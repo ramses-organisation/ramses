@@ -154,7 +154,7 @@ recursive subroutine amr_step(ilevel,icount)
 #if NDIM==3
         if(clumpfind .and. ndim==3) call clump_finder(.true.,.false.)
 #endif
-        
+
         call dump_all
 
         if (output_now_all.EQV..true.) then
@@ -349,18 +349,7 @@ recursive subroutine amr_step(ilevel,icount)
      call grow_sink(ilevel,.false.)
   end if
 #endif
-  !---------------
-  ! Move particles
-  !---------------
-  if(pic)then
-                               call timer('particles','start')
-     if(static_dm.or.static_stars)then
-        call move_fine_static(ilevel) ! Only remaining particles
-     else
-        call move_fine(ilevel) ! Only remaining particles
-     end if
-  end if
-
+  ! Call to move_fine was previously here. No longer!
   !-----------
   ! Hydro step
   !-----------
@@ -405,6 +394,19 @@ recursive subroutine amr_step(ilevel,icount)
      call upload_fine(ilevel)
 
   endif
+  ! ERM: Moved the below block of code to being after the hydro step.
+  !---------------
+  ! Deposit mass/momenta, evolve momenta, move particles
+  !---------------
+  if(pic)then
+                               call timer('particles','start')
+     call init_dust_fine(ilevel) !ERM: Added call to init_dust_fine just before move_fine
+     if(static_dm.or.static_stars)then
+        call move_fine_static(ilevel) ! Only remaining particles
+     else
+        call move_fine(ilevel) ! Only remaining particles
+     end if
+  end if
 
   !---------------------
   ! Do RT/Chemistry step
