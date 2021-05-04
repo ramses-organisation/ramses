@@ -406,6 +406,7 @@ recursive subroutine amr_step(ilevel,icount)
      else
         call move_fine(ilevel) ! Only remaining particles
      end if
+     call drag_fine
   end if
 
   !---------------------

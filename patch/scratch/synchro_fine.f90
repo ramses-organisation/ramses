@@ -1124,13 +1124,15 @@ subroutine init_dust(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   do ind=1,twotondim
      do j=1,np !deposit the dust mass density.
         if(ok(j))then
-           uold(indp(j,ind),ivar_dust)=uold(indp(j,ind),ivar_dust)+mp(ind_part(j))*vol(j,ind)/vol_loc
+           uold(indp(j,ind),ivar_dust)=uold(indp(j,ind),ivar_dust)&
+           &+mp(ind_part(j))*vol(j,ind)/vol_loc
         end if
      end do
      do idim=1,ndim
         do j=1,np ! deposit the dust momentum density
            if(ok(j))then
-              uold(indp(j,ind),ivar_dust+idim)=uold(indp(j,ind),ivar_dust+idim)+mp(ind_part(j))*vp(ind_part(j),idim)*vol(j,ind)/vol_loc
+              uold(indp(j,ind),ivar_dust+idim)=uold(indp(j,ind),ivar_dust+idim)&
+              &+mp(ind_part(j))*vp(ind_part(j),idim)*vol(j,ind)/vol_loc
            end if
         end do
      end do
@@ -1145,7 +1147,7 @@ subroutine init_dust(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
         if(ok(j))then
            unew(indp(j,ind),ivar_dust)=unew(indp(j,ind),ivar_dust)+&
            &(mp(ind_part(j))*vol(j,ind)/vol_loc)*&!rho^d_ij
-           &nu_stop(j)/uold(indp(j,ind),ivar_dust)
+           &nu_stop(j)/max(uold(indp(j,ind),ivar_dust),smallr)
         end if
      end do
   end do
