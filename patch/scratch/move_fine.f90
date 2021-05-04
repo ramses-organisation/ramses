@@ -607,7 +607,6 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   ! that in init_dust_fine. For second order accuracy, things will be more
   ! complicated.
     call StoppingRate(np,dtnew(ilevel),indp,vol,vv,nu_stop)
-    write(*,*)'nu=',nu_stop(1)
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! LORENTZ KICK
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -624,8 +623,6 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
     ! allow us to compute the evolution of the sub-clouds with the drag too.
     vv(1:np,1:ndim)=new_vp(1:np,1:ndim)
     call EMKick(np,dtnew(ilevel),indp,ctm,ok,vol,mov,vv,big_vv,big_ww)
-    write(*,*)'big_v=',big_vv(1,1,1),big_vv(1,1,2),big_vv(1,1,3)
-    write(*,*)'big_w=',big_ww(1,1,1),big_ww(1,1,2),big_ww(1,1,3)
     ! big_vv now contains changes to sub-cloud velocities. vv is still the old
     ! velocity. As well, unew's dust slot contains u**n+du**EM
 
@@ -634,8 +631,6 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     call DragKick(np,dtnew(ilevel),indp,ok,vol,nu_stop,big_vv,big_ww,vv)
-    write(*,*)'big_v+ =',big_vv(1,1,1),big_vv(1,1,2),big_vv(1,1,3)
-    write(*,*)'big_w+ =',big_ww(1,1,1),big_ww(1,1,2),big_ww(1,1,3)
     ! DragKick will modify big_ww as well as big_vv, but not vv.
     ! Now kick the dust given these quantities.
     do ind=1,twotondim
@@ -645,7 +640,7 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
         end do
       end do
     end do
-    write(*,*)'v =',vv(1,1),vv(1,2),vv(1,3)
+
     !call DragKick(np,dtnew(ilevel),indp,ok,vol,mov,nu_stop,big_vv,vv)
     new_vp(1:np,1:ndim)=vv(1:np,1:ndim)
     ! big_vv is not actually modified in this process:
