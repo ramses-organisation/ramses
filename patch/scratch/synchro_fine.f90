@@ -1295,4 +1295,4 @@ subroutine InitStoppingRate(nn,dt,indp,vol,v,nu)
        &/(cs*cs))
      end do
   endif
-end subroutine StoppingRate
+end subroutine InitStoppingRate
