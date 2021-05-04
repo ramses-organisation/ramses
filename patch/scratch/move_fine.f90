@@ -10,7 +10,7 @@ subroutine move_fine(ilevel)
   ! If particle sits entirely in level ilevel, then use fine grid force
   ! for CIC interpolation. Otherwise, use coarse grid (ilevel-1) force.
   !----------------------------------------------------------------------
-  integer::igrid,jgrid,ipart,jpart,next_part,ig,ip,npart1,icpu,ind,iskip,ivar,i
+  integer::igrid,jgrid,ipart,jpart,next_part,ig,ip,npart1,icpu,ind,iskip,ivar,i,ivar_dust
   integer,dimension(1:nvector),save::ind_grid,ind_part,ind_grid_part
   character(LEN=80)::filename,fileloc
   character(LEN=5)::nchar
@@ -22,12 +22,24 @@ subroutine move_fine(ilevel)
   call title(myid,nchar)
   fileloc=TRIM(filename)//TRIM(nchar)
   open(25+myid, file = fileloc, status = 'unknown', access = 'append')
+  ivar_dust=9
 
-  ! Set unew reception cells to zero.
+  ! Set unew reception cells to zero. ERM: Not sure this is necessary after init_dust.
   do icpu=1,ncpu
      do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
         do ivar=2,4
+           do i=1,reception(icpu,ilevel)%ngrid
+              unew(reception(icpu,ilevel)%igrid(i)+iskip,ivar)=0.0D0
+           end do
+        end do
+     end do
+  end do
+
+  do icpu=1,ncpu
+     do ind=1,twotondim
+        iskip=ncoarse+(ind-1)*ngridmax
+        do ivar=ivar_dust,ivar_dust+3
            do i=1,reception(icpu,ilevel)%ngrid
               unew(reception(icpu,ilevel)%igrid(i)+iskip,ivar)=0.0D0
            end do
@@ -71,7 +83,7 @@ subroutine move_fine(ilevel)
   ! End loop over grids
   if(ip>0)call move1(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
 
-  ! Update MPI boundary conditions for uold for dust mass and momentum densities
+  ! Update MPI boundary conditions for unew for dust mass and momentum densities
   do ivar=2,4 ! Gas momentum indices
      call make_virtual_reverse_dp(unew(1,ivar),ilevel)
   end do
@@ -234,7 +246,7 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   real(dp),dimension(1:nvector,1:ndim),save::x,ff,new_xp,new_vp,dd,dg
   real(dp),dimension(1:nvector,1:ndim),save::vv
   real(dp),dimension(1:10,1:ndim),save::bb,uu
-  real(dp),dimension(1:nvector,1:twotondim,1:ndim),save::big_vv
+  real(dp),dimension(1:nvector,1:twotondim,1:ndim),save::big_vv,big_ww
   real(dp),dimension(1:nvector),save:: nu_stop,mov ! ERM: fluid density interpolated to grain pos. and stopping times
   integer ,dimension(1:nvector,1:ndim),save::ig,id,igg,igd,icg,icd
   real(dp),dimension(1:nvector,1:twotondim),save::vol
@@ -589,6 +601,13 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
 
   if(boris.and.hydro)then
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  ! STOPPING RATE
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  ! We compute this before the EM kick for the sole reason that we had to do
+  ! that in init_dust_fine. For second order accuracy, things will be more
+  ! complicated.
+    call StoppingRate(np,dtnew(ilevel),indp,vol,vv,nu_stop)
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! LORENTZ KICK
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! ERM: Determining the evolved versions of the drift, then interpolating those
@@ -599,8 +618,11 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
     !call ResetUnewToFluidVel(ilevel)
     !call reset_unew(ilevel)
     big_vv(1:np,1:twotondim,1:ndim)=0.0D0 ! collects velocity changes to sub-clouds
+    ! might want a "big_ww"? I think that's how I'll approach it.
+    ! We want to evolve each of the subclouds. Knowing the new w will
+    ! allow us to compute the evolution of the sub-clouds with the drag too.
     vv(1:np,1:ndim)=new_vp(1:np,1:ndim)
-    call EMKick(np,dtnew(ilevel),indp,ctm,ok,vol,mov,vv,big_vv)
+    call EMKick(np,dtnew(ilevel),indp,ctm,ok,vol,mov,vv,big_vv,big_ww)
     ! big_vv now contains changes to sub-cloud velocities. vv is still the old
     ! velocity. As well, unew's dust slot contains u**n+du**EM
 
@@ -608,19 +630,8 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   ! DRAG KICK
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-  ! Compute the stopping rates at a half-timestep advanced.
-  ! If the stopping time is a constant, the array will be constant.
-
-    ! Reset dust variables to zero
-    !call ResetUoldToZero(ilevel)
-    !call reset_uold(ilevel)
-    !call StoppingRate(np,dtnew(ilevel),indp,ok,vol,mov,vv,big_vv,nu_stop)
-    ! Compute stopping rates at time n+1/2 using backward Euler.
-    ! If we have a constant stopping rate, it just sets nu_stop=1/t_stop.
-
-    !call ResetUoldToZero(ilevel)
-    !call reset_uold(ilevel)
-    vv(1:np,1:ndim)=new_vp(1:np,1:ndim)
+    call DragKick(np,dtnew(ilevel),indp,ok,vol,nu_stop,big_vv,big_ww,vv)
+    ! DragKick will modify big_ww as well as big_vv, but not vv.
     ! Now kick the dust given these quantities.
     do ind=1,twotondim
       do idim=1,ndim
@@ -701,6 +712,18 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      end do
   end do
 
+  ! Deposit minus final dust momentum to new gas momentum
+  do ind=1,twotondim
+     do idim=1,ndim
+        do j=1,np
+           if(ok(j))then
+              unew(indp(j,ind),1+idim)=unew(indp(j,ind),1+idim)&
+              &-mp(ind_part(j))*(new_vp(j,idim)-vp(ind_part(j),idim))*vol(j,ind)/vol_loc
+           end if
+        end do
+     end do
+  end do
+
   ! Store new velocity
   do idim=1,ndim
      do j=1,np
@@ -708,16 +731,6 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      end do
   end do
 
-  ! Deposit minus final dust momentum to new gas momentum
-  do ind=1,twotondim
-     do idim=1,ndim
-        do j=1,np
-           if(ok(j))then
-              unew(indp(j,ind),1+idim)=unew(indp(j,ind),1+idim)-mp(ind_part(j))*vp(ind_part(j),idim)*vol(j,ind)/vol_loc
-           end if
-        end do
-     end do
-  end do
 
 
 end subroutine move1
@@ -727,7 +740,7 @@ end subroutine move1
 !#########################################################################
 !#########################################################################
 
-subroutine EMKick(nn,dt,indp,ctm,ok,vol,mov,v,big_v)
+subroutine EMKick(nn,dt,indp,ctm,ok,vol,mov,v,big_v,big_w)
   ! This subroutine will compute changes to sub-cloud velocity in big_v,
   ! as well as set unew's dust momentum slot to being u+du**EM.
   use amr_parameters
@@ -742,10 +755,10 @@ subroutine EMKick(nn,dt,indp,ctm,ok,vol,mov,v,big_v)
   real(dp),dimension(1:nvector)::mov
   real(dp),dimension(1:nvector,1:twotondim)::vol
   integer ,dimension(1:nvector,1:twotondim)::indp
-  real(dp),dimension(1:nvector,1:twotondim,1:ndim)::big_v
+  real(dp),dimension(1:nvector,1:twotondim,1:ndim)::big_v,big_w
   real(dp),dimension(1:nvector,1:ndim) ::v! grain velocity
-  real(dp) ::w1,w2,w3,B1,B2,B3,den_dust,den_gas,mu
-  real(dp),dimension(1:3) ::vtemp
+  real(dp) ::den_dust,den_gas,mu
+  real(dp),dimension(1:3) ::vtemp,w,B
   integer ::i,j,ind,idim! Just an -index
 
   ivar_dust=9
@@ -755,75 +768,58 @@ subroutine EMKick(nn,dt,indp,ctm,ok,vol,mov,v,big_v)
         den_gas=uold(indp(i,ind),1)
         den_dust=uold(indp(i,ind),ivar_dust)
         mu=den_dust/max(den_gas,smallr)
-        B1=0.5D0*(uold(indp(i,ind),1+5)+uold(indp(i,ind),1+nvar))
-        B2=0.5D0*(uold(indp(i,ind),2+5)+uold(indp(i,ind),2+nvar))
-        B3=0.5D0*(uold(indp(i,ind),3+5)+uold(indp(i,ind),3+nvar))
-        w1=uold(indp(i,ind),1+ivar_dust)/max(uold(indp(i,ind),ivar_dust),smallr)&
-        &-uold(indp(i,ind),1+1)/max(uold(indp(i,ind),1),smallr)
-        w2=uold(indp(i,ind),2+ivar_dust)/max(uold(indp(i,ind),ivar_dust),smallr)&
-        &-uold(indp(i,ind),2+1)/max(uold(indp(i,ind),1),smallr)
-        w3=uold(indp(i,ind),3+ivar_dust)/max(uold(indp(i,ind),ivar_dust),smallr)&
-        &-uold(indp(i,ind),3+1)/max(uold(indp(i,ind),1),smallr)
+        do idim=1,3
+          B(idim)=0.5D0*(uold(indp(i,ind),idim+5)+uold(indp(i,ind),idim+nvar))
+          w(idim)=uold(indp(i,ind),idim+ivar_dust)/max(uold(indp(i,ind),ivar_dust),smallr)&
+          &-uold(indp(i,ind),idim+1)/max(uold(indp(i,ind),1),smallr)
+        end do
 
-        big_v(i,ind,1)=& !velocity changes to gas.
-        &mu*(ctm*dt*(2.*B2**2*ctm*dt*(1.+mu)**2*w1+&
-        &B2*(-2.*B1*ctm*dt*(1.+mu)**2*w2 + 4.*(1.+mu)*w3) +&
-        & B3*(2.*B3*ctm*dt*(1.+mu)**2*w1-4.*(1.+mu)*w2 - 2*B1*ctm*dt*(1.+mu)**2*w3)))/&
-        &((4.+(B1**2+B2**2+B3**2)*ctm**2*dt**2*(1.+mu)**2)*(1.+mu))
+        big_w(i,ind,1)=-1.*& !velocity changes to gas.
+        &(ctm*dt*(2.*B(2)**2*ctm*dt*(1.+mu)**2*w(1)+&
+        &B(2)*(-2.*B(1)*ctm*dt*(1.+mu)**2*w(2) + 4.*(1.+mu)*w(3)) +&
+        & B(3)*(2.*B(3)*ctm*dt*(1.+mu)**2*w(1)-4.*(1.+mu)*w(2) - 2*B(1)*ctm*dt*(1.+mu)**2*w(3))))/&
+        &((4.+(B(1)**2+B(2)**2+B(3)**2)*ctm**2*dt**2*(1.+mu)**2))
 
-        big_v(i,ind,2)=&
-        &mu*(ctm*dt*(2.*B3**2*ctm*dt*(1.+mu)**2*w2+&
-        &B3*(-2.*B2*ctm*dt*(1.+mu)**2*w3 + 4.*(1.+mu)*w1) +&
-        & B1*(2.*B1*ctm*dt*(1.+mu)**2*w2-4.*(1.+mu)*w3 - 2*B2*ctm*dt*(1.+mu)**2*w1)))/&
-        &((4.+(B1**2+B2**2+B3**2)*ctm**2*dt**2*(1.+mu)**2)*(1.+mu))
+        big_w(i,ind,2)=-1.*&
+        &(ctm*dt*(2.*B(3)**2*ctm*dt*(1.+mu)**2*w(2)+&
+        &B(3)*(-2.*B(2)*ctm*dt*(1.+mu)**2*w(3) + 4.*(1.+mu)*w(1)) +&
+        & B(1)*(2.*B(1)*ctm*dt*(1.+mu)**2*w(2)-4.*(1.+mu)*w(3) - 2*B(2)*ctm*dt*(1.+mu)**2*w(1))))/&
+        &((4.+(B(1)**2+B(2)**2+B(3)**2)*ctm**2*dt**2*(1.+mu)**2))
 
-        big_v(i,ind,3)=&
-        &mu*(ctm*dt*(2.*B1**2*ctm*dt*(1.+mu)**2*w3+&
-        &B1*(-2.*B3*ctm*dt*(1.+mu)**2*w1 + 4.*(1.+mu)*w2) +&
-        & B2*(2.*B2*ctm*dt*(1.+mu)**2*w3-4.*(1.+mu)*w1 - 2*B3*ctm*dt*(1.+mu)**2*w2)))/&
-        &((4.+(B1**2+B2**2+B3**2)*ctm**2*dt**2*(1.+mu)**2)*(1.+mu))
+        big_w(i,ind,3)=-1.*&
+        &(ctm*dt*(2.*B(1)**2*ctm*dt*(1.+mu)**2*w(3)+&
+        &B(1)*(-2.*B(3)*ctm*dt*(1.+mu)**2*w(1) + 4.*(1.+mu)*w(2)) +&
+        & B(2)*(2.*B(2)*ctm*dt*(1.+mu)**2*w(3)-4.*(1.+mu)*w(1) - 2*B(3)*ctm*dt*(1.+mu)**2*w(2))))/&
+        &((4.+(B(1)**2+B(2)**2+B(3)**2)*ctm**2*dt**2*(1.+mu)**2))
 
         do idim=1,ndim
           vtemp(idim) = v(i,idim)-uold(indp(i,ind),1+idim)/uold(indp(i,ind),1)&
-          &-0.5*big_v(i,ind,idim)
+          &+0.5*mu*big_w(i,ind,idim)/(1.+mu)
         end do
 
+
+
         big_v(i,ind,1)=& ! subcloud velocity change.
-        &(ctm*dt*(-2.*B2**2*ctm*dt*vtemp(1) + B2*(2.*B1*ctm*dt*vtemp(2) - 4.*vtemp(3)) +&
-        & B3*(-2.*B3*ctm*dt*vtemp(1) + 4.*vtemp(2) + 2.*B1*ctm*dt*vtemp(3))))/&
-        &(4. + (B1**2 + B2**2 + B3**2)*ctm**2*dt**2)
+        &(ctm*dt*(-2.*B(2)**2*ctm*dt*vtemp(1) + B(2)*(2.*B(1)*ctm*dt*vtemp(2) - 4.*vtemp(3)) +&
+        & B(3)*(-2.*B(3)*ctm*dt*vtemp(1) + 4.*vtemp(2) + 2.*B(1)*ctm*dt*vtemp(3))))/&
+        &(4. + (B(1)**2 + B(2)**2 + B(3)**2)*ctm**2*dt**2)
 
         big_v(i,ind,2)=&
-        &(ctm*dt*(-2.*B3**2*ctm*dt*vtemp(2) + B3*(2.*B2*ctm*dt*vtemp(3) - 4.*vtemp(1)) +&
-        & B1*(-2.*B1*ctm*dt*vtemp(2) + 4.*vtemp(3) + 2.*B2*ctm*dt*vtemp(1))))/&
-        &(4. + (B1**2 + B2**2 + B3**2)*ctm**2*dt**2)
+        &(ctm*dt*(-2.*B(3)**2*ctm*dt*vtemp(2) + B(3)*(2.*B(2)*ctm*dt*vtemp(3) - 4.*vtemp(1)) +&
+        & B(1)*(-2.*B(1)*ctm*dt*vtemp(2) + 4.*vtemp(3) + 2.*B(2)*ctm*dt*vtemp(1))))/&
+        &(4. + (B(1)**2 + B(2)**2 + B(3)**2)*ctm**2*dt**2)
 
         big_v(i,ind,3)=&
-        &(ctm*dt*(-2.*B1**2*ctm*dt*vtemp(3) + B1*(2.*B3*ctm*dt*vtemp(1) - 4.*vtemp(2)) +&
-        & B2*(-2.*B2*ctm*dt*vtemp(3) + 4.*vtemp(1) + 2.*B3*ctm*dt*vtemp(2))))/&
-        &(4. + (B1**2 + B2**2 + B3**2)*ctm**2*dt**2)
+        &(ctm*dt*(-2.*B(1)**2*ctm*dt*vtemp(3) + B(1)*(2.*B(3)*ctm*dt*vtemp(1) - 4.*vtemp(2)) +&
+        & B(2)*(-2.*B(2)*ctm*dt*vtemp(3) + 4.*vtemp(1) + 2.*B(3)*ctm*dt*vtemp(2))))/&
+        &(4. + (B(1)**2 + B(2)**2 + B(3)**2)*ctm**2*dt**2)
      end do
   end do
-
-  ! Deposit dust sub-cloud momentum onto the unew ``dust'' slot.
-  ! This is still velocity here.
-  ! do ind=1,twotondim
-  !    do idim=1,ndim
-  !       do j=1,nn
-  !          if(ok(j))then
-  !             unew(indp(j,ind),ivar_dust+idim)=unew(indp(j,ind),ivar_dust+idim)-&
-  !             &mov(j)*big_v(j,ind,idim)*vol(j,ind)/uold(indp(j,ind),1)
-  !          end if
-  !       end do
-  !    end do
-  ! end do
 end subroutine EMKick
 
 !#########################################################################
 !#########################################################################
-!#########################################################################
-!#########################################################################
-subroutine StoppingRate(nn,twodt,indp,ok,vol,mov,v,big_v,nu)
+subroutine StoppingRate(nn,dt,indp,vol,v,nu)
   ! The following subroutine will alter its last argument, nu
   ! to be a half-step advanced. Because we are operator splitting,
   ! one must use the updated dust and gas velocities.
@@ -835,20 +831,17 @@ subroutine StoppingRate(nn,twodt,indp,ok,vol,mov,v,big_v,nu)
   implicit none
   integer ::nn ! number of cells
   integer ::ivar_dust ! cell-centered dust variables start.
-  real(dp) ::dt,twodt ! half-timestep, full timestep.
+  real(dp) ::dt ! timestep.
   real(dp)::rd,cs! ERM: Grain size parameter
   real(dp),dimension(1:nvector) ::nu
-  real(dp),dimension(1:nvector) ::mov
   real(dp),dimension(1:nvector,1:twotondim)::vol
   integer ,dimension(1:nvector,1:twotondim)::indp
-  logical ,dimension(1:nvector)::ok
   real(dp),dimension(1:nvector),save ::dgr! gas density at grain.
   real(dp),dimension(1:nvector,1:ndim) ::v! grain velocity
   real(dp),dimension(1:nvector,1:twotondim,1:ndim)::big_v
   real(dp),dimension(1:nvector,1:ndim),save ::wh! drift at half step.
   integer ::i,j,idim,ind
   ivar_dust=9
-  dt=0.5*twodt
   rd = sqrt(gamma)*0.62665706865775*grain_size !constant for epstein drag law.
   cs=1.0 ! isothermal sound speed... Need to get this right. This works for now,
          ! but only if you have scaled things so that the sound speed is 1.
@@ -870,61 +863,26 @@ subroutine StoppingRate(nn,twodt,indp,ok,vol,mov,v,big_v,nu)
         do ind=1,twotondim
           do idim=1,ndim
             do j=1,nn
-               wh(j,idim)=wh(j,idim)+&
-               &(v(j,idim)+big_v(j,ind,idim)-unew(indp(j,ind),ivar_dust+idim))&
-               &*vol(j,ind)
+               wh(j,idim)=wh(j,idim)+vol(j,ind)*&
+               &(v(j,idim)-uold(indp(j,ind),1+idim)/&
+               &max(uold(indp(j,ind),1),smallr))
            end do
          end do
         end do
      endif
-     ! Initial stopping time used to compute half-step stopping time.
      do i=1,nn
        nu(i)=(dgr(i)*cs/rd)*sqrt(1.+&
        &0.22089323345553233*&
        &(wh(i,1)**2+wh(i,2)**2+wh(i,3)**2)&
        &/(cs*cs))
      end do
-     ! Deposit relevant quantities.
-     do ind=1,twotondim
-        do j=1,nn !deposit first order effective dust mass
-           if(ok(j))then
-              uold(indp(j,ind),ivar_dust)=uold(indp(j,ind),ivar_dust)+&
-              &mov(j)*dt*nu(j)*vol(j,ind)/(1.+dt*nu(j))
-           end if
-        end do
-        do idim=1,ndim
-           do j=1,nn ! deposit first order effective dust momentum.
-              if(ok(j))then
-                 uold(indp(j,ind),ivar_dust+idim)=uold(indp(j,ind),ivar_dust+idim)&
-                 &+mov(j)*(v(j,idim)+big_v(j,ind,idim))*dt*nu(j)*vol(j,ind)/(1.+dt*nu(j))
-              end if
-           end do
-        end do
-     end do
-     ! Do a half-step update here in order to compute the w**(n+1/2) drift mag.
-     wh(1:nn,1:ndim)=0.0D0
-     do ind=1,twotondim
-       do idim=1,ndim
-         do j=1,nn
-           wh(j,idim)=wh(j,idim)+vol(j,ind)*&
-           &((v(j,idim)+big_v(j,ind,idim)-unew(indp(j,ind),ivar_dust+idim))/(1.+dt*nu(j))-&
-           &(uold(indp(j,ind),ivar_dust+idim)-uold(indp(j,ind),ivar_dust)*unew(indp(j,ind),ivar_dust+idim))&
-           &/((1.+dt*nu(j))*max(uold(indp(j,ind),1)+uold(indp(j,ind),ivar_dust),smallr)))
-         end do
-       end do
-     end do
-    do i=1,nn
-       nu(i)=(dgr(i)*cs/rd)*sqrt(1.+&
-       &0.22089323345553233*(wh(i,1)**2+wh(i,2)**2+wh(i,3)**2)/(cs*cs)) ! In principle, will also depend on the sound speed.
-    end do
   endif
 end subroutine StoppingRate
 !#########################################################################
 !#########################################################################
 !#########################################################################
 !#########################################################################
-
-subroutine DragKick(nn,dt,indp,ok,vol,mp,nu,big_v,v) ! mp is actually mov
+subroutine DragKick(nn,dt,indp,ok,vol,nu,big_v,big_w,v) ! mp is actually mov
   use amr_parameters
   use hydro_parameters
   use hydro_commons, ONLY: uold,unew,smallr,nvar,gamma
@@ -938,275 +896,136 @@ subroutine DragKick(nn,dt,indp,ok,vol,mp,nu,big_v,v) ! mp is actually mov
   real(dp),dimension(1:nvector,1:twotondim)::vol
   integer ,dimension(1:nvector,1:twotondim)::indp
   real(dp),dimension(1:nvector,1:ndim) ::v ! grain velocity
-  real(dp),dimension(1:nvector,1:twotondim,1:ndim) ::big_v
+  real(dp),dimension(1:nvector,1:twotondim,1:ndim) ::big_v,big_w
   real(dp),dimension(1:nvector,1:ndim),save ::vo ! grain velocity "new" (?)
   real(dp) ::den_dust,den_gas,mu
   integer ::i,j,ind,idim! Just an index
   ivar_dust=9
 
   do ind=1,twotondim
-    !deposit effective dust mass
-     do j=1,nn
-        if(ok(j))then
-           uold(indp(j,ind),ivar_dust)=uold(indp(j,ind),ivar_dust)+&
-           &mp(j)*0.5*(dt*nu(j)+dt*dt*nu(j)*nu(j))*vol(j,ind)/&
-           &(1.+dt*nu(j)+0.5*dt*dt*nu(j)*nu(j))
-        end if
-     end do
-     do idim=1,ndim
-        do j=1,nn ! deposit vector for change in gas velocity. (V0)
-           if(ok(j))then
-              uold(indp(j,ind),ivar_dust+idim)=uold(indp(j,ind),ivar_dust+idim)&
-              &+mp(j)*(dt*nu(j)+0.5*dt*dt*nu(j)*nu(j))*&
-              &(v(j,idim)+big_v(j,ind,idim)-unew(indp(j,ind),ivar_dust+idim))*&
-              &vol(j,ind)/((1.+dt*nu(j)+0.5*dt*dt*nu(j)*nu(j))*&
-              &max(uold(indp(j,ind),1)+uold(indp(j,ind),ivar_dust),smallr))
-           end if
-        end do
-     end do
-  end do
+     do i=1,nn
+        den_gas=uold(indp(i,ind),1)
+        den_dust=uold(indp(i,ind),ivar_dust)
+        mu=den_dust/max(den_gas,smallr)
+        do idim=1,ndim
+          big_w(i,ind,idim)=big_w(i,ind,idim)-(1.+mu)*unew(indp(i,ind),ivar_dust)*dt*&
+          &(uold(indp(i,ind),idim+ivar_dust)/max(uold(indp(i,ind),ivar_dust),smallr)&
+          &-uold(indp(i,ind),idim+1)/max(uold(indp(i,ind),1),smallr)&
+          &+big_w(i,ind,1))/(1.+(1.+mu)*unew(indp(i,ind),ivar_dust)*dt)
 
-  ! Now kick the dust given these quantities.
-  do ind=1,twotondim
-    do idim=1,ndim
-      do j=1,nn
-        v(j,idim)=v(j,idim)+vol(j,ind)*&
-        &(big_v(j,ind,idim)+((dt*nu(j)+0.5*dt*dt*nu(j)*nu(j))*&
-        &(unew(indp(j,ind),ivar_dust+idim)-v(j,idim)-big_v(j,ind,idim))+&
-        &0.5*(dt*nu(j)+dt*dt*nu(j)*nu(j))*uold(indp(j,ind),ivar_dust+idim)&
-        &)/(1.+dt*nu(j)+0.5*dt*dt*nu(j)*nu(j)))
-      end do
-    end do
+          big_v(i,ind,idim)=-dt*nu(i)*(v(i,idim)+big_v(i,ind,idim)&
+          &-uold(indp(i,ind),idim+1)/max(uold(indp(i,ind),1),smallr)&
+          &+mu*big_w(i,ind,idim)/(1.+mu))&
+          &/(1.+dt*nu(i))
+        end do
+
+        ! big_w corresponds directly to a change in the gas velocity.
+     end do
   end do
 end subroutine DragKick
 !#########################################################################
 !#########################################################################
+
 !#########################################################################
 !#########################################################################
-!#########################################################################
-! subroutine ResetUoldToZero(ilevel)
-!   use pm_commons
-!   use amr_commons
-!   use hydro_commons
-!   use mpi_mod
+! subroutine StoppingRateMidpt(nn,twodt,indp,ok,vol,mov,v,big_v,nu)
+!   ! The following subroutine will alter its last argument, nu
+!   ! to be a half-step advanced. Because we are operator splitting,
+!   ! one must use the updated dust and gas velocities.
+!   ! "Large dust fractions can prevent the propagation of soundwaves"
+!   ! Above is a paper that we should use to test our code at high mu
+!   use amr_parameters
+!   use hydro_parameters
+!   use hydro_commons, ONLY: uold,unew,smallr,nvar,gamma
 !   implicit none
-! #ifndef WITHOUTMPI
-!   integer::info
-! #endif
-!   integer::ilevel
-!   ! First, reset uold to zero.
-!   ! Can remove gravity and sink particle related things.
-!   ! Can remove synchro_fine_static as well.
-!   ! In "sync", want to remove the gravity...
-!   ! Syncing up the velocity, get rid of that too.
-!   !--------------------------------------------------------------------
-!   ! This routine synchronizes particle velocity with particle
-!   ! position for ilevel particle only. If particle sits entirely
-!   ! in level ilevel, then use inverse CIC at fine level to compute
-!   ! the force. Otherwise, use coarse level force and coarse level CIC.
-!   !--------------------------------------------------------------------
-!   integer::igrid,jgrid,ipart,jpart
-!   integer::ig,ip,npart1,isink
-!   integer::i,iskip,icpu,ind,ibound,ivar,ivar_dust
-!   integer,dimension(1:nvector),save::ind_grid,ind_part,ind_grid_part
-!
-!   ! do icpu=1,ncpu
-!   !    do ind=1,twotondim
-!   !       iskip=ncoarse+(ind-1)*ngridmax
-!   !       do ivar=ivar_dust,ivar_dust+ndim
-!   !          do i=1,reception(icpu,ilevel)%ngrid
-!   !             uold(reception(icpu,ilevel)%igrid(i)+iskip,ivar)=0.0D0
-!   !          end do
-!   !       end do
-!   !    end do
-!   ! end do
-!
-!   do ind=1,twotondim
-!      iskip=ncoarse+(ind-1)*ngridmax
-!      do ivar=ivar_dust,ivar_dust+ndim
-!         do i=1,active(ilevel)%ngrid
-!            uold(active(ilevel)%igrid(i)+iskip,ivar)=0.0D0
-!         end do
-!      end do
-!   end do
-!
-!   ! Reset value in physical boundaries
-!   ! do ibound=1,nboundary
-!   !    do ind=1,twotondim
-!   !       iskip=ncoarse+(ind-1)*ngridmax
-!   !       do ivar=ivar_dust,ivar_dust+ndim
-!   !          do i=1,boundary(ibound,ilevel)%ngrid
-!   !             uold(boundary(ibound,ilevel)%igrid(i)+iskip,ivar)=0.0D0
-!   !          end do
-!   !       end do
-!   !    end do
-!   ! end do
-! end subroutine ResetUoldToZero
-!#########################################################################
-!#########################################################################
-!#########################################################################
-!#########################################################################
-! subroutine ResetUnewToFluidVel(ilevel)
-!   use pm_commons
-!   use amr_commons
-!   use hydro_commons
-!   use mpi_mod
-!   implicit none
-! #ifndef WITHOUTMPI
-!   integer::info
-! #endif
-!   integer::ilevel
-!   ! First, reset uold to zero.
-!   ! Can remove gravity and sink particle related things.
-!   ! Can remove synchro_fine_static as well.
-!   ! In "sync", want to remove the gravity...
-!   ! Syncing up the velocity, get rid of that too.
-!   !--------------------------------------------------------------------
-!   ! This routine synchronizes particle velocity with particle
-!   ! position for ilevel particle only. If particle sits entirely
-!   ! in level ilevel, then use inverse CIC at fine level to compute
-!   ! the force. Otherwise, use coarse level force and coarse level CIC.
-!   !--------------------------------------------------------------------
-!   integer::igrid,jgrid,ipart,jpart
-!   integer::ig,ip,npart1,isink
-!   integer::i,iskip,icpu,ind,ibound,ivar,ivar_dust
-!   integer,dimension(1:nvector),save::ind_grid,ind_part,ind_grid_part
+!   integer ::nn ! number of cells
+!   integer ::ivar_dust ! cell-centered dust variables start.
+!   real(dp) ::dt,twodt ! half-timestep, full timestep.
+!   real(dp)::rd,cs! ERM: Grain size parameter
+!   real(dp),dimension(1:nvector) ::nu
+!   real(dp),dimension(1:nvector) ::mov
+!   real(dp),dimension(1:nvector,1:twotondim)::vol
+!   integer ,dimension(1:nvector,1:twotondim)::indp
+!   logical ,dimension(1:nvector)::ok
+!   real(dp),dimension(1:nvector),save ::dgr! gas density at grain.
+!   real(dp),dimension(1:nvector,1:ndim) ::v! grain velocity
+!   real(dp),dimension(1:nvector,1:twotondim,1:ndim)::big_v
+!   real(dp),dimension(1:nvector,1:ndim),save ::wh! drift at half step.
+!   integer ::i,j,idim,ind
 !   ivar_dust=9
-!   do icpu=1,ncpu
+!   dt=0.5*twodt
+!   rd = sqrt(gamma)*0.62665706865775*grain_size !constant for epstein drag law.
+!   cs=1.0 ! isothermal sound speed... Need to get this right. This works for now,
+!          ! but only if you have scaled things so that the sound speed is 1.
+!
+!   if (constant_t_stop)then
+!     nu(1:nvector)=1./t_stop
+!   else
+!      dgr(1:nn) = 0.0D0
+!      if(boris)then
+!         do ind=1,twotondim
+!             do j=1,nn
+!                dgr(j)=dgr(j)+uold(indp(j,ind),1)*vol(j,ind)
+!            end do
+!         end do
+!      endif
+!
+!      wh(1:nn,1:ndim) = 0.0D0 ! Set to the drift velocity post-Lorentz force
+!      if(boris)then
+!         do ind=1,twotondim
+!           do idim=1,ndim
+!             do j=1,nn
+!                wh(j,idim)=wh(j,idim)+&
+!                &(v(j,idim)+big_v(j,ind,idim)-unew(indp(j,ind),ivar_dust+idim))&
+!                &*vol(j,ind)
+!            end do
+!          end do
+!         end do
+!      endif
+!      ! Initial stopping time used to compute half-step stopping time.
+!      do i=1,nn
+!        nu(i)=(dgr(i)*cs/rd)*sqrt(1.+&
+!        &0.22089323345553233*&
+!        &(wh(i,1)**2+wh(i,2)**2+wh(i,3)**2)&
+!        &/(cs*cs))
+!      end do
+!      ! Deposit relevant quantities.
 !      do ind=1,twotondim
-!         iskip=ncoarse+(ind-1)*ngridmax
-!         do ivar=1,ndim
-!            do i=1,reception(icpu,ilevel)%ngrid
-!               unew(reception(icpu,ilevel)%igrid(i)+iskip,ivar+ivar_dust)=0.0D0
-!               ! &uold(reception(icpu,ilevel)%igrid(i)+iskip,ivar+1)/&
-!               ! &max(uold(reception(icpu,ilevel)%igrid(i)+iskip,1),smallr)
+!         do j=1,nn !deposit first order effective dust mass
+!            if(ok(j))then
+!               uold(indp(j,ind),ivar_dust)=uold(indp(j,ind),ivar_dust)+&
+!               &mov(j)*dt*nu(j)*vol(j,ind)/(1.+dt*nu(j))
+!            end if
+!         end do
+!         do idim=1,ndim
+!            do j=1,nn ! deposit first order effective dust momentum.
+!               if(ok(j))then
+!                  uold(indp(j,ind),ivar_dust+idim)=uold(indp(j,ind),ivar_dust+idim)&
+!                  &+mov(j)*(v(j,idim)+big_v(j,ind,idim))*dt*nu(j)*vol(j,ind)/(1.+dt*nu(j))
+!               end if
 !            end do
 !         end do
 !      end do
-!   end do
-!
-!   do ind=1,twotondim
-!      iskip=ncoarse+(ind-1)*ngridmax
-!      do ivar=1,ndim
-!         do i=1,active(ilevel)%ngrid
-!            unew(active(ilevel)%igrid(i)+iskip,ivar+ivar_dust)=&
-!            &uold(active(ilevel)%igrid(i)+iskip,1+ivar)/&
-!            &max(uold(active(ilevel)%igrid(i)+iskip,1),smallr)
-!         end do
+!      ! Do a half-step update here in order to compute the w**(n+1/2) drift mag.
+!      wh(1:nn,1:ndim)=0.0D0
+!      do ind=1,twotondim
+!        do idim=1,ndim
+!          do j=1,nn
+!            wh(j,idim)=wh(j,idim)+vol(j,ind)*&
+!            &((v(j,idim)+big_v(j,ind,idim)-unew(indp(j,ind),ivar_dust+idim))/(1.+dt*nu(j))-&
+!            &(uold(indp(j,ind),ivar_dust+idim)-uold(indp(j,ind),ivar_dust)*unew(indp(j,ind),ivar_dust+idim))&
+!            &/((1.+dt*nu(j))*max(uold(indp(j,ind),1)+uold(indp(j,ind),ivar_dust),smallr)))
+!          end do
+!        end do
 !      end do
-!   end do
-!
-!   ! Reset value in physical boundaries
-!   ! do ibound=1,nboundary
-!   !    do ind=1,twotondim
-!   !       iskip=ncoarse+(ind-1)*ngridmax
-!   !       do ivar=1,ndim
-!   !          do i=1,boundary(ibound,ilevel)%ngrid
-!   !             unew(boundary(ibound,ilevel)%igrid(i)+iskip,ivar+ivar_dust)=&
-!   !             &uold(boundary(ibound,ilevel)%igrid(i)+iskip,ivar+1)/&
-!   !             &max(uold(boundary(ibound,ilevel)%igrid(i)+iskip,1),smallr)
-!   !          end do
-!   !       end do
-!   !    end do
-!   ! end do
-! end subroutine ResetUnewToFluidVel
-
+!     do i=1,nn
+!        nu(i)=(dgr(i)*cs/rd)*sqrt(1.+&
+!        &0.22089323345553233*(wh(i,1)**2+wh(i,2)**2+wh(i,3)**2)/(cs*cs)) ! In principle, will also depend on the sound speed.
+!     end do
+!   endif
+! end subroutine StoppingRateMidpt
 !#########################################################################
 !#########################################################################
 !#########################################################################
-!
-!###########################################################
-!###########################################################
-subroutine reset_unew(ilevel)
-  use amr_commons
-  use hydro_commons
-  implicit none
-  integer::ilevel
-  !--------------------------------------------------------------------------
-  ! This routine sets array unew to its initial value uold before calling
-  ! the hydro scheme. unew is set to zero in virtual boundaries.
-  !--------------------------------------------------------------------------
-  integer::i,ivar,ind,icpu,iskip,idim,ivar_dust
-  real(dp)::d,u,v,w,e
-#if NENER>0
-  integer::irad
-#endif
-
-  ivar_dust=9
-  if(numbtot(1,ilevel)==0)return
-  !if(verbose)write(*,111)ilevel
-
-  ! Set unew to uold for myid cells
-  do ind=1,twotondim
-     iskip=ncoarse+(ind-1)*ngridmax
-     do idim=1,ndim
-        do i=1,active(ilevel)%ngrid
-           unew(active(ilevel)%igrid(i)+iskip,ivar_dust+idim) =&
-           & uold(active(ilevel)%igrid(i)+iskip,1+idim)/&
-           &max(uold(active(ilevel)%igrid(i)+iskip,1),smallr)
-        end do
-     end do
-  end do
-
-  ! Set unew for virtual boundary cells
-  do icpu=1,ncpu
-  do ind=1,twotondim
-     iskip=ncoarse+(ind-1)*ngridmax
-     do idim=1,ndim
-        do i=1,reception(icpu,ilevel)%ngrid
-           unew(reception(icpu,ilevel)%igrid(i)+iskip,ivar_dust+idim)=&
-           &uold(reception(icpu,ilevel)%igrid(i)+iskip,1+idim)/&
-           &max(uold(reception(icpu,ilevel)%igrid(i)+iskip,1),smallr)
-        end do
-     end do
-  end do
-  end do
-
-!111 format('   Entering reset_unew for level ',i2)
-
-end subroutine reset_unew
-!###########################################################
-!###########################################################
-!###########################################################
-!###########################################################
-subroutine reset_uold(ilevel)
-  use amr_commons
-  use hydro_commons
-  use poisson_commons
-  implicit none
-  integer::ilevel
-  !---------------------------------------------------------
-  ! This routine sets array uold to its new value unew
-  ! after the hydro step.
-  !---------------------------------------------------------
-  integer::i,ivar,ind,iskip,nx_loc,ind_cell,ivar_dust
-  real(dp)::scale,d,u,v,w
-  real(dp)::e_kin,e_cons,e_prim,e_trunc,div,dx
-#if NENER>0
-  integer::irad
-#endif
-
-  ivar_dust=9
-
-  if(numbtot(1,ilevel)==0)return
-  !if(verbose)write(*,111)ilevel
-
-  nx_loc=icoarse_max-icoarse_min+1
-  scale=boxlen/dble(nx_loc)
-  dx=0.5d0**ilevel*scale
-
-  ! Set uold to unew for myid cells
-  do ind=1,twotondim
-     iskip=ncoarse+(ind-1)*ngridmax
-     do ivar=ivar_dust,ivar_dust+ndim
-        do i=1,active(ilevel)%ngrid
-           uold(active(ilevel)%igrid(i)+iskip,ivar) = 0.0D0
-        end do
-     end do
-  end do
-
-!111 format('   Entering reset_uold for level ',i2)
-
-end subroutine reset_uold
-!###########################################################
-!###########################################################
+!#########################################################################
+!#########################################################################

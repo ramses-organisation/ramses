@@ -669,9 +669,7 @@ subroutine init_dust_fine(ilevel)
      iskip=ncoarse+(ind-1)*ngridmax
      do ivar=1,3
         do i=1,active(ilevel)%ngrid
-           unew(active(ilevel)%igrid(i)+iskip,ivar_dust+ivar)=&
-           &uold(active(ilevel)%igrid(i)+iskip,1+ivar)/&
-           &max(uold(active(ilevel)%igrid(i)+iskip,1),smallr)
+           unew(active(ilevel)%igrid(i)+iskip,ivar_dust+ivar)=0.0D0
         end do
      end do
   end do
@@ -705,6 +703,28 @@ subroutine init_dust_fine(ilevel)
      do ivar=ivar_dust,ivar_dust+ndim
         do i=1,active(ilevel)%ngrid
            uold(active(ilevel)%igrid(i)+iskip,ivar)=0.0D0
+        end do
+     end do
+  end do
+
+  ! Reset unew to zero for dust mass and momentum densities
+
+  do icpu=1,ncpu
+     do ind=1,twotondim
+        iskip=ncoarse+(ind-1)*ngridmax
+        do ivar=ivar_dust,ivar_dust+ndim
+           do i=1,reception(icpu,ilevel)%ngrid
+              unew(reception(icpu,ilevel)%igrid(i)+iskip,ivar)=0.0D0
+           end do
+        end do
+     end do
+  end do
+
+  do ind=1,twotondim
+     iskip=ncoarse+(ind-1)*ngridmax
+     do ivar=ivar_dust,ivar_dust+ndim
+        do i=1,active(ilevel)%ngrid
+           unew(active(ilevel)%igrid(i)+iskip,ivar)=0.0D0
         end do
      end do
   end do
@@ -763,7 +783,13 @@ subroutine init_dust_fine(ilevel)
      call make_virtual_fine_dp   (uold(1,ivar),ilevel)
   end do
 
-  ! Update MPI boundary conditions for uold for dust mass and momentum densities
+  ! Update MPI boundary conditions for unew for dust "mass" and "momentum" densities
+  do ivar=ivar_dust,ivar_dust+ndim
+     call make_virtual_reverse_dp(unew(1,ivar),ilevel)
+     call make_virtual_fine_dp   (unew(1,ivar),ilevel)
+  end do
+
+  ! Update MPI boundary conditions for unew for gas mass and momentum densities
   do ivar=2,4
      call make_virtual_reverse_dp(unew(1,ivar),ilevel)
      call make_virtual_fine_dp   (unew(1,ivar),ilevel)
@@ -811,7 +837,7 @@ subroutine init_dust(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   integer ,dimension(1:nvector,1:twotondim),save::nbors_father_grids
   ! Particle-based arrays
   logical ,dimension(1:nvector),save::ok
-  real(dp),dimension(1:nvector),save::mmm,dteff
+  real(dp),dimension(1:nvector),save::mmm,dteff,nu_stop
   real(dp),dimension(1:nvector,1:ndim),save::x,ff,new_vp,dd,dg
   real(dp),dimension(1:nvector,1:ndim),save::uu,bb,vv ! ERM: Added these arrays
   real(dp),dimension(1:nvector),save::dgr,tss,mm ! ERM: density, (non-constant) stopping times
@@ -1060,13 +1086,13 @@ subroutine init_dust(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
 #endif
 
   ! Compute individual time steps (ERM: Unnecessary?)
-  do j=1,np
-     if(levelp(ind_part(j))>=ilevel)then
-        dteff(j)=dtnew(levelp(ind_part(j)))
-     else
-        dteff(j)=dtold(levelp(ind_part(j)))
-     endif
-  end do
+  ! do j=1,np
+  !    if(levelp(ind_part(j))>=ilevel)then
+  !       dteff(j)=dtnew(levelp(ind_part(j)))
+  !    else
+  !       dteff(j)=dtold(levelp(ind_part(j)))
+  !    endif
+  ! end do
 
   ! Update particles level (ERM: Updating level???)
   do j=1,np
@@ -1087,6 +1113,14 @@ subroutine init_dust(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      write(*,*)'You need to compile ramses with nvar=',ivar_dust+ndim
      stop
   endif
+
+  do idim=1,ndim ! set vv equal to the velocity.
+     do j=1,np
+        vv(j,idim)=vp(ind_part(j),idim)
+     end do
+  end do
+
+
   do ind=1,twotondim
      do j=1,np !deposit the dust mass density.
         if(ok(j))then
@@ -1102,19 +1136,53 @@ subroutine init_dust(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      end do
   end do
 
+
+  ! I don't think we actually want to do this until after the Lorentz kick
+  call StoppingRate(np,dtnew(ilevel),indp,vol,vv,nu_stop)
+
+  do ind=1,twotondim
+     do j=1,np !deposit the weighed stopping time.
+        if(ok(j))then
+           unew(indp(j,ind),ivar_dust)=unew(indp(j,ind),ivar_dust)+&
+           &(mp(ind_part(j))*vol(j,ind)/vol_loc)*&!rho^d_ij
+           &nu_stop(j)/uold(indp(j,ind),ivar_dust)
+        end if
+     end do
+  end do
+  !
+  ! do ind=1,twotondim
+  !    do j=1,np !deposit the dust "mass" density.
+  !       if(ok(j))then
+  !          unew(indp(j,ind),ivar_dust)=unew(indp(j,ind),ivar_dust)+&
+  !          &(mp(ind_part(j))*vol(j,ind)/vol_loc)*&!rho^d_ij
+  !          &nu_stop(j)*dtnew(ilevel)/(1.+nu_stop(j)*dtnew(ilevel))
+  !       end if
+  !    end do
+  !    do idim=1,ndim
+  !       do j=1,np ! deposit the dust "momentum" density
+  !          if(ok(j))then
+  !             unew(indp(j,ind),ivar_dust+idim)=unew(indp(j,ind),ivar_dust+idim)+&
+  !             &(mp(ind_part(j))*vp(ind_part(j),idim)*vol(j,ind)/vol_loc)*&
+  !             &vv(j,idim)*nu_stop(j)*dtnew(ilevel)/(1.+nu_stop(j)*dtnew(ilevel))
+  !          end if
+  !       end do
+  !    end do
+  ! end do
+
   ! Deposit initial dust momentum to new gas momentum.
   ! This variable will collect changes in dust momentum so we can subtract
   ! from the gas at the end of move_fine.
   ! This is unew's gas momentum slot.
-  do ind=1,twotondim
-     do idim=1,ndim
-        do j=1,np
-           if(ok(j))then
-              unew(indp(j,ind),1+idim)=unew(indp(j,ind),1+idim)+mp(ind_part(j))*vp(ind_part(j),idim)*vol(j,ind)/vol_loc
-           end if
-        end do
-     end do
-  end do
+  ! Try just adding in the momentum CHANGES.
+  ! do ind=1,twotondim
+  !    do idim=1,ndim
+  !       do j=1,np
+  !          if(ok(j))then
+  !             unew(indp(j,ind),1+idim)=unew(indp(j,ind),1+idim)+mp(ind_part(j))*vp(ind_part(j),idim)*vol(j,ind)/vol_loc
+  !          end if
+  !       end do
+  !    end do
+  ! end do
 
   ! Gather 3-force
   ! ERM: block 1
@@ -1169,3 +1237,62 @@ subroutine init_dust(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
 end subroutine init_dust
 !#########################################################################
 !#########################################################################
+! subroutine StoppingRate(nn,dt,indp,vol,v,nu)
+!   ! The following subroutine will alter its last argument, nu
+!   ! to be a half-step advanced. Because we are operator splitting,
+!   ! one must use the updated dust and gas velocities.
+!   ! "Large dust fractions can prevent the propagation of soundwaves"
+!   ! Above is a paper that we should use to test our code at high mu
+!   use amr_parameters
+!   use hydro_parameters
+!   use hydro_commons, ONLY: uold,unew,smallr,nvar,gamma
+!   implicit none
+!   integer ::nn ! number of cells
+!   integer ::ivar_dust ! cell-centered dust variables start.
+!   real(dp) ::dt ! timestep.
+!   real(dp)::rd,cs! ERM: Grain size parameter
+!   real(dp),dimension(1:nvector) ::nu
+!   real(dp),dimension(1:nvector,1:twotondim)::vol
+!   integer ,dimension(1:nvector,1:twotondim)::indp
+!   real(dp),dimension(1:nvector),save ::dgr! gas density at grain.
+!   real(dp),dimension(1:nvector,1:ndim) ::v! grain velocity
+!   real(dp),dimension(1:nvector,1:twotondim,1:ndim)::big_v
+!   real(dp),dimension(1:nvector,1:ndim),save ::w! drift at half step.
+!   integer ::i,j,idim,ind
+!   ivar_dust=9
+!   rd = sqrt(gamma)*0.62665706865775*grain_size !constant for epstein drag law.
+!   cs=1.0 ! isothermal sound speed... Need to get this right. This works for now,
+!          ! but only if you have scaled things so that the sound speed is 1.
+!
+!   if (constant_t_stop)then
+!     nu(1:nvector)=1./t_stop
+!   else
+!      dgr(1:nn) = 0.0D0
+!      if(boris)then
+!         do ind=1,twotondim
+!             do j=1,nn
+!                dgr(j)=dgr(j)+uold(indp(j,ind),1)*vol(j,ind)
+!            end do
+!         end do
+!      endif
+!
+!      w(1:nn,1:ndim) = 0.0D0 ! Set to the drift velocity post-Lorentz force
+!      if(boris)then
+!         do ind=1,twotondim
+!           do idim=1,ndim
+!             do j=1,nn
+!                w(j,idim)=w(j,idim)+vol(j,ind)*&
+!                &(v(j,idim)-uold(indp(j,ind),1+idim)/&
+!                &max(uold(indp(j,ind),1),smallr))
+!            end do
+!          end do
+!         end do
+!      endif
+!      do i=1,nn
+!        nu(i)=(dgr(i)*cs/rd)*sqrt(1.+&
+!        &0.22089323345553233*&
+!        &(w(i,1)**2+w(i,2)**2+w(i,3)**2)&
+!        &/(cs*cs))
+!      end do
+!   endif
+! end subroutine StoppingRate
