@@ -10,7 +10,7 @@ subroutine move_fine(ilevel)
   ! If particle sits entirely in level ilevel, then use fine grid force
   ! for CIC interpolation. Otherwise, use coarse grid (ilevel-1) force.
   !----------------------------------------------------------------------
-  integer::igrid,jgrid,ipart,jpart,next_part,ig,ip,npart1,icpu,ind,iskip,ivar,i,ivar_dust
+  integer::igrid,jgrid,ipart,jpart,next_part,ig,ip,npart1,icpu,ind,iskip,ivar,i
   integer,dimension(1:nvector),save::ind_grid,ind_part,ind_grid_part
   character(LEN=80)::filename,fileloc
   character(LEN=5)::nchar
@@ -22,24 +22,21 @@ subroutine move_fine(ilevel)
   call title(myid,nchar)
   fileloc=TRIM(filename)//TRIM(nchar)
   open(25+myid, file = fileloc, status = 'unknown', access = 'append')
-  ivar_dust=9
-
+  ! Set unew = uold in the active region
+  do ind=1,twotondim
+     iskip=ncoarse+(ind-1)*ngridmax
+     do ivar=2,4
+        do i=1,active(ilevel)%ngrid
+           unew(active(ilevel)%igrid(i)+iskip,ivar)=&
+           &uold(active(ilevel)%igrid(i)+iskip,ivar)
+        end do
+     end do
+  end do
   ! Set unew reception cells to zero. ERM: Not sure this is necessary after init_dust.
   do icpu=1,ncpu
      do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
         do ivar=2,4
-           do i=1,reception(icpu,ilevel)%ngrid
-              unew(reception(icpu,ilevel)%igrid(i)+iskip,ivar)=0.0D0
-           end do
-        end do
-     end do
-  end do
-
-  do icpu=1,ncpu
-     do ind=1,twotondim
-        iskip=ncoarse+(ind-1)*ngridmax
-        do ivar=ivar_dust,ivar_dust+3
            do i=1,reception(icpu,ilevel)%ngrid
               unew(reception(icpu,ilevel)%igrid(i)+iskip,ivar)=0.0D0
            end do
@@ -618,6 +615,7 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
     !call ResetUnewToFluidVel(ilevel)
     !call reset_unew(ilevel)
     big_vv(1:np,1:twotondim,1:ndim)=0.0D0 ! collects velocity changes to sub-clouds
+    big_ww(1:np,1:twotondim,1:ndim)=0.0D0 !mu(v-u)
     ! might want a "big_ww"? I think that's how I'll approach it.
     ! We want to evolve each of the subclouds. Knowing the new w will
     ! allow us to compute the evolution of the sub-clouds with the drag too.
@@ -740,7 +738,6 @@ end subroutine move1
 
 !#########################################################################
 !#########################################################################
-
 subroutine EMKick(nn,dt,indp,ctm,ok,vol,mov,v,big_v,big_w)
   ! This subroutine will compute changes to sub-cloud velocity in big_v,
   ! as well as set unew's dust momentum slot to being u+du**EM.
@@ -775,7 +772,7 @@ subroutine EMKick(nn,dt,indp,ctm,ok,vol,mov,v,big_v,big_w)
           &-uold(indp(i,ind),idim+1)/max(uold(indp(i,ind),1),smallr)
         end do
 
-        big_w(i,ind,1)=-1.*& !velocity changes to gas.
+        big_w(i,ind,1)=-1.*& !velocity changes to drift
         &(ctm*dt*(2.*B(2)**2*ctm*dt*(1.+mu)**2*w(1)+&
         &B(2)*(-2.*B(1)*ctm*dt*(1.+mu)**2*w(2) + 4.*(1.+mu)*w(3)) +&
         & B(3)*(2.*B(3)*ctm*dt*(1.+mu)**2*w(1)-4.*(1.+mu)*w(2) - 2*B(1)*ctm*dt*(1.+mu)**2*w(3))))/&
@@ -794,7 +791,7 @@ subroutine EMKick(nn,dt,indp,ctm,ok,vol,mov,v,big_v,big_w)
         &((4.+(B(1)**2+B(2)**2+B(3)**2)*ctm**2*dt**2*(1.+mu)**2))
 
         do idim=1,ndim
-          vtemp(idim) = v(i,idim)-uold(indp(i,ind),1+idim)/uold(indp(i,ind),1)&
+          vtemp(idim) = v(i,idim)-uold(indp(i,ind),1+idim)/max(uold(indp(i,ind),1),smallr)&
           &+0.5*mu*big_w(i,ind,idim)/(1.+mu)
         end do
 
@@ -898,8 +895,7 @@ subroutine DragKick(nn,dt,indp,ok,vol,nu,big_v,big_w,v) ! mp is actually mov
   integer ,dimension(1:nvector,1:twotondim)::indp
   real(dp),dimension(1:nvector,1:ndim) ::v ! grain velocity
   real(dp),dimension(1:nvector,1:twotondim,1:ndim) ::big_v,big_w
-  real(dp),dimension(1:nvector,1:ndim),save ::vo ! grain velocity "new" (?)
-  real(dp) ::den_dust,den_gas,mu
+  real(dp) ::den_dust,den_gas,mu,nuj,w
   integer ::i,j,ind,idim! Just an index
   ivar_dust=9
 
@@ -908,18 +904,24 @@ subroutine DragKick(nn,dt,indp,ok,vol,nu,big_v,big_w,v) ! mp is actually mov
         den_gas=uold(indp(i,ind),1)
         den_dust=uold(indp(i,ind),ivar_dust)
         mu=den_dust/max(den_gas,smallr)
+        nuj=(1.+mu)*unew(indp(i,ind),ivar_dust)/max(uold(indp(i,ind),ivar_dust),smallr)
         do idim=1,ndim
-          big_w(i,ind,idim)=big_w(i,ind,idim)-(1.+mu)*unew(indp(i,ind),ivar_dust)*dt*&
-          &(uold(indp(i,ind),idim+ivar_dust)/max(uold(indp(i,ind),ivar_dust),smallr)&
-          &-uold(indp(i,ind),idim+1)/max(uold(indp(i,ind),1),smallr)&
-          &+big_w(i,ind,1))/(1.+(1.+mu)*unew(indp(i,ind),ivar_dust)*dt)
+          w = big_w(i,ind,idim)+&
+          &uold(indp(i,ind),ivar_dust+idim)/max(uold(indp(i,ind),ivar_dust),smallr)&
+          &-uold(indp(i,ind),1+idim)/max(uold(indp(i,ind),1),smallr)
 
-          big_v(i,ind,idim)=-dt*nu(i)*(v(i,idim)+big_v(i,ind,idim)&
-          &-uold(indp(i,ind),idim+1)/max(uold(indp(i,ind),1),smallr)&
-          &+mu*big_w(i,ind,idim)/(1.+mu))&
-          &/(1.+dt*nu(i))
+          big_w(i,ind,idim)=big_w(i,ind,idim)-&
+          &(nuj*dt+0.5*nuj*nuj*dt*dt)*w&
+          &/(1.+nuj*dt+0.5*nuj*nuj*dt*dt)
+
+          w = w + big_w(i,ind,idim)
+
+          big_v(i,ind,idim)=(-(dt*nu(i)+0.5*dt*dt*nu(i)*nu(i))*(v(i,idim)+big_v(i,ind,idim))&
+          &+dt*nu(i)*uold(indp(i,ind),1+idim)/&
+          &max(uold(indp(i,ind),1),smallr)&
+          &-dt*nu(i)*(mu-0.5*dt*nuj)*w/(1.+mu))&
+          &/(1.+dt*nu(i)+0.5*dt*dt*nu(i)*nu(i))
         end do
-
         ! big_w corresponds directly to a change in the gas velocity.
      end do
   end do
