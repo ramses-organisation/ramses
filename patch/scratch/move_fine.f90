@@ -630,9 +630,9 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   ! DRAG KICK
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-    call DragKick(np,dtnew(ilevel),indp,ok,vol,nu_stop,big_vv,big_ww,vv)
-    write(*,*)'big_vv+=',big_vv(1,1,1),big_vv(1,1,2),big_vv(1,1,3)
-    write(*,*)'big_ww+=',big_ww(1,1,1),big_ww(1,1,2),big_ww(1,1,3)
+    ! call DragKick(np,dtnew(ilevel),indp,ok,vol,nu_stop,big_vv,big_ww,vv)
+    ! write(*,*)'big_vv+=',big_vv(1,1,1),big_vv(1,1,2),big_vv(1,1,3)
+    ! write(*,*)'big_ww+=',big_ww(1,1,1),big_ww(1,1,2),big_ww(1,1,3)
     ! DragKick will modify big_ww as well as big_vv, but not vv.
     ! Now kick the dust given these quantities.
     do ind=1,twotondim
