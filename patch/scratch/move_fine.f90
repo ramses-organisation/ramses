@@ -623,16 +623,13 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
     call EMKick(np,dtnew(ilevel),indp,ctm,ok,vol,mov,vv,big_vv,big_ww)
     ! big_vv now contains changes to sub-cloud velocities. vv is still the old
     ! velocity. As well, unew's dust slot contains u**n+du**EM
-    write(*,*)'big_vv=',big_vv(1,1,1),big_vv(1,1,2),big_vv(1,1,3)
-    write(*,*)'big_ww=',big_ww(1,1,1),big_ww(1,1,2),big_ww(1,1,3)
-
+    !write(*,*)'big_vv=',big_vv(1,1,1),big_vv(1,1,2),big_vv(1,1,3)
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! DRAG KICK
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-    ! call DragKick(np,dtnew(ilevel),indp,ok,vol,nu_stop,big_vv,big_ww,vv)
-    ! write(*,*)'big_vv+=',big_vv(1,1,1),big_vv(1,1,2),big_vv(1,1,3)
-    ! write(*,*)'big_ww+=',big_ww(1,1,1),big_ww(1,1,2),big_ww(1,1,3)
+    call DragKick(np,dtnew(ilevel),indp,ok,vol,nu_stop,big_vv,big_ww,vv)
+     !write(*,*)'big_vv+=',big_vv(1,1,1),big_vv(1,1,2),big_vv(1,1,3)
     ! DragKick will modify big_ww as well as big_vv, but not vv.
     ! Now kick the dust given these quantities.
     do ind=1,twotondim
@@ -899,7 +896,7 @@ subroutine DragKick(nn,dt,indp,ok,vol,nu,big_v,big_w,v) ! mp is actually mov
   integer ,dimension(1:nvector,1:twotondim)::indp
   real(dp),dimension(1:nvector,1:ndim) ::v ! grain velocity
   real(dp),dimension(1:nvector,1:twotondim,1:ndim) ::big_v,big_w
-  real(dp) ::den_dust,den_gas,mu,nuj,w
+  real(dp) ::den_dust,den_gas,mu,nuj,w,vo
   integer ::i,j,ind,idim! Just an index
   ivar_dust=9
 
@@ -910,7 +907,7 @@ subroutine DragKick(nn,dt,indp,ok,vol,nu,big_v,big_w,v) ! mp is actually mov
         mu=den_dust/max(den_gas,smallr)
         nuj=(1.+mu)*unew(indp(i,ind),ivar_dust)/max(uold(indp(i,ind),ivar_dust),smallr)
         do idim=1,ndim
-          w = big_w(i,ind,idim)+&
+          w = &
           &uold(indp(i,ind),ivar_dust+idim)/max(uold(indp(i,ind),ivar_dust),smallr)&
           &-uold(indp(i,ind),1+idim)/max(uold(indp(i,ind),1),smallr)
 
@@ -919,12 +916,12 @@ subroutine DragKick(nn,dt,indp,ok,vol,nu,big_v,big_w,v) ! mp is actually mov
           &/(1.+nuj*dt+0.5*nuj*nuj*dt*dt)
 
           w = w + big_w(i,ind,idim)
-
-          big_v(i,ind,idim)=(-(dt*nu(i)+0.5*dt*dt*nu(i)*nu(i))*(v(i,idim)+big_v(i,ind,idim))&
-          &+dt*nu(i)*(uold(indp(i,ind),1+idim)&
+          vo = -v(i,idim)-big_v(i,ind,idim) +(uold(indp(i,ind),1+idim)&
           &+uold(indp(i,ind),ivar_dust+idim))/&
-          &max(uold(indp(i,ind),1)+uold(indp(i,ind),ivar_dust),smallr)&
-          &-dt*nu(i)*(mu-0.5*dt*nuj)*w/(1.+mu))&
+          &max(uold(indp(i,ind),1)+uold(indp(i,ind),ivar_dust),smallr)
+
+          big_v(i,ind,idim)=((dt*nu(i)+0.5*dt*dt*nu(i)*nu(i))*vo&
+          &-dt*nu(i)*mu*(1.+0.5*dt*(nu(i)-nuj))*w/(1.+mu))&
           &/(1.+dt*nu(i)+0.5*dt*dt*nu(i)*nu(i))
         end do
         ! big_w corresponds directly to a change in the gas velocity.
