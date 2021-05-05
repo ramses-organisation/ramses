@@ -1293,17 +1293,58 @@ subroutine make_trees()
       use clfind_commons
       implicit none
       integer, intent(in) :: iprog ! local prog index to add
+      integer :: i, orphan_index
+      logical :: is_already_orphan 
 
-      pmprogs(pmprog_free) = prog_id(iprog)
-      pmprogs_galaxy(pmprog_free) = galaxy_tracers(iprog)
-      pmprogs_t(pmprog_free) = ifout-1 ! prog was active clump for the last time at this timestep 
-      pmprogs_owner(pmprog_free) = myid
-      pmprogs_mass(pmprog_free) = prog_mass(iprog)
-      if (make_mock_galaxies) then
-        orphans_local_pid(pmprog_free) = prog_galaxy_local_id(iprog)
-        pmprogs_mpeak(pmprog_free) = prog_mpeak(iprog)
+      is_already_orphan = .false.
+      orphan_index = pmprog_free
+
+      ! check whether galaxy particle is already an orphan particle
+      ! only the owner is adding the new orphan, so both the orphan
+      ! and the galaxy particle must be on same rank
+      do i=1, npastprogs
+        ! no need to check the newly added past progenitors,
+        ! just check the ones you already read in
+        if (galaxy_tracers(iprog) == pmprogs_galaxy(i)) then
+          is_already_orphan = .true.
+          orphan_index = i
+          exit
+        endif
+      enddo
+
+      if (is_already_orphan) then
+
+        ! assume orphans have merged, i.e. replace already existing
+        ! orphan particle
+        pmprogs(orphan_index) = prog_id(iprog)
+        pmprogs_galaxy(orphan_index) = galaxy_tracers(iprog)
+        pmprogs_t(orphan_index) = ifout-1 ! prog was active clump for the last time at this timestep 
+        pmprogs_owner(orphan_index) = myid
+        pmprogs_mass(orphan_index) = prog_mass(iprog)
+        if (make_mock_galaxies) then
+          orphans_local_pid(orphan_index) = prog_galaxy_local_id(iprog)
+          pmprogs_mpeak(orphan_index) = prog_mpeak(iprog)
+        endif
+        pmprog_free = pmprog_free + 1
+
+      else
+
+        pmprogs(pmprog_free) = prog_id(iprog)
+        pmprogs_galaxy(pmprog_free) = galaxy_tracers(iprog)
+        pmprogs_t(pmprog_free) = ifout-1 ! prog was active clump for the last time at this timestep 
+        pmprogs_owner(pmprog_free) = myid
+        pmprogs_mass(pmprog_free) = prog_mass(iprog)
+        if (make_mock_galaxies) then
+          orphans_local_pid(pmprog_free) = prog_galaxy_local_id(iprog)
+          pmprogs_mpeak(pmprog_free) = prog_mpeak(iprog)
+        endif
+        pmprog_free = pmprog_free + 1
+
       endif
-      pmprog_free = pmprog_free + 1
+
+
+
+
 
       return
 
@@ -2775,9 +2816,6 @@ subroutine write_progenitor_data()
 #endif
 
 #ifdef MTREEDEBUG
-#ifndef WITHOUTMPI
-  integer, dimension(1:4)                :: buf
-#endif
   call mtreedebug_dump_mostbound_lists()
 #endif
 
