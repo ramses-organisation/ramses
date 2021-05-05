@@ -624,9 +624,18 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
     ! big_vv now contains changes to sub-cloud velocities. vv is still the old
     ! velocity. As well, unew's dust slot contains u**n+du**EM
     !write(*,*)'big_vv=',big_vv(1,1,1),big_vv(1,1,2),big_vv(1,1,3)
+    do ind=1,twotondim
+      do idim=1,ndim
+        do j=1,np
+          vv(j,idim)=vv(j,idim)+vol(j,ind)*big_vv(j,ind,idim)
+        end do
+      end do
+    end do
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! DRAG KICK
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  big_vv(1:np,1:twotondim,1:ndim)=0.0D0 ! collects velocity changes to sub-clouds
+  big_ww(1:np,1:twotondim,1:ndim)=0.0D0 !mu(v-u)
 
     call DragKick(np,dtnew(ilevel),indp,ok,vol,nu_stop,big_vv,big_ww,vv)
      !write(*,*)'big_vv+=',big_vv(1,1,1),big_vv(1,1,2),big_vv(1,1,3)
