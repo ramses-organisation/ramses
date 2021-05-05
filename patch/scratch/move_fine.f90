@@ -917,8 +917,9 @@ subroutine DragKick(nn,dt,indp,ok,vol,nu,big_v,big_w,v) ! mp is actually mov
           w = w + big_w(i,ind,idim)
 
           big_v(i,ind,idim)=(-(dt*nu(i)+0.5*dt*dt*nu(i)*nu(i))*(v(i,idim)+big_v(i,ind,idim))&
-          &+dt*nu(i)*uold(indp(i,ind),1+idim)/&
-          &max(uold(indp(i,ind),1),smallr)&
+          &+dt*nu(i)*(uold(indp(i,ind),1+idim)&
+          &+uold(indp(i,ind),ivar_dust+idim))/&
+          &max(uold(indp(i,ind),1)+uold(indp(i,ind),ivar_dust),smallr)&
           &-dt*nu(i)*(mu-0.5*dt*nuj)*w/(1.+mu))&
           &/(1.+dt*nu(i)+0.5*dt*dt*nu(i)*nu(i))
         end do
