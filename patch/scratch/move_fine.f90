@@ -968,7 +968,7 @@ subroutine FirstOrderDragKick(nn,dt,indp,ok,vol,nu,big_v,big_w,v) ! mp is actual
           &+uold(indp(i,ind),ivar_dust+idim))/&
           &max(uold(indp(i,ind),1)+uold(indp(i,ind),ivar_dust),smallr)
 
-          big_v(i,ind,idim)=big_v-dt*nu(i)*(big_v(i,ind,idim)-up)/(1.+dt*nu(i))
+          big_v(i,ind,idim)=(big_v(i,ind,idim)+dt*nu(i)*up)/(1.+dt*nu(i))
         end do
         ! big_w corresponds directly to a change in the gas velocity.
      end do
