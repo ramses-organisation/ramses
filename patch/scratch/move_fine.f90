@@ -628,7 +628,7 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   ! DRAG KICK
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-    call DragKick(np,dtnew(ilevel),indp,ok,vol,nu_stop,big_vv,big_ww,vv)
+    call FirstOrderDragKick(np,dtnew(ilevel),indp,ok,vol,nu_stop,big_vv,big_ww,vv)
      !write(*,*)'big_vv+=',big_vv(1,1,1),big_vv(1,1,2),big_vv(1,1,3)
     ! DragKick will modify big_ww as well as big_vv, but not vv.
     ! Now kick the dust given these quantities.
@@ -931,6 +931,49 @@ subroutine DragKick(nn,dt,indp,ok,vol,nu,big_v,big_w,v) ! mp is actually mov
 end subroutine DragKick
 !#########################################################################
 !#########################################################################
+subroutine FirstOrderDragKick(nn,dt,indp,ok,vol,nu,big_v,big_w,v) ! mp is actually mov
+  use amr_parameters
+  use hydro_parameters
+  use hydro_commons, ONLY: uold,unew,smallr,nvar,gamma
+  implicit none
+  integer::nn
+  integer ::ivar_dust ! cell-centered dust variables start.  integer ::nn ! number of cells
+  real(dp) ::dt ! timestep
+  real(dp) ::vol_loc ! cloud volume
+  real(dp),dimension(1:nvector) ::nu,mp
+  logical ,dimension(1:nvector)::ok
+  real(dp),dimension(1:nvector,1:twotondim)::vol
+  integer ,dimension(1:nvector,1:twotondim)::indp
+  real(dp),dimension(1:nvector,1:ndim) ::v ! grain velocity
+  real(dp),dimension(1:nvector,1:twotondim,1:ndim) ::big_v,big_w
+  real(dp) ::den_dust,den_gas,mu,nuj,up
+  integer ::i,j,ind,idim! Just an index
+  ivar_dust=9
+
+  do ind=1,twotondim
+     do i=1,nn
+        den_gas=uold(indp(i,ind),1)
+        den_dust=uold(indp(i,ind),ivar_dust)
+        mu=den_dust/max(den_gas,smallr)
+        nuj=(1.+mu)*unew(indp(i,ind),ivar_dust)/max(uold(indp(i,ind),ivar_dust),smallr)
+        do idim=1,ndim
+          ! w = &
+          ! &uold(indp(i,ind),ivar_dust+idim)/max(uold(indp(i,ind),ivar_dust),smallr)&
+          ! &-uold(indp(i,ind),1+idim)/max(uold(indp(i,ind),1),smallr)
+
+          big_w(i,ind,idim)=big_w(i,ind,idim)&
+          &/(1.+nuj*dt)
+
+          up = -mu*big_w(i,ind,idim)/(1.+mu)+(uold(indp(i,ind),1+idim)&
+          &+uold(indp(i,ind),ivar_dust+idim))/&
+          &max(uold(indp(i,ind),1)+uold(indp(i,ind),ivar_dust),smallr)
+
+          big_v(i,ind,idim)=big_v-dt*nu(i)*(big_v(i,ind,idim)-up)/(1.+dt*nu(i))
+        end do
+        ! big_w corresponds directly to a change in the gas velocity.
+     end do
+  end do
+end subroutine FirstOrderDragKick
 
 !#########################################################################
 !#########################################################################
