@@ -1,7 +1,6 @@
 subroutine synchro_fine(ilevel)
   use pm_commons
   use amr_commons
-  use hydro_commons
   use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
@@ -16,7 +15,6 @@ subroutine synchro_fine(ilevel)
   !--------------------------------------------------------------------
   integer::igrid,jgrid,ipart,jpart
   integer::ig,ip,npart1,isink
-  integer::i,iskip,icpu,ind,ibound,ivar,ivar_dust
   integer,dimension(1:nvector),save::ind_grid,ind_part,ind_grid_part
 
   if(numbtot(1,ilevel)==0)return
@@ -25,38 +23,6 @@ subroutine synchro_fine(ilevel)
   if(sink)then
      fsink_new=0
   endif
-
-  ! Reset uold to zero for dust mass and momentum densities
-  ivar_dust=9
-  do icpu=1,ncpu
-     do ind=1,twotondim
-        iskip=ncoarse+(ind-1)*ngridmax
-        do ivar=ivar_dust,ivar_dust+ndim
-           do i=1,reception(icpu,ilevel)%ngrid
-              uold(reception(icpu,ilevel)%igrid(i)+iskip,ivar)=0.0D0
-           end do
-        end do
-     end do
-  end do
-  do ind=1,twotondim
-     iskip=ncoarse+(ind-1)*ngridmax
-     do ivar=ivar_dust,ivar_dust+ndim
-        do i=1,active(ilevel)%ngrid
-           uold(active(ilevel)%igrid(i)+iskip,ivar)=0.0D0
-        end do
-     end do
-  end do
-  ! Reset rho in physical boundaries
-  do ibound=1,nboundary
-     do ind=1,twotondim
-        iskip=ncoarse+(ind-1)*ngridmax
-        do ivar=ivar_dust,ivar_dust+ndim
-           do i=1,boundary(ibound,ilevel)%ngrid
-              uold(boundary(ibound,ilevel)%igrid(i)+iskip,ivar)=0.0D0
-           end do
-        end do
-     end do
-  end do
 
   ! Synchronize velocity using CIC
   ig=0
@@ -92,13 +58,7 @@ subroutine synchro_fine(ilevel)
   ! End loop over grids
   if(ip>0)call sync(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
 
-  ! Update MPI boundary conditions for uold for dust mass and momentum densities
-  do ivar=ivar_dust,ivar_dust+ndim
-     call make_virtual_reverse_dp(uold(1,ivar),ilevel)
-     call make_virtual_fine_dp   (uold(1,ivar),ilevel)
-  end do
-
-  ! Sink cloud particles are used to average the grav. acceleration
+  !sink cloud particles are used to average the grav. acceleration
   if(sink)then
      if(nsink>0)then
 #ifndef WITHOUTMPI
@@ -251,10 +211,8 @@ end subroutine synchro_fine_static
 !####################################################################
 subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   use amr_commons
-  !use amr_parameters ERM
   use pm_commons
   use poisson_commons
-  use hydro_commons, ONLY: uold,unew,smallr,nvar,gamma
   implicit none
   integer::ng,np,ilevel
   integer,dimension(1:nvector)::ind_grid
@@ -263,12 +221,8 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   !
   !
   logical::error
-  integer::i,j,ind,idim,nx_loc,isink,ivar_dust
-  real(dp)::dx,scale,dx_loc,vol_loc
-  real(dp)::ctm ! ERM: recommend 1.15D3
-  real(dp)::ts !ERM: recommend 2.2D-1
-  real(dp)::rd ! ERM: Grain size parameter
-
+  integer::i,j,ind,idim,nx_loc,isink
+  real(dp)::dx,scale
   ! Grid-based arrays
   real(dp),dimension(1:nvector,1:ndim),save::x0
   integer ,dimension(1:nvector),save::ind_cell
@@ -276,16 +230,12 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   integer ,dimension(1:nvector,1:twotondim),save::nbors_father_grids
   ! Particle-based arrays
   logical ,dimension(1:nvector),save::ok
-  real(dp),dimension(1:nvector),save::mmm,dteff
+  real(dp),dimension(1:nvector),save::dteff
   real(dp),dimension(1:nvector,1:ndim),save::x,ff,new_vp,dd,dg
   integer ,dimension(1:nvector,1:ndim),save::ig,id,igg,igd,icg,icd
   real(dp),dimension(1:nvector,1:twotondim),save::vol
   integer ,dimension(1:nvector,1:twotondim),save::igrid,icell,indp,kg
   real(dp),dimension(1:3)::skip_loc
-
-  ctm = charge_to_mass
-  ts = t_stop
-  rd = sqrt(gamma)*0.62665706865775*grain_size ! constant for epstein drag law
 
   ! Mesh spacing in that level
   dx=0.5D0**ilevel
@@ -295,8 +245,6 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   if(ndim>1)skip_loc(2)=dble(jcoarse_min)
   if(ndim>2)skip_loc(3)=dble(kcoarse_min)
   scale=boxlen/dble(nx_loc)
-  dx_loc=dx*scale
-  vol_loc=dx_loc**ndim
 
   ! Lower left corner of 3x3x3 grid-cube
   do idim=1,ndim
@@ -522,22 +470,7 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   end do
 #endif
 
-  ! Compute individual time steps
-  do j=1,np
-     if(levelp(ind_part(j))>=ilevel)then
-        dteff(j)=dtnew(levelp(ind_part(j)))
-     else
-        dteff(j)=dtold(levelp(ind_part(j)))
-     endif
-  end do
-
-  ! Update particles level
-  do j=1,np
-     levelp(ind_part(j))=ilevel
-  end do
-
   ! Gather 3-force
-  ! ERM: block 1
   ff(1:np,1:ndim)=0.0D0
   if(poisson)then
      do ind=1,twotondim
@@ -545,28 +478,6 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
            do j=1,np
               ff(j,idim)=ff(j,idim)+f(indp(j,ind),idim)*vol(j,ind)
            end do
-        end do
-     end do
-  endif
-  ! Update 3-velocity
-  ! ERM: Block 2. Modifying vp instead of new_vp.
-  do idim=1,ndim
-     if(static)then
-        do j=1,np
-           vp(ind_part(j),idim)=ff(j,idim)
-        end do
-     else
-        do j=1,np
-           vp(ind_part(j),idim)=vp(ind_part(j),idim)+ff(j,idim)*0.5D0*dteff(j)
-        end do
-     endif
-  end do
-
-  ! Acceleration forces will be added here.
-  if((accel_gr(1).ne.0).or.(accel_gr(2).ne.0).or.(accel_gr(3).ne.0))then
-     do idim=1,ndim
-        do j=1,np
-           vp(ind_part(j),idim)=vp(ind_part(j),idim)+dteff(j)*accel_gr(idim)
         end do
      end do
   endif
@@ -585,17 +496,46 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      end do
   end if
 
-  ! do idim=1,ndim
-  !    do j=1,np
-  !       new_vp(j,idim)=vp(ind_part(j),idim)
-  !    end do
-  ! end do
-  !
-  ! do idim=1,ndim
-  !    do j=1,np
-  !       vp(ind_part(j),idim)=new_vp(j,idim)
-  !    end do
-  ! end do
+  ! Compute individual time steps
+  do j=1,np
+     if(levelp(ind_part(j))>=ilevel)then
+        dteff(j)=dtnew(levelp(ind_part(j)))
+     else
+        dteff(j)=dtold(levelp(ind_part(j)))
+     endif
+  end do
+
+  ! Update particles level
+  do j=1,np
+     levelp(ind_part(j))=ilevel
+  end do
+
+  ! Update 3-velocity
+  do idim=1,ndim
+     if(static)then
+        do j=1,np
+           new_vp(j,idim)=ff(j,idim)
+        end do
+     else
+        do j=1,np
+           new_vp(j,idim)=vp(ind_part(j),idim)+ff(j,idim)*0.5D0*dteff(j)
+        end do
+     endif
+  end do
+  do idim=1,ndim
+     do j=1,np
+        vp(ind_part(j),idim)=new_vp(j,idim)
+     end do
+  end do
+  
+  ! Extra acceleration forces are added here.
+  if((accel_gr(1).ne.0).or.(accel_gr(2).ne.0).or.(accel_gr(3).ne.0))then
+     do idim=1,ndim
+        do j=1,np
+           vp(ind_part(j),idim)=vp(ind_part(j),idim)+dteff(j)*accel_gr(idim)
+        end do
+     end do
+  endif
 
   ! For sink particle only, overwrite cloud particle velocity with sink velocity
   if(sink)then
@@ -613,7 +553,8 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
 end subroutine sync
 !#########################################################################
 !#########################################################################
-
+!#########################################################################
+!#########################################################################
 subroutine init_dust_fine(ilevel)
   use pm_commons
   use amr_commons
@@ -651,7 +592,6 @@ subroutine init_dust_fine(ilevel)
            unew(active(ilevel)%igrid(i)+iskip,ivar_dust)=0.0D0
         end do
   end do
-
   do icpu=1,ncpu
      do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
@@ -662,7 +602,6 @@ subroutine init_dust_fine(ilevel)
   end do
 
   ! Reset uold to zero for dust mass and momentum densities
-
   do icpu=1,ncpu
      do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
@@ -673,7 +612,6 @@ subroutine init_dust_fine(ilevel)
         end do
      end do
   end do
-
   do ind=1,twotondim
      iskip=ncoarse+(ind-1)*ngridmax
      do ivar=ivar_dust,ivar_dust+3
@@ -682,8 +620,7 @@ subroutine init_dust_fine(ilevel)
         end do
      end do
   end do
-
-
+  
   ! Reset rho in physical boundaries, may need later
   ! do ibound=1,nboundary
   !    do ind=1,twotondim
@@ -741,14 +678,6 @@ subroutine init_dust_fine(ilevel)
   ! Update MPI boundary conditions for unew for dust "mass" and "momentum" densities
   call make_virtual_reverse_dp(unew(1,ivar_dust),ilevel)
   call make_virtual_fine_dp   (unew(1,ivar_dust),ilevel)
-
-  ! ! Update MPI boundary conditions for uold for dust mass and momentum densities
-  ! do ivar=ivar_dust,ivar_dust+ndim
-  !    call make_virtual_reverse_dp(unew(1,ivar),ilevel)
-  !    call make_virtual_fine_dp   (unew(1,ivar),ilevel)
-  ! end do
-
-
 
 111 format('   Entering init_dust_fine for level ',I2)
 
@@ -1032,20 +961,6 @@ subroutine init_dust(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   end do
 #endif
 
-  ! Compute individual time steps (ERM: Unnecessary?)
-  ! do j=1,np
-  !    if(levelp(ind_part(j))>=ilevel)then
-  !       dteff(j)=dtnew(levelp(ind_part(j)))
-  !    else
-  !       dteff(j)=dtold(levelp(ind_part(j)))
-  !    endif
-  ! end do
-
-  ! Update particles level (ERM: Updating level???)
-  do j=1,np
-     levelp(ind_part(j))=ilevel
-  end do
-
   ! Gather 3-force
   ! ERM: deleted.
   ! Update 3-velocity
@@ -1067,9 +982,8 @@ subroutine init_dust(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      end do
   end do
 
-
   do ind=1,twotondim
-     do j=1,np !deposit the dust mass density.
+     do j=1,np ! deposit the dust mass density.
         if(ok(j))then
            uold(indp(j,ind),ivar_dust)=uold(indp(j,ind),ivar_dust)&
            &+mp(ind_part(j))*vol(j,ind)/vol_loc
@@ -1085,12 +999,11 @@ subroutine init_dust(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      end do
   end do
 
-
   ! I don't think we actually want to do this until after the Lorentz kick
   call InitStoppingRate(np,dtnew(ilevel),indp,vol,vv,nu_stop)
 
   do ind=1,twotondim
-     do j=1,np !deposit the weighed stopping time.
+     do j=1,np ! deposit the dust mass weighted stopping time.
         if(ok(j))then
            unew(indp(j,ind),ivar_dust)=unew(indp(j,ind),ivar_dust)+&
            &(mp(ind_part(j))*vol(j,ind)/vol_loc)*&!rho^d_ij

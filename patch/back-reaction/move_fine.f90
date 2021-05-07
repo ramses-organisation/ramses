@@ -22,6 +22,7 @@ subroutine move_fine(ilevel)
   call title(myid,nchar)
   fileloc=TRIM(filename)//TRIM(nchar)
   open(25+myid, file = fileloc, status = 'unknown', access = 'append')
+
   ! Set unew = uold in the active region
   do ind=1,twotondim
      iskip=ncoarse+(ind-1)*ngridmax
@@ -32,7 +33,7 @@ subroutine move_fine(ilevel)
         end do
      end do
   end do
-  ! Set unew reception cells to zero. ERM: Not sure this is necessary after init_dust.
+  ! Set unew reception cells to zero
   do icpu=1,ncpu
      do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
@@ -594,8 +595,6 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      endif
   end do
 
-
-
   if(boris.and.hydro)then
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! STOPPING RATE
@@ -629,7 +628,7 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     call DragKick(np,dtnew(ilevel),indp,ok,vol,nu_stop,big_vv,big_ww,vv)
-     !write(*,*)'big_vv+=',big_vv(1,1,1),big_vv(1,1,2),big_vv(1,1,3)
+    !write(*,*)'big_vv+=',big_vv(1,1,1),big_vv(1,1,2),big_vv(1,1,3)
     ! DragKick will modify big_ww as well as big_vv, but not vv.
     ! Now kick the dust given these quantities.
     vv(1:np,1:ndim)=0.0D0
@@ -732,12 +731,9 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      end do
   end do
 
-
-
 end subroutine move1
 !#########################################################################
 !#########################################################################
-
 !#########################################################################
 !#########################################################################
 subroutine EMKick(nn,dt,indp,ctm,ok,vol,mov,v,big_v,big_w)
@@ -798,8 +794,6 @@ subroutine EMKick(nn,dt,indp,ctm,ok,vol,mov,v,big_v,big_w)
           big_w(i,ind,idim)=w(idim)+big_w(i,ind,idim)
         end do
 
-
-
         big_v(i,ind,1)=v(i,1)+& ! subcloud velocity update
         &(ctm*dt*(-2.*B(2)**2*ctm*dt*vtemp(1) + B(2)*(2.*B(1)*ctm*dt*vtemp(2) - 4.*vtemp(3)) +&
         & B(3)*(-2.*B(3)*ctm*dt*vtemp(1) + 4.*vtemp(2) + 2.*B(1)*ctm*dt*vtemp(3))))/&
@@ -817,7 +811,8 @@ subroutine EMKick(nn,dt,indp,ctm,ok,vol,mov,v,big_v,big_w)
      end do
   end do
 end subroutine EMKick
-
+!#########################################################################
+!#########################################################################
 !#########################################################################
 !#########################################################################
 subroutine StoppingRate(nn,dt,indp,vol,v,nu)
@@ -929,8 +924,8 @@ end subroutine StoppingRate
 !      end do
 !   end do
 ! end subroutine OldDragKick
-! !#########################################################################
-
+!
+!#########################################################################
 !#########################################################################
 !#########################################################################
 !#########################################################################
