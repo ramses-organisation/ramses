@@ -175,7 +175,7 @@ module amr_parameters
   logical::constant_t_stop=.false.    ! Dictates whether stopping time is constant t_stop, or uses grain_size, gas density, velocity, etc.
   real(dp)::dust_to_gas=1.0          ! Dust-to-gas mass ratio.
   real(dp),dimension(1:3)::accel_gr=0 ! constant external grain force
-  integer:: second_order=.false.      ! Only works for constant t-stop
+  logical:: second_order=.false.      ! Only works for constant t-stop
 
   logical ::self_shielding=.false.
   logical ::pressure_fix=.false.
