@@ -948,29 +948,56 @@ subroutine DragKick(nn,dt,indp,ok,vol,nu,big_v,big_w,v) ! mp is actually mov
   integer ::i,j,ind,idim! Just an index
   ivar_dust=9
 
-  do ind=1,twotondim
-     do i=1,nn
-        den_gas=uold(indp(i,ind),1)
-        den_dust=uold(indp(i,ind),ivar_dust)
-        mu=den_dust/max(den_gas,smallr)
-        nuj=(1.+mu)*unew(indp(i,ind),ivar_dust)/max(uold(indp(i,ind),ivar_dust),smallr)
-        do idim=1,ndim
-          ! w = &
-          ! &uold(indp(i,ind),ivar_dust+idim)/max(uold(indp(i,ind),ivar_dust),smallr)&
-          ! &-uold(indp(i,ind),1+idim)/max(uold(indp(i,ind),1),smallr)
+  if (constant_t_stop.and.second_order)then
+    do ind=1,twotondim
+       do i=1,nn
+          den_gas=uold(indp(i,ind),1)
+          den_dust=uold(indp(i,ind),ivar_dust)
+          mu=den_dust/max(den_gas,smallr)
+          nuj=(1.+mu)*unew(indp(i,ind),ivar_dust)/max(uold(indp(i,ind),ivar_dust),smallr)
+          do idim=1,ndim
+            ! w = &
+            ! &uold(indp(i,ind),ivar_dust+idim)/max(uold(indp(i,ind),ivar_dust),smallr)&
+            ! &-uold(indp(i,ind),1+idim)/max(uold(indp(i,ind),1),smallr)
 
-          big_w(i,ind,idim)=big_w(i,ind,idim)&
-          &/(1.+nuj*dt)
+            big_w(i,ind,idim)=big_w(i,ind,idim)&
+            &/(1.+nuj*dt+0.5*nuj*nuj*dt*dt)
 
-          up = -mu*big_w(i,ind,idim)/(1.+mu)+(uold(indp(i,ind),1+idim)&
-          &+uold(indp(i,ind),ivar_dust+idim))/&
-          &max(uold(indp(i,ind),1)+uold(indp(i,ind),ivar_dust),smallr)
+            up = -mu*big_w(i,ind,idim)/(1.+mu)+(uold(indp(i,ind),1+idim)&
+            &+uold(indp(i,ind),ivar_dust+idim))/&
+            &max(uold(indp(i,ind),1)+uold(indp(i,ind),ivar_dust),smallr)
 
-          big_v(i,ind,idim)=(big_v(i,ind,idim)+dt*nu(i)*up)/(1.+dt*nu(i))
+            big_v(i,ind,idim)=(big_v(i,ind,idim)+dt*nu(i)*(1.+0.5*dt*nu(i))*up)&
+            &/(1.+dt*nu(i)*(1.+0.5*dt*nu(i)))
+          end do
+          ! big_w corresponds directly to a change in the gas velocity.
+       end do
+    end do
+   else
+     do ind=1,twotondim
+        do i=1,nn
+           den_gas=uold(indp(i,ind),1)
+           den_dust=uold(indp(i,ind),ivar_dust)
+           mu=den_dust/max(den_gas,smallr)
+           nuj=(1.+mu)*unew(indp(i,ind),ivar_dust)/max(uold(indp(i,ind),ivar_dust),smallr)
+           do idim=1,ndim
+             ! w = &
+             ! &uold(indp(i,ind),ivar_dust+idim)/max(uold(indp(i,ind),ivar_dust),smallr)&
+             ! &-uold(indp(i,ind),1+idim)/max(uold(indp(i,ind),1),smallr)
+
+             big_w(i,ind,idim)=big_w(i,ind,idim)&
+             &/(1.+nuj*dt)
+
+             up = -mu*big_w(i,ind,idim)/(1.+mu)+(uold(indp(i,ind),1+idim)&
+             &+uold(indp(i,ind),ivar_dust+idim))/&
+             &max(uold(indp(i,ind),1)+uold(indp(i,ind),ivar_dust),smallr)
+
+             big_v(i,ind,idim)=(big_v(i,ind,idim)+dt*nu(i)*up)/(1.+dt*nu(i))
+           end do
+           ! big_w corresponds directly to a change in the gas velocity.
         end do
-        ! big_w corresponds directly to a change in the gas velocity.
      end do
-  end do
+   endif
 end subroutine DragKick
 
 !#########################################################################
