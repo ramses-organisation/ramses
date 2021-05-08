@@ -948,7 +948,7 @@ subroutine DragKick(nn,dt,indp,ok,vol,nu,big_v,big_w,v) ! mp is actually mov
   integer ::i,j,ind,idim! Just an index
   ivar_dust=9
 
-  if (constant_t_stop.and.second_order)then
+  if (second_order)then
     do ind=1,twotondim
        do i=1,nn
           den_gas=uold(indp(i,ind),1)
