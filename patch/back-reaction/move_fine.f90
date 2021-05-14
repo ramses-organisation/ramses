@@ -243,7 +243,7 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   logical ,dimension(1:nvector),save::ok
   real(dp),dimension(1:nvector,1:ndim),save::x,ff,new_xp,new_vp,dd,dg
   real(dp),dimension(1:nvector,1:ndim),save::vv
-  real(dp),dimension(1:10,1:ndim),save::bb,uu
+  real(dp),dimension(1:nvector,1:ndim),save::bb,uu
   real(dp),dimension(1:nvector,1:twotondim,1:ndim),save::big_vv,big_ww
   real(dp),dimension(1:nvector),save:: nu_stop,mov ! ERM: fluid density interpolated to grain pos. and stopping times
   integer ,dimension(1:nvector,1:ndim),save::ig,id,igg,igd,icg,icd
