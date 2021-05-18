@@ -1239,7 +1239,7 @@ def make_tree(progenitors, descendants, progenitor_outputnrs, outputnrs, t):
     # if params.start != 0, then you have manually set start dir.
     startind = 0
     if params.start > 0:
-        startind = outputnrs[outputnrs == params.start]
+        startind = np.nonzero(outputnrs == params.start)[0][0]
     else:
         if not params.use_t:
             # find output closest to z=0
