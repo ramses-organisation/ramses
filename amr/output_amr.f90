@@ -7,6 +7,9 @@ subroutine dump_all
   use pm_commons
   use hydro_commons
   use cooling_module
+#if USE_TURB==1
+  use turb_commons
+#endif
   use mpi_mod
   implicit none
 #if ! defined (WITHOUTMPI) || defined (NOSYSTEM)
@@ -166,6 +169,17 @@ subroutine dump_all
 #endif
      if(myid==1.and.print_when_io) write(*,*)'End backup gadget format'
   end if
+
+#if USE_TURB==1
+     if (turb) then
+        if(myid==1.and.print_when_io) write(*,*)'Start backup turb'
+        if (myid==1) call write_turb_fields(filedir)
+#ifndef WITHOUTMPI
+        if(synchro_when_io) call MPI_BARRIER(MPI_COMM_WORLD,info)
+#endif
+        if(myid==1.and.print_when_io) write(*,*)'End backup turb'
+     end if
+#endif
 
   if(myid==1.and.print_when_io) write(*,*)'Start timer'
   ! Output timer: must be called by each process !
@@ -500,11 +514,8 @@ subroutine output_header(filename)
      ! Only used particles have a levelp > 0
      if (levelp(ipart) > 0) then
         npart_all_loc = npart_all_loc + 1
-        do ifam = -5, 5
-           if (typep(ipart)%family == ifam) then
-              npart_family_loc(ifam) = npart_family_loc(ifam) + 1
-           end if
-        end do
+        ifam = typep(ipart)%family
+        npart_family_loc(ifam) = npart_family_loc(ifam) + 1
      end if
   end do
 

@@ -21,11 +21,17 @@ subroutine read_params
 #ifndef WITHOUTMPI
   integer::dummy_io,ierr,info2
 #endif
-
+#if NDIM==1
+  integer, parameter :: max_level_wout_quadhilbert = 61
+#elif NDIM==2
+  integer, parameter :: max_level_wout_quadhilbert = 29
+#elif NDIM==3
+  integer, parameter :: max_level_wout_quadhilbert = 19
+#endif
   !--------------------------------------------------
   ! Namelist definitions
   !--------------------------------------------------
-  namelist/run_params/clumpfind,cosmo,pic,sink,lightcone,poisson,hydro,rt,verbose,debug &
+  namelist/run_params/clumpfind,cosmo,pic,sink,tracer,lightcone,poisson,hydro,rt,verbose,debug &
        & ,nrestart,ncontrol,nstepmax,nsubcycle,nremap,ordering &
        & ,bisec_tol,static,overload,cost_weighting,aton,nrestart_quad,restart_remap &
        & ,static_dm,static_gas,static_stars,convert_birth_times,use_proper_time,remap_pscalar &
@@ -44,6 +50,9 @@ subroutine read_params
        & ,theta_camera,phi_camera,dtheta_camera,dphi_camera,focal_camera,dist_camera,ddist_camera &
        & ,perspective_camera,smooth_frame,shader_frame,tstart_theta_camera,tstart_phi_camera &
        & ,tend_theta_camera,tend_phi_camera,method_frame,varmin_frame,varmax_frame
+  namelist/tracer_params/MC_tracer,tracer_feed,tracer_feed_fmt &
+       & ,tracer_mass,tracer_first_balance_part_per_cell &
+       & ,tracer_first_balance_levelmin
 
   ! MPI initialization
 #ifndef WITHOUTMPI
@@ -156,6 +165,10 @@ subroutine read_params
   rewind(1)
   read(1,NML=amr_params)
   rewind(1)
+  read(1,NML=tracer_params,END=84)
+84 continue
+  if (tracer_first_balance_levelmin <= 0) tracer_first_balance_levelmin = levelmax + 1
+  rewind(1)
   read(1,NML=lightcone_params,END=83)
 83 continue
   rewind(1)
@@ -209,6 +222,10 @@ subroutine read_params
      do i=1,noutput
         tout(i)=dble(i)*delta_tout
      end do
+     if(tout(noutput).LT.tend)then
+        noutput=noutput+1
+        tout(noutput)=tend
+     endif
   else if(aend>0)then
      if(delta_aout==0)delta_aout=aend
      noutput=MIN(int(aend/delta_aout),MAXOUT)
@@ -282,6 +299,9 @@ subroutine read_params
   if (clumpfind .or. sink)call read_clumpfind_params
   if (unbind)call read_unbinding_params
   if (make_mergertree)call read_mergertree_params
+#if USE_TURB==1
+  call read_turb_params(nml_ok)
+#endif
 #endif
   if (movie)call set_movie_vars
 
@@ -307,6 +327,29 @@ subroutine read_params
   end if
   if(nregion>MAXREGION)then
      write(*,*) 'Error: nregion>MAXREGION'
+     call clean_stop
+  end if
+#ifndef QUADHILBERT
+  if(nlevelmax>=max_level_wout_quadhilbert) then
+     if (myid == 1) then
+        write(*,*) "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+        write(*,"(a,i2,a)")"WARNING: running with nlevelmax>=", max_level_wout_quadhilbert, " will likely fail."
+        write(*,*)"It is recommended to compiling with -DQUADHILBERT"
+        write(*,*) "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+     end if
+  end if
+#endif
+
+  !-----------------
+  ! MC tracer
+  !-----------------
+  if(MC_tracer .and. (.not. tracer))then
+     write(*,*)'Error: you have activated the MC tracer but not the tracers.'
+     call clean_stop
+  end if
+
+  if(MC_tracer .and. (.not. pic)) then
+     write(*,*)'Error: you have activated the MC tracer but pic is false.'
      call clean_stop
   end if
 

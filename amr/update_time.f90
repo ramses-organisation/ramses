@@ -193,6 +193,9 @@ subroutine update_time(ilevel)
   use pm_commons
   use hydro_commons
   use cooling_module
+#if USE_TURB==1
+  use turb_commons
+#endif
   use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
@@ -204,6 +207,9 @@ subroutine update_time(ilevel)
   real(dp)::dt,econs,mcons
 #ifdef SOLVERmhd
   real(dp)::sqrt_aexp_prev
+#endif
+#if USE_TURB==1
+  real(kind=dp) :: cur_turb_rms
 #endif
   integer::i,itest
 
@@ -352,6 +358,16 @@ subroutine update_time(ilevel)
      hexp = 0
      texp = t
   end if
+
+#if USE_TURB==1
+  if (turb) then
+     call turb_check_time
+     if (myid==1) then
+        call current_turb_rms(cur_turb_rms)
+        write (6,*) ' Current turbulent rms: ', cur_turb_rms
+     end if
+  end if
+#endif
 
 777 format(' Main step=',i7,' mcons=',1pe9.2,' econs=',1pe9.2, &
          & ' epot=',1pe9.2,' ekin=',1pe9.2)

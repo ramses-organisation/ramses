@@ -69,12 +69,13 @@ module amr_parameters
   logical::static_gas=.false. ! Static mode for gas only activated
   logical::static_stars=.false.! Static mode for stars only activated
   logical::tracer  =.false.   ! Tracer particles activated
+  logical::MC_tracer = .false.! Use Monte Carlo tracer particle (https://arxiv.org/abs/1810.11401)
   logical::lightcone=.false.  ! Enable lightcone generation
   logical::clumpfind=.false.  ! Enable clump finder
   logical::unbind=.false.     ! Enable particle unbinding for the clump finder
   logical::make_mergertree=.false. ! Make on the fly mergertrees
   logical::aton=.false.       ! Enable ATON coarse grid radiation transfer
-  
+
   ! Mesh parameters
   integer::nx=1,ny=1,nz=1                  ! Number of coarse cells in each dimension
   integer::levelmin=1                      ! Full refinement up to levelmin
@@ -100,7 +101,7 @@ module amr_parameters
   integer::ncontrol=1            ! Write control variables
   integer::nremap=0              ! Load balancing frequency (0: never)
   integer,allocatable,dimension(:)::remap_pscalar
-  
+
   ! Output parameters
   integer::iout=1                ! Increment for output times
   integer::ifout=1               ! Increment for output files
@@ -167,6 +168,14 @@ module amr_parameters
   real(dp)::mass_sne_min=10          ! Minimum mass of a single supernova in solar mass
   integer::momentum_feedback=0       ! Use supernovae momentum feedback if cooling radius not resolved
   integer::strict_equilibrium=0      ! Hydro scheme to preserve exactly hydrostatic equilibrium
+  real(dp)::charge_to_mass=0.0       ! Charge to mass ratio for dust grains
+  real(dp)::t_stop=0.0               ! Stopping time for dust grains
+  real(dp)::grain_size=0.0           ! Grain size parameter rho_d^i r_d/(rho_g l_0). May wan to get rid of t_stop.
+  logical::boris=.false.             ! Activate boris pusher for PIC solver for grain dynamics
+  logical::constant_t_stop=.false.    ! Dictates whether stopping time is constant t_stop, or uses grain_size, gas density, velocity, etc.
+  real(dp)::dust_to_gas=1.0          ! Dust-to-gas mass ratio.
+  real(dp),dimension(1:3)::accel_gr=0 ! constant external grain force
+  logical:: second_order=.false.      ! Only works for constant t-stop
 
   logical ::self_shielding=.false.
   logical ::pressure_fix=.false.
