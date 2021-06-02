@@ -6,7 +6,7 @@
 # Do we want a debug build? 1=Yes, 0=No
 DEBUG = 0
 # Compiler flavor: GNU or INTEL
-COMPILER = GNU
+COMPILER = INTEL
 # Size of vector cache
 NVECTOR = 32
 # Number of dimensions
@@ -14,18 +14,18 @@ NDIM = 3
 # Float precision size
 NPRE = 8
 # hydro/mhd solver
-SOLVER = hydro
+SOLVER = mhd  
 # Patch
-PATCH = '../patch/convection'
+PATCH = '../patch/mhdconv'   
 # Use RT? 1=Yes, 0=No
 RT = 0
 # Use turbulence? 1=Yes, 0=No (requires fftw3)
 USE_TURB=0
 # Use MPI? 1=Yes, 0=No
 MPI = 1
-MPIF90 = ftn
+MPIF90 = mpiifort  
 # Root name of executable
-EXEC = ramsesTest
+EXEC = ramses3DMHD_eiger
 # Number of additional energies
 NENER = 0
 # Use Grackle cooling? 1=Yes, 0=No
