@@ -776,13 +776,13 @@ subroutine EMKick(nn,dt,indp,ctm,ok,vol,mov,v,big_v,big_w)
         & B(3)*(2.*B(3)*ctm*dt*(1.+mu)**2*w(1)-4.*(1.+mu)*w(2) - 2*B(1)*ctm*dt*(1.+mu)**2*w(3))))/&
         &((4.+(B(1)**2+B(2)**2+B(3)**2)*ctm**2*dt**2*(1.+mu)**2))
 
-        big_w(i,ind,2)=-1.*&
+        big_w(i,ind,2)=-1.*& !velocity changes to drift
         &(ctm*dt*(2.*B(3)**2*ctm*dt*(1.+mu)**2*w(2)+&
         &B(3)*(-2.*B(2)*ctm*dt*(1.+mu)**2*w(3) + 4.*(1.+mu)*w(1)) +&
         & B(1)*(2.*B(1)*ctm*dt*(1.+mu)**2*w(2)-4.*(1.+mu)*w(3) - 2*B(2)*ctm*dt*(1.+mu)**2*w(1))))/&
         &((4.+(B(1)**2+B(2)**2+B(3)**2)*ctm**2*dt**2*(1.+mu)**2))
 
-        big_w(i,ind,3)=-1.*&
+        big_w(i,ind,3)=-1.*& !velocity changes to drift
         &(ctm*dt*(2.*B(1)**2*ctm*dt*(1.+mu)**2*w(3)+&
         &B(1)*(-2.*B(3)*ctm*dt*(1.+mu)**2*w(1) + 4.*(1.+mu)*w(2)) +&
         & B(2)*(2.*B(2)*ctm*dt*(1.+mu)**2*w(3)-4.*(1.+mu)*w(1) - 2*B(3)*ctm*dt*(1.+mu)**2*w(2))))/&
