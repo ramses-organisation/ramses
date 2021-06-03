@@ -1,7 +1,0 @@
-INPUT params
-magnetic field strenght Bx: 0 Gauss
-magnetic field strenght By: 0 Gauss
-magnetic field strenght Bz: 5e-07 Gauss
-alven speed: 16858.388283618384 cm/s
-alfvenic mach number: 0.22657369674588057
-sound speed: 74405.76079987931cm/s

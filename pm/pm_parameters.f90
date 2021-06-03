@@ -5,10 +5,12 @@ module pm_parameters
   integer::npart=0                  ! Actual number of particles
   integer::nsink=0                  ! Actual number of sinks
   integer::iseed=0                  ! Seed for stochastic star formation
+  integer::tseed=0                  ! Seed for MC tracers
   integer::nstar_tot=0              ! Total number of star particles
   real(dp)::mstar_tot=0             ! Total star mass
   real(dp)::mstar_lost=0            ! Missing star mass
 
+  integer::ntracer_tot=0            ! Total number of tracers
   ! More sink related parameters, can all be set in namelist file
 
   integer::ir_cloud=4                        ! Radius of cloud region in unit of grid spacing (i.e. the ACCRETION RADIUS)
@@ -70,5 +72,13 @@ module pm_parameters
      integer(1) :: family
      integer(1) :: tag
   end type part_t
+
+  ! MC Tracer
+  character(LEN=1025) :: tracer_feed             ! Filename to read the tracer from
+  character(LEN=  10) :: tracer_feed_fmt='ascii' ! Format of the input (ascii or binary)
+  real(dp)::tracer_mass=-1.0                     ! Mass of the tracers, used for outputs and seed
+
+  integer :: tracer_first_balance_levelmin = -1  ! Set to >0 to add more weight on level finer than this
+  integer :: tracer_first_balance_part_per_cell = 0 ! Typical initial number of parts per cell
 
 end module pm_parameters

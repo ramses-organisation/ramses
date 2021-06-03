@@ -305,9 +305,14 @@ subroutine add_gravity_source_terms(ilevel)
   ! total energy are modified in array unew.
   !--------------------------------------------------------------------------
   integer::i,ind,iskip,ind_cell,imat
-  real(dp)::d,d_mat,u,v,w,d_old,fact
-  real(dp),dimension(1:nmat)::e_kin,e_prim
-  
+  real(dp)::d,d_mat,u,v,w,e_kin,e_tot,d_old,fact
+  real(dp)::one=1.0_dp,half=0.5_dp,zero=0.0_dp
+  real(dp),dimension(1:nmat)::e_prim
+#if NVAR > NDIM + 3*NMAT
+  integer::ipscal,npscal
+  real(dp)::s_entry,e_th,e_cold
+  real(dp),dimension(1:nvector),save::g_mat,e_mat,s_mat
+#endif
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
   
@@ -318,44 +323,72 @@ subroutine add_gravity_source_terms(ilevel)
         ind_cell = active(ilevel)%igrid(i) + iskip
         
         d = 0
-        do imat=1,nmat
-          d = d + max(unew(ind_cell,nmat+imat),smallr)
+        do imat = 1,nmat
+          d = d + unew(ind_cell,nmat+imat)
         end do
 
-        u=0; v=0; w=0
-        if(ndim>0) u = unew(ind_cell,2*nmat+1)/max(d,smallr)
-        if(ndim>1) v = unew(ind_cell,2*nmat+2)/max(d,smallr)
-        if(ndim>2) w = unew(ind_cell,2*nmat+3)/max(d,smallr)
+        u=0; v=0; w=0; e_kin=0.0d0
+        if(ndim>0) u = unew(ind_cell,2*nmat+1)/d
+        e_kin = e_kin + half*u**2
+        if(ndim>1) v = unew(ind_cell,2*nmat+2)/d
+        e_kin = e_kin + half*v**2
+        if(ndim>2) w = unew(ind_cell,2*nmat+3)/d
+        e_kin = e_kin + half*w**2
         
         do imat=1,nmat
-          d_mat         = unew(ind_cell,nmat+imat)/max(unew(ind_cell,imat),smallf)
-          e_kin(imat)   = 0.5d0*d_mat*(u**2+v**2+w**2)
-          e_prim(imat)  = unew(ind_cell,2*nmat+ndim+imat)/max(unew(ind_cell,imat),smallf) - e_kin(imat)
+
+           ! Check that entropy is correct on entry 
+           s_entry = unew(ind_cell,3*nmat+ndim+imat)/unew(ind_cell,nmat+imat)
+           if(s_entry<0)then
+              write(*,*)'gravity: negative entropy on entry',imat,s_entry
+           endif
+
+           ! Compute thermal energy using the total energy
+           e_tot = unew(ind_cell,2*nmat+ndim+imat)/unew(ind_cell,nmat+imat)
+           e_prim(imat) = e_tot - e_kin
+           g_mat(1) = unew(ind_cell,nmat+imat)/unew(ind_cell,imat)
+           e_mat(1) = e_prim(imat)*g_mat(1)
+           call eos_s(g_mat,e_mat,s_mat,imat,.false.,1)
+           e_th = s_mat(1)*g_mat(1)**eos_params(imat,1)
+           e_cold=eos_params(imat,3)*(g_mat(1)/eos_params(imat,4))**eos_params(imat,2)           
+           if(e_th < 0.001*e_kin .or. e_th < 0.001*e_cold)then
+!           if(.true.)then
+              ! If thermal energy is too small then use entropy instead
+              s_mat(1) = s_entry
+              call eos_s(g_mat,e_mat,s_mat,imat,.true.,1)
+              e_prim(imat) = e_mat(1)/g_mat(1)
+           else
+              ! Otherwise keep thermal energy but update entropy accordingly              
+              unew(ind_cell,3*nmat+ndim+imat) = unew(ind_cell,nmat+imat)*s_mat(1)
+           endif
         end do
         
         d_old = 0
-        do imat=1,nmat
-          d_old = d_old + max(uold(ind_cell,nmat+imat),smallr)
+        do imat = 1,nmat
+          d_old = d_old + uold(ind_cell,nmat+imat)
         end do
-        fact    = d_old/d*0.5d0*dtnew(ilevel)
+        fact = d_old/d*0.5d0*dtnew(ilevel)
         
+        e_kin=0d0
         if(ndim>0)then
            u = u + f(ind_cell,1)*fact
            unew(ind_cell,2*nmat+1) = d*u
+           e_kin = e_kin + half*u**2
         endif
         if(ndim>1)then
            v = v + f(ind_cell,2)*fact
            unew(ind_cell,2*nmat+2) = d*v
+           e_kin = e_kin + half*v**2
         end if
         if(ndim>2)then
            w = w + f(ind_cell,3)*fact
            unew(ind_cell,2*nmat+3) = d*w
+           e_kin = e_kin + half*w**2
         endif
         
         do imat=1,nmat
-          d_mat       = unew(ind_cell,nmat+imat)/max(unew(ind_cell,imat),smallf)
-          e_kin(imat) = 0.5d0*d_mat*(u**2+v**2+w**2)
-          unew(ind_cell,2*nmat+ndim+imat) = unew(ind_cell,imat)*(e_prim(imat) + e_kin(imat))
+           e_tot = e_prim(imat) + e_kin
+           unew(ind_cell,2*nmat+ndim+imat) = unew(ind_cell,nmat+imat)*e_tot
         end do
      end do
   end do
@@ -384,7 +417,7 @@ subroutine pressure_relaxation(ilevel)
   real(dp),dimension(1:nvector,1:ndim),save::vv
   real(dp)::smallgamma,biggamma,p_0,e_c,p_c,a0,rho_0,eta
   real(dp)::skip_loc,dx,eps,scale,dx_loc
-  real(dp)::one=1.0_dp, half=0.5_dp, zero=0.0_dp
+  real(dp)::one=1.0_dp,half=0.5_dp,zero=0.0_dp
   real(dp),dimension(1:8)::xc
   integer::ix,iy,iz,nx_loc
   logical::error,inv
@@ -530,20 +563,25 @@ subroutine pressure_relaxation2(ilevel)
   !-------------------------------------------------------------------
   integer::i,ivar,imat,idim,ind,iskip,ncache,igrid,ngrid
   integer,dimension(1:nvector),save::ind_grid,ind_cell
-  real(dp)::ekin,dtot,etot,ptot
-  real(dp),dimension(1:nmat),save::ff,gg,ee,pp,rc2
+  real(dp)::dtot,ptot
+  real(dp),dimension(1:nmat),save::ff_old,ff,gg,ee,pp,rc2
   real(dp),dimension(1:nmat),save::ff_new,ee_new,w
   real(dp),dimension(1:ndim),save::vv
+  real(dp)::error
   real(dp)::smallgamma,biggamma,p_0,e_c,p_c,delpc,a0,rho_0,eta
+  real(dp)::E_1,E_2,A_1,A_2,C_v,T_0,E_0,p_c_1,p_c_2
   real(dp)::skip_loc,dx,eps,scale,dx_loc,dd,ddd
   real(dp)::t12,t13,t14,t23,t24,t34
   real(dp)::t123,t124,t125,t134,t135,t145
-  real(dp)::t234,t234,t245,t345
-  real(dp)::one=1.0_dp, half=0.5_dp, zero=0.0_dp
+  real(dp)::t234,t235,t245,t345
+  real(dp)::one=1.0_dp,half=0.5_dp, zero=0.0_dp
   real(dp),dimension(1:8)::xc
   integer::ix,iy,iz,nx_loc,iter
-  logical::error,inv
-
+  integer::iter_max=100,iter_mean
+  logical::inv
+  real(dp),dimension(1:nvector),save::g_mat,e_mat,s_mat
+  real(dp)::s_entry,e_th,e_cold,e_kin,e_tot
+  
   dx=0.5d0**ilevel
   skip_loc=dble(icoarse_min)
   nx_loc=(icoarse_max-icoarse_min+1)
@@ -580,6 +618,11 @@ subroutine pressure_relaxation2(ilevel)
         do i=1,ngrid
            if(son(ind_cell(i))==0)then
               
+              ! Compute old volume fraction
+              do imat = 1,nmat
+                 ff_old(imat) = uold(ind_cell(i),imat)
+              end do
+
               ! Compute total mass density
               dtot=0
               do imat = 1,nmat
@@ -592,126 +635,237 @@ subroutine pressure_relaxation2(ilevel)
               end do
         
               ! Compute specific kinetic energy
-              ekin=0.0
+              e_kin=0.0
               do idim = 1,ndim
-                 ekin = ekin + half*vv(idim)**2
+                 e_kin = e_kin + half*vv(idim)**2
               end do
 
-              do iter=1,10
+              iter = 0
+              error = 1
+              do while(error.GT.1d-6.AND.iter<iter_max)
               
-              ! Compute volume fraction and true density
-              do imat = 1,nmat
-                 ff(imat) = uold(ind_cell(i),imat)
-                 gg(imat) = uold(ind_cell(i),nmat+imat)/ff(imat)
-              end do
-
-              ! Compute specific internal energy
-              do imat = 1,nmat
-                 ee(imat) = uold(ind_cell(i),2*nmat+ndim+imat)/ff(imat)/gg(imat)-ekin
-              end do
-        
-              ! Mie-Gruneisen
-              ptot = 0.0
-              do imat = 1,nmat
-                 smallgamma=eos_params(imat,1);biggamma=eos_params(imat,2);p_0=eos_params(imat,3);rho_0=eos_params(imat,4)
-                 eta = gg(imat)/rho_0
-                 p_c = p_0 * eta**biggamma
-                 e_c = p_c / (biggamma-one)
-                 delpc = biggamma * p_c 
-                 pp(imat) = (smallgamma-1)*(gg(imat)*ee(imat)-e_c) + p_c
-                 rc2(imat) = delpc + smallgamma * (pp(imat)-p_c)
-                 ptot = ptot + ff(imat)*pp(imat)
-              end do
-
-              do imat = 1,nmat
-                 smallgamma = eos_params(imat,1)
-                 rc2(imat) = rc2(imat) + (smallgamma-1)*(ptot-pp(imat))
-              end do
-
-              ! Compute weights
-              do imat = 1,nmat
-                 w(imat) = rc2(imat)/ff(imat)
-              end do
-
-              ! Compute new volume fraction
+                 ! Compute volume fraction and true density
+                 do imat = 1,nmat
+                    ff(imat) = uold(ind_cell(i),imat)
+                    gg(imat) = uold(ind_cell(i),nmat+imat)/ff(imat)
+                 end do
+                 
+                 ! Compute specific internal energy
+                 do imat = 1,nmat
+                    e_tot = uold(ind_cell(i),2*nmat+ndim+imat)/uold(ind_cell(i),nmat+imat)
+                    ee(imat) = e_tot-e_kin
+                    if(ee(imat)<0)then
+                       write(*,*)'relaxation: negative energy',iter,ff(1),ff(2),gg(1),gg(2),ee(imat),e_tot,e_kin
+                    endif
+                 end do
+                                  
+                 ptot = 0.0
+                 do imat = 1,nmat
+                    
+                    ! Mie-Gruneisen
+                    if(eos_name == 'mie-grueneisen')then
+                       smallgamma=eos_params(imat,1);biggamma=eos_params(imat,2);p_0=eos_params(imat,3);rho_0=eos_params(imat,4)
+                       eta = gg(imat)/rho_0
+                       p_c = p_0 * eta**biggamma
+                       e_c = p_c / (biggamma-one)
+                       delpc = biggamma * p_c 
+                       
+                       ! Cochran-Chan
+                    else if(eos_name == 'cochran-chan')then
+                       smallgamma=eos_params(imat,1);rho_0=eos_params(imat,2)
+                       E_1=eos_params(imat,3);E_2=eos_params(imat,4)
+                       A_1=eos_params(imat,5);A_2=eos_params(imat,6)
+                       C_v=eos_params(imat,7);T_0=eos_params(imat,8)
+                       
+                       ! Define the Cochran-Chan constant term
+                       E_0 = A_1 / (E_1-one) - A_2 / (E_2-one) + rho_0 * C_v * T_0
+                       
+                       ! Update Mie-Gruneisen terms for each material
+                       eta   = gg(imat)/rho_0
+                       p_c_1 = A_1 * eta**E_1
+                       p_c_2 = A_2 * eta**E_2
+                       p_c   = p_c_1 - p_c_2
+                       e_c   = p_c_1 / (E_1-1.0) - p_c_2 / (E_2-1.0) - eta * E_0
+                       delpc = p_c_1 * E_1 - p_c_2 * E_2
+                    end if
+                    
+                    pp(imat) = (smallgamma-1)*(gg(imat)*ee(imat)-e_c) + p_c
+                    rc2(imat) = delpc + smallgamma * (pp(imat)-p_c)
+                    ptot = ptot + ff(imat)*pp(imat)
+                    if(rc2(imat)<0.0)then
+                      write(*,*) "Sound speed",imat,ff(imat),gg(imat),ee(imat),e_c,pp(imat),rc2(imat)
+                    end if
+                    
+                 end do
+              
+                 do imat = 1,nmat
+                    smallgamma = eos_params(imat,1)
+                    rc2(imat) = rc2(imat) + (smallgamma-1)*(ptot-pp(imat))
+                    if(rc2(imat)<0.0)then
+                      write(*,*) "Correction sound speed", rc2(imat), ptot,pp(imat)
+                    end if
+                 end do
+                 
+                 ! Compute weights
+                 do imat = 1,nmat
+                    w(imat) = rc2(imat)/ff(imat)
+                 end do
+                 
+                 ! Compute new volume fraction
 #if NMAT==2
-              dd=w(1)+w(2)
-              
-              ff_new(1) = ff(1) + (pp(1)-pp(2))/dd
-              ff_new(2) = ff(2) + (pp(2)-pp(1))/dd
+                 dd=w(1)+w(2)
+                 
+                 ff_new(1) = ff(1) + (pp(1)-pp(2))/dd
+                 ff_new(2) = ff(2) + (pp(2)-pp(1))/dd
+
+                 if(ff_new(1)<0.0)then
+!                    write(*,*) "relaxation: negative volume fraction",ff_new(1),ff_new(2), ff(1), ff(2)
+                    ff_new(1) = ff(1) - ff(1)/2.0 !1d-8 !ff(1) + (pp(1)-pp(2))/dd/2.0
+                    ff_new(2) = ff(2) + ff(1)/2.0 !1d0 - 1d-8 !ff(2) + (pp(2)-pp(1))/dd/2.0
+                 end if
+
+                 if(ff_new(2)<0.0)then
+!                    write(*,*) "relaxation: negative volume fraction",ff_new(1),ff_new(2), ff(1), ff(2)
+                    ff_new(1) = ff(1) + ff(2)/2.0 !1d0 - 1d-8 !ff(1) + (pp(1)-pp(2))/dd/2.0
+                    ff_new(2) = ff(2) - ff(2)/2.0 !1d-8 !ff(2) + (pp(2)-pp(1))/dd/2.0
+                 end if
 #endif
 #if NMAT==3
-              dd=3*w(1)*w(2)+3*w(1)*w(3)+3*w(2)*w(3)
-              
-              ff_new(1) = ff(1) + ((w(2)+2*w(3))*(pp(1)-pp(2))+(2*w(2)+w(3))*(pp(1)-pp(3))+(w(2)-w(3))*(pp(2)-pp(3)))/dd
-              ff_new(2) = ff(2) + ((w(3)+2*w(1))*(pp(2)-pp(3))+(2*w(3)+w(1))*(pp(2)-pp(1))+(w(3)-w(1))*(pp(3)-pp(1)))/dd
-              ff_new(3) = ff(3) + ((w(1)+2*w(2))*(pp(3)-pp(1))+(2*w(1)+w(2))*(pp(3)-pp(2))+(w(1)-w(2))*(pp(1)-pp(2)))/dd
+                 dd=3*w(1)*w(2)+3*w(1)*w(3)+3*w(2)*w(3)
+                 
+                 ff_new(1) = ff(1) + ((w(2)+2*w(3))*(pp(1)-pp(2))+(2*w(2)+w(3))*(pp(1)-pp(3))+(w(2)-w(3))*(pp(2)-pp(3)))/dd
+                 ff_new(2) = ff(2) + ((w(3)+2*w(1))*(pp(2)-pp(3))+(2*w(3)+w(1))*(pp(2)-pp(1))+(w(3)-w(1))*(pp(3)-pp(1)))/dd
+                 ff_new(3) = ff(3) + ((w(1)+2*w(2))*(pp(3)-pp(1))+(2*w(1)+w(2))*(pp(3)-pp(2))+(w(1)-w(2))*(pp(1)-pp(2)))/dd
 #endif
 #if NMAT==4
-              t12=w(1)*w(2)
-              t13=w(1)*w(3)
-              t14=w(1)*w(4)
-              t23=w(2)*w(3)
-              t24=w(2)*w(4)
-              t34=w(3)*w(4)
-              dd=4*w(1)*w(2)*w(3)+4*w(1)*w(2)*w(4)+4*w(1)*w(3)*w(4)+4*w(2)*w(3)*w(4)
-              
-              ff_new(1) = ff(1) + ((t23+t24+2*t34)*(pp(1)-pp(2))+(t23+2*t24+t34)*(pp(1)-pp(3))+(2*t23+t24+t34)*(pp(1)-pp(4))+ &
-                   &                     (t24-t34)*(pp(2)-pp(3))+      (t23-t34)*(pp(2)-pp(4))+      (t23-t24)*(pp(3)-pp(4)))/dd
-              ff_new(2) = ff(2) + ((t34+t13+2*t14)*(pp(2)-pp(3))+(t34+2*t13+t14)*(pp(2)-pp(4))+(2*t34+t13+t14)*(pp(2)-pp(1))+ &
-                   &                     (t13-t14)*(pp(3)-pp(4))+      (t34-t14)*(pp(3)-pp(1))+      (t34-t13)*(pp(4)-pp(1)))/dd
-              ff_new(3) = ff(3) + ((t14+t24+2*t12)*(pp(3)-pp(4))+(t14+2*t24+t12)*(pp(3)-pp(1))+(2*t14+t24+t12)*(pp(3)-pp(2))+ &
-                   &                     (t24-t12)*(pp(4)-pp(1))+      (t14-t12)*(pp(4)-pp(2))+      (t14-t24)*(pp(1)-pp(2)))/dd
-              ff_new(4) = ff(4) + ((t12+t13+2*t23)*(pp(4)-pp(1))+(t12+2*t13+t23)*(pp(4)-pp(2))+(2*t12+t13+t23)*(pp(4)-pp(3))+ &
-                   &                     (t13-t23)*(pp(1)-pp(2))+      (t12-t23)*(pp(1)-pp(3))+      (t12-t13)*(pp(2)-pp(3)))/dd
+                 t12=w(1)*w(2)
+                 t13=w(1)*w(3)
+                 t14=w(1)*w(4)
+                 t23=w(2)*w(3)
+                 t24=w(2)*w(4)
+                 t34=w(3)*w(4)
+                 dd=4*w(1)*w(2)*w(3)+4*w(1)*w(2)*w(4)+4*w(1)*w(3)*w(4)+4*w(2)*w(3)*w(4)
+                 
+                 ff_new(1) = ff(1) + ((t23+t24+2*t34)*(pp(1)-pp(2))+(t23+2*t24+t34)*(pp(1)-pp(3))+(2*t23+t24+t34)*(pp(1)-pp(4))+ &
+                      &                     (t24-t34)*(pp(2)-pp(3))+      (t23-t34)*(pp(2)-pp(4))+      (t23-t24)*(pp(3)-pp(4)))/dd
+                 ff_new(2) = ff(2) + ((t34+t13+2*t14)*(pp(2)-pp(3))+(t34+2*t13+t14)*(pp(2)-pp(4))+(2*t34+t13+t14)*(pp(2)-pp(1))+ &
+                      &                     (t13-t14)*(pp(3)-pp(4))+      (t34-t14)*(pp(3)-pp(1))+      (t34-t13)*(pp(4)-pp(1)))/dd
+                 ff_new(3) = ff(3) + ((t14+t24+2*t12)*(pp(3)-pp(4))+(t14+2*t24+t12)*(pp(3)-pp(1))+(2*t14+t24+t12)*(pp(3)-pp(2))+ &
+                      &                     (t24-t12)*(pp(4)-pp(1))+      (t14-t12)*(pp(4)-pp(2))+      (t14-t24)*(pp(1)-pp(2)))/dd
+                 ff_new(4) = ff(4) + ((t12+t13+2*t23)*(pp(4)-pp(1))+(t12+2*t13+t23)*(pp(4)-pp(2))+(2*t12+t13+t23)*(pp(4)-pp(3))+ &
+                      &                     (t13-t23)*(pp(1)-pp(2))+      (t12-t23)*(pp(1)-pp(3))+      (t12-t13)*(pp(2)-pp(3)))/dd
 #endif
 #if NMAT==5
-              t123=w(1)*w(2)*w(3)
-              t124=w(1)*w(2)*w(4)
-              t125=w(1)*w(2)*w(5)
-              t134=w(1)*w(3)*w(4)
-              t135=w(1)*w(3)*w(5)
-              t145=w(1)*w(4)*w(5)
-              t234=w(2)*w(3)*w(4)
-              t235=w(2)*w(3)*w(5)
-              t245=w(2)*w(4)*w(5)
-              t345=w(3)*w(4)*w(5)
-              dd=5*w(1)*w(2)*w(3)*w(4)+5*w(1)*w(2)*w(3)*w(5)+5*w(1)*w(2)*w(4)*w(5)+5*w(1)*w(3)*w(4)*w(5)+5*w(2)*w(3)*w(4)*w(5)
-              
-              ff_new(1) = ff(1) + ((t234+t235+t245+2*t345)*(pp(1)-pp(2))+(t234+t235+2*t245+t345)*(pp(1)-pp(3))+(t234+2*t235+t245+t345)*(pp(1)-pp(4))+(2*t234+t235+t245+t345)*(pp(1)-pp(5))+ &
-                   &                           (t245-t345)*(pp(2)-pp(3))+            (t235-t345)*(pp(2)-pp(4))+            (t234-t345)*(pp(2)-pp(5))+ &
-                   &                           (t235-t245)*(pp(3)-pp(4))+            (t234-t245)*(pp(3)-pp(5))+            (t234-t235)*(pp(4)-pp(5)))/dd
-              ff_new(2) = ff(2) + ((t345+t134+t135+2*t145)*(pp(2)-pp(3))+(t345+t134+2*t135+t145)*(pp(2)-pp(4))+(t345+2*t134+t135+t145)*(pp(2)-pp(5))+(2*t345+t134+t135+t145)*(pp(2)-pp(1))+ &
-                   &                           (t135-t145)*(pp(3)-pp(4))+            (t134-t145)*(pp(3)-pp(5))+            (t345-t145)*(pp(3)-pp(1))+ &
-                   &                           (t134-t135)*(pp(4)-pp(5))+            (t345-t135)*(pp(4)-pp(1))+            (t345-t134)*(pp(5)-pp(1)))/dd
-              ff_new(3) = ff(3) + ((t145+t245+t124+2*t125)*(pp(3)-pp(4))+(t145+t245+2*t124+t125)*(pp(3)-pp(5))+(t145+2*t245+t124+t125)*(pp(3)-pp(1))+(2*t145+t245+t124+t125)*(pp(3)-pp(2))+ &
-                   &                           (t124-t125)*(pp(4)-pp(5))+            (t245-t125)*(pp(4)-pp(1))+            (t145-t125)*(pp(4)-pp(2))+ &
-                   &                           (t245-t124)*(pp(5)-pp(1))+            (t145-t124)*(pp(5)-pp(2))+            (t145-t245)*(pp(1)-pp(2)))/dd
-              ff_new(4) = ff(4) + ((t125+t135+t235+2*t123)*(pp(4)-pp(5))+(t125+t135+2*t235+t123)*(pp(4)-pp(1))+(t125+2*t135+t235+t123)*(pp(4)-pp(2))+(2*t125+t135+t235+t123)*(pp(4)-pp(3))+ &
-                   &                           (t235-t123)*(pp(5)-pp(1))+            (t135-t123)*(pp(5)-pp(2))+            (t125-t123)*(pp(5)-pp(3))+ &
-                   &                           (t135-t235)*(pp(1)-pp(2))+            (t125-t235)*(pp(1)-pp(3))+            (t125-t135)*(pp(2)-pp(3)))/dd
-              ff_new(5) = ff(5) + ((t123+t124+t134+2*t234)*(pp(5)-pp(1))+(t123+t124+2*t134+t234)*(pp(5)-pp(2))+(t123+2*t124+t134+t234)*(pp(5)-pp(3))+(2*t123+t124+t134+t234)*(pp(5)-pp(4))+ &
-                   &                           (t134-t234)*(pp(1)-pp(5))+            (t124-t234)*(pp(1)-pp(3))+            (t123-t234)*(pp(1)-pp(4))+ &
-                   &                           (t124-t134)*(pp(2)-pp(3))+            (t123-t134)*(pp(2)-pp(4))+            (t123-t124)*(pp(3)-pp(4)))/dd
+                 t123=w(1)*w(2)*w(3)
+                 t124=w(1)*w(2)*w(4)
+                 t125=w(1)*w(2)*w(5)
+                 t134=w(1)*w(3)*w(4)
+                 t135=w(1)*w(3)*w(5)
+                 t145=w(1)*w(4)*w(5)
+                 t234=w(2)*w(3)*w(4)
+                 t235=w(2)*w(3)*w(5)
+                 t245=w(2)*w(4)*w(5)
+                 t345=w(3)*w(4)*w(5)
+                 dd=5*w(1)*w(2)*w(3)*w(4)+5*w(1)*w(2)*w(3)*w(5)+5*w(1)*w(2)*w(4)*w(5)+5*w(1)*w(3)*w(4)*w(5)+5*w(2)*w(3)*w(4)*w(5)
+                 
+                 ff_new(1) = ff(1) + ((t234+t235+t245+2*t345)*(pp(1)-pp(2))+(t234+t235+2*t245+t345)*(pp(1)-pp(3))+(t234+2*t235+t245+t345)*(pp(1)-pp(4))+(2*t234+t235+t245+t345)*(pp(1)-pp(5))+ &
+                      &                           (t245-t345)*(pp(2)-pp(3))+            (t235-t345)*(pp(2)-pp(4))+            (t234-t345)*(pp(2)-pp(5))+ &
+                      &                           (t235-t245)*(pp(3)-pp(4))+            (t234-t245)*(pp(3)-pp(5))+            (t234-t235)*(pp(4)-pp(5)))/dd
+                 ff_new(2) = ff(2) + ((t345+t134+t135+2*t145)*(pp(2)-pp(3))+(t345+t134+2*t135+t145)*(pp(2)-pp(4))+(t345+2*t134+t135+t145)*(pp(2)-pp(5))+(2*t345+t134+t135+t145)*(pp(2)-pp(1))+ &
+                      &                           (t135-t145)*(pp(3)-pp(4))+            (t134-t145)*(pp(3)-pp(5))+            (t345-t145)*(pp(3)-pp(1))+ &
+                      &                           (t134-t135)*(pp(4)-pp(5))+            (t345-t135)*(pp(4)-pp(1))+            (t345-t134)*(pp(5)-pp(1)))/dd
+                 ff_new(3) = ff(3) + ((t145+t245+t124+2*t125)*(pp(3)-pp(4))+(t145+t245+2*t124+t125)*(pp(3)-pp(5))+(t145+2*t245+t124+t125)*(pp(3)-pp(1))+(2*t145+t245+t124+t125)*(pp(3)-pp(2))+ &
+                      &                           (t124-t125)*(pp(4)-pp(5))+            (t245-t125)*(pp(4)-pp(1))+            (t145-t125)*(pp(4)-pp(2))+ &
+                      &                           (t245-t124)*(pp(5)-pp(1))+            (t145-t124)*(pp(5)-pp(2))+            (t145-t245)*(pp(1)-pp(2)))/dd
+                 ff_new(4) = ff(4) + ((t125+t135+t235+2*t123)*(pp(4)-pp(5))+(t125+t135+2*t235+t123)*(pp(4)-pp(1))+(t125+2*t135+t235+t123)*(pp(4)-pp(2))+(2*t125+t135+t235+t123)*(pp(4)-pp(3))+ &
+                      &                           (t235-t123)*(pp(5)-pp(1))+            (t135-t123)*(pp(5)-pp(2))+            (t125-t123)*(pp(5)-pp(3))+ &
+                      &                           (t135-t235)*(pp(1)-pp(2))+            (t125-t235)*(pp(1)-pp(3))+            (t125-t135)*(pp(2)-pp(3)))/dd
+                 ff_new(5) = ff(5) + ((t123+t124+t134+2*t234)*(pp(5)-pp(1))+(t123+t124+2*t134+t234)*(pp(5)-pp(2))+(t123+2*t124+t134+t234)*(pp(5)-pp(3))+(2*t123+t124+t134+t234)*(pp(5)-pp(4))+ &
+                      &                           (t134-t234)*(pp(1)-pp(5))+            (t124-t234)*(pp(1)-pp(3))+            (t123-t234)*(pp(1)-pp(4))+ &
+                      &                           (t124-t134)*(pp(2)-pp(3))+            (t123-t134)*(pp(2)-pp(4))+            (t123-t124)*(pp(3)-pp(4)))/dd
 #endif
-              ! Compute new specific internal energy
+                 ! Compute new specific internal energy
+                 do imat = 1,nmat
+                    ee_new(imat) = ee(imat) - ptot * (ff_new(imat) - ff(imat)) / (ff(imat)*gg(imat))
+                 end do
+                 
+                 ! Store new volume fraction
+                 do imat = 1,nmat
+                    uold(ind_cell(i),imat) = ff_new(imat)
+                 end do
+                 
+!!$                 ! Compute new entropy
+!!$                 do imat = 1,nmat
+!!$                    s_entry = uold(ind_cell(i),3*nmat+ndim+imat)/uold(ind_cell(i),nmat+imat)
+!!$                    g_mat(1) = uold(ind_cell(i),nmat+imat)/uold(ind_cell(i),imat)
+!!$                    e_mat(1) = ee_new(imat)*g_mat(1)
+!!$                    call eos_s(g_mat,e_mat,s_mat,imat,.false.,1)
+!!$                    e_th = s_mat(1)*g_mat(1)**eos_params(imat,1)
+!!$                    e_cold = eos_params(imat,3)*(g_mat(1)/eos_params(imat,4))**eos_params(imat,2)
+!!$                    if(e_th < 0.001*e_kin .or. e_th < 0.001*e_cold)then
+!!$!                       write(*,*)'relaxation: entropy iter=',iter,imat,g_mat(1),e_th,e_cold,s_mat(1),s_entry
+!!$                       s_mat(1) = s_entry
+!!$                       call eos_s(g_mat,e_mat,s_mat,imat,.true.,1)
+!!$                       ee_new(imat) = e_mat(1)/g_mat(1)
+!!$                    else
+!!$                       uold(ind_cell(i),3*nmat+ndim+imat) = uold(ind_cell(i),nmat+imat)*s_mat(1)
+!!$                    endif
+!!$                 end do
+
+                 ! Store new partial total energy
+                 do imat=1,nmat
+                    e_tot = ee_new(imat) + e_kin
+                    uold(ind_cell(i),2*nmat+ndim+imat) = uold(ind_cell(i),nmat+imat)*e_tot
+                 end do
+
+                 iter=iter+1
+                 error=abs(pp(1)-pp(2))/abs(pp(1)+pp(2))
+                 
+              end do
+              
+              ! Compute new entropy
               do imat = 1,nmat
-                 ee_new(imat) = ee(imat) - ptot * (ff_new(imat) - ff(imat)) / (ff(imat)*gg(imat))
+                 
+                 ! Check that entropy is correct on entry 
+                 s_entry = unew(ind_cell(i),3*nmat+ndim+imat)/unew(ind_cell(i),nmat+imat)
+                 if(s_entry<0)then
+                    write(*,*)'end relaxation: negative entropy on entry',imat,s_entry
+                 endif
+              
+                 s_entry = uold(ind_cell(i),3*nmat+ndim+imat)/uold(ind_cell(i),nmat+imat)
+                 g_mat(1) = uold(ind_cell(i),nmat+imat)/uold(ind_cell(i),imat)
+                 e_tot = uold(ind_cell(i),2*nmat+ndim+imat)/uold(ind_cell(i),nmat+imat)
+                 e_mat(1) = (e_tot-e_kin)*g_mat(1)
+                 call eos_s(g_mat,e_mat,s_mat,imat,.false.,1)
+                 e_th = s_mat(1)*g_mat(1)**eos_params(imat,1)
+                 e_cold = eos_params(imat,3)*(g_mat(1)/eos_params(imat,4))**eos_params(imat,2)
+                 if(e_th < 0.001*e_kin .or. e_th < 0.001*e_cold)then
+                    s_mat(1) = s_entry
+                    call eos_s(g_mat,e_mat,s_mat,imat,.true.,1)
+                    ee_new(imat) = e_mat(1)/g_mat(1)
+                    e_tot = ee_new(imat) + e_kin
+                    uold(ind_cell(i),2*nmat+ndim+imat) = uold(ind_cell(i),nmat+imat)*e_tot
+                 else
+                    uold(ind_cell(i),3*nmat+ndim+imat) = uold(ind_cell(i),nmat+imat)*s_mat(1)
+                 endif
+                 
               end do
-
-              ! Store new volume fraction
+              
+              ! Check new entropy
               do imat = 1,nmat
-                 uold(ind_cell(i),imat) = ff_new(imat)
+                 g_mat(1) = uold(ind_cell(i),nmat+imat)/uold(ind_cell(i),imat)
+                 e_tot = uold(ind_cell(i),2*nmat+ndim+imat)/uold(ind_cell(i),nmat+imat)
+                 e_mat(1) = (e_tot-e_kin)*g_mat(1)
+                 call eos_s(g_mat,e_mat,s_mat,imat,.false.,1)
+                 if(s_mat(1)<0)then
+                    write(*,*)'end relaxation: negative entropy iter=',iter,imat,g_mat(1),e_mat(1),s_mat(1)
+                 endif
               end do
 
-              ! Store new partial total energy
-              do imat=1,nmat
-                 uold(ind_cell(i),2*nmat+ndim+imat) = ff(imat)*gg(imat)*(ee_new(imat) + ekin)
-              end do
-
-!              write(*,*)iter,ff(1),ff(2),pp(1),pp(2)
-
-              end do
+              if(iter.EQ.iter_max)then
+!              if(iter>1)then
+                 write(*,*)'pressure relaxation iter=',iter,ff(1),ff(2),gg(1),gg(2),pp(1),pp(2),error
+              endif
               
            endif
         end do

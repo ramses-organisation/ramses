@@ -1,0 +1,45 @@
+This namelist contains various input parameters for RAMSES runs
+make NDIM=2 SOLVER=mhd MPI=1 PATCH=../patch/mhd/aw/
+This is the circular Alfven wave test as in Stone and Gardiner (2005).
+
+&RUN_PARAMS
+hydro=.true.
+nrestart=0
+ncontrol=1
+nsubcycle=1*1,2
+/
+
+&AMR_PARAMS 
+levelmin=7
+levelmax=7
+ngridmax=100000
+nexpand=1
+boxlen=1.0
+/
+
+&INIT_PARAMS
+nregion=2
+/
+
+&OUTPUT_PARAMS
+foutput=10
+noutput=1
+tout=1.0
+/
+
+&HYDRO_PARAMS
+gamma=1.6666667
+courant_factor=0.8
+slope_type=2
+riemann='hlld'
+riemann2d='hlld'
+/
+
+&REFINE_PARAMS 
+err_grad_p=0.1
+interpol_var=0
+interpol_type=2
+/
+
+
+

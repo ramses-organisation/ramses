@@ -14,7 +14,7 @@ subroutine synchro_fine(ilevel)
   ! the force. Otherwise, use coarse level force and coarse level CIC.
   !--------------------------------------------------------------------
   integer::igrid,jgrid,ipart,jpart
-  integer::ig,ip,npart1,isink
+  integer::ig,ip,npart1,isink,local_counter
   integer,dimension(1:nvector),save::ind_grid,ind_part,ind_grid_part
 
   if(numbtot(1,ilevel)==0)return
@@ -35,23 +35,36 @@ subroutine synchro_fine(ilevel)
         ig=ig+1
         ind_grid(ig)=igrid
         ipart=headp(igrid)
+        local_counter = 0
         ! Loop over particles
         do jpart=1,npart1
            if(ig==0)then
               ig=1
               ind_grid(ig)=igrid
            end if
-           ip=ip+1
-           ind_part(ip)=ipart
-           ind_grid_part(ip)=ig
-           if(ip==nvector)then
-              call sync(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
-              ip=0
-              ig=0
+           ! MC TRACER PATCH
+           if (is_not_tracer(typep(ipart))) then
+              local_counter=local_counter+1
+              ip=ip+1
+              ind_part(ip)=ipart
+              ind_grid_part(ip)=ig
+              if(ip==nvector)then
+                 call sync(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
+                 local_counter=0
+                 ip=0
+                 ig=0
+              end if
+           else
+              ! Update level for tracer particles
+              levelp(ipart) = ilevel
            end if
            ipart=nextp(ipart)  ! Go to next particle
         end do
         ! End loop over particles
+        ! If there was no particle in the grid, remove the grid from the buffer
+        if (local_counter == 0 .and. ig > 0) then
+           ig=ig-1
+        end if
      end if
      igrid=next(igrid)   ! Go to next grid
   end do

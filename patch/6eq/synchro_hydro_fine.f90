@@ -57,9 +57,10 @@ subroutine synchydrofine1(ind_cell,ncell,dteff)
   !-------------------------------------------------------------------
   ! Gravity update for hydro variables
   !-------------------------------------------------------------------
-  integer::i,idim,neul=2*nmat+ndim,nndim=ndim
+  integer::i,idim,neul=2*nmat+ndim
   real(dp),dimension(1:nvector),save::pp,dtot
-
+  real(dp)::d_mat
+  
   ! Compute total density
   dtot(1:ncell) = 0.0
   do imat=1,nmat
@@ -70,47 +71,44 @@ subroutine synchydrofine1(ind_cell,ncell,dteff)
 
   ! Compute internal + magnetic + radiative energies
   do imat=1,nmat
-    do i=1,ncell
-       pp(i) = uold(ind_cell(i),neul+imat)/max(uold(ind_cell(i),imat),smallf)
-    end do
-    do idim=1,nndim
-       do i=1,ncell
-          pp(i) = pp(i) - 0.5d0*uold(ind_cell(i),2*nmat+idim)**2/max(dtot(i),smallr)
-       end do
-    end do
-    do i=1,ncell
-       uold(ind_cell(i),neul+imat) = pp(i)
-    end do
+     do i=1,ncell
+        pp(i) = uold(ind_cell(i),neul+imat)/uold(ind_cell(i),imat)
+     end do
+     do idim=1,ndim
+        do i=1,ncell
+           d_mat = uold(ind_cell(i),nmat+imat)/uold(ind_cell(i),imat)
+           pp(i) = pp(i) - 0.5d0*d_mat*(uold(ind_cell(i),2*nmat+idim)/max(dtot(i),smallr))**2
+        end do
+     end do
+     do i=1,ncell
+        uold(ind_cell(i),neul+imat) = pp(i)
+     end do
   end do
-
+  
   ! Update momentum
   do idim=1,ndim
      do i=1,ncell
         pp(i) = uold(ind_cell(i),2*nmat+idim) + dtot(i)*f(ind_cell(i),idim)*dteff
      end do
-     if(strict_equilibrium>0)then
-        do i=1,ncell
-           pp(i) = pp(i) - rho_eq(ind_cell(i))*f(ind_cell(i),idim)*dteff
-        end do
-     endif
      do i=1,ncell
         uold(ind_cell(i),2*nmat+idim)=pp(i)
      end do
   end do
-
+  
   ! Update total energy
   do imat=1,nmat
-    do i=1,ncell
-       pp(i) = uold(ind_cell(i),neul+imat)
-    end do
-    do idim=1,nndim
-       do i=1,ncell
-          pp(i) = pp(i) + 0.5d0*uold(ind_cell(i),2*nmat+idim)**2/max(dtot(i),smallr)
-       end do
-    end do
-    do i=1,ncell
-       uold(ind_cell(i),neul+imat) = pp(i)*uold(ind_cell(i),imat)
-    end do
+     do i=1,ncell
+        pp(i) = uold(ind_cell(i),neul+imat)
+     end do
+     do idim=1,ndim
+        do i=1,ncell
+           d_mat = uold(ind_cell(i),nmat+imat)/uold(ind_cell(i),imat)
+           pp(i) = pp(i) + 0.5d0*d_mat*(uold(ind_cell(i),2*nmat+idim)/max(dtot(i),smallr))**2
+        end do
+     end do
+     do i=1,ncell
+        uold(ind_cell(i),neul+imat) = pp(i)*uold(ind_cell(i),imat)
+     end do
   end do
 
 end subroutine synchydrofine1

@@ -306,6 +306,7 @@ SUBROUTINE quick_sort_int_int(list, order, n)
   ! (order) in the same way.
   !------------------------------------------------------------
   
+  use amr_parameters, ONLY: i8b
   IMPLICIT NONE
   ! Quick sort routine from:
   ! Brainerd, W.S., Goldberg, C.H. & Adams, J.C. (1990) "Programmer's Guide to
@@ -314,7 +315,7 @@ SUBROUTINE quick_sort_int_int(list, order, n)
 
 
   INTEGER :: n
-  INTEGER, DIMENSION (1:n), INTENT(INOUT)  :: list
+  INTEGER(i8b), DIMENSION (1:n), INTENT(INOUT)  :: list
   INTEGER, DIMENSION (1:n), INTENT(INOUT)  :: order
 
 
@@ -328,7 +329,7 @@ CONTAINS
 
     !     Local variables
     INTEGER             :: i, j, itemp
-    INTEGER             :: reference, temp
+    INTEGER(i8b)        :: reference, temp
     INTEGER, PARAMETER  :: max_simple_sort_size = 6
 
     IF (right_end < left_end + max_simple_sort_size) THEN
@@ -376,7 +377,8 @@ CONTAINS
     INTEGER, INTENT(IN) :: left_end, right_end
 
     !     Local variables
-    INTEGER             :: i, j, itemp, temp
+    INTEGER             :: i, j, itemp
+    INTEGER(i8b)        :: temp
 
     DO i = left_end, right_end - 1
        DO j = i+1, right_end

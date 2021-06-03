@@ -557,7 +557,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
   integer::i2min,i2max,j2min,j2max,k2min,k2max
   integer::i3min,i3max,j3min,j3max,k3min,k3max
   real(dp)::dflux_x,dflux_y,dflux_z
-  real(dp)::dx,scale,oneontwotondim
+  real(dp)::dx,scale,oneontwotondim,d
   real(dp)::dflux,weight
 
   oneontwotondim = 1d0/dble(twotondim)
@@ -689,6 +689,40 @@ subroutine godfine1(ind_grid,ncache,ilevel)
   ! Compute flux using second-order Godunov method
   !-----------------------------------------------
   call mag_unsplit(uloc,gloc,flux,emfx,emfy,emfz,tmp,dx,dx,dx,dtnew(ilevel),ncache)
+  !--------------------------------------
+  ! Store the fluxes for later use
+  !--------------------------------------
+  if (MC_tracer) then
+   do idim=1,ndim
+      i0=0; j0=0; k0=0
+      if(idim==1)i0=1
+      if(idim==2)j0=1
+      if(idim==3)k0=1
+      do k2=k2min,k2max
+         do j2=j2min,j2max
+            do i2=i2min,i2max
+               ind_son=1+i2+2*j2+4*k2
+               iskip=ncoarse+(ind_son-1)*ngridmax
+               do i=1,ncache
+                  ind_cell(i)=iskip+ind_grid(i)
+               end do
+               i3=1+i2
+               j3=1+j2
+               k3=1+k2
+               do i=1,ncache
+                  d = max(uold(ind_cell(i),1), smallr)
+                  ! Copy left flux
+                  fluxes(ind_cell(i),(idim-1)*2+1)= flux(i,i3   ,j3   ,k3,   1,idim)&
+                       / d
+                  ! Copy right flux
+                  fluxes(ind_cell(i),(idim-1)*2+2)=-flux(i,i3+i0,j3+j0,k3+k0,1,idim)&
+                       / d
+               end do
+            end do
+         end do
+      end do
+   end do
+end if
 
   if(ischeme.eq.1)then
   !---------------------------------
