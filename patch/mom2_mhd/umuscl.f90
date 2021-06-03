@@ -797,7 +797,7 @@ SUBROUTINE trace3d(q,pin,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
   INTEGER ::ir, iu, iv, iw, ip, iA, iB, iC, is
   REAL(dp)::dtdx, dtdy, dtdz, smallp
   REAL(dp)::r, u, v, w, p, A, B, C
-  REAL(dp)::rini, uini, vini, wini, pini
+  REAL(dp)::rini, uini, vini, wini, pini, Aini, Bini, Cini
   REAL(dp)::ELL, ELR, ERL, ERR
   REAL(dp)::FLL, FLR, FRL, FRR
   REAL(dp)::GLL, GLR, GRL, GRR
@@ -810,6 +810,7 @@ SUBROUTINE trace3d(q,pin,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
   REAL(dp)::dBLx, dBRx, dBLz, dBRz
   REAL(dp)::dCLx, dCRx, dCLy, dCRy
   REAL(DP)::sAL0, sAR0, sBL0, sBR0, sCL0, sCR0
+  REAL(dp)::smallrr
 #if NENER>0
   real(dp),dimension(1:nener)::e, dex, dey, dez, se0
   integer ::irad
@@ -822,6 +823,7 @@ SUBROUTINE trace3d(q,pin,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
   dtdy = dt/dy
   dtdz = dt/dz
   smallp = smallr*smallc**2/gamma
+  smallrr =0.001
 
   ilo=MIN(1,iu1+1); ihi=MAX(1,iu2-1)
   jlo=MIN(1,ju1+1); jhi=MAX(1,ju2-1)
@@ -871,8 +873,11 @@ SUBROUTINE trace3d(q,pin,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               p =    q(l,i,j,k,ip)
               pini = q(l,i,j,k,ip)
               A =    q(l,i,j,k,iA)
+              Aini = q(l,i,j,k,iA)
               B =    q(l,i,j,k,iB)
+              Bini = q(l,i,j,k,iB)
               C =    q(l,i,j,k,iC)
+              Cini = q(l,i,j,k,iC)
 #if NENER>0
               do irad=1,nener
                  e(irad) = q(l,i,j,k,iC+irad)
@@ -1016,9 +1021,10 @@ SUBROUTINE trace3d(q,pin,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qp(l,i,j,k,iA,1) = AL
               qp(l,i,j,k,iB,1) = B - dBx
               qp(l,i,j,k,iC,1) = C - dCx
-              if (qp(l,i,j,k,ir,1) < smallr) then
+              if (qp(l,i,j,k,ir,1) < smallrr) then
                   qp(l,i,j,k,ir,1) = rini
                   qp(l,i,j,k,iu,1) = uini
+                  qp(l,i,j,k,iv,1) = vini
                   qp(l,i,j,k,iw,1) = wini
                   qp(l,i,j,k,ip,1) = pini
               endif
@@ -1039,7 +1045,7 @@ SUBROUTINE trace3d(q,pin,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qm(l,i,j,k,iA,1) = AR
               qm(l,i,j,k,iB,1) = B + dBx
               qm(l,i,j,k,iC,1) = C + dCx
-              if (qm(l,i,j,k,ir,1) < smallr) then
+              if (qm(l,i,j,k,ir,1) < smallrr) then
                   qm(l,i,j,k,ir,1) = rini
                   qm(l,i,j,k,iu,1) = uini
                   qm(l,i,j,k,iv,1) = vini
@@ -1063,7 +1069,7 @@ SUBROUTINE trace3d(q,pin,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qp(l,i,j,k,iA,2) = A - dAy
               qp(l,i,j,k,iB,2) = BL
               qp(l,i,j,k,iC,2) = C - dCy
-              if (qp(l,i,j,k,ir,2) < smallr) then
+              if (qp(l,i,j,k,ir,2) < smallrr) then
                   qp(l,i,j,k,ir,2) = rini
                   qp(l,i,j,k,iu,2) = uini
                   qp(l,i,j,k,iv,2) = vini
@@ -1087,7 +1093,7 @@ SUBROUTINE trace3d(q,pin,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qm(l,i,j,k,iA,2) = A + dAy
               qm(l,i,j,k,iB,2) = BR
               qm(l,i,j,k,iC,2) = C + dCy
-              if (qm(l,i,j,k,ir,2) < smallr) then
+              if (qm(l,i,j,k,ir,2) < smallrr) then
                   qm(l,i,j,k,ir,2) = rini
                   qm(l,i,j,k,iu,2) = uini
                   qm(l,i,j,k,iv,2) = vini
@@ -1111,7 +1117,7 @@ SUBROUTINE trace3d(q,pin,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qp(l,i,j,k,iA,3) = A - dAz
               qp(l,i,j,k,iB,3) = B - dBz
               qp(l,i,j,k,iC,3) = CL
-              if (qp(l,i,j,k,ir,3) < smallr) then
+              if (qp(l,i,j,k,ir,3) < smallrr) then
                   qp(l,i,j,k,ir,3) = rini
                   qp(l,i,j,k,iu,3) = uini
                   qp(l,i,j,k,iv,3) = vini
@@ -1135,7 +1141,7 @@ SUBROUTINE trace3d(q,pin,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qm(l,i,j,k,iA,3) = A + dAz
               qm(l,i,j,k,iB,3) = B + dBz
               qm(l,i,j,k,iC,3) = CR
-              if (qm(l,i,j,k,ir,3) < smallr) then
+              if (qm(l,i,j,k,ir,3) < smallrr) then
                   qm(l,i,j,k,ir,3) = rini
                   qm(l,i,j,k,iu,3) = uini
                   qm(l,i,j,k,iv,3) = vini
@@ -1159,7 +1165,7 @@ SUBROUTINE trace3d(q,pin,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qRT(l,i,j,k,iA,1) = A + (+dAy+dAz)
               qRT(l,i,j,k,iB,1) = BR+ (   +dBRz)
               qRT(l,i,j,k,iC,1) = CR+ (+dCRy   )
-              if (qRT(l,i,j,k,ir,1) < smallr) then
+              if (qRT(l,i,j,k,ir,1) < smallrr) then
                   qRT(l,i,j,k,ir,1) = rini
                   qRT(l,i,j,k,iu,1) = uini
                   qRT(l,i,j,k,iv,1) = vini
@@ -1184,7 +1190,7 @@ SUBROUTINE trace3d(q,pin,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qRB(l,i,j,k,iA,1) = A + (+dAy-dAz)
               qRB(l,i,j,k,iB,1) = BR+ (   -dBRz)
               qRB(l,i,j,k,iC,1) = CL+ (+dCLy   )
-              if (qRB(l,i,j,k,ir,1) < smallr) then
+              if (qRB(l,i,j,k,ir,1) < smallrr) then
                   qRB(l,i,j,k,ir,1) = rini
                   qRB(l,i,j,k,iu,1) = uini
                   qRB(l,i,j,k,iv,1) = vini
@@ -1209,7 +1215,7 @@ SUBROUTINE trace3d(q,pin,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qLT(l,i,j,k,iA,1) = A + (-dAy+dAz)
               qLT(l,i,j,k,iB,1) = BL+ (   +dBLz)
               qLT(l,i,j,k,iC,1) = CR+ (-dCRy   )
-              if (qLT(l,i,j,k,ir,1) < smallr) then
+              if (qLT(l,i,j,k,ir,1) < smallrr) then
                   qLT(l,i,j,k,ir,1) = rini
                   qLT(l,i,j,k,iu,1) = uini
                   qLT(l,i,j,k,iv,1) = vini
@@ -1234,7 +1240,7 @@ SUBROUTINE trace3d(q,pin,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qLB(l,i,j,k,iA,1) = A + (-dAy-dAz)
               qLB(l,i,j,k,iB,1) = BL+ (   -dBLz)
               qLB(l,i,j,k,iC,1) = CL+ (-dCLy   )
-              if (qLB(l,i,j,k,ir,1) < smallr) then
+              if (qLB(l,i,j,k,ir,1) < smallrr) then
                   qLB(l,i,j,k,ir,1) = rini
                   qLB(l,i,j,k,iu,1) = uini
                   qLB(l,i,j,k,iv,1) = vini
@@ -1259,7 +1265,7 @@ SUBROUTINE trace3d(q,pin,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qRT(l,i,j,k,iA,2) = AR+ (   +dARz)
               qRT(l,i,j,k,iB,2) = B + (+dBx+dBz)
               qRT(l,i,j,k,iC,2) = CR+ (+dCRx   )
-              if (qRT(l,i,j,k,ir,2) < smallr) then
+              if (qRT(l,i,j,k,ir,2) < smallrr) then
                   qRT(l,i,j,k,ir,2) = rini
                   qRT(l,i,j,k,iu,2) = uini
                   qRT(l,i,j,k,iv,2) = vini
@@ -1284,7 +1290,7 @@ SUBROUTINE trace3d(q,pin,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qRB(l,i,j,k,iA,2) = AR+ (   -dARz)
               qRB(l,i,j,k,iB,2) = B + (+dBx-dBz)
               qRB(l,i,j,k,iC,2) = CL+ (+dCLx   )
-              if (qRB(l,i,j,k,ir,2) < smallr) then
+              if (qRB(l,i,j,k,ir,2) < smallrr) then
                   qRB(l,i,j,k,ir,2) = rini
                   qRB(l,i,j,k,iu,2) = uini
                   qRB(l,i,j,k,iv,2) = vini
@@ -1309,7 +1315,7 @@ SUBROUTINE trace3d(q,pin,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qLT(l,i,j,k,iA,2) = AL+ (   +dALz)
               qLT(l,i,j,k,iB,2) = B + (-dBx+dBz)
               qLT(l,i,j,k,iC,2) = CR+ (-dCRx   )
-              if (qLT(l,i,j,k,ir,2) < smallr) then
+              if (qLT(l,i,j,k,ir,2) < smallrr) then
                   qLT(l,i,j,k,ir,2) = rini
                   qLT(l,i,j,k,iu,2) = uini
                   qLT(l,i,j,k,iv,2) = vini
@@ -1334,7 +1340,7 @@ SUBROUTINE trace3d(q,pin,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qLB(l,i,j,k,iA,2) = AL+ (   -dALz)
               qLB(l,i,j,k,iB,2) = B + (-dBx-dBz)
               qLB(l,i,j,k,iC,2) = CL+ (-dCLx   )
-              if (qLB(l,i,j,k,ir,2) < smallr) then
+              if (qLB(l,i,j,k,ir,2) < smallrr) then
                   qLB(l,i,j,k,ir,2) = rini
                   qLB(l,i,j,k,iu,2) = uini
                   qLB(l,i,j,k,iv,2) = vini
@@ -1359,7 +1365,7 @@ SUBROUTINE trace3d(q,pin,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qRT(l,i,j,k,iA,3) = AR+ (   +dARy)
               qRT(l,i,j,k,iB,3) = BR+ (+dBRx   )
               qRT(l,i,j,k,iC,3) = C + (+dCx+dCy)
-              if (qRT(l,i,j,k,ir,3) < smallr) then
+              if (qRT(l,i,j,k,ir,3) < smallrr) then
                   qRT(l,i,j,k,ir,3) = rini
                   qRT(l,i,j,k,iu,3) = uini
                   qRT(l,i,j,k,iv,3) = vini
@@ -1384,7 +1390,7 @@ SUBROUTINE trace3d(q,pin,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qRB(l,i,j,k,iA,3) = AR+ (   -dARy)
               qRB(l,i,j,k,iB,3) = BL+ (+dBLx   )
               qRB(l,i,j,k,iC,3) = C + (+dCx-dCy)
-              if (qRB(l,i,j,k,ir,3) < smallr) then
+              if (qRB(l,i,j,k,ir,3) < smallrr) then
                   qRB(l,i,j,k,ir,3) = rini
                   qRB(l,i,j,k,iu,3) = uini
                   qRB(l,i,j,k,iv,3) = vini
@@ -1409,7 +1415,7 @@ SUBROUTINE trace3d(q,pin,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qLT(l,i,j,k,iA,3) = AL+ (   +dALy)
               qLT(l,i,j,k,iB,3) = BR+ (-dBRx   )
               qLT(l,i,j,k,iC,3) = C + (-dCx+dCy)
-              if (qLT(l,i,j,k,ir,3) < smallr) then
+              if (qLT(l,i,j,k,ir,3) < smallrr) then
                   qLT(l,i,j,k,ir,3) = rini
                   qLT(l,i,j,k,iu,3) = uini
                   qLT(l,i,j,k,iv,3) = vini
@@ -1434,7 +1440,7 @@ SUBROUTINE trace3d(q,pin,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qLB(l,i,j,k,iA,3) = AL+ (   -dALy)
               qLB(l,i,j,k,iB,3) = BL+ (-dBLx   )
               qLB(l,i,j,k,iC,3) = C + (-dCx-dCy)
-              if (qLB(l,i,j,k,ir,3) < smallr) then
+              if (qLB(l,i,j,k,ir,3) < smallrr) then
                   qLB(l,i,j,k,ir,3) = rini
                   qLB(l,i,j,k,iu,3) = uini
                   qLB(l,i,j,k,iv,3) = vini
@@ -1516,6 +1522,7 @@ subroutine cmpflxm(qm,im1,im2,jm1,jm2,km1,km2, &
   real(dp),dimension(1:nvar)::qleft,qright
   real(dp),dimension(1:nvar+1)::fgdnv
   real(dp)::zero_flux, bn_mean, entho
+  real(dp)::rmin
 
 #if NVAR>8
   integer::n
@@ -1574,6 +1581,7 @@ subroutine cmpflxm(qm,im1,im2,jm1,jm2,km1,km2, &
               end do
 #endif
               ! Solve 1D Riemann problem
+              rmin = MIN(qleft(1), qright(1))
               zero_flux = one
               IF(ischeme.NE.1)THEN
               SELECT CASE (iriemann)
@@ -1584,7 +1592,11 @@ subroutine cmpflxm(qm,im1,im2,jm1,jm2,km1,km2, &
               CASE (2)
                  CALL hll           (qleft,qright,fgdnv)
               CASE (3)
-                 CALL hlld          (qleft,qright,snleft,snright,fgdnv)
+                 if (rmin.LT.1D-2) then
+                    CALL lax_friedrich (qleft,qright,fgdnv,zero_flux)
+                 else
+                    CALL hlld          (qleft,qright,snleft,snright,fgdnv)
+                 endif
               CASE (4)
                  CALL lax_friedrich (qleft,qright,fgdnv,zero_flux)
               CASE (5)
@@ -1675,6 +1687,7 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
   REAL(dp) :: rstarLL,rstarLR,rstarRL,rstarRR,AstarLL,AstarLR,AstarRL,AstarRR,BstarLL,BstarLR,BstarRL,BstarRR
   REAL(dp) :: EstarLLx,EstarLRx,EstarRLx,EstarRRx,EstarLLy,EstarLRy,EstarRLy,EstarRRy,EstarLL,EstarLR,EstarRL,EstarRR
   REAL(dp) :: AstarT,AstarB,BstarR,BstarL
+  REAL(dp) :: rmin,Smax
 
   is = nvar + 1
 
@@ -1788,6 +1801,9 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
                   rLR=qLR(l,1); pLR=qLR(l,2); uLR=qLR(l,3); vLR=qLR(l,4); ALR=qLR(l,6); BLR=qLR(l,7) ; CLR=qLR(l,8)
                   rRL=qRL(l,1); pRL=qRL(l,2); uRL=qRL(l,3); vRL=qRL(l,4); ARL=qRL(l,6); BRL=qRL(l,7) ; CRL=qRL(l,8)
                   rRR=qRR(l,1); pRR=qRR(l,2); uRR=qRR(l,3); vRR=qRR(l,4); ARR=qRR(l,6); BRR=qRR(l,7) ; CRR=qRR(l,8)
+
+                  rmin=MIN(rLL, rLR, rRL, rRR)
+
 #if NENER>0
                   do irad = 1,nener
                      pLL = pLL + qLL(l,8+irad)
@@ -1879,6 +1895,8 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
                   SB=min(vLL,vLR,vRL,vRR)-max(cfastLLy,cfastLRy,cfastRLy,cfastRRy)
                   ST=max(vLL,vLR,vRL,vRR)+max(cfastLLy,cfastLRy,cfastRLy,cfastRRy)
 
+                  Smax = max(abs(SR), abs(ST), abs(SL), abs(SB))
+
                   ELL=uLL*BLL-vLL*ALL
                   ELR=uLR*BLR-vLR*ALR
                   ERL=uRL*BRL-vRL*ARL
@@ -1963,7 +1981,11 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
                           & -SAT*SAB/(SAT-SAB)*(AstarT-AstarB)+SAR*SAL/(SAR-SAL)*(BstarR-BstarL)
                   endif
 
-                  emf(l,i,j,k) = E
+                  if(rmin > 1D-2) then
+                     emf(l,i,j,k) = E
+                  else
+                     emf(l,i,j,k) = forth*(ERR+ERL+ELR+ELL)+half*Smax*(qRR(l,6)-qLL(l,6))-half*Smax*(qRR(l,7)-qLL(l,7))
+                  endif
 
                else if(iriemann2d==3)then
 
@@ -3060,6 +3082,7 @@ subroutine turb_dynamo(uin,q,alphaT,ngrid)
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2)::alphaT
 
    real(dp),dimension(1:nvector)::emag, emag_crit
+   real(dp)::emag_lim, b_lim
    ! local constants
    real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
    real(dp)::Kturb,sigma,d_old,epsilon,nISM,nCOM,d0
@@ -3076,6 +3099,9 @@ subroutine turb_dynamo(uin,q,alphaT,ngrid)
    endif
       d0   = nISM/scale_nH
 
+   ! B field cap is 100 microGauss in cgs unit, convert to code unit
+   b_lim = 100D-6 / sqrt(4 * 3.14159 * scale_d) * (scale_t / scale_l) 
+
    do k = ku1, ku2
       do j = ju1, ju2
          do i = iu1, iu2
@@ -3089,8 +3115,11 @@ subroutine turb_dynamo(uin,q,alphaT,ngrid)
               sigma=sqrt(max(2.0*Kturb/d_old,smallc**2))
               if(d_old.GT.d0)then
                   epsilon = 0.001
-                  emag_crit(l) = epsilon * d_old * sigma**2
+                  emag_lim = half*b_lim**2
+                  emag_crit(l) = min(epsilon * d_old * sigma**2, emag_lim)
                   alphaT(l,i,j,k)=sigma * max(1.0-emag(l)/emag_crit(l), 0.0)
+!              else if (d_old.LT.1d-3) then
+!                  alphaT(l,i,j,k) = -sigma
               else
                   alphaT(l,i,j,k)=0.0
               endif
