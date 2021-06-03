@@ -113,12 +113,6 @@ subroutine cmpdt(uu,gg,pp,dx,dt,ncell)
   do k = 1,ncell
      dtcell=dx/ctot(k)*(sqrt(one+two*courant_factor*rho(k))-one)/rho(k)
      dt = min(dt,dtcell)
-     if (dtcell < 1D-6) then
-        emag = half * ((0.5 * (uu(k,6) + uu(k,12)))**2 + (0.5 * (uu(k,7) + uu(k,13)))**2 + (0.5 * (uu(k,8) + uu(k,14))**2))
-        turb = uu(k,ivirial1)
-        ekin = 0.5 * uu(k,1) * (uu(k,2)**2 + uu(k,3)**2 + uu(k,4)**2)
-        write(*,'(" rho=",1PE10.3," Ekin=",1PE10.3," Eint=",1PE10.3," Emag=",1PE10.3," Eturb=",1PE10.3)')uu(k,1),ekin,uu(k,5),emag,turb
-     endif
   end do
 
 end subroutine cmpdt
