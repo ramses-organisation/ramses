@@ -3118,8 +3118,6 @@ subroutine turb_dynamo(uin,q,alphaT,ngrid)
                   emag_lim = half*b_lim**2
                   emag_crit(l) = min(epsilon * d_old * sigma**2, emag_lim)
                   alphaT(l,i,j,k)=sigma * max(1.0-emag(l)/emag_crit(l), 0.0)
-!              else if (d_old.LT.1d-3) then
-!                  alphaT(l,i,j,k) = -sigma
               else
                   alphaT(l,i,j,k)=0.0
               endif
