@@ -36,83 +36,79 @@ subroutine condinit(x,u,dx,nn)
   integer,save::nmax
   real(dp),save::rmax,dmax,pmax              
   real(dp)::v0,rr,etot_mat
-  
+#if NVAR > NDIM + 3*NMAT
+  integer::ipscal,npscal
+  real(dp),dimension(1:nvector),save::s_mat
+#endif  
 
 #if NDIM==1 
   ! Call built-in initial condition generator
   call region_condinit(x,q,f,g,dx,nn)
 #endif
 
-#if NDIM>1
-  id=1; iu=2; iv=3; iw=4; ip=npri; ip1=npri+1 ; ip2=npri+2
-
-  v0 = 0.2
+#if NDIM==2
+  iu=1; iv=2
 
   if (.not. read_flag) then
-    ! Read Lane-Emden solutions into an array
-    xx=0d0
-    open (unit=10,file="patch/planet/le_0.5.csv",action="read",status="old")
-    nmax=0
-    do
-      nmax=nmax+1
-      read (10,*,iostat=io) xx(nmax,:)
-      if(io.ne.0)exit
-    end do
-    read_flag = .true.
-    ! Maximum radius for the planet
-    rmax=xx(nmax-1,1)
-    ! Minimum density for the planet
-    dmax=xx(nmax-1,2)
-    write(*,*)'Lane Emden file read'
-    write(*,*)'nmax=',nmax,' rmax=',rmax,' dmin=',dmax
+     ! Read Lane-Emden solutions into an array
+     xx=0d0
+     open (unit=10,file="patch/planet/le_0.5.csv",action="read",status="old")
+     nmax=0
+     do
+        nmax=nmax+1
+        read (10,*,iostat=io) xx(nmax,:)
+        if(io.ne.0)exit
+     end do
+     read_flag = .true.
+     ! Maximum radius for the planet
+     rmax=xx(nmax-1,1)
+     ! Minimum density for the planet
+     dmax=xx(nmax-1,2)
+     write(*,*)'Lane Emden file read'
+     write(*,*)'nmax=',nmax,' rmax=',rmax,' dmin=',dmax
   end if
   
   ! Loop over all the cells 
   do k=1,nn
-    q(k,id) = 1d-4
-    q(k,iu) = 0.0d0
-    q(k,iv) = 0.0d0
-    q(k,ip) = q(k,id)**3
-    f(k,1)  = 1e-8
-    g(k,1)  = 1d-4
-    f(k,2)  = 1.0
-    g(k,2)  = 1d-4
-    ! q(k,ip1)=q(k,id)**3
-    ! q(k,ip2)=q(k,id)**3
-
-    rr=((x(k,1)-boxlen/4.0)**2+(x(k,2)-boxlen/4.0)**2)**(1.0/2)
-    if(rr<rmax)then
-      i=(rr/rmax)*(nmax-1)
-      q(k,id)=q(k,id)+xx(i,2)+(rr-xx(i,1))*((xx(i+1,2)-xx(i,2))/(xx(i+1,1)-xx(i,1)))
-      ! q(k,ip1)=q(k,id)**3
-      ! q(k,ip2)=q(k,id)**3
-      q(k,ip) = q(k,id)**3
-      q(k,iu) = 0.2
-      q(k,iv) = 0.2
-      f(k,1)  = 1.0
-      g(k,1)  = q(k,id)
-      f(k,2)  = 1d-8
-      g(k,2)  = q(k,id)
-    endif
-
-    rr=((x(k,1)-3.0*boxlen/4.0)**2+(x(k,2)-boxlen*3.0/4.0)**2)**(1.0/2)
-    if(rr<rmax)then
-      i=(rr/rmax)*(nmax-1)
-      q(k,id)=q(k,id)+xx(i,2)+(rr-xx(i,1))*((xx(i+1,2)-xx(i,2))/(xx(i+1,1)-xx(i,1)))
-      ! q(k,ip1)=q(k,id)**3
-      ! q(k,ip2)=q(k,id)**3
-      q(k,ip) = q(k,id)**3
-      q(k,iu) = -0.2
-      q(k,iv) = -0.2
-      f(k,1)  = 1.0
-      g(k,1)  = q(k,id)
-      f(k,2)  = 1d-8
-      g(k,2)  = q(k,id)
-    endif
+     q(k,iu) = 0.0d0
+     q(k,iv) = 0.0d0
+     g(k,1)  = 1d-4
+     g(k,2)  = 1d-4
+     do imat=1,nmat
+        q(k,ndim+imat) = g(k,1)**3 + g(k,1)*1d-6
+     end do
+     f(k,1)  = 1e-8
+     f(k,2)  = 1.0
+     
+     rr=((x(k,1)-boxlen/2.0)**2+(x(k,2)-boxlen/2.0)**2)**(1.0/2)
+     if(rr<rmax)then
+        i=(rr/rmax)*(nmax-1)
+        do imat=1,nmat
+           g(k,imat)      = xx(i,2) + (rr-xx(i,1))*((xx(i+1,2)-xx(i,2))/(xx(i+1,1)-xx(i,1)))
+           q(k,ndim+imat) = g(k,imat)**3 + g(k,imat)*1d-6
+        end do
+        q(k,iu) = 1.0
+        q(k,iv) = 0.0
+        f(k,1)  = 1.0
+        f(k,2)  = 1e-8
+     endif
+   
+     ! rr=((x(k,1)-3.0*boxlen/4.0)**2+(x(k,2)-boxlen/2.0)**2)**(1.0/2)
+     ! if(rr<rmax)then
+     !    i=(rr/rmax)*(nmax-1)
+     !    do imat=1,nmat
+     !       g(k,imat)      = xx(i,2) + (rr-xx(i,1))*((xx(i+1,2)-xx(i,2))/(xx(i+1,1)-xx(i,1)))
+     !       q(k,ndim+imat) = g(k,imat)**3 + g(k,imat)*1d-6
+     !    end do
+     !    q(k,iu) = -0.2
+     !    q(k,iv) = 0.0
+     !    f(k,1)  = 1.0
+     !    f(k,2)  = 1e-8
+     ! endif
   end do
 #endif
-
-  ! Normalize volume fraction
+  
+  ! normalize volume fraction
   ftot(1:nn)=0.0
   do imat=1,nmat
      do k=1,nn
@@ -125,7 +121,7 @@ subroutine condinit(x,u,dx,nn)
      end do
   end do
 
-  ! Calculate the kinetic energy
+  ! compute kinetic energy
   ekin(1:nn)=0.0
   do k=1,nn
     do idim=1,ndim
@@ -133,7 +129,7 @@ subroutine condinit(x,u,dx,nn)
     end do
   end do
 
-  ! call inverse eos routine (g,p) -> (e,c)
+  ! pressures --> partial total energies
   inv=.true.
   dtot(1:nn)=0.0
   do imat=1,nmat
@@ -141,17 +137,24 @@ subroutine condinit(x,u,dx,nn)
       g_mat(k) = g(k,imat)
       p_mat(k) = q(k,ndim+imat)
     end do
+    ! call inverse eos routine (g,p) -> (e,c)
     call eos(g_mat,eint_mat,p_mat,cs_mat,imat,inv,nn) 
     do k=1,nn
-      etot_mat              = eint_mat(k) + 0.5*g(k,imat)*ekin(k)                    ! E_k
-      u(k,2*nmat+ndim+imat) = etot_mat*f(k,imat)                                     ! E_k * f_k 
-      dtot(k)               = dtot(k) + f(k,imat)*g(k,imat)                          ! d_tot
+      etot_mat = eint_mat(k) + g(k,imat)* ekin(k) ! E_k
+      u(k,2*nmat+ndim+imat) = etot_mat * f(k,imat) ! E_k * f_k 
+      dtot(k) = dtot(k) + f(k,imat) * g(k,imat)    ! total density
     end do
+#if NVAR > NDIM + 3*NMAT
+    call eos_s(g_mat,eint_mat,s_mat,imat,.false.,nn)
+    do k=1,nn
+       q(k,2*nmat+ndim+imat) = s_mat(k)
+    end do
+#endif
   end do 
 
   ! volume fractions --> volume fractions 
   u(1:nn,1:nmat)      = f(1:nn,1:nmat)
-  ! volume fractions -> conservative volume fractions (rho * f_k)
+  ! physical densities -> partial masses (m_k = rho_k * f_k)
   do imat=1,nmat
     u(1:nn,nmat+imat) = f(1:nn,imat)*g(1:nn,imat)
   end do
@@ -162,6 +165,16 @@ subroutine condinit(x,u,dx,nn)
 #endif
 #if NDIM>2
   u(1:nn,2*nmat+ndim) = dtot(1:nn)*q(1:nn,ndim)
+#endif
+  ! passive scalars for each fluid
+#if NVAR > NDIM + 3*NMAT
+  npscal = (nvar - ndim - 3*nmat) / nmat
+  do imat = 1, nmat
+     do ipscal = 1, npscal
+        ivar = ndim + 3*nmat + npscal*(imat-1) + ipscal
+        u(1:nn,ivar) = f(1:nn,imat)*g(1:nn,imat)*q(1:nn,ivar-nmat)
+     end do
+  end do
 #endif
 
 end subroutine condinit

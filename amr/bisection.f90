@@ -50,7 +50,7 @@ contains
 
    ! MAIN BISECTION CREATION/UPDATING ROUTINE
    subroutine build_bisection(update)
-  use mpi_mod
+      use mpi_mod
 
       logical, intent(in) :: update
 
@@ -472,7 +472,7 @@ contains
       ! This sets up bisec_ind_cell, bisec_hist_bounds ready to start a level-0 hist build
       ! by looping over all AMR cells
 
-  use mpi_mod
+      use mpi_mod
 
       integer::igrid,ncache,ngrid
       integer::ilevel,i,ind
@@ -572,7 +572,7 @@ contains
    subroutine build_bisection_histogram(lev,dir)
       ! build the 2**lev histograms of level lev, for a split in direction dir
 
-  use mpi_mod
+      use mpi_mod
       integer, intent(in) :: lev, dir
       integer :: ix,iy,iz
       integer :: nc, nx_loc, nxny

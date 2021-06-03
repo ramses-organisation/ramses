@@ -58,7 +58,7 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim),save::dq
 
   ! Face-centered slopes
-  REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3,1:ndim),save::dbf
+  REAL(dp),DIMENSION(1:nvector,iu1:iu2+1,ju1:ju2+1,ku1:ku2+1,1:3,1:ndim),save::dbf
 
   ! Face-averaged left and right state arrays
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim),save::qm
@@ -87,7 +87,7 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
   call ctoprim(uin,qin,bf,gravin,dt,ngrid)
 
   ! Compute TVD slopes
-  call uslope(bf,qin,dq,dbf,dx,dt,ngrid)
+  call uslope(qin,dq,bf,dbf,dx,dt,ngrid)
 
   ! Compute 3D traced-states in all three directions
 #if NDIM==1
@@ -414,12 +414,12 @@ SUBROUTINE trace2d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dt,ngrid)
   REAL(dp)::dx, dy, dt
 
   REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q
-  REAL(dp),DIMENSION(1:nvector,iu1:iu2+1,ju1:ju2+1,ku1:ku2+1,1:3)::bf
   REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::dq
   REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qm
   REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qp
 
-  REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3,1:ndim)::dbf
+  REAL(dp),DIMENSION(1:nvector,iu1:iu2+1,ju1:ju2+1,ku1:ku2+1,1:3)::bf
+  REAL(dp),DIMENSION(1:nvector,iu1:iu2+1,ju1:ju2+1,ku1:ku2+1,1:3,1:ndim)::dbf
 
   REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:3)::qRT
   REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:3)::qRB
@@ -565,7 +565,6 @@ SUBROUTINE trace2d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dt,ngrid)
                       & - (dux*dtdx+dvy*dtdy)*gamma_rad(irad)*e(irad)
               end do
 #endif
-
               ! Cell-centered predicted states
               r = r + sr0
               u = u + su0
@@ -580,7 +579,6 @@ SUBROUTINE trace2d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dt,ngrid)
                  e(irad)=e(irad)+se0(irad)
               end do
 #endif
-
               ! Face averaged right state at left interface
               qp(l,i,j,k,ir,1) = r - drx
               qp(l,i,j,k,iu,1) = u - dux
@@ -597,7 +595,6 @@ SUBROUTINE trace2d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dt,ngrid)
                  qp(l,i,j,k,iC+irad,1) = e(irad) - dex(irad)
               end do
 #endif
-
               ! Face averaged left state at right interface
               qm(l,i,j,k,ir,1) = r + drx
               qm(l,i,j,k,iu,1) = u + dux
@@ -614,7 +611,6 @@ SUBROUTINE trace2d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dt,ngrid)
                  qm(l,i,j,k,iC+irad,1) = e(irad) + dex(irad)
               end do
 #endif
-
               ! Face averaged top state at bottom interface
               qp(l,i,j,k,ir,2) = r - dry
               qp(l,i,j,k,iu,2) = u - duy
@@ -631,7 +627,6 @@ SUBROUTINE trace2d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dt,ngrid)
                  qp(l,i,j,k,iC+irad,2) = e(irad) - dey(irad)
               end do
 #endif
-
               ! Face averaged bottom state at top interface
               qm(l,i,j,k,ir,2) = r + dry
               qm(l,i,j,k,iu,2) = u + duy
@@ -648,7 +643,6 @@ SUBROUTINE trace2d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dt,ngrid)
                  qm(l,i,j,k,iC+irad,2) = e(irad) + dey(irad)
               end do
 #endif
-
               ! Edge averaged right-top corner state (RT->LL)
               qRT(l,i,j,k,ir,3) = r + (+drx+dry)
               qRT(l,i,j,k,iu,3) = u + (+dux+duy)
@@ -665,7 +659,6 @@ SUBROUTINE trace2d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dt,ngrid)
                  qRT(l,i,j,k,iC+irad,3) = e(irad) + (+dex(irad)+dey(irad))
               end do
 #endif
-
               ! Edge averaged right-bottom corner state (RB->LR)
               qRB(l,i,j,k,ir,3) = r + (+drx-dry)
               qRB(l,i,j,k,iu,3) = u + (+dux-duy)
@@ -682,7 +675,6 @@ SUBROUTINE trace2d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dt,ngrid)
                  qRB(l,i,j,k,iC+irad,3) = e(irad) + (+dex(irad)-dey(irad))
               end do
 #endif
-
               ! Edge averaged left-top corner state (LT->RL)
               qLT(l,i,j,k,ir,3) = r + (-drx+dry)
               qLT(l,i,j,k,iu,3) = u + (-dux+duy)
@@ -699,7 +691,6 @@ SUBROUTINE trace2d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dt,ngrid)
                  qLT(l,i,j,k,iC+irad,3) = e(irad) + (-dex(irad)+dey(irad))
               end do
 #endif
-
               ! Edge averaged left-bottom corner state (LB->RR)
               qLB(l,i,j,k,ir,3) = r + (-drx-dry)
               qLB(l,i,j,k,iu,3) = u + (-dux-duy)
@@ -716,7 +707,6 @@ SUBROUTINE trace2d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dt,ngrid)
                  qLB(l,i,j,k,iC+irad,3) = e(irad) + (-dex(irad)-dey(irad))
               end do
 #endif
-
            END DO
         END DO
      END DO
@@ -764,12 +754,13 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
   REAL(dp)::dx, dy, dz, dt
 
   REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q
-  REAL(dp),DIMENSION(1:nvector,iu1:iu2+1,ju1:ju2+1,ku1:ku2+1,1:3)::bf
   REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::dq
   REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qm
   REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qp
 
-  REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3,1:ndim)::dbf
+  REAL(dp),DIMENSION(1:nvector,iu1:iu2+1,ju1:ju2+1,ku1:ku2+1,1:3)::bf
+  REAL(dp),DIMENSION(1:nvector,iu1:iu2+1,ju1:ju2+1,ku1:ku2+1,1:3,1:ndim)::dbf
+
   REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:3)::qRT
   REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:3)::qRB
   REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:3)::qLT
@@ -860,7 +851,6 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
                  e(irad) = q(l,i,j,k,iC+irad)
               end do
 #endif
-
               ! Face centered variables
               AL =  bf(l,i  ,j  ,k  ,1)
               AR =  bf(l,i+1,j  ,k  ,1)
@@ -882,7 +872,6 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
                  dex(irad) = half*dq(l,i,j,k,iC+irad,1)
               end do
 #endif
-
               dry = half * dq(l,i,j,k,ir,2)
               duy = half * dq(l,i,j,k,iu,2)
               dvy = half * dq(l,i,j,k,iv,2)
@@ -895,7 +884,6 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
                  dey(irad) = half*dq(l,i,j,k,iC+irad,2)
               end do
 #endif
-
               drz = half * dq(l,i,j,k,ir,3)
               duz = half * dq(l,i,j,k,iu,3)
               dvz = half * dq(l,i,j,k,iv,3)
@@ -908,7 +896,6 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
                  dez(irad) = half*dq(l,i,j,k,iC+irad,3)
               end do
 #endif
-
               ! Face centered TVD slopes in transverse directions
               dALy = half * dbf(l,i  ,j  ,k  ,1,1)
               dARy = half * dbf(l,i+1,j  ,k  ,1,1)
@@ -973,7 +960,6 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
                       & - (dux*dtdx+dvy*dtdy+dwz*dtdz)*gamma_rad(irad)*e(irad)
               end do
 #endif
-
               ! Cell-centered predicted states
               r = r + sr0
               u = u + su0
@@ -988,7 +974,6 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
                  e(irad)=e(irad)+se0(irad)
               end do
 #endif
-
               ! Face averaged right state at left interface
               qp(l,i,j,k,ir,1) = r - drx
               qp(l,i,j,k,iu,1) = u - dux
@@ -1005,7 +990,6 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
                  qp(l,i,j,k,iC+irad,1) = e(irad) - dex(irad)
               end do
 #endif
-
               ! Face averaged left state at right interface
               qm(l,i,j,k,ir,1) = r + drx
               qm(l,i,j,k,iu,1) = u + dux
@@ -1022,7 +1006,6 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
                  qm(l,i,j,k,iC+irad,1) = e(irad) + dex(irad)
               end do
 #endif
-
               ! Face averaged top state at bottom interface
               qp(l,i,j,k,ir,2) = r - dry
               qp(l,i,j,k,iu,2) = u - duy
@@ -1039,7 +1022,6 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
                  qp(l,i,j,k,iC+irad,2) = e(irad) - dey(irad)
               end do
 #endif
-
               ! Face averaged bottom state at top interface
               qm(l,i,j,k,ir,2) = r + dry
               qm(l,i,j,k,iu,2) = u + duy
@@ -1056,7 +1038,6 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
                  qm(l,i,j,k,iC+irad,2) = e(irad) + dey(irad)
               end do
 #endif
-
               ! Face averaged front state at back interface
               qp(l,i,j,k,ir,3) = r - drz
               qp(l,i,j,k,iu,3) = u - duz
@@ -1073,7 +1054,6 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
                  qp(l,i,j,k,iC+irad,3) = e(irad) - dez(irad)
               end do
 #endif
-
               ! Face averaged back state at front interface
               qm(l,i,j,k,ir,3) = r + drz
               qm(l,i,j,k,iu,3) = u + duz
@@ -1090,7 +1070,6 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
                  qm(l,i,j,k,iC+irad,3) = e(irad) + dez(irad)
               end do
 #endif
-
               ! X-edge averaged right-top corner state (RT->LL)
               qRT(l,i,j,k,ir,1) = r + (+dry+drz)
               qRT(l,i,j,k,iu,1) = u + (+duy+duz)
@@ -1107,7 +1086,6 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
                  qRT(l,i,j,k,iC+irad,1) = e(irad) + (+dey(irad)+dez(irad))
               end do
 #endif
-
               ! X-edge averaged right-bottom corner state (RB->LR)
               qRB(l,i,j,k,ir,1) = r + (+dry-drz)
               qRB(l,i,j,k,iu,1) = u + (+duy-duz)
@@ -1124,7 +1102,6 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
                  qRB(l,i,j,k,iC+irad,1) = e(irad) + (+dey(irad)-dez(irad))
               end do
 #endif
-
               ! X-edge averaged left-top corner state (LT->RL)
               qLT(l,i,j,k,ir,1) = r + (-dry+drz)
               qLT(l,i,j,k,iu,1) = u + (-duy+duz)
@@ -1141,7 +1118,6 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
                  qLT(l,i,j,k,iC+irad,1) = e(irad) + (-dey(irad)+dez(irad))
               end do
 #endif
-
               ! X-edge averaged left-bottom corner state (LB->RR)
               qLB(l,i,j,k,ir,1) = r + (-dry-drz)
               qLB(l,i,j,k,iu,1) = u + (-duy-duz)
@@ -1158,7 +1134,6 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
                  qLB(l,i,j,k,iC+irad,1) = e(irad) + (-dey(irad)-dez(irad))
               end do
 #endif
-
               ! Y-edge averaged right-top corner state (RT->LL)
               qRT(l,i,j,k,ir,2) = r + (+drx+drz)
               qRT(l,i,j,k,iu,2) = u + (+dux+duz)
@@ -1175,7 +1150,6 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
                  qRT(l,i,j,k,iC+irad,2) = e(irad) + (+dex(irad)+dez(irad))
               end do
 #endif
-
               ! Y-edge averaged right-bottom corner state (RB->LR)
               qRB(l,i,j,k,ir,2) = r + (+drx-drz)
               qRB(l,i,j,k,iu,2) = u + (+dux-duz)
@@ -1192,7 +1166,6 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
                  qRB(l,i,j,k,iC+irad,2) = e(irad) + (+dex(irad)-dez(irad))
               end do
 #endif
-
               ! Y-edge averaged left-top corner state (LT->RL)
               qLT(l,i,j,k,ir,2) = r + (-drx+drz)
               qLT(l,i,j,k,iu,2) = u + (-dux+duz)
@@ -1209,7 +1182,6 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
                  qLT(l,i,j,k,iC+irad,2) = e(irad) + (-dex(irad)+dez(irad))
               end do
 #endif
-
               ! Y-edge averaged left-bottom corner state (LB->RR)
               qLB(l,i,j,k,ir,2) = r + (-drx-drz)
               qLB(l,i,j,k,iu,2) = u + (-dux-duz)
@@ -1226,7 +1198,6 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
                  qLB(l,i,j,k,iC+irad,2) = e(irad) + (-dex(irad)-dez(irad))
               end do
 #endif
-
               ! Z-edge averaged right-top corner state (RT->LL)
               qRT(l,i,j,k,ir,3) = r + (+drx+dry)
               qRT(l,i,j,k,iu,3) = u + (+dux+duy)
@@ -1243,7 +1214,6 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
                  qRT(l,i,j,k,iC+irad,3) = e(irad) + (+dex(irad)+dey(irad))
               end do
 #endif
-
               ! Z-edge averaged right-bottom corner state (RB->LR)
               qRB(l,i,j,k,ir,3) = r + (+drx-dry)
               qRB(l,i,j,k,iu,3) = u + (+dux-duy)
@@ -1260,7 +1230,6 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
                  qRB(l,i,j,k,iC+irad,3) = e(irad) + (+dex(irad)-dey(irad))
               end do
 #endif
-
               ! Z-edge averaged left-top corner state (LT->RL)
               qLT(l,i,j,k,ir,3) = r + (-drx+dry)
               qLT(l,i,j,k,iu,3) = u + (-dux+duy)
@@ -1277,7 +1246,6 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
                  qLT(l,i,j,k,iC+irad,3) = e(irad) + (-dex(irad)+dey(irad))
               end do
 #endif
-
               ! Z-edge averaged left-bottom corner state (LB->RR)
               qLB(l,i,j,k,ir,3) = r + (-drx-dry)
               qLB(l,i,j,k,iu,3) = u + (-dux-duy)
@@ -1294,7 +1262,6 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
                  qLB(l,i,j,k,iC+irad,3) = e(irad) + (-dex(irad)-dey(irad))
               end do
 #endif
-
            END DO
         END DO
      END DO
@@ -2181,7 +2148,7 @@ end subroutine ctoprim
 !###########################################################
 !###########################################################
 !###########################################################
-subroutine uslope(bf,q,dq,dbf,dx,dt,ngrid)
+subroutine uslope(q,dq,bf,dbf,dx,dt,ngrid)
   use amr_parameters
   use hydro_parameters
   use const
@@ -2189,10 +2156,10 @@ subroutine uslope(bf,q,dq,dbf,dx,dt,ngrid)
 
   integer::ngrid
   real(dp)::dx,dt
-  real(dp),dimension(1:nvector,iu1:iu2+1,ju1:ju2+1,ku1:ku2+1,1:3)::bf
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::dq
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3,1:ndim)::dbf
+  real(dp),dimension(1:nvector,iu1:iu2+1,ju1:ju2+1,ku1:ku2+1,1:3)::bf
+  real(dp),dimension(1:nvector,iu1:iu2+1,ju1:ju2+1,ku1:ku2+1,1:3,1:ndim)::dbf
 
   ! local arrays
   integer::i, j, k, l, n
