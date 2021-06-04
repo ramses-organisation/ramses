@@ -512,7 +512,8 @@ subroutine trace3d(q,dq,qm,qp,dx,dy,dz,dt,ngrid)
   integer ::n
   real(dp)::a, dax, day, daz, sa0
 #endif
-
+  real::smallrr
+  
   dtdx = dt/dx
   dtdy = dt/dy
   dtdz = dt/dz
@@ -520,7 +521,8 @@ subroutine trace3d(q,dq,qm,qp,dx,dy,dz,dt,ngrid)
   jlo=MIN(1,ju1+1); jhi=MAX(1,ju2-1)
   klo=MIN(1,ku1+1); khi=MAX(1,ku2-1)
   ir=1; iu=2; iv=3; iw=4; ip=5
-
+  smallrr=1d-3
+  
   do k = klo, khi
      do j = jlo, jhi
         do i = ilo, ihi
@@ -595,7 +597,13 @@ subroutine trace3d(q,dq,qm,qp,dx,dy,dz,dt,ngrid)
               qp(l,i,j,k,iv,1) = v - half*dvx + sv0*dtdx*half
               qp(l,i,j,k,iw,1) = w - half*dwx + sw0*dtdx*half
 !              qp(l,i,j,k,ir,1) = max(smallr, qp(l,i,j,k,ir,1))
-              if(qp(l,i,j,k,ir,1)<smallr)qp(l,i,j,k,ir,1)=r
+              if(qp(l,i,j,k,ir,1) < smallrr)then
+                 qp(l,i,j,k,ir,1) = r
+                 qp(l,i,j,k,ip,1) = p
+                 qp(l,i,j,k,iu,1) = u
+                 qp(l,i,j,k,iv,1) = v
+                 qp(l,i,j,k,iw,1) = w
+              endif
 #if NENER>0
               do irad=1,nener
                  qp(l,i,j,k,ip+irad,1) = e(irad) - half*dex(irad) + se0(irad)*dtdx*half
@@ -609,7 +617,13 @@ subroutine trace3d(q,dq,qm,qp,dx,dy,dz,dt,ngrid)
               qm(l,i,j,k,iv,1) = v + half*dvx + sv0*dtdx*half
               qm(l,i,j,k,iw,1) = w + half*dwx + sw0*dtdx*half
 !              qm(l,i,j,k,ir,1) = max(smallr, qm(l,i,j,k,ir,1))
-              if(qm(l,i,j,k,ir,1)<smallr)qm(l,i,j,k,ir,1)=r
+              if(qm(l,i,j,k,ir,1) < smallrr)then
+                 qm(l,i,j,k,ir,1) = r
+                 qm(l,i,j,k,ip,1) = p
+                 qm(l,i,j,k,iu,1) = u
+                 qm(l,i,j,k,iv,1) = v
+                 qm(l,i,j,k,iw,1) = w
+              endif
 #if NENER>0
               do irad=1,nener
                  qm(l,i,j,k,ip+irad,1) = e(irad) + half*dex(irad) + se0(irad)*dtdx*half
@@ -623,7 +637,13 @@ subroutine trace3d(q,dq,qm,qp,dx,dy,dz,dt,ngrid)
               qp(l,i,j,k,iv,2) = v - half*dvy + sv0*dtdy*half
               qp(l,i,j,k,iw,2) = w - half*dwy + sw0*dtdy*half
 !              qp(l,i,j,k,ir,2) = max(smallr, qp(l,i,j,k,ir,2))
-              if(qp(l,i,j,k,ir,2)<smallr)qp(l,i,j,k,ir,2)=r
+              if(qp(l,i,j,k,ir,2) < smallrr)then
+                 qp(l,i,j,k,ir,2) = r
+                 qp(l,i,j,k,ip,2) = p
+                 qp(l,i,j,k,iu,2) = u
+                 qp(l,i,j,k,iv,2) = v
+                 qp(l,i,j,k,iw,2) = w
+              endif
 #if NENER>0
               do irad=1,nener
                  qp(l,i,j,k,ip+irad,2) = e(irad) - half*dey(irad) + se0(irad)*dtdy*half
@@ -637,7 +657,13 @@ subroutine trace3d(q,dq,qm,qp,dx,dy,dz,dt,ngrid)
               qm(l,i,j,k,iv,2) = v + half*dvy + sv0*dtdy*half
               qm(l,i,j,k,iw,2) = w + half*dwy + sw0*dtdy*half
 !              qm(l,i,j,k,ir,2) = max(smallr, qm(l,i,j,k,ir,2))
-              if(qm(l,i,j,k,ir,2)<smallr)qm(l,i,j,k,ir,2)=r
+              if(qm(l,i,j,k,ir,2) < smallrr)then
+                 qm(l,i,j,k,ir,2) = r
+                 qm(l,i,j,k,ip,2) = p
+                 qm(l,i,j,k,iu,2) = u
+                 qm(l,i,j,k,iv,2) = v
+                 qm(l,i,j,k,iw,2) = w
+              endif
 #if NENER>0
               do irad=1,nener
                  qm(l,i,j,k,ip+irad,2) = e(irad) + half*dey(irad) + se0(irad)*dtdy*half
@@ -651,7 +677,13 @@ subroutine trace3d(q,dq,qm,qp,dx,dy,dz,dt,ngrid)
               qp(l,i,j,k,iv,3) = v - half*dvz + sv0*dtdz*half
               qp(l,i,j,k,iw,3) = w - half*dwz + sw0*dtdz*half
 !              qp(l,i,j,k,ir,3) = max(smallr, qp(l,i,j,k,ir,3))
-              if(qp(l,i,j,k,ir,3)<smallr)qp(l,i,j,k,ir,3)=r
+              if(qp(l,i,j,k,ir,3) < smallrr)then
+                 qp(l,i,j,k,ir,3) = r
+                 qp(l,i,j,k,ip,3) = p
+                 qp(l,i,j,k,iu,3) = u
+                 qp(l,i,j,k,iv,3) = v
+                 qp(l,i,j,k,iw,3) = w
+              endif
 #if NENER>0
               do irad=1,nener
                  qp(l,i,j,k,ip+irad,3) = e(irad) - half*dez(irad) + se0(irad)*dtdz*half
@@ -665,7 +697,13 @@ subroutine trace3d(q,dq,qm,qp,dx,dy,dz,dt,ngrid)
               qm(l,i,j,k,iv,3) = v + half*dvz + sv0*dtdz*half
               qm(l,i,j,k,iw,3) = w + half*dwz + sw0*dtdz*half
 !              qm(l,i,j,k,ir,3) = max(smallr, qm(l,i,j,k,ir,3))
-              if(qm(l,i,j,k,ir,3)<smallr)qm(l,i,j,k,ir,3)=r
+              if(qm(l,i,j,k,ir,3) < smallrr)then
+                 qm(l,i,j,k,ir,3) = r
+                 qm(l,i,j,k,ip,3) = p
+                 qm(l,i,j,k,iu,3) = u
+                 qm(l,i,j,k,iv,3) = v
+                 qm(l,i,j,k,iw,3) = w
+              endif
 #if NENER>0
               do irad=1,nener
                  qm(l,i,j,k,ip+irad,3) = e(irad) + half*dez(irad) + se0(irad)*dtdz*half
