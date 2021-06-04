@@ -113,6 +113,7 @@ program amr2map
   open(unit=10,file=nomfich,form='formatted',status='old')
   read(10,*)
   read(10,*)
+!  read(10,*) ! Comment out for Sphinx
   read(10,'(A13,I11)')GMGM,levelmin
   read(10,*)
   read(10,*)
@@ -132,6 +133,8 @@ program amr2map
   read(10,'(A13,E23.15)')GMGM,scale_t
   read(10,*)
 
+  write(*,*)scale_d,scale_l,scale_t
+  
   read(10,'(A14,A80)')GMGM,ordering
   write(*,'(" ordering type=",A20)')TRIM(ordering)
   read(10,*)
