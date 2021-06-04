@@ -1483,36 +1483,4 @@ subroutine uslope(q,dq,dx,dt,ngrid)
                     if((dlft*drgt)<=zero)dlim=zero
                     dq(l,i,j,k,n,1) = dsgn*min(dlim,abs(dcen))
                  end do
-                 ! slopes in second coordinate direction
-                 do l = 1, ngrid
-                    dlft = (q(l,i,j  ,k,n) - q(l,i,j-1,k,n))
-                    drgt = (q(l,i,j+1,k,n) - q(l,i,j  ,k,n))
-                    dcen = half*(dlft+drgt)
-                    dsgn = sign(one,dcen)
-                    slop = min(slope_theta*abs(dlft),slope_theta*abs(drgt))
-                    dlim = slop
-                    if((dlft*drgt)<=zero)dlim=zero
-                    dq(l,i,j,k,n,2) = dsgn*min(dlim,abs(dcen))
-                 end do
-                 ! slopes in third coordinate direction
-                 do l = 1, ngrid
-                    dlft = (q(l,i,j,k  ,n) - q(l,i,j,k-1,n))
-                    drgt = (q(l,i,j,k+1,n) - q(l,i,j,k  ,n))
-                    dcen = half*(dlft+drgt)
-                    dsgn = sign(one,dcen)
-                    slop = min(slope_theta*abs(dlft),slope_theta*abs(drgt))
-                    dlim = slop
-                    if((dlft*drgt)<=zero)dlim=zero
-                    dq(l,i,j,k,n,3) = dsgn*min(dlim,abs(dcen))
-                 end do
-              end do
-           end do
-        end do
-     end do
-  else
-     write(*,*)'Unknown slope type',dx,dt
-     stop
-  endif
-#endif
-
-end subroutine uslope
+                 ! slopes
