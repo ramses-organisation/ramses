@@ -3192,4 +3192,4 @@ subroutine turb_emf(alphaT,bf,dt,dx,emfx,emfy,emfz,ngrid)
    END DO 
  
 end subroutine turb_emf
-           
+
