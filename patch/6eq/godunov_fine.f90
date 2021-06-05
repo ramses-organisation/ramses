@@ -133,7 +133,10 @@ subroutine set_uold(ilevel)
      end do
   end do
 
-  if(nmat>1)call pressure_relaxation2(ilevel)
+  if(nmat>1)then
+     call pressure_relaxation2(ilevel)
+     call phase_transition(ilevel)
+  end if
   
 111 format('   Entering set_uold for level ',i2)
 
@@ -335,6 +338,7 @@ subroutine add_gravity_source_terms(ilevel)
         if(ndim>2) w = unew(ind_cell,2*nmat+3)/d
         e_kin = e_kin + half*w**2
         
+#if NVAR > NDIM + 3*NMAT
         do imat=1,nmat
 
            ! Check that entropy is correct on entry 
@@ -362,7 +366,8 @@ subroutine add_gravity_source_terms(ilevel)
               unew(ind_cell,3*nmat+ndim+imat) = unew(ind_cell,nmat+imat)*s_mat(1)
            endif
         end do
-        
+#endif
+
         d_old = 0
         do imat = 1,nmat
           d_old = d_old + uold(ind_cell,nmat+imat)
@@ -565,10 +570,10 @@ subroutine pressure_relaxation2(ilevel)
   integer,dimension(1:nvector),save::ind_grid,ind_cell
   real(dp)::dtot,ptot
   real(dp),dimension(1:nmat),save::ff_old,ff,gg,ee,pp,rc2
-  real(dp),dimension(1:nmat),save::ff_new,ee_new,w
+  real(dp),dimension(1:nmat),save::ff_new,ee_new,w,pp_new
   real(dp),dimension(1:ndim),save::vv
   real(dp)::error
-  real(dp)::smallgamma,biggamma,p_0,e_c,p_c,delpc,a0,rho_0,eta
+  real(dp)::smallgamma,biggamma,p_0,e_c,p_c,delpc,a0,rho_0,eta,q
   real(dp)::E_1,E_2,A_1,A_2,C_v,T_0,E_0,p_c_1,p_c_2
   real(dp)::skip_loc,dx,eps,scale,dx_loc,dd,ddd
   real(dp)::t12,t13,t14,t23,t24,t34
@@ -579,8 +584,12 @@ subroutine pressure_relaxation2(ilevel)
   integer::ix,iy,iz,nx_loc,iter
   integer::iter_max=100,iter_mean
   logical::inv
-  real(dp),dimension(1:nvector),save::g_mat,e_mat,s_mat
-  real(dp)::s_entry,e_th,e_cold,e_kin,e_tot
+  real(dp),dimension(1:nvector),save::g_mat,e_mat
+  real(dp)::e_kin,e_tot,ee_mat,cc_mat
+#if NVAR > NDIM + 3*NMAT
+  real(dp),dimension(1:nvector),save::s_mat
+  real(dp)::s_entry,e_th,e_cold
+#endif
   
   dx=0.5d0**ilevel
   skip_loc=dble(icoarse_min)
@@ -655,56 +664,63 @@ subroutine pressure_relaxation2(ilevel)
                     e_tot = uold(ind_cell(i),2*nmat+ndim+imat)/uold(ind_cell(i),nmat+imat)
                     ee(imat) = e_tot-e_kin
                     if(ee(imat)<0)then
-                       write(*,*)'relaxation: negative energy',iter,ff(1),ff(2),gg(1),gg(2),ee(imat),e_tot,e_kin
+                       ! write(*,*)'relaxation: negative energy',iter,ff(1),ff(2),gg(1),gg(2),ee(imat),e_tot,e_kin
                     endif
                  end do
                                   
                  ptot = 0.0
                  do imat = 1,nmat
-                    
-                    ! Mie-Gruneisen
-                    if(eos_name == 'mie-grueneisen')then
-                       smallgamma=eos_params(imat,1);biggamma=eos_params(imat,2);p_0=eos_params(imat,3);rho_0=eos_params(imat,4)
-                       eta = gg(imat)/rho_0
-                       p_c = p_0 * eta**biggamma
-                       e_c = p_c / (biggamma-one)
-                       delpc = biggamma * p_c 
-                       
-                       ! Cochran-Chan
-                    else if(eos_name == 'cochran-chan')then
-                       smallgamma=eos_params(imat,1);rho_0=eos_params(imat,2)
-                       E_1=eos_params(imat,3);E_2=eos_params(imat,4)
-                       A_1=eos_params(imat,5);A_2=eos_params(imat,6)
-                       C_v=eos_params(imat,7);T_0=eos_params(imat,8)
-                       
-                       ! Define the Cochran-Chan constant term
-                       E_0 = A_1 / (E_1-one) - A_2 / (E_2-one) + rho_0 * C_v * T_0
-                       
-                       ! Update Mie-Gruneisen terms for each material
-                       eta   = gg(imat)/rho_0
-                       p_c_1 = A_1 * eta**E_1
-                       p_c_2 = A_2 * eta**E_2
-                       p_c   = p_c_1 - p_c_2
-                       e_c   = p_c_1 / (E_1-1.0) - p_c_2 / (E_2-1.0) - eta * E_0
-                       delpc = p_c_1 * E_1 - p_c_2 * E_2
-                    end if
-                    
-                    pp(imat) = (smallgamma-1)*(gg(imat)*ee(imat)-e_c) + p_c
-                    rc2(imat) = delpc + smallgamma * (pp(imat)-p_c)
-                    ptot = ptot + ff(imat)*pp(imat)
-                    if(rc2(imat)<0.0)then
-                      write(*,*) "Sound speed",imat,ff(imat),gg(imat),ee(imat),e_c,pp(imat),rc2(imat)
-                    end if
-                    
-                 end do
-              
-                 do imat = 1,nmat
-                    smallgamma = eos_params(imat,1)
-                    rc2(imat) = rc2(imat) + (smallgamma-1)*(ptot-pp(imat))
-                    if(rc2(imat)<0.0)then
-                      write(*,*) "Correction sound speed", rc2(imat), ptot,pp(imat)
+                    if(eos_name =='stiffened gas')then
+                      ! Get Stiffened Gas EOS parameters
+                      smallgamma=eos_params(imat,1);q=eos_params(imat,2);p_0=eos_params(imat,3)
+                      pp(imat)  = (smallgamma-1)*gg(imat)*(ee(imat)-q) - smallgamma*p_0
+                      rc2(imat) = smallgamma * (pp(imat)+p_0)
+                      ptot = ptot + ff(imat)*pp(imat)
+                    else 
+                      ! Mie-Gruneisen
+                      if(eos_name == 'mie-grueneisen')then
+                         smallgamma=eos_params(imat,1);biggamma=eos_params(imat,2);p_0=eos_params(imat,3);rho_0=eos_params(imat,4)
+                         eta = gg(imat)/rho_0
+                         p_c = p_0 * eta**biggamma
+                         e_c = p_c / (biggamma-one)
+                         delpc = biggamma * p_c 
+                         
+                      ! Cochran-Chan
+                      else if(eos_name == 'cochran-chan')then
+                         smallgamma=eos_params(imat,1);rho_0=eos_params(imat,2)
+                         E_1=eos_params(imat,3);E_2=eos_params(imat,4)
+                         A_1=eos_params(imat,5);A_2=eos_params(imat,6)
+                         C_v=eos_params(imat,7);T_0=eos_params(imat,8)
+                         
+                         ! Define the Cochran-Chan constant term
+                         E_0 = A_1 / (E_1-one) - A_2 / (E_2-one) + rho_0 * C_v * T_0
+                         
+                         ! Update Mie-Gruneisen terms for each material
+                         eta   = gg(imat)/rho_0
+                         p_c_1 = A_1 * eta**E_1
+                         p_c_2 = A_2 * eta**E_2
+                         p_c   = p_c_1 - p_c_2
+                         e_c   = p_c_1 / (E_1-1.0) - p_c_2 / (E_2-1.0) - eta * E_0
+                         delpc = p_c_1 * E_1 - p_c_2 * E_2
+                      end if
+                      pp(imat) = (smallgamma-1)*(gg(imat)*ee(imat)-e_c) + p_c
+                      rc2(imat) = delpc + smallgamma * (pp(imat)-p_c)
+                      ptot = ptot + ff(imat)*pp(imat)
+                      if(rc2(imat)<0.0)then
+                        ! write(*,*) "Sound speed",imat,ff(imat),gg(imat),ee(imat),e_c,pp(imat),rc2(imat)
+                      end if
                     end if
                  end do
+                 
+                 if(eos_name .ne. 'stiffened gas')then
+                   do imat = 1,nmat
+                      smallgamma = eos_params(imat,1)
+                      rc2(imat) = rc2(imat) + (smallgamma-1)*(ptot-pp(imat))
+                      if(rc2(imat)<0.0)then
+                        ! write(*,*) "Correction sound speed", rc2(imat), ptot,pp(imat)
+                      end if
+                   end do
+                 end if
                  
                  ! Compute weights
                  do imat = 1,nmat
@@ -784,11 +800,11 @@ subroutine pressure_relaxation2(ilevel)
                       &                           (t134-t234)*(pp(1)-pp(5))+            (t124-t234)*(pp(1)-pp(3))+            (t123-t234)*(pp(1)-pp(4))+ &
                       &                           (t124-t134)*(pp(2)-pp(3))+            (t123-t134)*(pp(2)-pp(4))+            (t123-t124)*(pp(3)-pp(4)))/dd
 #endif
-                 ! Compute new specific internal energy
+                 ! ! Compute new specific internal energy
                  do imat = 1,nmat
                     ee_new(imat) = ee(imat) - ptot * (ff_new(imat) - ff(imat)) / (ff(imat)*gg(imat))
                  end do
-                 
+
                  ! Store new volume fraction
                  do imat = 1,nmat
                     uold(ind_cell(i),imat) = ff_new(imat)
@@ -822,7 +838,8 @@ subroutine pressure_relaxation2(ilevel)
                  error=abs(pp(1)-pp(2))/abs(pp(1)+pp(2))
                  
               end do
-              
+
+#if NVAR > NDIM + 3*NMAT
               ! Compute new entropy
               do imat = 1,nmat
                  
@@ -840,6 +857,7 @@ subroutine pressure_relaxation2(ilevel)
                  e_th = s_mat(1)*g_mat(1)**eos_params(imat,1)
                  e_cold = eos_params(imat,3)*(g_mat(1)/eos_params(imat,4))**eos_params(imat,2)
                  if(e_th < 0.001*e_kin .or. e_th < 0.001*e_cold)then
+                    ! write(*,*) "Entropy fix: e_th=",e_th,"e_kin=",e_kin,"e_cold=",e_cold
                     s_mat(1) = s_entry
                     call eos_s(g_mat,e_mat,s_mat,imat,.true.,1)
                     ee_new(imat) = e_mat(1)/g_mat(1)
@@ -861,10 +879,10 @@ subroutine pressure_relaxation2(ilevel)
                     write(*,*)'end relaxation: negative entropy iter=',iter,imat,g_mat(1),e_mat(1),s_mat(1)
                  endif
               end do
-
+#endif
               if(iter.EQ.iter_max)then
-!              if(iter>1)then
-                 write(*,*)'pressure relaxation iter=',iter,ff(1),ff(2),gg(1),gg(2),pp(1),pp(2),error
+             ! if(iter>1)then
+                 ! write(*,*)'pressure relaxation iter=',iter,ff(1),ff(2),gg(1),gg(2),pp(1),pp(2),error
               endif
               
            endif
@@ -876,6 +894,349 @@ subroutine pressure_relaxation2(ilevel)
   ! End loop over grids
      
 end subroutine pressure_relaxation2
+!###########################################################
+!###########################################################
+!###########################################################
+!###########################################################
+subroutine phase_transition(ilevel)
+  use amr_commons
+  use hydro_commons
+  implicit none
+  integer::ilevel
+  !-------------------------------------------------------------------
+  ! Update volume fraction using compressibility source terms
+  !-------------------------------------------------------------------
+  integer::i,k,ivar,imat,idim,ind,iskip,ncache,igrid,ngrid,iphase,idx,io
+  integer,dimension(1:nvector),save::ind_grid,ind_cell
+  real(dp)::one=1.0_dp,half=0.5_dp, zero=0.0_dp
+  integer,parameter::nphase=2
+  real(dp),dimension(1:8)::xc
+  real(dp)::skip_loc,dx,eps,scale,dx_loc
+  integer::ix,iy,iz,nx_loc,iter
+  integer::iter_max=100,iter_mean
+  real(dp)::error
+  real(dp),dimension(1:nphase)::ff,ee,gg,ff_new,ee_new,p_sat,dedp,dfdp,gg_new
+  real(dp),dimension(1:nphase)::g_sat
+  real(dp),dimension(1:nphase)::gleft,gcen,gright,eleft,ecen,eright
+  real(dp),dimension(1:nvector)::gg_mat,ee_mat,cc_mat
+  real(dp),dimension(1:nvector)::pp_mat
+  real(dp),dimension(1:ndim),save::vv
+  real(dp)::pleft,pcen,pright
+  real(dp)::e_kin,e_tot,dtot,ptot,pp_new,f0,e0,p0,g0
+  logical,save::read_flag=.false.
+  logical::mod_flag=.false.
+  integer,parameter::nrows=10000,ncols=5          ! CSV file parameters
+  real(dp),dimension(1:nrows, 1:ncols),save::xx   ! Saturation dome values (P, d_v, d_l) 
+  integer,save::nmax
+  real(dp),save::p_crit, d_crit   
+  real(dp),save::step
+  real(dp)::smallgamma,p_0,q
+
+! Here we would need an index list of which phases we are transitioning
+! The subroutine should be reading in a file with (P_sat, d_vapor, d_liquid) values
+! If phase_params, for example, equals 0 no phase transition considerations
+! Example phase_params = (/1,2,0/) for NMAT=3, liquid-vapor mixture and another fluid 
+! If P<P_crit get (idx,phase_params(idx:idx+nphases)) and pass it on 
+! We need a check for dtot inside saturation dome but individual densities outside  
+
+  dx=0.5d0**ilevel
+  skip_loc=dble(icoarse_min)
+  nx_loc=(icoarse_max-icoarse_min+1)
+  scale=boxlen/dble(nx_loc)
+  dx_loc=dx*scale
+
+  ! Read saturation dome values into an array (For now for a single fluid-vapor mixture)
+  if (.not. read_flag) then
+    xx=0d0
+    open (unit=10,file="patch/6eq/psat.csv",action="read",status="old")
+    nmax=0
+    do
+      nmax=nmax+1
+      read (10,*,iostat=io) xx(nmax,:)
+      if(io.ne.0)exit
+    end do
+    read_flag = .true.
+              
+    ! Critical pressure & density point below which phase transition can happen
+    ! write(*,*) maxval(xx(:,1)), maxloc(xx(:,1)), xx(maxloc(xx(:,1)),2)
+    p_crit = maxval(xx(:,1)) 
+    d_crit = xx(nmax-1,2)
+    step   = xx(2,1) - xx(1,1)
+    write(*,*)'Saturation dome file read'
+    write(*,*)'nmax=',nmax,' P_crit=',p_crit,' d_crit=',d_crit, " step=", step
+  end if
+
+  ! Set position of cell centers relative to grid center
+  do ind=1,twotondim
+     iz=(ind-1)/4
+     iy=(ind-1-4*iz)/2
+     ix=(ind-1-2*iy-4*iz)
+     xc(ind)=(dble(ix)-0.5D0)*dx
+  end do
+
+  ! Loop over active grids by vector sweeps
+  ncache=active(ilevel)%ngrid
+  do igrid=1,ncache,nvector
+
+     ! Gather nvector grids
+     ngrid=MIN(nvector,ncache-igrid+1)
+     do i=1,ngrid
+        ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
+     end do
+
+     ! Loop over cells
+     do ind=1,twotondim
+
+        ! Compute cell index
+        iskip=ncoarse+(ind-1)*ngridmax
+        do i=1,ngrid
+           ind_cell(i)=ind_grid(i)+iskip
+        end do
+
+        do i=1,ngrid
+          if(son(ind_cell(i))==0)then
+            ! write(*,*) ptot, p_crit
+            ! Compute total mass density
+              dtot=0
+              do imat = 1,nmat
+                 dtot = dtot + uold(ind_cell(i),nmat+imat)
+              end do
+
+            ! Compute velocity
+            do idim = 1,ndim
+              vv(idim) = uold(ind_cell(i),2*nmat+idim)/dtot
+            end do
+        
+            ! Compute specific kinetic energy
+            e_kin=0.0
+            do idim = 1,ndim
+              e_kin = e_kin + half*vv(idim)**2
+            end do      
+
+            ! Calculate the the total pressure
+            ptot = 0.0
+            do imat=1,nmat
+              ff(imat)   = uold(ind_cell(i),imat)
+              gg_mat(1)  = uold(ind_cell(i),nmat+imat)/ff(imat) 
+              e_tot      = uold(ind_cell(i),2*nmat+ndim+imat)/ff(imat)
+              ee_mat(1)  = e_tot - gg_mat(1)*e_kin
+              call eos(gg_mat,ee_mat,pp_mat,cc_mat,imat,.false.,1)
+              ptot = ptot + pp_mat(1)*ff(imat)
+            end do 
+
+            if(ptot<p_crit)then
+              mod_flag = .false.
+              ! Compute f0, g0 and e0 for the given mixture
+              idx= 0.0 ! For now
+              f0 = 0.0
+              g0 = 0.0
+              e0 = 0.0
+              do iphase=1,nphase
+                ivar = idx + iphase
+                ff(iphase) = uold(ind_cell(i),ivar)
+                gg(iphase) = uold(ind_cell(i),nmat+ivar)/ff(iphase) 
+                e_tot      = uold(ind_cell(i),2*nmat+ndim+ivar)/ff(iphase)
+                ee(iphase) = e_tot - gg(iphase)*e_kin
+                if(ee(iphase)<0)then
+                  write(*,*)'phase transition: negative energy',ff(1),ff(2),gg(1),gg(2),ee(iphase),e_tot,e_kin
+                endif
+                f0 = f0 + ff(iphase)
+                g0 = g0 + ff(iphase) * gg(iphase)
+                e0 = e0 + ff(iphase) * ee(iphase)
+              end do
+              g0 = g0/f0
+              e0 = e0/f0
+              ! write(*,*) "Entered phase transition region (P,rho) = (",ptot,",",g0,")"
+              ! write(*,*) "e0=",e0," g0=",g0, " f0=",f0
+
+              ! Set the interpolation kernel
+              k=(ptot/p_crit)*(nmax-1)
+              if(k==0)then
+                 pleft = xx(k  , 1)
+                 pcen  = xx(k+1, 1)
+                 pright= xx(k+2, 1)
+              else if(k==nmax-1)then 
+                 pleft = xx(k-2, 1)
+                 pcen  = xx(k-1, 1)
+                 pright= xx(k  , 1)
+              else
+                 pleft = xx(k-1, 1)
+                 pcen  = xx(k  , 1)
+                 pright= xx(k+1, 1)
+              end if
+              
+              do iphase=1,nphase
+                 if(k==0)then
+                    gleft(iphase) = xx(k  , 1+iphase)
+                    gcen(iphase)  = xx(k+1, 1+iphase)
+                    gright(iphase)= xx(k+2, 1+iphase)
+                    eleft(iphase) = xx(k  , 3+iphase)
+                    ecen(iphase)  = xx(k+1, 3+iphase)
+                    eright(iphase)= xx(k+2, 3+iphase)
+                 else if(k==nmax-1)then 
+                    gleft(iphase) = xx(k-2, 1+iphase)
+                    gcen(iphase)  = xx(k-1, 1+iphase)
+                    gright(iphase)= xx(k  , 1+iphase)
+                    eleft(iphase) = xx(k-2, 3+iphase)
+                    ecen(iphase)  = xx(k-1, 3+iphase)
+                    eright(iphase)= xx(k  , 3+iphase)
+                 else
+                    gleft(iphase) = xx(k-1, 1+iphase)
+                    gcen(iphase)  = xx(k  , 1+iphase)
+                    gright(iphase)= xx(k+1, 1+iphase)
+                    eleft(iphase) = xx(k-1, 3+iphase)
+                    ecen(iphase)  = xx(k  , 3+iphase)
+                    eright(iphase)= xx(k+1, 3+iphase)
+                 end if
+              end do
+              ! write(*,*) "k=",k," P_tot=",ptot," P_crit=",p_crit," N_points=", nmax-1
+              
+              ! Interpolate to the saturation dome values
+              do iphase=1,nphase
+                 g_sat(iphase)  = ((ptot - pright)*(ptot - pleft)) /((pcen   - pright)*(pcen   - pleft)) *gcen(iphase)   &
+                                + ((ptot - pcen)  *(ptot - pleft)) /((pright - pcen)  *(pright - pleft)) *gright(iphase) &
+                                + ((ptot - pcen)  *(ptot - pright))/((pleft  - pcen)  *(pleft  - pright))*gleft(iphase)
+                 ee_new(iphase) = ((ptot - pright)*(ptot - pleft)) /((pcen   - pright)*(pcen   - pleft)) *ecen(iphase)   &
+                                + ((ptot - pcen)  *(ptot - pleft)) /((pright - pcen)  *(pright - pleft)) *eright(iphase) &
+                                + ((ptot - pcen)  *(ptot - pright))/((pleft  - pcen)  *(pleft  - pright))*eleft(iphase)
+                 ! g_sat(iphase) = xx(k,1+iphase) + (ptot-xx(k,1))*((xx(k+1,1+iphase)-xx(k,1+iphase))/(xx(k+1,1)-xx(k,1)))
+                 ! write(*,*) "g_sat_",iphase,"=",g_sat(iphase)
+              end do
+
+              ! If we are inside the saturation dome, we trigger the mass transfer routine
+              if(g0<g_sat(1) .and. g0>g_sat(2))then
+                 mod_flag = .true.
+                 ! write(*,*) "dedp1=",dedp(1), " dedp2=", dedp(2)
+                 ! Newton iteration to get the new pressure
+                 iter = 0
+                 error = 1
+                 do while(abs(error).GT.1d-12.AND.iter<iter_max)
+                    ! write(*,*) iter, "Current state: P_n=",pp_new," Error=",error, &
+                    !            " Correction=",(ff_new(1)*ee_new(1)+ff_new(2)*ee_new(2)-f0*e0)/(ff_new(1)*dedp(1)+ff_new(2)*dedp(2))
+                    ! write(*,*) iter, "Current state: f_n1=",ff_new(1)," f_n2=",ff_new(2)," ee_new1=",ee_new(1)," ee_new2=",ee_new(2)
+                    ! write(*,*) iter, "Current state: g_n1=",g_sat(1)," g_n2=",g_sat(2)
+                    if(iter==0)then 
+                     pp_new = xx(k,1) ! Initial guess
+                    else
+                     ! Assumption for volume fractions f = f(P_n)   
+                     ! pp_new = pp_new + (ff_new(1)*ee_new(1)+ff_new(2)*ee_new(2)-f0*e0)/(dfdp(1)*ee_new(1)+ff_new(2)*dedp(2)+dfdp(2)*ee_new(2)+ff_new(2)*dedp(2))
+                     ! Assumption for volume fractions f = f(P_{n-1}) 
+                     pp_new = pp_new - (ff_new(1)*ee_new(1)+ff_new(2)*ee_new(2)-f0*e0)/(ff_new(1)*dedp(1)+ff_new(2)*dedp(2))
+                    end if
+                   
+                    ! Set the interpolation kernel
+                    k=(pp_new/p_crit)*(nmax-1)
+                    if(k==0)then
+                       pleft = xx(k  , 1)
+                       pcen  = xx(k+1, 1)
+                       pright= xx(k+2, 1)
+                    else if(k==nmax-1)then 
+                       pleft = xx(k-2, 1)
+                       pcen  = xx(k-1, 1)
+                       pright= xx(k  , 1)
+                    else
+                       pleft = xx(k-1, 1)
+                       pcen  = xx(k  , 1)
+                       pright= xx(k+1, 1)
+                    end if
+                    
+                    do iphase=1,nphase
+                       if(k==0)then
+                          gleft(iphase) = xx(k  , 1+iphase)
+                          gcen(iphase)  = xx(k+1, 1+iphase)
+                          gright(iphase)= xx(k+2, 1+iphase)
+                          eleft(iphase) = xx(k  , 3+iphase)
+                          ecen(iphase)  = xx(k+1, 3+iphase)
+                          eright(iphase)= xx(k+2, 3+iphase)
+                       else if(k==nmax-1)then 
+                          gleft(iphase) = xx(k-2, 1+iphase)
+                          gcen(iphase)  = xx(k-1, 1+iphase)
+                          gright(iphase)= xx(k  , 1+iphase)
+                          eleft(iphase) = xx(k-2, 3+iphase)
+                          ecen(iphase)  = xx(k-1, 3+iphase)
+                          eright(iphase)= xx(k  , 3+iphase)
+                       else
+                          gleft(iphase) = xx(k-1, 1+iphase)
+                          gcen(iphase)  = xx(k  , 1+iphase)
+                          gright(iphase)= xx(k+1, 1+iphase)
+                          eleft(iphase) = xx(k-1, 3+iphase)
+                          ecen(iphase)  = xx(k  , 3+iphase)
+                          eright(iphase)= xx(k+1, 3+iphase)
+                       end if
+                    end do
+                    ! write(*,*) "k=",k," P_tot=",ptot," P_crit=",p_crit," N_points=", nmax-1
+                    
+                    ! Interpolate to the saturation dome values
+                    do iphase=1,nphase
+                       g_sat(iphase)  = ((pp_new - pright)*(pp_new - pleft)) /((pcen   - pright)*(pcen   - pleft)) *gcen(iphase)   &
+                                      + ((pp_new - pcen)  *(pp_new - pleft)) /((pright - pcen)  *(pright - pleft)) *gright(iphase) &
+                                      + ((pp_new - pcen)  *(pp_new - pright))/((pleft  - pcen)  *(pleft  - pright))*gleft(iphase)
+                       ee_new(iphase) = ((pp_new - pright)*(pp_new - pleft)) /((pcen   - pright)*(pcen   - pleft)) *ecen(iphase)   &
+                                      + ((pp_new - pcen)  *(pp_new - pleft)) /((pright - pcen)  *(pright - pleft)) *eright(iphase) &
+                                      + ((pp_new - pcen)  *(pp_new - pright))/((pleft  - pcen)  *(pleft  - pright))*eleft(iphase)
+                       dedp(iphase)   = (eright(iphase) - eleft(iphase))/ (pright - pleft)
+                    end do
+                   
+                    ! Update volume fractions 
+                    ff_new(1) = f0 * (g0 - g_sat(2))/(g_sat(1) - g_sat(2))
+                    ff_new(2) = f0 * (g_sat(1) - g0)/(g_sat(1) - g_sat(2))
+                   
+                    ! Update iteration variable
+                    iter = iter+1
+
+                    ! Calculate the error 
+                    error  = (ff_new(1)*ee_new(1)+ff_new(2)*ee_new(2)-f0*e0)/(f0*e0)
+                 end do
+
+                 ! Update the density terms
+                 do iphase=1,nphase
+                    gg_new(iphase) = g_sat(iphase)
+                 end do
+
+              ! Check for unphysical states landing in the saturation dome when no phase transition is happening
+              else if(gg(1)<g_sat(1))then 
+                 ! write(*,*) "Pure liquid case", g0, g_sat(1)
+                 ! write(*,*) "Correcting values from:"," f_n1=",ff_new(1)," f_n2=",ff_new(2)," ee_1=",ee(1)," ee_2=",ee(2)
+                 mod_flag  = .true.
+                 ff_new(1) = 1.0 - 1e-2
+                 ff_new(2) = 1e-2
+                 gg_new(1) = gg(1)
+                 gg_new(2) = g_sat(2)
+                 ee_new(1) = ee(1)
+                 ! write(*,*) "To:"," f_n1=",ff_new(1)," f_n2=",ff_new(2)," ee_new1=",ee(1)," ee_new2=",ee(2)
+              else if(gg(2)>g_sat(2))then 
+                 ! write(*,*) "Pure vapor case", g0, g_sat(2)
+                 ! write(*,*) "Correcting values from:"," f_n1=",ff_new(1)," f_n2=",ff_new(2)," ee_1=",ee(1)," ee_2=",ee(2)
+                 mod_flag  = .true.
+                 ff_new(1) = 1e-2
+                 ff_new(2) = 1.0 - 1e-2
+                 gg_new(1) = g_sat(1)
+                 gg_new(2) = gg(2)
+                 ee_new(2) = ee(2)
+                 ! write(*,*) "To:"," f_n1=",ff_new(1)," f_n2=",ff_new(2)," ee_new1=",ee(1)," ee_new2=",ee(2)
+              end if
+
+              ! If values were modified update existing solutions
+              if(mod_flag)then 
+                 do iphase = 1,nphase
+                    ivar = idx + iphase
+                    ! Store new volume fractions & densities
+                    uold(ind_cell(i),ivar)      = ff_new(iphase)
+                    uold(ind_cell(i),nmat+ivar) = ff_new(iphase) * gg_new(iphase)
+                    ! Store new partial total energies
+                    e_tot = ee_new(iphase) + gg_new(iphase)*e_kin
+                    uold(ind_cell(i),2*nmat+ndim+ivar) = uold(ind_cell(i),ivar)*e_tot
+                 end do
+              end if
+            end if
+          endif
+        end do
+      
+     end do
+     ! End loop over cells
+  end do
+  ! End loop over grids
+end subroutine phase_transition
 !###########################################################
 !###########################################################
 !###########################################################

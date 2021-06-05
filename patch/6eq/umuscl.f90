@@ -234,7 +234,7 @@ subroutine ctoprim(uin,q,f,g,c,gravin,dt,ngrid)
       gg_mat(l) = g(l,i,j,k,imat)
       ee_mat(l) = q(l,i,j,k,ndim+nmat+imat)
       if(ee_mat(l)<0)then
-         write(*,*)'ctoprim',imat,l,ee_mat(l)
+         ! write(*,*)'ctoprim',imat,l,ee_mat(l)
       endif
       end do
       ! Call eos routine
@@ -269,7 +269,7 @@ subroutine ctoprim(uin,q,f,g,c,gravin,dt,ngrid)
         do l = 1, ngrid
            q(l,i,j,k,n-nmat) = uin(l,i,j,k,n)/uin(l,i,j,k,nmat+imat)
            if(q(l,i,j,k,n-nmat)<0)then
-              write(*,*)'ctoprim negative entropy',imat,ipscal,q(l,i,j,k,n-nmat)
+              ! write(*,*)'ctoprim negative entropy',imat,ipscal,q(l,i,j,k,n-nmat)
            endif
         end do
      end do
