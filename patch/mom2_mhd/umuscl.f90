@@ -865,19 +865,12 @@ SUBROUTINE trace3d(q,pin,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               r =    q(l,i,j,k,ir)
               rini = q(l,i,j,k,ir)
               u =    q(l,i,j,k,iu)
-              uini = q(l,i,j,k,iu)
               v =    q(l,i,j,k,iv)
-              vini = q(l,i,j,k,iv)
               w =    q(l,i,j,k,iw)
-              wini = q(l,i,j,k,iw)
               p =    q(l,i,j,k,ip)
-              pini = q(l,i,j,k,ip)
               A =    q(l,i,j,k,iA)
-              Aini = q(l,i,j,k,iA)
               B =    q(l,i,j,k,iB)
-              Bini = q(l,i,j,k,iB)
               C =    q(l,i,j,k,iC)
-              Cini = q(l,i,j,k,iC)
 #if NENER>0
               do irad=1,nener
                  e(irad) = q(l,i,j,k,iC+irad)
@@ -1023,10 +1016,6 @@ SUBROUTINE trace3d(q,pin,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qp(l,i,j,k,iC,1) = C - dCx
               if (qp(l,i,j,k,ir,1) < smallrr) then
                   qp(l,i,j,k,ir,1) = rini
-                  qp(l,i,j,k,iu,1) = uini
-                  qp(l,i,j,k,iv,1) = vini
-                  qp(l,i,j,k,iw,1) = wini
-                  qp(l,i,j,k,ip,1) = pini
               endif
 
               qp(l,i,j,k,ip,1) = MAX(smallp, qp(l,i,j,k,ip,1))
@@ -1047,10 +1036,6 @@ SUBROUTINE trace3d(q,pin,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qm(l,i,j,k,iC,1) = C + dCx
               if (qm(l,i,j,k,ir,1) < smallrr) then
                   qm(l,i,j,k,ir,1) = rini
-                  qm(l,i,j,k,iu,1) = uini
-                  qm(l,i,j,k,iv,1) = vini
-                  qm(l,i,j,k,iw,1) = wini
-                  qm(l,i,j,k,ip,1) = pini
               endif
 
               qm(l,i,j,k,ip,1) = MAX(smallp, qm(l,i,j,k,ip,1))
@@ -1071,10 +1056,6 @@ SUBROUTINE trace3d(q,pin,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qp(l,i,j,k,iC,2) = C - dCy
               if (qp(l,i,j,k,ir,2) < smallrr) then
                   qp(l,i,j,k,ir,2) = rini
-                  qp(l,i,j,k,iu,2) = uini
-                  qp(l,i,j,k,iv,2) = vini
-                  qp(l,i,j,k,iw,2) = wini
-                  qp(l,i,j,k,ip,2) = pini
               endif
 
               qp(l,i,j,k,ip,2) = MAX(smallp, qp(l,i,j,k,ip,2))
@@ -1095,10 +1076,6 @@ SUBROUTINE trace3d(q,pin,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qm(l,i,j,k,iC,2) = C + dCy
               if (qm(l,i,j,k,ir,2) < smallrr) then
                   qm(l,i,j,k,ir,2) = rini
-                  qm(l,i,j,k,iu,2) = uini
-                  qm(l,i,j,k,iv,2) = vini
-                  qm(l,i,j,k,iw,2) = wini
-                  qm(l,i,j,k,ip,2) = pini
               endif
 
               qm(l,i,j,k,ip,2) = MAX(smallp, qm(l,i,j,k,ip,2))
@@ -1119,10 +1096,6 @@ SUBROUTINE trace3d(q,pin,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qp(l,i,j,k,iC,3) = CL
               if (qp(l,i,j,k,ir,3) < smallrr) then
                   qp(l,i,j,k,ir,3) = rini
-                  qp(l,i,j,k,iu,3) = uini
-                  qp(l,i,j,k,iv,3) = vini
-                  qp(l,i,j,k,iw,3) = wini
-                  qp(l,i,j,k,ip,3) = pini
               endif
 
               qp(l,i,j,k,ip,3) = MAX(smallp, qp(l,i,j,k,ip,3))
@@ -1143,10 +1116,6 @@ SUBROUTINE trace3d(q,pin,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qm(l,i,j,k,iC,3) = CR
               if (qm(l,i,j,k,ir,3) < smallrr) then
                   qm(l,i,j,k,ir,3) = rini
-                  qm(l,i,j,k,iu,3) = uini
-                  qm(l,i,j,k,iv,3) = vini
-                  qm(l,i,j,k,iw,3) = wini
-                  qm(l,i,j,k,ip,3) = pini
               endif
 
               qm(l,i,j,k,ip,3) = MAX(smallp, qm(l,i,j,k,ip,3))
@@ -1167,10 +1136,6 @@ SUBROUTINE trace3d(q,pin,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qRT(l,i,j,k,iC,1) = CR+ (+dCRy   )
               if (qRT(l,i,j,k,ir,1) < smallrr) then
                   qRT(l,i,j,k,ir,1) = rini
-                  qRT(l,i,j,k,iu,1) = uini
-                  qRT(l,i,j,k,iv,1) = vini
-                  qRT(l,i,j,k,iw,1) = wini
-                  qRT(l,i,j,k,ip,1) = pini
               endif
 
               qRT(l,i,j,k,ip,1) = MAX(smallp, qRT(l,i,j,k,ip,1))
@@ -1192,10 +1157,6 @@ SUBROUTINE trace3d(q,pin,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qRB(l,i,j,k,iC,1) = CL+ (+dCLy   )
               if (qRB(l,i,j,k,ir,1) < smallrr) then
                   qRB(l,i,j,k,ir,1) = rini
-                  qRB(l,i,j,k,iu,1) = uini
-                  qRB(l,i,j,k,iv,1) = vini
-                  qRB(l,i,j,k,iw,1) = wini
-                  qRB(l,i,j,k,ip,1) = pini
               endif
 
               qRB(l,i,j,k,ip,1) = MAX(smallp, qRB(l,i,j,k,ip,1))
@@ -1217,10 +1178,6 @@ SUBROUTINE trace3d(q,pin,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qLT(l,i,j,k,iC,1) = CR+ (-dCRy   )
               if (qLT(l,i,j,k,ir,1) < smallrr) then
                   qLT(l,i,j,k,ir,1) = rini
-                  qLT(l,i,j,k,iu,1) = uini
-                  qLT(l,i,j,k,iv,1) = vini
-                  qLT(l,i,j,k,iw,1) = wini
-                  qLT(l,i,j,k,ip,1) = pini
               endif
 
               qLT(l,i,j,k,ip,1) = MAX(smallp, qLT(l,i,j,k,ip,1))
@@ -1242,10 +1199,6 @@ SUBROUTINE trace3d(q,pin,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qLB(l,i,j,k,iC,1) = CL+ (-dCLy   )
               if (qLB(l,i,j,k,ir,1) < smallrr) then
                   qLB(l,i,j,k,ir,1) = rini
-                  qLB(l,i,j,k,iu,1) = uini
-                  qLB(l,i,j,k,iv,1) = vini
-                  qLB(l,i,j,k,iw,1) = wini
-                  qLB(l,i,j,k,ip,1) = pini
               endif
 
               qLB(l,i,j,k,ip,1) = MAX(smallp, qLB(l,i,j,k,ip,1))
@@ -1267,10 +1220,6 @@ SUBROUTINE trace3d(q,pin,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qRT(l,i,j,k,iC,2) = CR+ (+dCRx   )
               if (qRT(l,i,j,k,ir,2) < smallrr) then
                   qRT(l,i,j,k,ir,2) = rini
-                  qRT(l,i,j,k,iu,2) = uini
-                  qRT(l,i,j,k,iv,2) = vini
-                  qRT(l,i,j,k,iw,2) = wini
-                  qRT(l,i,j,k,ip,2) = pini
               endif
 
               qRT(l,i,j,k,ip,2) = MAX(smallp, qRT(l,i,j,k,ip,2))
@@ -1292,10 +1241,6 @@ SUBROUTINE trace3d(q,pin,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qRB(l,i,j,k,iC,2) = CL+ (+dCLx   )
               if (qRB(l,i,j,k,ir,2) < smallrr) then
                   qRB(l,i,j,k,ir,2) = rini
-                  qRB(l,i,j,k,iu,2) = uini
-                  qRB(l,i,j,k,iv,2) = vini
-                  qRB(l,i,j,k,iw,2) = wini
-                  qRB(l,i,j,k,ip,2) = pini
               endif
 
               qRB(l,i,j,k,ip,2) = MAX(smallp, qRB(l,i,j,k,ip,2))
@@ -1317,10 +1262,6 @@ SUBROUTINE trace3d(q,pin,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qLT(l,i,j,k,iC,2) = CR+ (-dCRx   )
               if (qLT(l,i,j,k,ir,2) < smallrr) then
                   qLT(l,i,j,k,ir,2) = rini
-                  qLT(l,i,j,k,iu,2) = uini
-                  qLT(l,i,j,k,iv,2) = vini
-                  qLT(l,i,j,k,iw,2) = wini
-                  qLT(l,i,j,k,ip,2) = pini
               endif
 
               qLT(l,i,j,k,ip,2) = MAX(smallp, qLT(l,i,j,k,ip,2))
@@ -1342,10 +1283,6 @@ SUBROUTINE trace3d(q,pin,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qLB(l,i,j,k,iC,2) = CL+ (-dCLx   )
               if (qLB(l,i,j,k,ir,2) < smallrr) then
                   qLB(l,i,j,k,ir,2) = rini
-                  qLB(l,i,j,k,iu,2) = uini
-                  qLB(l,i,j,k,iv,2) = vini
-                  qLB(l,i,j,k,iw,2) = wini
-                  qLB(l,i,j,k,ip,2) = pini
               endif
 
               qLB(l,i,j,k,ip,2) = MAX(smallp, qLB(l,i,j,k,ip,2))
@@ -1367,10 +1304,6 @@ SUBROUTINE trace3d(q,pin,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qRT(l,i,j,k,iC,3) = C + (+dCx+dCy)
               if (qRT(l,i,j,k,ir,3) < smallrr) then
                   qRT(l,i,j,k,ir,3) = rini
-                  qRT(l,i,j,k,iu,3) = uini
-                  qRT(l,i,j,k,iv,3) = vini
-                  qRT(l,i,j,k,iw,3) = wini
-                  qRT(l,i,j,k,ip,3) = pini
               endif
 
               qRT(l,i,j,k,ip,3) = MAX(smallp, qRT(l,i,j,k,ip,3))
@@ -1392,10 +1325,6 @@ SUBROUTINE trace3d(q,pin,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qRB(l,i,j,k,iC,3) = C + (+dCx-dCy)
               if (qRB(l,i,j,k,ir,3) < smallrr) then
                   qRB(l,i,j,k,ir,3) = rini
-                  qRB(l,i,j,k,iu,3) = uini
-                  qRB(l,i,j,k,iv,3) = vini
-                  qRB(l,i,j,k,iw,3) = wini
-                  qRB(l,i,j,k,ip,3) = pini
               endif
 
               qRB(l,i,j,k,ip,3) = MAX(smallp, qRB(l,i,j,k,ip,3))
@@ -1417,10 +1346,6 @@ SUBROUTINE trace3d(q,pin,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qLT(l,i,j,k,iC,3) = C + (-dCx+dCy)
               if (qLT(l,i,j,k,ir,3) < smallrr) then
                   qLT(l,i,j,k,ir,3) = rini
-                  qLT(l,i,j,k,iu,3) = uini
-                  qLT(l,i,j,k,iv,3) = vini
-                  qLT(l,i,j,k,iw,3) = wini
-                  qLT(l,i,j,k,ip,3) = pini
               endif
 
               qLT(l,i,j,k,ip,3) = MAX(smallp, qLT(l,i,j,k,ip,3))
@@ -1442,10 +1367,6 @@ SUBROUTINE trace3d(q,pin,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               qLB(l,i,j,k,iC,3) = C + (-dCx-dCy)
               if (qLB(l,i,j,k,ir,3) < smallrr) then
                   qLB(l,i,j,k,ir,3) = rini
-                  qLB(l,i,j,k,iu,3) = uini
-                  qLB(l,i,j,k,iv,3) = vini
-                  qLB(l,i,j,k,iw,3) = wini
-                  qLB(l,i,j,k,ip,3) = pini
               endif
 
               qLB(l,i,j,k,ip,3) = MAX(smallp, qLB(l,i,j,k,ip,3))
