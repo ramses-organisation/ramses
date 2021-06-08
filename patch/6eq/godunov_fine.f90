@@ -906,22 +906,22 @@ subroutine phase_transition(ilevel)
   !-------------------------------------------------------------------
   ! Update volume fraction using compressibility source terms
   !-------------------------------------------------------------------
-  integer::i,k,ivar,imat,idim,ind,iskip,ncache,igrid,ngrid,iphase,idx,io
+  integer::i,k,ivar,imat,idim,ind,iskip,ncache,igrid,ngrid,iphase,idx,io,trial
   integer,dimension(1:nvector),save::ind_grid,ind_cell
   real(dp)::one=1.0_dp,half=0.5_dp, zero=0.0_dp
   integer,parameter::nphase=2
   real(dp),dimension(1:8)::xc
   real(dp)::skip_loc,dx,eps,scale,dx_loc
   integer::ix,iy,iz,nx_loc,iter
-  integer::iter_max=100,iter_mean
-  real(dp)::error
+  integer::iter_max=200,trial_max=5
+  real(dp)::error,error_old,pp_best
   real(dp),dimension(1:nphase)::ff,ee,gg,ff_new,ee_new,p_sat,dedp,dfdp,gg_new
   real(dp),dimension(1:nphase)::g_sat
   real(dp),dimension(1:nphase)::gleft,gcen,gright,eleft,ecen,eright
   real(dp),dimension(1:nvector)::gg_mat,ee_mat,cc_mat
   real(dp),dimension(1:nvector)::pp_mat
   real(dp),dimension(1:ndim),save::vv
-  real(dp)::pleft,pcen,pright
+  real(dp)::pleft,pcen,pright,ftot
   real(dp)::e_kin,e_tot,dtot,ptot,pp_new,f0,e0,p0,g0
   logical,save::read_flag=.false.
   logical::mod_flag=.false.
@@ -932,12 +932,17 @@ subroutine phase_transition(ilevel)
   real(dp),save::step
   real(dp)::smallgamma,p_0,q
 
+! Ideas for generalising the phase transition routine for an arbitrary combination of 
+! fluids with an arbitrary number of them transitioning:
 ! Here we would need an index list of which phases we are transitioning
-! The subroutine should be reading in a file with (P_sat, d_vapor, d_liquid) values
+! The subroutine should be reading in a file with (P_sat12, ... , P_sat1m, P_satl(l+1), ..., P_satln, d_1, ..., d_m, d_l, ..., d_n, e_1, e_2, ... , e_n) values
+! Here P_sat12 would be the saturation pressure for the mixture of fluid 1 and fluid 2 
+! d_1 and d_2 the densities at P_sat12 (Analogous for e_1,2)
 ! If phase_params, for example, equals 0 no phase transition considerations
-! Example phase_params = (/1,2,0/) for NMAT=3, liquid-vapor mixture and another fluid 
-! If P<P_crit get (idx,phase_params(idx:idx+nphases)) and pass it on 
-! We need a check for dtot inside saturation dome but individual densities outside  
+! Example phase_params = (/1,2,0/) for NMAT=3, liquid-vapor mixture and another fluid
+! => Fluid 1,2 are a pair with pre-computed phase transition data available. No phase transition considerations for fluid 3 
+! If P<P_crit for any pair of fluids store their indices in the idx variable and trigger the phase transition routine
+! After all fluid pairs are relaxed, we perform another pressure relaxation to equalize the pressure before continuing
 
   dx=0.5d0**ilevel
   skip_loc=dble(icoarse_min)
@@ -945,25 +950,25 @@ subroutine phase_transition(ilevel)
   scale=boxlen/dble(nx_loc)
   dx_loc=dx*scale
 
-  ! Read saturation dome values into an array (For now for a single fluid-vapor mixture)
+  ! Read saturation dome values into an array (For now for a single fluid-vapour mixture)
   if (.not. read_flag) then
-    xx=0d0
-    open (unit=10,file="patch/6eq/psat.csv",action="read",status="old")
-    nmax=0
-    do
-      nmax=nmax+1
-      read (10,*,iostat=io) xx(nmax,:)
-      if(io.ne.0)exit
-    end do
-    read_flag = .true.
+     xx=0d0
+     open (unit=10,file="patch/6eq/psat.csv",action="read",status="old")
+     nmax=0
+     do
+       nmax=nmax+1
+       read (10,*,iostat=io) xx(nmax,:)
+       if(io.ne.0)exit
+     end do
+     read_flag = .true.
               
     ! Critical pressure & density point below which phase transition can happen
-    ! write(*,*) maxval(xx(:,1)), maxloc(xx(:,1)), xx(maxloc(xx(:,1)),2)
-    p_crit = maxval(xx(:,1)) 
-    d_crit = xx(nmax-1,2)
-    step   = xx(2,1) - xx(1,1)
-    write(*,*)'Saturation dome file read'
-    write(*,*)'nmax=',nmax,' P_crit=',p_crit,' d_crit=',d_crit, " step=", step
+    ! File structure (P_sat, d_liquid, d_vapour, e_liquid, e_vapour)
+     p_crit = maxval(xx(:,1)) 
+     d_crit = xx(nmax-1,2)
+     step   = xx(2,1) - xx(1,1)
+     write(*,*)'Saturation dome file read'
+     write(*,*)'nmax=',nmax,' P_crit=',p_crit,' d_crit=',d_crit, " step=", step
   end if
 
   ! Set position of cell centers relative to grid center
@@ -1051,14 +1056,14 @@ subroutine phase_transition(ilevel)
 
               ! Set the interpolation kernel
               k=(ptot/p_crit)*(nmax-1)
-              if(k==0)then
-                 pleft = xx(k  , 1)
-                 pcen  = xx(k+1, 1)
-                 pright= xx(k+2, 1)
-              else if(k==nmax-1)then 
-                 pleft = xx(k-2, 1)
-                 pcen  = xx(k-1, 1)
-                 pright= xx(k  , 1)
+              if(k<=1)then
+                 pleft = xx(1  , 1)
+                 pcen  = xx(2  , 1)
+                 pright= xx(3  , 1)
+              else if(k>=nmax-1)then 
+                 pleft = xx(nmax-3, 1)
+                 pcen  = xx(nmax-2, 1)
+                 pright= xx(nmax-1, 1)
               else
                  pleft = xx(k-1, 1)
                  pcen  = xx(k  , 1)
@@ -1066,20 +1071,20 @@ subroutine phase_transition(ilevel)
               end if
               
               do iphase=1,nphase
-                 if(k==0)then
-                    gleft(iphase) = xx(k  , 1+iphase)
-                    gcen(iphase)  = xx(k+1, 1+iphase)
-                    gright(iphase)= xx(k+2, 1+iphase)
-                    eleft(iphase) = xx(k  , 3+iphase)
-                    ecen(iphase)  = xx(k+1, 3+iphase)
-                    eright(iphase)= xx(k+2, 3+iphase)
-                 else if(k==nmax-1)then 
-                    gleft(iphase) = xx(k-2, 1+iphase)
-                    gcen(iphase)  = xx(k-1, 1+iphase)
-                    gright(iphase)= xx(k  , 1+iphase)
-                    eleft(iphase) = xx(k-2, 3+iphase)
-                    ecen(iphase)  = xx(k-1, 3+iphase)
-                    eright(iphase)= xx(k  , 3+iphase)
+                 if(k<=1)then
+                    gleft(iphase) = xx(1, 1+iphase)
+                    gcen(iphase)  = xx(2, 1+iphase)
+                    gright(iphase)= xx(3, 1+iphase)
+                    eleft(iphase) = xx(1, 3+iphase)
+                    ecen(iphase)  = xx(2, 3+iphase)
+                    eright(iphase)= xx(3, 3+iphase)
+                 else if(k>=nmax-1)then 
+                    gleft(iphase) = xx(nmax-3, 1+iphase)
+                    gcen(iphase)  = xx(nmax-2, 1+iphase)
+                    gright(iphase)= xx(nmax-1, 1+iphase)
+                    eleft(iphase) = xx(nmax-3, 3+iphase)
+                    ecen(iphase)  = xx(nmax-2, 3+iphase)
+                    eright(iphase)= xx(nmax-1, 3+iphase)
                  else
                     gleft(iphase) = xx(k-1, 1+iphase)
                     gcen(iphase)  = xx(k  , 1+iphase)
@@ -1104,36 +1109,55 @@ subroutine phase_transition(ilevel)
               end do
 
               ! If we are inside the saturation dome, we trigger the mass transfer routine
-              if(g0<g_sat(1) .and. g0>g_sat(2))then
+              if((gg(1)<g_sat(1) .or. gg(2)>g_sat(2)) .and. g0<g_sat(1) .and. g0>g_sat(2))then
                  mod_flag = .true.
-                 ! write(*,*) "dedp1=",dedp(1), " dedp2=", dedp(2)
                  ! Newton iteration to get the new pressure
                  iter = 0
                  error = 1
+                 trial = 0
+                 ! write(*,*) "Entered phase transition region (P,rho) = (",ptot,",",g0,")"
+                 ! write(*,*) "k=",k," P_crit=",p_crit," N_points=", nmax-1
+                 ! write(*,*) "e0=",e0," g0=",g0, " f0=",f0
                  do while(abs(error).GT.1d-12.AND.iter<iter_max)
-                    ! write(*,*) iter, "Current state: P_n=",pp_new," Error=",error, &
-                    !            " Correction=",(ff_new(1)*ee_new(1)+ff_new(2)*ee_new(2)-f0*e0)/(ff_new(1)*dedp(1)+ff_new(2)*dedp(2))
-                    ! write(*,*) iter, "Current state: f_n1=",ff_new(1)," f_n2=",ff_new(2)," ee_new1=",ee_new(1)," ee_new2=",ee_new(2)
-                    ! write(*,*) iter, "Current state: g_n1=",g_sat(1)," g_n2=",g_sat(2)
+                    ! Initial guess
                     if(iter==0)then 
-                     pp_new = xx(k,1) ! Initial guess
+                       pp_new = xx(k,1) 
+                       ! write(*,*) iter, "Initial state: P_n=",pp_new," Error=",error
+                       ! write(*,*) iter, "Initial state: f_n1=",ff(1)," f_n2=",ff(2)," ee_new1=",ee_new(1)," ee_new2=",ee_new(2)
+                       ! write(*,*) iter, "Initial state: g_n1=",g_sat(1)," g_n2=",g_sat(2)
+                    ! Attempts at remedying a bad initial guess
+                    else if(k<0 .or. k>nmax-1)then 
+                       pp_new = pp_new/1.2
+                    ! Normal iteration case   
                     else
-                     ! Assumption for volume fractions f = f(P_n)   
-                     ! pp_new = pp_new + (ff_new(1)*ee_new(1)+ff_new(2)*ee_new(2)-f0*e0)/(dfdp(1)*ee_new(1)+ff_new(2)*dedp(2)+dfdp(2)*ee_new(2)+ff_new(2)*dedp(2))
-                     ! Assumption for volume fractions f = f(P_{n-1}) 
-                     pp_new = pp_new - (ff_new(1)*ee_new(1)+ff_new(2)*ee_new(2)-f0*e0)/(ff_new(1)*dedp(1)+ff_new(2)*dedp(2))
+                       ! Assumption for volume fractions f = f(P_n)   
+                       ! pp_new = pp_new + (ff_new(1)*ee_new(1)+ff_new(2)*ee_new(2)-f0*e0)/(dfdp(1)*ee_new(1)+ff_new(2)*dedp(2)+dfdp(2)*ee_new(2)+ff_new(2)*dedp(2))
+                       ! Assumption for volume fractions f = f(P_{n-1}) 
+                       pp_new = pp_new - (ff_new(1)*ee_new(1)+ff_new(2)*ee_new(2)-f0*e0)/(ff_new(1)*dedp(1)+ff_new(2)*dedp(2))
                     end if
-                   
+                    
+                    ! Attempt at continuing the iteration when it gets stuck in a loop
+                    if(iter == iter_max-1 .and. trial<trial_max)then 
+                      ! write(*,*) iter, "Current state: f_n1=",ff_new(1)," f_n2=",ff_new(2)
+                      ! write(*,*) iter, "Current state:"," ee_new1=",ee_new(1)," ee_new2=",ee_new(2)
+                      ! write(*,*) iter, "Current state:"," dedp_1=",dedp(1)," dedp_2=",dedp(2)
+                      ! write(*,*) iter, "Current state: g_n1=",g_sat(1)," g_n2=",g_sat(2)
+                      pp_new = pp_best + pp_best*1e-5
+                      iter   = 1
+                      trial = trial + 1
+                      write(*,*) iter, "Current state: P_n=",pp_new
+                      write(*,*) "Retrying..."
+                    end if
                     ! Set the interpolation kernel
                     k=(pp_new/p_crit)*(nmax-1)
-                    if(k==0)then
-                       pleft = xx(k  , 1)
-                       pcen  = xx(k+1, 1)
-                       pright= xx(k+2, 1)
-                    else if(k==nmax-1)then 
-                       pleft = xx(k-2, 1)
-                       pcen  = xx(k-1, 1)
-                       pright= xx(k  , 1)
+                    if(k<=1)then
+                       pleft = xx(1, 1)
+                       pcen  = xx(2, 1)
+                       pright= xx(3, 1)
+                    else if(k>=nmax-1)then 
+                       pleft = xx(nmax-3, 1)
+                       pcen  = xx(nmax-2, 1)
+                       pright= xx(nmax-1, 1)
                     else
                        pleft = xx(k-1, 1)
                        pcen  = xx(k  , 1)
@@ -1141,20 +1165,20 @@ subroutine phase_transition(ilevel)
                     end if
                     
                     do iphase=1,nphase
-                       if(k==0)then
-                          gleft(iphase) = xx(k  , 1+iphase)
-                          gcen(iphase)  = xx(k+1, 1+iphase)
-                          gright(iphase)= xx(k+2, 1+iphase)
-                          eleft(iphase) = xx(k  , 3+iphase)
-                          ecen(iphase)  = xx(k+1, 3+iphase)
-                          eright(iphase)= xx(k+2, 3+iphase)
-                       else if(k==nmax-1)then 
-                          gleft(iphase) = xx(k-2, 1+iphase)
-                          gcen(iphase)  = xx(k-1, 1+iphase)
-                          gright(iphase)= xx(k  , 1+iphase)
-                          eleft(iphase) = xx(k-2, 3+iphase)
-                          ecen(iphase)  = xx(k-1, 3+iphase)
-                          eright(iphase)= xx(k  , 3+iphase)
+                       if(k<=1)then
+                          gleft(iphase) = xx(1, 1+iphase)
+                          gcen(iphase)  = xx(2, 1+iphase)
+                          gright(iphase)= xx(3, 1+iphase)
+                          eleft(iphase) = xx(1, 3+iphase)
+                          ecen(iphase)  = xx(2, 3+iphase)
+                          eright(iphase)= xx(3, 3+iphase)
+                       else if(k>=nmax-1)then 
+                          gleft(iphase) = xx(nmax-3, 1+iphase)
+                          gcen(iphase)  = xx(nmax-2, 1+iphase)
+                          gright(iphase)= xx(nmax-1, 1+iphase)
+                          eleft(iphase) = xx(nmax-3, 3+iphase)
+                          ecen(iphase)  = xx(nmax-2, 3+iphase)
+                          eright(iphase)= xx(nmax-1, 3+iphase)
                        else
                           gleft(iphase) = xx(k-1, 1+iphase)
                           gcen(iphase)  = xx(k  , 1+iphase)
@@ -1164,7 +1188,7 @@ subroutine phase_transition(ilevel)
                           eright(iphase)= xx(k+1, 3+iphase)
                        end if
                     end do
-                    ! write(*,*) "k=",k," P_tot=",ptot," P_crit=",p_crit," N_points=", nmax-1
+                    ! write(*,*) "k=",k," P_crit=",p_crit," N_points=", nmax-1
                     
                     ! Interpolate to the saturation dome values
                     do iphase=1,nphase
@@ -1174,6 +1198,12 @@ subroutine phase_transition(ilevel)
                        ee_new(iphase) = ((pp_new - pright)*(pp_new - pleft)) /((pcen   - pright)*(pcen   - pleft)) *ecen(iphase)   &
                                       + ((pp_new - pcen)  *(pp_new - pleft)) /((pright - pcen)  *(pright - pleft)) *eright(iphase) &
                                       + ((pp_new - pcen)  *(pp_new - pright))/((pleft  - pcen)  *(pleft  - pright))*eleft(iphase)
+                       ! dedp(iphase) = (ecen(iphase)  *(pp_new - pright))/((pcen   - pright)*(pcen   - pleft))  &
+                       !              + (ecen(iphase)  *(pp_new - pleft)) /((pcen   - pright)*(pcen   - pleft))  &
+                       !              + (eright(iphase)*(pp_new - pcen))  /((pright - pcen)  *(pright - pleft))  &
+                       !              + (eright(iphase)*(pp_new - pleft)) /((pright - pcen)  *(pright - pleft))  &
+                       !              + (eleft(iphase) *(pp_new - pcen))  /((pleft  - pcen)  *(pleft  - pright)) &
+                       !              + (eleft(iphase) *(pp_new - pright))/((pleft  - pcen)  *(pleft  - pright))
                        dedp(iphase)   = (eright(iphase) - eleft(iphase))/ (pright - pleft)
                     end do
                    
@@ -1185,17 +1215,24 @@ subroutine phase_transition(ilevel)
                     iter = iter+1
 
                     ! Calculate the error 
+                    error_old = error
                     error  = (ff_new(1)*ee_new(1)+ff_new(2)*ee_new(2)-f0*e0)/(f0*e0)
-                 end do
-
-                 ! Update the density terms
+                    
+                    ! Store best guess for possibly restarting the iteration
+                    if(abs(error)<abs(error_old) .and. iter>1)then 
+                       pp_best = pp_new
+                    end if
+                  end do
+                  ! write(*,*) iter, "Final state: P_n=",pp_new," Error=",error
+                  ! write(*,*) iter, "Final state: f_n1=",ff_new(1)," f_n2=",ff_new(2)," ee_new1=",ee_new(1)," ee_new2=",ee_new(2)
+                  ! write(*,*) iter, "Final state: g_n1=",g_sat(1)," g_n2=",g_sat(2)
+                 ! Update the density terms and normalize volume fractions
                  do iphase=1,nphase
                     gg_new(iphase) = g_sat(iphase)
                  end do
 
-              ! Check for unphysical states landing in the saturation dome when no phase transition is happening
-              else if(gg(1)<g_sat(1))then 
-                 ! write(*,*) "Pure liquid case", g0, g_sat(1)
+              ! Check for unphysical states landing in the saturation dome when no phase transition is happening (<- Does not do anything so far)
+              else if(gg(1)<g_sat(1) .and. (g0>g_sat(1) .or. g0<g_sat(2)))then 
                  ! write(*,*) "Correcting values from:"," f_n1=",ff_new(1)," f_n2=",ff_new(2)," ee_1=",ee(1)," ee_2=",ee(2)
                  mod_flag  = .true.
                  ff_new(1) = 1.0 - 1e-2
@@ -1204,8 +1241,7 @@ subroutine phase_transition(ilevel)
                  gg_new(2) = g_sat(2)
                  ee_new(1) = ee(1)
                  ! write(*,*) "To:"," f_n1=",ff_new(1)," f_n2=",ff_new(2)," ee_new1=",ee(1)," ee_new2=",ee(2)
-              else if(gg(2)>g_sat(2))then 
-                 ! write(*,*) "Pure vapor case", g0, g_sat(2)
+              else if(gg(2)>g_sat(2) .and. (g0>g_sat(1) .or. g0<g_sat(2)))then 
                  ! write(*,*) "Correcting values from:"," f_n1=",ff_new(1)," f_n2=",ff_new(2)," ee_1=",ee(1)," ee_2=",ee(2)
                  mod_flag  = .true.
                  ff_new(1) = 1e-2
@@ -1213,7 +1249,7 @@ subroutine phase_transition(ilevel)
                  gg_new(1) = g_sat(1)
                  gg_new(2) = gg(2)
                  ee_new(2) = ee(2)
-                 ! write(*,*) "To:"," f_n1=",ff_new(1)," f_n2=",ff_new(2)," ee_new1=",ee(1)," ee_new2=",ee(2)
+                 write(*,*) "To:"," f_n1=",ff_new(1)," f_n2=",ff_new(2)," ee_new1=",ee(1)," ee_new2=",ee(2)
               end if
 
               ! If values were modified update existing solutions

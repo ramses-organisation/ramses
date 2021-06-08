@@ -25,10 +25,12 @@ bound_type= 2, 2
 /
 
 &MATERIAL_PARAMS
-! eos_params(1,1:4)=4.4,0.0,-0.6,1.0
-! eos_params(2,1:4)=4.4,0.0,-0.6,1.0
+! Experimental reproduction values
 eos_params(1,1:3)=2.356093,-1.167056,1.501054e7 
 eos_params(2,1:3)=1.377570,2.030253,-4.523879
+! Values given in the paper
+! eos_params(1,1:3)=2.35,-1.167,1.498284e7 
+! eos_params(2,1:3)=1.43,2.030,0.0
 /
 
 &INIT_PARAMS
@@ -47,7 +49,7 @@ p2_region=1.498e3,1.498e3
 /
 
 &OUTPUT_PARAMS
-foutput=75
+foutput=200
 tend=3.2
 /
 
