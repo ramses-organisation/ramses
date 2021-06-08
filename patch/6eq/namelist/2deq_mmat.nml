@@ -14,7 +14,7 @@ levelmin=8
 levelmax=8
 ngridmax=100000
 nexpand=1
-boxlen=25.0
+boxlen=5.0
 /
 
 &BOUNDARY_PARAMS
@@ -37,8 +37,8 @@ eos_params(2,1:4)=1.4,0.0,0.0,1.0
 
 &OUTPUT_PARAMS
 ! foutput=50
-delta_tout=3
-tend=27
+delta_tout=0.28
+tend=2.8
 /
 
 &POISSON_PARAMS 
