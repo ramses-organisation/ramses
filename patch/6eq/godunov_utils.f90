@@ -23,11 +23,27 @@ subroutine eos(d,e,p,c,imat,inv,ncell)
   !   e is the internal energy of each fluid   
   !   p is the pressure of each fluid
   integer::k
-  real(dp)::smallgamma,biggamma,p_0,rho_0,e_c,p_c,delpc,eta
+  real(dp)::smallgamma,biggamma,p_0,rho_0,e_c,p_c,delpc,eta,q
   real(dp)::E_1,E_2,A_1,A_2,C_v,T_0,E_0,p_c_1,p_c_2
   do k=1,ncell
 
-     if(eos_name=='mie-grueneisen')then
+     if(eos_name =='stiffened gas')then
+
+        ! Get Stiffened Gas EOS parameters
+        smallgamma=eos_params(imat,1);q=eos_params(imat,2);p_0=eos_params(imat,3)
+        ! Use the EOS to calculate the current pressure/internal energy in a given cell
+        ! P  = (gamma - one) * (e - d*q) + gamma*P_inf 
+        if(inv .eqv. .false.)then
+           p(k) = (smallgamma-1)*(e(k)-d(k)*q) - smallgamma*p_0
+        else if(inv .eqv. .true.)then
+           e(k) = (1/(smallgamma-1))*(p(k)+smallgamma*p_0) + d(k)*q
+        end if
+
+        ! Calculate the speed of sound 
+        c(k) = smallgamma*(p(k)+p_0)/d(k)
+        c(k) = sqrt(max(c(k),smallc**2))
+
+     else if(eos_name =='mie-grueneisen')then
 
         ! Get Mie-Grueneisen EOS parameters
         smallgamma=eos_params(imat,1);biggamma=eos_params(imat,2);p_0=eos_params(imat,3);rho_0=eos_params(imat,4)
@@ -44,7 +60,7 @@ subroutine eos(d,e,p,c,imat,inv,ncell)
            e(k) = (1/(smallgamma-1))*(p(k)-p_c) + e_c
         end if
 
-        ! Calculate the speed of sound of each fluid
+        ! Calculate the speed of sound
         ! c**2 = P_c' + gamma * (P - P_c) / rho
         c(k) = (delpc + smallgamma * (p(k)-p_c)) / d(k)
         c(k) = sqrt(max(c(k),smallc**2))
