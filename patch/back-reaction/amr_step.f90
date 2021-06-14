@@ -10,6 +10,9 @@ recursive subroutine amr_step(ilevel,icount)
   use coolrates_module, only: update_coolrates_tables
   use rt_cooling_module, only: update_UVrates
 #endif
+#if USE_TURB==1
+  use turb_commons
+#endif
   use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
@@ -276,6 +279,15 @@ recursive subroutine amr_step(ilevel,icount)
   if(rt .and. rt_star) call update_star_RT_feedback(ilevel)
 #endif
 
+#if USE_TURB==1
+  ! Compute turbulent forcing
+                               call timer('turb','start')
+  if (turb .and. turb_type/=3) then
+     ! Calculate turbulent acceleration on each cell in this level
+     call calc_turb_forcing(ilevel)
+  end if
+#endif
+
   !-----------------------
   ! Set unew equal to uold
   !-----------------------
@@ -389,6 +401,15 @@ recursive subroutine amr_step(ilevel,icount)
                                call timer('poisson','start')
      if(poisson)call synchro_hydro_fine(ilevel,+0.5*dtnew(ilevel))
 
+     #if USE_TURB==1
+          ! Compute turbulent forcing
+                                    call timer('turb','start')
+          if (turb .AND. turb_type/=3) then
+             ! Euler step, adding turbulent acceleration
+             call synchro_hydro_fine(ilevel,dtnew(ilevel),2)
+          end if
+     #endif
+     
      ! Restriction operator
                                call timer('hydro upload fine','start')
      call upload_fine(ilevel)
