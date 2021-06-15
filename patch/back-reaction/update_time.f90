@@ -307,7 +307,7 @@ subroutine update_time(ilevel)
 
      !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! Added
      if(myid==1)then
-       write(25+myid,*)emag_tot,ekin_tot,eint_tot
+       write(25+myid,*)emag_tot,ekin_tot-eint_tot
      endif
      !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
