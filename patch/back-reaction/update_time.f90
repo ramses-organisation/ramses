@@ -263,9 +263,11 @@ subroutine update_time(ilevel)
 
      !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! Added
      filename='energy.dat'
-     call title(myid,nchar)
-     fileloc=TRIM(filename)//TRIM(nchar)
-     open(25+myid, file = fileloc, status = 'unknown', access = 'append')
+     if(myid==1)then
+       call title(myid,nchar)
+       fileloc=TRIM(filename)//TRIM(nchar)
+       open(25+myid, file = fileloc, status = 'unknown', access = 'append')
+     endif
      !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
      if(mod(nstep_coarse,ncontrol)==0.or.output_done)then
@@ -304,7 +306,9 @@ subroutine update_time(ilevel)
      end if
 
      !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! Added
-     write(25+myid,*)emag_tot,ekin_tot,eint_tot
+     if(myid==1)then
+       write(25,*)emag_tot,ekin_tot,eint_tot
+     endif
      !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
      !---------------
