@@ -14,18 +14,18 @@ NDIM = 3
 # Float precision size
 NPRE = 8
 # hydro/mhd solver
-SOLVER = mhd  
+SOLVER = mhd
 # Patch
-PATCH = '../patch/mhdconv'   
+PATCH = '../patch/mhdconv'
 # Use RT? 1=Yes, 0=No
 RT = 0
 # Use turbulence? 1=Yes, 0=No (requires fftw3)
 USE_TURB=0
 # Use MPI? 1=Yes, 0=No
 MPI = 1
-MPIF90 = mpiifort  
+MPIF90 = ftn
 # Root name of executable
-EXEC = ramses3DMHD_eiger
+EXEC = ramsesMHD_eiger
 # Number of additional energies
 NENER = 0
 # Use Grackle cooling? 1=Yes, 0=No
@@ -79,7 +79,7 @@ endif
 
 # GNU compiler (gfortran)
 ifeq ($(COMPILER),GNU)
-   FFLAGS = -x f95-cpp-input -fallow-argument-mismatch $(DEFINES)
+   FFLAGS = -x f95-cpp-input $(DEFINES)
    ifeq ($(MPI),1)
       F90 = $(MPIF90)
    else
