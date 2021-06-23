@@ -203,14 +203,13 @@ subroutine adaptive_loop
            if (tot_pt==0) muspt=0 ! dont count first timestep
            n_step = int(numbtot(1,levelmin),kind=8)*twotondim
            do ilevel=levelmin+1,nlevelmax
-             n_step = n_step + int(numbtot(1,ilevel),kind=8)*product(nsubcycle(levelmin:ilevel-1))*(twotondim-1)
+              n_step = n_step + int(numbtot(1,ilevel),kind=8)*product(nsubcycle(levelmin:ilevel-1))*(twotondim-1)
            enddo
            muspt_this_step = (tt2-tt1)*1e6/n_step*ncpu
            muspt = muspt + muspt_this_step
            tot_pt = tot_pt + 1
-           write(*,'(a,f8.2,a,f12.2,a,f12.2,a)')' Time elapsed since last coarse step:',tt2-tt1 &
-          ,' s',muspt_this_step,' mus/pt'  &
-          ,muspt / max(tot_pt,1), ' mus/pt (av)'
+           write(*,'(a,f8.2,a,f12.2,a,f12.2,a)')' Time elapsed since last coarse step:', &
+                & tt2-tt1,' s',muspt_this_step,' mus/pt',muspt/max(tot_pt,1),' mus/pt (av)'
            call writemem(real_mem_tot)
            write(*,*)'Total running time:', NINT((tt2-tstart)*100.0)*0.01,'s'
         endif

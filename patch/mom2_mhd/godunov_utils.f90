@@ -113,7 +113,7 @@ subroutine cmpdt(uu,gg,pp,dx,dt,ncell)
   do k = 1,ncell
      dtcell=dx/ctot(k)*(sqrt(one+two*courant_factor*rho(k))-one)/rho(k)
      dt = min(dt,dtcell)
-     if (dtcell < 1D-6) then
+     if (dtcell < dt_debug) then
         emag = half*((0.5*(uu(k,6)+uu(k,12)))**2 &
              &      +(0.5*(uu(k,7)+uu(k,13)))**2 &
              &      +(0.5*(uu(k,8)+uu(k,14)))**2 )
