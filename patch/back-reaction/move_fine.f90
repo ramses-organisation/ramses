@@ -18,10 +18,10 @@ subroutine move_fine(ilevel)
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
 
-  filename='trajectory.dat'
-  call title(myid,nchar)
-  fileloc=TRIM(filename)//TRIM(nchar)
-  open(25+myid, file = fileloc, status = 'unknown', access = 'append')
+  ! filename='trajectory.dat'
+  ! call title(myid,nchar)
+  ! fileloc=TRIM(filename)//TRIM(nchar)
+  ! open(25+myid, file = fileloc, status = 'unknown', access = 'append')
 
   ! Set unew = uold in the active region
   do ind=1,twotondim
@@ -529,20 +529,20 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      end do
   endif
 
-  if(boris.or.tracer)then!Various fields interpolated to particle positions
-     do index_part=1,10
-        do j=1,np
-           if(idp(ind_part(j)).EQ.index_part)then
-              write(25+myid,*)t-dtnew(ilevel),idp(ind_part(j)),& ! Old time
-                   & xp(ind_part(j),1),xp(ind_part(j),2),xp(ind_part(j),3),& ! Old particle position
-                   & vp(ind_part(j),1),vp(ind_part(j),2),vp(ind_part(j),3),& ! Old particle velocity
-                   &  uu(j,1),uu(j,2),uu(j,3),& ! Old fluid velocity
-                   &  bb(j,1),bb(j,2),bb(j,3)! Old magnetic field.
-                   ! & new_vp(j,1),new_vp(j,2),new_vp(j,3) ! NEW particle velocity (for comparison)
-           endif
-        end do
-     end do
-  endif
+  ! if(boris.or.tracer)then!Various fields interpolated to particle positions
+  !    do index_part=1,10
+  !       do j=1,np
+  !          if(idp(ind_part(j)).EQ.index_part)then
+  !             write(25+myid,*)t-dtnew(ilevel),idp(ind_part(j)),& ! Old time
+  !                  & xp(ind_part(j),1),xp(ind_part(j),2),xp(ind_part(j),3),& ! Old particle position
+  !                  & vp(ind_part(j),1),vp(ind_part(j),2),vp(ind_part(j),3),& ! Old particle velocity
+  !                  &  uu(j,1),uu(j,2),uu(j,3),& ! Old fluid velocity
+  !                  &  bb(j,1),bb(j,2),bb(j,3)! Old magnetic field.
+  !                  ! & new_vp(j,1),new_vp(j,2),new_vp(j,3) ! NEW particle velocity (for comparison)
+  !          endif
+  !       end do
+  !    end do
+  ! endif
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! ERM: Block here is only used for computing variable stopping times.
@@ -776,13 +776,13 @@ subroutine EMKick(nn,dt,indp,ctm,ok,vol,mov,v,big_v,big_w)
         & B(3)*(2.*B(3)*ctm*dt*(1.+mu)**2*w(1)-4.*(1.+mu)*w(2) - 2*B(1)*ctm*dt*(1.+mu)**2*w(3))))/&
         &((4.+(B(1)**2+B(2)**2+B(3)**2)*ctm**2*dt**2*(1.+mu)**2))
 
-        big_w(i,ind,2)=-1.*&
+        big_w(i,ind,2)=-1.*& !velocity changes to drift
         &(ctm*dt*(2.*B(3)**2*ctm*dt*(1.+mu)**2*w(2)+&
         &B(3)*(-2.*B(2)*ctm*dt*(1.+mu)**2*w(3) + 4.*(1.+mu)*w(1)) +&
         & B(1)*(2.*B(1)*ctm*dt*(1.+mu)**2*w(2)-4.*(1.+mu)*w(3) - 2*B(2)*ctm*dt*(1.+mu)**2*w(1))))/&
         &((4.+(B(1)**2+B(2)**2+B(3)**2)*ctm**2*dt**2*(1.+mu)**2))
 
-        big_w(i,ind,3)=-1.*&
+        big_w(i,ind,3)=-1.*& !velocity changes to drift
         &(ctm*dt*(2.*B(1)**2*ctm*dt*(1.+mu)**2*w(3)+&
         &B(1)*(-2.*B(3)*ctm*dt*(1.+mu)**2*w(1) + 4.*(1.+mu)*w(2)) +&
         & B(2)*(2.*B(2)*ctm*dt*(1.+mu)**2*w(3)-4.*(1.+mu)*w(1) - 2*B(3)*ctm*dt*(1.+mu)**2*w(2))))/&
