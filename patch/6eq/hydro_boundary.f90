@@ -152,7 +152,7 @@ subroutine make_boundary_hydro(ilevel)
               ! Scatter to boundary region
               do ivar=1,nvar
                  switch=1
-                 if(ivar>2*nmat.and.ivar<2*nmat+ndim+1)switch=gs(ivar-1)
+                 if(ivar>2*nmat.and.ivar<2*nmat+ndim+1)switch=gs(ivar-2*nmat)
                  do i=1,ngrid
                     uold(ind_cell(i),ivar)=uu(i,ivar)*switch
                  end do
@@ -173,7 +173,7 @@ subroutine make_boundary_hydro(ilevel)
               do imat=1,nmat
                 do i = 1,ngrid
                   dtot(i)   = dtot(i) + uu(i,nmat+imat)
-                  g(i,imat) = uu(i,nmat+imat)/max(uu(i,imat),smallf)
+                  g(i,imat) = uu(i,nmat+imat)/uu(i,imat)
                 end do
               end do
 
@@ -185,7 +185,7 @@ subroutine make_boundary_hydro(ilevel)
                     v = uu(i,2*nmat+idim)/dtot(i)
                     ekin = ekin + 0.5d0*g(i,imat)*v**2
                   end do
-                  uu(i,2*nmat+ndim+imat) = uu(i,2*nmat+ndim+imat) - ekin*max(uu(i,imat),smallf) ! f_k.E_k - f_k.E_kin
+                  uu(i,2*nmat+ndim+imat) = uu(i,2*nmat+ndim+imat) - ekin*uu(i,imat) ! f_k.E_k - f_k.E_kin
                 end do
               end do
 
@@ -198,7 +198,7 @@ subroutine make_boundary_hydro(ilevel)
 
               ! Prevent inflow back into the box
               if(no_inflow) then
-                 ivar = gdim+1
+                 ivar = 2*nmat+gdim
                  if((boundary_dir.eq.1).or.(boundary_dir.eq.3).or.(boundary_dir.eq.5)) then
                     do i=1,ngrid
                        uold(ind_cell(i),ivar) = min(0d0,uold(ind_cell(i),ivar))
@@ -216,7 +216,7 @@ subroutine make_boundary_hydro(ilevel)
               do imat=1,nmat
                 do i = 1,ngrid
                   dtot(i)   = dtot(i) + uold(ind_cell(i),nmat+imat)
-                  g(i,imat) = uold(ind_cell(i),nmat+imat)/max(uold(ind_cell(i),imat),smallf)
+                  g(i,imat) = uold(ind_cell(i),nmat+imat)/uold(ind_cell(i),imat)
                 end do
               end do
 
@@ -228,7 +228,7 @@ subroutine make_boundary_hydro(ilevel)
                     v = uold(ind_cell(i),2*nmat+idim)/dtot(i)
                     ekin = ekin + 0.5d0*g(i,imat)*v**2
                   end do
-                  uold(ind_cell(i),2*nmat+ndim+imat) = uold(ind_cell(i),2*nmat+ndim+imat) + ekin*max(uold(ind_cell(i),imat),smallf) ! f_k.eint_k + f_k.E_kin
+                  uold(ind_cell(i),2*nmat+ndim+imat) = uold(ind_cell(i),2*nmat+ndim+imat) + ekin*uold(ind_cell(i),imat) ! f_k.eint_k + f_k.E_kin
                 end do
               end do
 

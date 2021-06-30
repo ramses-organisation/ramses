@@ -26,11 +26,11 @@ bound_type= 1, 1
 
 &MATERIAL_PARAMS
 ! Mie-Grueneisen parameters
-eos_params(1,1:4)=4.4,0.0,-0.6,1.0
-eos_params(2,1:4)=1.4,0.0,0.0,0.05
+! eos_params(1,1:4)=4.4,0.0,-0.6,1.0
+! eos_params(2,1:4)=1.4,0.0,0.0,0.05
 ! Stiffened gas parameters
-! eos_params(1,1:2)=4.4,0.6
-! eos_params(2,1:2)=1.4,0.0
+eos_params(1,1:3)=4.4,0.0,0.6
+eos_params(2,1:3)=1.4,0.0,0.0
 /
 
 &INIT_PARAMS
@@ -57,7 +57,7 @@ tend=0.23
 courant_factor=0.5
 slope_type=2
 scheme='muscl'
-eos_name='mie-grueneisen'
+eos_name='stiffened gas'
 /
 
 &REFINE_PARAMS 

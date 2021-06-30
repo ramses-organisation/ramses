@@ -190,7 +190,7 @@ SUBROUTINE rt_solve_cooling(T2, xion, Np, Fp, p_gas, dNpdt, dFpdt        &
   real(dp),dimension(nGroups):: dNp
   real(dp),dimension(1:ndim, 1:nGroups):: dFp
   real(dp),dimension(1:ndim):: dp_gas
-  integer::i, ia, ig,  nAct, nAct_next, loopcnt, code
+  integer::i, ia, ig, nAct, nAct_next, loopcnt, code
   integer,dimension(1:nvector):: indAct              ! Active cell indexes
   real(dp)::one_over_rt_c_cgs, one_over_egy_IR_erg, one_over_x_FRAC
   real(dp)::one_over_Np_FRAC, one_over_Fp_FRAC, one_over_T_FRAC
@@ -1015,10 +1015,10 @@ SUBROUTINE rt_evol_single_cell(astart,aend,dasura,h,omegab,omega0,omegaL &
           T2_com/aexp**2, nH_com/aexp**3, pHI_rates, mu_dp, n_Spec, z_ave)
   ! Initialize cell state
   T2(1)=T2_com                                          !      Temperature
-  if(isH2) xion(1,ixHI)=n_Spec(3)/(nH_com/aexp**3)      !   HI frac
-  xion(1,ixHII)=n_Spec(4)/(nH_com/aexp**3)              !   HII   fraction
-  if(isHe) xion(1,ixHeII)=n_Spec(6)/(nH_com/aexp**3)    !   HeII  fraction
-  if(isHe) xion(1,ixHeIII)=n_Spec(7)/(nH_com/aexp**3)   !   HeIII fraction
+  if(isH2) xion(ixHI,1)=n_Spec(3)/(nH_com/aexp**3)      !   HI frac
+  xion(ixHII,1)=n_Spec(4)/(nH_com/aexp**3)              !   HII   fraction
+  if(isHe) xion(ixHeII,1)=n_Spec(6)/(nH_com/aexp**3)    !   HeII  fraction
+  if(isHe) xion(ixHeIII,1)=n_Spec(7)/(nH_com/aexp**3)   !   HeIII fraction
   p_gas(:,1)=0.
   Np(:,1)=0. ; Fp(:,:,1)=0.                  ! Photon densities and fluxes
   dNpdt(:,1)=0. ; dFpdt(:,:,1)=0.

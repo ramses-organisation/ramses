@@ -14,12 +14,12 @@ levelmin=8
 levelmax=8
 ngridmax=100000
 nexpand=1
-boxlen=20.0
+boxlen=25.0
 /
 
 &BOUNDARY_PARAMS
-nboundary=4
 ! no_inflow=.true.
+nboundary=4
 ibound_min=-1,+1,-1,-1
 ibound_max=-1,+1,+1,+1
 jbound_min= 0, 0,-1,+1
@@ -29,16 +29,16 @@ bound_type= 2, 2, 2, 2
 
 &MATERIAL_PARAMS
 eos_params(1,1:4)=3,3,1.0,1.0
-eos_params(2,1:4)=3,3,1.0,1.0
+eos_params(2,1:4)=1.4,0.0,0.0,1.0
 /
-eos_params(2,1:4)=1.4,3,0.0,0.05
 
 &INIT_PARAMS
 /
 
 &OUTPUT_PARAMS
-delta_tout=0.1
-tend=25
+! foutput=50
+delta_tout=3
+tend=27
 /
 
 &POISSON_PARAMS 
@@ -51,17 +51,19 @@ courant_factor=0.5
 slope_type=1
 scheme='muscl'
 eos_name='mie-grueneisen'
+smallc=1d-6
 /
 
-! &COOLING_PARAMS 
-! isothermal=.true.
-! /
 
 &REFINE_PARAMS 
 err_grad_f=0.05
 floor_f=0.01
 interpol_var=1
 interpol_type=1
+! x_refine=0.0
+! y_refine=0.0
+! a_refine=20.0
+! b_refine=20.0
 /
 
 
