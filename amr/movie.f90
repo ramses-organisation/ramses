@@ -12,6 +12,7 @@ subroutine output_frame()
 #endif
   use constants, only: pi, c_cgs, L_sun, M_sun, yr2sec
   use mpi_mod
+  use file_module, ONLY: mkdir
   implicit none
 #if NDIM > 1
 #ifndef WITHOUTMPI
@@ -55,6 +56,7 @@ subroutine output_frame()
   real(kind=8),dimension(:,:,:),allocatable::data_frame
   real(kind=8),dimension(:,:),allocatable::weights
   real(kind=8)::e,uvar
+  integer, parameter :: mode = int(O'755')
   integer::igrid,ilevel
   integer::i,j,ivar
   integer::proj_ind,nh_temp,nw_temp,proj_ax
@@ -154,8 +156,9 @@ subroutine output_frame()
 #else
        if(myid==1)then
           ierr=1
-          call system(moviecmd,ierr)
-          !        call EXECUTE_COMMAND_LINE(moviecmd,exitstat=ierr,wait=.true.)
+          ! call system(moviecmd,ierr)
+          ! call EXECUTE_COMMAND_LINE(moviecmd,exitstat=ierr,wait=.true.)
+          call mkdir(trim(moviedir),mode,ierr)
        endif
 #ifndef WITHOUTMPI
        call MPI_BCAST(ierr,1,MPI_INTEGER,0,MPI_COMM_WORLD,info)
