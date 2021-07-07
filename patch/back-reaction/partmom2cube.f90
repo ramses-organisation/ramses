@@ -430,15 +430,17 @@ program part2cube
               iyp1=iy+1
               izp1=iz+1
               if(ix>=0.and.ix<nx.and.iy>=0.and.iy<ny.and.iz>=0.and.iz<nz)then
-                 cube(ix  ,iy  ,iz  )=cube(ix  ,iy  ,iz  )+m(i)*dex*dey*dez*weight
-                 cube(ix  ,iyp1,iz  )=cube(ix  ,iyp1,iz  )+m(i)*dex*ddy*dez*weight
-                 cube(ixp1,iy  ,iz  )=cube(ixp1,iy  ,iz  )+m(i)*ddx*dey*dez*weight
-                 cube(ixp1,iyp1,iz  )=cube(ixp1,iyp1,iz  )+m(i)*ddx*ddy*dez*weight
-                 cube(ix  ,iy  ,izp1)=cube(ix  ,iy  ,izp1)+m(i)*dex*dey*ddz*weight
-                 cube(ix  ,iyp1,izp1)=cube(ix  ,iyp1,izp1)+m(i)*dex*ddy*ddz*weight
-                 cube(ixp1,iy  ,izp1)=cube(ixp1,iy  ,izp1)+m(i)*ddx*dey*ddz*weight
-                 cube(ixp1,iyp1,izp1)=cube(ixp1,iyp1,izp1)+m(i)*ddx*ddy*ddz*weight
-                 mtot=mtot+m(i)
+                 do j=1,ndim
+                   cube(ix  ,iy  ,iz  ,j)=cube(ix  ,iy  ,iz  ,j)+m(i)*dex*dey*dez*weight*v(i,j)
+                   cube(ix  ,iyp1,iz  ,j)=cube(ix  ,iyp1,iz  ,j)+m(i)*dex*ddy*dez*weight*v(i,j)
+                   cube(ixp1,iy  ,iz  ,j)=cube(ixp1,iy  ,iz  ,j)+m(i)*ddx*dey*dez*weight*v(i,j)
+                   cube(ixp1,iyp1,iz  ,j)=cube(ixp1,iyp1,iz  ,j)+m(i)*ddx*ddy*dez*weight*v(i,j)
+                   cube(ix  ,iy  ,izp1,j)=cube(ix  ,iy  ,izp1,j)+m(i)*dex*dey*ddz*weight*v(i,j)
+                   cube(ix  ,iyp1,izp1,j)=cube(ix  ,iyp1,izp1,j)+m(i)*dex*ddy*ddz*weight*v(i,j)
+                   cube(ixp1,iy  ,izp1,j)=cube(ixp1,iy  ,izp1,j)+m(i)*ddx*dey*ddz*weight*v(i,j)
+                   cube(ixp1,iyp1,izp1,j)=cube(ixp1,iyp1,izp1,j)+m(i)*ddx*ddy*ddz*weight*v(i,j)
+                   ptot=ptot+m(i)*v(i,j)
+                 end do
               endif
            end if
         end do
