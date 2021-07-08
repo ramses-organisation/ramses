@@ -270,10 +270,10 @@ program part2cube
   !-----------------------------------------------
   ! Compute projected mass using CIC smoothing
   !----------------------------------------------
-  allocate(ptot(1:ndim))
-  do i=1,ndim
-    ptot(i)=0.0d0
-  end do
+
+
+  ptot=0.0d0
+
   do k=1,ncpu_read
      icpu=cpu_list(k)
      call title(icpu,ncharcpu)
@@ -381,7 +381,7 @@ program part2cube
               cube(ix  ,iyp1,izp1)=cube(ix  ,iyp1,izp1)+m(i)*dex*ddy*ddz*v(i,type)
               cube(ixp1,iy  ,izp1)=cube(ixp1,iy  ,izp1)+m(i)*ddx*dey*ddz*v(i,type)
               cube(ixp1,iyp1,izp1)=cube(ixp1,iyp1,izp1)+m(i)*ddx*ddy*ddz*v(i,type)
-              ptot(j)=ptot(j)+m(i)*v(i,type) ! A momentum total
+              ptot=ptot+m(i)*v(i,type) ! A momentum total
 
            end if
         end do
@@ -457,8 +457,8 @@ program part2cube
   open(unit=10,file=nomfich,form='unformatted')
   if(periodic)then
      write(10)nx,ny,nz
-     allocate(toto(nx,ny,nz,ndim))
-     toto=cube(0:nx-1,0:ny-1,0:nz-1,)
+     allocate(toto(nx,ny,nz))
+     toto=cube(0:nx-1,0:ny-1,0:nz-1)
      write(10)toto
   else
      write(10)nx+1,ny+1,nz+1,ndim
