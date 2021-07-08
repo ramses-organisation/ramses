@@ -9,18 +9,18 @@ program part2cube
 
   use utils
   implicit none
-  integer::ncpu,ndim,npart,i,j,k,icpu,ipos,n_frw,nstar
+  integer::ncpu,ndim,npart,i,j,k,icpu,ipos,n_frw,nstar,type
   integer::ncpu2,npart2,ndim2,levelmin,levelmax,ilevel,iii
   integer::nx=0,ny=0,nz=0,ix,iy,iz,ixp1,iyp1,izp1,idim,jdim,kdim,ncpu_read
   real(KIND=8)::ddx,ddy,ddz,dex,dey,dez,t,time,time_tot,time_simu,weight
-  real(KIND=8),dimension(:),allocatable::ptot !momentum total
+  real(KIND=8)::ptot=0.0 !momentum total
   real(KIND=8)::xmin=0,xmax=1,ymin=0,ymax=1,zmin=0,zmax=1
   real(KIND=8)::aexp,omega_m,omega_l,omega_b,omega_k,h0,unit_l,unit_t,unit_d
   integer::imin,imax,jmin,jmax,kmin,kmax,lmin
   real(KIND=8)::xxmin,xxmax,yymin,yymax,zzmin,zzmax,dx,dy,dz,deltax
-  real(KIND=4),dimension(:,:,:,:),allocatable::toto
+  real(KIND=4),dimension(:,:,:),allocatable::toto
   real(KIND=8),dimension(:),allocatable::aexp_frw,hexp_frw,tau_frw,t_frw
-  real(KIND=8),dimension(:,:,:,:),allocatable::cube
+  real(KIND=8),dimension(:,:,:),allocatable::cube
   real(KIND=8),dimension(:,:),allocatable::x,v
   real(KIND=8),dimension(:)  ,allocatable::m,age
   character(LEN=5)::nchar,ncharcpu
@@ -155,8 +155,8 @@ program part2cube
      nz=nx
   end if
   write(*,*)'time=',t
-  write(*,*)'Working cube =',nx,ny,nz,ndim
-  allocate(cube(0:nx,0:ny,0:nz,1:ndim))
+  write(*,*)'Working cube =',nx,ny,nz
+  allocate(cube(0:nx,0:ny,0:nz))
   cube=0.0d0
   idim=1
   jdim=2
@@ -372,17 +372,17 @@ program part2cube
               if(iyp1>=ny)iyp1=iyp1-ny
               if(izp1<0)izp1=izp1+nz
               if(izp1>=nz)izp1=izp1-nz
-              do j=1,ndim
-                cube(ix  ,iy  ,iz  ,j)=cube(ix  ,iy  ,iz  ,j)+m(i)*dex*dey*dez*v(i,j)
-                cube(ix  ,iyp1,iz  ,j)=cube(ix  ,iyp1,iz  ,j)+m(i)*dex*ddy*dez*v(i,j)
-                cube(ixp1,iy  ,iz  ,j)=cube(ixp1,iy  ,iz  ,j)+m(i)*ddx*dey*dez*v(i,j)
-                cube(ixp1,iyp1,iz  ,j)=cube(ixp1,iyp1,iz  ,j)+m(i)*ddx*ddy*dez*v(i,j)
-                cube(ix  ,iy  ,izp1,j)=cube(ix  ,iy  ,izp1,j)+m(i)*dex*dey*ddz*v(i,j)
-                cube(ix  ,iyp1,izp1,j)=cube(ix  ,iyp1,izp1,j)+m(i)*dex*ddy*ddz*v(i,j)
-                cube(ixp1,iy  ,izp1,j)=cube(ixp1,iy  ,izp1,j)+m(i)*ddx*dey*ddz*v(i,j)
-                cube(ixp1,iyp1,izp1,j)=cube(ixp1,iyp1,izp1,j)+m(i)*ddx*ddy*ddz*v(i,j)
-                ptot(j)=ptot(j)+m(i)*v(i,j) ! A momentum total
-              end do
+
+              cube(ix  ,iy  ,iz  )=cube(ix  ,iy  ,iz  )+m(i)*dex*dey*dez*v(i,type)
+              cube(ix  ,iyp1,iz  )=cube(ix  ,iyp1,iz  )+m(i)*dex*ddy*dez*v(i,type)
+              cube(ixp1,iy  ,iz  )=cube(ixp1,iy  ,iz  )+m(i)*ddx*dey*dez*v(i,type)
+              cube(ixp1,iyp1,iz  )=cube(ixp1,iyp1,iz  )+m(i)*ddx*ddy*dez*v(i,type)
+              cube(ix  ,iy  ,izp1)=cube(ix  ,iy  ,izp1)+m(i)*dex*dey*ddz*v(i,type)
+              cube(ix  ,iyp1,izp1)=cube(ix  ,iyp1,izp1)+m(i)*dex*ddy*ddz*v(i,type)
+              cube(ixp1,iy  ,izp1)=cube(ixp1,iy  ,izp1)+m(i)*ddx*dey*ddz*v(i,type)
+              cube(ixp1,iyp1,izp1)=cube(ixp1,iyp1,izp1)+m(i)*ddx*ddy*ddz*v(i,type)
+              ptot(j)=ptot(j)+m(i)*v(i,type) ! A momentum total
+
            end if
         end do
      else
@@ -430,17 +430,17 @@ program part2cube
               iyp1=iy+1
               izp1=iz+1
               if(ix>=0.and.ix<nx.and.iy>=0.and.iy<ny.and.iz>=0.and.iz<nz)then
-                 do j=1,ndim
-                   cube(ix  ,iy  ,iz  ,j)=cube(ix  ,iy  ,iz  ,j)+m(i)*dex*dey*dez*weight*v(i,j)
-                   cube(ix  ,iyp1,iz  ,j)=cube(ix  ,iyp1,iz  ,j)+m(i)*dex*ddy*dez*weight*v(i,j)
-                   cube(ixp1,iy  ,iz  ,j)=cube(ixp1,iy  ,iz  ,j)+m(i)*ddx*dey*dez*weight*v(i,j)
-                   cube(ixp1,iyp1,iz  ,j)=cube(ixp1,iyp1,iz  ,j)+m(i)*ddx*ddy*dez*weight*v(i,j)
-                   cube(ix  ,iy  ,izp1,j)=cube(ix  ,iy  ,izp1,j)+m(i)*dex*dey*ddz*weight*v(i,j)
-                   cube(ix  ,iyp1,izp1,j)=cube(ix  ,iyp1,izp1,j)+m(i)*dex*ddy*ddz*weight*v(i,j)
-                   cube(ixp1,iy  ,izp1,j)=cube(ixp1,iy  ,izp1,j)+m(i)*ddx*dey*ddz*weight*v(i,j)
-                   cube(ixp1,iyp1,izp1,j)=cube(ixp1,iyp1,izp1,j)+m(i)*ddx*ddy*ddz*weight*v(i,j)
-                   ptot=ptot+m(i)*v(i,j)
-                 end do
+
+              cube(ix  ,iy  ,iz  )=cube(ix  ,iy  ,iz  )+m(i)*dex*dey*dez*weight*v(i,type)
+              cube(ix  ,iyp1,iz  )=cube(ix  ,iyp1,iz  )+m(i)*dex*ddy*dez*weight*v(i,type)
+              cube(ixp1,iy  ,iz  )=cube(ixp1,iy  ,iz  )+m(i)*ddx*dey*dez*weight*v(i,type)
+              cube(ixp1,iyp1,iz  )=cube(ixp1,iyp1,iz  )+m(i)*ddx*ddy*dez*weight*v(i,type)
+              cube(ix  ,iy  ,izp1)=cube(ix  ,iy  ,izp1)+m(i)*dex*dey*ddz*weight*v(i,type)
+              cube(ix  ,iyp1,izp1)=cube(ix  ,iyp1,izp1)+m(i)*dex*ddy*ddz*weight*v(i,type)
+              cube(ixp1,iy  ,izp1)=cube(ixp1,iy  ,izp1)+m(i)*ddx*dey*ddz*weight*v(i,type)
+              cube(ixp1,iyp1,izp1)=cube(ixp1,iyp1,izp1)+m(i)*ddx*ddy*ddz*weight*v(i,type)
+              ptot=ptot+m(i)*v(i,type)
+
               endif
            end if
         end do
@@ -458,12 +458,12 @@ program part2cube
   if(periodic)then
      write(10)nx,ny,nz
      allocate(toto(nx,ny,nz,ndim))
-     toto=cube(0:nx-1,0:ny-1,0:nz-1,1:ndim)
+     toto=cube(0:nx-1,0:ny-1,0:nz-1,)
      write(10)toto
   else
      write(10)nx+1,ny+1,nz+1,ndim
-     allocate(toto(nx+1,ny+1,nz+1,ndim))
-     toto=cube(0:nx,0:ny,0:nz,1:ndim)
+     allocate(toto(nx+1,ny+1,nz+1))
+     toto=cube(0:nx,0:ny,0:nz)
      write(10)toto
   endif
   close(10)
@@ -494,6 +494,7 @@ contains
        print *, '                 [-nz  nz  ] '
        print *, '                 [-per flag] '
        print *, '                 [-str flag] '
+       print *, '                 [-typ type] '
        print *, 'ex: part2cube -inp output_00001 -out cube.dat'// &
             &   ' -xmi 0.1 -xma 0.7'
        stop
@@ -535,6 +536,8 @@ contains
           read (arg,*) periodic
        case ('-str')
           read (arg,*) star
+       case ('-typ')
+          read (arg,*) type ! specifies which momentum component you'd like.
        case default
           print '("unknown option ",a2," ignored")', opt
        end select
