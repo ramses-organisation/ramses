@@ -14,13 +14,13 @@ NDIM = 3
 # Float precision size
 NPRE = 8
 # hydro/mhd solver
-SOLVER = hydro
+SOLVER = mhd
 # Patch
-PATCH =
+PATCH = ../patch/back-reaction
 # Use RT? 1=Yes, 0=No
 RT = 0
 # Use turbulence? 1=Yes, 0=No (requires fftw3)
-USE_TURB=0
+USE_TURB=1
 # Use MPI? 1=Yes, 0=No
 MPI = 1
 MPIF90 = mpif90
@@ -39,7 +39,7 @@ NIONS = 0
 # Number of photon groups for RT
 NGROUPS = 0
 # Number of passive scalars
-NPSCAL = 0
+NPSCAL = 4
 
 # Compute NVAR
 NVAR = 2+$(NDIM)
@@ -110,7 +110,7 @@ ifeq ($(COMPILER),INTEL)
       F90 += -warn all -O0 -g -traceback -check bounds
       FFLAGS += -fpe0 -ftrapuv -init=zero -init=snan -init=arrays
    else
-      F90 += -O3
+      F90 += -O3 -DNOSYSTEM -Ofast -march=cascadelake
    endif
 endif
 
@@ -147,7 +147,7 @@ VPATH += ../hydro:../pm:../poisson:../amr:../io
 #############################################################################
 # All objects
 MODOBJ = mpi_mod.o amr_parameters.o amr_commons.o random.o pm_parameters.o \
-         pm_commons.o poisson_parameters.o dump_utils.o constants.o file_module.o
+         pm_commons.o poisson_parameters.o dump_utils.o constants.o
 ifeq ($(GRACKLE),1)
    MODOBJ += grackle_parameters.o
 endif
