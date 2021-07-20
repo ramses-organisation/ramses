@@ -10,11 +10,8 @@ recursive subroutine amr_step(ilevel,icount)
   use coolrates_module, only: update_coolrates_tables
   use rt_cooling_module, only: update_UVrates
 #endif
-#ifdef USE_TURB
+#if USE_TURB==1
   use turb_commons ! ERM: modified the preprocessor line.
-#else
-  integer ::turb=0
-  integer ::turb_type=0
 #endif
   use mpi_mod
   implicit none
@@ -282,7 +279,7 @@ recursive subroutine amr_step(ilevel,icount)
   if(rt .and. rt_star) call update_star_RT_feedback(ilevel)
 #endif
 
-#ifdef USE_TURB
+#if USE_TURB==1
   ! Compute turbulent forcing ! ERM: changed this line.
                                call timer('turb','start')
   if (turb .and. turb_type/=3) then
@@ -404,7 +401,7 @@ recursive subroutine amr_step(ilevel,icount)
                                call timer('poisson','start')
      if(poisson)call synchro_hydro_fine(ilevel,+0.5*dtnew(ilevel),1)
 
-     #ifdef USE_TURB
+     #if USE_TURB==1
           ! Compute turbulent forcing
                                     call timer('turb','start')
           if (turb .AND. turb_type/=3) then
