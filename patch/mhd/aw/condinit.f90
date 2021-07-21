@@ -40,7 +40,7 @@ subroutine condinit(x,u,dx,nn)
      yc=x(i,2)
 
      q(i,1)=1.0
-     q(i,2)=1.0
+     q(i,2)=0.0
      q(i,3)=0.1*sin(2.0*pi*xc)
      q(i,4)=0.1*cos(2.0*pi*xc)
      q(i,5)=0.1

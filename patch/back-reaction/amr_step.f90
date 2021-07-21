@@ -401,14 +401,14 @@ recursive subroutine amr_step(ilevel,icount)
                                call timer('poisson','start')
      if(poisson)call synchro_hydro_fine(ilevel,+0.5*dtnew(ilevel),1)
 
-     #if USE_TURB==1
-          ! Compute turbulent forcing
-                                    call timer('turb','start')
-          if (turb .AND. turb_type/=3) then
-             ! Euler step, adding turbulent acceleration
-             call synchro_hydro_fine(ilevel,dtnew(ilevel),2)
-          end if
-     #endif
+#if USE_TURB==1
+     ! Compute turbulent forcing
+                               call timer('turb','start')
+     if (turb .AND. turb_type/=3) then
+        ! Euler step, adding turbulent acceleration
+        call synchro_hydro_fine(ilevel,dtnew(ilevel),2)
+     end if
+#endif
 
      ! Restriction operator
                                call timer('hydro upload fine','start')
