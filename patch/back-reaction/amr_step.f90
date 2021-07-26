@@ -3,6 +3,7 @@ recursive subroutine amr_step(ilevel,icount)
   use pm_commons
   use hydro_commons
   use poisson_commons
+  use tracer_utils, only: reset_tracer_move_flag
 #ifdef RT
   use rt_hydro_commons
   use SED_module
@@ -11,7 +12,7 @@ recursive subroutine amr_step(ilevel,icount)
   use rt_cooling_module, only: update_UVrates
 #endif
 #if USE_TURB==1
-  use turb_commons ! ERM: modified the preprocessor line.
+  use turb_commons
 #endif
   use mpi_mod
   implicit none
@@ -280,7 +281,7 @@ recursive subroutine amr_step(ilevel,icount)
 #endif
 
 #if USE_TURB==1
-  ! Compute turbulent forcing ! ERM: changed this line.
+  ! Compute turbulent forcing
                                call timer('turb','start')
   if (turb .and. turb_type/=3) then
      ! Calculate turbulent acceleration on each cell in this level

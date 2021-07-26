@@ -271,7 +271,7 @@ contains
     real(dp),dimension(1:3)::xbound
     real(dp),dimension(1:3)::skip_loc
     real(dp)::scale
-    
+
     ! Local constants
     nxny=nx*ny
     xbound(1:3)=(/dble(nx),dble(ny),dble(nz)/)

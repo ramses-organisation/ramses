@@ -327,11 +327,11 @@ contains
                 ind_cell(i)=iskip+ind_grid(i)
              end do
              do i=1,ngrid
-                xx1=xg(ind_grid(i),1)+xc(ind,1)
+                xx1=xg(ind_grid(i),1)+xc(ind,1) - skip_loc(1)
                 xx1=(xx1*(dxini(ilevel)/dx)-xoff1(ilevel))/dxini(ilevel)
-                xx2=xg(ind_grid(i),2)+xc(ind,2)
+                xx2=xg(ind_grid(i),2)+xc(ind,2) - skip_loc(2)
                 xx2=(xx2*(dxini(ilevel)/dx)-xoff2(ilevel))/dxini(ilevel)
-                xx3=xg(ind_grid(i),3)+xc(ind,3)
+                xx3=xg(ind_grid(i),3)+xc(ind,3) - skip_loc(3)
                 xx3=(xx3*(dxini(ilevel)/dx)-xoff3(ilevel))/dxini(ilevel)
                 i1_min=MIN(i1_min,int(xx1)+1)
                 i1_max=MAX(i1_max,int(xx1)+1)
@@ -608,11 +608,11 @@ contains
                       ind_cell(i)=iskip+ind_grid(i)
                    end do
                    do i=1,ngrid
-                      xx1=xg(ind_grid(i),1)+xc(ind,1)
+                      xx1=xg(ind_grid(i),1)+xc(ind,1) - skip_loc(1)
                       xx1=(xx1*(dxini(ilevel)/dx)-xoff1(ilevel))/dxini(ilevel)
-                      xx2=xg(ind_grid(i),2)+xc(ind,2)
+                      xx2=xg(ind_grid(i),2)+xc(ind,2) - skip_loc(1)
                       xx2=(xx2*(dxini(ilevel)/dx)-xoff2(ilevel))/dxini(ilevel)
-                      xx3=xg(ind_grid(i),3)+xc(ind,3)
+                      xx3=xg(ind_grid(i),3)+xc(ind,3) - skip_loc(1)
                       xx3=(xx3*(dxini(ilevel)/dx)-xoff3(ilevel))/dxini(ilevel)
                       i1=int(xx1)+1
                       i1=int(xx1)+1
