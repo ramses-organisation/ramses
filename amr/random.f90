@@ -283,7 +283,7 @@ contains
 
   !=======================================================================
   integer function iranfodd( N )
-    integer N
+    integer :: N
     if( mod( N, 2 ) .eq. 0 ) then
        iranfodd = 0
     else
@@ -295,7 +295,7 @@ contains
   !=======================================================================
   !=======================================================================
   integer function iranfeven( N )
-    integer N
+    integer :: N
     if( mod( N, 2 ) .eq. 0 ) then
        iranfeven = 1
     else

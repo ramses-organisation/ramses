@@ -3,6 +3,7 @@ recursive subroutine amr_step(ilevel,icount)
   use pm_commons
   use hydro_commons
   use poisson_commons
+  use tracer_utils, only: reset_tracer_move_flag
 #ifdef RT
   use rt_hydro_commons
   use SED_module
@@ -18,7 +19,7 @@ recursive subroutine amr_step(ilevel,icount)
 #ifndef WITHOUTMPI
   integer::mpi_err
 #endif
-  integer::ilevel,icount
+  integer, intent(in)::ilevel,icount
   !-------------------------------------------------------------------!
   ! This routine is the adaptive-mesh/adaptive-time-step main driver. !
   ! Each routine is called using a specific order, don't change it,   !
@@ -379,6 +380,16 @@ recursive subroutine amr_step(ilevel,icount)
 #else
      end do
 #endif
+     ! MC Tracer
+     ! Communicate fluxes accross boundaries
+     if(MC_tracer)then
+                                call timer('tracer','start')
+        do ivar=1,twondim
+           call make_virtual_reverse_dp(fluxes(1,ivar),ilevel-1)
+           call make_virtual_fine_dp(fluxes(1,ivar),ilevel-1)
+        end do
+     end if
+
      if(momentum_feedback>0)then
         call make_virtual_reverse_dp(pstarnew(1),ilevel)
      endif
@@ -543,7 +554,14 @@ recursive subroutine amr_step(ilevel,icount)
      if(icount==2)dtnew(ilevel-1)=dtold(ilevel)+dtnew(ilevel)
   end if
 
-999 format(' Entering amr_step',i1,' for level',i2)
+  ! Reset move flag flag
+  if(MC_tracer) then
+                                call timer('tracer','start')
+     ! Decrease the move flag by 1
+     call reset_tracer_move_flag(ilevel)
+  end if
+
+999 format(' Entering amr_step(',i1,') for level',i2)
 
 end subroutine amr_step
 
