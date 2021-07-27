@@ -88,7 +88,7 @@ subroutine read_hydro_params(nml_ok)
 
   ! Cooling / basic chemistry parameters
   namelist/cooling_params/cooling,metal,isothermal,haardt_madau,J21 &
-       & ,barotrop,barotrop_knee,barotrop_slope,mu_gas &
+       & ,eos,eos_form,barotrop_knee,barotrop_slope,mu_gas &
        & ,a_spec,self_shielding, z_ave,z_reion,ind_rsink,T2max,neq_chem
 
   ! Star formation parameters
@@ -254,6 +254,22 @@ subroutine read_hydro_params(nml_ok)
      if(myid==1)write(*,*)'Error: metals need nvar >= ndim+3'
      if(myid==1)write(*,*)'Modify hydro_parameters.f90 and recompile'
      nml_ok=.false.
+  endif
+
+  !--------------------------------------------------
+  ! Check EOS parameters
+  !--------------------------------------------------
+  if(isothermal .and. .not. eos)then
+    eos=.true.
+    if(myid==1)write(*,*)'WARNING: The isothermal keyword is replaced by "eos". Running with eos=.true.'
+  endif
+  if(eos)then
+    ! TODO check EOS type
+    if(myid==1)write(*,*)'Choose isothermal, barotrop or table '
+    if(eos_form=='table')then
+       ! TODO read table
+       if(myid==1)write(*,*)'Reading EOS table from bla'
+    endif
   endif
 
   !--------------------------------------------------

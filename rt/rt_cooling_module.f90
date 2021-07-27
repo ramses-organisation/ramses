@@ -1419,6 +1419,7 @@ SUBROUTINE heat_unresolved_HII_regions_vsweep(ind_grid,ngrid,ilevel)
      end do
 
      ! Subtract polytropic temperature
+     ! TC: DO WE NEED TO TAKE INTO ACCOUNT EOS HERE?
      if(jeans_ncells>0)then
         do i=1,nleaf
            T2min(i) = nH(i)*polytropic_constant*scale_T2

@@ -43,6 +43,7 @@ cs2 = p/rho
 T = cs2 * 2.37 * MH /KB
 
 ax[2].plot(rho,T,'o',color='black',markerfacecolor='none')
+ax[2].plot(rho, 10, color='red')
 ax[2].set_xlabel('Density (g/cm3)')
 ax[2].set_ylabel('Temperature (K)')
 #ax[2].set_ylabel('cs (cm/s)')

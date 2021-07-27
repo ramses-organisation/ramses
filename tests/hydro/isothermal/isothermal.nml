@@ -63,7 +63,7 @@ units_length=3.0857d18
 !isothermal with barotrop
 &COOLING_PARAMS
 isothermal=.true.
-barotrop=.true.
+eos_form='isothermal'
 !barotrop_knee=1d50
 mu_gas=2.37
 barotrop_knee=1d50 !g/cm3

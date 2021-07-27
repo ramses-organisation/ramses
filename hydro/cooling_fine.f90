@@ -108,7 +108,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
 #if NENER>0
   integer::irad
 #endif
-   real(dp)::barotrop1D
+   !real(dp)::barotrop1D
 
   ! Mesh spacing in that level
   dx=0.5D0**ilevel
@@ -318,11 +318,14 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
      !==========================================
      ! Compute temperature from polytrope EOS
      !==========================================
-     if(barotrop)then
+     if(eos)then
         do i=1,nleaf
-           T2min(i) = barotrop1D(nH(i)/scale_nH*scale_d)/mu_gas
+           call get_eos(nH(i), T2min(i))
+           !T2min(i) = barotrop1D(nH(i)/scale_nH*scale_d)/mu_gas
+
         enddo
      else
+        ! cooling floor
         if(jeans_ncells>0)then
            do i=1,nleaf
               T2min(i) = nH(i)*polytropic_constant*scale_T2
@@ -382,7 +385,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
                    cooling_on(i)=.false.
            end do
         end if
-        if(isothermal)cooling_on(1:nleaf)=.false.
+        if(eos)cooling_on(1:nleaf)=.false.
      endif
 
      if(rt_vc) then ! Do the Lorentz boost. Eqs A4 and A5. in RT15
@@ -549,7 +552,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
      endif
 
      ! Update total fluid energy
-     if(isothermal.or.barotrop)then
+     if(eos)then
         do i=1,nleaf
            uold(ind_leaf(i),neul) = T2min(i) + ekk(i) + err(i) + emag(i)
         end do

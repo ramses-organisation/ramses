@@ -1,6 +1,47 @@
+subroutine get_eos(rho, temperature)
+   use amr_parameters      ,only:dp,T2_star,n_star,g_star,mu_gas
+   use hydro_commons       ,only:gamma,eos_form
+   real(dp)::rho, temperature
+   real(dp)::barotrop1D
+   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
+
+   !--------------------------------------------------------------
+   ! This routine selects the chosen EOS
+   ! Inputs/output are in H/cc units
+   !--------------------------------------------------------------
+   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
+
+   SELECT CASE (eos_form)
+   CASE ('isothermal')
+      temperature = T2_star
+   CASE ('polytrop')
+      temperature = T2_star*(rho/n_star)**(g_star-1.0d0)
+   CASE ('barotrop')
+      temperature = barotrop1D(rho/scale_nH*scale_d)/mu_gas
+   CASE DEFAULT
+     write(*,*)'unknown eos form'
+     call clean_stop
+   END SELECT
+
+end subroutine get_eos
+!###########################################################
+!###########################################################
+!###########################################################
+!###########################################################
+
+!subroutine read_eos_table()
+!end subroutine read_eos_table
+
+!subroutine get_eos_value_from_table()
+!end subroutine get_eos_value_from_table
+
+!###########################################################
+!###########################################################
+!###########################################################
+!###########################################################
 subroutine pressure_eos(rho_temp,Enint_temp,Peos)
   use amr_parameters      ,only:dp
-  use hydro_commons       ,only:gamma,barotrop
+  use hydro_commons       ,only:gamma
   implicit none
   !--------------------------------------------------------------
   ! This routine computes the pressure from the density and 
@@ -29,7 +70,7 @@ end subroutine pressure_eos
 !###########################################################
 subroutine temperature_eos(rho_temp,Enint_temp,Teos)
   use amr_parameters      ,only:dp,mu_gas
-  use hydro_commons       ,only:gamma,barotrop
+  use hydro_commons       ,only:gamma
   use constants
   implicit none
   !--------------------------------------------------------------
@@ -67,7 +108,7 @@ end subroutine temperature_eos
 !###########################################################
 subroutine soundspeed_eos(rho_temp,Enint_temp,Cseos)
   use amr_parameters      ,only:dp,mu_gas
-  use hydro_commons       ,only:gamma,barotrop
+  use hydro_commons       ,only:gamma
   use constants
   implicit none
   !--------------------------------------------------------------
@@ -113,10 +154,11 @@ function barotrop1D(rhon)
 
    ! Implement analytical EOS here
    ! rhon is the density in g/cm3
-   if(rhon<barotrop_knee)then
-      barotrop1D = mu_gas * T2_star
-   else
-      barotrop1D = mu_gas * T2_star * (rhon/barotrop_knee)**(barotrop_slope-1.0d0)
-   endif
+   !if(rhon<barotrop_knee)then
+   !   barotrop1D = mu_gas * T2_star
+   !else
+   !   barotrop1D = mu_gas * T2_star * (rhon/barotrop_knee)**(barotrop_slope-1.0d0)
+   !endif
+   barotrop1D = mu_gas * T2_star * (1 + (rhon/barotrop_knee)**(barotrop_slope-1.0d0))
 
 end function barotrop1D

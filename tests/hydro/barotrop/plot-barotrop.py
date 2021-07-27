@@ -41,8 +41,12 @@ ax[1].set_yscale('log')
 cs = np.sqrt(p/rho)
 cs2 = p/rho
 T = cs2 * 2.37 * MH /KB
+rho_ana = np.logspace(-18,-12,50)
+b3 = 10 * (1 + (rho_ana/1e-15)**(1.666667-1))
 
 ax[2].plot(rho,T,'o',color='black',markerfacecolor='none')
+ax[2].plot(rho_ana, b3, color='red')
+
 ax[2].set_xlabel('Density (g/cm3)')
 ax[2].set_ylabel('Temperature (K)')
 #ax[2].set_ylabel('cs (cm/s)')
@@ -56,4 +60,4 @@ ax[2].set_ylim(1,max(T)*10)
 fig.savefig('barotrop.pdf',bbox_inches='tight')
 
 # Check results against reference solution
-visu_ramses.check_solution(data["data"],'barotrop', overwrite=True)
+visu_ramses.check_solution(data["data"],'barotrop', overwrite=False)
