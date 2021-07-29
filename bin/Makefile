@@ -6,11 +6,11 @@
 # Do we want a debug build? 1=Yes, 0=No
 DEBUG = 0
 # Compiler flavor: GNU or INTEL
-COMPILER = INTEL
+COMPILER = GNU
 # Size of vector cache
 NVECTOR = 32
 # Number of dimensions
-NDIM = 3
+NDIM = 1
 # Float precision size
 NPRE = 8
 # hydro/mhd solver
@@ -22,7 +22,7 @@ RT = 0
 # Use turbulence? 1=Yes, 0=No (requires fftw3)
 USE_TURB=0
 # Use MPI? 1=Yes, 0=No
-MPI = 1
+MPI = 0
 MPIF90 = mpif90
 # Root name of executable
 EXEC = ramses
@@ -52,7 +52,7 @@ ifeq ($(RT),1)
 endif
 
 # Set to one to use 'include "mpif.h"' instead of more recent "use mpi"
-OLD_MPI_SUPPORT = 1
+OLD_MPI_SUPPORT = 0
 #############################################################################
 GITBRANCH = $(shell git rev-parse --abbrev-ref HEAD)
 GITHASH = $(shell git log --pretty=format:'%H' -n 1)
