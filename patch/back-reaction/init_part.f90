@@ -408,6 +408,7 @@ contains
          allocate(init_array_m(i1_min:i1_max,i2_min:i2_max,i3_min:i3_max))
        end if
 
+       if(myid==1)write(*,*)i1_min,i1_max,i2_min,i2_max,i3_min,i3_max
        ! Loop over input variables
        do idim=1,ndim
 

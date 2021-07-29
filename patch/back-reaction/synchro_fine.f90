@@ -639,8 +639,12 @@ subroutine init_dust_fine(ilevel)
    do ibound=1,nboundary
       do ind=1,twotondim
          iskip=ncoarse+(ind-1)*ngridmax
-         do i=1,boundary(ibound,ilevel)%ngrid
-            unew(boundary(ibound,ilevel)%igrid(i)+iskip,ivar_dust)=0.0D0
+         do ivar=ivar_dust,ivar_dust+ndim
+            do i=1,boundary(ibound,ilevel)%ngrid
+               unew(boundary(ibound,ilevel)%igrid(i)+iskip,ivar)=0.0D0
+               ! unew(boundary(ibound,ilevel)%igrid(i)+iskip,ivar)=&
+               ! &uold(boundary(ibound,ilevel)%igrid(i)+iskip,ivar)
+            end do
          end do
       end do
    end do
