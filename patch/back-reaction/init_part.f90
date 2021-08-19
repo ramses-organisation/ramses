@@ -624,6 +624,7 @@ contains
                       keep_part=son(ind_cell(i))==0
                       if(keep_part)then
                          ipart=ipart+1
+                         write(*,*)i1,i2,i3
                          vp(ipart,idim)=init_array(i1,i2,i3)
                          if(.not. read_pos)then
                             dispmax=max(dispmax,abs(init_array(i1,i2,i3)/dx))
