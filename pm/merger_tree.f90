@@ -2452,6 +2452,8 @@ subroutine read_progenitor_data()
 
   endif ! nprogs > 0
 
+  if (.not.make_mock_galaxies) deallocate(prog_mpeak)
+
 
 
 
