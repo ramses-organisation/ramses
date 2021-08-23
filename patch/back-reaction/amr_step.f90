@@ -3,6 +3,7 @@ recursive subroutine amr_step(ilevel,icount)
   use pm_commons
   use hydro_commons
   use poisson_commons
+  use tracer_utils, only: reset_tracer_move_flag
 #ifdef RT
   use rt_hydro_commons
   use SED_module
