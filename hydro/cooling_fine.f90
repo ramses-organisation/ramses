@@ -108,7 +108,6 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
 #if NENER>0
   integer::irad
 #endif
-   !real(dp)::barotrop1D
 
   ! Mesh spacing in that level
   dx=0.5D0**ilevel
@@ -320,9 +319,8 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
      !==========================================
      if(eos)then
         do i=1,nleaf
-           call get_eos(nH(i), T2min(i))
-           !T2min(i) = barotrop1D(nH(i)/scale_nH*scale_d)/mu_gas
-
+           ! analytic EOS
+           call eos_temperature_from_density(nH(i), T2min(i))
         enddo
      else
         ! cooling floor

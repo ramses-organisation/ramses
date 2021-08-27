@@ -29,7 +29,7 @@ p      = data["data"]["pressure"] * unit_d * unit_l**2 / unit_t**2
 ax[0].plot(x,rho,'o',color='black',markerfacecolor='none')
 ax[0].set_xlabel('Distance (AU)')
 ax[0].set_ylabel('Density (g/cm3)')
-ax[0].set_xscale('symlog', linthreshx=1.*PC/AU/2**16)
+ax[0].set_xscale('symlog', linthresh=1.*PC/AU/2**16)
 ax[0].set_yscale('log')
 
 ax[1].plot(rho,p,'o',color='black',markerfacecolor='none')
@@ -41,6 +41,8 @@ ax[1].set_yscale('log')
 cs = np.sqrt(p/rho)
 cs2 = p/rho
 T = cs2 * 2.37 * MH /KB
+
+#analytical solution
 rho_ana = np.logspace(-18,-12,50)
 b3 = 10 * (1 + (rho_ana/1e-15)**(1.666667-1))
 
@@ -49,13 +51,9 @@ ax[2].plot(rho_ana, b3, color='red')
 
 ax[2].set_xlabel('Density (g/cm3)')
 ax[2].set_ylabel('Temperature (K)')
-#ax[2].set_ylabel('cs (cm/s)')
 ax[2].set_xscale('log')
 ax[2].set_yscale('log')
-#ax[2].set_ylim(1.7e4,2e4)
 ax[2].set_ylim(1,max(T)*10)
-
-#analytical solution
 
 fig.savefig('barotrop.pdf',bbox_inches='tight')
 

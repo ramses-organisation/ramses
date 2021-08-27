@@ -29,7 +29,7 @@ p      = data["data"]["pressure"] * unit_d * unit_l**2 / unit_t**2
 ax[0].plot(x,rho,'o',color='black',markerfacecolor='none')
 ax[0].set_xlabel('Distance (AU)')
 ax[0].set_ylabel('Density (g/cm3)')
-ax[0].set_xscale('symlog', linthreshx=1.*PC/AU/2**16)
+ax[0].set_xscale('symlog', linthresh=1.*PC/AU/2**16)
 ax[0].set_yscale('log')
 
 ax[1].plot(rho,p,'o',color='black',markerfacecolor='none')
@@ -43,7 +43,7 @@ cs2 = p/rho
 T = cs2 * 2.37 * MH /KB
 
 ax[2].plot(rho,T,'o',color='black',markerfacecolor='none')
-ax[2].plot(rho, 10, color='red')
+ax[2].plot(rho, np.full(len(rho),10), color='red')
 ax[2].set_xlabel('Density (g/cm3)')
 ax[2].set_ylabel('Temperature (K)')
 #ax[2].set_ylabel('cs (cm/s)')
@@ -51,8 +51,6 @@ ax[2].set_xscale('log')
 ax[2].set_yscale('log')
 #ax[2].set_ylim(1.7e4,2e4)
 ax[2].set_ylim(1,max(T)*10)
-
-#analytical solution
 
 fig.savefig('isothermal.pdf',bbox_inches='tight')
 

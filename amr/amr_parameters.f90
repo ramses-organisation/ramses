@@ -198,10 +198,12 @@ module amr_parameters
   logical ::sf_compressive=.false.      ! Advect compressive and solenoidal turbulence terms separately
 
   ! EOS parameters
-  character(len=20)::eos_form='isothermal'  !type of EOS: choose 'isothermal', 'barotrop', 'polytrop', 'table'
-  real(dp)::barotrop_knee=1.0d50         ! knee-density for barotropic EOS
-  real(dp)::barotrop_slope=1.0d0        ! slope for barotropic EOS
-  real(dp)::mu_gas=1.0d0                ! molecular weight
+  character(len=20)::eos_form='polytrop'  !type of EOS: choose 'isothermal', 'barotrop', 'polytrop', 'table'
+  real(dp)::barotrop_knee=1.0d50         ! knee-density for barotropic EOS in g/cm3
+  real(dp)::barotrop_slope=1.0d0         ! slope for barotropic EOS
+  real(dp)::mu_gas=1d0                   ! molecular weight
+  real(dp)::T_eos=10                     ! isothermal temperature for EOS, namelist parameter
+  real(dp)::T2_eos=10                    ! = T/mu, used in the computations
 
   ! Output times
   real(dp),dimension(1:MAXOUT)::aout=1.1d0      ! Output expansion factors

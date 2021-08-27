@@ -4,6 +4,7 @@ This is the RAMSES parameter file for the isothermal EOS test.
 hydro=.true.
 poisson=.true.
 nsubcycle=15*1
+ncontrol=50
 /
 
 &AMR_PARAMS
@@ -50,25 +51,8 @@ units_time=3.1556926d13
 units_length=3.0857d18
 /
 
-!isothermal without barotrop
-!&COOLING_PARAMS
-!isothermal=.true.
-!barotrop=.false.
-!/
-!&SF_PARAMS
-!T2_star=4.2194
-!g_star=1
-!/
-
-!isothermal with barotrop
 &COOLING_PARAMS
 isothermal=.true.
 eos_form='isothermal'
-!barotrop_knee=1d50
-mu_gas=2.37
-barotrop_knee=1d50 !g/cm3
-/
-
-&SF_PARAMS
-T2_star=4.2194 !can't remove this:(
+T_eos=4.2194 !mu_gas=1 by default
 /
