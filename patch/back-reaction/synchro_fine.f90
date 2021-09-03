@@ -527,7 +527,7 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
         vp(ind_part(j),idim)=new_vp(j,idim)
      end do
   end do
-  
+
   ! Extra acceleration forces are added here.
   if((accel_gr(1).ne.0).or.(accel_gr(2).ne.0).or.(accel_gr(3).ne.0))then
      do idim=1,ndim
@@ -620,20 +620,36 @@ subroutine init_dust_fine(ilevel)
         end do
      end do
   end do
-  
-  ! Reset rho in physical boundaries, may need later
-  ! do ibound=1,nboundary
-  !    do ind=1,twotondim
-  !       iskip=ncoarse+(ind-1)*ngridmax
-  !       do ivar=ivar_dust,ivar_dust+ndim
-  !          do i=1,boundary(ibound,ilevel)%ngrid
-  !             uold(boundary(ibound,ilevel)%igrid(i)+iskip,ivar)=0.0D0
-  !             ! unew(boundary(ibound,ilevel)%igrid(i)+iskip,ivar)=&
-  !             ! &uold(boundary(ibound,ilevel)%igrid(i)+iskip,ivar)
-  !          end do
-  !       end do
-  !    end do
-  ! end do
+
+!!!!!!!!!!!!!!!!!!!!!!! NEW !!!!!!!!!!!!!!!!!!!!!!!!!!!
+  ! Reset dust variables in physical boundaries
+   do ibound=1,nboundary
+      do ind=1,twotondim
+         iskip=ncoarse+(ind-1)*ngridmax
+         do ivar=ivar_dust,ivar_dust+ndim
+            do i=1,boundary(ibound,ilevel)%ngrid
+               uold(boundary(ibound,ilevel)%igrid(i)+iskip,ivar)=0.0D0
+               ! unew(boundary(ibound,ilevel)%igrid(i)+iskip,ivar)=&
+               ! &uold(boundary(ibound,ilevel)%igrid(i)+iskip,ivar)
+            end do
+         end do
+      end do
+   end do
+
+   do ibound=1,nboundary
+      do ind=1,twotondim
+         iskip=ncoarse+(ind-1)*ngridmax
+         do ivar=ivar_dust,ivar_dust+ndim
+            do i=1,boundary(ibound,ilevel)%ngrid
+               unew(boundary(ibound,ilevel)%igrid(i)+iskip,ivar)=0.0D0
+               ! unew(boundary(ibound,ilevel)%igrid(i)+iskip,ivar)=&
+               ! &uold(boundary(ibound,ilevel)%igrid(i)+iskip,ivar)
+            end do
+         end do
+      end do
+   end do
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   ! Synchronize velocity using CIC (No longer need velocity to be synced.)
   ig=0
@@ -678,6 +694,8 @@ subroutine init_dust_fine(ilevel)
   ! Update MPI boundary conditions for unew for dust "mass" and "momentum" densities
   call make_virtual_reverse_dp(unew(1,ivar_dust),ilevel)
   call make_virtual_fine_dp   (unew(1,ivar_dust),ilevel)
+
+
 
 111 format('   Entering init_dust_fine for level ',I2)
 
