@@ -841,7 +841,7 @@ subroutine StoppingRate(nn,dt,indp,vol,v,nu)
   real(dp),dimension(1:nvector,1:ndim),save ::wh! drift at half step.
   integer ::i,j,idim,ind
   ivar_dust=9
-  rd = sqrt(gamma)*0.62665706865775*grain_size !constant for epstein drag law.
+  rd = 0.62665706865775*grain_size !*sqrt(gamma) constant for epstein drag law.
   cs=1.0 ! isothermal sound speed... Need to get this right. This works for now,
          ! but only if you have scaled things so that the sound speed is 1.
 
