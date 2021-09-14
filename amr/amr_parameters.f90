@@ -183,7 +183,7 @@ module amr_parameters
   logical ::cooling=.false.
   logical ::neq_chem=.false.            ! Non-equilbrium chemistry activated
   logical ::isothermal=.false.          ! Enable equation of state for gas (heating and cooling disabled if .true.)
-  logical ::eos=.false.                 ! New keyword to replace the confusing name "isothermal"
+  logical ::barotropic_eos=.false.      ! New keyword to replace the confusing name "isothermal"
   logical ::metal=.false.
   logical ::haardt_madau=.false.
   logical ::delayed_cooling=.false.
@@ -198,12 +198,17 @@ module amr_parameters
   logical ::sf_compressive=.false.      ! Advect compressive and solenoidal turbulence terms separately
 
   ! EOS parameters
-  character(len=20)::eos_form='polytrop'  !type of EOS: choose 'isothermal', 'barotrop', 'polytrop', 'table'
-  real(dp)::barotrop_knee=1.0d50         ! knee-density for barotropic EOS in g/cm3
-  real(dp)::barotrop_slope=1.0d0         ! slope for barotropic EOS
-  real(dp)::mu_gas=1d0                   ! molecular weight
-  real(dp)::T_eos=10                     ! isothermal temperature for EOS, namelist parameter
-  real(dp)::T2_eos=10                    ! = T/mu, used in the computations
+  character(len=20)::barotropic_eos_form='legacy'  !Type of barotropic EOS: choose from:
+                                        !'isothermal': constant temperature T0
+                                        !'polytrope': T = T0*(rho/rho0)**(gamma-1) or P ~ rho**gamma for ideal gas
+                                        !'double_polytrope': isothermal with T0 below rho0 and polytropic with gamma above
+                                        !'custom': for patching your own eos
+                                        !'legacy': same as polytrop but using the old n_star, g_star and T2_star
+  real(dp)::polytrope_rho=1.0d50        ! sets rho0 in EOS = density normalisation or knee-density, in g/cm3
+  real(dp)::polytrope_index=1.0d0       ! sets gamma in EOS = polytropic index
+  real(dp)::T_eos=10                    ! sets T0 in EOS: isothermal temperature or temperature normalisation, in K
+  real(dp)::mu_gas=1d0                  ! molecular weight
+  real(dp)::T2_eos=10                   ! = T/mu, used in the computations
 
   ! Output times
   real(dp),dimension(1:MAXOUT)::aout=1.1d0      ! Output expansion factors

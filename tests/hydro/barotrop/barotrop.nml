@@ -53,10 +53,10 @@ units_length=3.0857d18
 /
 
 &COOLING_PARAMS
-eos=.true.
-eos_form='barotrop'
-barotrop_knee=1d-15 !g/cm3
-barotrop_slope=1.666667
+barotropic_eos=.true.
+barotropic_eos_form='double_polytrope'
+polytrope_rho=1d-15 !g/cm3
+polytrope_index=1.666667
 T_eos=10d0
 mu_gas=2.37d0
 /

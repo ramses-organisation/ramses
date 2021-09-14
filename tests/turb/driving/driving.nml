@@ -47,8 +47,8 @@ units_length=3.0857d18
 /
 
 &COOLING_PARAMS
-eos=.true.
-eos_form='isothermal'
+barotropic_eos=.true.
+barotropic_eos_form='isothermal'
 T_eos=4.2194
 /
 

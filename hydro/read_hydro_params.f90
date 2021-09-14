@@ -88,7 +88,7 @@ subroutine read_hydro_params(nml_ok)
 
   ! Cooling / basic chemistry parameters
   namelist/cooling_params/cooling,metal,isothermal,haardt_madau,J21 &
-       & ,eos,eos_form,barotrop_knee,barotrop_slope,T_eos,mu_gas &
+       & ,barotropic_eos,barotropic_eos_form,polytrope_rho,polytrope_index,T_eos,mu_gas &
        & ,a_spec,self_shielding, z_ave,z_reion,ind_rsink,T2max,neq_chem
 
   ! Star formation parameters
@@ -259,11 +259,11 @@ subroutine read_hydro_params(nml_ok)
   !--------------------------------------------------
   ! Check EOS parameters
   !--------------------------------------------------
-  if(isothermal .and. .not. eos)then
-    eos=.true.
-    if(myid==1)write(*,*)'WARNING: The isothermal keyword is replaced by "eos". Running with eos=.true.'
+  if(isothermal .and. .not. barotropic_eos)then
+    barotropic_eos=.true.
+    if(myid==1)write(*,*)'WARNING: The isothermal keyword is replaced by "barotropic_eos". Running with barotropic_eos=.true.'
   endif
-  if(eos)then
+  if(barotropic_eos)then
     ! set T2 for computations
     T2_eos = T_eos/mu_gas
   endif

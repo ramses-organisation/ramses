@@ -317,10 +317,10 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
      !==========================================
      ! Compute temperature from polytrope EOS
      !==========================================
-     if(eos)then
+     if(barotropic_eos)then
         do i=1,nleaf
            ! analytic EOS
-           call eos_temperature_from_density(nH(i), T2min(i))
+           call barotropic_eos_temperature(nH(i), T2min(i))
         enddo
      else
         ! cooling floor
@@ -383,7 +383,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
                    cooling_on(i)=.false.
            end do
         end if
-        if(eos)cooling_on(1:nleaf)=.false.
+        if(barotropic_eos)cooling_on(1:nleaf)=.false.
      endif
 
      if(rt_vc) then ! Do the Lorentz boost. Eqs A4 and A5. in RT15
@@ -550,7 +550,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
      endif
 
      ! Update total fluid energy
-     if(eos)then
+     if(barotropic_eos)then
         do i=1,nleaf
            uold(ind_leaf(i),neul) = T2min(i) + ekk(i) + err(i) + emag(i)
         end do

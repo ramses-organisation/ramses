@@ -52,7 +52,7 @@ units_length=3.0857d18
 /
 
 &COOLING_PARAMS
-isothermal=.true.
-eos_form='isothermal'
+isothermal=.true. !test backwards compatibility
+barotropic_eos_form='isothermal'
 T_eos=4.2194 !mu_gas=1 by default
 /
