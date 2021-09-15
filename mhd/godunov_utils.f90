@@ -145,7 +145,7 @@ subroutine cmpdt(uu,gg,dx,dt,ncell)
   ! time step for non-ideal mhd
 
   ! Hall effect - WARNING not working yet
-  if(.not.nhall.) then
+  if(.not.nhall) then
      dthallbis=1d34
   else
      dthallbis=1d34

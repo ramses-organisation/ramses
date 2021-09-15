@@ -809,9 +809,11 @@ subroutine computejb(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,b
            end do
         end do
      end do
+
   endif
 
   if(nambipolar.or.nhall) then
+
      do k=min(1,ku1+1),max(1,ku2-1)
         do j=min(1,ju1+1),max(1,ju2-1)
            do i=min(1,iu1+1),max(1,iu2-1)
@@ -824,9 +826,11 @@ subroutine computejb(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,b
            end do
         end do
      end do
+
   endif
 
   if(nambipolar)then
+
      do k=min(1,ku1+1),max(1,ku2-1)
         do j=min(1,ju1+1),max(1,ju2-1)
            do i=min(1,iu1+1),max(1,iu2-1)
@@ -839,6 +843,7 @@ subroutine computejb(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,b
            end do
         end do
      end do
+
   endif
 
 end subroutine computejb
@@ -1298,10 +1303,10 @@ subroutine computejb2(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
                  fluxmd(l,i,j,k,1)=fluxbis(l,i,j,k,1,1)
                  fluxmd(l,i,j,k,2)=fluxbis(l,i,j,k,2,2)
                  fluxmd(l,i,j,k,3)=fluxbis(l,i,j,k,3,3)
-              end do
-           end do
-        end do
-     end do
+             end do
+          end do
+       end do
+    end do
 
   endif
 
@@ -1404,33 +1409,32 @@ index_k = (/0,0,1/)
 dtlim = dt !neil
 
 do k=min(1,ku1+1),max(1,ku2-1)
-     do j=min(1,ju1+1),max(1,ju2-1)
-        do i=min(1,iu1+1),max(1,iu2-1)
-           
-           do l=1,ngrid
+   do j=min(1,ju1+1),max(1,ju2-1)
+      do i=min(1,iu1+1),max(1,iu2-1)
 
-              jemf(l,i,j,k,1)=jemfx(l,i,j,k,1)
-              jemf(l,i,j,k,2)=jemfy(l,i,j,k,2)
-              jemf(l,i,j,k,3)=jemfz(l,i,j,k,3)
+         do l=1,ngrid
 
+            jemf(l,i,j,k,1)=jemfx(l,i,j,k,1)
+            jemf(l,i,j,k,2)=jemfy(l,i,j,k,2)
+            jemf(l,i,j,k,3)=jemfz(l,i,j,k,3)
 
-              rhox=0.25d0*(u(l,i,j,k,   1)+u(l,i  ,j-1,k,   1)+u(l,i,j  ,k-1,   1)+u(l,i  ,j-1,k-1,   1))
-              rhoy=0.25d0*(u(l,i,j,k,   1)+u(l,i-1,j  ,k,   1)+u(l,i,j  ,k-1,   1)+u(l,i-1,j  ,k-1,   1))
-              rhoz=0.25d0*(u(l,i,j,k,   1)+u(l,i-1,j  ,k,   1)+u(l,i,j-1,k  ,   1)+u(l,i-1,j-1,k  ,   1))
-              epsx=0.25d0*(u(l,i,j,k,nvar)+u(l,i  ,j-1,k,nvar)+u(l,i,j  ,k-1,nvar)+u(l,i  ,j-1,k-1,nvar))
-              epsy=0.25d0*(u(l,i,j,k,nvar)+u(l,i-1,j  ,k,nvar)+u(l,i,j  ,k-1,nvar)+u(l,i-1,j  ,k-1,nvar))
-              epsz=0.25d0*(u(l,i,j,k,nvar)+u(l,i-1,j  ,k,nvar)+u(l,i,j-1,k  ,nvar)+u(l,i-1,j-1,k  ,nvar))
-               if(nmagdiffu)then
+            rhox=0.25d0*(u(l,i,j,k,   1)+u(l,i  ,j-1,k,   1)+u(l,i,j  ,k-1,   1)+u(l,i  ,j-1,k-1,   1))
+            rhoy=0.25d0*(u(l,i,j,k,   1)+u(l,i-1,j  ,k,   1)+u(l,i,j  ,k-1,   1)+u(l,i-1,j  ,k-1,   1))
+            rhoz=0.25d0*(u(l,i,j,k,   1)+u(l,i-1,j  ,k,   1)+u(l,i,j-1,k  ,   1)+u(l,i-1,j-1,k  ,   1))
+            epsx=0.25d0*(u(l,i,j,k,nvar)+u(l,i  ,j-1,k,nvar)+u(l,i,j  ,k-1,nvar)+u(l,i  ,j-1,k-1,nvar))
+            epsy=0.25d0*(u(l,i,j,k,nvar)+u(l,i-1,j  ,k,nvar)+u(l,i,j  ,k-1,nvar)+u(l,i-1,j  ,k-1,nvar))
+            epsz=0.25d0*(u(l,i,j,k,nvar)+u(l,i-1,j  ,k,nvar)+u(l,i,j-1,k  ,nvar)+u(l,i-1,j-1,k  ,nvar))
+            if(nmagdiffu)then
                  bsquarex=bemfx(l,i,j,k,1)**2+bemfx(l,i,j,k,2)**2+bemfx(l,i,j,k,3)**2
                  bsquarey=bemfy(l,i,j,k,1)**2+bemfy(l,i,j,k,2)**2+bemfy(l,i,j,k,3)**2
                  bsquarez=bemfz(l,i,j,k,1)**2+bemfz(l,i,j,k,2)**2+bemfz(l,i,j,k,3)**2
-               else
+            endif
 
-               if(ntestDADM.eq.1)then
+            if(ntestDADM.eq.1)then
                   tcellx=1.0d0
                   tcelly=1.0d0
                   tcellz=1.0d0
-               else
+            else
 !                  print*,'x',rhox,epsx,u(l,i,j,k,2),bemfx(l,i,j,k,1)**2+bemfx(l,i,j,k,2)**2+bemfx(l,i,j,k,3)**2
 !                  if(epsy* scale_d*scale_v**2  .lt. 1d-16) print*,'y',rhoy,epsy
 !                  if(epsz* scale_d*scale_v**2  .lt. 1d-16) print*,'z',rhoz,epsz
@@ -1441,19 +1445,19 @@ do k=min(1,ku1+1),max(1,ku2-1)
 !!$                  tcelly=10.
 !!$                  tcellx=10.
 !!$                  tcellz=10.
-               endif
-              ionisrate=default_ionisrate 
+            endif
+            ionisrate=default_ionisrate 
 !               etaod2x=etaohmdiss(rhox,bsquarex,tcellx)
 !               etaod2y=etaohmdiss(rhoy,bsquarey,tcelly)
 !               etaod2z=etaohmdiss(rhoz,bsquarez,tcellz)
-              etaod2x=etaohmdissbricolo(rhox,bsquarex,tcellx,dtlim,dx,ionisrate)
-              etaod2y=etaohmdissbricolo(rhoy,bsquarey,tcelly,dtlim,dx,ionisrate)
-              etaod2z=etaohmdissbricolo(rhoz,bsquarez,tcellz,dtlim,dx,ionisrate)
+            etaod2x=etaohmdissbricolo(rhox,bsquarex,tcellx,dtlim,dx,ionisrate)
+            etaod2y=etaohmdissbricolo(rhoy,bsquarey,tcelly,dtlim,dx,ionisrate)
+            etaod2z=etaohmdissbricolo(rhoz,bsquarez,tcellz,dtlim,dx,ionisrate)
               
 ! WARNING dB/dt=-curl(eta*J)
-              emfohmdiss(l,i,j,k,nxx)=-etaod2x*jemf(l,i,j,k,1)
-              emfohmdiss(l,i,j,k,nyy)=-etaod2y*jemf(l,i,j,k,2)
-              emfohmdiss(l,i,j,k,nzz)=-etaod2z*jemf(l,i,j,k,3)
+            emfohmdiss(l,i,j,k,nxx)=-etaod2x*jemf(l,i,j,k,1)
+            emfohmdiss(l,i,j,k,nyy)=-etaod2y*jemf(l,i,j,k,2)
+            emfohmdiss(l,i,j,k,nzz)=-etaod2z*jemf(l,i,j,k,3)
 
 ! !!!!!!!!!!!!!!!!!!!!!!!
 ! !
@@ -1465,9 +1469,9 @@ do k=min(1,ku1+1),max(1,ku2-1)
 ! ! is naturally defined; Ex bmagij(l,i,j,k,1,2) is Bx at i,j-1/2,k
 ! ! and we can write it Bx,y
 
-              jcenter(l,i,j,k,1)=computdy(bmagij,nzz,nyy,l,i,j,k,dy)-computdz(bmagij,nyy,nzz,l,i,j,k,dy)
-              jcenter(l,i,j,k,2)=computdz(bmagij,nxx,nzz,l,i,j,k,dy)-computdx(bmagij,nzz,nxx,l,i,j,k,dy)
-              jcenter(l,i,j,k,3)=computdx(bmagij,nyy,nxx,l,i,j,k,dy)-computdy(bmagij,nxx,nyy,l,i,j,k,dy)
+            jcenter(l,i,j,k,1)=computdy(bmagij,nzz,nyy,l,i,j,k,dy)-computdz(bmagij,nyy,nzz,l,i,j,k,dy)
+            jcenter(l,i,j,k,2)=computdz(bmagij,nxx,nzz,l,i,j,k,dy)-computdx(bmagij,nzz,nxx,l,i,j,k,dy)
+            jcenter(l,i,j,k,3)=computdx(bmagij,nyy,nxx,l,i,j,k,dy)-computdy(bmagij,nxx,nyy,l,i,j,k,dy)
 
 ! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! !
@@ -1475,36 +1479,32 @@ do k=min(1,ku1+1),max(1,ku2-1)
 ! ! jface is the value of the current where Bj 
 ! ! is naturally defined; Ex jface(l,i,j,k,1,2) is Jx at i,j-1/2,k
 ! ! and we can write it Jx,y
-                 do h = 1,3
-                    
-                    rhof=0.5d0*(u(l,i,j,k,   1)+u(l,i-index_i(h),j-index_j(h),k-index_k(h),   1))
-!                 epsf=u(l,i,j,k,3)
-                    epsf=0.5d0*(u(l,i,j,k,nvar)+u(l,i-index_i(h),j-index_j(h),k-index_k(h),nvar))
-                    bsqf=bmagij(l,i,j,k,1,h)**2+bmagij(l,i,j,k,2,h)**2+bmagij(l,i,j,k,3,h)**2
-                    
-                 ! Compute gas temperature in cgs
+            do h = 1,3
+                  rhof=0.5d0*(u(l,i,j,k,   1)+u(l,i-index_i(h),j-index_j(h),k-index_k(h),   1))
+                  epsf=0.5d0*(u(l,i,j,k,nvar)+u(l,i-index_i(h),j-index_j(h),k-index_k(h),nvar))
+                  bsqf=bmagij(l,i,j,k,1,h)**2+bmagij(l,i,j,k,2,h)**2+bmagij(l,i,j,k,3,h)**2
 
-                    if(ntestDADM.eq.1)then
+                  ! Compute gas temperature in cgs
+                  if(ntestDADM.eq.1)then
                        tcellf=1.0d0
-                    else 
+                  else 
                        call barotropic_eos_temperature(rhof*scale_nH,tcellf)
                        tcellf = tcellf*mu_gas
-                    endif
+                  endif
                     
-                    etaod2=etaohmdiss(rhof,bsqf,tcellf,ionisrate)
-                    fluxohm(l,i,j,k,h)=etaod2*fluxmd(l,i,j,k,h)
+                  etaod2=etaohmdiss(rhof,bsqf,tcellf,ionisrate)
+                  fluxohm(l,i,j,k,h)=etaod2*fluxmd(l,i,j,k,h)
                     
                     !               rhof=0.5d0*(u(l,i,j,k,1)+u(l,i-1,j,k,1))
                     !               pf=0.5d0*(q(l,i,j,k,5)+q(l,i-1,j,k,5))
 !               etaod2=etaohmdiss(rhof,pf)
 !               fluxohm(l,i,j,k,1)=etaod2*fluxmd(l,i,j,k,1)
-                    
-                 enddo
+            enddo
 
-!            end do
-!         end do
-!      end do
-!   end do
+         end do
+      end do
+   end do
+end do
 ! 
 ! 
 !   do k=min(1,ku1+1),max(1,ku2-1) 
@@ -1542,15 +1542,13 @@ do k=min(1,ku1+1),max(1,ku2-1)
 !      end do
 !   end do
 
-
 ! compute contribution to energy flux +eta*I*B
 
-
 !            do l=1,ngrid
-              end do
-        end do
-     end do
-  end do
+ !             end do
+ !       end do
+ !    end do
+ ! end do
   
 end subroutine computdifmag
 !###########################################################
