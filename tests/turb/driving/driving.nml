@@ -47,13 +47,9 @@ units_length=3.0857d18
 /
 
 &COOLING_PARAMS
-isothermal=.true.
-T2max=4.2194
-/
-
-&SF_PARAMS
-T2_star=4.2194
-g_star=1 !isothermal
+barotropic_eos=.true.
+barotropic_eos_form='isothermal'
+T_eos=4.2194
 /
 
 &TURB_PARAMS

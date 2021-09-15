@@ -512,7 +512,7 @@ end do
    !              if(son(ind_cell(i))==0)then
               
                  !JB
-              !                if (.not. barotrop) then
+              !                if (.not. barotropic_eos) then
               ! Remove emag to etot
                     !!$                    unew(ind_cell(i),5)=unew(ind_cell(i),5)-0.125d0*&
                     !!$                         &((unew(ind_cell(i),6)+unew(ind_cell(i),nvar+1))**2&
@@ -608,7 +608,7 @@ end do
                     !!$                    &(flux(i,i3,j3,k3+1,3)-flux(i,i3,j3,k3,3)))*dtdiff/dx_loc
                     !            end if
                     !         
-                    !            if (.not. barotrop) then
+                    !            if (.not. barotropic_eos) then
 
 
                     !!$                    unew(ind_cell(i),5) = unew(ind_cell(i),5) + jxbsquare(i,i3,j3,k3) + jcentersquare(i,i3,j3,k3)

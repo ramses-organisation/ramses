@@ -28,11 +28,6 @@ module hydro_parameters
   integer  :: nRho,nEnergy,nTemp
   real(dp) :: rhomin,rhomax,Emax,emin,yHe,Tmax,Tmin
 
-  ! barotrop parameters
-  integer  :: nrho_barotrop
-  logical  :: analytical_barotrop = .true.
-  real(dp) :: rhomin_barotrop,rhomax_barotrop,drho_barotrop
-
   ! Size of hydro kernel
   integer,parameter::iu1=-1
   integer,parameter::iu2=+4

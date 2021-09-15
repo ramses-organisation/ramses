@@ -95,7 +95,8 @@ subroutine read_hydro_params(nml_ok)
        & ,ir_feedback,ir_eff,t_diss,t_sne,mass_star_max,mass_sne_min
 
   ! Cooling / basic chemistry parameters
-  namelist/cooling_params/cooling,metal,isothermal,barotrop,haardt_madau,J21 &
+  namelist/cooling_params/cooling,metal,isothermal,haardt_madau,J21 &
+       & ,barotropic_eos,barotropic_eos_form,polytrope_rho,polytrope_index,T_eos,mu_gas &
        & ,a_spec,self_shielding, z_ave,z_reion,ind_rsink,T2max,neq_chem
 
   ! Star formation parameters
@@ -376,6 +377,18 @@ subroutine read_hydro_params(nml_ok)
   endif
 
   !--------------------------------------------------
+  ! Check EOS parameters
+  !--------------------------------------------------
+  if(isothermal .and. .not. barotropic_eos)then
+    barotropic_eos=.true.
+    if(myid==1)write(*,*)'WARNING: The isothermal keyword is replaced by "barotropic_eos". Running with barotropic_eos=.true.'
+  endif
+  if(barotropic_eos)then
+    ! set T2 for computations
+    T2_eos = T_eos/mu_gas
+  endif
+
+  !--------------------------------------------------
   ! Check whether illegally trying non-eq chemistry
   !--------------------------------------------------
 #ifndef RT
@@ -539,18 +552,9 @@ subroutine read_hydro_params(nml_ok)
   do i=1,nboundary
      boundary_var(i,1)=MAX(d_bound(i),smallr)
      boundary_var(i,2)=d_bound(i)*u_bound(i)
-#if NDIM>1 || SOLVERmhd
-     boundary_var(i,3)=d_bound(i)*v_bound(i)
-#endif
-#if NDIM>2 || SOLVERmhd
-     boundary_var(i,4)=d_bound(i)*w_bound(i)
-#endif
-     ek_bound=0.0d0
-     do idim=1,ndim
-        ek_bound=ek_bound+0.5d0*boundary_var(i,idim+1)**2/boundary_var(i,1)
-     end do
-     boundary_var(i,ndim+2)=ek_bound+P_bound(i)/(gamma-1.0d0)
 #ifdef SOLVERmhd
+     boundary_var(i,3)=d_bound(i)*v_bound(i)
+     boundary_var(i,4)=d_bound(i)*w_bound(i)
      boundary_var(i,6)=A_bound(i)
      boundary_var(i,7)=B_bound(i)
      boundary_var(i,8)=C_bound(i)
@@ -560,6 +564,18 @@ subroutine read_hydro_params(nml_ok)
      ek_bound=0.5d0*d_bound(i)*(u_bound(i)**2+v_bound(i)**2+w_bound(i)**2)
      em_bound=0.5d0*(A_bound(i)**2+B_bound(i)**2+C_bound(i)**2)
      boundary_var(i,5)=ek_bound+em_bound+P_bound(i)/(gamma-1.0d0)
+#else
+#if NDIM>1
+     boundary_var(i,3)=d_bound(i)*v_bound(i)
+#endif
+#if NDIM>2
+     boundary_var(i,4)=d_bound(i)*w_bound(i)
+#endif
+     ek_bound=0.0d0
+     do idim=1,ndim
+        ek_bound=ek_bound+0.5d0*boundary_var(i,idim+1)**2/boundary_var(i,1)
+     end do
+     boundary_var(i,ndim+2)=ek_bound+P_bound(i)/(gamma-1.0d0)     
 #endif
   end do
 

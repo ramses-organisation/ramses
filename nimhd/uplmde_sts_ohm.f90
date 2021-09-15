@@ -510,7 +510,7 @@ end do
                     &    -( emfy(i,i3,j3,k3+1)-emfy(i,i3+1,j3,k3+1) )
                  unew(ind_cell(i),ivar6)=unew(ind_cell(i),ivar6)+dflux_z*dtdiff/dx_loc
 
-!!$                 if ((.not. barotrop).and. (.not.radiative_nimhdheating)) then
+!!$                 if ((.not. barotropic_eos).and. (.not.radiative_nimhdheating)) then
 !!$                    unew(ind_cell(i),nvar)=unew(ind_cell(i),nvar)+&
 !!$                       &jxbsquare(i,i3,j3,k3) +jcentersquare(i,i3,j3,k3)
 !!$                 endif

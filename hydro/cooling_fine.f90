@@ -14,7 +14,6 @@ subroutine cooling_fine(ilevel)
   !-------------------------------------------------------------------
   integer::ncache,i,igrid,ngrid
   integer,dimension(1:nvector),save::ind_grid
-  real(dp)::barotrop1D
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
@@ -110,7 +109,6 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
 #if NENER>0
   integer::irad
 #endif
-   real(dp)::barotrop1D
 
   ! Mesh spacing in that level
   dx=0.5D0**ilevel
@@ -135,6 +133,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
      nCOM = del_star*omega_b*rhoc*(h0/100)**2/aexp**3*X/mH
   endif
   nISM = MAX(nCOM,nISM)
+  polytrope_rho_cu = polytrope_rho/scale_d
 
   ! Polytropic constant for Jeans length related polytropic EOS
   if(jeans_ncells>0)then
@@ -320,11 +319,13 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
      !==========================================
      ! Compute temperature from polytrope EOS
      !==========================================
-     if(barotrop)then
+     if(barotropic_eos)then
         do i=1,nleaf
-           T2min(i) = barotrop1D(nH(i)/scale_nH*scale_d)/mu_gas
+           ! analytic EOS
+           call barotropic_eos_temperature(nH(i), T2min(i))
         enddo
      else
+        ! cooling floor
         if(jeans_ncells>0)then
            do i=1,nleaf
               T2min(i) = nH(i)*polytropic_constant*scale_T2
@@ -332,18 +333,12 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
         else
            do i=1,nleaf
               T2min(i) = T2_star*(nH(i)/nISM)**(g_star-1.0d0)
-              !T2min(i) = 0. !T2_star*(nH(i)/nISM)**(g_star-1.0d0)
            end do
         endif
-      end if
+      endif
      !==========================================
      ! You can put your own polytrope EOS here
      !==========================================
-     !if(barotrop)then
-     !   do i=1,nleaf
-     !      T2min(i) = barotrop1D(nH(i)/scale_nH*scale_d)/mu_gas
-     !   enddo
-     !end if
 
      if(cooling)then
         ! Compute thermal temperature by subtracting polytrope
@@ -390,7 +385,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
                    cooling_on(i)=.false.
            end do
         end if
-        if(isothermal)cooling_on(1:nleaf)=.false.
+        if(barotropic_eos)cooling_on(1:nleaf)=.false.
      endif
 
      if(rt_vc) then ! Do the Lorentz boost. Eqs A4 and A5. in RT15
@@ -557,7 +552,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
      endif
 
      ! Update total fluid energy
-     if(isothermal.or.barotrop)then
+     if(barotropic_eos)then
         do i=1,nleaf
            uold(ind_leaf(i),neul) = T2min(i) + ekk(i) + err(i) + emag(i)
         end do
@@ -648,12 +643,6 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
 #endif
 #endif
 
-     !if(barotrop)then
-     !   do i=1,nleaf
-     !      uold(ind_leaf(i),neul) = T2min(i) + ekk(i) + err(i) + emag(i)
-     !   end do
-     !end if
-
   end do
   ! End loop over cells
 
@@ -706,7 +695,7 @@ end subroutine cmp_Eddington_tensor
 !=====================================================================================================
 subroutine pressure_eos(rho_temp,Enint_temp,Peos)
   use amr_parameters      ,only:dp
-  use hydro_commons       ,only:gamma,barotrop
+  use hydro_commons       ,only:gamma
   implicit none
   !--------------------------------------------------------------
   ! This routine computes the pressure from the density and 

@@ -1396,7 +1396,7 @@ real(dp)::crossprodx,crossprody,crossprodz, Cv
 
 real(dp)::etaohmdiss,etaod2,tcellx,tcelly,tcellz,bsquarex,bsquarey,bsquarez,etaohmdissbricolo,dtlim
 real(dp)::pressurex,pressurey,pressurez,rhox,rhoy,rhoz,epsx,epsy,epsz
-real(dp)::etaod2x,etaod2y,etaod2z,rhof,pf,bsqf,epsf,tcellf,barotrop1D
+real(dp)::etaod2x,etaod2y,etaod2z,rhof,pf,bsqf,epsf,tcellf
 
 integer , dimension(1:3) :: index_i,index_j,index_k
 
@@ -1507,12 +1507,11 @@ do k=min(1,ku1+1),max(1,ku2-1)
                     
                  ! Compute gas temperature in cgs
 
-                    if(barotrop)then
-                       tcellf=barotrop1D(rhof*scale_d)
-                    elseif(ntestDADM.eq.1)then
+                    if(ntestDADM.eq.1)then
                        tcellf=1.0d0
                     else 
-                       call temperature_eos(rhof,epsf,tcellf)
+                       call barotropic_eos_temperature(rhof*scale_nH,tcellf)
+                       tcellf = tcellf*mu_gas
                     endif
                     
                     etaod2=etaohmdiss(rhof,bsqf,tcellf,ionisrate)

@@ -101,6 +101,9 @@ subroutine move_fine(ilevel)
   end do
 
   close(25+myid)
+!!!!!!!!!!!!!!!!!!!!!!! NEW !!!!!!!!!!!!!!!!!!!!!!!!!!!
+if(simple_boundary)call make_boundary_hydro(ilevel)
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 111 format('   Entering move_fine for level ',I2)
 
