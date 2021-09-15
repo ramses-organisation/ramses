@@ -418,29 +418,26 @@ program amr2cube
                  rho = icpu
               case (0)
                  rho = ilevel
-              case (1)
-                 rho = var(:,ind,1)
-              case (2)
-                 rho = var(:,ind,2)
-              case (3)
-                 rho = var(:,ind,3)
-              case (4)
-                 rho = var(:,ind,4)
-              case (5)
-                 rho = var(:,ind,5)
-              case (-6)
-                 rho = var(:,ind,1)*var(:,ind,6)
-              case (6)
-                 rho = var(:,ind,6)
-              case (7)
-                 rho = var(:,ind,7)
-              case (8)
-                 rho = var(:,ind,8)
-              case (10)
-                 rho = 0.5*(var(:,ind,1)**2+var(:,ind,2)**2+var(:,ind,3)**2)
-              case (11)
-                 rho = 0.5*(var(:,ind,5)**2+var(:,ind,6)**2+var(:,ind,7)**2)
-              end select
+              case (15) !! This is for temperature (Hydro case)
+                 rho = var(:,ind,5)/var(:,ind,1)
+              case (22) !! This is for H2 using HI and HII (ramses_rt patch mol)
+                 rho = 1.0-var(:,ind,8)-var(:,ind,9)
+              case (31) !! This is cell-centered Bx
+	         rho = 0.5*(var(:,ind,5)+var(:,ind,8))
+              case (32) !! This is cell-centered By
+                 rho = 0.5*(var(:,ind,6)+var(:,ind,9))
+              case (33) !! This is cell-centered Bz
+                 rho = 0.5*(var(:,ind,7)+var(:,ind,10))
+              case (34) !! This is cell-centered 0.5*B^2
+                 rho = 0.125*((var(:,ind,5)+var(:,ind,8))**2+&
+                      &       (var(:,ind,6)+var(:,ind,9))**2+&
+                      &       (var(:,ind,7)+var(:,ind,10))**2)
+              case (35) !! This is for temperature (MHD case)
+	         rho = var(:,ind,11)/var(:,ind,1)
+              case default ! Hydro variable
+                 rho = var(:,ind,type)
+	      end select
+
               ! Store data cube
               do i=1,ngrida
                  ok_cell= .not.ref(i)
