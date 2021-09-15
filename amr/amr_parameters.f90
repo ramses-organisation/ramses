@@ -78,7 +78,6 @@ module amr_parameters
 #ifdef NIMHD
   ! remove DTU
   ! radiative_nimhdheating_in_cg to be added with FLD update
-  logical::DTU     =.false.   ! Unique time-step activated for niMHD diffusion routines
   logical::nimhdheating_in_eint=.false. ! Enable niMHD heating as a source term in the gas internal energy in goduvov_fine
 #endif
   
@@ -143,7 +142,6 @@ module amr_parameters
   real(dp)::T2_star=0                ! Typical ISM polytropic temperature
   real(dp)::g_star =1.6d0            ! Typical ISM polytropic index
   real(dp)::jeans_ncells=-1          ! Jeans polytropic EOS
-  real(dp)::mu_gas=1.0d0             ! molecular weight
   real(dp)::del_star=200             ! Minimum overdensity to define ISM
   real(dp)::eta_sn =0                ! Supernova mass fraction
   real(dp)::eta_ssn=0.95d0           ! Single supernova ejected mass fraction (sf_imf=.true. only)

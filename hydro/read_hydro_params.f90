@@ -100,7 +100,7 @@ subroutine read_hydro_params(nml_ok)
        & ,a_spec,self_shielding, z_ave,z_reion,ind_rsink,T2max,neq_chem
 
   ! Star formation parameters
-  namelist/sf_params/m_star,n_star,T2_star,g_star,mu_gas,del_star &
+  namelist/sf_params/m_star,n_star,T2_star,g_star,del_star &
        & ,eps_star,jeans_ncells,sf_virial,sf_trelax,sf_tdiss,sf_model&
        & ,sf_log_properties,sf_imf,sf_compressive
 
@@ -128,8 +128,8 @@ subroutine read_hydro_params(nml_ok)
   ! Non-ideal MHD parameters
   namelist/nonidealmhd_params/nambipolar,gammaAD &
        & ,nmagdiffu,etaMD,nhall,rHall,ntestDADM,use_x3d &
-       & ,coefad, nminitimestep, coefalfven,nmagdiffu2,nambipolar2,nu_sts,coefdtohm &
-       & ,DTU,nimhdheating_in_eint
+       & ,coefad, nminitimestep, coefalfven,coefdtohm &
+       & ,nimhdheating_in_eint
 #endif
 
   ! Read namelist file
@@ -237,7 +237,7 @@ subroutine read_hydro_params(nml_ok)
 
 ! Checks on non-ideal MHD parameters
 ! to move to separate file nimhd/read_nimhd_params.f90
-! to remove STS checks
+! TODO make these booleans
 #ifdef NIMHD
   rewind(1)
   read(1,NML=nonidealmhd_params,END=109)
@@ -255,19 +255,7 @@ subroutine read_hydro_params(nml_ok)
      call clean_stop
   end if
 
-  if((nmagdiffu.eq.1).and.(nmagdiffu2.eq.1)) then
-     write(*,*)'Wrong choice for nmagdiffu : choose one kind not both'
-     call clean_stop
-  end if
-
-  if((nambipolar.eq.1).and.(nambipolar2.eq.1)) then
-     write(*,*)'Wrong choice for nambipolar : choose one kind not both'
-     call clean_stop
-  end if
-
-  if( (nambipolar.eq.1) .or. (nambipolar2.eq.1) .or. &
-      (nmagdiffu .eq.1) .or. (nmagdiffu2 .eq.1) .or. &
-      (nhall.eq.1) )then
+  if( (nambipolar.eq.1) .or. (nmagdiffu .eq.1) .or. (nhall.eq.1) )then
      use_nonideal_mhd = .true.
   else
      use_nonideal_mhd = .false.
@@ -289,18 +277,6 @@ subroutine read_hydro_params(nml_ok)
            write(*,*)'Mini time step switched OFF'
         endif
      endif
-     if(nambipolar2==1) then
-        write(*,*)'Ambipolar diffusion switched ON : subcylcing'
-        write(*,*)'Ambipolar diffusion coefficient',gammaAD
-        write(*,*)'Ambipolar diffusion time coefficient',coefad
-        write(*,*)'Ionisation coefficient',coefionis
-        if(nminitimestep.eq.1) then
-           write(*,*)'Mini time step switched ON'
-           write(*,*)'Mini time step coefficient',coefalfven
-        else
-           write(*,*)'Mini time step switched OFF'
-        endif
-     endif
 
      if((nambipolar.eq.0) .and. (nambipolar2 == 0)) write(*,*)'Ambipolar diffusion switched OFF'
 
@@ -309,12 +285,7 @@ subroutine read_hydro_params(nml_ok)
         write(*,*)'Magnetic diffusion coefficient',etaMD
         write(*,*)'Magnetic diffusion  time coefficient',coefohm
      endif
-     if(nmagdiffu2.eq.1)then
-        write(*,*)'Magnetic diffusion switched ON : subcycling'
-        write(*,*)'Magnetic diffusion coefficient',etaMD
-        write(*,*)'Magnetic diffusion  time coefficient',coefohm
-     endif
-     if((nmagdiffu.eq.0).and.(nmagdiffu2.eq.0))write(*,*)'Magnetic diffusion switched OFF'
+     if(nmagdiffu.eq.0)write(*,*)'Magnetic diffusion switched OFF'
 
      if(nhall.eq.1)then
         write(*,*)'Hall effect switched ON'
@@ -331,12 +302,6 @@ subroutine read_hydro_params(nml_ok)
   rewind(1)
 111 continue
 
-  if((nambipolar2.eq.1).or.(nmagdiffu2.eq.1))then
-     if(pressure_fix.eqv..false.) then
-        write(*,*)'STS needs pressure_fix=.true. to work....'
-        call clean_stop
-     end if
-  end if
 #endif
 
   !--------------------------------------------------

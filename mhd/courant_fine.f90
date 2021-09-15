@@ -258,17 +258,9 @@ subroutine courant_fine(ilevel)
      endif
   end if
 
-! remove if, since nambipolar2 will be removed (STS)
-  if  (nambipolar2 == 0) then ! no subcycling, on prend en compte le temps ambipolaire
-     dtnew(ilevel)=MIN(dtnew(ilevel),tmag1)
-  endif
-! remove if, since nmagdiffu2 will be removed (STS)
-  if  (nmagdiffu2 == 0) then ! no subcycling, on prend en compte le temps ohmique
-     dtnew(ilevel)=MIN(dtnew(ilevel),tmag2)
-  endif
-  
-  ! and finally Hall dt
-  dtnew(ilevel)=MIN(dtnew(ilevel),dthall(ilevel))
+   dtnew(ilevel)=MIN(dtnew(ilevel),tmag1)
+   dtnew(ilevel)=MIN(dtnew(ilevel),tmag2)
+   dtnew(ilevel)=MIN(dtnew(ilevel),dthall(ilevel))
 
 #endif
 

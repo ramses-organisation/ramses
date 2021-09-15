@@ -166,7 +166,7 @@ subroutine cmpdt(uu,gg,dx,dt,ncell)
   endif
 
   ! Ohmic dissipation
-  if (nmagdiffu.eq.0 .and. nmagdiffu2.eq.0) then
+  if (nmagdiffu.eq.0) then
      dtohmdiss=1d35
   else
      dtohmdiss=1d35
@@ -182,7 +182,7 @@ subroutine cmpdt(uu,gg,dx,dt,ncell)
   endif
   
   ! ambipolar diffusion
-  if (nambipolar.eq.0 .and. nambipolar2.eq.0) then
+  if (nambipolar.eq.0) then
      dtambdiff=1d36
   else
      dtambdiff=1d36

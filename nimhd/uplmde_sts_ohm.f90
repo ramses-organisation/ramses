@@ -37,8 +37,7 @@ subroutine diffusion_sts(ilevel,nsub)
    dtdiff=1.0d0/dtdiff
    dtdiffold=min(dtdiff,dtnew(ilevel))
    dtdiffsum=0.0d0
-   !nu=0
-   nu = nu_sts!1d0/(4d0*nsts(ilevel)**2)
+
 
    call make_virtual_fine_dp(unew(1,1),ilevel)
    call make_virtual_fine_dp(unew(1,5),ilevel)
@@ -79,20 +78,8 @@ subroutine diffusion_sts(ilevel,nsub)
       call make_virtual_fine_dp(unew(1,nvar),ilevel)
       !      call make_virtual_fine_dp(enew(1),ilevel)
 
-      nsts(ilevel)=min(100,floor(sqrt(dtnew(ilevel)/dtdiffold))+1)
-      nsubdiff=max(1,nsts(ilevel))
-      dtsts(ilevel) = dtdiffold*nsts(ilevel)/(2.*sqrt(nu_sts))*((1.+sqrt(nu_sts))**(2.*nsts(ilevel))-(1.-sqrt(nu_sts))**(2.*nsts(ilevel))) &         ! somme des dtsts, theorique
-             & /((1.+sqrt(nu_sts))**(2.*nsts(ilevel))+(1.-sqrt(nu_sts))**(2.*nsts(ilevel)))
-      dtdiffcoef= dtnew(ilevel)/dtsts(ilevel)
-
       do  icycle=1,nsubdiff
-         if (nsts(ilevel) > 0) then
-            if(myid==1 .and. (mod(nstep,ncontrol)==0))write(*,*)nu,'dtdiffcoeff',dtdiffcoef,'sommeinit',sommeinit,'dtdiffsum',dtdiffsum,'dtdiffold',dtdiffold
-!!$            dtdiff=dtdiffold*((-1d0+nu)*cos((2d0*dble(icycle)-1d0)*acos(-1d0)/(2d0*nsubdiff))+1d0+nu)**(-1)    ! pas de temps du STS
-            dtdiff=dtdiffcoef*dtdiffold*((-1d0+nu)*cos((2d0*dble(icycle)-1d0)*acos(-1d0)/(2d0*nsubdiff))+1d0+nu)**(-1)    ! pas de temps du STS
-         else if (nsts(ilevel) == 0) then
             dtdiff = dtnew(ilevel)
-         end if
 
          dtdiffsum=dtdiffsum+dtdiff
          if(myid==1 .and. (mod(nstep,ncontrol)==0))write(*,*)'subcycling through STS',icycle,'ilevel',ilevel,'nsubdiff :',nsubdiff,&

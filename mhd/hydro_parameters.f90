@@ -146,11 +146,9 @@ module hydro_parameters
 ! NON IDEAL MHD parameters
 ! Ambipolar diffusion ? Yes=1 No=0
   integer :: nambipolar = 0
-  integer :: nambipolar2 = 0 !remove (sts)
 
 ! Magnetic  diffusion ? Yes=1 No=0 
   integer :: nmagdiffu  = 0                ! magnetic diffusion with multiple time stepping
-  integer :: nmagdiffu2 = 0   !remove      ! magnetic diffusion with subcycling
 
 ! Hall effect ? Yes=1 No=0 
   integer :: nhall = 0
