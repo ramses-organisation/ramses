@@ -228,7 +228,7 @@ subroutine courant_fine(ilevel)
   
   tmag1 = 1.0e+30 ; tmag2 = 1.0e+30
   
-  if(nambipolar.eq.1) then
+  if(nambipolar) then
      ! ambipolar diffusion
      ! WARNING this should not be done for tests
      if (nminitimestep.eq.1) then
@@ -244,7 +244,7 @@ subroutine courant_fine(ilevel)
      endif
   endif
 
-  if  (nmagdiffu == 1) then
+  if  (nmagdiffu) then
      if (nminitimestep.eq.1) then
         ! alfven time alone maybe not correct
         ! comparison with global time step

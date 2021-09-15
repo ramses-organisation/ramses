@@ -106,7 +106,7 @@ subroutine cmpdt(uu,gg,dx,dt,ncell)
            BN=half*(uu(k,5+idim)+uu(k,nvar+idim))
            cf=sqrt(cc+sqrt(cc**2-a2(k)*BN**2/rho(k)))
 #if HALL==1
-           if(nhall==1) then
+           if(nhall) then
              cw1=abs(eta_hall_chimie(rho(k),tcell(k),ionisrate(k),B2(k))/(2.0d0*dx)) ! Whistler wave speed
              cw = cw1+sqrt(cw1**2+B2(k)/rho(k))                  ! Whistler wave speed
            else
@@ -145,7 +145,7 @@ subroutine cmpdt(uu,gg,dx,dt,ncell)
   ! time step for non-ideal mhd
 
   ! Hall effect - WARNING not working yet
-  if(nhall.eq.0) then
+  if(.not.nhall.) then
      dthallbis=1d34
   else
      dthallbis=1d34
@@ -166,7 +166,7 @@ subroutine cmpdt(uu,gg,dx,dt,ncell)
   endif
 
   ! Ohmic dissipation
-  if (nmagdiffu.eq.0) then
+  if (.not.nmagdiffu) then
      dtohmdiss=1d35
   else
      dtohmdiss=1d35
@@ -182,7 +182,7 @@ subroutine cmpdt(uu,gg,dx,dt,ncell)
   endif
   
   ! ambipolar diffusion
-  if (nambipolar.eq.0) then
+  if (.not.nambipolar) then
      dtambdiff=1d36
   else
      dtambdiff=1d36
@@ -937,7 +937,7 @@ SUBROUTINE find_speed_info(qvar,vel_info)
 
 #if HALL==1
   cw=0d0
-  if(nhall==1 .and. dx>0) then
+  if(nhall .and. dx>0) then
     call temperature_eos(d,P/(gamma-1),tcell)
     eta=abs(eta_hall_chimie(d,tcell,ionisrate,B2))
     cw1=eta/(2.0d0*dx) ! Whistler wave speed
@@ -951,7 +951,7 @@ SUBROUTINE find_speed_info(qvar,vel_info)
   cf = sqrt( d2 + sqrt(d2**2-c2*A*A/d) )
   vel_info = cf+abs(u)
 #if HALL==1
-  if (nhall==1) vel_info=abs(u)+max(cf,cw)
+  if (nhall) vel_info=abs(u)+max(cf,cw)
 #else
   vel_info=abs(u)+cf
 #endif
@@ -1003,7 +1003,7 @@ SUBROUTINE find_speed_fast(qvar,vel_info)
 
 #if HALL==1
   cw=0d0
-  if(nhall==1 .and. dx>0) then
+  if(nhall.and. dx>0) then
     call temperature_eos(d,P/(gamma-1),tcell)
     eta=abs(eta_hall_chimie(d,tcell,ionisrate,B2))
     cw1=dabs(eta/(2.0d0*dx)) ! Whistler wave speed
@@ -1017,9 +1017,9 @@ SUBROUTINE find_speed_fast(qvar,vel_info)
   cf = sqrt( d2 + sqrt(d2**2-c2*A*A/d) )
   vel_info = cf
 #if HALL==1
-  if (nhall == 1) vel_info=max(cf,cw)
+  if (nhall) vel_info=max(cf,cw)
 #else
-  if (nhall == 1) vel_info=cf
+  if (nhall) vel_info=cf
 #endif
 
 END SUBROUTINE find_speed_fast

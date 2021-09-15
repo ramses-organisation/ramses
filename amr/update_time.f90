@@ -300,7 +300,7 @@ subroutine update_time(ilevel)
                    & real(100.0D0*dble(used_mem_tot)/dble(ngridmax+1))
            endif
 #ifdef NIMHD
-           if((nambipolar==1) .or. (nmagdiffu==1) .or. (nhall==1))then
+           if(nambipolar.or.nmagdiffu.or.nhall)then
               write(*,889)dtad,dtmd,dthal,dtwithoutad,dt
            endif
 #endif

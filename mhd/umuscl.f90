@@ -163,7 +163,7 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
   call uslope(qin,dq,bf,dbf,dx,dt,ngrid)
 
 #ifdef NIMHD
-  if((nambipolar.eq.1).or.(nmagdiffu.eq.1).or.(nhall.eq.1)) then
+  if(nambipolar.or.nmagdiffu.or.nhall) then
      ! compute Lorentz Force with magnetic fluxes
 !    call computejb(uin,qin,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,bmagij,florentzx,florentzy,florentzz,fluxmd,fluxh,fluxad)
   
@@ -172,12 +172,12 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
   endif
 
   ! AMBIPOLAR DIFFUSION
-  if(nambipolar.eq.1) then
+  if(nambipolar) then
      call computambip(uin,qin,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,florentzx,florentzy,florentzz,fluxad,bmagij,emfambdiff,fluxambdiff,jxbsquare)
   endif
 
   ! OHMIC DISSIPATION
-  if(nmagdiffu.eq.1) then
+  if(nmagdiffu) then
      call computdifmag(uin,qin,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,bmagij,fluxmd,emfohmdiss,fluxohm,jcentersquare)
   endif
 #endif
@@ -198,7 +198,7 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
 
 #ifdef NIMHD
 #if HALL==1
-     if(nhall==1) call computvhall(qin,dx,dy,dz,ngrid,bpred,rppred,vhall)
+     if(nhall) call computvhall(qin,dx,dy,dz,ngrid,bpred,rppred,vhall)
 #endif
 #endif
 
@@ -228,7 +228,7 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
 
 #ifdef NIMHD
   ! Energy flux from ohmic term dB/dt=rot(-eta*J)
-  if((nambipolar.eq.1).or.(nmagdiffu.eq.1).or.(nhall.eq.1) .and. (.not.nimhdheating_in_eint)) then
+  if(nambipolar.or.nmagdiffu.or.nhall .and. (.not.nimhdheating_in_eint)) then
      ivar=5
      do k=klo,khi
         do j=jlo,jhi
@@ -267,7 +267,7 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
 
 #ifdef NIMHD
   ! Energy flux from ohmic term dB/dt=rot(-eta*J)
-  if((nambipolar.eq.1).or.(nmagdiffu.eq.1).or.(nhall.eq.1) .and. (.not.nimhdheating_in_eint)) then  
+  if(nambipolar.or.nmagdiffu.or.nhall .and. (.not.nimhdheating_in_eint)) then  
      ivar=5
      do k=klo,khi
         do j=jf1,jf2
@@ -308,7 +308,7 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
   
 #ifdef NIMHD
   ! Energy flux from ohmic term dB/dt=rot(-eta*J)
-  if((nambipolar.eq.1).or.(nmagdiffu.eq.1).or.(nhall.eq.1) .and. (.not.nimhdheating_in_eint)) then  
+  if(nambipolar.or.nmagdiffu.or.nhall .and. (.not.nimhdheating_in_eint)) then  
      ivar=5
      do k=kf1,kf2
         do j=jlo,jhi
@@ -1540,7 +1540,7 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
 
 #if HALL==1
 ! bpred(l,i,j,k,1,2) is the predicted state By at i-1/2,j,k
-  if(nhall==1) then
+  if(nhall) then
     DO k = klo, khi
        DO j = jlo, jhi
           DO i = ilo, ihi

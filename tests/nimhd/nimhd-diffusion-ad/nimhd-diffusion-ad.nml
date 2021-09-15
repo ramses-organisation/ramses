@@ -59,7 +59,7 @@ interpol_type=1
 /
 
 &NONIDEALMHD_PARAMS
-nambipolar=1
+nambipolar=.true.
 gammaAD=1.0
 coefad=0.1d0
 nminitimestep=0   ! pour la diffusion ambipolaire seulement

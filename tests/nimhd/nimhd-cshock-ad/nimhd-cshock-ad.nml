@@ -90,7 +90,7 @@ C_bound(2)=0.0
 /
 
 &NONIDEALMHD_PARAMS
-nambipolar=1
+nambipolar=.true.
 gammaAD=75.0
 coefad=0.1d0
 nminitimestep=0   ! pour la diffusion ambipolaire seulement

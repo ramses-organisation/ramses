@@ -943,16 +943,6 @@ subroutine cmp_current_sts(u,Ex_arete,Ey_arete,Ez_arete,fluxni, &
    q=0.0d0
 
    call ctoprim_sts(u,q,ngrid)
-   if((nambipolar2.eq.1).or.(nmagdiffu2.eq.1)) then
-      call computejb2(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,bmagij,florentzx,florentzy,florentzz,fluxmd,fluxh,fluxad,jcell)
-      !     call computejb(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,bmagij,florentzx,florentzy,florentzz,fluxmd,fluxh,fluxad)
-   end if
-   if (nmagdiffu2.eq.1) then
-      call computdifmag(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,bmagij,fluxmd,emfohmdiss,fluxohm,jcentersquare)
-   endif
-   if (nambipolar2.eq.1)  then
-      call computambip(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,florentzx,florentzy,florentzz,fluxad,bmagij,emfambdiff,fluxambdiff,jxbsquare)
-   end if
 
    !ben
    ilo=MIN(1,iu1+2); ihi=MAX(1,iu2-2)
@@ -1076,30 +1066,6 @@ subroutine set_unew_sts(ilevel,iupdate,dtohm,dtad)
               call temperature_eos(d,eps,Tcell)
 
               B2 = A**2+B**2+C**2
-              !compute nimhd timesteps
-              ! Ohmic dissipation
-              if (nmagdiffu2.eq.1) then
-                 xx=etaohmdiss(d,B2,tcell)
-                 if(xx.gt.0d0) then
-                    dtohmb=coefohm*dx*dx/xx
-                 else
-                    dtohmb=1d35
-                 endif
-                 dtohm=min(dtohmb,dtohm)
-              end if
-                            
-              ! ambipolar diffusion
-              if (nambipolar2.eq.1)then
-                 dtad=1d36
-                 xx=B2*betaad(d,B2,tcell) 
-                 if (xx.gt.0d0) then
-                    !! WARNING RHOAD mandatory because rho(k) is not density cf lines above
-                    dtadb=coefad*dx*dx/xx
-                 else
-                    dtadb=1d36
-                 endif
-                 dtad=min(dtadb,dtad)
-              endif  ! diffusion ambipolaire
               
            end if
            
@@ -1242,12 +1208,6 @@ subroutine set_uold_sts(ilevel,iend,dtloc)
                  call temperature_eos(d,uold(active(ilevel)%igrid(i)+iskip,nvar),tcell)
               end if
 
-              if(nmagdiffu2 .eq. 1 )ohm_heating=jsquare*etaohmdiss(d,bcell2,tcell)*dtnew(ilevel)!*vol_loc
-
-              if(nambipolar2 .eq. 1 )then
-                 ambi_heating = (jy*C-jz*B)**2+(jz*A-jx*C)**2+(jx*B-jy*A)**2
-                 ambi_heating = ambi_heating * betaad(d,bcell2,tcell)*dtnew(ilevel)
-              endif
               nimhd_heating=ambi_heating+ohm_heating
               uold(active(ilevel)%igrid(i)+iskip,5)=e_cons+e_kin+e_mag+e_r+nimhd_heating
               uold(active(ilevel)%igrid(i)+iskip,nvar)= e_cons+nimhd_heating

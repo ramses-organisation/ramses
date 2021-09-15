@@ -301,7 +301,7 @@ subroutine computejb(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,b
      end do
   end do
 
-  if((nambipolar.eq.1).or.(nhall.eq.1)) then
+  if(nambipolar.or.nhall) then
 
      ! Fx,x
      do k=min(1,ku1+1),ku2
@@ -695,12 +695,11 @@ subroutine computejb(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,b
         end do
      end do
    
-   ! end if((nambipolar.eq.1).or.(nhall.eq.1)) then
    endif
 
   ! computation of current on faces
 
-  if((nambipolar.eq.1).or.(nhall.eq.1).or.(nmagdiffu.eq.1).or.(nmagdiffu2.eq.1)) then
+  if(nambipolar.or.nhall) then
 
      ! face at i-1/2,j,k
    
@@ -810,10 +809,9 @@ subroutine computejb(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,b
            end do
         end do
      end do
-   ! end if((nambipolar.eq.1).or.(nhall.eq.1).or.(nmagdiffu.eq.1)) then
   endif
 
-  if((nambipolar.eq.1).or.(nhall.eq.1)) then
+  if(nambipolar.or.nhall) then
      do k=min(1,ku1+1),max(1,ku2-1)
         do j=min(1,ju1+1),max(1,ju2-1)
            do i=min(1,iu1+1),max(1,iu2-1)
@@ -828,7 +826,7 @@ subroutine computejb(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,b
      end do
   endif
 
-  if(nambipolar.eq.1)then
+  if(nambipolar)then
      do k=min(1,ku1+1),max(1,ku2-1)
         do j=min(1,ju1+1),max(1,ju2-1)
            do i=min(1,iu1+1),max(1,iu2-1)
@@ -1175,7 +1173,7 @@ subroutine computejb2(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
      end do
   end do
 
-  if((nambipolar.eq.1).or.(nhall.eq.1).or.(nambipolar2.eq.1)) then
+  if(nambipolar.or.nhall) then
   ! EMF x
     do k=min(1,ku1+1),max(1,ku2-1)
        do j=min(1,ju1+1),max(1,ju2-1)
@@ -1193,7 +1191,7 @@ subroutine computejb2(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
 
   ! computation of current on faces
 
-  if((nambipolar.eq.1).or.(nhall.eq.1).or.(nmagdiffu.eq.1).or.(nambipolar2.eq.1).or.(nmagdiffu2.eq.1)) then
+  if(nambipolar.or.nhall.or.nmagdiffu) then
 
     ! face at i-1/2,j,k
   
@@ -1307,8 +1305,7 @@ subroutine computejb2(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
 
   endif
 
-  if((nambipolar.eq.1).or.(nhall.eq.1).or.(nambipolar2==1)) then
-
+  if(nambipolar.or.nhall) then
      do k=min(1,ku1+1),max(1,ku2-1)
         do j=min(1,ju1+1),max(1,ju2-1)
            do i=min(1,iu1+1),max(1,iu2-1)
@@ -1321,11 +1318,9 @@ subroutine computejb2(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
            end do
         end do
      end do
-
   endif
 
-  if((nambipolar.eq.1).or.(nambipolar2==1))then
-
+  if(nambipolar)then
      do k=min(1,ku1+1),max(1,ku2-1)
         do j=min(1,ju1+1),max(1,ju2-1)
            do i=min(1,iu1+1),max(1,iu2-1)
@@ -1338,7 +1333,6 @@ subroutine computejb2(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
            end do
         end do
      end do
-
   endif
 
   do k=min(1,ku1+1),max(1,ku2-1)
@@ -1426,27 +1420,11 @@ do k=min(1,ku1+1),max(1,ku2-1)
               epsx=0.25d0*(u(l,i,j,k,nvar)+u(l,i  ,j-1,k,nvar)+u(l,i,j  ,k-1,nvar)+u(l,i  ,j-1,k-1,nvar))
               epsy=0.25d0*(u(l,i,j,k,nvar)+u(l,i-1,j  ,k,nvar)+u(l,i,j  ,k-1,nvar)+u(l,i-1,j  ,k-1,nvar))
               epsz=0.25d0*(u(l,i,j,k,nvar)+u(l,i-1,j  ,k,nvar)+u(l,i,j-1,k  ,nvar)+u(l,i-1,j-1,k  ,nvar))
-               if(nmagdiffu .eq.1)then
+               if(nmagdiffu)then
                  bsquarex=bemfx(l,i,j,k,1)**2+bemfx(l,i,j,k,2)**2+bemfx(l,i,j,k,3)**2
                  bsquarey=bemfy(l,i,j,k,1)**2+bemfy(l,i,j,k,2)**2+bemfy(l,i,j,k,3)**2
                  bsquarez=bemfz(l,i,j,k,1)**2+bemfz(l,i,j,k,2)**2+bemfz(l,i,j,k,3)**2
-               else if(nmagdiffu2 .eq.1)then
-                  bsquarex=u(l,i,j,k,   2)
-                  bsquarey=u(l,i,j,k,   2)
-                  bsquarez=u(l,i,j,k,   2)
-                  epsx=u(l,i,j,k,nvar)
-                  epsy=u(l,i,j,k,nvar)
-                  epsz=u(l,i,j,k,nvar)
-                  rhox=u(l,i,j,k,1)
-                  rhoy=u(l,i,j,k,1)
-                  rhoz=u(l,i,j,k,1)
-                  if(epsx .ne.u(l,i,j,k,3))then
-                     ! Attention, on est sur les boundary du domaine, divu et enew ne sont pas connus....
-                     bsquarex=bemfx(l,i,j,k,1)**2+bemfx(l,i,j,k,2)**2+bemfx(l,i,j,k,3)**2
-                     bsquarey=bemfy(l,i,j,k,1)**2+bemfy(l,i,j,k,2)**2+bemfy(l,i,j,k,3)**2
-                     bsquarez=bemfz(l,i,j,k,1)**2+bemfz(l,i,j,k,2)**2+bemfz(l,i,j,k,3)**2
-                  end if
-               end if
+               else
 
                if(ntestDADM.eq.1)then
                   tcellx=1.0d0
@@ -1497,7 +1475,6 @@ do k=min(1,ku1+1),max(1,ku2-1)
 ! ! jface is the value of the current where Bj 
 ! ! is naturally defined; Ex jface(l,i,j,k,1,2) is Jx at i,j-1/2,k
 ! ! and we can write it Jx,y
-              if(nmagdiffu2 .eq.0)then
                  do h = 1,3
                     
                     rhof=0.5d0*(u(l,i,j,k,   1)+u(l,i-index_i(h),j-index_j(h),k-index_k(h),   1))
@@ -1523,7 +1500,6 @@ do k=min(1,ku1+1),max(1,ku2-1)
 !               fluxohm(l,i,j,k,1)=etaod2*fluxmd(l,i,j,k,1)
                     
                  enddo
-              end if
 
 !            end do
 !         end do
@@ -1571,26 +1547,6 @@ do k=min(1,ku1+1),max(1,ku2-1)
 
 
 !            do l=1,ngrid
-              if(nmagdiffu2 .eq. 1)then
-                 jcentersquare(l,i,j,k)=jcenter(l,i,j,k,1)*jcenter(l,i,j,k,1)+jcenter(l,i,j,k,2)*jcenter(l,i,j,k,2)+jcenter(l,i,j,k,3)*jcenter(l,i,j,k,3)
-                 
-                 rhocell = u(l,i,j,k,1)
-                 bcell   = u(l,i,j,k,2)
-                 if(u(l,i,j,k,nvar) .ne.u(l,i,j,k,3))then
-                    ! Attention, on est sur les boundary du domaine, divu et enew ne sont pas connus....
-                    bcell=(0.5*(u(l,i,j,k,6)+u(l,i,j,k,nvar+1)))**2 + (0.5*(u(l,i,j,k,7)+u(l,i,j,k,nvar+2)))**2 +(0.5*(u(l,i,j,k,8)+u(l,i,j,k,nvar+3)))**2
-                 end if
-
-                 if(ntestDADM.eq.1)then
-                    tcell=1.0d0
-                 else 
-                    call temperature_eos(rhocell,u(l,i,j,k,nvar),tcell)
-!                    if(nmagdiffu2.eq.1)call temperature_eos(rhocell,u(l,i,j,k,3),tcell)
-                    end if
-                    
-                    jcentersquare(l,i,j,k) = jcentersquare(l,i,j,k)*etaohmdiss(rhocell,bcell,tcell,ionisrate)*dt
-                    
-                 end if
               end do
         end do
      end do
@@ -1697,7 +1653,6 @@ jcenter=0.0d0
                  tcell=1.0d0
               else
                  call temperature_eos(u(l,i,j,k,1),u(l,i,j,k,nvar),tcell)
-                 if(nambipolar2.eq.1)call temperature_eos(u(l,i,j,k,1),u(l,i,j,k,3),tcell)
               end if
              
 
@@ -1725,15 +1680,8 @@ jcenter=0.0d0
               rhox=0.25d0*(u(l,i,j,k,1)+u(l,i,j-1,k,1)+u(l,i,j,k-1,1)+u(l,i,j-1,k-1,1))
               bcell = bsquaremax(l,i,j,k)
               bcellold=bcell
-              if(nambipolar2.eq.1)then
-!                 bcell=v2x*v2x+v2y*v2y+v2z*v2z
-                 bcellold=u(l,i,j,k,2)
-!!$                 rhox=rhocell
-!!$                 rhoy=rhocell
-!!$                 rhoz=rhocell
-              end if
 
-              if(nambipolar2 .eq. 0)rhocell = rhocellmin(l,i,j,k)
+              rhocell = rhocellmin(l,i,j,k)
 ! alfven time alone maybe not correct
 !             betaad2=betaadbricolo(rhox,dtlim,bsquare,dx,ntest)
 ! comparison with hydro+idealMHD
@@ -1759,12 +1707,8 @@ jcenter=0.0d0
               rhoy=0.25d0*(u(l,i,j,k,1)+u(l,i-1,j,k,1)+u(l,i,j,k-1,1)+u(l,i-1,j,k-1,1))
               bcell = bsquaremax(l,i,j,k)
               bcellold=bcell
-              if(nambipolar2.eq.1)then
-!                 bcell=v2x*v2x+v2y*v2y+v2z*v2z
-                 bcellold=u(l,i,j,k,2)
-              end if
 
-              if(nambipolar2 .eq. 0)rhocell = rhocellmin(l,i,j,k)
+              rhocell = rhocellmin(l,i,j,k)
 ! alfven time alone maybe not correct
 !             betaad2=betaadbricolo(rhoy,dtlim,bsquare,dx,ntest)
 ! comparison with hydro+idealMHD 
@@ -1787,11 +1731,7 @@ jcenter=0.0d0
               rhoz=0.25d0*(u(l,i,j,k,1)+u(l,i-1,j,k,1)+u(l,i,j-1,k,1)+u(l,i-1,j-1,k,1))
               bcell = bsquaremax(l,i,j,k)
               bcellold=bcell
-              if(nambipolar2.eq.1)then
- !                bcell=v2x*v2x+v2y*v2y+v2z*v2z
-                 bcellold=u(l,i,j,k,2)
-              end if
-              if(nambipolar2 .eq. 0) rhocell = rhocellmin(l,i,j,k)
+              rhocell = rhocellmin(l,i,j,k)
              
              betaad2=betaadbricolo(rhocell,rhoz,dtlim,bcell,bcellold,dx,ntest,tcell,ionisrate)
 !             betaad2=betaadbricolo(rhocell,rhoz,dtlim,bcellold,bcellold,dx,ntest,tcell)
@@ -1805,10 +1745,6 @@ jcenter=0.0d0
               v2z=bmagij(l,i,j,k,3,1)
 
              bcell = bsquaremax(l,i,j,k)
-             if(nambipolar2.eq.1)then
-                 bcell=v2x*v2x+v2y*v2y+v2z*v2z
-              end if
-
 
               rhocell = rhocellmin(l,i,j,k)
               rhofx=0.5d0*(u(l,i,j,k,1)+u(l,i-1,j,k,1))
@@ -1821,10 +1757,6 @@ jcenter=0.0d0
 
               rhofy=0.5d0*(u(l,i,j,k,1)+u(l,i,j-1,k,1))
               bcell = bsquaremax(l,i,j,k)
-              if(nambipolar2.eq.1)then
-!                 bcell=0.5d0*(u(l,i,j,k,2)+u(l,i,j-1,k,2))
-                 bcell=v2x*v2x+v2y*v2y+v2z*v2z
-              end if
 
               betaad2=betaadbricolo(rhocell,rhofy,dtlim,bcell,bcell,dx,ntest,tcell,ionisrate)
               fluxambdiff(l,i,j,k,2)=-betaad2*fluxad(l,i,j,k,2)
@@ -1835,10 +1767,6 @@ jcenter=0.0d0
 !              bsquare=v2x*v2x+v2y*v2y+v2z*v2z
               rhofz=0.5d0*(u(l,i,j,k,1)+u(l,i,j,k-1,1))
               bcell = bsquaremax(l,i,j,k)
-              if(nambipolar2.eq.1)then
-!                 bcell=0.5d0*(u(l,i,j,k,2)+u(l,i,j,k-1,2))
-                 bcell=v2x*v2x+v2y*v2y+v2z*v2z
-              end if
 
               betaad2=betaadbricolo(rhocell,rhofz,dtlim,bcell,bcell,dx,ntest,tcell,ionisrate)
               fluxambdiff(l,i,j,k,3)=-betaad2*fluxad(l,i,j,k,3)
@@ -1848,10 +1776,6 @@ jcenter=0.0d0
               v2z=u(l,i,j,k,8)
              !              bsquare=v2x*v2x+v2y*v2y+v2z*v2z
               bcellold=bcell
-             if(nambipolar2.eq.1)then
-                 bcellold=u(l,i,j,k,2)
-                 bcell=v2x*v2x+v2y*v2y+v2z*v2z
-              end if
 
               jcenter(l,i,j,k,1)=computdy(bmagij,nzz,nyy,l,i,j,k,dy)-computdz(bmagij,nyy,nzz,l,i,j,k,dy)
               jcenter(l,i,j,k,2)=computdz(bmagij,nxx,nzz,l,i,j,k,dy)-computdx(bmagij,nzz,nxx,l,i,j,k,dy)
@@ -1974,7 +1898,7 @@ do k=min(1,ku1+1),max(1,ku2-1)
     do i=min(1,iu1+1),max(1,iu2-1)
         
       do l=1,ngrid
-        if(nhall==1) then
+        if(nhall) then
           do kk=1,3
             if(kk==1) then
               imm1=0
@@ -2898,7 +2822,7 @@ double precision function etaohmdissbricolo(rhon,BBcell,temper,dtlim,dx,ionisrat
       etaohmdissbricolo=etaohmdissbricolo*scale_t/(scale_l)**2
 
       ! robbery to avoid too small time step
-      if(nminitimestep.eq.1 .and. nmagdiffu2.eq.0) then
+      if(nminitimestep.eq.1) then
          if(dtlim.ne.0d0) then
             xx=etaohmdissbricolo
             if(xx.ne.0d0) then
@@ -3043,7 +2967,7 @@ double precision function betaadbricolo(rhocelln,rhon,dtlim,bsquare,bsquareold,d
       endif
 
       ! robbery to avoid too small time step
-      if(nminitimestep.eq.1 .and. nambipolar2.eq.0) then
+      if(nminitimestep.eq.1) then
          if(dtlim.ne.0d0) then
             xx=bsquare*betaadbricolo
             if(xx.ne.0d0) then

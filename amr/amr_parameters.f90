@@ -76,7 +76,6 @@ module amr_parameters
   logical::make_mergertree=.false. ! Make on the fly mergertrees
   logical::aton=.false.       ! Enable ATON coarse grid radiation transfer
 #ifdef NIMHD
-  ! remove DTU
   ! radiative_nimhdheating_in_cg to be added with FLD update
   logical::nimhdheating_in_eint=.false. ! Enable niMHD heating as a source term in the gas internal energy in goduvov_fine
 #endif

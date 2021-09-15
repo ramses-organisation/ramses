@@ -90,11 +90,11 @@ C_bound(2)=0.0
 /
 
 &NONIDEALMHD_PARAMS
-nambipolar=1
+nambipolar=.true.
 gammaAD=286d0 
 nmagdiffu=1
 etaMD=1.d-9
-nhall=1 
+nhall=.true.
 rhall=-2d-2
 ntestDADM=1
 /

@@ -144,14 +144,9 @@ module hydro_parameters
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! NON IDEAL MHD parameters
-! Ambipolar diffusion ? Yes=1 No=0
-  integer :: nambipolar = 0
-
-! Magnetic  diffusion ? Yes=1 No=0 
-  integer :: nmagdiffu  = 0                ! magnetic diffusion with multiple time stepping
-
-! Hall effect ? Yes=1 No=0 
-  integer :: nhall = 0
+  logical :: nambipolar = .false. ! Ambipolar diffusion ?
+  logical :: nmagdiffu  = .false. ! Magnetic  diffusion ?
+  logical :: nhall      = .false. ! Hall effect ?
 
 ! Magnetic  diffusion alone then magohm=1. (or flux=0.)
 ! predictor including eta*J*B

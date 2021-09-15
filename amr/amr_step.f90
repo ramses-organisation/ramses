@@ -335,13 +335,13 @@ recursive subroutine amr_step(ilevel,icount)
         dtnew(ilevel+1)=dtnew(ilevel)/dble(nsubcycle(ilevel))
 #ifdef NIMHD
         ! is this for STS?
-        if((nmagdiffu==1).or.(nambipolar==1))then
+        if(nmagdiffu.or.nambipolar)then
            dtambdiffold(ilevel+1)=dtambdiff(ilevel)/dble(nsubcycle(ilevel))
            dtmagdiffold(ilevel+1)=dtmagdiff(ilevel)/dble(nsubcycle(ilevel))
            dtwadold(ilevel+1)=dtwad(ilevel)/dble(nsubcycle(ilevel))
            dthallold(ilevel+1)=dthall(ilevel)/dble(nsubcycle(ilevel))
         end if
-        if((nmagdiffu==1).or.(nambipolar==1))then
+        if(nmagdiffu.or.nambipolar)then
            dtambdiff(ilevel+1)=dtambdiff(ilevel)/dble(nsubcycle(ilevel))
            dtmagdiff(ilevel+1)=dtmagdiff(ilevel)/dble(nsubcycle(ilevel))
            dtwad(ilevel+1)=dtwad(ilevel)/dble(nsubcycle(ilevel))
@@ -569,8 +569,7 @@ recursive subroutine amr_step(ilevel,icount)
      if(icount==2)dtnew(ilevel-1)=dtold(ilevel)+dtnew(ilevel)
 #ifdef NIMHD
      ! to keep (but check)
-     ! remove nmagdiffu2 checks since 2 i used for STS and will be removed
-     if((nmagdiffu==1).or.(nambipolar==1))then
+     if(nmagdiffu.or.nambipolar)then
         if(nsubcycle(ilevel-1)==1)dtambdiff(ilevel-1)=dtambdiff(ilevel)
         if (icount==2) dtambdiff(ilevel-1)=dtambdiffold(ilevel)+dtambdiff(ilevel)
         

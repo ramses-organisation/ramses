@@ -242,20 +242,8 @@ subroutine read_hydro_params(nml_ok)
   rewind(1)
   read(1,NML=nonidealmhd_params,END=109)
 109 continue
-  if((nambipolar.ne.0).and.(nambipolar.ne.1)) then
-     write(*,*)'Wrong choice for nambipolar'
-     call clean_stop
-  end if
-  if((nmagdiffu.ne.0).and.(nmagdiffu.ne.1)) then
-     write(*,*)'Wrong choice for nmagdiffu'
-     call clean_stop
-  end if
-  if((nhall.ne.0).and.(nhall.ne.1)) then
-     write(*,*)'Wrong choice for nhall'
-     call clean_stop
-  end if
 
-  if( (nambipolar.eq.1) .or. (nmagdiffu .eq.1) .or. (nhall.eq.1) )then
+  if(nambipolar.or.nmagdiffu.or.nhall)then
      use_nonideal_mhd = .true.
   else
      use_nonideal_mhd = .false.
@@ -265,7 +253,7 @@ subroutine read_hydro_params(nml_ok)
      write(*,*)'!!!!!!!!!!!!!!!  Non Ideal MHD   !!!!!!!!!!!!!!!!'
      write(*,*)'Non ideal MHD parameters'
      write(*,*)'Making a test ? (Yes=1 No=0)',ntestDADM
-     if(nambipolar.eq.1) then
+     if(nambipolar) then
         write(*,*)'Ambipolar diffusion switched ON'
         write(*,*)'Ambipolar diffusion coefficient',gammaAD
         write(*,*)'Ambipolar diffusion time coefficient',coefad
@@ -276,23 +264,25 @@ subroutine read_hydro_params(nml_ok)
         else
            write(*,*)'Mini time step switched OFF'
         endif
+      else
+        write(*,*)'Ambipolar diffusion switched OFF'
      endif
 
-     if((nambipolar.eq.0) .and. (nambipolar2 == 0)) write(*,*)'Ambipolar diffusion switched OFF'
-
-     if(nmagdiffu.eq.1)then
+     if(nmagdiffu)then
         write(*,*)'Magnetic diffusion switched ON : multiple time stepping'
         write(*,*)'Magnetic diffusion coefficient',etaMD
         write(*,*)'Magnetic diffusion  time coefficient',coefohm
+     else
+      write(*,*)'Magnetic diffusion switched OFF'
      endif
-     if(nmagdiffu.eq.0)write(*,*)'Magnetic diffusion switched OFF'
 
-     if(nhall.eq.1)then
+     if(nhall)then
         write(*,*)'Hall effect switched ON'
         write(*,*)'Hall resistivity',rHall
         write(*,*)'Hall effect time coefficient',coefhall
+     else
+      write(*,*)'Hall effect switched OFF'
      endif
-     if(nhall.eq.0)write(*,*)'Hall effect switched OFF'
 
      ! change solver is always used in this version
         write(*,*)'Solveur change when the time step becomes too small'
