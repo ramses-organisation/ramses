@@ -940,10 +940,6 @@ subroutine cmp_current_sts(u,Ex_arete,Ey_arete,Ez_arete,fluxni, &
    florentzy=0d0
    florentzz=0d0
 
-   q=0.0d0
-
-   call ctoprim_sts(u,q,ngrid)
-
    !ben
    ilo=MIN(1,iu1+2); ihi=MAX(1,iu2-2)
    jlo=MIN(1,ju1+2); jhi=MAX(1,ju2-2)

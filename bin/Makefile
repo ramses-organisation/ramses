@@ -14,14 +14,14 @@ NDIM = 1
 # Float precision size
 NPRE = 8
 # hydro/mhd solver
-SOLVER = mhd
+SOLVER = hydro
 # Patch
 PATCH =
 # Use RT? 1=Yes, 0=No
 RT = 0
 # Use non-ideal MHD? 1=Yes, 0=No
-NIMHD=1
-HALL=1
+NIMHD=0
+HALL=0
 # Use turbulence? 1=Yes, 0=No (requires fftw3)
 USE_TURB=0
 # Use MPI? 1=Yes, 0=No
