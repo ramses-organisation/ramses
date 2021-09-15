@@ -68,8 +68,7 @@ subroutine star_formation(ilevel)
 
   ! TODO: when f2008 is obligatory - remove this and replace erfc_pre_f08 below by
   ! the f2008 intrinsic erfc() function:
-  real(dp) erfc_pre_f08
-
+  real(dp) :: erfc_pre_f08
   if(numbtot(1,ilevel)==0) return
   if(.not. hydro)return
   if(ndim.ne.3)return

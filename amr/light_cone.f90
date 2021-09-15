@@ -6,6 +6,7 @@ subroutine output_cone()
   use amr_commons
   use pm_commons
   use mpi_mod
+  use file_module, ONLY: mkdir
   implicit none
 
 #ifndef WITHOUTMPI
@@ -31,7 +32,9 @@ subroutine output_cone()
   integer::igrid,jgrid,ipart,jpart,idim,icpu,ilevel
   integer::i,ip,npart1
   integer::nalloc1,nalloc2
-
+  integer, parameter :: mode = int(O'755')
+  integer::ierr
+  
   integer,dimension(1:nvector),save::ind_part
   logical::opened
   opened=.false.
@@ -63,7 +66,8 @@ subroutine output_cone()
   conedir = "cone_" // trim(istep_str) // "/"
   conecmd = "mkdir -p " // trim(conedir)
   if(.not.withoutmkdir) then
-     if (myid==1) call system(conecmd)
+!     if (myid==1) call system(conecmd)
+     if (myid==1) call mkdir(trim(conedir),mode,ierr)
   endif
 
 #ifndef WITHOUTMPI

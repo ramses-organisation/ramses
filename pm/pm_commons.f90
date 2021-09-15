@@ -45,11 +45,14 @@ module pm_commons
   real(dp),allocatable,dimension(:,:)  ::xp       ! Positions
   real(dp),allocatable,dimension(:,:)  ::vp       ! Velocities
   real(dp),allocatable,dimension(:)    ::mp       ! Masses
+  integer,  allocatable, dimension(:)  :: move_flag ! Move flag (for particles), >0 means don't move!
 #ifdef OUTPUT_PARTICLE_POTENTIAL
   real(dp),allocatable,dimension(:)    ::ptcl_phi ! Potential of particle added by AP for output purposes
 #endif
   real(dp),allocatable,dimension(:)    ::tp       ! Birth epoch
   real(dp),allocatable,dimension(:)    ::zp       ! Birth metallicity
+  integer,  allocatable, dimension(:)  :: itmpp    ! Working array
+  integer,  allocatable, dimension(:)  :: partp    ! Particle parent (for tracers only)
   integer ,allocatable,dimension(:)    ::nextp    ! Next particle in list
   integer ,allocatable,dimension(:)    ::prevp    ! Previous particle in list
   integer ,allocatable,dimension(:)    ::levelp   ! Current level of particle
@@ -62,6 +65,7 @@ module pm_commons
   integer::headp_free,tailp_free,numbp_free=0,numbp_free_tot=0
   ! Local and current seed for random number generator
   integer,dimension(IRandNumSize) :: localseed=-1
+  integer, dimension(IRandNumSize) :: tracer_seed = -1
 
   ! Particle types
   integer, parameter   :: NFAMILIES=5
@@ -124,11 +128,26 @@ contains
     is_not_tracer = typep%family > 0
   end function is_not_tracer
 
-  elemental logical pure function is_not_DM(typep)
+  elemental logical pure function is_gas_tracer(typep)
     type(part_t), intent(in) :: typep
-    is_not_DM = typep%family /= FAM_DM
+    is_gas_tracer = typep%family == FAM_TRACER_GAS
+  end function is_gas_tracer
+
+  elemental logical pure function is_not_DM(typep)
+    ! Check that the particle is not DM and not a tracer
+    type(part_t), intent(in) :: typep
+    is_not_DM = typep%family /= FAM_DM .and. is_not_tracer(typep)
   end function is_not_DM
-  
+
+  elemental logical pure function is_star_tracer(typep)
+    type(part_t), intent(in) :: typep
+    is_star_tracer = typep%family == FAM_TRACER_STAR
+  end function is_star_tracer
+
+  elemental logical pure function is_cloud_tracer(typep)
+    type(part_t), intent(in) :: typep
+    is_cloud_tracer = typep%family == FAM_TRACER_CLOUD
+  end function is_cloud_tracer
 
   elemental function part2int (part)
     ! Convert a particle into an integer

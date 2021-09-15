@@ -167,12 +167,12 @@ module clfind_commons
   integer,  allocatable, dimension(:)   :: prog_id                ! global ID of progenitors
   integer,  allocatable, dimension(:)   :: prog_owner             ! CPU that owns the progenitor
   real(dp), allocatable, dimension(:)   :: prog_mass              ! list of progenitors masses
-  integer,  allocatable, dimension(:)   :: tracers_all            ! list of progenitor tracers (global particle IDs) of all progs
+  integer(i8b),allocatable, dimension(:):: tracers_all            ! list of progenitor tracers (global particle IDs) of all progs
   integer,  allocatable, dimension(:)   :: tracers_loc_pid        ! list of progenitor tracers (local particle IDs)
   integer,  allocatable, dimension(:)   :: tracer_loc_progids_all ! list of progenitor IDs for tracers (local prog ID) of all progs
   integer,  allocatable, dimension(:)   :: tracer_loc_progids     ! list of progenitor IDs for tracers (local prog ID)
                                                                   ! only on this CPU
-  integer,  allocatable, dimension(:)   :: galaxy_tracers         ! list of active galaxy tracers 
+  integer(i8b),allocatable, dimension(:):: galaxy_tracers         ! list of active galaxy tracers 
                                                                   ! (the absolutely most bound  particle of progenitor) 
   integer,  allocatable, dimension(:)   :: main_prog              ! main progenitor of each descendant 
   integer,  allocatable, dimension(:)   :: main_desc              ! main descendant of each progenitor
@@ -228,7 +228,7 @@ module clfind_commons
 
 
   integer, dimension(:), allocatable :: pmprogs         ! Past Merged Progenitors for multi-snapshot matching
-  integer, dimension(:), allocatable :: pmprogs_galaxy  ! Past Merged Progenitors' galaxy particles
+  integer(i8b), dimension(:), allocatable :: pmprogs_galaxy  ! Past Merged Progenitors' galaxy particles
   integer, dimension(:), allocatable :: pmprogs_t       ! Time at which past progenitors have been merged (= ifout-1 at merging time)
   integer, dimension(:), allocatable :: pmprogs_owner   ! Current owner Merged Progenitors' galaxy particles
   real(dp),dimension(:), allocatable :: pmprogs_mass    ! Mass of past merged progenitors

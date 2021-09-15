@@ -23,13 +23,14 @@ subroutine backup_hydro(filename, filename_desc)
   logical :: dump_info_flag
   logical :: inv
   integer :: info_var_count
-  integer :: idim,imat
+  integer :: idim,imat,jmat
   character(len=100) :: field_name
-  real(dp)::ekin,erad
-  real(dp),dimension(1:nvector,1:nmat),save::ff,gg
-  real(dp),dimension(1:nvector,1:npri),save::qq
-  real(dp),dimension(1:nvector),save::dtot,gg_mat,ee_mat,pp,cc
-
+  real(dp)::ekin,erad,ff,gg,ee,dtot,vv
+  real(dp),dimension(1:nvector),save::gg_mat,ee_mat,pp,cc
+#if NVAR > NDIM + 3*NMAT
+  integer::ipscal,npscal
+#endif
+  
   if (verbose) write(*,*)'Entering backup_hydro'
 
   call title(myid, nchar)
@@ -84,13 +85,7 @@ subroutine backup_hydro(filename, filename_desc)
            ! Loop over cells
            do ind = 1, twotondim
               iskip = ncoarse+(ind-1)*ngridmax
-              ! Calculate total density 
-              dtot(1:ncache) = 0.0
-              do imat = 1,nmat
-                do i=1,ncache
-                  dtot(i) = dtot(i) + uold(ind_grid(i)+iskip,nmat+imat)
-                end do
-              end do
+
               ! Write volume fractions
               do imat = 1,nmat
                  ivar = imat
@@ -104,16 +99,21 @@ subroutine backup_hydro(filename, filename_desc)
               do imat = 1,nmat
                  ivar = nmat+imat
                  do i = 1, ncache
-                    xdp(i) = uold(ind_grid(i)+iskip,ivar)/max(uold(ind_grid(i)+iskip,imat),smallf)
+                    xdp(i) = uold(ind_grid(i)+iskip,ivar)/uold(ind_grid(i)+iskip,imat)
                  end do
                  write(field_name, '("true_dens_", i0.2)') imat
                  call generic_dump(field_name, info_var_count, xdp, unit_out, dump_info_flag, unit_info)
               end do
+              ! Write velocities
               do ivar = 2*nmat+1, 2*nmat+ndim
                 do i = 1, ncache
-                  xdp(i) = uold(ind_grid(i)+iskip, ivar)/max(dtot(i),smallr)
+                  dtot = 0
+                  do imat=1,nmat
+                    dtot = dtot + uold(ind_grid(i)+iskip,nmat+imat)
+                  end do
+                  xdp(i) = uold(ind_grid(i)+iskip, ivar)/dtot
                 end do
-                field_name = 'velocity_' // dim_keys(ivar - 1)
+                field_name = 'velocity_' // dim_keys(ivar - 2*nmat)
                 call generic_dump(field_name, info_var_count, xdp, unit_out, dump_info_flag, unit_info)
               end do
 #if NENER > 0
@@ -126,42 +126,45 @@ subroutine backup_hydro(filename, filename_desc)
                  call generic_dump(field_name, info_var_count, xdp, unit_out, dump_info_flag, unit_info)
               end do
 #endif
-              ! Calculate individual internal + radiative energies
-              inv=.false.
-              do imat = 1,nmat
-                do i = 1, ncache
-                  ff(i,imat)   = uold(ind_grid(i)+iskip,imat)
-                  gg(i,imat)   = uold(ind_grid(i)+iskip,imat+nmat)/max(ff(i,imat),smallf)
-                  ekin=0.0
-                  do idim=1,ndim
-                    qq(i,idim) = uold(ind_grid(i)+iskip,2*nmat+idim)/max(dtot(i),smallr)
-                    ekin       = ekin + 0.5d0*qq(i,idim)**2
-                  end do
-                  erad=00
-#if NENER > 0
-                  do irad = 1,nener
-                    erad       = erad + uold(ind_grid(i)+iskip,3*nmat+ndim+irad)
-                  end do
-#endif
-                  qq(i,ndim+nmat+imat) = uold(ind_grid(i)+iskip,2*nmat+ndim+imat)/max(ff(i,imat),smallf) - gg(i,imat)*ekin - erad
-                end do
-              end do
-
               ! Write thermal pressure
+              inv=.false.
               do imat=1,nmat
                 do i=1,ncache
-                  gg_mat(i) = gg(i,imat)
-                  ee_mat(i) = qq(i,ndim+nmat+imat)
-                end do
-                call eos(gg_mat,ee_mat,pp,cc,imat,inv,ncache)
-                do i=1,ncache
-                  xdp(i) = pp(i)       ! Pressure
-                end do
+                  ff        = uold(ind_grid(i)+iskip,imat)
+                  gg        = uold(ind_grid(i)+iskip,imat+nmat)/ff
+                  dtot = 0.0
+                  do jmat=1,nmat
+                    dtot = dtot + uold(ind_grid(i)+iskip,nmat+jmat)
+                  end do
+                  ekin=0.0
+                  do idim=1,ndim
+                    vv      = uold(ind_grid(i)+iskip,2*nmat+idim)/dtot
+                    ekin    = ekin + 0.5d0*vv**2
+                  end do
+                  ee        = uold(ind_grid(i)+iskip,2*nmat+ndim+imat)/ff - gg*ekin 
+                  gg_mat(1) = gg
+                  ee_mat(1) = ee
+                  call eos(gg_mat,ee_mat,pp,cc,imat,inv,1)
+                  xdp(i) = pp(1)       ! Pressure
+               end do
                 write(field_name, '("pressure_", i0.2)') imat
                 call generic_dump(field_name, info_var_count, xdp, unit_out, dump_info_flag, unit_info)
               end do
 
-
+#if NVAR > NDIM + 3*NMAT
+              ! Write passive scalars
+              npscal = (nvar - ndim - 3*nmat) / nmat
+              do imat = 1, nmat
+                 do ipscal = 1, npscal
+                    ivar = ndim + 3*nmat + npscal*(imat-1) + ipscal
+                    do i = 1, ncache
+                       xdp(i) = uold(ind_grid(i)+iskip, ivar) / uold(ind_grid(i)+iskip, nmat+imat)
+                    end do
+                    write(field_name, '("passive_scalar_", i0.2)') ivar-ndim-3*nmat
+                    call generic_dump(field_name, info_var_count, xdp, unit_out, dump_info_flag, unit_info)
+                 end do
+              end do
+#endif
               ! We did one output, deactivate dumping of variables
               dump_info_flag = .false.
            end do

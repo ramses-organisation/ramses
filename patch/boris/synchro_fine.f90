@@ -214,7 +214,7 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   !use amr_parameters ERM
   use pm_commons
   use poisson_commons
-  use hydro_commons, ONLY: uold,smallr,nvar ! ERM: Included these. May want to ask Romain about this.
+  use hydro_commons, ONLY: uold,smallr,nvar,gamma ! ERM: Included these. May want to ask Romain about this.
   implicit none
   integer::ng,np,ilevel
   integer,dimension(1:nvector)::ind_grid
@@ -227,6 +227,7 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   real(dp)::dx,scale
   real(dp)::ctm ! ERM: recommend 1.15D3
   real(dp)::ts !ERM: recommend 2.2D-1
+  real(dp)::rd ! ERM: Grain size parameter
 
   ! Grid-based arrays
   real(dp),dimension(1:nvector,1:ndim),save::x0
@@ -238,6 +239,7 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   real(dp),dimension(1:nvector),save::dteff
   real(dp),dimension(1:nvector,1:ndim),save::x,ff,new_vp,dd,dg
   real(dp),dimension(1:nvector,1:ndim),save::uu,bb,vv ! ERM: Added these arrays
+  real(dp),dimension(1:nvector),save::dgr,tss ! ERM: density, (non-constant) stopping times
   integer ,dimension(1:nvector,1:ndim),save::ig,id,igg,igd,icg,icd
   real(dp),dimension(1:nvector,1:twotondim),save::vol
   integer ,dimension(1:nvector,1:twotondim),save::igrid,icell,indp,kg
@@ -245,6 +247,7 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
 
   ctm = charge_to_mass
   ts = t_stop
+  rd = sqrt(gamma)*0.62665706865775*grain_size ! constant for epstein drag law
 
   ! Mesh spacing in that level
   dx=0.5D0**ilevel
@@ -490,7 +493,7 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
         end do
      end do
   endif
-  
+
   ! ERM: interpolate variables for the boris kicker
   uu(1:np,1:ndim)=0.0D0
   bb(1:np,1:ndim)=0.0D0
@@ -503,6 +506,16 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
           end do
        end do
     end do
+  endif
+
+  ! ERM: Is this best here in its own loop? Or is the time difference negligible?
+  dgr(1:np) = 0.0D0
+  if(.not.constant_t_stop.and.boris)then
+     do ind=1,twotondim
+         do j=1,np
+            dgr(j)=dgr(j)+uold(indp(j,ind),1)*vol(j,ind)
+         end do
+     end do
   endif
 
   ! For sink particle only, store contribution to the sink force
@@ -546,9 +559,23 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      endif
   end do
 
-  if(boris)then
+  if(boris.and.constant_t_stop)then
      vv(1:np,1:ndim)=new_vp(1:np,1:ndim)
      call ThirdBorisKick(np,dteff,ctm,ts,bb,uu,vv)
+     new_vp(1:np,1:ndim)=vv(1:np,1:ndim)
+  endif
+
+  if(.not.constant_t_stop.and.boris)then
+     vv(1:np,1:ndim)=new_vp(1:np,1:ndim)
+     ! ERM: Compute the stopping time assuming a constant (and unit) sound speed
+     if(.not.constant_t_stop.and.boris)then
+       do j=1,np
+         tss(j)=rd/(dgr(j)*&
+         sqrt(1.0+0.2209*gamma*&
+         ((vv(j,1)-uu(j,1))**2+(vv(j,2)-uu(j,2))**2+(vv(j,3)-uu(j,3))**2)))
+       end do
+     endif
+     call ThirdBorisKickWithVarTs(np,dteff,ctm,tss,bb,uu,vv)
      new_vp(1:np,1:ndim)=vv(1:np,1:ndim)
   endif
 
@@ -557,7 +584,7 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
         vp(ind_part(j),idim)=new_vp(j,idim)
      end do
   end do
-  
+
   ! For sink particle only, overwrite cloud particle velocity with sink velocity
   if(sink)then
      do idim=1,ndim
@@ -594,15 +621,46 @@ subroutine ThirdBorisKick(nn,dtarr,ctm,ts,b,u,v)
   real(dp),dimension(1:nn)::dtarr
   real(dp),dimension(1:nvector,1:ndim),save ::vo ! grain velocity "new"
   integer ::i ! Just an index
-  
+
   do i=1,nn
      vo(i,1)=(v(i,1)-0.5*dtarr(i)*(ctm*(u(i,2)*b(i,3)-u(i,3)*b(i,2))-u(i,1)/ts))/(1.0+0.5*dtarr(i)/ts)
      vo(i,2)=(v(i,2)-0.5*dtarr(i)*(ctm*(u(i,3)*b(i,1)-u(i,1)*b(i,3))-u(i,2)/ts))/(1.0+0.5*dtarr(i)/ts)
      vo(i,3)=(v(i,3)-0.5*dtarr(i)*(ctm*(u(i,1)*b(i,2)-u(i,2)*b(i,1))-u(i,3)/ts))/(1.0+0.5*dtarr(i)/ts)
   end do
   v(1:nn,1:ndim)=vo(1:nn,1:ndim)
-  
+
 end subroutine ThirdBorisKick
+!#########################################################################
+!#########################################################################
+!#########################################################################
+!#########################################################################
+subroutine ThirdBorisKickWithVarTs(nn,dtarr,ctm,tss,b,u,v)
+  ! The following subroutine will alter its last argument, v
+  ! to be an intermediate step, having been either accelerated by
+  ! drag+the electric field, or rotated by the magnetic field.
+  use amr_parameters
+  use hydro_parameters
+  implicit none
+  integer ::kick ! kick number
+  integer ::nn ! number of cells
+  real(dp) ::dt ! timestep
+  real(dp) ::ctm ! charge-to-mass ratio
+  real(dp),dimension(1:nvector) ::tss ! stopping time
+  real(dp),dimension(1:nvector,1:ndim) ::b ! magnetic field components
+  real(dp),dimension(1:nvector,1:ndim) ::u ! fluid velocity
+  real(dp),dimension(1:nvector,1:ndim) ::v ! grain velocity
+  real(dp),dimension(1:nn)::dtarr
+  real(dp),dimension(1:nvector,1:ndim),save ::vo ! grain velocity "new"
+  integer ::i ! Just an index
+
+  do i=1,nn
+     vo(i,1)=(v(i,1)-0.5*dtarr(i)*(ctm*(u(i,2)*b(i,3)-u(i,3)*b(i,2))-u(i,1)/tss(i)))/(1.0+0.5*dtarr(i)/tss(i))
+     vo(i,2)=(v(i,2)-0.5*dtarr(i)*(ctm*(u(i,3)*b(i,1)-u(i,1)*b(i,3))-u(i,2)/tss(i)))/(1.0+0.5*dtarr(i)/tss(i))
+     vo(i,3)=(v(i,3)-0.5*dtarr(i)*(ctm*(u(i,1)*b(i,2)-u(i,2)*b(i,1))-u(i,3)/tss(i)))/(1.0+0.5*dtarr(i)/tss(i))
+  end do
+  v(1:nn,1:ndim)=vo(1:nn,1:ndim)
+
+end subroutine ThirdBorisKickWithVarTs
 !#########################################################################
 !#########################################################################
 !#########################################################################

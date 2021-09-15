@@ -94,7 +94,7 @@ program part2cylprof
   read(10,*)
 
   read(10,'(A14,A80)')GMGM,ordering
-  write(*,'(" ordering type=",A20)'),TRIM(ordering)
+  write(*,'(" ordering type=",A20)')TRIM(ordering)
   read(10,*)
   allocate(cpu_list(1:ncpu))
   if(TRIM(ordering).eq.'hilbert')then

@@ -1,6 +1,31 @@
-#!/usr/bin/python2
+#!/usr/bin/env python3
 
 #===============================================================================
+shorthelp="""
+Create a plot for the merger tree of a given clump/halo as the root of the tree
+of the ramses merger tree data output. 
+
+Usage: mergertreeplot.py [-options] <halo-ID>
+
+    <halo-ID>: clump ID of halo in the output_XXXXX directory with redshift zero.
+
+To use a different snapshot as the root of the tree, use
+
+    mergertreeplot.py [-options] -s <output_nr> <halo-ID> 
+or
+    mergertreeplot.py [-options] --start_at <output_nr> <halo-ID> 
+
+    <output_nr> does not need to be formatted, e.g.  5 is good enough, no need to 
+    type 00005 to use the directory output_00005 as the root directory. Naturally, 
+    the <halo-ID> must be a halo/clump in this output directory.
+
+For a detailed documentation of further options (e.g. plotting particles and 
+galaxies, not drawing clump numbers, not drawing jumpers, creating TeX output, 
+creating backups...) call the script with the --help flag.
+"""
+
+
+
 errormsg="""
 -----------------------------
      MERGERTREEPLOT.PY
@@ -17,7 +42,7 @@ directories are stored.
 -------------
  Usage:
 -------------
-     treeplot.py [-options] <halo-ID>
+     mergertreeplot.py [-options] <halo-ID>
 
      for fastest version, but possibly really bad image, don't use any option
      flags.
@@ -301,7 +326,7 @@ class global_params:
             '-g':                   self.set_galaxies,
             '--galaxy':             self.set_galaxies,
             '--galaxies':           self.set_galaxies,
-            '-h':                   self.print_help,
+            '-h':                   self.print_short_help,
             '--help':               self.print_help,
             '-lc':                  self.set_clumplabels,
             '--label-clumps' :      self.set_clumplabels,
@@ -378,7 +403,7 @@ class global_params:
                         self.accepted_args[arg](startnr)
                     except ValueError:
                         print('"'+argv[i+1]+'"',
-                        "is not a valid start number for an output directory.")
+                                "is not a valid start number for an output directory.")
                         print("use mergertreeplot.py -h or --help to print help message.")
                         quit()
                     i += 1
@@ -474,6 +499,18 @@ class global_params:
         print(errormsg)
         quit()
         return
+
+    #========================
+    def print_short_help(self):
+    #========================
+        """
+        Print error message. Used as class method for simplicity to
+        fit in with other cmdline arg triggered actions.
+        """
+        print(shorthelp)
+        quit()
+        return
+
 
 
 
@@ -722,6 +759,8 @@ def _draw_tree(node, ax, strategy):
     # when you're done, add labels
     if params.treeclumplabels:
         _draw_tree_labels(node, ax, strategy)
+    else:
+        _draw_clump_points(node, ax)
 
 
     return
@@ -959,6 +998,40 @@ def _draw_tree_labels(node, ax, strategy):
             zorder=2)
 
 
+
+
+    return
+
+
+
+#============================================
+def _draw_clump_points(node, ax):
+#============================================
+    """
+    If not drawing labels, draw points for clumps on the plot.
+
+    Arguments:
+        node:       class Node object of descendant
+        ax:         axis object of the plot
+
+    returns:
+        nothing
+    """
+
+    inner, outer = _get_plotcolors(node.x.x)
+    myfacecolor = params.colorlist[inner]
+    myedgecolor = params.colorlist[outer]
+
+    # add scatter points
+    ax.scatter(node.x.x, node.y,
+            color = myfacecolor,
+            edgecolor = myedgecolor, 
+            s = 100, 
+            lw = 2, 
+            zorder = 2, 
+            )
+
+
     return
 
 
@@ -1166,7 +1239,7 @@ def make_tree(progenitors, descendants, progenitor_outputnrs, outputnrs, t):
     # if params.start != 0, then you have manually set start dir.
     startind = 0
     if params.start > 0:
-        startind = outputnrs[outputnrs == params.start]
+        startind = np.nonzero(outputnrs == params.start)[0][0]
     else:
         if not params.use_t:
             # find output closest to z=0
@@ -1854,6 +1927,7 @@ def _plot_galaxies(fig,galaxydata,clumps_in_tree,colors,borders):
     xg = galaxydata[0]
     yg = galaxydata[1]
     zg = galaxydata[2]
+    zmax = zg.max()
     galid = galaxydata[3]
 
     mask = galid>0
@@ -1875,7 +1949,7 @@ def _plot_galaxies(fig,galaxydata,clumps_in_tree,colors,borders):
                         facecolor=color,
                         edgecolor='black',
                         lw=lw,
-                        zorder=4)
+                        zorder=4+zmax-zg[mask][i])
                 else:
                     ax1.scatter(xg[mask][i],yg[mask][i],
                         marker="*",
@@ -1883,21 +1957,21 @@ def _plot_galaxies(fig,galaxydata,clumps_in_tree,colors,borders):
                         facecolor=color,
                         edgecolor='black',
                         lw=lw,
-                        zorder=4)
+                        zorder=5)
                     ax2.scatter(yg[mask][i],zg[mask][i],
                         marker="*",
                         s=msize,
                         facecolor=color,
                         edgecolor='black',
                         lw=lw,
-                        zorder=4)
+                        zorder=5)
                     ax3.scatter(xg[mask][i],zg[mask][i],
                         marker="*",
                         s=msize,
                         facecolor=color,
                         edgecolor='black',
                         lw=lw,
-                        zorder=4)
+                        zorder=5)
 
                 break
 
@@ -1927,13 +2001,16 @@ def _plot_galaxies(fig,galaxydata,clumps_in_tree,colors,borders):
 
     if params.movie:
 
-        ax.scatter(xg[to_plot],yg[to_plot],
-            marker="*",
-            s=msize,
-            facecolor='black',
-            edgecolor='black',
-            lw=lw,
-            zorder=4)
+        
+        x, y, z = xg[to_plot], yg[to_plot], zg[to_plot]
+        for i,Z in enumerate(z):
+            ax.scatter(x[i],y[i],
+                marker="*",
+                s=msize,
+                facecolor='black',
+                edgecolor='black',
+                lw=lw,
+                zorder=4+zmax-Z)
     else:
         ax1.scatter(xg[to_plot],yg[to_plot],
             marker="*",
@@ -2806,7 +2883,11 @@ def _tweak_particleplot(fig, time, borders, outnr):
             verticalalignment='top'
             )
 
-        plt.tight_layout()
+        ax1.set_axis_off()
+        ax1.xaxis.set_major_locator(plt.NullLocator())
+        ax1.yaxis.set_major_locator(plt.NullLocator())
+
+        plt.tight_layout(pad=0.0)
 
 
 

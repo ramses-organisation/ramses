@@ -514,11 +514,8 @@ subroutine output_header(filename)
      ! Only used particles have a levelp > 0
      if (levelp(ipart) > 0) then
         npart_all_loc = npart_all_loc + 1
-        do ifam = -5, 5
-           if (typep(ipart)%family == ifam) then
-              npart_family_loc(ifam) = npart_family_loc(ifam) + 1
-           end if
-        end do
+        ifam = typep(ipart)%family
+        npart_family_loc(ifam) = npart_family_loc(ifam) + 1
      end if
   end do
 
@@ -661,6 +658,7 @@ end subroutine savegadget
 subroutine create_output_dirs(filedir)
   use mpi_mod
   use amr_commons
+  use file_module, ONLY: mkdir
   implicit none
   character(LEN=80), intent(in):: filedir
 #ifdef NOSYSTEM
@@ -673,6 +671,7 @@ subroutine create_output_dirs(filedir)
 #ifndef WITHOUTMPI
   integer :: info
 #endif
+  integer, parameter :: mode = int(O'755')
   
   if (.not.withoutmkdir) then
     if (myid==1) then
@@ -683,8 +682,9 @@ subroutine create_output_dirs(filedir)
 #else
       filecmd='mkdir -p '//TRIM(filedir)
       ierr=1
-      call system(filecmd,ierr)
+!      call system(filecmd,ierr)
 !      call EXECUTE_COMMAND_LINE(filecmd,exitstat=ierr,wait=.true.)
+      call mkdir(TRIM(filedir),mode,ierr) 
       if(ierr.ne.0 .and. ierr.ne.127)then
         write(*,*) 'Error - Could not create ',TRIM(filedir),' error code=',ierr
 #ifndef WITHOUTMPI

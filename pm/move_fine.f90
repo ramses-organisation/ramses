@@ -9,7 +9,7 @@ subroutine move_fine(ilevel)
   ! If particle sits entirely in level ilevel, then use fine grid force
   ! for CIC interpolation. Otherwise, use coarse grid (ilevel-1) force.
   !----------------------------------------------------------------------
-  integer::igrid,jgrid,ipart,jpart,next_part,ig,ip,npart1
+  integer::igrid,jgrid,ipart,jpart,next_part,ig,ip,npart1,local_counter
   integer,dimension(1:nvector),save::ind_grid,ind_part,ind_grid_part
 
   if(numbtot(1,ilevel)==0)return
@@ -18,7 +18,7 @@ subroutine move_fine(ilevel)
   ! Update particles position and velocity
   ig=0
   ip=0
-  ! Loop over grids
+  ! Loop over particles that are not tracers
   igrid=headl(myid,ilevel)
   do jgrid=1,numbl(myid,ilevel)
      npart1=numbp(igrid)  ! Number of particles in the grid
@@ -26,31 +26,50 @@ subroutine move_fine(ilevel)
         ig=ig+1
         ind_grid(ig)=igrid
         ipart=headp(igrid)
+        local_counter=0
         ! Loop over particles
         do jpart=1,npart1
            ! Save next particle  <---- Very important !!!
            next_part=nextp(ipart)
+           ! Classical particles
            if(ig==0)then
               ig=1
               ind_grid(ig)=igrid
            end if
-           ip=ip+1
-           ind_part(ip)=ipart
-           ind_grid_part(ip)=ig
-           if(ip==nvector)then
-              call move1(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
-              ip=0
-              ig=0
+           ! Skip tracers (except "classic" tracers)
+           if (.not. (MC_tracer .and. is_tracer(typep(ipart)))) then
+              local_counter=local_counter+1
+              ip=ip+1
+              ind_part(ip)=ipart
+              ind_grid_part(ip)=ig
+              if(ip==nvector)then
+                 call move1(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
+                 local_counter=0
+                 ip=0
+                 ig=0
+              end if
            end if
+
            ipart=next_part  ! Go to next particle
         end do
         ! End loop over particles
+        ! If there was no particle in the grid, remove the grid from the buffer
+        if(local_counter==0 .and. ig>0)then
+           ig=ig-1
+        end if
      end if
      igrid=next(igrid)   ! Go to next grid
   end do
   ! End loop over grids
   if(ip>0)call move1(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
 
+
+  !---------------
+  ! Moving tracers
+  !---------------
+  if (MC_tracer) then  ! Loop over grids for MC tracers
+     call move_tracer_fine(ilevel)
+  end if
 111 format('   Entering move_fine for level ',I2)
 
 end subroutine move_fine
@@ -69,7 +88,7 @@ subroutine move_fine_static(ilevel)
   ! If particle sits entirely in level ilevel, then use fine grid force
   ! for CIC interpolation. Otherwise, use coarse grid (ilevel-1) force.
   !----------------------------------------------------------------------
-  integer::igrid,jgrid,ipart,jpart,next_part,ig,ip,npart1,npart2
+  integer::igrid,jgrid,ipart,jpart,next_part,ig,ip,npart1,npart2,local_counter
   integer,dimension(1:nvector),save::ind_grid,ind_part,ind_grid_part
 
   if(numbtot(1,ilevel)==0)return
@@ -107,11 +126,12 @@ subroutine move_fine_static(ilevel)
         end do
      endif
 
-     ! Gather star particles
+     ! Gather DM and star particles
      if(npart2>0)then
         ig=ig+1
         ind_grid(ig)=igrid
         ipart=headp(igrid)
+        local_counter=0
         ! Loop over particles
         do jpart=1,npart1
            ! Save next particle   <--- Very important !!!
@@ -120,12 +140,14 @@ subroutine move_fine_static(ilevel)
            if(star) then
               if ( (.not. static_DM .and. is_DM(typep(ipart))) .or. &
                    & (.not. static_stars .and. is_not_DM(typep(ipart)) )  ) then
+                 ! Note: is_not_DM only returns stars and clouds, but not tracers
                  ! FIXME: there should be a static_sink as well
                  ! FIXME: what about debris?
                  if(ig==0)then
                     ig=1
                     ind_grid(ig)=igrid
                  end if
+                 local_counter=local_counter+1
                  ip=ip+1
                  ind_part(ip)=ipart
                  ind_grid_part(ip)=ig
@@ -136,6 +158,7 @@ subroutine move_fine_static(ilevel)
                     ig=1
                     ind_grid(ig)=igrid
                  end if
+                 local_counter=local_counter+1
                  ip=ip+1
                  ind_part(ip)=ipart
                  ind_grid_part(ip)=ig
@@ -148,6 +171,11 @@ subroutine move_fine_static(ilevel)
            end if
            ipart=next_part  ! Go to next particle
         end do
+
+        ! If there was no particle in the grid, remove the grid from the buffer
+        if (local_counter==0 .and. ig > 0)then
+           ig=ig-1
+        end if
         ! End loop over particles
      end if
      igrid=next(igrid)   ! Go to next grid
@@ -193,6 +221,8 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   real(dp),dimension(1:nvector,1:twotondim),save::vol
   integer ,dimension(1:nvector,1:twotondim),save::igrid,icell,indp,kg
   real(dp),dimension(1:3)::skip_loc
+  ! Family
+  logical,dimension(1:nvector),save :: classical_tracer
 
   ! Mesh spacing in that level
   dx=0.5D0**ilevel
@@ -430,13 +460,21 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   end do
 #endif
 
+  ! Boolean flag for classical tracers (velocity advected ones)
+  ! Note: this is enough as the subroutine is only called if `MC_tracer` is false
+  do j = 1, np
+     classical_tracer(j) = is_gas_tracer(typep(ind_part(j)))
+  end do
   ! Gather 3-force
   ff(1:np,1:ndim)=0.0D0
   if(tracer.and.hydro)then
      do ind=1,twotondim
         do idim=1,ndim
            do j=1,np
-              ff(j,idim)=ff(j,idim)+uold(indp(j,ind),idim+1)/max(uold(indp(j,ind),1),smallr)*vol(j,ind)
+              if (classical_tracer(j)) then
+                 ff(j,idim)=ff(j,idim) + &
+                      uold(indp(j,ind),idim+1)/max(uold(indp(j,ind),1),smallr)*vol(j,ind)
+              end if
            end do
         end do
      end do
@@ -445,7 +483,9 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      do ind=1,twotondim
         do idim=1,ndim
            do j=1,np
+              if (.not. classical_tracer(j)) then
               ff(j,idim)=ff(j,idim)+f(indp(j,ind),idim)*vol(j,ind)
+              end if
            end do
         end do
 #ifdef OUTPUT_PARTICLE_POTENTIAL
@@ -458,18 +498,22 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
 
   ! Update velocity
   do idim=1,ndim
-     if(static.or.tracer)then
+     if(static)then
         do j=1,np
            new_vp(j,idim)=ff(j,idim)
         end do
      else
         do j=1,np
-           new_vp(j,idim)=vp(ind_part(j),idim)+ff(j,idim)*0.5D0*dtnew(ilevel)
+           if (classical_tracer(j)) then
+              new_vp(j,idim)=ff(j,idim)
+           else
+              new_vp(j,idim)=vp(ind_part(j),idim)+ff(j,idim)*0.5D0*dtnew(ilevel)
+           end if
         end do
      endif
   end do
 
-  ! For sink cloud particle only
+  ! For sink cloud particle, overwrite velocity with sink velocity
   if(sink)then
      ! Overwrite cloud particle velocity with sink velocity
      do idim=1,ndim

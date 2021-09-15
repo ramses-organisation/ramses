@@ -88,9 +88,9 @@ subroutine courant_fine(ilevel)
         ! Calculate total density
         dtot(1:nleaf) = 0.0
         do imat=1,nmat
-          do i=1,nleaf
-            dtot(i) = dtot(i) + uu(i,nmat+imat)
-          end do
+           do i=1,nleaf
+              dtot(i) = dtot(i) + uu(i,nmat+imat)
+           end do
         end do
         
         ! Gather gravitational acceleration
@@ -104,40 +104,16 @@ subroutine courant_fine(ilevel)
         end if
         
         ! Compute total mass
-        if(geom==3)then
-           do i=1,nleaf
-              mass_loc = mass_loc + dtot(i)*vol*(rloc(i)**2+dx_loc**2/12.0)*fourpi
-           end do
-        else if(geom==2)then
-           do i=1,nleaf
-              mass_loc = mass_loc + dtot(i)*vol*rloc(i)*twopi
-           end do
-        else
-           do i=1,nleaf
-              mass_loc = mass_loc + dtot(i)*vol
-           end do
-        endif
+        do i=1,nleaf
+           mass_loc = mass_loc + dtot(i)*vol
+        end do
 
         ! Compute total energy
-        if(geom==3)then
-          do imat=1,nmat
-            do i=1,nleaf
-              ekin_loc = ekin_loc + uu(i,2*nmat+ndim+imat)*vol*(rloc(i)**2+dx_loc**2/12.0)*fourpi
-            end do
-          end do
-        else if(geom==2)then
-          do imat=1,nmat
-            do i=1,nleaf
-              ekin_loc = ekin_loc + uu(i,2*nmat+ndim+imat)*vol*rloc(i)*twopi
-            end do
-          end do
-        else
-          do imat=1,nmat
-            do i=1,nleaf
+        do imat=1,nmat
+           do i=1,nleaf
               ekin_loc = ekin_loc + uu(i,2*nmat+ndim+imat)*vol
-            end do
-          end do
-        endif
+           end do
+        end do
 
         ! Compute CFL time-step
         if(nleaf>0)then

@@ -11,6 +11,7 @@
 
 module sparse_matrix
   use amr_commons
+  implicit none
   type sparse_mat
      real(dp),allocatable,dimension(:)::val,maxval
      integer,allocatable,dimension(:)::next,col,first,maxloc
