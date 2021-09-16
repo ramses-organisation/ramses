@@ -2419,7 +2419,7 @@ end function eta_hall_chimie
 !###########################################################
 double precision function densionbis(rhon)
 
-   use nimhd_parameters, only : coefionis,default_ionisrate,ntestDADM,rhoi0,dp
+   use nimhd_parameters, only : coefionis,default_ionisrate,ntestDADM,dp
 
    implicit none 
    real(dp)::rhon
@@ -2433,13 +2433,6 @@ double precision function densionbis(rhon)
 
    ! function which computes the density in g/cm3 of ions 
    ! see Duffin & Pudritz 2008, astro-ph 08/10/08 eq (14)
-
-   ! density of neutral in number per cm3
-   !xn=rhoncgs/xmneutre
-
-   ! density of ions in g/cm3 
-   !densionbis=densionbis*xmion
-
 
    ! Mellon & Li 2009 (?) or Hennebelle & Teyssier 2007
    ! WARNING 3d-16 si in cgs
@@ -2457,7 +2450,7 @@ double precision function densionbis(rhon)
 
    ! test C shock Duffin et Pudritz
    if(ntestDADM.eq.1) then
-      densionbis=rhoi0
+      densionbis=1d0
    endif
 
 end function densionbis
@@ -2923,7 +2916,7 @@ double precision function betaad(rhon,bsquare,temper,ionisrate)
       ! test Barenblatt
       !betaadbricolo=1d0
       ! test C shock
-         betaad=1d0/(gammaAD*rhoi0*rhon)
+         betaad=1d0/(gammaAD*rhon)
       !betaadbricolo=0d0
    endif
 
@@ -3015,7 +3008,7 @@ double precision function betaadbricolo(rhocelln,rhon,dtlim,bsquare,bsquareold,d
       ! test Barenblatt
       !betaadbricolo=1d0
       ! test C shock
-         betaadbricolo=1d0/(gammaAD*rhoi0*rhon)
+         betaadbricolo=1d0/(gammaAD*rhon)
       !betaadbricolo=0d0
    endif
 
