@@ -128,8 +128,7 @@ subroutine read_hydro_params(nml_ok)
   ! Non-ideal MHD parameters
   namelist/nonidealmhd_params/nambipolar,gammaAD &
        & ,nmagdiffu,etaMD,nhall,rHall,ntestDADM,use_x3d &
-       & ,coefad, nminitimestep, coefalfven,coefdtohm &
-       & ,nimhdheating_in_eint
+       & ,coefad, nminitimestep, coefalfven,coefdtohm
 #endif
 
   ! Read namelist file

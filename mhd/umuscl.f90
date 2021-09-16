@@ -228,7 +228,7 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
 
 #ifdef NIMHD
   ! Energy flux from ohmic term dB/dt=rot(-eta*J)
-  if(nambipolar.or.nmagdiffu.or.nhall .and. (.not.nimhdheating_in_eint)) then
+  if(nambipolar.or.nmagdiffu.or.nhall) then
      ivar=5
      do k=klo,khi
         do j=jlo,jhi
@@ -267,7 +267,7 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
 
 #ifdef NIMHD
   ! Energy flux from ohmic term dB/dt=rot(-eta*J)
-  if(nambipolar.or.nmagdiffu.or.nhall .and. (.not.nimhdheating_in_eint)) then  
+  if(nambipolar.or.nmagdiffu.or.nhall) then  
      ivar=5
      do k=klo,khi
         do j=jf1,jf2
@@ -308,7 +308,7 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
   
 #ifdef NIMHD
   ! Energy flux from ohmic term dB/dt=rot(-eta*J)
-  if(nambipolar.or.nmagdiffu.or.nhall .and. (.not.nimhdheating_in_eint)) then  
+  if(nambipolar.or.nmagdiffu.or.nhall) then  
      ivar=5
      do k=kf1,kf2
         do j=jlo,jhi

@@ -75,11 +75,7 @@ module amr_parameters
   logical::unbind=.false.     ! Enable particle unbinding for the clump finder
   logical::make_mergertree=.false. ! Make on the fly mergertrees
   logical::aton=.false.       ! Enable ATON coarse grid radiation transfer
-#ifdef NIMHD
-  ! radiative_nimhdheating_in_cg to be added with FLD update
-  logical::nimhdheating_in_eint=.false. ! Enable niMHD heating as a source term in the gas internal energy in goduvov_fine
-#endif
-  
+
   ! Mesh parameters
   integer::nx=1,ny=1,nz=1                  ! Number of coarse cells in each dimension
   integer::levelmin=1                      ! Full refinement up to levelmin
