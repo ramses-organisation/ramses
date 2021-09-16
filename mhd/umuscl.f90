@@ -166,7 +166,7 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
   call uslope(qin,dq,bf,dbf,dx,dt,ngrid)
 
 #ifdef NIMHD
-  if(nambipolar.or.nmagdiffu.or.nhall) then
+  if(use_nonideal_mhd) then
      ! compute Lorentz Force with magnetic fluxes
 !    call computejb(uin,qin,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,bmagij,florentzx,florentzy,florentzz,fluxmd,fluxh,fluxad)
   
@@ -231,7 +231,7 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
 
 #ifdef NIMHD
   ! Energy flux from ohmic term dB/dt=rot(-eta*J)
-  if(nambipolar.or.nmagdiffu.or.nhall) then
+  if(use_nonideal_mhd) then
      ivar=5
      do k=klo,khi
         do j=jlo,jhi
@@ -270,7 +270,7 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
 
 #ifdef NIMHD
   ! Energy flux from ohmic term dB/dt=rot(-eta*J)
-  if(nambipolar.or.nmagdiffu.or.nhall) then  
+  if(use_nonideal_mhd) then  
      ivar=5
      do k=klo,khi
         do j=jf1,jf2
@@ -311,7 +311,7 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
   
 #ifdef NIMHD
   ! Energy flux from ohmic term dB/dt=rot(-eta*J)
-  if(nambipolar.or.nmagdiffu.or.nhall) then  
+  if(use_nonideal_mhd) then  
      ivar=5
      do k=kf1,kf2
         do j=jlo,jhi

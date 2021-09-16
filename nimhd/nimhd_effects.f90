@@ -1198,7 +1198,7 @@ subroutine computejb2(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
 
   ! computation of current on faces
 
-  if(nambipolar.or.nhall.or.nmagdiffu) then
+  if(use_nonideal_mhd) then
 
     ! face at i-1/2,j,k
   
