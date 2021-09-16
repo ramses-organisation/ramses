@@ -4,7 +4,7 @@ subroutine move_fine(ilevel)
   use pm_commons
   use mpi_mod
   implicit none
-  integer::ilevel
+  integer::ilevel,xtondim
   !----------------------------------------------------------------------
   ! Update particle position and time-centred velocity at level ilevel.
   ! If particle sits entirely in level ilevel, then use fine grid force
@@ -25,8 +25,14 @@ subroutine move_fine(ilevel)
    open(25+myid, file = fileloc, status = 'unknown', access = 'append')
   endif
 
+  #ifdef TSC
+    xtondim=threetondim
+  #else
+    xtondim=twotondim
+  #endif
+
   ! Set unew = uold in the active region
-  do ind=1,twotondim
+  do ind=1,xtondim
      iskip=ncoarse+(ind-1)*ngridmax
      do ivar=2,4
         do i=1,active(ilevel)%ngrid
@@ -37,7 +43,7 @@ subroutine move_fine(ilevel)
   end do
   ! Set unew reception cells to zero
   do icpu=1,ncpu
-     do ind=1,twotondim
+     do ind=1,xtondim
         iskip=ncoarse+(ind-1)*ngridmax
         do ivar=2,4
            do i=1,reception(icpu,ilevel)%ngrid
@@ -70,7 +76,7 @@ subroutine move_fine(ilevel)
            ind_part(ip)=ipart
            ind_grid_part(ip)=ig
            if(ip==nvector)then
-              call move1(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
+              call move1(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel,xtondim)
               ip=0
               ig=0
            end if
@@ -81,14 +87,14 @@ subroutine move_fine(ilevel)
      igrid=next(igrid)   ! Go to next grid
   end do
   ! End loop over grids
-  if(ip>0)call move1(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
+  if(ip>0)call move1(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel,xtondim)
 
   ! Update MPI boundary conditions for unew for dust mass and momentum densities
   do ivar=2,4 ! Gas momentum indices
      call make_virtual_reverse_dp(unew(1,ivar),ilevel)
   end do
 
-  do ind=1,twotondim
+  do ind=1,xtondim
      iskip=ncoarse+(ind-1)*ngridmax
      do ivar=2,4
         do i=1,active(ilevel)%ngrid
@@ -119,7 +125,7 @@ subroutine move_fine_static(ilevel)
   use pm_commons
   use mpi_mod
   implicit none
-  integer::ilevel
+  integer::ilevel,xtondim
   !----------------------------------------------------------------------
   ! Update particle position and time-centred velocity at level ilevel.
   ! If particle sits entirely in level ilevel, then use fine grid force
@@ -130,6 +136,11 @@ subroutine move_fine_static(ilevel)
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
+  #ifdef TSC
+    xtondim=threetondim
+  #else
+    xtondim=twotondim
+  #endif
 
   ! Update particles position and velocity
   ig=0
@@ -198,7 +209,7 @@ subroutine move_fine_static(ilevel)
               endif
            endif
            if(ip==nvector)then
-              call move1(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
+              call move1(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel,xtondim)
               ip=0
               ig=0
            end if
@@ -209,7 +220,7 @@ subroutine move_fine_static(ilevel)
      igrid=next(igrid)   ! Go to next grid
   end do
   ! End loop over grids
-  if(ip>0)call move1(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
+  if(ip>0)call move1(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel,xtondim)
 
 111 format('   Entering move_fine for level ',I2)
 
@@ -218,13 +229,13 @@ end subroutine move_fine_static
 !#########################################################################
 !#########################################################################
 !#########################################################################
-subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
+subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,xtondim)
   use amr_commons
   use pm_commons
   use poisson_commons
   use hydro_commons, ONLY: uold,unew,smallr,nvar,gamma
   implicit none
-  integer::ng,np,ilevel
+  integer::ng,np,ilevel,xtondim
   integer,dimension(1:nvector)::ind_grid
   integer,dimension(1:nvector)::ind_grid_part,ind_part
   !------------------------------------------------------------
@@ -249,11 +260,11 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   real(dp),dimension(1:nvector,1:ndim),save::x,ff,new_xp,new_vp,dd,dg
   real(dp),dimension(1:nvector,1:ndim),save::vv
   real(dp),dimension(1:nvector,1:ndim),save::bb,uu
-  real(dp),dimension(1:nvector,1:twotondim,1:ndim),save::big_vv,big_ww
+  real(dp),dimension(1:nvector,1:xtondim,1:ndim),save::big_vv,big_ww
   real(dp),dimension(1:nvector),save:: nu_stop,mov ! ERM: fluid density interpolated to grain pos. and stopping times
   integer ,dimension(1:nvector,1:ndim),save::ig,id,igg,igd,icg,icd
-  real(dp),dimension(1:nvector,1:twotondim),save::vol
-  integer ,dimension(1:nvector,1:twotondim),save::igrid,icell,indp,kg
+  real(dp),dimension(1:nvector,1:xtondim),save::vol
+  integer ,dimension(1:nvector,1:xtondim),save::igrid,icell,indp,kg
   real(dp),dimension(1:3)::skip_loc
   real(dp)::den_dust,den_gas,mom_dust,mom_gas,velocity_com
   ! ERM: w is the cell dust-gas drift, B the mag field.
@@ -268,7 +279,7 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   if(ndim>2)skip_loc(3)=dble(kcoarse_min)
   scale=boxlen/dble(nx_loc)
   dx_loc=dx*scale
-  vol_loc=dx_loc**3
+  vol_loc=dx_loc**ndim
 
   ! Lower left corner of 3x3x3 grid-cube
   do idim=1,ndim
@@ -301,7 +312,8 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      end do
   end do
 
-  ! Check for illegal moves
+  #ifndef TSC
+  ! Check for illegal moves. Is this different for CIC vs TSC?
   error=.false.
   do idim=1,ndim
      do j=1,np
@@ -495,6 +507,9 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   end do
 #endif
 
+  #else
+    #include "tsc_fine.f90"
+  #endif
   ! Gather center of mass 3-velocity
   ivar_dust=9
   if(nvar<ivar_dust+ndim)then
@@ -524,7 +539,7 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   uu(1:np,1:ndim)=0.0D0
   bb(1:np,1:ndim)=0.0D0
   if(boris.and.hydro)then
-     do ind=1,twotondim
+     do ind=1,xtondim
         do idim=1,ndim
            do j=1,np
               uu(j,idim)=uu(j,idim)+uold(indp(j,ind),idim+1)/max(uold(indp(j,ind),1),smallr)*vol(j,ind)
@@ -563,7 +578,7 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   ! Gather 3-velocity
   ff(1:np,1:ndim)=0.0D0
   if(tracer.and.hydro)then
-     do ind=1,twotondim
+     do ind=1,xtondim
         do idim=1,ndim
            do j=1,np
               ff(j,idim)=ff(j,idim)+uold(indp(j,ind),idim+1)/max(uold(indp(j,ind),1),smallr)*vol(j,ind)
@@ -573,7 +588,7 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   endif
   ! Gather 3-force
   if(poisson)then
-     do ind=1,twotondim
+     do ind=1,xtondim
         do idim=1,ndim
            do j=1,np
               ff(j,idim)=ff(j,idim)+f(indp(j,ind),idim)*vol(j,ind)
@@ -607,7 +622,7 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   ! We compute this before the EM kick for the sole reason that we had to do
   ! that in init_dust_fine. For second order accuracy, things will be more
   ! complicated.
-    call StoppingRate(np,dtnew(ilevel),indp,vol,vv,nu_stop)
+    call StoppingRate(np,dtnew(ilevel),indp,vol,vv,nu_stop,xtondim)
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! LORENTZ KICK
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -618,13 +633,13 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
 
     !call ResetUnewToFluidVel(ilevel)
     !call reset_unew(ilevel)
-    big_vv(1:np,1:twotondim,1:ndim)=0.0D0 ! contains actual sub-cloud velocities.
-    big_ww(1:np,1:twotondim,1:ndim)=0.0D0 ! Contains net mean drift velocity
+    big_vv(1:np,1:xtondim,1:ndim)=0.0D0 ! contains actual sub-cloud velocities.
+    big_ww(1:np,1:xtondim,1:ndim)=0.0D0 ! Contains net mean drift velocity
     ! might want a "big_ww"? I think that's how I'll approach it.
     ! We want to evolve each of the subclouds. Knowing the new w will
     ! allow us to compute the evolution of the sub-clouds with the drag too.
     vv(1:np,1:ndim)=new_vp(1:np,1:ndim)
-    call EMKick(np,dtnew(ilevel),indp,ctm,ok,vol,mov,vv,big_vv,big_ww)
+    call EMKick(np,dtnew(ilevel),indp,ctm,ok,vol,mov,vv,big_vv,big_ww,xtondim)
     ! big_vv now contains changes to sub-cloud velocities. vv is still the old
     ! velocity. As well, unew's dust slot contains u**n+du**EM
     !write(*,*)'big_vv=',big_vv(1,1,1),big_vv(1,1,2),big_vv(1,1,3)
@@ -632,12 +647,12 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   ! DRAG KICK
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-    call DragKick(np,dtnew(ilevel),indp,ok,vol,nu_stop,big_vv,big_ww,vv)
+    call DragKick(np,dtnew(ilevel),indp,ok,vol,nu_stop,big_vv,big_ww,vv,xtondim)
     !write(*,*)'big_vv+=',big_vv(1,1,1),big_vv(1,1,2),big_vv(1,1,3)
     ! DragKick will modify big_ww as well as big_vv, but not vv.
     ! Now kick the dust given these quantities.
     vv(1:np,1:ndim)=0.0D0
-    do ind=1,twotondim
+    do ind=1,xtondim
       do idim=1,ndim
         do j=1,np
           vv(j,idim)=vv(j,idim)+vol(j,ind)*big_vv(j,ind,idim)
@@ -718,7 +733,7 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   end do
 
   ! Deposit minus final dust momentum to new gas momentum
-  do ind=1,twotondim
+  do ind=1,xtondim
      do idim=1,ndim
         do j=1,np
            if(ok(j))then
@@ -741,22 +756,22 @@ end subroutine move1
 !#########################################################################
 !#########################################################################
 !#########################################################################
-subroutine EMKick(nn,dt,indp,ctm,ok,vol,mov,v,big_v,big_w)
+subroutine EMKick(nn,dt,indp,ctm,ok,vol,mov,v,big_v,big_w,xtondim)
   ! This subroutine will compute changes to sub-cloud velocity in big_v,
   ! as well as set unew's dust momentum slot to being u+du**EM.
   use amr_parameters
   use hydro_parameters
   use hydro_commons, ONLY: uold,unew,smallr,nvar,gamma
   implicit none
-  integer ::ivar_dust ! cell-centered dust variables start.
+  integer ::ivar_dust,xtondim ! cell-centered dust variables start.
   integer ::nn ! number of cells
   real(dp) ::dt! timestep
   real(dp) ::ctm ! charge-to-mass ratio
   logical ,dimension(1:nvector)::ok
   real(dp),dimension(1:nvector)::mov
-  real(dp),dimension(1:nvector,1:twotondim)::vol
-  integer ,dimension(1:nvector,1:twotondim)::indp
-  real(dp),dimension(1:nvector,1:twotondim,1:ndim)::big_v,big_w
+  real(dp),dimension(1:nvector,1:xtondim)::vol
+  integer ,dimension(1:nvector,1:xtondim)::indp
+  real(dp),dimension(1:nvector,1:xtondim,1:ndim)::big_v,big_w
   real(dp),dimension(1:nvector,1:ndim) ::v! grain velocity
   real(dp) ::den_dust,den_gas,mu
   real(dp),dimension(1:3) ::vtemp,w,B
@@ -764,7 +779,7 @@ subroutine EMKick(nn,dt,indp,ctm,ok,vol,mov,v,big_v,big_w)
 
   ivar_dust=9
 
-  do ind=1,twotondim
+  do ind=1,xtondim
      do i=1,nn
         den_gas=uold(indp(i,ind),1)
         den_dust=uold(indp(i,ind),ivar_dust)
@@ -820,7 +835,7 @@ end subroutine EMKick
 !#########################################################################
 !#########################################################################
 !#########################################################################
-subroutine StoppingRate(nn,dt,indp,vol,v,nu)
+subroutine StoppingRate(nn,dt,indp,vol,v,nu,xtondim)
   ! The following subroutine will alter its last argument, nu
   ! to be a half-step advanced. Because we are operator splitting,
   ! one must use the updated dust and gas velocities.
@@ -831,15 +846,15 @@ subroutine StoppingRate(nn,dt,indp,vol,v,nu)
   use hydro_commons, ONLY: uold,unew,smallr,nvar,gamma
   implicit none
   integer ::nn ! number of cells
-  integer ::ivar_dust ! cell-centered dust variables start.
+  integer ::ivar_dust,xtondim  ! cell-centered dust variables start.
   real(dp) ::dt ! timestep.
   real(dp)::rd,cs! ERM: Grain size parameter
   real(dp),dimension(1:nvector) ::nu
-  real(dp),dimension(1:nvector,1:twotondim)::vol
-  integer ,dimension(1:nvector,1:twotondim)::indp
+  real(dp),dimension(1:nvector,1:xtondim)::vol
+  integer ,dimension(1:nvector,1:xtondim)::indp
   real(dp),dimension(1:nvector),save ::dgr! gas density at grain.
   real(dp),dimension(1:nvector,1:ndim) ::v! grain velocity
-  real(dp),dimension(1:nvector,1:twotondim,1:ndim)::big_v
+  real(dp),dimension(1:nvector,1:xtondim,1:ndim)::big_v
   real(dp),dimension(1:nvector,1:ndim),save ::wh! drift at half step.
   integer ::i,j,idim,ind
   ivar_dust=9
@@ -852,7 +867,7 @@ subroutine StoppingRate(nn,dt,indp,vol,v,nu)
   else
      dgr(1:nn) = 0.0D0
      if(boris)then
-        do ind=1,twotondim
+        do ind=1,xtondim
             do j=1,nn
                dgr(j)=dgr(j)+uold(indp(j,ind),1)*vol(j,ind)
            end do
@@ -861,7 +876,7 @@ subroutine StoppingRate(nn,dt,indp,vol,v,nu)
 
      wh(1:nn,1:ndim) = 0.0D0 ! Set to the drift velocity post-Lorentz force
      if(boris)then
-        do ind=1,twotondim
+        do ind=1,xtondim
           do idim=1,ndim
             do j=1,nn
                wh(j,idim)=wh(j,idim)+vol(j,ind)*&
@@ -934,27 +949,27 @@ end subroutine StoppingRate
 !#########################################################################
 !#########################################################################
 !#########################################################################
-subroutine DragKick(nn,dt,indp,ok,vol,nu,big_v,big_w,v) ! mp is actually mov
+subroutine DragKick(nn,dt,indp,ok,vol,nu,big_v,big_w,v,xtondim) ! mp is actually mov
   use amr_parameters
   use hydro_parameters
   use hydro_commons, ONLY: uold,unew,smallr,nvar,gamma
   implicit none
   integer::nn
-  integer ::ivar_dust ! cell-centered dust variables start.  integer ::nn ! number of cells
+  integer ::ivar_dust, xtondim ! cell-centered dust variables start.  integer ::nn ! number of cells
   real(dp) ::dt ! timestep
   real(dp) ::vol_loc ! cloud volume
   real(dp),dimension(1:nvector) ::nu,mp
   logical ,dimension(1:nvector)::ok
-  real(dp),dimension(1:nvector,1:twotondim)::vol
-  integer ,dimension(1:nvector,1:twotondim)::indp
+  real(dp),dimension(1:nvector,1:xtondim)::vol
+  integer ,dimension(1:nvector,1:xtondim)::indp
   real(dp),dimension(1:nvector,1:ndim) ::v ! grain velocity
-  real(dp),dimension(1:nvector,1:twotondim,1:ndim) ::big_v,big_w
+  real(dp),dimension(1:nvector,1:xtondim,1:ndim) ::big_v,big_w
   real(dp) ::den_dust,den_gas,mu,nuj,up
   integer ::i,j,ind,idim! Just an index
   ivar_dust=9
 
   if (second_order)then
-    do ind=1,twotondim
+    do ind=1,xtondim
        do i=1,nn
           den_gas=uold(indp(i,ind),1)
           den_dust=uold(indp(i,ind),ivar_dust)
@@ -979,7 +994,7 @@ subroutine DragKick(nn,dt,indp,ok,vol,nu,big_v,big_w,v) ! mp is actually mov
        end do
     end do
    else
-     do ind=1,twotondim
+     do ind=1,xtondim
         do i=1,nn
            den_gas=uold(indp(i,ind),1)
            den_dust=uold(indp(i,ind),ivar_dust)

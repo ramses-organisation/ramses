@@ -6,7 +6,7 @@ subroutine synchro_fine(ilevel)
 #ifndef WITHOUTMPI
   integer::info
 #endif
-  integer::ilevel
+  integer::ilevel,xtondim
   !--------------------------------------------------------------------
   ! This routine synchronizes particle velocity with particle
   ! position for ilevel particle only. If particle sits entirely
@@ -23,6 +23,12 @@ subroutine synchro_fine(ilevel)
   if(sink)then
      fsink_new=0
   endif
+
+  #ifdef TSC
+    xtondim=threetondim
+  #else
+    xtondim=twotondim
+  #endif
 
   ! Synchronize velocity using CIC
   ig=0
@@ -45,7 +51,7 @@ subroutine synchro_fine(ilevel)
            ind_part(ip)=ipart
            ind_grid_part(ip)=ig
            if(ip==nvector)then
-              call sync(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
+              call sync(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel,xtondim)
               ip=0
               ig=0
            end if
@@ -56,7 +62,7 @@ subroutine synchro_fine(ilevel)
      igrid=next(igrid)   ! Go to next grid
   end do
   ! End loop over grids
-  if(ip>0)call sync(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
+  if(ip>0)call sync(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel,xtondim)
 
   !sink cloud particles are used to average the grav. acceleration
   if(sink)then
@@ -89,7 +95,7 @@ subroutine synchro_fine_static(ilevel)
 #ifndef WITHOUTMPI
   integer::info
 #endif
-  integer::ilevel
+  integer::ilevel,xtondim
   !--------------------------------------------------------------------
   ! This routine synchronizes particle velocity with particle
   ! position for ilevel particle only. If particle sits entirely
@@ -107,6 +113,12 @@ subroutine synchro_fine_static(ilevel)
      fsink_new=0
      fsink_all=0
   endif
+
+  #ifdef TSC
+    xtondim=threetondim
+  #else
+    xtondim=twotondim
+  #endif
 
   ! Synchronize velocity using CIC
   ig=0
@@ -173,7 +185,7 @@ subroutine synchro_fine_static(ilevel)
               endif
            endif
            if(ip==nvector)then
-              call sync(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
+              call sync(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel,xtondim)
               ip=0
               ig=0
            end if
@@ -184,7 +196,7 @@ subroutine synchro_fine_static(ilevel)
      igrid=next(igrid)   ! Go to next grid
   end do
   ! End loop over grids
-  if(ip>0)call sync(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
+  if(ip>0)call sync(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel,xtondim)
 
   !sink cloud particles are used to average the grav. acceleration
   if(sink)then
@@ -209,7 +221,7 @@ end subroutine synchro_fine_static
 !####################################################################
 !####################################################################
 !####################################################################
-subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
+subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,xtondim)
   use amr_commons
   use pm_commons
   use poisson_commons
@@ -233,8 +245,8 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   real(dp),dimension(1:nvector),save::dteff
   real(dp),dimension(1:nvector,1:ndim),save::x,ff,new_vp,dd,dg
   integer ,dimension(1:nvector,1:ndim),save::ig,id,igg,igd,icg,icd
-  real(dp),dimension(1:nvector,1:twotondim),save::vol
-  integer ,dimension(1:nvector,1:twotondim),save::igrid,icell,indp,kg
+  real(dp),dimension(1:nvector,1:xtondim),save::vol
+  integer ,dimension(1:nvector,1:xtondim),save::igrid,icell,indp,kg
   real(dp),dimension(1:3)::skip_loc
 
   ! Mesh spacing in that level
@@ -275,6 +287,8 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
         x(j,idim)=x(j,idim)/dx
      end do
   end do
+
+  #ifndef TSC
 
   ! Check for illegal moves
   error=.false.
@@ -470,10 +484,13 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   end do
 #endif
 
+  #else
+    #include "tsc_fine.f90"
+  #endif
   ! Gather 3-force
   ff(1:np,1:ndim)=0.0D0
   if(poisson)then
-     do ind=1,twotondim
+     do ind=1,xtondim
         do idim=1,ndim
            do j=1,np
               ff(j,idim)=ff(j,idim)+f(indp(j,ind),idim)*vol(j,ind)
@@ -564,7 +581,7 @@ subroutine init_dust_fine(ilevel)
 #ifndef WITHOUTMPI
   integer::info
 #endif
-  integer::ilevel
+  integer::ilevel,xtondim
   ! First, reset uold to zero.
   ! Can remove gravity and sink particle related things.
   ! Can remove synchro_fine_static as well.
@@ -585,15 +602,21 @@ subroutine init_dust_fine(ilevel)
   if(verbose)write(*,111)ilevel
   ivar_dust=9
 
+  #ifdef TSC
+    xtondim=threetondim
+  #else
+    xtondim=twotondim
+  #endif
+
   ! Reset unew to zero for dust ``stopping time''
-  do ind=1,twotondim
+  do ind=1,xtondim
      iskip=ncoarse+(ind-1)*ngridmax
         do i=1,active(ilevel)%ngrid
            unew(active(ilevel)%igrid(i)+iskip,ivar_dust)=0.0D0
         end do
   end do
   do icpu=1,ncpu
-     do ind=1,twotondim
+     do ind=1,xtondim
         iskip=ncoarse+(ind-1)*ngridmax
            do i=1,reception(icpu,ilevel)%ngrid
               unew(reception(icpu,ilevel)%igrid(i)+iskip,ivar_dust)=0.0D0
@@ -603,7 +626,7 @@ subroutine init_dust_fine(ilevel)
 
   ! Reset uold to zero for dust mass and momentum densities
   do icpu=1,ncpu
-     do ind=1,twotondim
+     do ind=1,xtondim
         iskip=ncoarse+(ind-1)*ngridmax
         do ivar=ivar_dust,ivar_dust+3
            do i=1,reception(icpu,ilevel)%ngrid
@@ -612,7 +635,7 @@ subroutine init_dust_fine(ilevel)
         end do
      end do
   end do
-  do ind=1,twotondim
+  do ind=1,xtondim
      iskip=ncoarse+(ind-1)*ngridmax
      do ivar=ivar_dust,ivar_dust+3
         do i=1,active(ilevel)%ngrid
@@ -624,7 +647,7 @@ subroutine init_dust_fine(ilevel)
 !!!!!!!!!!!!!!!!!!!!!!! NEW !!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! Reset dust variables in physical boundaries
    do ibound=1,nboundary
-      do ind=1,twotondim
+      do ind=1,xtondim
          iskip=ncoarse+(ind-1)*ngridmax
          do ivar=ivar_dust,ivar_dust+ndim
             do i=1,boundary(ibound,ilevel)%ngrid
@@ -637,7 +660,7 @@ subroutine init_dust_fine(ilevel)
    end do
 
    do ibound=1,nboundary
-      do ind=1,twotondim
+      do ind=1,xtondim
          iskip=ncoarse+(ind-1)*ngridmax
          do ivar=ivar_dust,ivar_dust+ndim
             do i=1,boundary(ibound,ilevel)%ngrid
@@ -672,7 +695,7 @@ subroutine init_dust_fine(ilevel)
            ind_part(ip)=ipart
            ind_grid_part(ip)=ig
            if(ip==nvector)then
-              call init_dust(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
+              call init_dust(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel,xtondim)
               ip=0
               ig=0
            end if
@@ -683,7 +706,7 @@ subroutine init_dust_fine(ilevel)
      igrid=next(igrid)   ! Go to next grid
   end do
   ! End loop over grids
-  if(ip>0)call init_dust(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
+  if(ip>0)call init_dust(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel,xtondim)
 
   ! Update MPI boundary conditions for uold for dust mass and momentum densities
   do ivar=ivar_dust,ivar_dust+ndim
@@ -704,14 +727,14 @@ end subroutine init_dust_fine
 !####################################################################
 !####################################################################
 !####################################################################
-subroutine init_dust(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
+subroutine init_dust(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,xtondim)
   use amr_commons
   !use amr_parameters ERM
   use pm_commons
   use poisson_commons
   use hydro_commons, ONLY: uold,unew,smallr,nvar,gamma
   implicit none
-  integer::ng,np,ilevel
+  integer::ng,np,ilevel,xtondim
   integer,dimension(1:nvector)::ind_grid
   integer,dimension(1:nvector)::ind_grid_part,ind_part
   !
@@ -736,8 +759,8 @@ subroutine init_dust(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   real(dp),dimension(1:nvector,1:ndim),save::uu,bb,vv ! ERM: Added these arrays
   real(dp),dimension(1:nvector),save::dgr,tss,mm ! ERM: density, (non-constant) stopping times
   integer ,dimension(1:nvector,1:ndim),save::ig,id,igg,igd,icg,icd
-  real(dp),dimension(1:nvector,1:twotondim),save::vol
-  integer ,dimension(1:nvector,1:twotondim),save::igrid,icell,indp,kg
+  real(dp),dimension(1:nvector,1:xtondim),save::vol
+  integer ,dimension(1:nvector,1:xtondim),save::igrid,icell,indp,kg
   real(dp),dimension(1:3)::skip_loc
 
   ctm = charge_to_mass
@@ -785,6 +808,7 @@ subroutine init_dust(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      end do
   end do
 
+  #ifndef TSC
   ! Check for illegal moves
   error=.false.
   do idim=1,ndim
@@ -979,6 +1003,10 @@ subroutine init_dust(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   end do
 #endif
 
+  #else
+    #include "tsc_fine.f90"
+  #endif
+
   ! Gather 3-force
   ! ERM: deleted.
   ! Update 3-velocity
@@ -1000,7 +1028,7 @@ subroutine init_dust(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      end do
   end do
 
-  do ind=1,twotondim
+  do ind=1,xtondim
      do j=1,np ! deposit the dust mass density.
         if(ok(j))then
            uold(indp(j,ind),ivar_dust)=uold(indp(j,ind),ivar_dust)&
@@ -1018,9 +1046,9 @@ subroutine init_dust(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   end do
 
   ! I don't think we actually want to do this until after the Lorentz kick
-  call InitStoppingRate(np,dtnew(ilevel),indp,vol,vv,nu_stop)
+  call InitStoppingRate(np,dtnew(ilevel),indp,vol,vv,nu_stop,xtondim)
 
-  do ind=1,twotondim
+  do ind=1,xtondim
      do j=1,np ! deposit the dust mass weighted stopping time.
         if(ok(j))then
            unew(indp(j,ind),ivar_dust)=unew(indp(j,ind),ivar_dust)+&
@@ -1117,7 +1145,7 @@ subroutine init_dust(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
 end subroutine init_dust
 !#########################################################################
 !#########################################################################
-subroutine InitStoppingRate(nn,dt,indp,vol,v,nu)
+subroutine InitStoppingRate(nn,dt,indp,vol,v,nu,xtondim)
   ! The following subroutine will alter its last argument, nu
   ! to be a half-step advanced. Because we are operator splitting,
   ! one must use the updated dust and gas velocities.
@@ -1127,16 +1155,16 @@ subroutine InitStoppingRate(nn,dt,indp,vol,v,nu)
   use hydro_parameters
   use hydro_commons, ONLY: uold,unew,smallr,nvar,gamma
   implicit none
-  integer ::nn ! number of cells
+  integer ::nn,xtondim ! number of cells
   integer ::ivar_dust ! cell-centered dust variables start.
   real(dp) ::dt ! timestep.
   real(dp)::rd,cs! ERM: Grain size parameter
   real(dp),dimension(1:nvector) ::nu
-  real(dp),dimension(1:nvector,1:twotondim)::vol
-  integer ,dimension(1:nvector,1:twotondim)::indp
+  real(dp),dimension(1:nvector,1:xtondim)::vol
+  integer ,dimension(1:nvector,1:xtondim)::indp
   real(dp),dimension(1:nvector),save ::dgr! gas density at grain.
   real(dp),dimension(1:nvector,1:ndim) ::v! grain velocity
-  real(dp),dimension(1:nvector,1:twotondim,1:ndim)::big_v
+  real(dp),dimension(1:nvector,1:xtondim,1:ndim)::big_v
   real(dp),dimension(1:nvector,1:ndim),save ::w! drift at half step.
   integer ::i,j,idim,ind
   ivar_dust=9
@@ -1149,7 +1177,7 @@ subroutine InitStoppingRate(nn,dt,indp,vol,v,nu)
   else
      dgr(1:nn) = 0.0D0
      if(boris)then
-        do ind=1,twotondim
+        do ind=1,xtondim
             do j=1,nn
                dgr(j)=dgr(j)+uold(indp(j,ind),1)*vol(j,ind)
            end do
@@ -1158,7 +1186,7 @@ subroutine InitStoppingRate(nn,dt,indp,vol,v,nu)
 
      w(1:nn,1:ndim) = 0.0D0 ! Set to the drift velocity post-Lorentz force
      if(boris)then
-        do ind=1,twotondim
+        do ind=1,xtondim
           do idim=1,ndim
             do j=1,nn
                w(j,idim)=w(j,idim)+vol(j,ind)*&
