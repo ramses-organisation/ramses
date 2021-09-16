@@ -2363,8 +2363,7 @@ double precision function eta_hall_chimie(rhon,temper,ionisrate,BBcell)
    use hydro_commons
    use constants
    use nimhd_commons,ONLY:dtchimie,dnchimie,nminchimie,tminchimie,ximinchimie,&
-                     &dbchimie,bminchimie,nchimie,tchimie,xichimie,dxichimie,&
-                     &bchimie
+                     &dbchimie,bminchimie,nchimie,tchimie,dxichimie
    use nimhd_parameters
 
    implicit none

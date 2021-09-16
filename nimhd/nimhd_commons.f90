@@ -1,6 +1,5 @@
 module nimhd_commons
    use amr_parameters, ONLY:dp
-   use constants, ONLY:c_cgs, kB
    implicit none
 
    !integer,parameter   :: nbins_grains=10           ! number of bins
@@ -9,7 +8,6 @@ module nimhd_commons
    integer   :: Nvarchimie   ! nombre d'especes ioniques
    integer   :: nion=9
    !integer,parameter   :: Ntot=Nvar+6  ! nombre total d'especes considerees
-
 
    !!!! Variables
    real(dp), allocatable, dimension(:) :: x_g        ! abondance des grains par bins
@@ -37,9 +35,6 @@ module nimhd_commons
    real(dp), parameter :: zeta=a_min/a_max  ! a_min/a_max
    real(dp), parameter :: lambda_pow=-3.5d0     ! Coeff power law
 
-   real(dp)            :: rho_gtot
-   real(dp)            :: sigv, muuu
-
    ! resistivites (cf Kunz & Mouschovias 2009)
    real(dp), allocatable, dimension(:)  :: sigma         ! sigma_s
    real(dp), allocatable, dimension(:)  :: zetas
@@ -50,23 +45,21 @@ module nimhd_commons
    real(dp), allocatable, dimension(:)  :: omega,omega_bar
 
    ! for RAMSES
-   integer :: tchimie   ! tchmie steps in temperature
-   real(dp) :: dtchimie   ! dtchmie step in temperature
+   integer :: tchimie       ! tchmie steps in temperature
+   real(dp) :: dtchimie     ! dtchmie step in temperature
    real(dp) :: tminchimie   ! min tchmie 
-   integer :: nchimie   ! nchmie steps in density 
-   real(dp) :: dnchimie   ! dnchmie step in density 
+   integer :: nchimie       ! nchmie steps in density 
+   real(dp) :: dnchimie     ! dnchmie step in density 
    real(dp) :: nminchimie   ! min nchmie  
-   integer :: bchimie   ! bchmie steps in B field
-   real(dp) :: dbchimie   ! dbchmie step in B field
+   integer :: bchimie       ! bchmie steps in B field (currently only used for reading table)
+   real(dp) :: dbchimie     ! dbchmie step in B field
    real(dp) :: bminchimie   ! min bchmie 
-   integer :: xichimie ! Steps in ionisation rate
-   real(dp) :: dxichimie ! dxichimie step in ion rate
-   real(dp) :: ximinchimie ! min xichimie
-   integer :: nislin,tislin,xiislin ! Linear scale or not
+   integer :: xichimie      ! Steps in ionisation rate
+   real(dp) :: dxichimie    ! dxichimie step in ion rate
+   real(dp) :: ximinchimie  ! min xichimie
    real(dp),allocatable,dimension(:,:,:,:,:)::resistivite_chimie ! resistivites chimie
    real(dp),allocatable,dimension(:,:,:,:)::resistivite_chimie_x ! to read in resistivity table
-   real(dp),allocatable,dimension(:,:)::resistivite_chimie_res ! resistivites chimie
-
+   real(dp),allocatable,dimension(:,:)::resistivite_chimie_res   ! resistivites chimie
 
 end module nimhd_commons
 !###########################################################
@@ -75,9 +68,8 @@ end module nimhd_commons
 !###########################################################
 subroutine nimhd_3dtable
    use nimhd_commons
-   !use hydro_commons, only:resistivite_chimie_x
    use amr_commons, only : myid
-   use constants, only:pi
+   use constants, only:pi,c_cgs, kB
    implicit none
 
    integer  :: iB,iH,iT,i
@@ -187,12 +179,10 @@ end subroutine nimhd_3dtable
 !###########################################################
 subroutine rq_3d    ! just use it once if you change the grains distribution to update the variables q(:) and r_g(:)
    use nimhd_commons
-   use constants, only:pi
+   use constants, only:pi,c_cgs, kB
    implicit none
    integer :: i
    real(dp):: Lp1,Lp3,Lp4,nbins_real
-
-   !rho_gtot=0.01d0*(a_min/a_0)*zeta**(-0.5)*rho_n_tot
 
    !cmp_X=0
 
@@ -268,11 +258,12 @@ end subroutine rq_3d
 subroutine nimhd_4dtable
    use nimhd_commons
    use amr_commons, only : myid
-   use constants, only:pi
+   use constants, only:pi,c_cgs,kB
    implicit none
 
    integer  :: iB,iH,iT,iX,i
    real(dp) :: B,bmaxchimie,nH,T,xi,sigH,sigO,sigP
+   real(dp)            :: sigv, muuu
 
    if(myid==1) write(*,*) 'Computing 3D resistivities table'
    

@@ -2,11 +2,6 @@ subroutine read_hydro_params(nml_ok)
   use amr_commons
   use hydro_commons
   use mpi_mod
-#ifdef NIMHD
-  use nimhd_commons
-  use nimhd_parameters
-  use constants, ONLY:mH
-#endif
   implicit none
   logical::nml_ok
   !--------------------------------------------------
@@ -18,10 +13,6 @@ subroutine read_hydro_params(nml_ok)
   logical :: dummy
 #ifdef SOLVERmhd
   real(dp)::em_bound
-#endif
-#ifdef NIMHD
-  integer::j,k
-  real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
 #endif
 
   !--------------------------------------------------
@@ -123,13 +114,6 @@ subroutine read_hydro_params(nml_ok)
        & ,grackle_DustTemperatureStart,grackle_DustTemperatureEnd,grackle_LWbackground_intensity,grackle_UVbackground_redshift_on &
        & ,grackle_UVbackground_redshift_off,grackle_UVbackground_redshift_fullon,grackle_UVbackground_redshift_drop &
        & ,grackle_cloudy_electron_fraction_factor,grackle_data_file
-#endif
-
-#ifdef NIMHD
-  ! Non-ideal MHD parameters
-  namelist/nonidealmhd_params/nambipolar,gammaAD &
-       & ,nmagdiffu,etaMD,nhall,rHall,ntestDADM,use_x3d &
-       & ,coefad, nminitimestep, coefalfven,coefdtohm
 #endif
 
   ! Read namelist file
@@ -234,65 +218,6 @@ subroutine read_hydro_params(nml_ok)
     write(*,*)'unknown 2D riemann solver'
     call clean_stop
   END SELECT
-
-! Checks on non-ideal MHD parameters
-! to move to separate file nimhd/read_nimhd_params.f90
-! TODO make these booleans
-#ifdef NIMHD
-  rewind(1)
-  read(1,NML=nonidealmhd_params,END=109)
-109 continue
-
-  if(nambipolar.or.nmagdiffu.or.nhall)then
-     use_nonideal_mhd = .true.
-  else
-     use_nonideal_mhd = .false.
-  endif
-
-  if(myid==1) then
-     write(*,*)'!!!!!!!!!!!!!!!  Non Ideal MHD   !!!!!!!!!!!!!!!!'
-     write(*,*)'Non ideal MHD parameters'
-     write(*,*)'Making a test ? (Yes=1 No=0)',ntestDADM
-     if(nambipolar) then
-        write(*,*)'Ambipolar diffusion switched ON'
-        write(*,*)'Ambipolar diffusion coefficient',gammaAD
-        write(*,*)'Ambipolar diffusion time coefficient',coefad
-        write(*,*)'Ionisation coefficient',coefionis
-        if(nminitimestep.eq.1) then
-           write(*,*)'Mini time step switched ON'
-           write(*,*)'Mini time step coefficient',coefalfven
-        else
-           write(*,*)'Mini time step switched OFF'
-        endif
-      else
-        write(*,*)'Ambipolar diffusion switched OFF'
-     endif
-
-     if(nmagdiffu)then
-        write(*,*)'Magnetic diffusion switched ON : multiple time stepping'
-        write(*,*)'Magnetic diffusion coefficient',etaMD
-        write(*,*)'Magnetic diffusion  time coefficient',coefohm
-     else
-      write(*,*)'Magnetic diffusion switched OFF'
-     endif
-
-     if(nhall)then
-        write(*,*)'Hall effect switched ON'
-        write(*,*)'Hall resistivity',rHall
-        write(*,*)'Hall effect time coefficient',coefhall
-     else
-      write(*,*)'Hall effect switched OFF'
-     endif
-
-     ! change solver is always used in this version
-        write(*,*)'Solveur change when the time step becomes too small'
-        write(*,*)'switch_solv', switch_solv
-  endif
-
-  rewind(1)
-111 continue
-
-#endif
 
   !--------------------------------------------------
   ! Make sure virtual boundaries are expanded to
@@ -602,60 +527,6 @@ subroutine read_hydro_params(nml_ok)
   endif
   if (interpol_mag_type == -1) then
     interpol_mag_type = interpol_type
-  endif
-#endif
-
-#ifdef NIMHD
-  call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
-  !------------------------------------------
-  ! Read resistivity tables for non-ideal MHD
-  !------------------------------------------
-  ! this should be refactored
-  ! add parameter to choose how to compute the resistivity
-  ! 1) fixed resistivity
-  ! 2) analytical model resitivity(rho,T), Shu? Default option? Can be easily patched by the user
-  ! 3) a table (like from Marchand 2016)
-  ! make separate routine that computes the resistivity based on the chosen option
-! move use_x3d to patch. We don't want to include a large table in ramses
-  !TODO: What about if TEST?
-  if(use_nonideal_mhd)then
-     if(use_x3d==1)then
-        open(42,file='marchand2016_table.dat',status='old')
-        read(42,*) nchimie, tchimie, xichimie, nvarchimie
-        read(42,*)
-        read(42,*)
-        !write(*,*)nchimie, tchimie, xichimie, nvarchimie
-        allocate(resistivite_chimie_x(-2:nvarchimie+4,nchimie,tchimie,xichimie))
-        do k=1,xichimie
-        do i=1,tchimie
-           do j=1,nchimie
-              read(42,*)resistivite_chimie_x(-2:nvarchimie+4,j,i,k)
-!              print *, resistivite_chimie_x(:,j,i)
-           end do
-           read(42,*)
-        end do
-        end do
-        close(42)
-
-        rho_threshold=max(rho_threshold,resistivite_chimie_x(-2,1,1,1)*(mu_gas*mH)/scale_d) ! input in part/cc, output in code units
-        nminchimie=(resistivite_chimie_x(-2,1,1,1))
-        dnchimie=(log10(resistivite_chimie_x(-2,nchimie,1,1))-log10(resistivite_chimie_x(-2,1,1,1)))/&
-                 &(nchimie-1)
-        !         print*, dnchimie,15d0/50d0
-        tminchimie=(resistivite_chimie_x(-1,1,1,1))
-        dtchimie=(log10(resistivite_chimie_x(-1,1,tchimie,1))-log10(resistivite_chimie_x(-1,1,1,1)))/&
-                 &(tchimie-1)
-        !         print*, dtchimie,3d0/50d0
-        !print*,tminchimie,dtchimie
-        ximinchimie=(resistivite_chimie_x(0,1,1,1))
-        dxichimie=(log10(resistivite_chimie_x(0,1,1,xichimie))-log10(resistivite_chimie_x(0,1,1,1)))/&
-                 &(xichimie-1)
-        call rq_3d
-        call nimhd_4dtable
-     else
-        print*, 'must choose an input for abundances or resistivities'
-        stop
-     endif
   endif
 #endif
 

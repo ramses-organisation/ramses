@@ -303,6 +303,9 @@ subroutine read_params
   call read_turb_params(nml_ok)
 #endif
 #endif
+#ifdef NIMHD
+  call read_nimhd_params(nml_ok)
+#endif
   if (movie)call set_movie_vars
 
   close(1)
