@@ -122,4 +122,4 @@ fig.subplots_adjust(wspace=0.33)
 fig.savefig('nimhd-cshock-hall.pdf',bbox_inches='tight')
 
 # Check results against reference solution
-visu_ramses.check_solution(data["data"],'nimhd-cshock-hall', overwrite=True)
+visu_ramses.check_solution(data["data"],'nimhd-cshock-hall')
