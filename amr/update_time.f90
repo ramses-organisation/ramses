@@ -196,6 +196,9 @@ subroutine update_time(ilevel)
 #if USE_TURB==1
   use turb_commons
 #endif
+#ifdef NIMHD
+  use nimhd_parameters
+#endif
   use mpi_mod
   implicit none
 #ifndef WITHOUTMPI

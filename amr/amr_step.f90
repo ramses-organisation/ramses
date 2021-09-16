@@ -14,7 +14,10 @@ recursive subroutine amr_step(ilevel,icount)
 #if USE_TURB==1
   use turb_commons
 #endif
-  use mpi_mod
+#ifdef NIMHD
+  use nimhd_parameters
+#endif
+use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
   integer::mpi_err

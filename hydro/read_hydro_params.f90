@@ -4,6 +4,7 @@ subroutine read_hydro_params(nml_ok)
   use mpi_mod
 #ifdef NIMHD
   use nimhd_commons
+  use nimhd_parameters
   use constants, ONLY:mH
 #endif
   implicit none

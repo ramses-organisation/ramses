@@ -12,7 +12,7 @@ subroutine cmpdt(uu,gg,dx,dt,ncell)
   use hydro_parameters
   use const
 #ifdef NIMHD
-  use hydro_commons,ONLY:default_ionisrate
+  use nimhd_parameters
 #endif 
   implicit none
   integer::ncell
@@ -973,6 +973,9 @@ SUBROUTINE find_speed_fast(qvar,vel_info)
   USE amr_parameters
   USE const
   USE hydro_parameters
+#ifdef NIMHD
+  use nimhd_parameters
+#endif
   !! calculate the fast magnetosonic velocity
   !! the structure of qvar is : rho, Pressure, Vnormal, Bnormal,
   !! Vtransverse1,Btransverse1,Vtransverse2,Btransverse2

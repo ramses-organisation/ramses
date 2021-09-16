@@ -9,6 +9,7 @@ subroutine computejb(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,b
 
   USE amr_parameters
   use hydro_commons
+  use nimhd_parameters
   USE const
   IMPLICIT NONE
 
@@ -855,6 +856,7 @@ subroutine computejb2(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
 
   USE amr_parameters
   use hydro_commons
+  use nimhd_parameters
   USE const
   IMPLICIT NONE
 
@@ -1362,6 +1364,7 @@ subroutine computdifmag(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemf
 
   USE amr_parameters
   use hydro_commons
+  use nimhd_parameters
   USE const
   use constants
   IMPLICIT NONE
@@ -1560,6 +1563,7 @@ SUBROUTINE  computambip(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,florentzx,floren
   use amr_commons
   USE amr_parameters
   use hydro_commons
+  use nimhd_parameters
   USE const
   IMPLICIT NONE
   
@@ -1800,6 +1804,7 @@ end SUBROUTINE computambip
 subroutine computvhall(q,dx,dy,dz,ngrid,bpred,rppred,vhall)
   USE amr_parameters
   use hydro_commons
+  use nimhd_parameters
   USE const
   implicit none
   integer :: l,i,j,k,kk,m
@@ -1952,7 +1957,8 @@ end subroutine computvhall
 !###########################################################
 double precision  function computdx(vec,n2,n3,l,i,j,k,dx)
 
-   use hydro_parameters
+   use amr_parameters,only:dp,nvector
+   use hydro_parameters,only:iu1,iu2,ju1,ju2,ku1,ku2
    implicit none 
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3,1:3)::vec
    real(dp)::dx
@@ -1966,7 +1972,8 @@ end function computdx
 !###########################################################
 double precision  function computdy(vec,n2,n3,l,i,j,k,dx)
 
-   use hydro_parameters
+   use amr_parameters,only:dp,nvector
+   use hydro_parameters,only:iu1,iu2,ju1,ju2,ku1,ku2
    implicit none 
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3,1:3)::vec
    real(dp)::dx
@@ -1980,7 +1987,8 @@ end function computdy
 !###########################################################
 double precision  function computdz(vec,n2,n3,l,i,j,k,dx)
 
-   use hydro_parameters
+   use amr_parameters,only:dp,nvector
+   use hydro_parameters,only:iu1,iu2,ju1,ju2,ku1,ku2
    implicit none 
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3,1:3)::vec
    real(dp)::dx
@@ -1994,7 +2002,8 @@ end function computdz
 !###########################################################
 double precision  function computdxbis(vec,n2,l,i,j,k,dx)
 
-   use hydro_parameters
+   use amr_parameters,only:dp,nvector
+   use hydro_parameters,only:iu1,iu2,ju1,ju2,ku1,ku2
    implicit none 
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::vec
    real(dp)::dx
@@ -2008,7 +2017,8 @@ end function computdxbis
 !###########################################################
 double precision  function computdybis(vec,n2,l,i,j,k,dx)
 
-   use hydro_parameters
+   use amr_parameters,only:dp,nvector
+   use hydro_parameters,only:iu1,iu2,ju1,ju2,ku1,ku2
    implicit none 
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::vec
    real(dp)::dx
@@ -2022,7 +2032,8 @@ end function computdybis
 !###########################################################
 double precision  function computdzbis(vec,n2,l,i,j,k,dx)
 
-   use hydro_parameters
+   use amr_parameters,only:dp,nvector
+   use hydro_parameters,only:iu1,iu2,ju1,ju2,ku1,ku2
    implicit none
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::vec
    real(dp)::dx
@@ -2038,6 +2049,7 @@ double precision function gammaadbis(rhon,BBcell,BBcellold,temper,ionisrate)
 
    use hydro_parameters
    use amr_parameters,only:mu_gas
+   use nimhd_parameters
    use constants
    implicit none
 
@@ -2080,6 +2092,8 @@ subroutine sig_x2d(ll,ii,j,k,lb,ib,sigO,sigH,sigP,bsquare)
 
    use amr_parameters,    only : dp
    use nimhd_commons
+   use nimhd_parameters
+
    use amr_commons, only : myid
    implicit none
 
@@ -2129,6 +2143,8 @@ subroutine sig_x3d(ll,ii,xx,j,k,xi,lb,ib,sigO,sigH,sigP,bsquare)
 
    use amr_parameters,    only : dp
    use nimhd_commons
+   use nimhd_parameters
+
    use amr_commons, only : myid
    implicit none
 
@@ -2189,6 +2205,7 @@ double precision function eta_AD_chimie(rhon,BBcell,BBcellold,temper,ionisrate)
    use hydro_commons
    use constants
    use nimhd_commons
+   use nimhd_parameters
    implicit none
 
    real(dp)     :: sigO,sigH,sigP,densionbis,BBcgs, bbcell,BBcellold
@@ -2283,6 +2300,7 @@ double precision function eta_ohm_chimie(rhon,BBcell,temper,ionisrate)
    use hydro_commons
    use constants
    use nimhd_commons
+   use nimhd_parameters
    implicit none
 
    real(dp) :: inp,ll,ii,lb,rhon,BBcell
@@ -2347,6 +2365,8 @@ double precision function eta_hall_chimie(rhon,temper,ionisrate,BBcell)
    use nimhd_commons,ONLY:dtchimie,dnchimie,nminchimie,tminchimie,ximinchimie,&
                      &dbchimie,bminchimie,nchimie,tchimie,xichimie,dxichimie,&
                      &bchimie
+   use nimhd_parameters
+
    implicit none
 
    real(dp) :: inp,ll,ii,lb,rhon,BBcell
@@ -2399,7 +2419,7 @@ end function eta_hall_chimie
 !###########################################################
 double precision function densionbis(rhon)
 
-   use hydro_parameters, only : coefionis,default_ionisrate,ntestDADM,rhoi0,dp
+   use nimhd_parameters, only : coefionis,default_ionisrate,ntestDADM,rhoi0,dp
 
    implicit none 
    real(dp)::rhon
@@ -2446,8 +2466,9 @@ end function densionbis
 !###########################################################
 double precision function computdxvx(vec,l,i,j,k,dx,dy,dz)
 
-   use hydro_parameters
-
+   use amr_parameters,only:dp,nvector
+   use hydro_parameters,only:iu1,iu2,ju1,ju2,ku1,ku2
+   use nimhd_parameters
    implicit none
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::vec
    integer l,i,j,k
@@ -2461,8 +2482,9 @@ end function computdxvx
 !###########################################################
 double precision function computdyvy(vec,l,i,j,k,dx,dy,dz)
 
-   use hydro_parameters
-
+   use amr_parameters,only:dp,nvector
+   use hydro_parameters,only:iu1,iu2,ju1,ju2,ku1,ku2
+   use nimhd_parameters
    implicit none
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::vec
    integer l,i,j,k
@@ -2476,8 +2498,9 @@ end function computdyvy
 !###########################################################
 double precision function computdzvz(vec,l,i,j,k,dx,dy,dz)
 
-   use hydro_parameters
-
+   use amr_parameters,only:dp,nvector
+   use hydro_parameters,only:iu1,iu2,ju1,ju2,ku1,ku2
+   use nimhd_parameters
    implicit none
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::vec
    integer l,i,j,k
@@ -2491,8 +2514,9 @@ end function computdzvz
 !###########################################################
 double precision function computdiv(vec,l,i,j,k,dx,dy,dz)
 
-   use hydro_parameters
-
+   use amr_parameters,only:dp,nvector,ndim
+   use hydro_parameters,only:iu1,iu2,ju1,ju2,ku1,ku2
+   use nimhd_parameters
    implicit none
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::vec
    integer l,i,j,k
@@ -2514,8 +2538,8 @@ end function computdiv
 !###########################################################
 double precision function computdivbisx(vec,l,i,j,k,dx,dy,dz)
 
-   use hydro_parameters
-
+   use amr_parameters,only:dp,nvector,ndim
+   use hydro_parameters,only:iu1,iu2,ju1,ju2,ku1,ku2
    implicit none
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::vec
    integer l,i,j,k
@@ -2538,8 +2562,8 @@ end function computdivbisx
 !###########################################################
 double precision function computdivbisy(vec,l,i,j,k,dx,dy,dz)
 
-   use hydro_parameters
-
+   use amr_parameters,only:dp,nvector,ndim
+   use hydro_parameters,only:iu1,iu2,ju1,ju2,ku1,ku2
    implicit none
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::vec
    integer l,i,j,k
@@ -2562,8 +2586,8 @@ end function computdivbisy
 !###########################################################
 double precision function computdivbisz(vec,l,i,j,k,dx,dy,dz)
 
-   use hydro_parameters
-
+   use amr_parameters,only:dp,nvector,ndim
+   use hydro_parameters,only:iu1,iu2,ju1,ju2,ku1,ku2
    implicit none
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::vec
    integer l,i,j,k
@@ -2586,8 +2610,8 @@ end function computdivbisz
 !###########################################################
 subroutine crossprodbis(vec1,vec2,v1crossv2,l,i,j,k)
 
-   use hydro_parameters
-
+   use amr_parameters,only:dp,nvector
+   use hydro_parameters,only:iu1,iu2,ju1,ju2,ku1,ku2
    implicit none
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3,1:3)::vec1,vec2,v1crossv2
    integer ::l,i,j,k 
@@ -2616,8 +2640,8 @@ end subroutine crossprodbis
 !###########################################################
 subroutine crossprod(vec1,vec2,v1crossv2,l,i,j,k)
 
-   use hydro_parameters
-
+   use amr_parameters,only:dp,nvector
+   use hydro_parameters,only:iu1,iu2,ju1,ju2,ku1,ku2
    implicit none
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::vec1,vec2,v1crossv2
    integer ::l,i,j,k 
@@ -2644,7 +2668,7 @@ double precision function  crossprodx(v1x,v1y,v1z,v2x,v2y,v2z)
 
    ! function which gives the x component of a cross product of two
    ! vectors of coordinates v1x,v1y,v1z,v2x,v2y,v2z
-   use hydro_parameters
+   use amr_parameters,only:dp
    implicit none
    real(dp)::v1x,v1y,v1z,v2x,v2y,v2z
 
@@ -2658,7 +2682,7 @@ double precision function crossprody(v1x,v1y,v1z,v2x,v2y,v2z)
 
    ! function which gives the y component of a cross product of two
    ! vectors of coordinates v1x,v1y,v1z,v2x,v2y,v2z
-   use hydro_parameters
+   use amr_parameters,only:dp
    implicit none
    real(dp)::v1x,v1y,v1z,v2x,v2y,v2z
 
@@ -2672,7 +2696,7 @@ double precision function crossprodz(v1x,v1y,v1z,v2x,v2y,v2z)
 
    ! function which gives the z component of a cross product of two
    ! vectors of coordinates v1x,v1y,v1z,v2x,v2y,v2z
-   use hydro_parameters
+   use amr_parameters,only:dp
    implicit none
    real(dp)::v1x,v1y,v1z,v2x,v2y,v2z
 
@@ -2686,6 +2710,7 @@ double precision function etaohmdiss(rhon,BBcell,temper,ionisrate)
 
    use hydro_commons
    use amr_parameters,only:mu_gas
+   use nimhd_parameters
    use constants
 
    implicit none 
@@ -2763,6 +2788,7 @@ double precision function etaohmdissbricolo(rhon,BBcell,temper,dtlim,dx,ionisrat
 
    use hydro_commons
    use amr_parameters,only:mu_gas
+   use nimhd_parameters
    use constants
 
    implicit none 
@@ -2857,6 +2883,7 @@ end function etaohmdissbricolo
 double precision function betaad(rhon,bsquare,temper,ionisrate)
 
    use hydro_parameters
+   use nimhd_parameters
    implicit none
 
    real(dp) ::rhon,rhotemp,bsquare,temper
@@ -2912,6 +2939,7 @@ double precision function betaadbricolo(rhocelln,rhon,dtlim,bsquare,bsquareold,d
    use hydro_parameters
    use amr_commons
    use cooling_module
+   use nimhd_parameters
    use constants
 
    implicit none

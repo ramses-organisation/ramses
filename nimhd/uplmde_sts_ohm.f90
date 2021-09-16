@@ -1098,6 +1098,7 @@ subroutine set_uold_sts(ilevel,iend,dtloc)
   use pm_commons
   use mpi_mod
   use constants
+  use nimhd_parameters,only:ntestDADM
   implicit none
   integer::ilevel
   !--------------------------------------------------------------------------

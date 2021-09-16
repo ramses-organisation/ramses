@@ -46,6 +46,9 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
   use amr_parameters
   use const
   use hydro_parameters
+#ifdef NIMHD
+  use nimhd_parameters
+#endif
   implicit none
 
   integer ::ngrid

@@ -6,6 +6,9 @@ subroutine courant_fine(ilevel)
 #if USE_TURB==1
   use turb_commons
 #endif
+#ifdef NIMHD
+  use nimhd_parameters
+#endif
   implicit none
 #ifndef WITHOUTMPI
   integer::info
