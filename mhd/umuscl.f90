@@ -1326,6 +1326,7 @@ subroutine cmpflxm(qm,im1,im2,jm1,jm2,km1,km2, &
   real(dp),dimension(1:nvar)::qleft,qright
   real(dp),dimension(1:nvar+1)::fgdnv
   real(dp)::zero_flux, bn_mean, entho
+  logical::check_switch_solver=.false.
 
 #if NVAR>8
   integer::n
@@ -1372,19 +1373,35 @@ subroutine cmpflxm(qm,im1,im2,jm1,jm2,km1,km2, &
               ! Solve 1D Riemann problem
               zero_flux = one
               IF(ischeme.NE.1)THEN
+              if(allow_switch_solver .and. ((iriemann.eq.2).or.(iriemann.eq.3)))then
+                 check_switch_solver = ( (qright(4)**2 + qright(6)**2 + qright(8)**2)/qright(2) .gt. switch_solv_B .or. &
+                                       & (qleft(4)**2 + qleft(6)**2 + qleft(8)**2)/qleft(2)     .gt. switch_solv_B  ) .or. &
+                                     & ( qleft(1)/qright(1) .gt. switch_solv_dens ) .or. &
+                                     & ( qleft(1)/qright(1) .lt. 1.0d0/switch_solv_dens)
+              else
+                 check_switch_solver = .false.
+              endif
               SELECT CASE (iriemann)
               CASE (1)
-                 CALL athena_roe    (qleft,qright,fgdnv,zero_flux)
+                    CALL athena_roe    (qleft,qright,fgdnv,zero_flux)
               CASE (0)
-                 CALL lax_friedrich (qleft,qright,fgdnv,zero_flux)
+                    CALL lax_friedrich (qleft,qright,fgdnv,zero_flux)
               CASE (2)
-                 CALL hll           (qleft,qright,fgdnv)
+                 if(check_switch_solver)  then
+                    CALL lax_friedrich (qleft,qright,fgdnv,zero_flux)
+                 else
+                    CALL hll           (qleft,qright,fgdnv)
+                 endif
               CASE (3)
-                 CALL hlld          (qleft,qright,fgdnv)
+                 if(check_switch_solver)  then
+                    CALL lax_friedrich (qleft,qright,fgdnv,zero_flux) 
+                 else
+                    CALL hlld          (qleft,qright,fgdnv)
+                 endif
               CASE (4)
-                 CALL lax_friedrich (qleft,qright,fgdnv,zero_flux)
+                 CALL lax_friedrich    (qleft,qright,fgdnv,zero_flux)
               CASE (5)
-                 CALL hydro_acoustic(qleft,qright,fgdnv)
+                 CALL hydro_acoustic   (qleft,qright,fgdnv)
               CASE DEFAULT
                  write(*,*)'unknown riemann solver'
                  call clean_stop

@@ -99,6 +99,9 @@ module hydro_parameters
   character(LEN=10)::scheme='muscl'
   character(LEN=10)::riemann='llf'
   character(LEN=10)::riemann2d='llf'
+  logical ::allow_switch_solver=.false. ! enable on the fly switching solver to prevent numerical crash
+  real(dp)::switch_solv_B=1.d20         ! value of B_tot**2/P above which to switch to lax friedrich solver
+  real(dp)::switch_solv_dens=1.d20      ! switch solver when density discontinuity is larger than this factor
   integer ::ischeme=0
   integer ::iriemann=0
   integer ::iriemann2d=0
