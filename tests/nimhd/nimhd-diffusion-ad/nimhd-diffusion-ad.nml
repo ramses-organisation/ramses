@@ -66,6 +66,6 @@ nminitimestep=0   ! pour la diffusion ambipolaire seulement
 ntestDADM=1
 /
 
-&SF_PARAMS
+&COOLING_PARAMS
 mu_gas=1.0d08
 /

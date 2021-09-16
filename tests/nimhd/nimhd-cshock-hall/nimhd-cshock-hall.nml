@@ -1,3 +1,5 @@
+! something is very wrong with the timestep here
+
 This namelist contains various input parameters for RAMSES runs
 
 &RUN_PARAMS
@@ -92,7 +94,7 @@ C_bound(2)=0.0
 &NONIDEALMHD_PARAMS
 nambipolar=.true.
 gammaAD=286d0 
-nmagdiffu=1
+nmagdiffu=.true.
 etaMD=1.d-9
 nhall=.true.
 rhall=-2d-2

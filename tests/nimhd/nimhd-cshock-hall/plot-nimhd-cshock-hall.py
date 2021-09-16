@@ -20,14 +20,14 @@ ax6 = fig.add_subplot(236)
 
 # Load RAMSES output
 data = visu_ramses.load_snapshot(2)
-x    = data["x"]
-dens = data["density"]
-vx   = data["velocity_x"]
-vy   = data["velocity_y"]
-vz   = data["velocity_z"]
-By   = 0.5*(data["B_left_y"] + data["B_right_y"])
-Bz   = 0.5*(data["B_left_z"] + data["B_right_z"])
-P    = data["thermal_pressure"]
+x    = data["data"]["x"]
+dens = data["data"]["density"]
+vx   = data["data"]["velocity_x"]
+vy   = data["data"]["velocity_y"]
+vz   = data["data"]["velocity_z"]
+By   = 0.5*(data["data"]["B_y_left"] + data["data"]["B_y_right"])
+Bz   = 0.5*(data["data"]["B_z_left"] + data["data"]["B_z_right"])
+P    = data["data"]["pressure"]
 
 # Analytical solution
 data_ana = np.loadtxt('nimhd-cshock-hall-ana.dat')
@@ -122,4 +122,4 @@ fig.subplots_adjust(wspace=0.33)
 fig.savefig('nimhd-cshock-hall.pdf',bbox_inches='tight')
 
 # Check results against reference solution
-visu_ramses.check_solution(data,'nimhd-cshock-hall')
+visu_ramses.check_solution(data["data"],'nimhd-cshock-hall', overwrite=True)

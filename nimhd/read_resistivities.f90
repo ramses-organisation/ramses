@@ -17,6 +17,8 @@ subroutine read_resistivities
     ! make separate routine that computes the resistivity based on the chosen option
   ! move use_x3d to patch. We don't want to include a large table in ramses
     !TODO: What about if TEST?
+    if(ntestDADM==1) return
+
     if(use_nonideal_mhd)then
        if(use_x3d==1)then
           open(42,file='marchand2016_table.dat',status='old')

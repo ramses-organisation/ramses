@@ -100,7 +100,7 @@ subroutine condinit(x,u,dx,nn)
 #if NPSCAL>0
   ! passive scalars
   do ivar=1,npscal
-     u(1:nn,firstindex_pscal+ivar)=q(1:nn,1)*q(1:nn,firstindex_pscal+ivar)
+     u(1:nn,8+nener+ivar)=q(1:nn,1)*q(1:nn,8+nener+ivar)
   end do
   ! Internal energy
   u(1:nn,nvar)=q(1:nn,5)/(gamma-1.0d0)

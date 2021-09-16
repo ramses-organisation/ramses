@@ -59,11 +59,11 @@ interpol_type=1
 /
 
 &NONIDEALMHD_PARAMS
-nmagdiffu=1
+nmagdiffu=.true.
 etaMD=1.d0
 ntestDADM=1
 /
 
-&SF_PARAMS
+&COOLING_PARAMS
 mu_gas=1.0d08
 /

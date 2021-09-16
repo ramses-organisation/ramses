@@ -285,11 +285,7 @@ subroutine update_time(ilevel)
            if(cooling.or.pressure_fix)then
               write(*,778)nstep_coarse,mcons,econs,epot_tot,ekin_tot,eint_tot
            else
-#ifdef NIMHD
-              write(*,779)nstep_coarse,econs,epot_tot,ekin_tot,eint_tot,emag_tot
-#else
               write(*,777)nstep_coarse,mcons,econs,epot_tot,ekin_tot
-#endif
            end if
 #ifdef SOLVERmhd
            write(*,'(" emag=",ES9.2)') emag_tot

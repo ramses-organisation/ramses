@@ -17,7 +17,7 @@ recursive subroutine amr_step(ilevel,icount)
 #ifdef NIMHD
   use nimhd_parameters
 #endif
-use mpi_mod
+  use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
   integer::mpi_err
@@ -337,18 +337,16 @@ use mpi_mod
         dtold(ilevel+1)=dtnew(ilevel)/dble(nsubcycle(ilevel))
         dtnew(ilevel+1)=dtnew(ilevel)/dble(nsubcycle(ilevel))
 #ifdef NIMHD
-        ! is this for STS?
         if(nmagdiffu.or.nambipolar)then
-           dtambdiffold(ilevel+1)=dtambdiff(ilevel)/dble(nsubcycle(ilevel))
-           dtmagdiffold(ilevel+1)=dtmagdiff(ilevel)/dble(nsubcycle(ilevel))
-           dtwadold(ilevel+1)=dtwad(ilevel)/dble(nsubcycle(ilevel))
-           dthallold(ilevel+1)=dthall(ilevel)/dble(nsubcycle(ilevel))
-        end if
-        if(nmagdiffu.or.nambipolar)then
-           dtambdiff(ilevel+1)=dtambdiff(ilevel)/dble(nsubcycle(ilevel))
-           dtmagdiff(ilevel+1)=dtmagdiff(ilevel)/dble(nsubcycle(ilevel))
-           dtwad(ilevel+1)=dtwad(ilevel)/dble(nsubcycle(ilevel))
-           dthall(ilevel+1)=dthall(ilevel)/dble(nsubcycle(ilevel))
+           ! analogous, update NIMHD timesteps
+           dtambdiffold(ilevel+1) = dtambdiff(ilevel) / dble(nsubcycle(ilevel))
+           dtmagdiffold(ilevel+1) = dtmagdiff(ilevel) / dble(nsubcycle(ilevel))
+           dtwadold    (ilevel+1) = dtwad    (ilevel) / dble(nsubcycle(ilevel))
+           dthallold   (ilevel+1) = dthall   (ilevel) / dble(nsubcycle(ilevel))
+           dtambdiff(ilevel+1) = dtambdiff(ilevel) / dble(nsubcycle(ilevel))
+           dtmagdiff(ilevel+1) = dtmagdiff(ilevel) / dble(nsubcycle(ilevel))
+           dtwad    (ilevel+1) = dtwad    (ilevel) / dble(nsubcycle(ilevel))
+           dthall   (ilevel+1) = dthall   (ilevel) / dble(nsubcycle(ilevel))
         end if
 #endif
         call update_time(ilevel)
@@ -571,19 +569,20 @@ use mpi_mod
      if(nsubcycle(ilevel-1)==1)dtnew(ilevel-1)=dtnew(ilevel)
      if(icount==2)dtnew(ilevel-1)=dtold(ilevel)+dtnew(ilevel)
 #ifdef NIMHD
-     ! to keep (but check)
+     ! analogous, update NIMHD course timesteps
      if(nmagdiffu.or.nambipolar)then
-        if(nsubcycle(ilevel-1)==1)dtambdiff(ilevel-1)=dtambdiff(ilevel)
-        if (icount==2) dtambdiff(ilevel-1)=dtambdiffold(ilevel)+dtambdiff(ilevel)
-        
-        if(nsubcycle(ilevel-1)==1)dtmagdiff(ilevel-1)=dtmagdiff(ilevel)
-        if  (icount==2) dtmagdiff(ilevel-1)=dtmagdiffold(ilevel)+dtmagdiff(ilevel)
-
-        if(nsubcycle(ilevel-1)==1)dtwad(ilevel-1)=dtwad(ilevel)
-        if(icount==2)dtwad(ilevel-1)=dtwadold(ilevel)+dtwad(ilevel)
-
-        if(nsubcycle(ilevel-1)==1)dthall(ilevel-1)=dthall(ilevel)
-        if(icount==2)dthall(ilevel-1)=dthallold(ilevel)+dthall(ilevel)
+        if(nsubcycle(ilevel-1)==1) then
+           dtambdiff(ilevel-1) = dtambdiff(ilevel)
+           dtmagdiff(ilevel-1) = dtmagdiff(ilevel)
+           dtwad    (ilevel-1) = dtwad    (ilevel)
+           dthall   (ilevel-1) = dthall   (ilevel)
+        endif
+        if (icount==2) then
+           dtambdiff(ilevel-1) = dtambdiffold(ilevel) + dtambdiff(ilevel)
+           dtmagdiff(ilevel-1) = dtmagdiffold(ilevel) + dtmagdiff(ilevel)
+           dtwad    (ilevel-1) = dtwadold    (ilevel) + dtwad    (ilevel)
+           dthall   (ilevel-1) = dthallold   (ilevel) + dthall   (ilevel)
+        endif
      end if
 #endif
   end if

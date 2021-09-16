@@ -30,12 +30,12 @@ ax3 = plt.subplot2grid((2, 2), (1, 1))
 
 # Load RAMSES output
 data  = visu_ramses.load_snapshot(2)
-dxmin = np.amin(data["dx"])
-x = data["x"]-(0.5+0.5*dxmin)
-z = data["z"]-(0.5+0.5*dxmin)
+dxmin = np.amin(data["data"]["dx"])
+x = data["data"]["x"]-(0.5+0.5*dxmin)
+z = data["data"]["z"]-(0.5+0.5*dxmin)
 rc = np.sqrt(x**2 + z**2)
-By = 0.5*(data["B_left_y"] + data["B_right_y"])
-t  = data["time"]
+By = 0.5*(data["data"]["B_y_left"] + data["data"]["B_y_right"])
+t  = data["data"]["time"]
 
 # Bin the data in r to avoid having too many symbols in figure
 rmin = 0.0
@@ -74,7 +74,7 @@ ax1.set_ylim([-0.001,0.008])
 er1.set_ylim([-0.02,0.45])
 
 # By(x,z) and error maps
-cube = np.where(np.abs(data["y"]-0.51)<=0.51*data["dx"])
+cube = np.where(np.abs(data["data"]["y"]-0.51)<=0.51*data["data"]["dx"])
 slice_x = x[cube]
 slice_z = z[cube]
 slice_B = By[cube]
@@ -115,4 +115,4 @@ fig.subplots_adjust(wspace=0.25)
 fig.savefig('nimhd-diffusion-ad.pdf',bbox_inches='tight')
 
 # Check results against reference solution
-visu_ramses.check_solution(data,'nimhd-diffusion-ad')
+visu_ramses.check_solution(data["data"],'nimhd-diffusion-ad', overwrite=True)

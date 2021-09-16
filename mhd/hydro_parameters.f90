@@ -7,26 +7,11 @@ module hydro_parameters
 #else
   integer,parameter::nener=NENER
 #endif
-
-#ifndef NPSCAL
-  integer,parameter::npscal=0
-#else
-  integer,parameter::npscal=NPSCAL
-#endif
-
 #ifndef NVAR
-  integer,parameter::nvar=8+nener+npscal
+  integer,parameter::nvar=8+nener
 #else
   integer,parameter::nvar=NVAR
 #endif
-
-  ! First index of variables (in fact index just before the first index)
-  ! so that we can loop over 1,nener for instance
-  integer,parameter::firstindex_pscal=8+nener ! for passive scalars
-
-  ! EOS parameters
-  integer  :: nRho,nEnergy,nTemp
-  real(dp) :: rhomin,rhomax,Emax,emin,yHe,Tmax,Tmin
 
   ! Size of hydro kernel
   integer,parameter::iu1=-1

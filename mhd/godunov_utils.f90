@@ -1021,8 +1021,6 @@ SUBROUTINE find_speed_fast(qvar,vel_info)
   vel_info = cf
 #if HALL==1
   if (nhall) vel_info=max(cf,cw)
-#else
-  if (nhall) vel_info=cf
 #endif
 
 END SUBROUTINE find_speed_fast
