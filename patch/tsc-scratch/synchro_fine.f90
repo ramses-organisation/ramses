@@ -24,11 +24,11 @@ subroutine synchro_fine(ilevel)
      fsink_new=0
   endif
 
-  #ifdef TSC
+#ifdef TSC
     xtondim=threetondim
-  #else
+#else
     xtondim=twotondim
-  #endif
+#endif
 
   ! Synchronize velocity using CIC
   ig=0
@@ -114,11 +114,11 @@ subroutine synchro_fine_static(ilevel)
      fsink_all=0
   endif
 
-  #ifdef TSC
+#ifdef TSC
     xtondim=threetondim
-  #else
+#else
     xtondim=twotondim
-  #endif
+#endif
 
   ! Synchronize velocity using CIC
   ig=0
@@ -288,7 +288,7 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,xtondim)
      end do
   end do
 
-  #ifndef TSC
+#ifndef TSC
 
   ! Check for illegal moves
   error=.false.
@@ -484,9 +484,9 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,xtondim)
   end do
 #endif
 
-  #else
-    #include "tsc_fine.f90"
-  #endif
+#else
+#include "tsc_fine.F90"
+#endif
   ! Gather 3-force
   ff(1:np,1:ndim)=0.0D0
   if(poisson)then
@@ -808,7 +808,7 @@ subroutine init_dust(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,xtondim)
      end do
   end do
 
-  #ifndef TSC
+#ifndef TSC
   ! Check for illegal moves
   error=.false.
   do idim=1,ndim
@@ -1003,9 +1003,9 @@ subroutine init_dust(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,xtondim)
   end do
 #endif
 
-  #else
-    #include "tsc_fine.f90"
-  #endif
+#else
+#include "tsc_fine.F90"
+#endif
 
   ! Gather 3-force
   ! ERM: deleted.

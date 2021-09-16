@@ -312,7 +312,7 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,xtondim)
      end do
   end do
 
-  #ifndef TSC
+#ifndef TSC
   ! Check for illegal moves. Is this different for CIC vs TSC?
   error=.false.
   do idim=1,ndim
@@ -507,9 +507,9 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,xtondim)
   end do
 #endif
 
-  #else
-    #include "tsc_fine.f90"
-  #endif
+#else
+#include "tsc_fine.F90"
+#endif
   ! Gather center of mass 3-velocity
   ivar_dust=9
   if(nvar<ivar_dust+ndim)then
