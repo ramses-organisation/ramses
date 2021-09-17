@@ -226,7 +226,7 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,xtondim)
   use pm_commons
   use poisson_commons
   implicit none
-  integer::ng,np,ilevel
+  integer::ng,np,ilevel,xtondim
   integer,dimension(1:nvector)::ind_grid
   integer,dimension(1:nvector)::ind_grid_part,ind_part
   !
