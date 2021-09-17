@@ -240,14 +240,24 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,xtondim)
   integer ,dimension(1:nvector),save::ind_cell
   integer ,dimension(1:nvector,1:threetondim),save::nbors_father_cells
   integer ,dimension(1:nvector,1:twotondim),save::nbors_father_grids
-  ! Particle-based arrays
   logical ,dimension(1:nvector),save::ok
   real(dp),dimension(1:nvector),save::dteff
+  real(dp),dimension(1:3)::skip_loc
+  ! Particle-based arrays
+#ifndef TSC
   real(dp),dimension(1:nvector,1:ndim),save::x,ff,new_vp,dd,dg
   integer ,dimension(1:nvector,1:ndim),save::ig,id,igg,igd,icg,icd
-  real(dp),dimension(1:nvector,1:xtondim),save::vol
-  integer ,dimension(1:nvector,1:xtondim),save::igrid,icell,indp,kg
-  real(dp),dimension(1:3)::skip_loc
+  real(dp),dimension(1:nvector,1:twotondim),save::vol
+  integer ,dimension(1:nvector,1:twotondim),save::igrid,icell,indp,kg
+#else
+  logical ,dimension(1:nvector),save::ok
+  real(dp),dimension(1:nvector,1:ndim),save::x,ff,new_vp
+  real(dp),dimension(1:nvector,1:ndim),save::cl,cr,cc,wl,wr,wc
+  integer ,dimension(1:nvector,1:ndim),save::igl,igr,igc,icl,icr,icc
+  real(dp),dimension(1:nvector,1:threetondim),save::vol
+  integer ,dimension(1:nvector,1:threetondim),save::igrid,icell,indp,kg
+#endif
+
 
   ! Mesh spacing in that level
   dx=0.5D0**ilevel
@@ -755,12 +765,19 @@ subroutine init_dust(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,xtondim)
   ! Particle-based arrays
   logical ,dimension(1:nvector),save::ok
   real(dp),dimension(1:nvector),save::mmm,dteff,nu_stop
-  real(dp),dimension(1:nvector,1:ndim),save::x,ff,new_vp,dd,dg
-  real(dp),dimension(1:nvector,1:ndim),save::uu,bb,vv ! ERM: Added these arrays
   real(dp),dimension(1:nvector),save::dgr,tss,mm ! ERM: density, (non-constant) stopping times
+  real(dp),dimension(1:nvector,1:ndim),save::uu,bb,vv ! ERM: Added these arrays
+#ifndef TSC
+  real(dp),dimension(1:nvector,1:ndim),save::x,ff,new_vp,dd,dg
   integer ,dimension(1:nvector,1:ndim),save::ig,id,igg,igd,icg,icd
-  real(dp),dimension(1:nvector,1:xtondim),save::vol
-  integer ,dimension(1:nvector,1:xtondim),save::igrid,icell,indp,kg
+  real(dp),dimension(1:nvector,1:twotondim),save::vol
+  integer ,dimension(1:nvector,1:twotondim),save::igrid,icell,indp,kg
+#else
+  real(dp),dimension(1:nvector,1:ndim),save::x,ff,new_vp,cl,cr,cc,wl,wr,wc
+  integer ,dimension(1:nvector,1:ndim),save::igl,igr,igc,icl,icr,icc
+  real(dp),dimension(1:nvector,1:threetondim),save::vol
+  integer ,dimension(1:nvector,1:threetondim),save::igrid,icell,indp,kg
+#endif
   real(dp),dimension(1:3)::skip_loc
 
   ctm = charge_to_mass
