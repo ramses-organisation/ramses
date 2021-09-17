@@ -653,6 +653,7 @@ do idim=1,ndim
       icl(j,idim)=int(cl(j,idim))
       icc(j,idim)=int(cc(j,idim))
       icr(j,idim)=int(cr(j,idim))
+    endif
    end do
 end do
 
