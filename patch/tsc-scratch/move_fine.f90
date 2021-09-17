@@ -25,11 +25,11 @@ subroutine move_fine(ilevel)
    open(25+myid, file = fileloc, status = 'unknown', access = 'append')
   endif
 
-  #ifdef TSC
+#ifdef TSC
     xtondim=threetondim
-  #else
+#else
     xtondim=twotondim
-  #endif
+#endif
 
   ! Set unew = uold in the active region
   do ind=1,xtondim

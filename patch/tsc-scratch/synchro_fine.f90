@@ -849,11 +849,11 @@ subroutine init_dust_fine(ilevel)
   if(verbose)write(*,111)ilevel
   ivar_dust=9
 
-  #ifdef TSC
+#ifdef TSC
     xtondim=threetondim
-  #else
+#else
     xtondim=twotondim
-  #endif
+#endif
 
   ! Reset unew to zero for dust ``stopping time''
   do ind=1,xtondim
