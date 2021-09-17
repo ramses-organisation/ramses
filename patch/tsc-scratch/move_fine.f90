@@ -521,7 +521,6 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,xtondim)
 
 #else
 !#include "tsc_fine.F90"
-
 if (ndim .ne. 3)then
    write(*,*)'TSC not supported for ndim neq 3'
    call clean_stop
@@ -649,11 +648,11 @@ do idim=1,ndim
       icl(j,idim)=int(cl(j,idim))-2*igl(j,idim)
       icc(j,idim)=int(cc(j,idim))-2*igc(j,idim)
       icr(j,idim)=int(cr(j,idim))-2*igr(j,idim)
-    else ! ERM: this else may or may not be correct? But I believe it is.
+     else ! ERM: this else may or may not be correct? But I believe it is.
       icl(j,idim)=int(cl(j,idim))
       icc(j,idim)=int(cc(j,idim))
       icr(j,idim)=int(cr(j,idim))
-    endif
+     endif
    end do
 end do
 
@@ -715,6 +714,7 @@ do j=1,np
    icell(j,25)=1+icl(j,1)+3*icr(j,2)+9*icr(j,3)
    icell(j,26)=1+icc(j,1)+3*icr(j,2)+9*icr(j,3)
    icell(j,27)=1+icr(j,1)+3*icr(j,2)+9*icr(j,3)
+ endif
 end do
 
 ! Compute parent cell adress
@@ -722,7 +722,7 @@ do ind=1,threetondim
    do j=1,np
      if(ok(j))then
       indp(j,ind)=ncoarse+(icell(j,ind)-1)*ngridmax+igrid(j,ind)
-    else ! ERM: for AMR(?) there may be an issue with ind_grid_part(j) being used here.
+     else ! ERM: for AMR(?) there may be an issue with ind_grid_part(j) being used here.
        indp(j,ind)=nbors_father_cells(ind_grid_part(j),icell(j,ind))
      endif
    end do

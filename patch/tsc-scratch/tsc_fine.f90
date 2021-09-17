@@ -1,33 +1,32 @@
-use amr_commons
-use pm_commons
-use poisson_commons
-use hydro_commons, ONLY: uold,unew,smallr,nvar,gamma
-implicit none
-integer::ng,np,ilevel,xtondim
-integer,dimension(1:nvector)::ind_grid
-integer,dimension(1:nvector)::ind_grid_part,ind_part
+! use amr_commons
+! use pm_commons
+! use poisson_commons
+! use hydro_commons, ONLY: uold,unew,smallr,nvar,gamma
+! implicit none
+! integer::ng,np,ilevel,xtondim
+! integer,dimension(1:nvector)::ind_grid
+! integer,dimension(1:nvector)::ind_grid_part,ind_part
+! !
+! !
+! !
+! logical::error
+! integer::i,j,ind,idim,nx_loc,isink,ivar_dust
+! real(dp)::dx,scale,dx_loc,vol_loc
 !
 !
-!
-logical::error
-integer::i,j,ind,idim,nx_loc,isink,ivar_dust
-real(dp)::dx,scale,dx_loc,vol_loc
-
-
-! Grid-based arrays
-real(dp),dimension(1:nvector,1:ndim),save::x0
-integer ,dimension(1:nvector),save::ind_cell
-integer ,dimension(1:nvector,1:threetondim),save::nbors_father_cells
-integer ,dimension(1:nvector,1:twotondim),save::nbors_father_grids
-! Particle-based arrays
-logical ,dimension(1:nvector),save::ok
-real(dp),dimension(1:nvector,1:ndim),save::x,ff,new_vp
-real(dp),dimension(1:nvector,1:ndim),save::cl,cr,cc,wl,wr,wc
-integer ,dimension(1:nvector,1:ndim),save::igl,igr,igc,icl,icr,icc
-real(dp),dimension(1:nvector,1:threetondim),save::vol
-integer ,dimension(1:nvector,1:threetondim),save::igrid,icell,indp,kg
-integer::i,j,idim,ind,np,ng
-
+! ! Grid-based arrays
+! real(dp),dimension(1:nvector,1:ndim),save::x0
+! integer ,dimension(1:nvector),save::ind_cell
+! integer ,dimension(1:nvector,1:threetondim),save::nbors_father_cells
+! integer ,dimension(1:nvector,1:twotondim),save::nbors_father_grids
+! ! Particle-based arrays
+! logical ,dimension(1:nvector),save::ok
+! real(dp),dimension(1:nvector,1:ndim),save::x,ff,new_vp
+! real(dp),dimension(1:nvector,1:ndim),save::cl,cr,cc,wl,wr,wc
+! integer ,dimension(1:nvector,1:ndim),save::igl,igr,igc,icl,icr,icc
+! real(dp),dimension(1:nvector,1:threetondim),save::vol
+! integer ,dimension(1:nvector,1:threetondim),save::igrid,icell,indp,kg
+! integer::i,j,idim,ind,np,ng
 if (ndim .ne. 3)then
    write(*,*)'TSC not supported for ndim neq 3'
    call clean_stop
@@ -221,6 +220,7 @@ do j=1,np
    icell(j,25)=1+icl(j,1)+3*icr(j,2)+9*icr(j,3)
    icell(j,26)=1+icc(j,1)+3*icr(j,2)+9*icr(j,3)
    icell(j,27)=1+icr(j,1)+3*icr(j,2)+9*icr(j,3)
+ endif
 end do
 
 ! Compute parent cell adress
@@ -228,7 +228,7 @@ do ind=1,threetondim
    do j=1,np
      if(ok(j))then
       indp(j,ind)=ncoarse+(icell(j,ind)-1)*ngridmax+igrid(j,ind)
-    else ! ERM: for AMR(?) there may be an issue with ind_grid_part(j) being used here.
+     else ! ERM: for AMR(?) there may be an issue with ind_grid_part(j) being used here.
        indp(j,ind)=nbors_father_cells(ind_grid_part(j),icell(j,ind))
      endif
    end do
