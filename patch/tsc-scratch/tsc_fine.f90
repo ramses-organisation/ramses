@@ -1,3 +1,33 @@
+use amr_commons
+use pm_commons
+use poisson_commons
+use hydro_commons, ONLY: uold,unew,smallr,nvar,gamma
+implicit none
+integer::ng,np,ilevel,xtondim
+integer,dimension(1:nvector)::ind_grid
+integer,dimension(1:nvector)::ind_grid_part,ind_part
+!
+!
+!
+logical::error
+integer::i,j,ind,idim,nx_loc,isink,ivar_dust
+real(dp)::dx,scale,dx_loc,vol_loc
+
+
+! Grid-based arrays
+real(dp),dimension(1:nvector,1:ndim),save::x0
+integer ,dimension(1:nvector),save::ind_cell
+integer ,dimension(1:nvector,1:threetondim),save::nbors_father_cells
+integer ,dimension(1:nvector,1:twotondim),save::nbors_father_grids
+! Particle-based arrays
+logical ,dimension(1:nvector),save::ok
+real(dp),dimension(1:nvector,1:ndim),save::x,ff,new_vp
+real(dp),dimension(1:nvector,1:ndim),save::cl,cr,cc,wl,wr,wc
+integer ,dimension(1:nvector,1:ndim),save::igl,igr,igc,icl,icr,icc
+real(dp),dimension(1:nvector,1:threetondim),save::vol
+integer ,dimension(1:nvector,1:threetondim),save::igrid,icell,indp,kg
+integer::i,j,idim,ind,np,ng
+
 if (ndim .ne. 3)then
    write(*,*)'TSC not supported for ndim neq 3'
    call clean_stop

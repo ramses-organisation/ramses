@@ -250,7 +250,6 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,xtondim)
   real(dp),dimension(1:nvector,1:twotondim),save::vol
   integer ,dimension(1:nvector,1:twotondim),save::igrid,icell,indp,kg
 #else
-  logical ,dimension(1:nvector),save::ok
   real(dp),dimension(1:nvector,1:ndim),save::x,ff,new_vp
   real(dp),dimension(1:nvector,1:ndim),save::cl,cr,cc,wl,wr,wc
   integer ,dimension(1:nvector,1:ndim),save::igl,igr,igc,icl,icr,icc
