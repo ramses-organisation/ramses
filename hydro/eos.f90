@@ -11,9 +11,6 @@ subroutine barotropic_eos_temperature(density, temperature)
    call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
 
    SELECT CASE (barotropic_eos_form)
-   CASE ('legacy')
-      ! remark: not exactly the same for cosmo=.true. since n_star!=nISM in all cases
-      temperature = T2_star*(density/n_star)**(g_star-1.0d0)
    CASE ('isothermal')
       temperature = T2_eos
    CASE ('polytrope')
