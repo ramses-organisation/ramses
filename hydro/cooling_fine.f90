@@ -318,7 +318,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
      !==========================================
      ! Compute temperature from polytrope EOS
      !==========================================
-     if(barotropic_eos)then
+     if(barotropic_eos.and.(barotropic_eos_form.ne.'legacy'))then
         do i=1,nleaf
            ! analytic EOS
            call barotropic_eos_temperature(nH(i), T2min(i))
