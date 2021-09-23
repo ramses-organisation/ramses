@@ -37,6 +37,9 @@ rc = np.sqrt(x**2 + z**2)
 By = 0.5*(data["data"]["B_y_left"] + data["data"]["B_y_right"])
 t  = data["data"]["time"]
 
+pressure = data["data"]["pressure"]
+print(pressure)
+
 # Bin the data in r to avoid having too many symbols in figure
 rmin = 0.0
 rmax = 0.7

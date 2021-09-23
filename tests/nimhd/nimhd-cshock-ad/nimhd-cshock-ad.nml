@@ -99,4 +99,5 @@ ntestDADM=1
 
 &COOLING_PARAMS
 mu_gas=1.0d08
+! details of cooling?
 /

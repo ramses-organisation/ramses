@@ -47,8 +47,7 @@ subroutine cmpdt(uu,gg,dx,dt,ncell)
      rho(k)=uu(k,1)
 #ifdef NIMHD
      rhoad(k)=rho(k)
-     call temperature_eos(rho(k),uu(k,nvar),tcell(k))
-     ! TODO uu(nvar used to be Eint? Not used atm but needs to be fixed!
+     call ideal_gas_temperature(rho(k), uu(k,5), tcell(k))
      ionisrate(k) = default_ionisrate
 #endif
   end do
@@ -938,7 +937,7 @@ SUBROUTINE find_speed_info(qvar,vel_info)
 #if HALL==1
   cw=0d0
   if(nhall .and. dx>0) then
-    call temperature_eos(d,P/(gamma-1),tcell)
+    call ideal_gas_temperature(d, P, tcell)
     eta=abs(eta_hall_chimie(d,tcell,ionisrate,B2))
     cw1=eta/(2.0d0*dx) ! Whistler wave speed
     cw = cw1+sqrt(cw1**2+B2/d)                  ! Whistler wave speed
@@ -1007,7 +1006,7 @@ SUBROUTINE find_speed_fast(qvar,vel_info)
 #if HALL==1
   cw=0d0
   if(nhall.and. dx>0) then
-    call temperature_eos(d,P/(gamma-1),tcell)
+    call ideal_gas_temperature(d, P, tcell)
     eta=abs(eta_hall_chimie(d,tcell,ionisrate,B2))
     cw1=dabs(eta/(2.0d0*dx)) ! Whistler wave speed
     cw = cw1+dsqrt(cw1**2+B2/d)                  ! Whistler wave speed

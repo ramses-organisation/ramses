@@ -2353,9 +2353,6 @@ subroutine ctoprim(uin,q,bf,gravin,dt,ngrid)
   real(dp)::eint, smalle, smallp, etot
   real(dp),dimension(1:nvector),save::eken,emag,erad
 
-  ! EOS
-  real(dp)  :: pp_eos
-
 #if NENER>0
   integer::irad
 #endif
@@ -2463,9 +2460,7 @@ subroutine ctoprim(uin,q,bf,gravin,dt,ngrid)
            do l = 1, ngrid
               etot = uin(l,i,j,k,5) - emag(l) -erad(l)
               eint = etot/q(l,i,j,k,1)-eken(l)
-              eint = eint*q(l,i,j,k,1)   ! volumic
-              call pressure_eos(uin(l,i,j,k,1),eint,pp_eos)
-              q(l,i,j,k,5)=MAX(pp_eos,smallp)
+              q(l,i,j,k,5)=MAX((gamma-one)*q(l,i,j,k,1)*eint,smallp)
            end do
 
            ! Gravity predictor step

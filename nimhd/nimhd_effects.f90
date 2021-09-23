@@ -9,7 +9,6 @@ subroutine computejb2(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
   USE amr_parameters
   use hydro_commons
   use nimhd_parameters
-  USE const
   IMPLICIT NONE
 
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar+3)::u 
@@ -577,9 +576,9 @@ do k=min(1,ku1+1),max(1,ku2-1)
             rhox=0.25d0*(u(l,i,j,k,   1)+u(l,i  ,j-1,k,   1)+u(l,i,j  ,k-1,   1)+u(l,i  ,j-1,k-1,   1))
             rhoy=0.25d0*(u(l,i,j,k,   1)+u(l,i-1,j  ,k,   1)+u(l,i,j  ,k-1,   1)+u(l,i-1,j  ,k-1,   1))
             rhoz=0.25d0*(u(l,i,j,k,   1)+u(l,i-1,j  ,k,   1)+u(l,i,j-1,k  ,   1)+u(l,i-1,j-1,k  ,   1))
-            epsx=0.25d0*(u(l,i,j,k,nvar)+u(l,i  ,j-1,k,nvar)+u(l,i,j  ,k-1,nvar)+u(l,i  ,j-1,k-1,nvar))
-            epsy=0.25d0*(u(l,i,j,k,nvar)+u(l,i-1,j  ,k,nvar)+u(l,i,j  ,k-1,nvar)+u(l,i-1,j  ,k-1,nvar))
-            epsz=0.25d0*(u(l,i,j,k,nvar)+u(l,i-1,j  ,k,nvar)+u(l,i,j-1,k  ,nvar)+u(l,i-1,j-1,k  ,nvar))
+            epsx=0.25d0*(u(l,i,j,k,5)+u(l,i  ,j-1,k,5)+u(l,i,j  ,k-1,5)+u(l,i  ,j-1,k-1,5))
+            epsy=0.25d0*(u(l,i,j,k,5)+u(l,i-1,j  ,k,5)+u(l,i,j  ,k-1,5)+u(l,i-1,j  ,k-1,5))
+            epsz=0.25d0*(u(l,i,j,k,5)+u(l,i-1,j  ,k,5)+u(l,i,j-1,k  ,5)+u(l,i-1,j-1,k  ,5))
             if(nmagdiffu)then
                  bsquarex=bemfx(l,i,j,k,1)**2+bemfx(l,i,j,k,2)**2+bemfx(l,i,j,k,3)**2
                  bsquarey=bemfy(l,i,j,k,1)**2+bemfy(l,i,j,k,2)**2+bemfy(l,i,j,k,3)**2
@@ -595,9 +594,9 @@ do k=min(1,ku1+1),max(1,ku2-1)
 !                  if(epsy* scale_d*scale_v**2  .lt. 1d-16) print*,'y',rhoy,epsy
 !                  if(epsz* scale_d*scale_v**2  .lt. 1d-16) print*,'z',rhoz,epsz
 !                  print*,rhox,epsx,rhoy,epsy,rhoz,epsz
-                  call temperature_eos(rhox,epsx,tcellx)
-                  call temperature_eos(rhoy,epsy,tcelly)
-                  call temperature_eos(rhoz,epsz,tcellz)
+                  call ideal_gas_temperature(rhox, epsx, tcellx)
+                  call ideal_gas_temperature(rhoy, epsy, tcelly)
+                  call ideal_gas_temperature(rhoz, epsz, tcellz)
 !!$                  tcelly=10.
 !!$                  tcellx=10.
 !!$                  tcellz=10.
@@ -637,15 +636,14 @@ do k=min(1,ku1+1),max(1,ku2-1)
 ! ! and we can write it Jx,y
             do h = 1,3
                   rhof=0.5d0*(u(l,i,j,k,   1)+u(l,i-index_i(h),j-index_j(h),k-index_k(h),   1))
-                  epsf=0.5d0*(u(l,i,j,k,nvar)+u(l,i-index_i(h),j-index_j(h),k-index_k(h),nvar))
+                  epsf=0.5d0*(u(l,i,j,k,5)+u(l,i-index_i(h),j-index_j(h),k-index_k(h),5))
                   bsqf=bmagij(l,i,j,k,1,h)**2+bmagij(l,i,j,k,2,h)**2+bmagij(l,i,j,k,3,h)**2
 
                   ! Compute gas temperature in cgs
                   if(ntestDADM.eq.1)then
                        tcellf=1.0d0
                   else 
-                       call barotropic_eos_temperature(rhof*scale_nH,tcellf)
-                       tcellf = tcellf*mu_gas
+                       call ideal_gas_temperature(rhof, epsf, tcellf)
                   endif
                     
                   etaod2=etaohmdiss(rhof,bsqf,tcellf,ionisrate)
@@ -807,7 +805,7 @@ jcenter=0.0d0
               if(ntestDADM.eq.1) then
                  tcell=1.0d0
               else
-                 call temperature_eos(u(l,i,j,k,1),u(l,i,j,k,nvar),tcell)
+                 call ideal_gas_temperature(u(l,i,j,k,1), u(l,i,j,k,5), tcell)
               end if
              
 
@@ -1080,7 +1078,7 @@ do k=min(1,ku1+1),max(1,ku2-1)
             ! We take non-updated ionisation rate !!
             ionisrate=1d-17
             bedge2=bedge*bedge
-            call temperature_eos(rhoedge,nrjedge/(gamma-1),tedge)
+            call ideal_gas_temperature(rhoedge, nrjedge, tedge)
             eta=eta_hall_chimie(rhoedge,tedge,ionisrate,bedge2)/bedge
 
             if (kk==1)  vhall(l,i,j,k,1,1:3)=jx(l,i,j,k,1:3)*eta
