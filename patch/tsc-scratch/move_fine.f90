@@ -262,7 +262,7 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,xtondim)
   real(dp),dimension(1:nvector,1:ndim),save::vv
   real(dp),dimension(1:nvector,1:ndim),save::bb,uu
   real(dp),dimension(1:nvector,1:twotondim,1:ndim),save::big_vv,big_ww
-  real(dp),dimension(1:nvector),save:: nu_stop,mov ! ERM: fluid density interpolated to grain pos. and stopping times
+  real(dp),dimension(1:nvector),save:: nu_stop,mov,dgr ! ERM: fluid density interpolated to grain pos. and stopping times
   integer ,dimension(1:nvector,1:ndim),save::ig,id,igg,igd,icg,icd
   real(dp),dimension(1:nvector,1:twotondim),save::vol
   integer ,dimension(1:nvector,1:twotondim),save::igrid,icell,indp,kg
@@ -799,11 +799,20 @@ end do
      end do
   endif
 
+  dgr(1:np) = 0.0D0
+  if(boris)then
+     do ind=1,xtondim
+         do j=1,np
+            dgr(j)=dgr(j)+uold(indp(j,ind),1)*vol(j,ind)
+        end do
+     end do
+  endif
+
   if(trajectories(1)>0)then!Various fields interpolated to particle positions
      do index_part=trajectories(1),trajectories(2)
         do j=1,np
            if(idp(ind_part(j)).EQ.index_part)then
-              write(25+myid,*)t-dtnew(ilevel),idp(ind_part(j)),& ! Old time
+              write(25+myid,*)t-dtnew(ilevel),idp(ind_part(j)),dgr(j),& ! Old time
                    & xp(ind_part(j),1),xp(ind_part(j),2),xp(ind_part(j),3),& ! Old particle position
                    & vp(ind_part(j),1),vp(ind_part(j),2),vp(ind_part(j),3),& ! Old particle velocity
                    &  uu(j,1),uu(j,2),uu(j,3),& ! Old fluid velocity
