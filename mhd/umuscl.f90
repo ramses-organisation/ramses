@@ -167,9 +167,6 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
 
 #ifdef NIMHD
   if(use_nonideal_mhd) then
-     ! compute Lorentz Force with magnetic fluxes
-!    call computejb(uin,qin,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,bmagij,florentzx,florentzy,florentzz,fluxmd,fluxh,fluxad)
-  
      ! compute Lorentz Force with current
      call computejb2(uin,qin,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,bmagij,florentzx,florentzy,florentzz,fluxmd,fluxh,fluxad,jcell)
   endif
