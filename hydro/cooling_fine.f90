@@ -132,6 +132,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
      nCOM = del_star*omega_b*rhoc*(h0/100)**2/aexp**3*X/mH
   endif
   nISM = MAX(nCOM,nISM)
+  polytrope_rho_cu = polytrope_rho/scale_d
 
   ! Polytropic constant for Jeans length related polytropic EOS
   if(jeans_ncells>0)then
@@ -317,15 +318,23 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
      !==========================================
      ! Compute temperature from polytrope EOS
      !==========================================
-     if(jeans_ncells>0)then
+     if(barotropic_eos.and.(barotropic_eos_form.ne.'legacy'))then
         do i=1,nleaf
-           T2min(i) = nH(i)*polytropic_constant*scale_T2
-        end do
+           ! analytic EOS
+           call barotropic_eos_temperature(nH(i), T2min(i))
+        enddo
      else
-        do i=1,nleaf
-           T2min(i) = T2_star*(nH(i)/nISM)**(g_star-1.0d0)
-        end do
-     endif
+        ! cooling floor
+        if(jeans_ncells>0)then
+           do i=1,nleaf
+              T2min(i) = nH(i)*polytropic_constant*scale_T2
+           end do
+        else
+           do i=1,nleaf
+              T2min(i) = T2_star*(nH(i)/nISM)**(g_star-1.0d0)
+           end do
+        endif
+      endif
      !==========================================
      ! You can put your own polytrope EOS here
      !==========================================
@@ -375,7 +384,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
                    cooling_on(i)=.false.
            end do
         end if
-        if(isothermal)cooling_on(1:nleaf)=.false.
+        if(barotropic_eos)cooling_on(1:nleaf)=.false.
      endif
 
      if(rt_vc) then ! Do the Lorentz boost. Eqs A4 and A5. in RT15
@@ -542,7 +551,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
      endif
 
      ! Update total fluid energy
-     if(isothermal)then
+     if(barotropic_eos)then
         do i=1,nleaf
            uold(ind_leaf(i),neul) = T2min(i) + ekk(i) + err(i) + emag(i)
         end do
