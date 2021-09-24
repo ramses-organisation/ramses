@@ -172,7 +172,7 @@ SUBROUTINE read_rt_params(nml_ok)
        & ,rt_n_source, rt_u_source, rt_v_source, rt_w_source             &
        ! RT boundary (for boundary conditions)                           &
        & ,rt_n_bound,rt_u_bound,rt_v_bound,rt_w_bound                    &
-       & ,rt_AGN
+       & ,rt_AGN, rt_sink
 
 
   ! Set default initialisation of ionisation states:

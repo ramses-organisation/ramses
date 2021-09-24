@@ -132,6 +132,12 @@ subroutine dump_all
         filename=TRIM(filedir)//'sink_'//TRIM(nchar)//'.csv'
         call output_sink_csv(filename)
      end if
+     !some improvement would also be good on the csv (data name and units at for the sink csv)
+     if(stellar)then
+        filename=TRIM(filedir)//'stellar_'//TRIM(nchar)//'.csv'
+        call output_stellar_csv(filename)
+     end if
+
 #ifndef WITHOUTMPI
      if(synchro_when_io) call MPI_BARRIER(MPI_COMM_WORLD,info)
 #endif

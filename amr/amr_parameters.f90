@@ -62,6 +62,7 @@ module amr_parameters
   logical::cosmo   =.false.   ! Cosmology activated
   logical::star    =.false.   ! Star formation activated
   logical::sink    =.false.   ! Sink particles activated
+  logical::stellar = .false.  ! stellar particles for sink feedback
   logical::rt      =.false.   ! Radiative transfer activated
   logical::debug   =.false.   ! Debug mode activated
   logical::static  =.false.   ! Static mode activated
@@ -176,7 +177,6 @@ module amr_parameters
   logical::second_order=.false.      ! Only works for constant t-stop
   real(dp)::dust_to_gas=1.0          ! Dust-to-gas mass ratio.
   real(dp),dimension(1:3)::accel_gr=0 ! constant external grain force
-  integer,dimension(1:2)::trajectories=0 ! determines whether or not to output trajectories, which particles to output, and how many.
 
   logical ::self_shielding=.false.
   logical ::pressure_fix=.false.

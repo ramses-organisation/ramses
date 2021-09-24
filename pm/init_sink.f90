@@ -19,9 +19,14 @@ subroutine init_sink
 
   integer::sid,slevel
   real(dp)::sm1,sx1,sx2,sx3,sv1,sv2,sv3,sl1,sl2,sl3
-  real(dp)::stform,sacc_rate,sacc_mass,srho_gas,sc2_gas,seps_sink,svg1,svg2,svg3,sm2
+  real(dp)::stform,sacc_rate,sacc_mass,srho_gas,sc2_gas,seps_sink,svg1,svg2,svg3,sm2,dmf
   character::co
   character(LEN=200)::comment_line
+
+  !introduced by PH 09/2013 to compute feedback around sink
+  !reimported by PH 27/07/2021
+  allocate(dmfsink(1:nsinkmax))
+  dmfsink=0.0
 
   ! Allocate all sink related quantities...
   allocate(idsink(1:nsinkmax))
@@ -49,6 +54,14 @@ subroutine init_sink
   allocate(msum_overlap(1:nsinkmax))
   allocate(rho_sink_tff(levelmin:nlevelmax))
   msum_overlap=0; rho_sink_tff=0d0
+
+  !introduced by PH 09/2013 to compute feedback around sink
+  !reimported by PH 27/07/2021
+  allocate(dmfsink_new(1:nsinkmax))
+
+  !introduced by PH 09/2013 to compute feedback around sink
+  !reimported by PH 27/07/2021
+  allocate(dmfsink_all(1:nsinkmax))
 
   ! Temporary sink variables
   allocate(wden(1:nsinkmax))
@@ -135,13 +148,15 @@ subroutine init_sink
 #endif
 
      nsink=0
+
+     !updated by PH 28/07/2021 to take dmfsink into account
      open(10,file=fileloc,form='formatted')
      eof=.false.
      ! scrolling over the comment lines
      read(10,'(A200)')comment_line
      read(10,'(A200)')comment_line
      do
-        read(10,'(I10,20(A1,ES21.10),A1,I10)',end=104)sid,co, sm1,co,&
+        read(10,'(I10,21(A1,ES21.10),A1,I10)',end=104)sid,co, sm1,co,&
                            sx1,co,sx2,co,sx3,co, &
                            sv1,co,sv2,co,sv3,co, &
                            sl1,co,sl2,co,sl3,co, &
@@ -149,7 +164,7 @@ subroutine init_sink
                            sacc_mass,co, &
                            srho_gas,co, sc2_gas,co, seps_sink,co, &
                            svg1,co,svg2,co,svg3,co, &
-                           sm2,co,slevel
+                           sm2,co,dmf,co,slevel
         nsink=nsink+1
         idsink(nsink)=sid
         msink(nsink)=sm1
@@ -173,6 +188,8 @@ subroutine init_sink
         vel_gas(nsink,3)=svg3
         new_born(nsink)=.false. ! this is a restart
         msmbh(nsink)=sm2
+        !PH 28/07/2021
+        dmfsink(nsink)=dmf
         vsold(nsink,1:ndim,slevel)=vsink(nsink,1:ndim)
         vsnew(nsink,1:ndim,slevel)=vsink(nsink,1:ndim)
      end do

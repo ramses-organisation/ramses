@@ -602,6 +602,7 @@ subroutine grow_sink(ilevel,on_creation)
   ! Reset new sink variables
   msink_new=0d0; msmbh_new=0d0
   xsink_new=0d0; vsink_new=0d0; lsink_new=0d0; delta_mass_new=0d0
+  dmfsink_new=0d0
 
   ! Loop over cpus
   do icpu=1,ncpu
@@ -667,6 +668,7 @@ subroutine grow_sink(ilevel,on_creation)
      call MPI_ALLREDUCE(vsink_new,vsink_all,nsinkmax*ndim,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
      call MPI_ALLREDUCE(lsink_new,lsink_all,nsinkmax*ndim,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
      call MPI_ALLREDUCE(delta_mass_new,delta_mass_all,nsinkmax,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
+     call MPI_ALLREDUCE(dmfsink_new,dmfsink_all,nsinkmax,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
 #else
      msink_all=msink_new
      msmbh_all=msmbh_new
@@ -674,6 +676,7 @@ subroutine grow_sink(ilevel,on_creation)
      vsink_all=vsink_new
      lsink_all=lsink_new
      delta_mass_all=delta_mass_new
+     dmfsink_all=dmfsink_new
 #endif
   endif
 
@@ -683,6 +686,7 @@ subroutine grow_sink(ilevel,on_creation)
         ! Update mass from accretion
         msink(isink)=msink(isink)+msink_all(isink)
         msmbh(isink)=msmbh(isink)+msmbh_all(isink)
+        dmfsink(isink)=dmfsink(isink)+dmfsink_all(isink)
 
         ! Reset jump in old sink coordinates
         do lev=levelmin,nlevelmax
@@ -737,7 +741,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
   integer,dimension(1:nvector)::ind_grid_part,ind_part
   logical::on_creation
   integer::j,nx_loc,isink,ivar,idim,ind
-  real(dp)::d,e,density,volume
+  real(dp)::d,e,density,volume,d_floor
 #ifdef SOLVERmhd
   real(dp)::bx1,bx2,by1,by2,bz1,bz2
 #endif
@@ -883,8 +887,27 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
                  m_acc_smbh=0
               end if
            else
-              m_acc      = dMsink_overdt(isink)*dtnew(ilevel)*weight/volume
-              m_acc_smbh = dMsmbh_overdt(isink)*dtnew(ilevel)*weight/volume
+
+              !PH 26/07/2021 has reintroduced this line from the previous RAMSES_ism version
+              if (bondi_accretion)then
+                 m_acc      = dMsink_overdt(isink)*dtnew(ilevel)*weight/volume
+                 m_acc_smbh = dMsmbh_overdt(isink)*dtnew(ilevel)*weight/volume
+!PH 26/07/2021 - this is the previous line from RAMSES_ism
+!                 m_acc=dMsink_overdt(isink)*dtnew(ilevel)*weight/volume*d/density
+              end if
+
+              if (threshold_accretion.and.d_sink>0.0)then
+                 d_floor=d_sink ! User defined density threshold
+                 ! Jeans length related density threshold  
+!                 if(jeans_accretion)then
+!                    call soundspeed_eos(d,eint,c2)
+!                    c2=c2**2
+!                    d_jeans=c2*3.1415926/(4.0*dx_loc)**2/factG
+!                    d_floor=d_jeans
+!                 endif
+                 m_acc=c_acc*weight*(d-d_floor)
+              end if
+
               if (agn_acc_method=='mass') then
                  m_acc      = m_acc * (d/density)
                  m_acc_smbh = m_acc_smbh * (d/density)
@@ -928,6 +951,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
 
            ! Add accreted properties to sink variables
            msink_new(isink)=msink_new(isink)+m_acc
+           dmfsink_new(isink)=dmfsink_new(isink)+m_acc
            msmbh_new(isink)=msmbh_new(isink)+m_acc_smbh
            xsink_new(isink,1:ndim)=xsink_new(isink,1:ndim)+x_acc(1:ndim)
            vsink_new(isink,1:ndim)=vsink_new(isink,1:ndim)+p_acc(1:ndim)
@@ -1357,6 +1381,7 @@ subroutine make_sink_from_clump(ilevel)
   msink_new=0d0; msmbh_new=0d0
   xsink_new=0d0; vsink_new=0d0; lsink_new=0d0; delta_mass_new=0d0
   tsink_new=0d0; oksink_new=0d0; idsink_new=0; new_born_new=.false.
+  dmfsink_new=0d0
 
   ! Count number of new sinks (flagged cells)
   ntot=0
@@ -1495,6 +1520,7 @@ subroutine make_sink_from_clump(ilevel)
               msink_new(index_sink)=delta_d*vol_loc
               msmbh_new(index_sink)=delta_d*vol_loc
               delta_mass_new(index_sink)=msmbh_new(index_sink)
+              dmfsink_new(index_sink)=delta_d*vol_loc
 
               ! Global index of the new sink
               oksink_new(index_sink)=1d0
@@ -1548,6 +1574,7 @@ subroutine make_sink_from_clump(ilevel)
   call MPI_ALLREDUCE(idsink_new,idsink_all,nsinkmax,MPI_INTEGER         ,MPI_SUM,MPI_COMM_WORLD,info)
   call MPI_ALLREDUCE(tsink_new ,tsink_all ,nsinkmax,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
   call MPI_ALLREDUCE(new_born_new,new_born_all,nsinkmax,MPI_LOGICAL,MPI_LOR,MPI_COMM_WORLD,info)
+  call MPI_ALLREDUCE(dmfsink_new ,dmfsink_all ,nsinkmax,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
 #else
   msink_all=msink_new
   msmbh_all=msmbh_new
@@ -1559,6 +1586,7 @@ subroutine make_sink_from_clump(ilevel)
   idsink_all=idsink_new
   tsink_all=tsink_new
   new_born_all=new_born_new
+  dmfsink_all=dmfsink_new
 #endif
   do isink=1,nsink
      if(oksink_all(isink)==1)then
@@ -1575,6 +1603,7 @@ subroutine make_sink_from_clump(ilevel)
         fsink_partial(isink,1:ndim,levelmin:nlevelmax)=0.0
         vsold(isink,1:ndim,ilevel)=vsink_all(isink,1:ndim)
         vsnew(isink,1:ndim,ilevel)=vsink_all(isink,1:ndim)
+        dmfsink(isink)=dmfsink_all(isink)
      endif
   end do
 #endif
@@ -1845,6 +1874,7 @@ subroutine update_sink(ilevel)
                  lsink(isink,1:ndim) = lcom(1:ndim)+lsink(isink,1:ndim)+lsink(jsink,1:ndim)
                  tsink(isink)        = min(tsink(isink),tsink(jsink))
                  idsink(isink)       = min(idsink(isink),idsink(jsink))
+                 dmfsink(isink)      = dmfsink(isink)+dmfsink(jsink) 
 
                  ! Store jump in new sink coordinates
                  do lev=levelmin,nlevelmax
@@ -1856,7 +1886,7 @@ subroutine update_sink(ilevel)
                  msmbh(jsink)=0
                  msum_overlap(jsink)=0
                  delta_mass(jsink)=0
-
+                 dmfsink(jsink)=0
               end if
            end if
         end do
@@ -2163,6 +2193,7 @@ subroutine clean_merged_sinks
            idsink(j)=idsink(j+1)
            msum_overlap(j)=msum_overlap(j+1)
            delta_mass(j)=delta_mass(j+1)
+           dmfsink(j)=dmfsink(j+1)
         end do
 
         ! Whipe last position in the sink list
@@ -2176,6 +2207,7 @@ subroutine clean_merged_sinks
         idsink(nsink+1)=0
         msum_overlap(nsink+1)=0d0
         delta_mass(nsink+1)=0d0
+        dmfsink(nsink+1)=0d0
      else
         i=i+1
      end if
@@ -2466,7 +2498,7 @@ subroutine read_sink_params()
   integer::nx_loc
   namelist/sink_params/n_sink,rho_sink,d_sink,accretion_scheme,merging_timescale,&
        ir_cloud_massive,sink_soft,mass_sink_direct_force,ir_cloud,nsinkmax,create_sinks,&
-       mass_sink_seed,mass_smbh_seed,&
+       mass_sink_seed,mass_smbh_seed, c_acc, &
        eddington_limit,acc_sink_boost,mass_merger_vel_check,&
        clump_core,verbose_AGN,T2_AGN,T2_min,cone_opening,mass_halo_AGN,mass_clump_AGN,mass_star_AGN,&
        AGN_fbk_frac_ener,AGN_fbk_frac_mom,T2_max,boost_threshold_density,&
@@ -2518,6 +2550,7 @@ subroutine read_sink_params()
 
   ! Check for accretion scheme
   if (accretion_scheme=='bondi')bondi_accretion=.true.
+  if (accretion_scheme =='threshold')threshold_accretion=.true.
 
   ! For sink formation and accretion a threshold must be given
   if (create_sinks .or. (accretion_scheme .ne. 'none'))then
@@ -2960,6 +2993,7 @@ subroutine synchronize_sink_info
   call MPI_BCAST(idsink,     nsinkmax, MPI_INTEGER,          1, MPI_COMM_WORLD, info)
   call MPI_BCAST(tsink,      nsinkmax, MPI_DOUBLE_PRECISION, 1, MPI_COMM_WORLD, info)
   call MPI_BCAST(new_born,   nsinkmax, MPI_LOGICAL,          1, MPI_COMM_WORLD, info)
+  call MPI_BCAST(dmfsink,    nsinkmax, MPI_DOUBLE_PRECISION, 1, MPI_COMM_WORLD, info)
 
 end subroutine synchronize_sink_info
 #endif
