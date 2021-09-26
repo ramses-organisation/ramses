@@ -1791,7 +1791,7 @@ subroutine tsc_cell(ind_grid,ngrid,ilevel)
      end do
 
      ! Update mass density and number density fields
-     do ind=1,twotondim
+     do ind=1,threetondim
         do j=1,np
            ok(j)=igrid(j,ind)>0
         end do
