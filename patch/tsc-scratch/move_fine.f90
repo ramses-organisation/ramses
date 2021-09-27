@@ -799,8 +799,8 @@ end do
      end do
   endif
 
-  dgr(1:np) = 0.0D0 ! Gas density
-  ddgr(1:np) = 0.0D0 ! Dust density
+  dgr(1:np) = 0.0D0 ! Gas density. Only used for trajectory file.
+  ddgr(1:np) = 0.0D0 ! Dust density.
   if(boris)then
      do ind=1,xtondim
          do j=1,np
@@ -814,7 +814,7 @@ end do
      do index_part=trajectories(1),trajectories(2)
         do j=1,np
            if(idp(ind_part(j)).EQ.index_part)then
-              write(25+myid,*)t-dtnew(ilevel),idp(ind_part(j)),dgr(j),ddgr(j)& ! Old time
+              write(25+myid,*)t-dtnew(ilevel),idp(ind_part(j)),dgr(j),ddgr(j), & ! Old time
                    & xp(ind_part(j),1),xp(ind_part(j),2),xp(ind_part(j),3),& ! Old particle position
                    & vp(ind_part(j),1),vp(ind_part(j),2),vp(ind_part(j),3),& ! Old particle velocity
                    &  uu(j,1),uu(j,2),uu(j,3),& ! Old fluid velocity
