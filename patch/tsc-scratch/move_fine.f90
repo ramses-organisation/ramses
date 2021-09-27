@@ -136,11 +136,11 @@ subroutine move_fine_static(ilevel)
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
-  #ifdef TSC
+#ifdef TSC
     xtondim=threetondim
-  #else
+#else
     xtondim=twotondim
-  #endif
+#endif
 
   ! Update particles position and velocity
   ig=0
