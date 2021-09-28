@@ -23,8 +23,6 @@ subroutine init_sink
   character::co
   character(LEN=200)::comment_line
 
-  !introduced by PH 09/2013 to compute feedback around sink
-  !reimported by PH 27/07/2021
   allocate(dmfsink(1:nsinkmax))
   dmfsink=0.0
 
@@ -55,12 +53,7 @@ subroutine init_sink
   allocate(rho_sink_tff(levelmin:nlevelmax))
   msum_overlap=0; rho_sink_tff=0d0
 
-  !introduced by PH 09/2013 to compute feedback around sink
-  !reimported by PH 27/07/2021
   allocate(dmfsink_new(1:nsinkmax))
-
-  !introduced by PH 09/2013 to compute feedback around sink
-  !reimported by PH 27/07/2021
   allocate(dmfsink_all(1:nsinkmax))
 
   ! Temporary sink variables
@@ -148,8 +141,6 @@ subroutine init_sink
 #endif
 
      nsink=0
-
-     !updated by PH 28/07/2021 to take dmfsink into account
      open(10,file=fileloc,form='formatted')
      eof=.false.
      ! scrolling over the comment lines
@@ -188,7 +179,6 @@ subroutine init_sink
         vel_gas(nsink,3)=svg3
         new_born(nsink)=.false. ! this is a restart
         msmbh(nsink)=sm2
-        !PH 28/07/2021
         dmfsink(nsink)=dmf
         vsold(nsink,1:ndim,slevel)=vsink(nsink,1:ndim)
         vsnew(nsink,1:ndim,slevel)=vsink(nsink,1:ndim)

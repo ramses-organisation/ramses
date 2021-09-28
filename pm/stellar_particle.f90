@@ -6,7 +6,7 @@ subroutine read_stellar_params()
 !                        & hii_w, hii_alpha, hii_c, hii_t, hii_T2, &
 !                        & mH_code
     use cooling_module, only: mH
-    use amr_commons, only: dp, myid
+    use amr_commons, only: dp, myid, stellar
     use pm_commons, only: iseed
     use sink_feedback_module
     implicit none

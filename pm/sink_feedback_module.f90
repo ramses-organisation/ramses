@@ -877,8 +877,12 @@ subroutine make_fb_fixed(currlevel,isn)
   sn_v = sqrt(2.0*(sn_e*scale_ecgs)/(sn_m*scale_msun*m_sun))
   sn_v = sn_v / scale_v
   sn_cent(1)= FB_pos_x(isn)*boxlen
+#if NDIM>1
   sn_cent(2)= FB_pos_y(isn)*boxlen
+#endif
+#if NDIM>2
   sn_cent(3)= FB_pos_z(isn)*boxlen
+#endif
 
   ! HACK - force Courant condition on winds before first hydro step
   ! TODO: think about how this is synchronised more carefully
@@ -902,7 +906,13 @@ subroutine make_fb_fixed(currlevel,isn)
      
   if(myid .eq. 1 .and. FB_sourcetype(isn) .eq. 'supernova') then
      write(*,*) 'Supernova blast! Wow!'
+#if NDIM==3
      write(*,*) 'x_sn, y_sn, z_sn, ',sn_cent(1),sn_cent(2),sn_cent(3)
+#elif NDIM==2
+     write(*,*) 'x_sn, y_sn, ',sn_cent(1),sn_cent(2)
+#elif NDIM==1
+     write(*,*) 'x_sn, ',sn_cent(1)
+#endif
   endif
 
   ! Loop over levels
@@ -1053,4 +1063,3 @@ end subroutine feedback_refine
 
 
 END MODULE sink_feedback_module
-
