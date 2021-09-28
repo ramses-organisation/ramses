@@ -32,7 +32,7 @@ subroutine move_fine(ilevel)
 #endif
 
   ! Set unew = uold in the active region
-  do ind=1,xtondim
+  do ind=1,twotondim
      iskip=ncoarse+(ind-1)*ngridmax
      do ivar=2,4
         do i=1,active(ilevel)%ngrid
@@ -43,7 +43,7 @@ subroutine move_fine(ilevel)
   end do
   ! Set unew reception cells to zero
   do icpu=1,ncpu
-     do ind=1,xtondim
+     do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
         do ivar=2,4
            do i=1,reception(icpu,ilevel)%ngrid
@@ -94,7 +94,7 @@ subroutine move_fine(ilevel)
      call make_virtual_reverse_dp(unew(1,ivar),ilevel)
   end do
 
-  do ind=1,xtondim
+  do ind=1,twotondim
      iskip=ncoarse+(ind-1)*ngridmax
      do ivar=2,4
         do i=1,active(ilevel)%ngrid

@@ -856,14 +856,14 @@ subroutine init_dust_fine(ilevel)
 #endif
 
   ! Reset unew to zero for dust ``stopping time''
-  do ind=1,xtondim
+  do ind=1,twotondim
      iskip=ncoarse+(ind-1)*ngridmax
         do i=1,active(ilevel)%ngrid
            unew(active(ilevel)%igrid(i)+iskip,ivar_dust)=0.0D0
         end do
   end do
   do icpu=1,ncpu
-     do ind=1,xtondim
+     do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
            do i=1,reception(icpu,ilevel)%ngrid
               unew(reception(icpu,ilevel)%igrid(i)+iskip,ivar_dust)=0.0D0
@@ -873,7 +873,7 @@ subroutine init_dust_fine(ilevel)
 
   ! Reset uold to zero for dust mass and momentum densities
   do icpu=1,ncpu
-     do ind=1,xtondim
+     do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
         do ivar=ivar_dust,ivar_dust+3
            do i=1,reception(icpu,ilevel)%ngrid
@@ -882,7 +882,7 @@ subroutine init_dust_fine(ilevel)
         end do
      end do
   end do
-  do ind=1,xtondim
+  do ind=1,twotondim
      iskip=ncoarse+(ind-1)*ngridmax
      do ivar=ivar_dust,ivar_dust+3
         do i=1,active(ilevel)%ngrid
@@ -894,7 +894,7 @@ subroutine init_dust_fine(ilevel)
 !!!!!!!!!!!!!!!!!!!!!!! NEW !!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! Reset dust variables in physical boundaries
    do ibound=1,nboundary
-      do ind=1,xtondim
+      do ind=1,twotondim
          iskip=ncoarse+(ind-1)*ngridmax
          do ivar=ivar_dust,ivar_dust+ndim
             do i=1,boundary(ibound,ilevel)%ngrid
@@ -907,7 +907,7 @@ subroutine init_dust_fine(ilevel)
    end do
 
    do ibound=1,nboundary
-      do ind=1,xtondim
+      do ind=1,twotondim
          iskip=ncoarse+(ind-1)*ngridmax
          do ivar=ivar_dust,ivar_dust+ndim
             do i=1,boundary(ibound,ilevel)%ngrid
