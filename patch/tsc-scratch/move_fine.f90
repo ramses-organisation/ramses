@@ -805,7 +805,7 @@ end do
      do ind=1,xtondim
          do j=1,np
             dgr(j)=dgr(j)+uold(indp(j,ind),1)*vol(j,ind)
-            ddgr(j)=ddgr(j)+uold(indp(i,ind),ivar_dust)*vol(j,ind)
+            ddgr(j)=ddgr(j)+uold(indp(j,ind),ivar_dust)*vol(j,ind)
         end do
      end do
   endif
