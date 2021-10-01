@@ -905,6 +905,7 @@ SUBROUTINE find_speed_info(qvar,vel_info)
   USE amr_parameters
   USE const
   USE hydro_parameters
+  USE nimhd_parameters
   !! calculate the fastest velocity at which information is exchanged
   !! at the interface
   !! the structure of qvar is : rho, Pressure, Vnormal, Bnormal,

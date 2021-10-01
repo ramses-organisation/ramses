@@ -974,6 +974,7 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
   USE amr_parameters
   USE hydro_parameters
   USE const
+  USE nimhd_parameters
   IMPLICIT NONE
 
   INTEGER ::ngrid

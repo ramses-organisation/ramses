@@ -75,6 +75,9 @@ endif
 ifeq ($(NIMHD),1)
    DEFINES += -DNIMHD
 endif
+ifeq ($(HALL),1)
+   DEFINES += -DHALL
+endif
 ifeq ($(OLD_MPI_SUPPORT),1)
    DEFINES += -DMPI_OLD
 endif
