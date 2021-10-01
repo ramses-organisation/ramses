@@ -968,13 +968,13 @@ END SUBROUTINE trace2d
 #if NDIM==3
 #if HALL==1
 SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid,bpred,rppred)
+  USE nimhd_parameters
 #else
 SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
 #endif
   USE amr_parameters
   USE hydro_parameters
   USE const
-  USE nimhd_parameters
   IMPLICIT NONE
 
   INTEGER ::ngrid

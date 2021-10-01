@@ -899,13 +899,13 @@ END SUBROUTINE find_mhd_flux
 ! 1d riemann solver (dx=0 or not)
 #if HALL==1
 SUBROUTINE find_speed_info(qvar,vel_info,dx)
+  USE nimhd_parameters
 #else
 SUBROUTINE find_speed_info(qvar,vel_info)
 #endif
   USE amr_parameters
   USE const
   USE hydro_parameters
-  USE nimhd_parameters
   !! calculate the fastest velocity at which information is exchanged
   !! at the interface
   !! the structure of qvar is : rho, Pressure, Vnormal, Bnormal,
