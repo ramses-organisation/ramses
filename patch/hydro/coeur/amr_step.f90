@@ -59,7 +59,7 @@ recursive subroutine amr_step(ilevel,icount)
      call rho_fine(ilevel,icount)
 
      ! Synchronize hydro for gravity (first pass)
-     if(hydro)call synchro_hydro_fine(ilevel,-0.5*dtnew(ilevel))
+     if(hydro)call synchro_hydro_fine(ilevel,-0.5*dtnew(ilevel),1)
 
      ! Compute gravitational potential
      if(ilevel>levelmin)then
@@ -73,7 +73,7 @@ recursive subroutine amr_step(ilevel,icount)
 
      ! Synchronize hydro for gravity (second pass)
      if(hydro)then
-        call synchro_hydro_fine(ilevel,+0.5*dtnew(ilevel))
+        call synchro_hydro_fine(ilevel,+0.5*dtnew(ilevel),1)
         ! Update boundaries
         do ivar=1,nvar
            call make_virtual_fine_dp(uold(1,ivar),ilevel)
@@ -132,7 +132,7 @@ recursive subroutine amr_step(ilevel,icount)
      if(star)call star_formation(ilevel)                     ! Star formation
      call godunov_fine(ilevel)                            ! Hyperbolic solver
      call set_uold(ilevel)                           ! Set uold equal to unew
-     if(poisson)call synchro_hydro_fine(ilevel,dtnew(ilevel))! Gravity source
+     if(poisson)call synchro_hydro_fine(ilevel,dtnew(ilevel),1)! Gravity source
      if(cooling)call cooling_fine(ilevel)                    ! Cooling source
      call upload_fine(ilevel)                                   ! Restriction
      if(poisson) call barotrop(ilevel)
