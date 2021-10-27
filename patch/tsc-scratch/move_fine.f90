@@ -810,6 +810,21 @@ end do
      end do
   endif
 
+  ! if(trajectories(1)>0)then!Various fields interpolated to particle positions
+  !    do index_part=trajectories(1),trajectories(2)
+  !       do j=1,np
+  !          if(idp(ind_part(j)).EQ.index_part)then
+  !             write(25+myid,*)t-dtnew(ilevel),idp(ind_part(j)),dgr(j),ddgr(j), & ! Old time
+  !                  & xp(ind_part(j),1),xp(ind_part(j),2),xp(ind_part(j),3),& ! Old particle position
+  !                  & vp(ind_part(j),1),vp(ind_part(j),2),vp(ind_part(j),3),& ! Old particle velocity
+  !                  &  uu(j,1),uu(j,2),uu(j,3),& ! Old fluid velocity
+  !                  &  bb(j,1),bb(j,2),bb(j,3)! Old magnetic field.
+  !                  ! & new_vp(j,1),new_vp(j,2),new_vp(j,3) ! NEW particle velocity (for comparison)
+  !          endif
+  !       end do
+  !    end do
+  ! endif
+
   if(trajectories(1)>0)then!Various fields interpolated to particle positions
      do index_part=trajectories(1),trajectories(2)
         do j=1,np
@@ -908,7 +923,8 @@ end do
   ! DRAG KICK
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-    call DragKick(np,dtnew(ilevel),indp,ok,vol,nu_stop,big_vv,big_ww,vv,xtondim)
+    call DragKickAlt(np,dtnew(ilevel),indp,ok,vol,nu_stop,big_vv,big_ww,vv,xtondim)
+    ! Was just "DragKick"
     !write(*,*)'big_vv+=',big_vv(1,1,1),big_vv(1,1,2),big_vv(1,1,3)
     ! DragKick will modify big_ww as well as big_vv, but not vv.
     ! Now kick the dust given these quantities.
@@ -1281,6 +1297,79 @@ subroutine DragKick(nn,dt,indp,ok,vol,nu,big_v,big_w,v,xtondim) ! mp is actually
    endif
 end subroutine DragKick
 
+
+subroutine DragKickAlt(nn,dt,indp,ok,vol,nu,big_v,big_w,v,xtondim) ! mp is actually mov
+  use amr_parameters
+  use hydro_parameters
+  use hydro_commons, ONLY: uold,unew,smallr,nvar,gamma
+  implicit none
+  integer::nn
+  integer ::ivar_dust, xtondim ! cell-centered dust variables start.  integer ::nn ! number of cells
+  real(dp) ::dt ! timestep
+  real(dp) ::vol_loc ! cloud volume
+  real(dp),dimension(1:nvector) ::nu,mp
+  logical ,dimension(1:nvector)::ok
+  real(dp),dimension(1:nvector,1:xtondim)::vol
+  integer ,dimension(1:nvector,1:xtondim)::indp
+  real(dp),dimension(1:nvector,1:ndim) ::v ! grain velocity
+  real(dp),dimension(1:nvector,1:xtondim,1:ndim) ::big_v,big_w
+  real(dp) ::den_dust,den_gas,mu,nuj,up
+  integer ::i,j,ind,idim! Just an index
+  ivar_dust=9
+
+  if (second_order)then
+    do ind=1,xtondim
+       do i=1,nn
+          den_gas=uold(indp(i,ind),1)
+          den_dust=uold(indp(i,ind),ivar_dust)
+          mu=den_dust/max(den_gas,smallr)
+          nuj=(1.+mu)*unew(indp(i,ind),ivar_dust)/max(uold(indp(i,ind),ivar_dust),smallr)
+          do idim=1,ndim
+            ! w = &
+            ! &uold(indp(i,ind),ivar_dust+idim)/max(uold(indp(i,ind),ivar_dust),smallr)&
+            ! &-uold(indp(i,ind),1+idim)/max(uold(indp(i,ind),1),smallr)
+
+            big_w(i,ind,idim)=big_w(i,ind,idim)&
+            &/(1.+nuj*dt+0.5*nuj*nuj*dt*dt)
+
+            up = -mu*big_w(i,ind,idim)/(1.+mu)+(uold(indp(i,ind),1+idim)&
+            &+uold(indp(i,ind),ivar_dust+idim))/&
+            &max(uold(indp(i,ind),1)+uold(indp(i,ind),ivar_dust),smallr)
+
+            big_v(i,ind,idim)= up + (big_v(i,ind,idim)-up)/&
+            &/(1.+dt*nu(i)*(1.+0.5*dt*nu(i)))
+            !big_v(i,ind,idim)=(big_v(i,ind,idim)+dt*nu(i)*(1.+0.5*dt*nu(i))*up)&
+            !&/(1.+dt*nu(i)*(1.+0.5*dt*nu(i))) ! suspected error begins here?
+          end do
+          ! big_w corresponds directly to a change in the gas velocity.
+       end do
+    end do
+   else
+     do ind=1,xtondim
+        do i=1,nn
+           den_gas=uold(indp(i,ind),1)
+           den_dust=uold(indp(i,ind),ivar_dust)
+           mu=den_dust/max(den_gas,smallr)
+           nuj=(1.+mu)*unew(indp(i,ind),ivar_dust)/max(uold(indp(i,ind),ivar_dust),smallr)
+           do idim=1,ndim
+             ! w = &
+             ! &uold(indp(i,ind),ivar_dust+idim)/max(uold(indp(i,ind),ivar_dust),smallr)&
+             ! &-uold(indp(i,ind),1+idim)/max(uold(indp(i,ind),1),smallr)
+
+             big_w(i,ind,idim)=big_w(i,ind,idim)&
+             &/(1.+nuj*dt)
+
+             up = -mu*big_w(i,ind,idim)/(1.+mu)+(uold(indp(i,ind),1+idim)&
+             &+uold(indp(i,ind),ivar_dust+idim))/&
+             &max(uold(indp(i,ind),1)+uold(indp(i,ind),ivar_dust),smallr)
+
+             big_v(i,ind,idim)=(big_v(i,ind,idim)+dt*nu(i)*up)/(1.+dt*nu(i))
+           end do
+           ! big_w corresponds directly to a change in the gas velocity.
+        end do
+     end do
+   endif
+end subroutine DragKickAlt
 !#########################################################################
 !#########################################################################
 ! subroutine StoppingRateMidpt(nn,twodt,indp,ok,vol,mov,v,big_v,nu)
