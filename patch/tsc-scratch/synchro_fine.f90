@@ -1019,7 +1019,7 @@ subroutine init_dust(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,xtondim)
 
   ctm = charge_to_mass
   ts = t_stop
-  rd = sqrt(gamma)*0.62665706865775*grain_size ! constant for epstein drag law
+  rd = 0.62665706865775*grain_size ! constant for epstein drag law. used to havesqrt(gamma)*
 
   ! Mesh spacing in that level
   dx=0.5D0**ilevel
@@ -1660,7 +1660,7 @@ subroutine InitStoppingRate(nn,dt,indp,vol,v,nu,xtondim)
   real(dp),dimension(1:nvector,1:ndim),save ::w! drift at half step.
   integer ::i,j,idim,ind
   ivar_dust=9
-  rd = sqrt(gamma)*0.62665706865775*grain_size !constant for epstein drag law.
+  rd = 0.62665706865775*grain_size !constant for epstein drag law. #used to have *sqrt(gamma)
   cs=1.0 ! isothermal sound speed... Need to get this right. This works for now,
          ! but only if you have scaled things so that the sound speed is 1.
 
