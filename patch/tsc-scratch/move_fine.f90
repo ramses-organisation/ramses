@@ -1336,7 +1336,7 @@ subroutine DragKickAlt(nn,dt,indp,ok,vol,nu,big_v,big_w,v,xtondim) ! mp is actua
             &+uold(indp(i,ind),ivar_dust+idim))/&
             &max(uold(indp(i,ind),1)+uold(indp(i,ind),ivar_dust),smallr)
 
-            big_v(i,ind,idim)= up + (big_v(i,ind,idim)-up)/&
+            big_v(i,ind,idim)= up + (big_v(i,ind,idim)-up)&
             &/(1.+dt*nu(i)*(1.+0.5*dt*nu(i)))
             !big_v(i,ind,idim)=(big_v(i,ind,idim)+dt*nu(i)*(1.+0.5*dt*nu(i))*up)&
             !&/(1.+dt*nu(i)*(1.+0.5*dt*nu(i))) ! suspected error begins here?
