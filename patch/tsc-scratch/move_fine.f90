@@ -1401,11 +1401,12 @@ subroutine NewDragKick(nn,dt,indp,ok,vol,nu,big_v,big_w,v,xtondim,t)
   integer ,dimension(1:nvector,1:xtondim)::indp
   real(dp),dimension(1:nvector,1:ndim) ::v ! grain velocity
   real(dp),dimension(1:nvector,1:xtondim,1:ndim) ::big_v,big_w
-  real(dp) ::den_dust,den_gas,mu,nuj,up,un,twopi
+  real(dp) ::den_dust,den_gas,mu,nuj,up,un,twopi,ns
   integer ::i,j,ind,idim! Just an index
   real(dp),dimension(1:3) ::utemp,vc
   ivar_dust=9
   twopi=2.*3.1415926
+  ns = twopi/10.;
 
 
   do ind=1,xtondim
@@ -1417,11 +1418,13 @@ subroutine NewDragKick(nn,dt,indp,ok,vol,nu,big_v,big_w,v,xtondim,t)
         !den_dust=uold(indp(i,ind),ivar_dust)
         !mu=den_dust/max(den_gas,smallr)
         !nuj=(1.+mu)*unew(indp(i,ind),ivar_dust)/max(uold(indp(i,ind),ivar_dust),smallr)
-        big_v(i,ind,1)=vc(1)*nu(i)*nu(i)/(nu(i)*nu(i)+twopi*twopi)+&
-        &vc(2)*nu(i)*twopi/(nu(i)*nu(i)+twopi*twopi)
+        big_v(i,ind,1)=vc(1)*ns*ns/(ns*ns+twopi*twopi)+&
+        &vc(2)*ns*twopi/(ns*ns+twopi*twopi)
         !-exp(-nu(i)*t)*nu(i)*nu(i)/(twopi*twopi+nu(i)*nu(i))
-        big_v(i,ind,2)=vc(2)*nu(i)*nu(i)/(nu(i)*nu(i)+twopi*twopi)-&
-        &vc(1)*nu(i)*twopi/(nu(i)*nu(i)+twopi*twopi)
+        big_v(i,ind,2)=0.1*cos(twopi*t)*nu(i)*nu(i)/(nu(i)*nu(i)+twopi*twopi)+&
+        &0.1*sin(twopi*t)*nu(i)*twopi/(nu(i)*nu(i)+twopi*twopi)
+        ! big_v(i,ind,2)=vc(2)*nu(i)*nu(i)/(nu(i)*nu(i)+twopi*twopi)-&
+        ! &vc(1)*nu(i)*twopi/(nu(i)*nu(i)+twopi*twopi)
         !+exp(-nu(i)*t)*twopi*nu(i)/(twopi*twopi+nu(i)*nu(i))
         big_v(i,ind,3)=1.0
       end do
