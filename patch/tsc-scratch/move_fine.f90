@@ -922,7 +922,7 @@ end do
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! DRAG KICK
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
+    write(*,*) big_ww(1,1,1),big_ww(1,1,2),big_ww(1,1,3)
     call NewDragKick(np,dtnew(ilevel),indp,ok,vol,nu_stop,big_vv,big_ww,vv,xtondim)
     ! Was just "DragKick"
     !write(*,*)'big_vv+=',big_vv(1,1,1),big_vv(1,1,2),big_vv(1,1,3)
