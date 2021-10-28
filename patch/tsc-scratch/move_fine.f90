@@ -923,7 +923,7 @@ end do
   ! DRAG KICK
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-    call NewDragKick(np,dtnew(ilevel),indp,ok,vol,nu_stop,big_vv,big_ww,vv,xtondim)
+    call NewDragKick(np,dtnew(ilevel),indp,ok,vol,nu_stop,big_vv,big_ww,vv,xtondim,t)
     ! Was just "DragKick"
     !write(*,*)'big_vv+=',big_vv(1,1,1),big_vv(1,1,2),big_vv(1,1,3)
     ! DragKick will modify big_ww as well as big_vv, but not vv.
@@ -1381,16 +1381,19 @@ end subroutine DragKickAlt
 !#########################################################################
 !#########################################################################
 
-subroutine NewDragKick(nn,dt,indp,ok,vol,nu,big_v,big_w,v,xtondim)
+subroutine NewDragKick(nn,dt,indp,ok,vol,nu,big_v,big_w,v,xtondim,t)
   ! This subroutine will compute changes to sub-cloud velocity in big_v,
   ! as well as set unew's dust momentum slot to being u+du**EM.
   use amr_parameters
   use hydro_parameters
+  ! use amr_commons
+  ! use pm_commons
+  ! use poisson_commons
   use hydro_commons, ONLY: uold,unew,smallr,nvar,gamma
   implicit none
   integer::nn
   integer ::ivar_dust, xtondim ! cell-centered dust variables start.  integer ::nn ! number of cells
-  real(dp) ::dt ! timestep
+  real(dp) ::dt,t ! timestep,time
   real(dp) ::vol_loc ! cloud volume
   real(dp),dimension(1:nvector) ::nu,mp
   logical ,dimension(1:nvector)::ok
