@@ -1372,7 +1372,7 @@ end subroutine DragKickAlt
 !#########################################################################
 !#########################################################################
 
-subroutine NewDragKick(nn,dt,indp,ok,vol,nu,big_v,big_w,v,xtondim,x)
+subroutine NewDragKick(nn,dt,indp,ok,vol,nu,big_v,big_w,v,xtondim)
   ! This subroutine will compute changes to sub-cloud velocity in big_v,
   ! as well as set unew's dust momentum slot to being u+du**EM.
   use amr_parameters
