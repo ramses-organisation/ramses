@@ -1372,7 +1372,7 @@ end subroutine DragKickAlt
 !#########################################################################
 !#########################################################################
 
-subroutine NewDragKick(nn,dt,indp,ok,vol,nu,big_v,big_w,v,xtondim)
+subroutine NewDragKick(nn,dt,indp,ok,vol,nu,big_v,big_w,v,xtondim,x)
   ! This subroutine will compute changes to sub-cloud velocity in big_v,
   ! as well as set unew's dust momentum slot to being u+du**EM.
   use amr_parameters
@@ -1389,7 +1389,7 @@ subroutine NewDragKick(nn,dt,indp,ok,vol,nu,big_v,big_w,v,xtondim)
   integer ,dimension(1:nvector,1:xtondim)::indp
   real(dp),dimension(1:nvector,1:ndim) ::v ! grain velocity
   real(dp),dimension(1:nvector,1:xtondim,1:ndim) ::big_v,big_w
-  real(dp) ::den_dust,den_gas,mu,nuj,up,un,vc
+  real(dp) ::den_dust,den_gas,mu,nuj,up,un,vc,twopi
   integer ::i,j,ind,idim! Just an index
   real(dp),dimension(1:3) ::utemp
   ivar_dust=9
@@ -1397,13 +1397,13 @@ subroutine NewDragKick(nn,dt,indp,ok,vol,nu,big_v,big_w,v,xtondim)
   do ind=1,xtondim
      do i=1,nn
         den_gas=unew(indp(i,ind),1)
+
         !den_dust=uold(indp(i,ind),ivar_dust)
         !mu=den_dust/max(den_gas,smallr)
         !nuj=(1.+mu)*unew(indp(i,ind),ivar_dust)/max(uold(indp(i,ind),ivar_dust),smallr)
         do idim=1,3
           vc=(unew(indp(i,ind),idim+1))/(den_gas)
-          big_v(i,ind,idim)=&
-          &big_v(i,ind,idim)-(big_v(i,ind,idim)-vc)*(1-exp(nu(i)*dt))
+          big_v(i,ind,idim)=vc
         end do
       end do
   end do
