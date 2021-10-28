@@ -1412,6 +1412,7 @@ subroutine NewDragKick(nn,dt,indp,ok,vol,nu,big_v,big_w,v,xtondim)
           big_v(i,ind,idim)=utemp(idim)+(big_v(i,ind,idim)-utemp(idim))/&
           &(1.+nu(i)*dt+0.5*nu(i)*nu(i)*dt*dt)
         end do
+      end do
   end do
 end subroutine NewDragKick
 ! subroutine StoppingRateMidpt(nn,twodt,indp,ok,vol,mov,v,big_v,nu)
