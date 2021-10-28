@@ -825,13 +825,12 @@ end do
   !    end do
   ! endif
 
-  call StoppingRate(np,dtnew(ilevel),indp,vol,vv,nu_stop,xtondim)
-  
+
   if(trajectories(1)>0)then!Various fields interpolated to particle positions
      do index_part=trajectories(1),trajectories(2)
         do j=1,np
            if(idp(ind_part(j)).EQ.index_part)then
-              write(25+myid,*)t-dtnew(ilevel),idp(ind_part(j)),nu_stop(j),ddgr(j), & ! Old time
+              write(25+myid,*)t-dtnew(ilevel),idp(ind_part(j)),t_stop,ddgr(j), & ! Old time
                    & xp(ind_part(j),1),xp(ind_part(j),2),xp(ind_part(j),3),& ! Old particle position
                    & vp(ind_part(j),1),vp(ind_part(j),2),vp(ind_part(j),3),& ! Old particle velocity
                    &  uu(j,1),uu(j,2),uu(j,3),& ! Old fluid velocity
@@ -900,7 +899,7 @@ end do
   ! We compute this before the EM kick for the sole reason that we had to do
   ! that in init_dust_fine. For second order accuracy, things will be more
   ! complicated.
-
+  call StoppingRate(np,dtnew(ilevel),indp,vol,vv,nu_stop,xtondim)
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! LORENTZ KICK
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
