@@ -1390,9 +1390,9 @@ subroutine NewDragKick(nn,dt,indp,ok,vol,nu,big_v,big_w,v,xtondim)
   integer ,dimension(1:nvector,1:xtondim)::indp
   real(dp),dimension(1:nvector,1:ndim) ::v ! grain velocity
   real(dp),dimension(1:nvector,1:xtondim,1:ndim) ::big_v,big_w
-  real(dp) ::den_dust,den_gas,mu,nuj
+  real(dp) ::den_dust,den_gas,mu,nuj,up,un,vc
   integer ::i,j,ind,idim! Just an index
-  real(dp),dimension(1:3) ::utemp,vc,up,un
+  real(dp),dimension(1:3) ::utemp
   ivar_dust=9
 
   do ind=1,xtondim
@@ -1404,9 +1404,9 @@ subroutine NewDragKick(nn,dt,indp,ok,vol,nu,big_v,big_w,v,xtondim)
         do idim=1,3
           vc(idim)=(uold(indp(i,ind),idim+ivar_dust)&
           &+uold(indp(i,ind),idim+1))/(den_dust+den_gas)
-          un(idim)=vc(idim)-mu*big_w(i,ind,idim)/(1+mu)
+          un=vc(idim)-mu*big_w(i,ind,idim)/(1+mu)
           big_w(i,ind,idim)=(1-nuj*dt*0.5)*big_w(i,ind,idim)/(1+nuj*dt*0.5)
-          up(idim)=vc(idim)&
+          up=vc(idim)&
           &-mu*big_w(i,ind,idim)/(1+mu)
 
           big_v(i,ind,idim)=(1-nu(i)*dt*0.5)*big_v(i,ind,idim)/(1+nu(i)*dt*0.5)&
