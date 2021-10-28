@@ -928,13 +928,13 @@ end do
     !write(*,*)'big_vv+=',big_vv(1,1,1),big_vv(1,1,2),big_vv(1,1,3)
     ! DragKick will modify big_ww as well as big_vv, but not vv.
     ! Now kick the dust given these quantities.
-     vv(1:np,1:ndim)=0.0D0
-     do ind=1,xtondim
-       do idim=1,ndim
-         do j=1,np
-           vv(j,idim)= vv(j,idim)+&
-           &uold(indp(j,ind),idim+1)/max(uold(indp(j,ind),1),smallr)*vol(j,ind)
-         end do
+    ! vv(1:np,1:ndim)=0.0D0
+     do idim=1,ndim
+       do j=1,np
+         vv(j,idim)= uu(j,idim)+&
+         &(vv(j,idim)-uu(j,idim))/&
+         &(1+nu_stop(i)*dtnew(ilevel)+&
+         &0.5*nu_stop(i)*dtnew(ilevel)*nu_stop(i)*dtnew(ilevel))
        end do
      end do
     ! do ind=1,xtondim
