@@ -923,7 +923,7 @@ end do
   ! DRAG KICK
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-    call DragKickAlt(np,dtnew(ilevel),indp,ok,vol,nu_stop,big_vv,big_ww,vv,xtondim)
+    call NewDragKick(np,dtnew(ilevel),indp,ok,vol,nu_stop,big_vv,big_ww,vv,xtondim)
     ! Was just "DragKick"
     !write(*,*)'big_vv+=',big_vv(1,1,1),big_vv(1,1,2),big_vv(1,1,3)
     ! DragKick will modify big_ww as well as big_vv, but not vv.
@@ -1372,6 +1372,48 @@ subroutine DragKickAlt(nn,dt,indp,ok,vol,nu,big_v,big_w,v,xtondim) ! mp is actua
 end subroutine DragKickAlt
 !#########################################################################
 !#########################################################################
+
+subroutine NewDragKick(nn,dt,indp,ok,vol,nu,big_v,big_w,v,xtondim)
+  ! This subroutine will compute changes to sub-cloud velocity in big_v,
+  ! as well as set unew's dust momentum slot to being u+du**EM.
+  use amr_parameters
+  use hydro_parameters
+  use hydro_commons, ONLY: uold,unew,smallr,nvar,gamma
+  implicit none
+  integer::nn
+  integer ::ivar_dust, xtondim ! cell-centered dust variables start.  integer ::nn ! number of cells
+  real(dp) ::dt ! timestep
+  real(dp) ::vol_loc ! cloud volume
+  real(dp),dimension(1:nvector) ::nu,mp
+  logical ,dimension(1:nvector)::ok
+  real(dp),dimension(1:nvector,1:xtondim)::vol
+  integer ,dimension(1:nvector,1:xtondim)::indp
+  real(dp),dimension(1:nvector,1:ndim) ::v ! grain velocity
+  real(dp),dimension(1:nvector,1:xtondim,1:ndim) ::big_v,big_w
+  real(dp) ::den_dust,den_gas,mu,nuj,up
+  integer ::i,j,ind,idim! Just an index
+  real(dp),dimension(1:3) ::utemp,vc
+  ivar_dust=9
+
+  do ind=1,xtondim
+     do i=1,nn
+        den_gas=uold(indp(i,ind),1)
+        den_dust=uold(indp(i,ind),ivar_dust)
+        mu=den_dust/max(den_gas,smallr)
+        nuj=(1.+mu)*unew(indp(i,ind),ivar_dust)/max(uold(indp(i,ind),ivar_dust),smallr)
+        do idim=1,3
+          vc(idim)=(uold(indp(i,ind),idim+ivar_dust)&
+          &+uold(indp(i,ind),idim+1))/(den_dust+den_gas)
+        end do
+        !new net drift velocity
+        do idim=1,3
+          big_w(i,ind,idim)= big_w(i,ind,idim)/(1.+nuj*dt+0.5*nuj*nuj*dt*dt)
+          utemp(idim) = vc(idim)-mu*big_w(i,ind,idim)/(1+mu)
+          big_v(i,ind,idim)=utemp(idim)+(big_v(i,ind,idim)-utemp(idim))/&
+          &(1.+nu(i)*dt+0.5*nu(i)*nu(i)*dt*dt)
+        end do
+  end do
+end subroutine NewDragKick
 ! subroutine StoppingRateMidpt(nn,twodt,indp,ok,vol,mov,v,big_v,nu)
 !   ! The following subroutine will alter its last argument, nu
 !   ! to be a half-step advanced. Because we are operator splitting,
