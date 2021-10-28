@@ -921,20 +921,29 @@ end do
     !write(*,*)'big_vv=',big_vv(1,1,1),big_vv(1,1,2),big_vv(1,1,3)
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! DRAG KICK
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    call NewDragKick(np,dtnew(ilevel),indp,ok,vol,nu_stop,big_vv,big_ww,vv,xtondim)
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+    !call NewDragKick(np,dtnew(ilevel),indp,ok,vol,nu_stop,big_vv,big_ww,vv,xtondim)
     ! Was just "DragKick"
     !write(*,*)'big_vv+=',big_vv(1,1,1),big_vv(1,1,2),big_vv(1,1,3)
     ! DragKick will modify big_ww as well as big_vv, but not vv.
     ! Now kick the dust given these quantities.
-    vv(1:np,1:ndim)=0.0D0
-    do ind=1,xtondim
-      do idim=1,ndim
-        do j=1,np
-          vv(j,idim)=vv(j,idim)+vol(j,ind)*big_vv(j,ind,idim)
-        end do
-      end do
-    end do
+     vv(1:np,1:ndim)=0.0D0
+     do ind=1,xtondim
+       do idim=1,ndim
+         do j=1,np
+           vv(j,idim)= vv(j,idim)+&
+           &uold(indp(j,ind),idim+1)/max(uold(indp(j,ind),1),smallr)*vol(j,ind)
+         end do
+       end do
+     end do
+    ! do ind=1,xtondim
+    !   do idim=1,ndim
+    !     do j=1,np
+    !       vv(j,idim)=vv(j,idim)+vol(j,ind)*big_vv(j,ind,idim)
+    !     end do
+    !   end do
+    ! end do
 
     !call DragKick(np,dtnew(ilevel),indp,ok,vol,mov,nu_stop,big_vv,vv)
     new_vp(1:np,1:ndim)=vv(1:np,1:ndim)
