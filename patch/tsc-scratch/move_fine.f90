@@ -1407,6 +1407,7 @@ subroutine NewDragKick(nn,dt,indp,ok,vol,nu,big_v,big_w,v,xtondim,t)
   ivar_dust=9
   twopi=2.*3.1415926
 
+
   do ind=1,xtondim
      do i=1,nn
         den_gas=unew(indp(i,ind),1)
@@ -1418,13 +1419,31 @@ subroutine NewDragKick(nn,dt,indp,ok,vol,nu,big_v,big_w,v,xtondim,t)
         !nuj=(1.+mu)*unew(indp(i,ind),ivar_dust)/max(uold(indp(i,ind),ivar_dust),smallr)
         big_v(i,ind,1)=vc(1)*nu(i)*nu(i)/(nu(i)*nu(i)+twopi*twopi)+&
         &vc(2)*nu(i)*twopi/(nu(i)*nu(i)+twopi*twopi)&
-        &-exp(-nu(i)*t)*nu(i)*nu(i)/(twopi*twopi+nu(i)*nu(i))
+        &!-exp(-nu(i)*t)*nu(i)*nu(i)/(twopi*twopi+nu(i)*nu(i))
         big_v(i,ind,2)=vc(2)*nu(i)*nu(i)/(nu(i)*nu(i)+twopi*twopi)-&
-        &vc(1)*nu(i)*twopi/(nu(i)*nu(i)+twopi*twopi)+&
-        &exp(-nu(i)*t)*twopi*nu(i)/(twopi*twopi+nu(i)*nu(i))
+        &vc(1)*nu(i)*twopi/(nu(i)*nu(i)+twopi*twopi)&
+        &!+exp(-nu(i)*t)*twopi*nu(i)/(twopi*twopi+nu(i)*nu(i))
         big_v(i,ind,3)=1.0
       end do
   end do
+  ! do ind=1,xtondim
+  !    do i=1,nn
+  !       den_gas=unew(indp(i,ind),1)
+  !       do idim=1,3
+  !         vc(idim)=(unew(indp(i,ind),idim+1))/(den_gas)
+  !       end do
+  !       !den_dust=uold(indp(i,ind),ivar_dust)
+  !       !mu=den_dust/max(den_gas,smallr)
+  !       !nuj=(1.+mu)*unew(indp(i,ind),ivar_dust)/max(uold(indp(i,ind),ivar_dust),smallr)
+  !       big_v(i,ind,1)=vc(1)*nu(i)*nu(i)/(nu(i)*nu(i)+twopi*twopi)+&
+  !       &vc(2)*nu(i)*twopi/(nu(i)*nu(i)+twopi*twopi)&
+  !       &-exp(-nu(i)*t)*nu(i)*nu(i)/(twopi*twopi+nu(i)*nu(i))
+  !       big_v(i,ind,2)=vc(2)*nu(i)*nu(i)/(nu(i)*nu(i)+twopi*twopi)-&
+  !       &vc(1)*nu(i)*twopi/(nu(i)*nu(i)+twopi*twopi)+&
+  !       &exp(-nu(i)*t)*twopi*nu(i)/(twopi*twopi+nu(i)*nu(i))
+  !       big_v(i,ind,3)=1.0
+  !     end do
+  ! end do
 end subroutine NewDragKick
 ! subroutine StoppingRateMidpt(nn,twodt,indp,ok,vol,mov,v,big_v,nu)
 !   ! The following subroutine will alter its last argument, nu
