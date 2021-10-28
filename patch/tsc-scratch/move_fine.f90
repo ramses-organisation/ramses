@@ -922,7 +922,6 @@ end do
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! DRAG KICK
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    write(*,*) big_ww(1,1,1),big_ww(1,1,2),big_ww(1,1,3)
     call NewDragKick(np,dtnew(ilevel),indp,ok,vol,nu_stop,big_vv,big_ww,vv,xtondim)
     ! Was just "DragKick"
     !write(*,*)'big_vv+=',big_vv(1,1,1),big_vv(1,1,2),big_vv(1,1,3)
@@ -1403,7 +1402,7 @@ subroutine NewDragKick(nn,dt,indp,ok,vol,nu,big_v,big_w,v,xtondim)
         !nuj=(1.+mu)*unew(indp(i,ind),ivar_dust)/max(uold(indp(i,ind),ivar_dust),smallr)
         do idim=1,3
           vc=(uold(indp(i,ind),idim+1))/(den_gas)
-          big_v(i,ind,idim)=big_w(i,ind,idim)/(1+nu(i)*dt+nu(i)*nu(i)*dt*dt*0.5)&
+          big_v(i,ind,idim)=(big_v(i,ind,idim)-vc)/(1+nu(i)*dt+nu(i)*nu(i)*dt*dt*0.5)&
           &+vc
         end do
       end do
