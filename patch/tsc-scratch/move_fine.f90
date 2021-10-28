@@ -1399,18 +1399,13 @@ subroutine NewDragKick(nn,dt,indp,ok,vol,nu,big_v,big_w,v,xtondim)
      do i=1,nn
         den_gas=uold(indp(i,ind),1)
         den_dust=uold(indp(i,ind),ivar_dust)
-        mu=den_dust/max(den_gas,smallr)
-        nuj=(1.+mu)*unew(indp(i,ind),ivar_dust)/max(uold(indp(i,ind),ivar_dust),smallr)
+        !mu=den_dust/max(den_gas,smallr)
+        !nuj=(1.+mu)*unew(indp(i,ind),ivar_dust)/max(uold(indp(i,ind),ivar_dust),smallr)
         do idim=1,3
           vc=(uold(indp(i,ind),idim+ivar_dust)&
           &+uold(indp(i,ind),idim+1))/(den_dust+den_gas)
-          un=vc-mu*big_w(i,ind,idim)/(1+mu)
-          big_w(i,ind,idim)=(1-nuj*dt*0.5)*big_w(i,ind,idim)/(1+nuj*dt*0.5)
-          up=vc&
-          &-mu*big_w(i,ind,idim)/(1+mu)
-
-          big_v(i,ind,idim)=(1-nu(i)*dt*0.5)*big_v(i,ind,idim)/(1+nu(i)*dt*0.5)&
-          &- nu(i)*dt*0.5*(up+un)/(1+nu(i)*dt*0.5)
+          big_v(i,ind,idim)=big_w(i,ind,idim)/(1+nu(i)*dt+nu(i)*nu(i)*dt*dt*0.5)&
+          &+vc
         end do
       end do
   end do
