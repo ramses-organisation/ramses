@@ -1390,9 +1390,9 @@ subroutine NewDragKick(nn,dt,indp,ok,vol,nu,big_v,big_w,v,xtondim)
   integer ,dimension(1:nvector,1:xtondim)::indp
   real(dp),dimension(1:nvector,1:ndim) ::v ! grain velocity
   real(dp),dimension(1:nvector,1:xtondim,1:ndim) ::big_v,big_w
-  real(dp) ::den_dust,den_gas,mu,nuj,up
+  real(dp) ::den_dust,den_gas,mu,nuj
   integer ::i,j,ind,idim! Just an index
-  real(dp),dimension(1:3) ::utemp,vc
+  real(dp),dimension(1:3) ::utemp,vc,up,un
   ivar_dust=9
 
   do ind=1,xtondim
@@ -1404,13 +1404,13 @@ subroutine NewDragKick(nn,dt,indp,ok,vol,nu,big_v,big_w,v,xtondim)
         do idim=1,3
           vc(idim)=(uold(indp(i,ind),idim+ivar_dust)&
           &+uold(indp(i,ind),idim+1))/(den_dust+den_gas)
-        end do
-        !new net drift velocity
-        do idim=1,3
-          big_w(i,ind,idim)= big_w(i,ind,idim)/(1.+nuj*dt+0.5*nuj*nuj*dt*dt)
-          utemp(idim) = vc(idim)-mu*big_w(i,ind,idim)/(1+mu)
-          big_v(i,ind,idim)=utemp(idim)+(big_v(i,ind,idim)-utemp(idim))/&
-          &(1.+nu(i)*dt+0.5*nu(i)*nu(i)*dt*dt)
+          un(idim)=vc(idim)-mu*big_w(i,ind,idim)/(1+mu)
+          big_w(i,ind,idim)=(1-nuj*dt*0.5)*big_w(i,ind,idim)/(1+nuj*dt*0.5)
+          up(idim)=vc(idim)&
+          &-mu*big_w(i,ind,idim)/(1+mu)
+
+          big_v(i,ind,idim)=(1-nu(i)*dt*0.5)*big_v(i,ind,idim)/(1+nu(i)*dt*0.5)&
+          &- nu(i)*dt*0.5*(up+un)/(1+nu(i)*dt*0.5)
         end do
       end do
   end do
