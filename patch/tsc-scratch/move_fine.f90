@@ -830,7 +830,7 @@ end do
      do index_part=trajectories(1),trajectories(2)
         do j=1,np
            if(idp(ind_part(j)).EQ.index_part)then
-              write(25+myid,*)t-dtnew(ilevel),idp(ind_part(j)),t_stop,ddgr(j), & ! Old time
+              write(25+myid,*)t-dtnew(ilevel),idp(ind_part(j)),dgr(j),ddgr(j), & ! Old time
                    & xp(ind_part(j),1),xp(ind_part(j),2),xp(ind_part(j),3),& ! Old particle position
                    & vp(ind_part(j),1),vp(ind_part(j),2),vp(ind_part(j),3),& ! Old particle velocity
                    &  uu(j,1),uu(j,2),uu(j,3),& ! Old fluid velocity
@@ -924,20 +924,12 @@ end do
   ! DRAG KICK
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-    call NewDragKick(np,dtnew(ilevel),indp,ok,vol,nu_stop,big_vv,big_ww,vv,xtondim,t)
+    call DragKick(np,dtnew(ilevel),indp,ok,vol,nu_stop,big_vv,big_ww,vv,xtondim)
     ! Was just "DragKick"
     !write(*,*)'big_vv+=',big_vv(1,1,1),big_vv(1,1,2),big_vv(1,1,3)
     ! DragKick will modify big_ww as well as big_vv, but not vv.
     ! Now kick the dust given these quantities.
-     vv(1:np,1:ndim)=0.0D0
-     ! do idim=1,ndim
-     !   do j=1,np
-     !     vv(j,idim)= uu(j,idim)+&
-     !     &(vv(j,idim)-uu(j,idim))/&
-     !     &(1+nu_stop(i)*dtnew(ilevel)+&
-     !     &0.5*nu_stop(i)*dtnew(ilevel)*nu_stop(i)*dtnew(ilevel))
-     !   end do
-     ! end do
+    vv(1:np,1:ndim)=0.0D0
     do ind=1,xtondim
       do idim=1,ndim
         do j=1,np
@@ -1275,6 +1267,12 @@ subroutine DragKick(nn,dt,indp,ok,vol,nu,big_v,big_w,v,xtondim) ! mp is actually
 
             big_v(i,ind,idim)=(big_v(i,ind,idim)+dt*nu(i)*(1.+0.5*dt*nu(i))*up)&
             &/(1.+dt*nu(i)*(1.+0.5*dt*nu(i)))
+            ! up = -mu*big_w(i,ind,idim)*(1.+0.5*dt*nuj)/(1.+mu)+(uold(indp(i,ind),1+idim)&
+            ! &+uold(indp(i,ind),ivar_dust+idim))/&
+            ! &max(uold(indp(i,ind),1)+uold(indp(i,ind),ivar_dust),smallr)
+            !
+            ! big_v(i,ind,idim)=(big_v(i,ind,idim)+dt*nu(i)*(1.+0.5*dt*nu(i))*up)&
+            ! &/(1.+dt*nu(i)*(1.+0.5*dt*nu(i)))
           end do
           ! big_w corresponds directly to a change in the gas velocity.
        end do
