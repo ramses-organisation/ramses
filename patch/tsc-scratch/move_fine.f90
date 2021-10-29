@@ -1351,7 +1351,7 @@ subroutine DragKickAlt(nn,dt,indp,ok,vol,nu,big_v,big_w,v,xtondim) ! mp is actua
           ! big_w corresponds directly to a change in the gas velocity.
        end do
     end do
-   else
+   else ! Change this to be the original algorithm
      do ind=1,xtondim
         do i=1,nn
            den_gas=uold(indp(i,ind),1)
@@ -1377,76 +1377,11 @@ subroutine DragKickAlt(nn,dt,indp,ok,vol,nu,big_v,big_w,v,xtondim) ! mp is actua
      end do
    endif
 end subroutine DragKickAlt
+!# Later on, can implement the better algorithm that does everything
+! self-consistently.
 !#########################################################################
 !#########################################################################
 
-subroutine NewDragKick(nn,dt,indp,ok,vol,nu,big_v,big_w,v,xtondim,t)
-  ! This subroutine will compute changes to sub-cloud velocity in big_v,
-  ! as well as set unew's dust momentum slot to being u+du**EM.
-  use amr_parameters
-  use hydro_parameters
-  ! use amr_commons
-  ! use pm_commons
-  ! use poisson_commons
-  use hydro_commons, ONLY: uold,unew,smallr,nvar,gamma
-  implicit none
-  integer::nn
-  integer ::ivar_dust, xtondim ! cell-centered dust variables start.  integer ::nn ! number of cells
-  real(dp) ::dt,t ! timestep,time
-  real(dp) ::vol_loc ! cloud volume
-  real(dp),dimension(1:nvector) ::nu,mp
-  logical ,dimension(1:nvector)::ok
-  real(dp),dimension(1:nvector,1:xtondim)::vol
-  integer ,dimension(1:nvector,1:xtondim)::indp
-  real(dp),dimension(1:nvector,1:ndim) ::v ! grain velocity
-  real(dp),dimension(1:nvector,1:xtondim,1:ndim) ::big_v,big_w
-  real(dp) ::den_dust,den_gas,mu,nuj,up,un,twopi,ns
-  integer ::i,j,ind,idim! Just an index
-  real(dp),dimension(1:3) ::utemp,vc
-  ivar_dust=9
-  twopi=2.*3.1415926
-  ns = twopi/10.;
-
-
-  do ind=1,xtondim
-     do i=1,nn
-        den_gas=unew(indp(i,ind),1)
-        do idim=1,3
-          vc(idim)=(unew(indp(i,ind),idim+1))/(den_gas)
-        end do
-        !den_dust=uold(indp(i,ind),ivar_dust)
-        !mu=den_dust/max(den_gas,smallr)
-        !nuj=(1.+mu)*unew(indp(i,ind),ivar_dust)/max(uold(indp(i,ind),ivar_dust),smallr)
-        big_v(i,ind,1)=vc(1)*ns*ns/(ns*ns+twopi*twopi)+&
-        &vc(2)*ns*twopi/(ns*ns+twopi*twopi)
-        !-exp(-nu(i)*t)*nu(i)*nu(i)/(twopi*twopi+nu(i)*nu(i))
-        big_v(i,ind,2)=0.1*cos(twopi*t)*nu(i)*nu(i)/(nu(i)*nu(i)+twopi*twopi)+&
-        &0.1*sin(twopi*t)*nu(i)*twopi/(nu(i)*nu(i)+twopi*twopi)
-        ! big_v(i,ind,2)=vc(2)*nu(i)*nu(i)/(nu(i)*nu(i)+twopi*twopi)-&
-        ! &vc(1)*nu(i)*twopi/(nu(i)*nu(i)+twopi*twopi)
-        !+exp(-nu(i)*t)*twopi*nu(i)/(twopi*twopi+nu(i)*nu(i))
-        big_v(i,ind,3)=1.0
-      end do
-  end do
-  ! do ind=1,xtondim
-  !    do i=1,nn
-  !       den_gas=unew(indp(i,ind),1)
-  !       do idim=1,3
-  !         vc(idim)=(unew(indp(i,ind),idim+1))/(den_gas)
-  !       end do
-  !       !den_dust=uold(indp(i,ind),ivar_dust)
-  !       !mu=den_dust/max(den_gas,smallr)
-  !       !nuj=(1.+mu)*unew(indp(i,ind),ivar_dust)/max(uold(indp(i,ind),ivar_dust),smallr)
-  !       big_v(i,ind,1)=vc(1)*nu(i)*nu(i)/(nu(i)*nu(i)+twopi*twopi)+&
-  !       &vc(2)*nu(i)*twopi/(nu(i)*nu(i)+twopi*twopi)&
-  !       &-exp(-nu(i)*t)*nu(i)*nu(i)/(twopi*twopi+nu(i)*nu(i))
-  !       big_v(i,ind,2)=vc(2)*nu(i)*nu(i)/(nu(i)*nu(i)+twopi*twopi)-&
-  !       &vc(1)*nu(i)*twopi/(nu(i)*nu(i)+twopi*twopi)+&
-  !       &exp(-nu(i)*t)*twopi*nu(i)/(twopi*twopi+nu(i)*nu(i))
-  !       big_v(i,ind,3)=1.0
-  !     end do
-  ! end do
-end subroutine NewDragKick
 ! subroutine StoppingRateMidpt(nn,twodt,indp,ok,vol,mov,v,big_v,nu)
 !   ! The following subroutine will alter its last argument, nu
 !   ! to be a half-step advanced. Because we are operator splitting,
