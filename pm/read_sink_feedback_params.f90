@@ -13,9 +13,7 @@ SUBROUTINE read_sink_feedback_params(nml_ok)
           & FB_nsource, FB_on, FB_start, FB_end, FB_sourcetype, &
           & FB_pos_x, FB_pos_y, FB_pos_z, &
           & FB_mejecta, FB_energy, FB_thermal, &
-          & FB_radius, FB_r_refine, Vdisp, &
-          & jet_feedback_sink, mass_jet_sink, frac_acc_ej, cone_jet, & 
-          & v_jet, expo_jet, verbose_jet, ssm_table_directory
+          & FB_radius, Vdisp
     rewind(1)
     read(1,NML=feed_params,END=101)
   101 continue

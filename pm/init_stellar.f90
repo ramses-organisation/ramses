@@ -56,8 +56,6 @@ subroutine init_stellar
         ! TODO: check that nstellar_var_tmp == nstellar_var
         read(ilun) nstellar
 
-!        read(ilun) nstellar_tot
-
         if(nstellar > 0) then
             allocate(xdp(1:nstellar))
             allocate(xin(1:nstellar))

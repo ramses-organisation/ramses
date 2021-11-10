@@ -6,8 +6,7 @@ module pm_commons
 
   implicit none
 
-  !introduced by PH 09/2013 to compute the feedback from the sink
-  !reimported by PH 27/07/2021
+  !to compute the feedback from the sink
   real(kind=8),allocatable,dimension(:)::dmfsink,dmfsink_new,dmfsink_all
 
   ! Sink particle related arrays
