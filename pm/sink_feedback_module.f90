@@ -24,7 +24,9 @@ module sink_feedback_module
 
   ! Stellar object related arrays, those parameters are read in  read_stellar_params 
   logical:: sn_direct = .false.
-  logical:: make_stellar_glob = .false. !if used, the objects are created when the total mass in sinks exceeds stellar_msink_th
+  character(LEN=100)::stellar_strategy='local' ! local: create stellar particles from each sink
+                                               ! global: create when the total mass in sinks exceeds stellar_msink_th
+
   integer:: nstellarmax ! maximum number of stellar objects
   integer:: nstellar = 0 ! current number of stellar objects
   integer:: nstellar_tot = 0 ! total number of stellar objects
