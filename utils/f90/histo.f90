@@ -458,11 +458,6 @@ program histo_main
                  if(ok_cell)then
                     if (gcc==0)then
                        xx=log10(rho(i)/1.66d-24*0.76)
-
-                       if(xx .lt. -2)then
-                          write(*,*)xx
-                       endif
-
                     else
                        xx=log10(rho(i))
                     end if
