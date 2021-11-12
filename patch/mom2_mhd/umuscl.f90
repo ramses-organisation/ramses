@@ -1513,7 +1513,7 @@ subroutine cmpflxm(qm,im1,im2,jm1,jm2,km1,km2, &
               CASE (2)
                  CALL hll           (qleft,qright,fgdnv)
               CASE (3)
-                 if (rmin > 1D-2) then
+                 if (rmin > dens_llf) then
                     CALL hlld          (qleft,qright,snleft,snright,fgdnv)
                  else
                     CALL lax_friedrich (qleft,qright,fgdnv,zero_flux)
