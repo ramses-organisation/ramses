@@ -9,6 +9,13 @@ module hydro_commons
   real(dp)::mass_tot=0,mass_tot_0=0
   real(dp)::ana_xmi,ana_xma,ana_ymi,ana_yma,ana_zmi,ana_zma
   integer::nbins
+
+#if USE_FLD==1
+  integer,allocatable,dimension(:)::liste_ind
+  integer::nb_ind
+  real(dp)   ::dt_imp                            ! Implicit timestep               
+  logical,allocatable,dimension(:)::in_sink !false -> true if cell within sink radius
+#endif
 end module hydro_commons
 
 module const
@@ -19,9 +26,23 @@ module const
   real(dp)::two = 2
   real(dp)::three = 3
   real(dp)::four = 4
+  real(dp)::five = 5
+  real(dp)::six = 6
+  real(dp)::seven = 7
+  real(dp)::eight = 8
+  real(dp)::nine = 9
+  real(dp)::ten = 10
   real(dp)::two3rd = 2/3d0
   real(dp)::half = 1/2d0
   real(dp)::third = 1/3d0
   real(dp)::forth = 1/4d0
   real(dp)::sixth = 1/6d0
 end module const
+
+#if USE_FLD==1
+! Units
+module units_commons
+  use amr_parameters, only : dp
+  real(dp):: scale_E0,scale_m,P_cal,C_cal
+end module units_commons
+#endif

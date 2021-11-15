@@ -1,0 +1,1 @@
+FLAGS: NDIM=3 SOLVER=mhd PATCH=../tests/fld/dirac3d NGRP=1 USE_FLD=1

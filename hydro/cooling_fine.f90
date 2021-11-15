@@ -63,6 +63,9 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
   use rt_cooling_module, only: rt_solve_cooling,iIR,rt_isIRtrap &
        ,rt_pressBoost,iIRtrapVar,kappaSc,kappaAbs,is_kIR_T,rt_vc
   use constants, only: a_r, Myr2sec
+#if USE_FLD==1
+  use radiation_parameters,only:sinks_opt_thin
+#endif
 #endif
   use mpi_mod
   implicit none
@@ -83,6 +86,9 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
   real(dp),dimension(1:3)::skip_loc
   real(kind=8)::dx,dx_loc,scale,vol_loc
 #ifdef RT
+#if USE_FLD==1
+  logical,dimension(1:nvector),save::insink
+#endif
   integer::ii,ig,iNp,il
   real(kind=8),dimension(1:nvector),save:: ekk_new,T2_new
   logical,dimension(1:nvector),save::cooling_on=.true.
@@ -492,9 +498,20 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
 #ifdef RT
      if(neq_chem) then
         T2_new(1:nleaf) = T2(1:nleaf)
+#if USE_FLD==0
         call rt_solve_cooling(T2_new, xion, Np, Fp, p_gas, dNpdt, dFpdt  &
                              ,nH, cooling_on, Zsolar, dtcool, aexp_loc   &
                              ,nleaf, ilevel)
+#else
+        if(sinks_opt_thin)then
+           do i=1,nleaf!!!raph 28/04/2020 for sink opt thin
+              insink(i)=in_sink(ind_leaf(i))
+           enddo
+        endif
+        call rt_solve_cooling(T2_new, xion, Np, Fp, p_gas, dNpdt, dFpdt  &
+                             ,nH, cooling_on, Zsolar, dtcool, aexp_loc   &
+                             ,nleaf, insink, ilevel)
+#endif
         delta_T2(1:nleaf) = T2_new(1:nleaf) - T2(1:nleaf)
      endif
 #endif

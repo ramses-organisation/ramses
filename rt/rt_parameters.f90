@@ -150,4 +150,9 @@ module rt_parameters
   ! Self-shielding factor, see Nickerson, Teyssier, & Rosdahl (2018)
   ! Array to track which groups are in the Lyman-Werner band, 11.2 eV to 13.6 eV
   real(dp),dimension(1:NGROUPS)::ssh2 = 1d0, isLW = 0d0
+
+  ! RT on sinks?
+  logical::rt_sink      =.false.   ! Radiative transfer on sinks activated
+  logical::rt_protostar_m1=.false. ! Hybrid RT : M1 + FLD
+
 end module rt_parameters

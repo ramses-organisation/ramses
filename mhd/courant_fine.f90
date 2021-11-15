@@ -3,6 +3,9 @@ subroutine courant_fine(ilevel)
   use hydro_commons
   use poisson_commons
   use mpi_mod
+#if USE_FLD==1
+  use radiation_parameters,only:frad,dtdiff_params
+#endif
 #if USE_TURB==1
   use turb_commons
 #endif
@@ -90,6 +93,17 @@ subroutine courant_fine(ilevel)
            end do
         end if
 
+        ! Gather radiative force
+#if USE_FLD==1 || USE_M_1==1
+        if(fld)then
+           do idim=1,ndim
+              do i=1,nleaf
+                 gg(i,idim)=gg(i,idim)+frad(ind_leaf(i),idim)
+              end do
+           end do
+        end if
+#endif
+
 #if USE_TURB==1
         if (turb .AND. turb_type/=3) then
            do idim=1,ndim
@@ -176,6 +190,10 @@ subroutine courant_fine(ilevel)
   emag_tot=emag_tot+emag_all
   dtnew(ilevel)=MIN(dtnew(ilevel),dt_all)
 
+#if USE_FLD==1
+  if(dt_control)dtnew(ilevel)=dtdiff_params(1)*dtdiff_params(2)**nstep_coarse
+#endif
+  
 111 format('   Entering courant_fine for level ',I2)
 
 end subroutine courant_fine
@@ -394,7 +412,11 @@ subroutine velocity_fine(ilevel)
            A=0.5*(uold(ind_cell(i),6)+uold(ind_cell(i),nvar+1))
            B=0.5*(uold(ind_cell(i),7)+uold(ind_cell(i),nvar+2))
            C=0.5*(uold(ind_cell(i),8)+uold(ind_cell(i),nvar+3))
+#if USE_FLD==1
+           uold(ind_cell(i),neul)=1.0/(gamma-1.)+0.5*d*(u**2+v**2+w**2)+0.5*(A**2+B**2+C**2)
+#else
            uold(ind_cell(i),neul)=1.0+0.5*d*(u**2+v**2+w**2)+0.5*(A**2+B**2+C**2)
+#endif
         end do
 
      end do

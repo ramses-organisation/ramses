@@ -193,6 +193,9 @@ end subroutine mag_unsplit
 SUBROUTINE  trace1d(q,qm,qp,dx,dt,ngrid)
   USE amr_parameters
   USE hydro_parameters
+#if USE_FLD==1
+  USE radiation_parameters,only:small_er
+#endif
   USE const
   IMPLICIT NONE
 
@@ -274,13 +277,25 @@ SUBROUTINE  trace1d(q,qm,qp,dx,dt,ngrid)
               sB0 = -u*dBx+A*dvx-B*dux
               sC0 = -u*dCx+A*dwx-C*dux
 #if NENER>0
+#if USE_FLD==0
               do irad=1,nener
                  su0 = su0 - (dex(irad))/r
                  se0(irad) = -u*dex(irad) &
                       & - (dux)*gamma_rad(irad)*e(irad)
               end do
+#else
+              do irad=1,nent
+                 su0 = su0 - (dex(irad))/r
+                 se0(irad) = -u*dex(irad) &
+                      & - (dux)*gamma_rad(irad)*e(irad)
+              end do
+              do irad=nent+1,nent+ngrp
+                 su0 = su0 - (dex(irad))/r*(gamma_rad(irad)-1.0d0)
+                 se0(irad) = -u*dex(irad) &
+                      & - (dux)*gamma_rad(irad)*e(irad)
+              end do
 #endif
-
+#endif
               ! Cell-centered predicted states
               r = r + sr0*dtdx
               u = u + su0*dtdx
@@ -306,11 +321,18 @@ SUBROUTINE  trace1d(q,qm,qp,dx,dt,ngrid)
               qp(l,i,j,k,iC,1) = C - dCx
               if (qp(l,i,j,k,ir,1)<smallr) qp(l,i,j,k,ir,1)=r
 #if NENER>0
+#if USE_FLD==0
               do irad=1,nener
                  qp(l,i,j,k,iC+irad,1) = e(irad) - dex(irad)
               end do
+#else
+              do irad=1,nener
+                 qp(l,i,j,k,iC+irad,1) = e(irad) - dex(irad) 
+                 if(irad.gt.nent)qp(l,i,j,k,iC+irad,1) = max(small_er, qp(l,i,j,k,iC+irad,1))
+              end do
 #endif
-
+#endif
+              
               ! Left state at right interface
               qm(l,i,j,k,ir,1) = r + drx
               qm(l,i,j,k,iu,1) = u + dux
@@ -322,9 +344,16 @@ SUBROUTINE  trace1d(q,qm,qp,dx,dt,ngrid)
               qm(l,i,j,k,iC,1) = C + dCx
               if (qm(l,i,j,k,ir,1)<smallr) qm(l,i,j,k,ir,1)=r
 #if NENER>0
+#if USE_FLD==0
               do irad=1,nener
                  qm(l,i,j,k,iC+irad,1) = e(irad) + dex(irad)
               end do
+#else
+              do irad=1,nener
+                 qm(l,i,j,k,iC+irad,1) = e(irad) + dex(irad) 
+                 if(irad.gt.nent)qm(l,i,j,k,iC+irad,1) = max(small_er, qm(l,i,j,k,iC+irad,1))
+              end do
+#endif
 #endif
            END DO
 
@@ -356,6 +385,9 @@ END SUBROUTINE trace1d
 SUBROUTINE trace2d(q,bf,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dt,ngrid)
   USE amr_parameters
   USE hydro_parameters
+#if USE_FLD==1
+  USE radiation_parameters,only:small_er
+#endif
   USE const
   IMPLICIT NONE
 
@@ -510,13 +542,29 @@ SUBROUTINE trace2d(q,bf,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dt,ngrid)
               sp0 = (-u*dpx-dux*gamma*p)*dtdx + (-v*dpy-dvy*gamma*p)*dtdy
               sC0 = (-u*dCx-C*dux+A*dwx)*dtdx + (-v*dCy-C*dvy+B*dwy)*dtdy
 #if NENER>0
+#if USE_FLD==0
               do irad=1,nener
                  su0 = su0 - (dex(irad))/r*dtdx
                  sv0 = sv0 - (dey(irad))/r*dtdy
                  se0(irad) = -u*dex(irad)*dtdx-v*dey(irad)*dtdy &
                       & - (dux*dtdx+dvy*dtdy)*gamma_rad(irad)*e(irad)
               end do
+#else
+              do irad=1,nent
+                 su0 = su0 - (dex(irad))/r*dtdx
+                 sv0 = sv0 - (dey(irad))/r*dtdy
+                 se0(irad) = -u*dex(irad)*dtdx-v*dey(irad)*dtdy &
+                      & - (dux*dtdx+dvy*dtdy)*gamma_rad(irad)*e(irad)
+              end do
+              do irad=nent+1,nent+ngrp
+                 su0 = su0 - (dex(irad))/r*dtdx*(gamma_rad(irad)-1.0d0)
+                 sv0 = sv0 - (dey(irad))/r*dtdy*(gamma_rad(irad)-1.0d0)
+                 se0(irad) = -u*dex(irad)*dtdx-v*dey(irad)*dtdy &
+                      & - (dux*dtdx+dvy*dtdy)*gamma_rad(irad)*e(irad)
+              end do
 #endif
+#endif
+
               ! Cell-centered predicted states
               r = r + sr0
               u = u + su0
@@ -545,6 +593,9 @@ SUBROUTINE trace2d(q,bf,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dt,ngrid)
 #if NENER>0
               do irad=1,nener
                  qp(l,i,j,k,iC+irad,1) = e(irad) - dex(irad)
+#if USE_FLD==1
+                 if(irad.gt.nent)qp(l,i,j,k,iC+irad,1) = max(small_er, qp(l,i,j,k,iC+irad,1))
+#endif
               end do
 #endif
               ! Face averaged left state at right interface
@@ -561,6 +612,9 @@ SUBROUTINE trace2d(q,bf,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dt,ngrid)
 #if NENER>0
               do irad=1,nener
                  qm(l,i,j,k,iC+irad,1) = e(irad) + dex(irad)
+#if USE_FLD==1
+                 if(irad.gt.nent)qm(l,i,j,k,iC+irad,1) = max(small_er, qm(l,i,j,k,iC+irad,1))
+#endif
               end do
 #endif
               ! Face averaged top state at bottom interface
@@ -577,6 +631,9 @@ SUBROUTINE trace2d(q,bf,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dt,ngrid)
 #if NENER>0
               do irad=1,nener
                  qp(l,i,j,k,iC+irad,2) = e(irad) - dey(irad)
+#if USE_FLD==1
+                 if(irad.gt.nent)qp(l,i,j,k,iC+irad,2) = max(small_er, qp(l,i,j,k,iC+irad,2))
+#endif
               end do
 #endif
               ! Face averaged bottom state at top interface
@@ -593,6 +650,9 @@ SUBROUTINE trace2d(q,bf,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dt,ngrid)
 #if NENER>0
               do irad=1,nener
                  qm(l,i,j,k,iC+irad,2) = e(irad) + dey(irad)
+#if USE_FLD==1
+                 if(irad.gt.nent)qm(l,i,j,k,iC+irad,2) = max(small_er, qm(l,i,j,k,iC+irad,2))
+#endif
               end do
 #endif
               ! Edge averaged right-top corner state (RT->LL)
@@ -609,6 +669,9 @@ SUBROUTINE trace2d(q,bf,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dt,ngrid)
 #if NENER>0
               do irad=1,nener
                  qRT(l,i,j,k,iC+irad,3) = e(irad) + (+dex(irad)+dey(irad))
+#if USE_FLD==1
+                 if(irad.gt.nent)qRT(l,i,j,k,iC+irad,3) = max(small_er, qRT(l,i,j,k,iC+irad,3))
+#endif
               end do
 #endif
               ! Edge averaged right-bottom corner state (RB->LR)
@@ -625,6 +688,9 @@ SUBROUTINE trace2d(q,bf,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dt,ngrid)
 #if NENER>0
               do irad=1,nener
                  qRB(l,i,j,k,iC+irad,3) = e(irad) + (+dex(irad)-dey(irad))
+#if USE_FLD==1
+                 if(irad.gt.nent)qRB(l,i,j,k,iC+irad,3) = max(small_er, qRB(l,i,j,k,iC+irad,3))
+#endif
               end do
 #endif
               ! Edge averaged left-top corner state (LT->RL)
@@ -641,6 +707,9 @@ SUBROUTINE trace2d(q,bf,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dt,ngrid)
 #if NENER>0
               do irad=1,nener
                  qLT(l,i,j,k,iC+irad,3) = e(irad) + (-dex(irad)+dey(irad))
+#if USE_FLD==1
+                 if(irad.gt.nent)qLT(l,i,j,k,iC+irad,3) = max(small_er, qLT(l,i,j,k,iC+irad,3))
+#endif
               end do
 #endif
               ! Edge averaged left-bottom corner state (LB->RR)
@@ -657,6 +726,9 @@ SUBROUTINE trace2d(q,bf,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dt,ngrid)
 #if NENER>0
               do irad=1,nener
                  qLB(l,i,j,k,iC+irad,3) = e(irad) + (-dex(irad)-dey(irad))
+#if USE_FLD==1
+                 if(irad.gt.nent)qLB(l,i,j,k,iC+irad,3) = max(small_er, qLB(l,i,j,k,iC+irad,3))
+#endif
               end do
 #endif
            END DO
@@ -692,6 +764,9 @@ END SUBROUTINE trace2d
 SUBROUTINE trace3d(q,bf,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
   USE amr_parameters
   USE hydro_parameters
+#if USE_FLD==1
+  USE radiation_parameters,only:small_er
+#endif
   USE const
   IMPLICIT NONE
 
@@ -900,6 +975,7 @@ SUBROUTINE trace3d(q,bf,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               endif
               sp0 = (-u*dpx-dux*gamma*p)*dtdx + (-v*dpy-dvy*gamma*p)*dtdy + (-w*dpz-dwz*gamma*p)*dtdz
 #if NENER>0
+#if USE_FLD==0
               do irad=1,nener
                  su0 = su0 - ((dex(irad))/r)*dtdx
                  sv0 = sv0 - ((dey(irad))/r)*dtdy
@@ -907,6 +983,22 @@ SUBROUTINE trace3d(q,bf,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
                  se0(irad) = -u*dex(irad)*dtdx-v*dey(irad)*dtdy-w*dez(irad)*dtdz &
                       & - (dux*dtdx+dvy*dtdy+dwz*dtdz)*gamma_rad(irad)*e(irad)
               end do
+#else
+              do irad=1,nent
+                 su0 = su0 - ((dex(irad))/r)*dtdx
+                 sv0 = sv0 - ((dey(irad))/r)*dtdy
+                 sw0 = sw0 - ((dez(irad))/r)*dtdz
+                 se0(irad) = -u*dex(irad)*dtdx-v*dey(irad)*dtdy-w*dez(irad)*dtdz & 
+                      & - (dux*dtdx+dvy*dtdy+dwz*dtdz)*gamma_rad(irad)*e(irad)
+              end do
+              do irad=nent+1,nent+ngrp
+                 su0 = su0 - ((dex(irad))/r)*dtdx*(gamma_rad(irad)-1.0d0)
+                 sv0 = sv0 - ((dey(irad))/r)*dtdy*(gamma_rad(irad)-1.0d0)
+                 sw0 = sw0 - ((dez(irad))/r)*dtdz*(gamma_rad(irad)-1.0d0)
+                 se0(irad) = -u*dex(irad)*dtdx-v*dey(irad)*dtdy-w*dez(irad)*dtdz & 
+                      & - (dux*dtdx+dvy*dtdy+dwz*dtdz)*gamma_rad(irad)*e(irad)
+              end do              
+#endif
 #endif
               ! Cell-centered predicted states
               r = r + sr0
@@ -936,6 +1028,9 @@ SUBROUTINE trace3d(q,bf,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
 #if NENER>0
               do irad=1,nener
                  qp(l,i,j,k,iC+irad,1) = e(irad) - dex(irad)
+#if USE_FLD==1
+                 if(irad.gt.nent)qp(l,i,j,k,iC+irad,1) = max(small_er, qp(l,i,j,k,iC+irad,1))
+#endif
               end do
 #endif
               ! Face averaged left state at right interface
@@ -952,6 +1047,9 @@ SUBROUTINE trace3d(q,bf,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
 #if NENER>0
               do irad=1,nener
                  qm(l,i,j,k,iC+irad,1) = e(irad) + dex(irad)
+#if USE_FLD==1
+                 if(irad.gt.nent)qm(l,i,j,k,iC+irad,1) = max(small_er, qm(l,i,j,k,iC+irad,1))
+#endif
               end do
 #endif
               ! Face averaged top state at bottom interface
@@ -968,6 +1066,9 @@ SUBROUTINE trace3d(q,bf,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
 #if NENER>0
               do irad=1,nener
                  qp(l,i,j,k,iC+irad,2) = e(irad) - dey(irad)
+#if USE_FLD==1
+                 if(irad.gt.nent)qp(l,i,j,k,iC+irad,2) = max(small_er, qp(l,i,j,k,iC+irad,2))
+#endif
               end do
 #endif
               ! Face averaged bottom state at top interface
@@ -984,6 +1085,9 @@ SUBROUTINE trace3d(q,bf,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
 #if NENER>0
               do irad=1,nener
                  qm(l,i,j,k,iC+irad,2) = e(irad) + dey(irad)
+#if USE_FLD==1
+                 if(irad.gt.nent)qm(l,i,j,k,iC+irad,2) = max(small_er, qm(l,i,j,k,iC+irad,2))
+#endif
               end do
 #endif
               ! Face averaged front state at back interface
@@ -1000,6 +1104,9 @@ SUBROUTINE trace3d(q,bf,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
 #if NENER>0
               do irad=1,nener
                  qp(l,i,j,k,iC+irad,3) = e(irad) - dez(irad)
+#if USE_FLD==1
+                 if(irad.gt.nent)qp(l,i,j,k,iC+irad,3) = max(small_er, qp(l,i,j,k,iC+irad,3))
+#endif
               end do
 #endif
               ! Face averaged back state at front interface
@@ -1016,6 +1123,9 @@ SUBROUTINE trace3d(q,bf,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
 #if NENER>0
               do irad=1,nener
                  qm(l,i,j,k,iC+irad,3) = e(irad) + dez(irad)
+#if USE_FLD==1
+                 if(irad.gt.nent)qm(l,i,j,k,iC+irad,3) = max(small_er, qm(l,i,j,k,iC+irad,3))
+#endif
               end do
 #endif
               ! X-edge averaged right-top corner state (RT->LL)
@@ -1032,6 +1142,9 @@ SUBROUTINE trace3d(q,bf,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
 #if NENER>0
               do irad=1,nener
                  qRT(l,i,j,k,iC+irad,1) = e(irad) + (+dey(irad)+dez(irad))
+#if USE_FLD==1
+                 if(irad.gt.nent)qRT(l,i,j,k,iC+irad,1) = max(small_er, qRT(l,i,j,k,iC+irad,1))
+#endif
               end do
 #endif
               ! X-edge averaged right-bottom corner state (RB->LR)
@@ -1048,6 +1161,9 @@ SUBROUTINE trace3d(q,bf,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
 #if NENER>0
               do irad=1,nener
                  qRB(l,i,j,k,iC+irad,1) = e(irad) + (+dey(irad)-dez(irad))
+#if USE_FLD==1
+                 if(irad.gt.nent)qRB(l,i,j,k,iC+irad,1) = max(small_er, qRB(l,i,j,k,iC+irad,1))
+#endif
               end do
 #endif
               ! X-edge averaged left-top corner state (LT->RL)
@@ -1064,6 +1180,9 @@ SUBROUTINE trace3d(q,bf,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
 #if NENER>0
               do irad=1,nener
                  qLT(l,i,j,k,iC+irad,1) = e(irad) + (-dey(irad)+dez(irad))
+#if USE_FLD==1
+                 if(irad.gt.nent)qLT(l,i,j,k,iC+irad,1) = max(small_er, qLT(l,i,j,k,iC+irad,1))
+#endif
               end do
 #endif
               ! X-edge averaged left-bottom corner state (LB->RR)
@@ -1080,6 +1199,9 @@ SUBROUTINE trace3d(q,bf,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
 #if NENER>0
               do irad=1,nener
                  qLB(l,i,j,k,iC+irad,1) = e(irad) + (-dey(irad)-dez(irad))
+#if USE_FLD==1
+                 if(irad.gt.nent)qLB(l,i,j,k,iC+irad,1) = max(small_er, qLB(l,i,j,k,iC+irad,1))
+#endif
               end do
 #endif
               ! Y-edge averaged right-top corner state (RT->LL)
@@ -1096,6 +1218,9 @@ SUBROUTINE trace3d(q,bf,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
 #if NENER>0
               do irad=1,nener
                  qRT(l,i,j,k,iC+irad,2) = e(irad) + (+dex(irad)+dez(irad))
+#if USE_FLD==1
+                 if(irad.gt.nent)qRT(l,i,j,k,iC+irad,2) = max(small_er, qRT(l,i,j,k,iC+irad,2))
+#endif
               end do
 #endif
               ! Y-edge averaged right-bottom corner state (RB->LR)
@@ -1112,6 +1237,9 @@ SUBROUTINE trace3d(q,bf,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
 #if NENER>0
               do irad=1,nener
                  qRB(l,i,j,k,iC+irad,2) = e(irad) + (+dex(irad)-dez(irad))
+#if USE_FLD==1
+                 if(irad.gt.nent)qRB(l,i,j,k,iC+irad,2) = max(small_er, qRB(l,i,j,k,iC+irad,2))
+#endif
               end do
 #endif
               ! Y-edge averaged left-top corner state (LT->RL)
@@ -1128,6 +1256,9 @@ SUBROUTINE trace3d(q,bf,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
 #if NENER>0
               do irad=1,nener
                  qLT(l,i,j,k,iC+irad,2) = e(irad) + (-dex(irad)+dez(irad))
+#if USE_FLD==1
+                 if(irad.gt.nent)qLT(l,i,j,k,iC+irad,2) = max(small_er, qLT(l,i,j,k,iC+irad,2))
+#endif
               end do
 #endif
               ! Y-edge averaged left-bottom corner state (LB->RR)
@@ -1144,6 +1275,9 @@ SUBROUTINE trace3d(q,bf,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
 #if NENER>0
               do irad=1,nener
                  qLB(l,i,j,k,iC+irad,2) = e(irad) + (-dex(irad)-dez(irad))
+#if USE_FLD==1
+                 if(irad.gt.nent)qLB(l,i,j,k,iC+irad,2) = max(small_er, qLB(l,i,j,k,iC+irad,2))
+#endif
               end do
 #endif
               ! Z-edge averaged right-top corner state (RT->LL)
@@ -1160,6 +1294,9 @@ SUBROUTINE trace3d(q,bf,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
 #if NENER>0
               do irad=1,nener
                  qRT(l,i,j,k,iC+irad,3) = e(irad) + (+dex(irad)+dey(irad))
+#if USE_FLD==1
+                 if(irad.gt.nent)qRT(l,i,j,k,iC+irad,3) = max(small_er, qRT(l,i,j,k,iC+irad,3))
+#endif
               end do
 #endif
               ! Z-edge averaged right-bottom corner state (RB->LR)
@@ -1176,6 +1313,9 @@ SUBROUTINE trace3d(q,bf,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
 #if NENER>0
               do irad=1,nener
                  qRB(l,i,j,k,iC+irad,3) = e(irad) + (+dex(irad)-dey(irad))
+#if USE_FLD==1
+                 if(irad.gt.nent)qRB(l,i,j,k,iC+irad,3) = max(small_er, qRB(l,i,j,k,iC+irad,3))
+#endif
               end do
 #endif
               ! Z-edge averaged left-top corner state (LT->RL)
@@ -1192,6 +1332,9 @@ SUBROUTINE trace3d(q,bf,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
 #if NENER>0
               do irad=1,nener
                  qLT(l,i,j,k,iC+irad,3) = e(irad) + (-dex(irad)+dey(irad))
+#if USE_FLD==1
+                 if(irad.gt.nent)qLT(l,i,j,k,iC+irad,3) = max(small_er, qLT(l,i,j,k,iC+irad,3))
+#endif
               end do
 #endif
               ! Z-edge averaged left-bottom corner state (LB->RR)
@@ -1208,6 +1351,9 @@ SUBROUTINE trace3d(q,bf,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
 #if NENER>0
               do irad=1,nener
                  qLB(l,i,j,k,iC+irad,3) = e(irad) + (-dex(irad)-dey(irad))
+#if USE_FLD==1
+                 if(irad.gt.nent)qLB(l,i,j,k,iC+irad,3) = max(small_er, qLB(l,i,j,k,iC+irad,3))
+#endif
               end do
 #endif
            END DO
@@ -1543,12 +1689,27 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
                   rmin=MIN(rLL, rLR, rRL, rRR)
 
 #if NENER>0
+#if USE_FLD==0
                   do irad = 1,nener
                      pLL = pLL + qLL(l,nhydro+irad)
                      pLR = pLR + qLR(l,nhydro+irad)
                      pRL = pRL + qRL(l,nhydro+irad)
                      pRR = pRR + qRR(l,nhydro+irad)
                   end do
+#else
+                  do irad = 1,nent
+                     pLL = pLL + qLL(l,8+irad)
+                     pLR = pLR + qLR(l,8+irad)
+                     pRL = pRL + qRL(l,8+irad)
+                     pRR = pRR + qRR(l,8+irad)
+                  end do
+                  do irad = 1,ngrp
+                     pLL = pLL + qLL(l,firstindex_er+irad)*(gamma_rad(nent+irad)-1.0d0)
+                     pLR = pLR + qLR(l,firstindex_er+irad)*(gamma_rad(nent+irad)-1.0d0)
+                     pRL = pRL + qRL(l,firstindex_er+irad)*(gamma_rad(nent+irad)-1.0d0)
+                     pRR = pRR + qRR(l,firstindex_er+irad)*(gamma_rad(nent+irad)-1.0d0)
+                  end do                  
+#endif
 #endif
 
                   ! Compute 4 fast magnetosonic velocity relative to x direction
@@ -1983,6 +2144,10 @@ subroutine ctoprim(uin,q,bf,gravin,dt,ngrid)
   real(dp)::eint, smalle, smallp, etot
   real(dp),dimension(1:nvector),save::eken,emag,erad
 
+#if USE_FLD==1
+  real(dp)::pp_eos
+#endif
+  
 #if NENER>0
   integer::irad
 #endif
@@ -2078,19 +2243,41 @@ subroutine ctoprim(uin,q,bf,gravin,dt,ngrid)
            ! Compute non-thermal pressure
            erad = zero
 #if NENER>0
+#if USE_FLD==0
            do irad = 1,nener
               do l = 1, ngrid
                  q(l,i,j,k,nhydro+irad) = (gamma_rad(irad)-one)*uin(l,i,j,k,nhydro+irad)
                  erad(l) = erad(l)+uin(l,i,j,k,nhydro+irad)
               end do
            enddo
+#else
+           do irad = 1,nent
+              do l = 1, ngrid
+                 q(l,i,j,k,8+irad) = (gamma_rad(irad)-one)*uin(l,i,j,k,8+irad)
+                 erad(l) = erad(l)+uin(l,i,j,k,8+irad)
+              end do
+           enddo
+           do irad = 1,ngrp
+              do l = 1, ngrid
+                 q(l,i,j,k,firstindex_er+irad) = uin(l,i,j,k,firstindex_er+irad)
+                 erad(l) = erad(l)+uin(l,i,j,k,firstindex_er+irad)
+              end do
+           enddo
+#endif
 #endif
 
            ! Compute thermal pressure through EOS
            do l = 1, ngrid
               etot = uin(l,i,j,k,5) - emag(l) -erad(l)
               eint = etot/q(l,i,j,k,1)-eken(l)
+#if USE_FLD==0
               q(l,i,j,k,5)=MAX((gamma-one)*q(l,i,j,k,1)*eint,smallp)
+#else
+              eint = eint*q(l,i,j,k,1)   ! volumic
+              if(energy_fix)eint=uin(l,i,j,k,nvar)
+              call pressure_eos(uin(l,i,j,k,1),eint,pp_eos)
+              q(l,i,j,k,5)=MAX(pp_eos,smallp)
+#endif
            end do
 
            ! Gravity predictor step
@@ -2183,8 +2370,11 @@ subroutine uslope_mag(bf,dbf,dx,dt,ngrid)
   integer,intent(in)::ngrid
   real(dp),intent(in)::dx,dt
   real(dp),dimension(1:nvector,iu1:iu2+1,ju1:ju2+1,ku1:ku2+1,1:3),intent(in)::bf
+#if USE_FLD==0
   real(dp),dimension(1:nvector,iu1:iu2+1,ju1:ju2+1,ku1:ku2+1,1:3,1:ndim),intent(out)::dbf
-
+#else
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3,1:ndim),intent(out)::dbf
+#endif
   ! local arrays
   integer::i, j, k, l, n
   real(dp):: dlft, drgt, bcen
