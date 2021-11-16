@@ -1022,6 +1022,18 @@ end do
      end do
   end do
 
+  ! Deposit minus final dust energy onto gas energy.
+  do ind=1,xtondim
+        do j=1,np
+           if(ok(j))then
+              unew(indp(j,ind),5)=unew(indp(j,ind),5)&
+              &-0.5*mp(ind_part(j))*&
+              &(new_vp(j,idim)*new_vp(j,idim)-vp(ind_part(j),idim)*vp(ind_part(j),idim))&
+              &*vol(j,ind)/vol_loc
+           end if
+        end do
+  end do
+
   ! Store new velocity
   do idim=1,ndim
      do j=1,np
