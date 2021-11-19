@@ -1539,7 +1539,7 @@ subroutine init_dust(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,xtondim)
 
   ! I don't think we actually want to do this until after the Lorentz kick
   call InitStoppingRate(np,dtnew(ilevel),indp,vol,vv,nu_stop,xtondim)
-
+  ! Will have to deposit the grain charges eventually too
   do ind=1,xtondim
      do j=1,np ! deposit the dust mass weighted stopping time.
         if(ok(j))then
@@ -1651,7 +1651,7 @@ subroutine InitStoppingRate(nn,dt,indp,vol,v,nu,xtondim)
   integer ::ivar_dust ! cell-centered dust variables start.
   real(dp) ::dt ! timestep.
   real(dp)::rd,cs! ERM: Grain size parameter
-  real(dp),dimension(1:nvector) ::nu
+  real(dp),dimension(1:nvector) ::nu,c2
   real(dp),dimension(1:nvector,1:xtondim)::vol
   integer ,dimension(1:nvector,1:xtondim)::indp
   real(dp),dimension(1:nvector),save ::dgr! gas density at grain.
@@ -1661,7 +1661,7 @@ subroutine InitStoppingRate(nn,dt,indp,vol,v,nu,xtondim)
   integer ::i,j,idim,ind
   ivar_dust=9
   rd = 0.62665706865775*grain_size !constant for epstein drag law. #used to have *sqrt(gamma)
-  cs=1.0 ! isothermal sound speed... Need to get this right. This works for now,
+   ! isothermal sound speed... Need to get this right. This works for now,
          ! but only if you have scaled things so that the sound speed is 1.
 
   if (constant_t_stop)then
@@ -1672,6 +1672,17 @@ subroutine InitStoppingRate(nn,dt,indp,vol,v,nu,xtondim)
         do ind=1,xtondim
             do j=1,nn
                dgr(j)=dgr(j)+uold(indp(j,ind),1)*vol(j,ind)
+               c2(j)=c2(j)+vol(j,ind)*&
+               & (uold(indp(j,ind),5) - &
+               &0.125D0*(uold(indp(j,ind),1+5)+uold(indp(j,ind),1+nvar))**2&
+               &-0.125D0*(uold(indp(j,ind),2+5)+uold(indp(j,ind),2+nvar))**2&
+               &-0.125D0*(uold(indp(j,ind),3+5)+uold(indp(j,ind),3+nvar))**2&
+               &- 0.5D0*(&
+               &uold(indp(j,ind),1+1)**2&
+               &uold(indp(j,ind),2+1)**2&
+               &uold(indp(j,ind),3+1)**2&
+               &)/max(uold(indp(j,ind),1),smallr))&! Subtract from total energy agnetic and kinetic energies
+               &*(gamma-1.0D0)/max(uold(indp(j,ind),1),smallr)
            end do
         end do
      endif
@@ -1689,10 +1700,10 @@ subroutine InitStoppingRate(nn,dt,indp,vol,v,nu,xtondim)
         end do
      endif
      do i=1,nn
-       nu(i)=(dgr(i)*cs/rd)*sqrt(1.+&
+       nu(i)=(dgr(i)*sqrt(c2(i))/rd)*sqrt(1.+&
        &0.22089323345553233*&
        &(w(i,1)**2+w(i,2)**2+w(i,3)**2)&
-       &/(cs*cs))
+       &/c2(i))
      end do
   endif
 end subroutine InitStoppingRate
