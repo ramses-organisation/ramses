@@ -260,7 +260,7 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,xtondim)
   logical ,dimension(1:nvector),save::ok
   real(dp),dimension(1:nvector,1:ndim),save::x,ff,new_xp,new_vp,dd,dg
   real(dp),dimension(1:nvector,1:ndim),save::vv
-  real(dp),dimension(1:nvector,1:ndim),save::bb,uu,epk
+  real(dp),dimension(1:nvector,1:ndim),save::bb,uu
   real(dp),dimension(1:nvector,1:twotondim,1:ndim),save::big_vv,big_ww
   real(dp),dimension(1:nvector),save:: nu_stop,mov,dgr,ddgr,ciso ! ERM: fluid density interpolated to grain pos. and stopping times
   integer ,dimension(1:nvector,1:ndim),save::ig,id,igg,igd,icg,icd
@@ -801,7 +801,7 @@ end do
 
   dgr(1:np) = 0.0D0 ! Gas density. Only used for trajectory file.
   ddgr(1:np) = 0.0D0 ! Dust density.
-  ciso2(1:np) = 0.0D0 ! Isothermal sound speed (squared).
+  ciso(1:np) = 0.0D0 ! Isothermal sound speed (squared).
   if(boris)then
      do ind=1,xtondim
          do j=1,np
