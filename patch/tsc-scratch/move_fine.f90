@@ -262,7 +262,7 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,xtondim)
   real(dp),dimension(1:nvector,1:ndim),save::vv
   real(dp),dimension(1:nvector,1:ndim),save::bb,uu,epk
   real(dp),dimension(1:nvector,1:twotondim,1:ndim),save::big_vv,big_ww
-  real(dp),dimension(1:nvector),save:: nu_stop,mov,dgr,ddgr,ciso2 ! ERM: fluid density interpolated to grain pos. and stopping times
+  real(dp),dimension(1:nvector),save:: nu_stop,mov,dgr,ddgr,ciso ! ERM: fluid density interpolated to grain pos. and stopping times
   integer ,dimension(1:nvector,1:ndim),save::ig,id,igg,igd,icg,icd
   real(dp),dimension(1:nvector,1:twotondim),save::vol
   integer ,dimension(1:nvector,1:twotondim),save::igrid,icell,indp,kg
@@ -807,17 +807,17 @@ end do
          do j=1,np
             dgr(j)=dgr(j)+uold(indp(j,ind),1)*vol(j,ind)
             ddgr(j)=ddgr(j)+uold(indp(j,ind),ivar_dust)*vol(j,ind)
-            ciso2(j)=ciso2(j)+vol(j,ind)*&
-            & (uold(indp(j,ind),5) - &
-            &0.125D0*(uold(indp(j,ind),1+5)+uold(indp(j,ind),1+nvar))**2&
-            &-0.125D0*(uold(indp(j,ind),2+5)+uold(indp(j,ind),2+nvar))**2&
-            &-0.125D0*(uold(indp(j,ind),3+5)+uold(indp(j,ind),3+nvar))**2&
+            ciso(j)=ciso(j)+vol(j,ind)*&
+            & sqrt((uold(indp(j,ind),5) - &
+            &0.125D0*(uold(indp(j,ind),1+5)+uold(indp(j,ind),1+nvar))*(uold(indp(j,ind),1+5)+uold(indp(j,ind),1+nvar)) &
+            &-0.125D0*(uold(indp(j,ind),2+5)+uold(indp(j,ind),2+nvar))*(uold(indp(j,ind),2+5)+uold(indp(j,ind),2+nvar)) &
+            &-0.125D0*(uold(indp(j,ind),3+5)+uold(indp(j,ind),3+nvar))*(uold(indp(j,ind),3+5)+uold(indp(j,ind),3+nvar)) &
             &- 0.5D0*(&
-            &uold(indp(j,ind),1+1)**2&
-            &uold(indp(j,ind),2+1)**2&
-            &uold(indp(j,ind),3+1)**2&
+            & uold(indp(j,ind),1+1)*uold(indp(j,ind),1+1)+ &
+            & uold(indp(j,ind),2+1)*uold(indp(j,ind),2+1)+ &
+            & uold(indp(j,ind),3+1)*uold(indp(j,ind),3+1) &
             &)/max(uold(indp(j,ind),1),smallr))&! Subtract from total energy agnetic and kinetic energies
-            &*(gamma-1.0D0)/max(uold(indp(j,ind),1),smallr)! P/rho = ciso**2, to be interpolated.
+            &*(gamma-1.0D0)/max(uold(indp(j,ind),1),smallr))! P/rho = ciso**2, to be interpolated.
         end do
      end do
   endif
@@ -911,7 +911,7 @@ end do
   ! We compute this before the EM kick for the sole reason that we had to do
   ! that in init_dust_fine. For second order accuracy, things will be more
   ! complicated.
-  call StoppingRate(np,dtnew(ilevel),indp,vol,vv,nu_stop,ciso2,dgr,xtondim)
+  call StoppingRate(np,dtnew(ilevel),indp,vol,vv,nu_stop,ciso,dgr,xtondim)
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! LORENTZ KICK
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -1137,7 +1137,7 @@ end subroutine EMKick
 !#########################################################################
 !#########################################################################
 !#########################################################################
-subroutine StoppingRate(nn,dt,indp,vol,v,nu,c2,dgr,xtondim)
+subroutine StoppingRate(nn,dt,indp,vol,v,nu,c,dgr,xtondim)
   ! The following subroutine will alter its last argument, nu
   ! to be a half-step advanced. Because we are operator splitting,
   ! one must use the updated dust and gas velocities.
@@ -1151,7 +1151,7 @@ subroutine StoppingRate(nn,dt,indp,vol,v,nu,c2,dgr,xtondim)
   integer ::ivar_dust,xtondim  ! cell-centered dust variables start.
   real(dp) ::dt ! timestep.
   real(dp)::rd,cs! ERM: Grain size parameter
-  real(dp),dimension(1:nvector) ::nu,c2
+  real(dp),dimension(1:nvector) ::nu,c
   real(dp),dimension(1:nvector,1:xtondim)::vol
   integer ,dimension(1:nvector,1:xtondim)::indp
   real(dp),dimension(1:nvector) ::dgr! gas density at grain.
@@ -1187,10 +1187,10 @@ subroutine StoppingRate(nn,dt,indp,vol,v,nu,c2,dgr,xtondim)
         end do
      endif
      do i=1,nn
-       nu(i)=(dgr(i)*sqrt(c2(i))/rd)*sqrt(1.+&
+       nu(i)=(dgr(i)*c(i)/rd)*sqrt(1.+&
        &0.22089323345553233*&
        &(wh(i,1)**2+wh(i,2)**2+wh(i,3)**2)&
-       &/c2(i))
+       &/(c(i)*c(i)))
      end do
   endif
 end subroutine StoppingRate

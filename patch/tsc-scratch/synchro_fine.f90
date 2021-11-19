@@ -1651,7 +1651,7 @@ subroutine InitStoppingRate(nn,dt,indp,vol,v,nu,xtondim)
   integer ::ivar_dust ! cell-centered dust variables start.
   real(dp) ::dt ! timestep.
   real(dp)::rd,cs! ERM: Grain size parameter
-  real(dp),dimension(1:nvector) ::nu,c2
+  real(dp),dimension(1:nvector) ::nu,c
   real(dp),dimension(1:nvector,1:xtondim)::vol
   integer ,dimension(1:nvector,1:xtondim)::indp
   real(dp),dimension(1:nvector),save ::dgr! gas density at grain.
@@ -1672,17 +1672,17 @@ subroutine InitStoppingRate(nn,dt,indp,vol,v,nu,xtondim)
         do ind=1,xtondim
             do j=1,nn
                dgr(j)=dgr(j)+uold(indp(j,ind),1)*vol(j,ind)
-               c2(j)=c2(j)+vol(j,ind)*&
-               & (uold(indp(j,ind),5) - &
-               &0.125D0*(uold(indp(j,ind),1+5)+uold(indp(j,ind),1+nvar))**2&
-               &-0.125D0*(uold(indp(j,ind),2+5)+uold(indp(j,ind),2+nvar))**2&
-               &-0.125D0*(uold(indp(j,ind),3+5)+uold(indp(j,ind),3+nvar))**2&
+               c(j)=c(j)+vol(j,ind)*&
+               & sqrt((uold(indp(j,ind),5) - &
+               &0.125D0*(uold(indp(j,ind),1+5)+uold(indp(j,ind),1+nvar))*(uold(indp(j,ind),1+5)+uold(indp(j,ind),1+nvar)) &
+               &-0.125D0*(uold(indp(j,ind),2+5)+uold(indp(j,ind),2+nvar))*(uold(indp(j,ind),2+5)+uold(indp(j,ind),2+nvar)) &
+               &-0.125D0*(uold(indp(j,ind),3+5)+uold(indp(j,ind),3+nvar))*(uold(indp(j,ind),3+5)+uold(indp(j,ind),3+nvar)) &
                &- 0.5D0*(&
-               &uold(indp(j,ind),1+1)**2&
-               &uold(indp(j,ind),2+1)**2&
-               &uold(indp(j,ind),3+1)**2&
+               & uold(indp(j,ind),1+1)*uold(indp(j,ind),1+1)+ &
+               & uold(indp(j,ind),2+1)*uold(indp(j,ind),2+1)+ &
+               & uold(indp(j,ind),3+1)*uold(indp(j,ind),3+1) &
                &)/max(uold(indp(j,ind),1),smallr))&! Subtract from total energy agnetic and kinetic energies
-               &*(gamma-1.0D0)/max(uold(indp(j,ind),1),smallr)
+               &*(gamma-1.0D0)/max(uold(indp(j,ind),1),smallr))
            end do
         end do
      endif
@@ -1700,10 +1700,10 @@ subroutine InitStoppingRate(nn,dt,indp,vol,v,nu,xtondim)
         end do
      endif
      do i=1,nn
-       nu(i)=(dgr(i)*sqrt(c2(i))/rd)*sqrt(1.+&
+       nu(i)=(dgr(i)*c(i)/rd)*sqrt(1.+&
        &0.22089323345553233*&
        &(w(i,1)**2+w(i,2)**2+w(i,3)**2)&
-       &/c2(i))
+       &/(c(i)*c(i)))
      end do
   endif
 end subroutine InitStoppingRate
