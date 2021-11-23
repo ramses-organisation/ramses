@@ -5,6 +5,9 @@
 subroutine gravana(x,f,dx,ncell)
   use amr_parameters
   use poisson_parameters
+  use poisson_commons, only: multipole
+  use constants
+
   implicit none
   integer ::ncell                         ! Size of input arrays
   real(dp)::dx                            ! Cell size
@@ -14,9 +17,12 @@ subroutine gravana(x,f,dx,ncell)
   ! This routine computes the acceleration using analytical models.
   ! x(i,1:ndim) are cell center position in [0,boxlen] (user units).
   ! f(i,1:ndim) is the gravitational acceleration in user units.
+  ! Only if there is no self-gravity
   !================================================================
   integer::idim,i
   real(dp)::gmass,emass,xmass,ymass,zmass,rr,rx,ry,rz
+  real(dp):: a1,a2,z0,sigma,f_max
+  real(dp)::scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2
 
   ! Constant vector
   if(gravity_type==1)then
@@ -52,6 +58,34 @@ subroutine gravana(x,f,dx,ncell)
 #if NDIM>2
         f(i,3)=-gmass*rz/rr**3
 #endif
+     end do
+  end if
+
+  if(gravity_type==3)then
+     ! vertical galactic gravitational field
+     ! Kuijken & Gilmore 1989 taken from Joung & MacLow (2006)
+     ! g = -a1 z / sqrt(z^2+z0^2) - a2 z
+     a1 = gravity_params(1) ! Star potential coefficient in kpc Myr-2
+     a2 = gravity_params(2) ! DM potential coefficient in Myr-2
+     z0 = gravity_params(3) ! Scale height in pc
+     ! If negative value, use default values
+     if(a1 < 0d0) a1 = 1.42d-3 !kpc/Myr2
+     if(a2 < 0d0) a2 = 5.49d-4 !1/Myr2
+     if(z0 <=0d0) z0 = 0.18d3  !pc
+
+     ! convert to cgs units and G=1, then to code units
+     call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
+     a1=kpc2cm*a1/(Myr2sec**2)/factG_in_cgs / scale_l * scale_t**2
+     a2=a2/(Myr2sec**2)/factG_in_cgs * scale_t**2
+     z0=z0*pc2cm / scale_l
+
+     sigma = multipole(1)/(boxlen**2)
+     f_max=a1*0.5d0*boxlen/((0.5d0*boxlen)**2+z0**2)**0.5 + a2*(0.5d0*boxlen)
+     do i=1,ncell
+        ! the last dimension is vertical (1D -> x, 2D -> y, 3D -> z)
+        x(i,ndim)=x(i,ndim)-0.5d0*boxlen
+        f(i,ndim)=-a1*x(i,ndim)/((x(i,ndim))**2+z0**2)**0.5 - a2*x(i,ndim)
+        f(i,ndim) = f(i,ndim) * sigma / (2d0*f_max / 2d0*twopi)
      end do
   end if
 
