@@ -400,7 +400,7 @@ subroutine refine_fine(ilevel)
            end do
         else if(icpu<=ncpu)then
            do i=1,ngrid
-              ind_grid(i)=reception(icpu,ilevel)%igrid(igrid+i-1)
+              ind_grid(i)=reception(icpu,ilevel)%pcomm%igrid(igrid+i-1)
            end do
         else
            do i=1,ngrid
@@ -493,7 +493,7 @@ subroutine refine_fine(ilevel)
            end do
         else if(icpu<=ncpu)then
            do i=1,ngrid
-              ind_grid(i)=reception(icpu,ilevel)%igrid(igrid+i-1)
+              ind_grid(i)=reception(icpu,ilevel)%pcomm%igrid(igrid+i-1)
            end do
         else
            do i=1,ngrid

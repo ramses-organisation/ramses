@@ -129,7 +129,7 @@ subroutine load_balance
            if(icpu==myid)then
               igrid=active(ilevel)%igrid(i)
            else
-              igrid=reception(icpu,ilevel)%igrid(i)
+              igrid=reception(icpu,ilevel)%pcomm%igrid(i)
            end if
            kcpu=cpu_map (father(igrid))
            jcpu=cpu_map2(father(igrid))
@@ -159,7 +159,7 @@ subroutine load_balance
            if(icpu==myid)then
               igrid=active(ilevel)%igrid(i)
            else
-              igrid=reception(icpu,ilevel)%igrid(i)
+              igrid=reception(icpu,ilevel)%pcomm%igrid(i)
            end if
            kcpu=cpu_map (father(igrid))
            jcpu=cpu_map2(father(igrid))
@@ -402,7 +402,7 @@ subroutine cmp_new_cpu_map
               end do
            else
               do i=1,ngrid
-                 ind_grid(i)=reception(icpu,ilevel)%igrid(igrid+i-1)
+                 ind_grid(i)=reception(icpu,ilevel)%pcomm%igrid(igrid+i-1)
               end do
            end if
            ! Loop over cells

@@ -124,12 +124,12 @@ subroutine rho_fine(ilevel,icount)
      do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
         do i=1,reception(icpu,ilevel)%ngrid
-           rho(reception(icpu,ilevel)%igrid(i)+iskip)=0.0D0
-           phi(reception(icpu,ilevel)%igrid(i)+iskip)=0.0D0
+           rho(reception(icpu,ilevel)%pcomm%igrid(i)+iskip)=0.0D0
+           phi(reception(icpu,ilevel)%pcomm%igrid(i)+iskip)=0.0D0
         end do
         if(ilevel==cic_levelmax)then
            do i=1,reception(icpu,ilevel)%ngrid
-              rho_top(reception(icpu,ilevel)%igrid(i)+iskip)=0.0D0
+              rho_top(reception(icpu,ilevel)%pcomm%igrid(i)+iskip)=0.0D0
            end do
         endif
      end do
@@ -840,7 +840,7 @@ subroutine cic_from_multipole(ilevel)
      do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
         do i=1,reception(icpu,ilevel)%ngrid
-           rho(reception(icpu,ilevel)%igrid(i)+iskip)=0.0D0
+           rho(reception(icpu,ilevel)%pcomm%igrid(i)+iskip)=0.0D0
         end do
      end do
   end do
@@ -1501,7 +1501,7 @@ subroutine tsc_from_multipole(ilevel)
      do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
         do i=1,reception(icpu,ilevel)%ngrid
-           rho(reception(icpu,ilevel)%igrid(i)+iskip)=0.0D0
+           rho(reception(icpu,ilevel)%pcomm%igrid(i)+iskip)=0.0D0
         end do
      end do
   end do

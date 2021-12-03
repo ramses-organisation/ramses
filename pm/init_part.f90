@@ -734,7 +734,7 @@ contains
     end if
  
     ! Count particles
-    offfset =0
+    offset=0
     sendbuf_cum=0
     do icpu=1,ncpu
        ncache=sendbuf(icpu)
@@ -751,8 +751,8 @@ contains
     if(emission_part(1)%nactive>0)then
        allocate(emission_part(1)%cpuid(emission_part(1)%nactive))
        allocate(emission_part(1)%nparts(emission_part(1)%nactive))
-       allocate(emission_part(1)%u(emission_part(1)%nparts_tot*(twondim+1)))
-       allocate(emission_part(1)%f8(emission_part(1)%nparts_tot*2))
+       allocate(emission_part(1)%u(emission_part(1)%nparts_tot*(twondim+1), 1:1))
+       allocate(emission_part(1)%f8(emission_part(1)%nparts_tot*2, 1:1))
        idx=1
        do icpu=1,ncpu
          ncache=sendbuf(icpu)
@@ -773,15 +773,15 @@ contains
           if(cc(1).ne.myid)then
              icpu=cc(1)
              ibuf=sendbuf(icpu)
-             emission_part(1)%u((sendbuf_cum(icpu)+ibuf)*(twondim+1))     = xp(ipart,1)
-             emission_part(1)%u((sendbuf_cum(icpu)+ibuf)*(twondim+1) + 1) = xp(ipart,2)
-             emission_part(1)%u((sendbuf_cum(icpu)+ibuf)*(twondim+1) + 2) = xp(ipart,3)
-             emission_part(1)%u((sendbuf_cum(icpu)+ibuf)*(twondim+1) + 3) = vp(ipart,1)
-             emission_part(1)%u((sendbuf_cum(icpu)+ibuf)*(twondim+1) + 4) = vp(ipart,2)
-             emission_part(1)%u((sendbuf_cum(icpu)+ibuf)*(twondim+1) + 5) = vp(ipart,3)
-             emission_part(1)%u((sendbuf_cum(icpu)+ibuf)*(twondim+1) + 6) = mp(ipar)
-             emission_part(1)%f8((sendbuf_cum(icpu)+ibuf)*2)              = part2int(typep(ipart))
-             emission_part(1)%f8((sendbuf_cum(icpu)+ibuf)*2 + 1)          = idp(ipart)
+             emission_part(1)%u((sendbuf_cum(icpu)+ibuf)*(twondim+1),1)     = xp(ipart,1)
+             emission_part(1)%u((sendbuf_cum(icpu)+ibuf)*(twondim+1) + 1,1) = xp(ipart,2)
+             emission_part(1)%u((sendbuf_cum(icpu)+ibuf)*(twondim+1) + 2,1) = xp(ipart,3)
+             emission_part(1)%u((sendbuf_cum(icpu)+ibuf)*(twondim+1) + 3,1) = vp(ipart,1)
+             emission_part(1)%u((sendbuf_cum(icpu)+ibuf)*(twondim+1) + 4,1) = vp(ipart,2)
+             emission_part(1)%u((sendbuf_cum(icpu)+ibuf)*(twondim+1) + 5,1) = vp(ipart,3)
+             emission_part(1)%u((sendbuf_cum(icpu)+ibuf)*(twondim+1) + 6,1) = mp(ipart)
+             emission_part(1)%f8((sendbuf_cum(icpu)+ibuf)*2,1)              = part2int(typep(ipart))
+             emission_part(1)%f8((sendbuf_cum(icpu)+ibuf)*2 + 1,1)          = idp(ipart)
           else
              jpart=jpart+1
              xp(jpart,1:3)=xp(ipart,1:3)
@@ -890,7 +890,7 @@ contains
           buf_count=ncache*(twondim+1)
           countsend=countsend+1 
 #ifdef LIGHT_MPI_COMM
-          call MPI_ISEND(emission_part(1)%u(sendbuf_cum(icpu)+ncache),buf_count, &
+          call MPI_ISEND(emission_part(1)%u(sendbuf_cum(icpu)+ncache,1),buf_count, &
                & MPI_DOUBLE_PRECISION,icpu-1,&
                & tagu,MPI_COMM_WORLD,reqsend(countsend),info)
 #else
@@ -948,7 +948,7 @@ contains
           countsend=countsend+1
 #ifdef LIGHT_MPI_COMM
 #ifndef LONGINT
-          call MPI_ISEND(emission_part(1)%f8(sendbuf_cum(icpu)+ncache),buf_count, &
+          call MPI_ISEND(emission_part(1)%f8(sendbuf_cum(icpu)+ncache,1),buf_count, &
                 & MPI_INTEGER,icpu-1,&
                 & tagu,MPI_COMM_WORLD,reqsend(countsend),info)
 #else
@@ -1032,8 +1032,8 @@ contains
 #endif
        if(recvbuf(icpu)>0)then
 #ifdef LIGHT_MPI_COMM
-         deallocate(reception(icpu,1)%u)
-         deallocate(reception(icpu,1)%f8)
+         deallocate(reception(icpu,1)%pcomm%u)
+         deallocate(reception(icpu,1)%pcomm%f8)
 #else
          deallocate(reception(icpu,1)%up)
          deallocate(reception(icpu,1)%fp)

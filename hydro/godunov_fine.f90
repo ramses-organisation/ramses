@@ -95,18 +95,18 @@ subroutine set_unew(ilevel)
      iskip=ncoarse+(ind-1)*ngridmax
      do ivar=1,nvar
         do i=1,reception(icpu,ilevel)%ngrid
-           unew(reception(icpu,ilevel)%igrid(i)+iskip,ivar)=0
+           unew(reception(icpu,ilevel)%pcomm%igrid(i)+iskip,ivar)=0
         end do
      end do
      if(momentum_feedback>0)then
         do i=1,reception(icpu,ilevel)%ngrid
-           pstarnew(reception(icpu,ilevel)%igrid(i)+iskip) = 0
+           pstarnew(reception(icpu,ilevel)%pcomm%igrid(i)+iskip) = 0
         end do
      endif
      if(pressure_fix)then
         do i=1,reception(icpu,ilevel)%ngrid
-           divu(reception(icpu,ilevel)%igrid(i)+iskip) = 0
-           enew(reception(icpu,ilevel)%igrid(i)+iskip) = 0
+           divu(reception(icpu,ilevel)%pcomm%igrid(i)+iskip) = 0
+           enew(reception(icpu,ilevel)%pcomm%igrid(i)+iskip) = 0
         end do
      end if
   end do
