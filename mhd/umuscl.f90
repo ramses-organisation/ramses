@@ -256,7 +256,10 @@ SUBROUTINE  trace1d(q,dq,qm,qp,dx,dt,ngrid)
   REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qp
 
   ! declare local variables
-  INTEGER ::i, j, k, l, n, irad
+  INTEGER ::i, j, k, l, n
+#if NENER>0
+  INTEGER ::irad
+#endif
   INTEGER ::ilo,ihi,jlo,jhi,klo,khi
   INTEGER ::ir, iu, iv, iw, ip, iA, iB, iC
   REAL(dp)::dtdx
