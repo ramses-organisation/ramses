@@ -16,7 +16,7 @@ module hydro_parameters
   ! Size of hydro kernel
   integer,parameter::iu1=-1
   integer,parameter::iu2=+4
-  integer,parameter::ju1=(1-ndim/2)-1*(ndim/2)
+  integer,parameter::ju1=(1-ndim/2)-1*(ndim/2) !integer division
   integer,parameter::ju2=(1-ndim/2)+4*(ndim/2)
   integer,parameter::ku1=(1-ndim/3)-1*(ndim/3)
   integer,parameter::ku2=(1-ndim/3)+4*(ndim/3)
