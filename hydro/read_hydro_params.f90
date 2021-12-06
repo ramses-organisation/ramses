@@ -47,7 +47,8 @@ subroutine read_hydro_params(nml_ok)
 #endif
 #ifdef SOLVERmhd
        & ,riemann2d,slope_mag_type,eta_mag &
-       & ,allow_switch_solver,switch_solv_B,switch_solv_dens &
+       & ,allow_switch_solver, allow_switch_solver2D &
+       & ,switch_solv_B,switch_solv_dens,switch_solv_min_dens &
 #endif
        & ,pressure_fix,beta_fix,scheme,riemann &
        & ,strict_equilibrium
