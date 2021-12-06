@@ -33,7 +33,7 @@
 ; 	Written by:	Romain Teyssier, 01/01/2003.
 ;                       e-mail: Romain.Teyssier@cea.fr
 ;-
-pro pp_histo, file=file, swap=swap, verbose=verbose
+pro pp_histo, file=file, swap=swap, verbose=verbose, xtitle=xtitle, ytitle=ytitle, title=title
 
 if not keyword_set(file) then begin
     file=DIALOG_PICKFILE(/READ)
@@ -53,13 +53,15 @@ readu,1,dmin,dmax
 readu,1,tmin,tmax
 close,1
 
-print,dmin,dmax
-print,tmin,tmax
+if keyword_set(verbose) then begin
+   print,dmin,dmax
+   print,tmin,tmax
+endif
 
 tt=tmin+FINDGEN(ny)/ny*(tmax-tmin)
 dd=dmin+FINDGEN(nx)/nx*(dmax-dmin)
 
-mycontour,image,dd,tt,ncont=200,/log,min=1e-8
+mycontour,image,dd,tt,ncont=200,/log,min=1e-20, xtitle=xtitle, ytitle=ytitle, title=title
 return
 
 bad_luck:  print,'I/O Error, exiting...'
