@@ -1767,8 +1767,10 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
                   endif
 
                   if(allow_switch_solver2D .and. (rmin < switch_solv_min_dens)) then
+                     ! switch to llf
                      emf(l,i,j,k) = forth*(ERR+ERL+ELR+ELL)+half*Smax*(qRR(l,6)-qLL(l,6))-half*Smax*(qRR(l,7)-qLL(l,7))
                   else
+                     ! keep hlld (iriemann2d=5)
                      emf(l,i,j,k) = E
                   endif
 
