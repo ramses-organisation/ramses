@@ -24,10 +24,6 @@ module sink_feedback_parameters
   integer,parameter::NSNMAX=1000
   integer::FB_nsource=0
 
-  ! Type of source ('supernova', 'wind')
-  ! NOTE: 'supernova' is a single dump, 'wind' assumes these values are per year
-  character(LEN=10),dimension(1:NSNMAX)::FB_sourcetype='supernova' !TC: why is this an array?
-
   ! Feedback start and end times (NOTE: supernova ignores FB_end)
   real(dp),dimension(1:NSNMAX)::FB_start = 1d10
   real(dp),dimension(1:NSNMAX)::FB_end = 1d10
@@ -87,9 +83,6 @@ module sink_feedback_parameters
   real(dp), allocatable, dimension(:, :):: xstellar ! stellar object position
   real(dp), allocatable, dimension(:):: mstellar, tstellar, ltstellar ! stellar object mass, birth time, life time
   integer, allocatable, dimension(:):: id_stellar !the id  of the sink to which it belongs
-
-  ! Book-keeping for whether the SN has happened
-  logical,dimension(1:NSNMAX)::FB_done = .false.
 
 end module sink_feedback_parameters
 

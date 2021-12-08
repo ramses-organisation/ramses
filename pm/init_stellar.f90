@@ -81,4 +81,7 @@ subroutine init_stellar
 #endif
     end if
 
+    ! TODO: add possibility to manually add stellar particles on restart as for sinks
+    !       replaces fixes sources in namelist
+
 end subroutine init_stellar
