@@ -5,7 +5,7 @@ program histo_main
   ! Version F90 par R. Teyssier le 01/04/01.
   !--------------------------------------------------------------------------
   implicit none
-  integer::ndim,i,j,k,twotondim
+  integer::ndim,i,j,k,twotondim,type=15
   integer::ivar,ncpu,lmax=0,nboundary,ngrid_current
   integer::nx,ny,nz,ilevel,idim
   integer::nlevelmax
@@ -18,7 +18,7 @@ program histo_main
   real::tpoly=0d0, npoly=1.0
 
   integer::nx_sample=0,ny_sample=0,nz_sample=0
-  integer::ngrid,imin,imax,jmin,jmax,kmin,kmax,gcc=0
+  integer::ngrid,imin,imax,jmin,jmax,kmin,kmax,gcc=0,sil=0
   integer::ncpu2,npart2,ndim2,nlevelmax2,nstep_coarse2
   integer::nx2,ny2,nz2,ngridmax2,nvarh,ndimh,nlevelmaxh
   integer::nx_full,ny_full,nz_full,lmin,levelmin
@@ -34,6 +34,7 @@ program histo_main
   real(KIND=8),dimension(:,:),allocatable::x,xg,histo
   real(KIND=8)::dmin=0.0,dmax=0.0,tmin=0.0,tmax=0.0
   real(KIND=8)::h0,unit_l,unit_d,unit_t,total_mass,mmm
+  real(KIND=8)::emag_dens=0,emag_diff=0,vol_dens=0,vol_diff=0
   real(KIND=8),dimension(:,:,:),allocatable::var
   real(KIND=8),dimension(:)  ,allocatable::rho,pre
   logical,dimension(:)  ,allocatable::ref
@@ -276,7 +277,7 @@ program histo_main
      ! Open AMR file and skip header
      nomfich=TRIM(repository)//'/amr_'//TRIM(nchar)//'.out'//TRIM(ncharcpu)
      open(unit=10,file=nomfich,status='old',form='unformatted')
-     write(*,*)'Processing file '//TRIM(nomfich)
+     if(sil==0)write(*,*)'Processing file '//TRIM(nomfich)
      do i=1,21
         read(10)
      end do
@@ -418,7 +419,36 @@ program histo_main
               end do
               ! Extract variable
               rho = var(:,ind,1)*unit_d
-              pre = var(:,ind,5)*unit_d*(unit_l/unit_t)**2
+
+	      select case (type)
+              case (-1)
+                 pre = icpu
+              case (0)
+                 pre = ilevel
+              case (22) !! This is for H2 using HI and HII (ramses_rt patch mol)
+                 pre = 1.0-var(:,ind,8)-var(:,ind,9)
+              case (31) !! This is cell-centered Bx
+                 pre = 0.5*(var(:,ind,5)+var(:,ind,8))
+	      case (32) !! This is cell-centered By
+	         pre = 0.5*(var(:,ind,6)+var(:,ind,9))
+              case (33) !! This is cell-centered Bz
+		 pre = 0.5*(var(:,ind,7)+var(:,ind,10))
+              case (34) !! This is cell-centered 0.5*B^2 ---> B in Gauss
+                 pre = 0.125*((var(:,ind,5)+var(:,ind,8))**2+(var(:,ind,6)+var(:,ind,9))**2+(var(:,ind,7)+var(:,ind,10))**2)
+                 pre = pre * 4d0*3.1415926d0 *unit_d*(unit_l/unit_t)**2
+                 pre = sqrt(2.0*pre)
+              case (15) !! This is for temperature (Hydro case)
+                 pre = var(:,ind,5)
+                 pre = pre * unit_d*(unit_l/unit_t)**2
+                 pre = pre/rho/1.38d-16*1.66d-24-tpoly*(rho/1.66d-24*0.76/npoly)**(0.6)
+              case (35) !! This is for temperature (MHD case)
+                 pre = var(:,ind,11)
+                 pre = pre * unit_d*(unit_l/unit_t)**2
+                 pre = pre/rho/1.38d-16*1.66d-24-tpoly*(rho/1.66d-24*0.76/npoly)**(0.6)
+              case default ! Hydro variable
+                 pre = var(:,ind,type)
+              end select
+
               ! Store data cube
               do i=1,ngrida
                  ok_cell= .not.ref(i).and. &
@@ -431,8 +461,7 @@ program histo_main
                     else
                        xx=log10(rho(i))
                     end if
-                    yy=log10(pre(i)/rho(i)/1.38d-16*1.66d-24 &
-                         & -tpoly*(rho(i)/1.66d-24*0.76/npoly)**(0.6))
+                    yy=log10(pre(i))
                     dxx=(xx-dymin)/(dymax-dymin)*dble(nhx)
                     dyy=(yy-tymin)/(tymax-tymin)*dble(nhy)
                     ihx=int(dxx)
@@ -444,6 +473,17 @@ program histo_main
                     mmm=rho(i)*(dx*unit_l)**3/2d33
                     total_mass=total_mass+mmm
                     histo(ihx+1,ihy+1)=histo(ihx+1,ihy+1)+mmm
+
+                    if(type==34)then
+                       if(pre(i)>1d-13)then
+                          emag_dens=emag_dens+pre(i)**2/2*dx**3
+                          vol_dens=vol_dens+dx**3
+                       else
+                          emag_diff=emag_diff+pre(i)**2/2*dx**3
+                          vol_diff=vol_diff+dx**3
+                       endif
+                    endif
+                    
                  end if
               end do
 
@@ -463,7 +503,18 @@ program histo_main
   ! End loop over cpus
 
   write(*,*)'Total mass=',total_mass
-
+  
+  if(type==34)then
+     emag_dens=emag_dens/vol_dens
+     emag_diff=emag_diff/vol_diff
+     write(*,*)'Volume fraction > 0.1nG=',vol_dens
+!     emag_dens=emag_dens/(xxmax-xxmin)/(yymax-yymin)/(zzmax-zzmin)
+!     emag_diff=emag_diff/(xxmax-xxmin)/(yymax-yymin)/(zzmax-zzmin)
+!!$     write(*,*)'Total field strength=',sqrt(2*(emag_dens+emag_diff))
+!!$     write(*,*)'Dense gas B strength=',sqrt(2*(emag_dens))
+!!$     write(*,*)'Diffuse gas strength=',sqrt(2*(emag_diff))     
+  endif
+  
   ! Output file
   if (filetype=='bin')then
      nomfich=TRIM(outfich)
@@ -513,6 +564,7 @@ contains
        print *, '            [-tma T_max  ] '
        print *, '            [-nx  nx_rho ] '
        print *, '            [-ny  ny_T   ] '
+       print *, '            [-typ vartype] '
        print *, '            [-fil ascii or bin  ] '
        print *, 'ex: histo -inp output_00001 -out map.dat'
        stop
@@ -560,10 +612,14 @@ contains
           read (arg,*) tpoly
        case ('-npo')
           read (arg,*) npoly
+       case ('-typ')
+          read (arg,*) type
        case ('-fil')
           read (arg,*) filetype
        case ('-gcc') ! if set to one, density output in g/cc
           read (arg,*) gcc
+       case ('-sil') ! if set to one, silent mode
+          read (arg,*) sil
        case default
           print '("unknown option ",a2," ignored")', opt
 
