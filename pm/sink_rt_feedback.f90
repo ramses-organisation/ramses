@@ -1,7 +1,7 @@
 #ifdef RT
 !*************************************************************************
 SUBROUTINE update_sink_RT_feedback(ilevel)
-! TC: Filenames should NOT have capital letters in them
+!TC: What strange contraption is this?
 
 ! Turn on RT advection if needed.
 ! Update photon group properties from stellar populations.
@@ -45,7 +45,6 @@ SUBROUTINE sink_RT_feedback(ilevel, dt)
   if(nsink .le. 0 ) return
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
-
 
   !if stellar objects are used, start by looping over the stellar objects and gather their fluxes
   if (stellar) then
@@ -110,13 +109,13 @@ SUBROUTINE sink_RT_feedback(ilevel, dt)
      end do
      ! End loop over grids
      if(ip > 0) then
-                 if(stellar) then 
-                    call sink_RT_vsweep_stellar( &
-                              ind_grid,ind_part,ind_grid_part,ig,ip,dt,ilevel,sink_ioni_flux)
-                 else
-                    call sink_RT_vsweep( &
-                              ind_grid,ind_part,ind_grid_part,ig,ip,dt,ilevel)
-                 endif
+         if(stellar) then 
+            call sink_RT_vsweep_stellar( &
+                     ind_grid,ind_part,ind_grid_part,ig,ip,dt,ilevel,sink_ioni_flux)
+         else
+            call sink_RT_vsweep( &
+                     ind_grid,ind_part,ind_grid_part,ig,ip,dt,ilevel)
+         endif
      endif
   end do 
   ! End loop over cpus
@@ -159,7 +158,7 @@ SUBROUTINE gather_ioni_flux(dt,sink_ioni_flux)
      ! Reset the photon counter
      nphotons = 0d0
         nphotons = max(nphotons,0d0)
-!     ! Use fit to Vacca+ 1996
+        ! Use fit to Vacca+ 1996
         !check whether the object is emitting
         if (t - tstellar(istellar) < hii_t) then
            !remember vaccafits is in code units because the corresponding parameters have been normalised in read_stellar_params (stf_K and stf_m0) 
@@ -236,7 +235,6 @@ SUBROUTINE sink_RT_vsweep_stellar(ind_grid,ind_part,ind_grid_part,ng,np,dt,ileve
   integer ,dimension(1:nvector,3),save::id=0,igd=0,icd=0
   integer ,dimension(1:nvector),save::igrid,icell,indp,kg
   real(dp),dimension(1:3)::skip_loc
-  real(dp)::Ep2Np
   ! units and temporary quantities
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v, scale_Np  & 
             , scale_Fp, age, z, scale_inp, scale_Nphot, dt_Gyr           &
@@ -273,13 +271,7 @@ SUBROUTINE sink_RT_vsweep_stellar(ind_grid,ind_part,ind_grid_part,ng,np,dt,ileve
   scale_inp = rt_esc_frac * scale_d / scale_np / vol_loc / m_sun    
   scale_nPhot = vol_loc * scale_np * scale_l**ndim / 1.d50
 
-
   vol_cgs = (dx_loc*scale_l)**ndim
-
-
-
-  ! Ep2Np=(scale_d * scale_v**2)/( scale_Np * group_egy(iIR) * ev_to_erg)
-
 
   ! Lower left corners of 3x3x3 grid-cubes (with given grid in center)
   do idim = 1, ndim
@@ -428,7 +420,6 @@ SUBROUTINE sink_RT_vsweep(ind_grid,ind_part,ind_grid_part,ng,np,dt,ilevel)
   integer ,dimension(1:nvector,3),save::id=0,igd=0,icd=0
   integer ,dimension(1:nvector),save::igrid,icell,indp,kg
   real(dp),dimension(1:3)::skip_loc
-  real(dp)::Ep2Np
   ! units and temporary quantities
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v, scale_Np  & 
             , scale_Fp, age, z, scale_inp, scale_Nphot, dt_Gyr           &
@@ -463,11 +454,6 @@ SUBROUTINE sink_RT_vsweep(ind_grid,ind_part,ind_grid_part,ng,np,dt,ilevel)
   scale_nPhot = vol_loc * scale_np * scale_l**ndim / 1.d50
   scale_msun = scale_d * scale_l**ndim / m_sun    
   vol_cgs = (dx_loc*scale_l)**ndim
-
-
-
-  ! Ep2Np=(scale_d * scale_v**2)/( scale_Np * group_egy(iIR) * ev_to_erg)
-
 
   ! Lower left corners of 3x3x3 grid-cubes (with given grid in center)
   do idim = 1, ndim
@@ -588,8 +574,6 @@ SUBROUTINE sink_RT_vsweep(ind_grid,ind_part,ind_grid_part,ng,np,dt,ilevel)
         !ener=acc_lum(isink)*dt
         !increase in energy density
         !dn(j)=ener/dble(ncloud_sink)/vol_loc
-        !increase in photon number density
-        !dn(j)=dn(j)*Ep2Np
         ! deposit the photons onto the grid
         ! TODO: ADD HELIUM 1 & 2
         rtunew(indp(j),1)=rtunew(indp(j),1)+dn(j)

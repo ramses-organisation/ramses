@@ -7,8 +7,6 @@ subroutine vaccafit(M,S)
   ! M - stellar mass / solar masses
   ! S - photon emission rate in / s
 
-!  use amr_parameters
-
   real(dp),intent(in)::M
   real(dp),intent(out)::S
   
@@ -105,11 +103,7 @@ subroutine make_sn_stellar
   sn_e = sn_e_ref
   sn_rp = 0.
 
-!  if(sn_r /= 0.0) then
     sn_vol = 4. / 3. * pi * sn_r**3
-!    sn_d = sn_m / sn_vol
-!    sn_ed = sn_e / sn_vol
-!  end if
 
   !we loop over stellar objets to determine whether one is turning supernovae
   !after it happens, the object is removed from the list
@@ -118,15 +112,11 @@ subroutine make_sn_stellar
     if(t - tstellar(istellar) < ltstellar(istellar)) cycle
     mark_del(istellar) = .true.
 
-
-    !!!PH 16/09/2016
     ! the mass of the massive stars 
     sn_m = mstellar(istellar) 
 
     !remove the mass that is dumped in the grid
     msink(id_stellar(istellar)) = msink(id_stellar(istellar)) - sn_m
-    !!!PH 16/09/2016
-
 
     !the velocity dispersion times the life time of the object
     rad_sn = ltstellar(istellar)*Vdisp
@@ -609,8 +599,6 @@ subroutine feedback_fixed(ilevel)
   !---------------------
   ! This check should be done already in amr_step, but best to be sure I suppose
   if(FB_on .and. ilevel == levelmin) then
-     ! Reset per-step flags/variables used to signal to other routines
-     FB_dtnew = 0d0
      do isn=1,FB_nsource
         ! Deal with supernovae
         if(FB_sourcetype(isn) .eq. 'supernova') then
@@ -713,12 +701,16 @@ subroutine make_fb_fixed(currlevel,isn)
   sn_v = sqrt(2.0*(sn_e*scale_ecgs)/(sn_m*scale_msun*m_sun))
   sn_v = sn_v / scale_v
   sn_cent(1)= FB_pos_x(isn)*boxlen
+#if NDIM>1
   sn_cent(2)= FB_pos_y(isn)*boxlen
+#endif
+#if NDIM>2
   sn_cent(3)= FB_pos_z(isn)*boxlen
+#endif
 
   ! HACK - force Courant condition on winds before first hydro step
   ! TODO: think about how this is synchronised more carefully
-  FB_dtnew(isn) = courant_factor*dx_min/sn_v ! T.C.: not used?
+
   dt = min(dtnew(currlevel),dt)
   dt = dtnew(currlevel)
 
@@ -738,7 +730,13 @@ subroutine make_fb_fixed(currlevel,isn)
      
   if(myid .eq. 1 .and. FB_sourcetype(isn) .eq. 'supernova') then
      write(*,*) 'Supernova blast! Wow!'
+#if NDIM==3
      write(*,*) 'x_sn, y_sn, z_sn, ',sn_cent(1),sn_cent(2),sn_cent(3)
+#elif NDIM==2
+     write(*,*) 'x_sn, y_sn, ',sn_cent(1),sn_cent(2)
+#elif NDIM==1
+     write(*,*) 'x_sn, ',sn_cent(1)
+#endif
   endif
 
   ! Loop over levels
@@ -847,45 +845,5 @@ subroutine make_fb_fixed(currlevel,isn)
   enddo
 #endif
 end subroutine make_fb_fixed
-!################################################################
-!################################################################
-!################################################################
-!################################################################
-subroutine feedback_refine(xx,ok,ncell,ilevel)
-! This routine flags cells immediately around SN sources to the finest
-! level of refinement. The criteria for refinement at a point are:
-! a) The point is less than one ilevel cell width from an SN source.
-! b) The point is within FB_r_wind finest level cell widths from
-!    the SN source.
-!-------------------------------------------------------------------------
-  use amr_commons
-  use pm_commons
-  use hydro_commons
-  use poisson_commons
-  use sink_feedback_parameters
-  implicit none
-  integer::ncell,ilevel,i,k,nx_loc,isn
-  real(dp),dimension(1:nvector,1:ndim)::xx
-  logical ,dimension(1:nvector)::ok
-  real(dp)::dx_loc,rvec(ndim),w,rmag,rFB
-!-------------------------------------------------------------------------
-  nx_loc=(icoarse_max-icoarse_min+1)
-  dx_loc = boxlen*0.5D0**ilevel/dble(nx_loc)
-  ! Loop over regions
-#if NDIM==3
-  do isn=1,FB_nsource
-     do i=1,ncell
-        rFB = FB_r_refine(isn)*boxlen*0.5D0**nlevelmax
-        rvec(1)=xx(i,1)-FB_pos_x(isn)*boxlen
-        rvec(2)=xx(i,2)-FB_pos_y(isn)*boxlen
-        rvec(3)=xx(i,3)-FB_pos_z(isn)*boxlen
-        rmag=sqrt(sum(rvec**2))
-        if(rmag .le. 2*rFB+dx_loc) then
-           ok(i)=.true.
-        endif
-     end do
-  end do
-#endif
-  
-end subroutine feedback_refine
 
+END MODULE sink_feedback_module

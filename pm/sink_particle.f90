@@ -888,12 +888,9 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
               end if
            else
 
-              !PH 26/07/2021 has reintroduced this line from the previous RAMSES_ism version
               if (bondi_accretion)then
                  m_acc      = dMsink_overdt(isink)*dtnew(ilevel)*weight/volume
                  m_acc_smbh = dMsmbh_overdt(isink)*dtnew(ilevel)*weight/volume
-!PH 26/07/2021 - this is the previous line from RAMSES_ism
-!                 m_acc=dMsink_overdt(isink)*dtnew(ilevel)*weight/volume*d/density
               end if
 
               if (threshold_accretion.and.d_sink>0.0)then

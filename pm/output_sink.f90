@@ -6,7 +6,7 @@ subroutine output_sink_csv(filename)
 
   integer::isink
 
-  !PH 28/07/2021 updated to include dmfsink (count mass in sink since last stellar object creation)
+  !dmfsink = count mass in sink since last stellar object creation)
   if(verbose)write(*,*)'Entering output_sink_csv'
 
   fileloc=TRIM(filename)

@@ -13,7 +13,7 @@ SUBROUTINE read_sink_feedback_params(nml_ok)
           & FB_nsource, FB_on, FB_start, FB_end, FB_sourcetype, &
           & FB_pos_x, FB_pos_y, FB_pos_z, &
           & FB_mejecta, FB_energy, FB_thermal, &
-          & FB_radius, FB_r_refine, Vdisp
+          & FB_radius, Vdisp
     rewind(1)
     read(1,NML=sink_feedback_params,END=101)
   101 continue

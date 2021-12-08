@@ -59,7 +59,8 @@ module sink_feedback_parameters
 
   ! Stellar object related arrays, those parameters are read in  read_stellar_params 
   logical:: sn_direct = .false.
-  logical:: make_stellar_glob = .false. !if used, the objects are created when the total mass in sinks exceeds stellar_msink_th
+  character(LEN=100)::stellar_strategy='local' ! local: create stellar particles from each sink
+                                               ! global: create when the total mass in sinks exceeds stellar_msink_th
   integer:: nstellarmax ! maximum number of stellar objects
   real(dp):: imf_index, imf_low, imf_high ! power-law IMF model: PDF index, lower and higher mass bounds (Msun)
   real(dp):: lt_t0, lt_m0, lt_a, lt_b ! Stellar lifetime model: t(M) = lt_t0 * exp(lt_a * (log(lt_m0 / M))**lt_b)

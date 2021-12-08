@@ -201,11 +201,7 @@ recursive subroutine amr_step(ilevel,icount)
   ! Feedback on sink particles
   !----------------------------------------------------
   if(stellar) then
-     if(make_stellar_glob) then
-        call make_stellar_from_sinks_glob
-     else
-        call make_stellar_from_sinks
-     endif
+     call make_stellar_from_sinks
   endif
   if (sn_feedback_sink) then
      call make_sn_stellar
