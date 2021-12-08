@@ -24,10 +24,12 @@ module pm_parameters
                                              ! used also as contraction timescale in creation
   real(dp)::cont_speed=0                     ! Clump contraction rate
 
-  character(LEN=15)::accretion_scheme='none' ! Sink accretion scheme; options: 'none', 'bondi'
+  character(LEN=15)::accretion_scheme='none' ! Sink accretion scheme; options: 'none', 'bondi', 'threshold'
+  logical::threshold_accretion=.false.       ! NOT A NAMELIST PARAMETER
   logical::bondi_accretion=.false.           ! NOT A NAMELIST PARAMETER
   logical::bondi_use_vrel=.true.             ! Use v_rel^2 in the denominator of Bondi formula
-
+  real(dp)::c_acc=0.75                       ! "courant factor" for sink accretion
+                                             ! gives fraction of available gas that can be accreted in one timestep
   real(dp)::mass_sink_seed=0                 ! Initial sink mass
   real(dp)::mass_smbh_seed=0                 ! Initial SMBH mass
   real(dp)::mass_merger_vel_check=1d100      ! Threshold for velocity check in merging in M_sun; default: don't check
