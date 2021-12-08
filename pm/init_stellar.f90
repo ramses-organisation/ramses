@@ -8,14 +8,15 @@ subroutine init_stellar
     integer:: ilun
     character(len=80):: fileloc
     character(len=5):: nchar, ncharcpu
+#ifndef WITHOUTMPI
     integer:: dummy_io, info2
-    real(dp), allocatable, dimension(:):: xdp
-    integer, allocatable, dimension(:):: xin
-    integer, parameter:: tag = 1112
-    integer:: nstellar_var, nstellar_var_tmp
+    integer, parameter:: tag=1112
+#endif
     integer:: idim
-
-    nstellar_var = ndim + 3 ! positions, mass, birth and life times
+    integer::sid
+    real(dp)::sm,sx1,sx2,sx3,stform,stlife
+    character::co
+    character(LEN=200)::comment_line
 
     ! Allocate all stellar object related quantities
     allocate(xstellar(1:nstellarmax, 1:ndim))
@@ -24,20 +25,17 @@ subroutine init_stellar
     allocate(ltstellar(1:nstellarmax))
     allocate(id_stellar(1:nstellarmax))
     
-    ! Read restart variables from output files
+    ! Load stellar particles from the restart
     if(nrestart > 0) then
         ilun = 4*ncpu + myid + 11
         call title(nrestart, nchar)
 
         if(IOGROUPSIZEREP > 0) then
             call title(((myid - 1) / IOGROUPSIZEREP) + 1, ncharcpu)
-            fileloc='output_'//TRIM(nchar)//'/group_'//TRIM(ncharcpu)//'/stellar_'//TRIM(nchar)//'.out'
+            fileloc='output_'//TRIM(nchar)//'/group_'//TRIM(ncharcpu)//'/stellar_'//TRIM(nchar)//'.csv'
         else
-            fileloc='output_'//TRIM(nchar)//'/stellar_'//TRIM(nchar)//'.out'
+            fileloc='output_'//TRIM(nchar)//'/stellar_'//TRIM(nchar)//'.csv'
         end if
-
-        call title(myid, nchar)
-        fileloc = TRIM(fileloc) // TRIM(nchar)
 
         ! Wait for the token                                                                                                                                                                    
 #ifndef WITHOUTMPI
@@ -49,40 +47,26 @@ subroutine init_stellar
         end if
 #endif
 
-        ! to do: read csv instead
-        open(unit=ilun, file=fileloc, form='unformatted')
-        rewind(ilun)
-        read(ilun) nstellar_var_tmp
-        ! TODO: check that nstellar_var_tmp == nstellar_var
-        read(ilun) nstellar
-
-        if(nstellar > 0) then
-            allocate(xdp(1:nstellar))
-            allocate(xin(1:nstellar))
-
-            ! Read stellar object position
-            do idim = 1, ndim
-                read(ilun) xdp
-                xstellar(1:nstellar, idim) = xdp
-            end do
-
-            ! Read stellar object mass
-            read(ilun) xdp
-            mstellar(1:nstellar) = xdp
-
-            ! Read stellar object birth time
-            read(ilun) xdp
-            tstellar(1:nstellar) = xdp
-
-            ! Read stellar object life time
-            read(ilun) xdp
-            ltstellar(1:nstellar) = xdp
-
-            ! Read stellar object sink particle id
-            read(ilun) xin
-            id_stellar(1:nstellar) = xin
-        end if
-
+        nstellar=0
+        open(ilun, file=fileloc, form='formatted')
+        eof=.false.
+        ! scrolling over the comment lines
+        read(ilun,'(A200)')comment_line
+        read(ilun,'(A200)')comment_line
+        do
+            read(ilun,'(I10,6(A1,ES21.10))',end=104)sid,co,sm,co,&
+                                sx1,co,sx2,co,sx3,co, &
+                                stform,co,stlife
+            nstellar=nstellar+1
+            id_stellar(nstellar)=sid
+            mstellar(nstellar)=sm
+            xstellar(nstellar,1)=sx1
+            xstellar(nstellar,2)=sx2
+            xstellar(nstellar,3)=sx3
+            tstellar(nstellar)=stform
+            ltstellar(nstellar)=stlife
+        end do
+   104  continue
         close(ilun)
 
         ! Send the token                                                                                                                                                                        
@@ -95,14 +79,6 @@ subroutine init_stellar
             end if
         end if
 #endif
-    end if
-
-    ! T.C. This should be in log file or in snapshots as a list until the time of snapshot
-    ! Create file for HII region feedback logging
-    if(myid == 1 .and. nrestart == 0) then
-        open(104, file='hii.txt', form='formatted', status='unknown', position='append')
-        write(104,*) 't ', 'x ', 'y ', 'z ', 'st_mass ', 'p_inj ', 'p_exp ', 'e_exp '
-        close(104)
     end if
 
 end subroutine init_stellar
