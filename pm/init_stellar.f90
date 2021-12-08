@@ -1,7 +1,7 @@
 subroutine init_stellar
     use amr_commons
     use pm_commons
-    use sink_feedback_module
+    use sink_feedback_parameters
     use mpi_mod
     implicit none
 
@@ -55,8 +55,6 @@ subroutine init_stellar
         read(ilun) nstellar_var_tmp
         ! TODO: check that nstellar_var_tmp == nstellar_var
         read(ilun) nstellar
-
-!        read(ilun) nstellar_tot
 
         if(nstellar > 0) then
             allocate(xdp(1:nstellar))

@@ -1,14 +1,9 @@
 subroutine read_stellar_params()
-!    use pm_commons, only: stellar, stellar_msink_th, nstellarmax, sn_direct, &
-!                        & imf_index, imf_low, imf_high, &
-!                        & lt_t0, lt_m0, lt_a, lt_b, &
-!                        & stf_K, stf_m0, stf_a, stf_b, stf_c, &
-!                        & hii_w, hii_alpha, hii_c, hii_t, hii_T2, &
-!                        & mH_code
     use cooling_module, only: mH
     use amr_commons, only: dp, myid
+    use amr_parameters, only:stellar
     use pm_commons, only: iseed
-    use sink_feedback_module
+    use sink_feedback_parameters
     implicit none
 
     !------------------------------------------------------------------------
@@ -18,9 +13,8 @@ subroutine read_stellar_params()
                            & imf_index, imf_low, imf_high, &
                            & lt_t0, lt_m0, lt_a, lt_b, &
                            & stf_K, stf_m0, stf_a, stf_b, stf_c, &
-                           & hii_w, hii_alpha, hii_c, hii_t, hii_T2 , &
+                           & hii_t, &
                            & sn_feedback_sink,make_stellar_glob,iseed, &
-                           & sn_feedback_cr,fcr, &
                            & mstellarini
 
     real(dp):: scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
@@ -71,13 +65,8 @@ subroutine read_stellar_params()
     stf_K = stf_K * scale_t ! K is in s**(-1)
     stf_m0 = stf_m0 * msun 
 
-    hii_alpha = hii_alpha / (scale_l**3 / scale_t) ! alpha is in cm**3 / s
-    hii_c = hii_c * km_s
-
     !Careful: normalised age of the time during which the star is emitting HII ionising flux
     hii_t = hii_t * Myr 
-    hii_T2 = hii_T2 / scale_T2
-    mH_code = mH / (scale_d * scale_l**3) ! make this useful...
 
 111 return
 
@@ -89,7 +78,7 @@ end subroutine read_stellar_params
 subroutine make_stellar_from_sinks
   use pm_commons
   use amr_commons
-  use sink_feedback_module
+  use sink_feedback_parameters
   use mpi_mod
   implicit none
 
@@ -136,7 +125,7 @@ end subroutine make_stellar_from_sinks
 subroutine make_stellar_from_sinks_glob
   use pm_commons
   use amr_commons
-  use sink_feedback_module
+  use sink_feedback_parameters
   use mpi_mod
   implicit none
 
@@ -206,7 +195,7 @@ subroutine create_stellar(ncreate, nbuf, xnew, id_new, print_table)
 !                         & nstellarmax, nstellar, stellar_msink_th, &
 !                         & xstellar, mstellar, tstellar, ltstellar
     use amr_commons, only: dp, myid, ncpu, ndim, t
-    use sink_feedback_module
+    use sink_feedback_parameters
     use mpi_mod
     implicit none
 
@@ -340,7 +329,6 @@ subroutine create_stellar(ncreate, nbuf, xnew, id_new, print_table)
     end if
 
     nstellar = nstellar + ncreate
-    nstellar_tot = nstellar_tot + ncreate !total number of created stellar objects
 
 end subroutine create_stellar
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -350,7 +338,7 @@ end subroutine create_stellar
 subroutine delete_stellar(flag_delete)
     use pm_commons
     use amr_commons
-    use sink_feedback_module
+    use sink_feedback_parameters
     use mpi_mod
     implicit none
 

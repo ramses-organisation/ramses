@@ -1,127 +1,7 @@
-module sink_feedback_module
-  use amr_parameters,only:dp,ndim
-  implicit none
-
-  public
-
-
-  logical::sn_feedback_sink = .false. !SN feedback emanates from the sink
-  logical::sn_feedback_cr=.false.     !Add CR component to the SN feedback
-
-  !mass, energy and momentum of supernova for forcing by sinks
-  ! sn_e in erg, sn_p in g cm/s , sn_mass in g
-  real(dp):: sn_e=1.d51 , sn_p=4.d43 , sn_mass=2.e33
-  real(dp):: sn_e_ref , sn_p_ref , sn_mass_ref
-
-  !limit speed and temperatue in supernova remnants, minimum radius for the SN remnant
-  real(dp):: Tsat=1.d99 , Vsat=1.d99, sn_r_sat=0.
-
-  !dispersion velocity of the stellar objects in km/s
-  real(dp):: Vdisp=1. 
-
-  !fraction of the SN energy put in the CR (WARNING, this is currently not set to sn_e at maxiume, so if fcr=1, then the energy inptu can ne 2*sn_e)
-  real(dp)::fcr=0.1
-
-  ! Stellar object related arrays, those parameters are read in  read_stellar_params 
-  logical:: sn_direct = .false.
-  logical:: make_stellar_glob = .false. !if used, the objects are created when the total mass in sinks exceeds stellar_msink_th
-  integer:: nstellarmax ! maximum number of stellar objects
-  integer:: nstellar = 0 ! current number of stellar objects
-  integer:: nstellar_tot = 0 ! total number of stellar objects
-  real(dp):: imf_index, imf_low, imf_high ! power-law IMF model: PDF index, lower and higher mass bounds (Msun)
-  real(dp):: lt_t0, lt_m0, lt_a, lt_b ! Stellar lifetime model: t(M) = lt_t0 * exp(lt_a * (log(lt_m0 / M))**lt_b)
-
-!  real(dp):: stf_K, stf_m0, stf_a, stf_b, stf_c 
-  ! Stellar ionizing flux model: S(M) = stf_K * (M / stf_m0)**stf_a / (1 + (M / stf_m0)**stf_b)**stf_c
-  ! This is a fit from Vacca et al. 1996
-  ! Corresponding routine : vaccafit
-  real(dp)::stf_K=9.634642584812752d48 ! s**(-1) then normalised in code units in read_stellar
-  real(dp)::stf_m0=2.728098824280431d1 ! Msun then normalised in code units in read_stellar
-  real(dp)::stf_a=6.840015602892084d0
-  real(dp)::stf_b=4.353614230584390d0
-  real(dp)::stf_c=1.142166657042991d0 
-
-  !     hii_w: density profile exponent (n = n_0 * (r / r_0)**(-hii_w))
-  !     hii_alpha: recombination constant in code units
-  !     hii_c: HII region sound speed
-  !     hii_t: fiducial HII region lifetime, it is normalised in code units in read_stellar 
-  !     hii_T2: HII region temperature
-  real(dp):: hii_w, hii_alpha, hii_c, hii_t, hii_T2
-  real(dp):: mH_code ! mH in code units
-  real(dp):: stellar_msink_th ! sink mass threshold for stellar object creation (Msun)
-  real(dp), allocatable, dimension(:, :):: xstellar ! stellar object position
-  real(dp), allocatable, dimension(:):: mstellar, tstellar, ltstellar ! stellar object mass, birth time, life time
-  integer, allocatable, dimension(:):: id_stellar !the id  of the sink to which it belongs
-  ! Allow users to pre-set stellar mass selection for physics comparison runs, etc
-  ! Every time mstellar is added to, instead of a random value, use mstellarini
-  integer,parameter::nstellarini=5000
-  real(dp),dimension(nstellarini)::mstellarini ! List of stellar masses to use
-
-  ! Proto-stellar jet feedback
-!  real(dp),allocatable,dimension(:)::vol_gas_jet,vol_gas_jet_all
-  logical::jet_feedback_sink=.false.         ! Put jet on sink 
-  real(dp)::mass_jet_sink=0.                 ! Mass above which a jets is included
-  real(dp)::frac_acc_ej=0.333333333333d0     ! Fraction of mass ejected into jet
-  real(dp)::cone_jet=90.                     ! Outflow cone opening angle of jet; in degree
-  real(dp)::v_jet = 1.6d6                    ! 16 km/s from Wang et al. 2010
-  real(dp)::expo_jet=5.d-1                   ! Powerlaw exponent of jet velocity on mass
-  logical::verbose_jet=.false.
-
-  ! Use the supernova module?
-  logical::FB_on = .false.
-
-  !series of supernovae specified by "hand"
-  ! Number of supernovae (max limit and number active in namelist)
-  integer,parameter::NSNMAX=1000
-  integer::FB_nsource=0
-
-  ! Location of single star module tables
-  character(LEN=200)::ssm_table_directory
-
-  ! Type of source ('supernova', 'wind')
-  ! NOTE: 'supernova' is a single dump, 'wind' assumes these values are per year
-  character(LEN=10),dimension(1:NSNMAX)::FB_sourcetype='supernova'
-
-  ! Feedback start and end times (NOTE: supernova ignores FB_end)
-  real(dp),dimension(1:NSNMAX)::FB_start = 1d10
-  real(dp),dimension(1:NSNMAX)::FB_end = 1d10
-  ! Book-keeping for whether the SN has happened
-  logical,dimension(1:NSNMAX)::FB_done = .false.
-  
-  ! Source position in units from 0 to 1
-  real(dp),dimension(1:NSNMAX)::FB_pos_x = 0.5d0
-  real(dp),dimension(1:NSNMAX)::FB_pos_y = 0.5d0
-  real(dp),dimension(1:NSNMAX)::FB_pos_z = 0.5d0
-
-  ! Ejecta mass in solar masses (/year for winds)
-  real(dp),dimension(1:NSNMAX)::FB_mejecta = 1.d0
-
-  ! Energy of source in ergs (/year for winds)
-  real(dp),dimension(1:NSNMAX)::FB_energy = 1.d51
-
-  ! Use a thermal dump? (Otherwise add kinetic energy)
-  ! Note that if FB_radius is 0 it's thermal anyway
-  logical,dimension(1:NSNMAX)::FB_thermal = .false.
-
-  ! Radius to deposit energy inside in number of cells (at highest level)
-  real(dp),dimension(1:NSNMAX)::FB_radius = 12d0
-
-  ! Radius in number of cells at highest level to refine fully around SN
-  integer,dimension(1:NSNMAX)::FB_r_refine = 10
-
-  ! Timestep to ensure winds are deposited properly
-  ! NOT A USER-SETTABLE PARAMETER
-  real(dp),dimension(1:NSNMAX)::FB_dtnew = 0d0
-
-  ! Is the source active this timestep? (Used by other routines)
-  ! NOT A USER-SETTABLE PARAMETER
-  logical,dimension(1:NSNMAX)::FB_sourceactive = .false. 
-
-
-CONTAINS
-
-
 subroutine vaccafit(M,S)
+  use amr_parameters,only:dp
+  use sink_feedback_parameters
+  implicit none
   ! This routine is called in sink_RT_feedback
   ! perform a fit of the Vacca et al. 96 ionising flux
   ! M - stellar mass / solar masses
@@ -143,6 +23,7 @@ subroutine make_sn_stellar
   use pm_commons
   use amr_commons
   use hydro_commons
+  use sink_feedback_parameters
   use mpi_mod
   implicit none
 
@@ -495,15 +376,6 @@ subroutine make_sn_stellar
                   sn_ed_lim = T_sn * dgas / (gamma-1.)
 
                   uold(ind_cell(i), 2+ndim) = uold(ind_cell(i), 2+ndim) + ekin + sn_ed_lim
-#if NCR>0
-                  if(sn_feedback_cr)then
-                     do ivar=1,ncr
-                        uold(ind_cell(i),firstindex_ent+ivar)=uold(ind_cell(i),firstindex_ent+ivar) &
-                             & + sn_ed*fcr
-                        uold(ind_cell(i), 2+ndim) = uold(ind_cell(i), 2+ndim) + sn_ed*fcr
-                     end do
-                  end if
-#endif
                   n_sn = n_sn + 1
 
                   !write(*,*) 'put SN, myid , n_sn ',myid, n_sn, 'x,y,z: ',x_sn(1),x_sn(2),x_sn(3), 'density ',dgas
@@ -728,6 +600,7 @@ end subroutine sphere_average
 subroutine feedback_fixed(ilevel)
   use amr_commons
   use hydro_parameters
+  use sink_feedback_parameters
   implicit none
   integer::ilevel,isn
   !---------------------
@@ -737,7 +610,6 @@ subroutine feedback_fixed(ilevel)
   ! This check should be done already in amr_step, but best to be sure I suppose
   if(FB_on .and. ilevel == levelmin) then
      ! Reset per-step flags/variables used to signal to other routines
-     FB_sourceactive = .false.
      FB_dtnew = 0d0
      do isn=1,FB_nsource
         ! Deal with supernovae
@@ -776,46 +648,11 @@ end subroutine feedback_fixed
 !################################################################
 !################################################################
 !################################################################
-subroutine courant_fb_fixed(dtout)
-  ! Find fixed source timestep
-  ! NOTE: This basically just ensures that the source starts on time
-  ! It's more efficient to let the other courant limiters work after that
-  ! dtout - output parameter
-  use amr_commons
-  use hydro_parameters
-  implicit none
-  
-  integer::isn
-  real(dp),intent(out)::dtout
-  
-  ! Loop through each source
-  do isn=1,FB_nsource
-     ! Check to see whether we're going to overshoot the supernova
-!     if (t+dtout > FB_start(isn)) then
-!        dtout = FB_start(isn) - t
-!     endif
-     ! OLD CODE FOR LIMITING TIMING, USE OTHER COURANT LIMITERS INSTEAD
-     ! TODO: REMOVE
-     ! Is the source active this timestep?
-     !if (FB_sourceactive(isn)) then
-     !   ! Set the timestep to the current minimum
-     !   if (dtout .gt. 0d0) then
-     !      dtout = min(dtout,FB_dtnew(isn))
-     !   else
-     !      dtout = FB_dtnew(isn)
-     !   end if
-     !end if
-  end do
-
-end subroutine courant_fb_fixed
-!################################################################
-!################################################################
-!################################################################
-!################################################################
 subroutine make_fb_fixed(currlevel,isn)
   ! Adapted from O. Iffrig's make_sn_blast
   use amr_commons
   use hydro_commons
+  use sink_feedback_parameters
   implicit none
 
   integer, intent(in) :: currlevel,isn
@@ -846,12 +683,11 @@ subroutine make_fb_fixed(currlevel,isn)
   if(.not. hydro)return
   if(ndim .ne. 3)return
 
+#if NDIM==3
+
   if(verbose)write(*,*)'Entering make_fb_fixed'
 
   pi = acos(-1.0)
-
-  ! Make source active this timestep
-  FB_sourceactive(isn) = .true.
 
   ! Mesh spacing in that level
   xbound(1:3) = (/ dble(nx), dble(ny), dble(nz) /)
@@ -882,7 +718,7 @@ subroutine make_fb_fixed(currlevel,isn)
 
   ! HACK - force Courant condition on winds before first hydro step
   ! TODO: think about how this is synchronised more carefully
-  FB_dtnew(isn) = courant_factor*dx_min/sn_v
+  FB_dtnew(isn) = courant_factor*dx_min/sn_v ! T.C.: not used?
   dt = min(dtnew(currlevel),dt)
   dt = dtnew(currlevel)
 
@@ -1009,6 +845,7 @@ subroutine make_fb_fixed(currlevel,isn)
       call make_virtual_fine_dp(uold(1, ivar), ilevel)
     enddo
   enddo
+#endif
 end subroutine make_fb_fixed
 !################################################################
 !################################################################
@@ -1025,6 +862,7 @@ subroutine feedback_refine(xx,ok,ncell,ilevel)
   use pm_commons
   use hydro_commons
   use poisson_commons
+  use sink_feedback_parameters
   implicit none
   integer::ncell,ilevel,i,k,nx_loc,isn
   real(dp),dimension(1:nvector,1:ndim)::xx
@@ -1050,7 +888,4 @@ subroutine feedback_refine(xx,ok,ncell,ilevel)
 #endif
   
 end subroutine feedback_refine
-
-
-END MODULE sink_feedback_module
 

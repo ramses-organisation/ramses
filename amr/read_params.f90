@@ -3,7 +3,7 @@ subroutine read_params
   use pm_parameters
   use poisson_parameters
   use hydro_parameters
-  use sink_feedback_module
+  use sink_feedback_parameters
   use mpi_mod
   implicit none
   !--------------------------------------------------
