@@ -47,9 +47,6 @@ module sink_feedback_parameters
   ! Radius to deposit energy inside in number of cells (at highest level)
   real(dp),dimension(1:NSNMAX)::FB_radius = 12d0
 
-  ! Radius in number of cells at highest level to refine fully around SN
-  integer,dimension(1:NSNMAX)::FB_r_refine = 10
-
   ! Timestep to ensure winds are deposited properly
   ! NOT A USER-SETTABLE PARAMETER
   real(dp),dimension(1:NSNMAX)::FB_dtnew = 0d0
