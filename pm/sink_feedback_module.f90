@@ -576,5 +576,3 @@ subroutine sphere_average(navg, nsph, center, radius, rpow, upow, avg)
     avg = avg_loc
 #endif
 end subroutine sphere_average
-
-END MODULE sink_feedback_module

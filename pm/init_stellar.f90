@@ -4,14 +4,14 @@ subroutine init_stellar
     use sink_feedback_parameters
     use mpi_mod
     implicit none
-
+#ifndef WITHOUTMPI
+    integer, parameter:: tag=1112
+    integer:: dummy_io, info2
+#endif
     integer:: ilun
+    logical::eof=.false.
     character(len=80):: fileloc
     character(len=5):: nchar, ncharcpu
-#ifndef WITHOUTMPI
-    integer:: dummy_io, info2
-    integer, parameter:: tag=1112
-#endif
     integer:: idim
     integer::sid
     real(dp)::sm,sx1,sx2,sx3,stform,stlife

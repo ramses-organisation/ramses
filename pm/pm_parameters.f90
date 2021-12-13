@@ -27,7 +27,6 @@ module pm_parameters
   character(LEN=15)::accretion_scheme='none' ! Sink accretion scheme; options: 'none', 'bondi', 'threshold'
   logical::threshold_accretion=.false.       ! NOT A NAMELIST PARAMETER
   logical::bondi_accretion=.false.           ! NOT A NAMELIST PARAMETER
-
   logical::bondi_use_vrel=.true.             ! Use v_rel^2 in the denominator of Bondi formula
   real(dp)::c_acc=0.75                       ! "courant factor" for sink accretion
                                              ! gives fraction of available gas that can be accreted in one timestep
