@@ -37,8 +37,9 @@ end subroutine read_sink_feedback_params
 subroutine read_stellar_params()
   use cooling_module, only: mH
   use amr_commons, only: dp, myid, stellar
-  use pm_commons, only: iseed
+  use pm_commons, only: stellar_seed
   use sink_feedback_parameters
+  use constants, only:M_sun
   implicit none
 
   !------------------------------------------------------------------------
@@ -49,7 +50,7 @@ subroutine read_stellar_params()
                          & lt_t0, lt_m0, lt_a, lt_b, &
                          & stf_K, stf_m0, stf_a, stf_b, stf_c, &
                          & hii_t, &
-                         & sn_feedback_sink,stellar_strategy,iseed, &
+                         & sn_feedback_sink,stellar_strategy,stellar_seed, &
                          & mstellarini
 
   real(dp):: scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
@@ -72,8 +73,8 @@ subroutine read_stellar_params()
       call clean_stop
   end if
 
-  if(imf_low <= 0.0d0 .or. imf_low >= imf_high) then
-      if(myid == 1) write(*, *) '0 < imf_low < imf_high has to be respected'
+  if(imf_low <= 0.0d0 .or. imf_low > imf_high) then
+      if(myid == 1) write(*, *) '0 < imf_low <= imf_high has to be respected'
       call clean_stop
   end if
 
@@ -82,7 +83,7 @@ subroutine read_stellar_params()
       call clean_stop
   end if
 
-  if(stellar_strategy .ne. 'local' .or. stellar_strategy .ne. 'global')then
+  if((stellar_strategy .ne. 'local') .and. (stellar_strategy .ne. 'global'))then
       if(myid == 1) write(*, *) 'stellar_strategy should be local or global'
       call clean_stop
   end if
@@ -90,7 +91,7 @@ subroutine read_stellar_params()
   call units(scale_l, scale_t, scale_d, scale_v, scale_nH, scale_T2)
 
   ! Convert parameters to code units
-  msun = 2d33 / scale_d / scale_l**3
+  msun = M_sun / scale_d / scale_l**3
   Myr = 1d6 * 365.25d0 * 86400d0 / scale_t
   km_s = 1d5 / scale_v
 

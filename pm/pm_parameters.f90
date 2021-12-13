@@ -5,6 +5,7 @@ module pm_parameters
   integer::npart=0                  ! Actual number of particles
   integer::nsink=0                  ! Actual number of sinks
   integer::iseed=0                  ! Seed for stochastic star formation
+  integer::stellar_seed=0           ! Seed for IMF sampling stellar particles
   integer::tseed=0                  ! Seed for MC tracers
   integer::nstar_tot=0              ! Total number of star particles
   real(dp)::mstar_tot=0             ! Total star mass

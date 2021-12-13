@@ -6,13 +6,11 @@ subroutine make_stellar_from_sinks
   implicit none
 
   integer:: isink
-  integer:: idim
 
   integer:: nbuf
   integer, parameter:: nbufmax = 1000
-  real(dp), dimension(1:nbufmax, 1:ndim):: buf
+  real(dp), dimension(1:nbufmax, 1:ndim):: buf_x
   integer, dimension(1:nbufmax):: buf_id
-  logical, dimension(1:nstellarmax):: mark_del
   real(dp):: mass_total
   integer:: iobj,nobj_new
   real(dp), dimension(1:nsink) :: dmfsink_sort
@@ -32,11 +30,11 @@ subroutine make_stellar_from_sinks
   
           nbuf = nbuf + 1
           if(nbuf > nbufmax) then
-            call create_stellar(nbufmax, nbufmax, buf, buf_id, .true.)
+            call create_stellar(nbufmax, nbufmax, buf_x, buf_id, .true.)
             nbuf = 1
           end if
-  
-          buf(nbuf, 1:ndim) = xsink(isink, 1:ndim)
+          ! save ID and position of sink
+          buf_x(nbuf, 1:ndim) = xsink(isink, 1:ndim)
           buf_id(nbuf) = isink
         end do
       end do
@@ -72,17 +70,17 @@ subroutine make_stellar_from_sinks
   
        nbuf = nbuf + 1
        if(nbuf > nbufmax) then
-          call create_stellar(nbufmax, nbufmax, buf, buf_id, .true.)
+          call create_stellar(nbufmax, nbufmax, buf_x, buf_id, .true.)
           nbuf = 1
        end if
 
-       buf(nbuf, 1:ndim) = xsink(isink, 1:ndim)
+       buf_x(nbuf, 1:ndim) = xsink(isink, 1:ndim)
        buf_id(nbuf) = isink
     end do
 
   endif
 
-  call create_stellar(nbuf, nbufmax, buf, buf_id, .true.)
+  call create_stellar(nbuf, nbufmax, buf_x, buf_id, .true.)
 
 end subroutine make_stellar_from_sinks
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -90,55 +88,43 @@ end subroutine make_stellar_from_sinks
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 subroutine create_stellar(ncreate, nbuf, xnew, id_new, print_table)
-!    use pm_commons, only: stellar, imf_index, imf_low, imf_high, &
-!                         & lt_t0, lt_m0, lt_a, lt_b, sn_direct, &
-!                         & nstellarmax, nstellar, stellar_msink_th, &
-!                         & xstellar, mstellar, tstellar, ltstellar
     use amr_commons, only: dp, myid, ncpu, ndim, t
     use sink_feedback_parameters
+    use constants, only:M_sun
     use mpi_mod
     implicit none
-
     !------------------------------------------------------------------------
     ! Create new stellar objects
     !------------------------------------------------------------------------
-
     integer, intent(in):: ncreate, nbuf
     real(dp), dimension(1:nbuf, 1:ndim), intent(in):: xnew
     integer, dimension(1:nbuf), intent(in):: id_new
     logical, intent(in):: print_table
 
-    integer:: ncreate_loc, iloc
+    integer:: ncreate_loc
     real(dp), dimension(1:ncreate):: mnew_loc, tnew_loc, ltnew_loc
     real(dp), dimension(1:ncreate):: mnew, tnew, ltnew
     real(dp), dimension(1:ncreate, 1:ndim):: xnew_loc, xnew2
     integer, dimension(1:ncreate):: id_new_loc, id_new2
-    integer, dimension(1:ncpu)::displ
-
-    real(dp):: scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
-    real(dp):: msun
-    
 #ifndef WITHOUTMPI
+    integer, dimension(1:ncpu)::displ
     integer:: info, icpu, idim, isplit, nsplit
     integer, dimension(1:ncpu):: narr
 #endif
-
     integer:: istellar
 
-    if(ncreate == 0) return
+    write(*, *) 'ncreate', ncreate
 
-    call units(scale_l, scale_t, scale_d, scale_v, scale_nH, scale_T2)
-    msun = 2d33 / scale_d / scale_l**3
+    if(ncreate == 0) return
     
     ! Check that there is enough space
     if(ncreate + nstellar > nstellarmax) then
-        if(myid == 1) write(*, *) 'Not enough space for new stellar objects'
-        if(myid == 1) write(*, *) 'Increase nstellarmax'
+        if(myid == 1) write(*, *) 'Not enough space for new stellar objects! Increase nstellarmax.'
         call clean_stop
     end if
 
-    ! Split work among processes
 #ifndef WITHOUTMPI
+    ! Split work among processes
     isplit = mod(ncreate, ncpu)
     nsplit = ncreate / ncpu
     narr(       1:isplit) = nsplit + 1
@@ -148,35 +134,38 @@ subroutine create_stellar(ncreate, nbuf, xnew, id_new, print_table)
         displ(icpu) = displ(icpu - 1) + narr(icpu - 1)
     end do
     ncreate_loc = narr(myid)
+    xnew_loc(1:ncreate_loc, 1:ndim) = xnew(displ(myid)+1:displ(myid)+ncreate_loc, 1:ndim)
+    id_new_loc(1:ncreate_loc) = id_new(displ(myid)+1:displ(myid)+ncreate_loc)
 #else
     ncreate_loc = ncreate
+    xnew_loc = xnew
+    id_new_loc = id_new
 #endif
 
-    xnew_loc(1:ncreate_loc, 1:ndim) = xnew(displ(myid)+1:displ(myid)+ncreate_loc, 1:ndim)
-
-    id_new_loc(1:ncreate_loc) = id_new(displ(myid)+1:displ(myid)+ncreate_loc)
-
-    ! Draw random masses fro the IMF
-    call sample_powerlaw(mnew_loc, imf_low, imf_high, imf_index, ncreate_loc)
+    ! Draw random masses from the IMF
+    !if(imf_low==imf_high)then
+    !    do istellar = 1, ncreate_loc
+    !        mnew_loc(istellar) = imf_low !c.u.
+    !    end do
+    !else
+        call sample_powerlaw(mnew_loc, imf_low, imf_high, imf_index, ncreate_loc)
+    !endif
 
     ! Set birth time to current time
     tnew_loc(1:ncreate_loc) = t
 
     ! Compute lifetime
-    ltnew_loc(1:ncreate_loc) = lt_t0 * &
-            & exp(lt_a * (log(lt_m0 / mnew_loc))**lt_b)
-
+    ltnew_loc(1:ncreate_loc) = lt_t0 * exp(lt_a * (log(lt_m0 / mnew_loc))**lt_b)
 
     ! Communicate data
 #ifndef WITHOUTMPI
     do idim = 1, ndim
         call MPI_ALLGATHERV(xnew_loc(:, idim), ncreate_loc, MPI_DOUBLE_PRECISION, xnew2(:, idim), narr, displ, MPI_DOUBLE_PRECISION, MPI_COMM_WORLD, info)
     end do
-    call MPI_ALLGATHERV(id_new_loc, ncreate_loc, MPI_INTEGER,          id_new2, narr, displ, MPI_INTEGER, MPI_COMM_WORLD, info)
-
-    call MPI_ALLGATHERV(  mnew_loc, ncreate_loc, MPI_DOUBLE_PRECISION, mnew, narr, displ, MPI_DOUBLE_PRECISION, MPI_COMM_WORLD, info)
-    call MPI_ALLGATHERV(  tnew_loc, ncreate_loc, MPI_DOUBLE_PRECISION, tnew, narr, displ, MPI_DOUBLE_PRECISION, MPI_COMM_WORLD, info)
-    call MPI_ALLGATHERV( ltnew_loc, ncreate_loc, MPI_DOUBLE_PRECISION, ltnew, narr, displ, MPI_DOUBLE_PRECISION, MPI_COMM_WORLD, info)
+    call MPI_ALLGATHERV(id_new_loc, ncreate_loc, MPI_INTEGER, id_new2, narr, displ, MPI_INTEGER, MPI_COMM_WORLD, info)
+    call MPI_ALLGATHERV(  mnew_loc, ncreate_loc, MPI_DOUBLE_PRECISION, mnew,    narr, displ, MPI_DOUBLE_PRECISION, MPI_COMM_WORLD, info)
+    call MPI_ALLGATHERV(  tnew_loc, ncreate_loc, MPI_DOUBLE_PRECISION, tnew,    narr, displ, MPI_DOUBLE_PRECISION, MPI_COMM_WORLD, info)
+    call MPI_ALLGATHERV( ltnew_loc, ncreate_loc, MPI_DOUBLE_PRECISION, ltnew,   narr, displ, MPI_DOUBLE_PRECISION, MPI_COMM_WORLD, info)
 #else
     mnew = mnew_loc
     tnew = tnew_loc
@@ -189,9 +178,8 @@ subroutine create_stellar(ncreate, nbuf, xnew, id_new, print_table)
 
     ! Set stellar masses
     ! EITHER: use mnew
-    ! OR: use mstellarini if this has non-zero values
-    do istellar = nstellar+1, nstellar+ncreate!
-
+    ! OR: use mstellarini if this has non-zero values (sets first stellar objects to have specific mass)
+    do istellar = nstellar+1, nstellar+ncreate
        if(istellar .ge. nstellarini) then 
           mstellar(istellar) = mnew(istellar-nstellar)
        else
@@ -201,9 +189,7 @@ subroutine create_stellar(ncreate, nbuf, xnew, id_new, print_table)
           else
             ! Current value? Leave it alone but overwrite the age with the correct one
              mstellar(istellar) = mstellarini(istellar)
-
-             ltnew(istellar-nstellar) = lt_t0 * &
-                & exp(lt_a * (log(lt_m0 / mstellar(istellar)))**lt_b)
+             ltnew(istellar-nstellar) = lt_t0 * exp(lt_a * (log(lt_m0 / mstellar(istellar)))**lt_b)
          endif
        endif
     end do
@@ -225,7 +211,8 @@ subroutine create_stellar(ncreate, nbuf, xnew, id_new, print_table)
     end if
 
     if(sn_direct) then
-        ltstellar(nstellar+1:nstellar+ncreate) = 0.0d0
+        ! explode immediately instead of after lifetime
+        ltstellar(nstellar+1:nstellar+ncreate) = 0
     end if
 
     nstellar = nstellar + ncreate
@@ -241,17 +228,16 @@ subroutine delete_stellar(flag_delete)
     use sink_feedback_parameters
     use mpi_mod
     implicit none
-
     !------------------------------------------------------------------------
     ! Delete flagged stellar objects
     !------------------------------------------------------------------------
-
-    logical, dimension(1:nstellar), intent(in):: flag_delete
-
-    integer:: i, inew, info
+    logical, dimension(1:nstellar), intent(in):: flag_delete !true if a particle should be deleted
+    integer:: i, inew
     logical, dimension(1:nstellar):: flag_any
 
 #ifndef WITHOUTMPI
+    integer:: info
+
     ! Make sure every process deletes the same objects
     call MPI_ALLREDUCE(flag_delete, flag_any, nstellar, MPI_LOGICAL, MPI_LOR, MPI_COMM_WORLD, info)
 #else
@@ -276,48 +262,42 @@ subroutine delete_stellar(flag_delete)
     nstellar = inew - 1
 
 end subroutine delete_stellar
-
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 subroutine sample_powerlaw(x, a, b, alpha, n)
     ! Sample from a power-law between a and b, with an index of alpha (for the PDF)
-    use amr_commons
-    use pm_commons
+    use amr_commons  ,only:ncpu,myid
+    use pm_commons   ,only:localseed
+    use pm_parameters,only:stellar_seed
     use random
-
-
     implicit none
-
-
     real(8), dimension(1:n), intent(out):: x
     real(8), intent(in):: a, b, alpha
     integer, intent(in):: n
-
-    integer ,dimension(1:ncpu,1:IRandNumSize)::allseed
-
+    integer, dimension(1:ncpu,1:IRandNumSize)::allseed
     real(8):: u, p, q
     integer:: i
 
     p = alpha + 1.0_8
     q = 1.0_8 / p
 
-
     ! If necessary, initialize random number generator
     if(localseed(1)==-1)then
-      call rans(ncpu,iseed,allseed)
-      localseed=allseed(myid,1:IRandNumSize)
+        call rans(ncpu,stellar_seed,allseed)
+        localseed=allseed(myid,1:IRandNumSize)
     end if
 
-
     do i = 1, n
-        call Ranf( localseed, u )
-
+        call Ranf(localseed, u)
         write(*,*) 'random number generated ', u
-        
-!        call random_number(u)
+        !call random_number(u)
         ! u follows an uniform law between 0 and 1
         ! Scale it to b^p..a^p
         u = b**p + (a**p - b**p) * u
-
         ! Calculate x(i)
         x(i) = u**q
     end do
+
 end subroutine sample_powerlaw

@@ -51,7 +51,7 @@ module sink_feedback_parameters
   ! namelist parameters STELLAR_PARAMS
 
   ! Stellar object related arrays, those parameters are read in  read_stellar_params 
-  logical:: sn_direct = .false.
+  logical:: sn_direct = .false.        ! explode immediately instead of after lifetime
   character(LEN=100)::stellar_strategy='local' ! local: create stellar particles from each sink
                                                ! global: create when the total mass in sinks exceeds stellar_msink_th
   integer:: nstellarmax ! maximum number of stellar objects
