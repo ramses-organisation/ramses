@@ -25,7 +25,9 @@ subroutine init_stellar
     allocate(mstellar(1:nstellarmax))
     allocate(tstellar(1:nstellarmax))
     allocate(ltstellar(1:nstellarmax))
+    allocate(time_remaining(1:nstellarmax))
     allocate(id_stellar(1:nstellarmax))
+    allocate(idstellar_sort(1:nstellarmax))
     
     ! Load stellar particles from the restart
     if(nrestart > 0) then

@@ -79,10 +79,17 @@ module sink_feedback_parameters
 
   ! commons
 
+  ! stellar object arrays
   integer:: nstellar = 0 ! current number of stellar objects
-  real(dp), allocatable, dimension(:, :):: xstellar ! stellar object position
-  real(dp), allocatable, dimension(:):: mstellar, tstellar, ltstellar ! stellar object mass, birth time, life time
-  integer, allocatable, dimension(:):: id_stellar !the id  of the sink to which it belongs
+  real(dp), allocatable, dimension(:, :):: xstellar                   ! position
+  real(dp), allocatable, dimension(:):: mstellar, tstellar, ltstellar ! mass, birth time, life time
+  real(dp), allocatable, dimension(:):: time_remaining                ! time before explosion (for outputting only) 
+  integer, allocatable, dimension(:):: id_stellar, idstellar_sort     !the id  of the sink to which it belongs
+
+  ! TODO
+  ! Why store position? Where does it explode?
+  ! sink_id != position in array if merging=true
+  ! take care of stellar particles when sinks are merged!
 
 end module sink_feedback_parameters
 

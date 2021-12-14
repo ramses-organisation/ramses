@@ -14,6 +14,7 @@ subroutine make_stellar_from_sinks
   real(dp):: mass_total
   integer:: iobj,nobj_new
   real(dp), dimension(1:nsink) :: dmfsink_sort
+  logical::write_stellar=.true.
 
   if(.not. hydro) return
   if(ndim /= 3) return
@@ -27,7 +28,6 @@ subroutine make_stellar_from_sinks
     do isink = 1, nsink
         do while(dmfsink(isink) .gt. stellar_msink_th)
           dmfsink(isink) = dmfsink(isink) - stellar_msink_th
-  
           nbuf = nbuf + 1
           if(nbuf > nbufmax) then
             call create_stellar(nbufmax, nbufmax, buf_x, buf_id, .true.)
@@ -35,7 +35,7 @@ subroutine make_stellar_from_sinks
           end if
           ! save ID and position of sink
           buf_x(nbuf, 1:ndim) = xsink(isink, 1:ndim)
-          buf_id(nbuf) = isink
+          buf_id(nbuf) = idsink(isink)
         end do
       end do
   else !global
@@ -75,12 +75,16 @@ subroutine make_stellar_from_sinks
        end if
 
        buf_x(nbuf, 1:ndim) = xsink(isink, 1:ndim)
-       buf_id(nbuf) = isink
+       buf_id(nbuf) = idsink(isink)
     end do
 
   endif
 
   call create_stellar(nbuf, nbufmax, buf_x, buf_id, .true.)
+
+   if (write_stellar)then
+    call print_stellar_properties
+   end if
 
 end subroutine make_stellar_from_sinks
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -102,19 +106,14 @@ subroutine create_stellar(ncreate, nbuf, xnew, id_new, print_table)
     logical, intent(in):: print_table
 
     integer:: ncreate_loc
-    real(dp), dimension(1:ncreate):: mnew_loc, tnew_loc, ltnew_loc
+    real(dp), dimension(1:ncreate):: mnew_loc, ltnew_loc
     real(dp), dimension(1:ncreate):: mnew, tnew, ltnew
-    real(dp), dimension(1:ncreate, 1:ndim):: xnew_loc, xnew2
-    integer, dimension(1:ncreate):: id_new_loc, id_new2
 #ifndef WITHOUTMPI
     integer, dimension(1:ncpu)::displ
     integer:: info, icpu, idim, isplit, nsplit
     integer, dimension(1:ncpu):: narr
 #endif
     integer:: istellar
-
-    ! debugging
-    write(*, *) 'ncreate', ncreate
 
     if(ncreate == 0) return
     
@@ -125,7 +124,7 @@ subroutine create_stellar(ncreate, nbuf, xnew, id_new, print_table)
     end if
 
 #ifndef WITHOUTMPI
-    ! Split work among processes
+    ! Split work among processes (determining mass and lifetime)
     isplit = mod(ncreate, ncpu)
     nsplit = ncreate / ncpu
     narr(       1:isplit) = nsplit + 1
@@ -135,49 +134,36 @@ subroutine create_stellar(ncreate, nbuf, xnew, id_new, print_table)
         displ(icpu) = displ(icpu - 1) + narr(icpu - 1)
     end do
     ncreate_loc = narr(myid)
-    xnew_loc(1:ncreate_loc, 1:ndim) = xnew(displ(myid)+1:displ(myid)+ncreate_loc, 1:ndim)
-    id_new_loc(1:ncreate_loc) = id_new(displ(myid)+1:displ(myid)+ncreate_loc)
 #else
     ncreate_loc = ncreate
-    xnew_loc(1:ncreate_loc, 1:ndim) = xnew(1:ncreate_loc, 1:ndim)
-    id_new_loc(1:ncreate_loc) = id_new(1:ncreate_loc)
 #endif
 
     ! Draw random masses from the IMF
     !if(imf_low==imf_high)then
-    !    do istellar = 1, ncreate_loc
-    !        mnew_loc(istellar) = imf_low !c.u.
-    !    end do
+    !        mnew_loc = imf_low !c.u.
     !else
         call sample_powerlaw(mnew_loc, imf_low, imf_high, imf_index, ncreate_loc)
     !endif
-
-    ! Set birth time to current time
-    tnew_loc(1:ncreate_loc) = t
 
     ! Compute lifetime
     ltnew_loc(1:ncreate_loc) = lt_t0 * exp(lt_a * (log(lt_m0 / mnew_loc))**lt_b)
 
     ! Communicate data
 #ifndef WITHOUTMPI
-    do idim = 1, ndim
-        call MPI_ALLGATHERV(xnew_loc(:, idim), ncreate_loc, MPI_DOUBLE_PRECISION, xnew2(:, idim), narr, displ, MPI_DOUBLE_PRECISION, MPI_COMM_WORLD, info)
-    end do
-    call MPI_ALLGATHERV(id_new_loc, ncreate_loc, MPI_INTEGER, id_new2, narr, displ, MPI_INTEGER, MPI_COMM_WORLD, info)
     call MPI_ALLGATHERV(  mnew_loc, ncreate_loc, MPI_DOUBLE_PRECISION, mnew,    narr, displ, MPI_DOUBLE_PRECISION, MPI_COMM_WORLD, info)
-    call MPI_ALLGATHERV(  tnew_loc, ncreate_loc, MPI_DOUBLE_PRECISION, tnew,    narr, displ, MPI_DOUBLE_PRECISION, MPI_COMM_WORLD, info)
     call MPI_ALLGATHERV( ltnew_loc, ncreate_loc, MPI_DOUBLE_PRECISION, ltnew,   narr, displ, MPI_DOUBLE_PRECISION, MPI_COMM_WORLD, info)
 #else
     mnew = mnew_loc
-    tnew = tnew_loc
     ltnew = ltnew_loc
 #endif
 
     ! Add new objects to the arrays
-    xstellar(nstellar+1:nstellar+ncreate, 1:ndim) = xnew2(1:ncreate, 1:ndim)
-    id_stellar(nstellar+1:nstellar+ncreate) = id_new2(1:ncreate)
+    xstellar(nstellar+1:nstellar+ncreate, 1:ndim) = xnew(1:ncreate, 1:ndim)
+    id_stellar(nstellar+1:nstellar+ncreate) = id_new(1:ncreate)
+    ! Set birth time to current time
+    tstellar(nstellar+1:nstellar+ncreate) = t
 
-    ! Set stellar masses
+    ! Set stellar masses and lifetimes
     ! EITHER: use mnew
     ! OR: use mstellarini if this has non-zero values (sets first stellar objects to have specific mass)
     do istellar = nstellar+1, nstellar+ncreate
@@ -195,15 +181,15 @@ subroutine create_stellar(ncreate, nbuf, xnew, id_new, print_table)
        endif
     end do
     !mstellar(nstellar+1:nstellar+ncreate) = mnew
-    tstellar(nstellar+1:nstellar+ncreate) = tnew
     ltstellar(nstellar+1:nstellar+ncreate) = ltnew
 
+    ! debugging
     if(myid == 1) then
         write(*, "('Created ', I5, ' stellar objects:')") ncreate
         if(print_table) then
-            write(*, "('===================================================================================================')")
+            write(*, "('***************************************************************************************************')")
             write(*, "('       x              y              z               Mass          Birth          LifeT       id   ')")
-            write(*, "('===================================================================================================')")
+            write(*, "('***************************************************************************************************')")
             do istellar = nstellar + 1, nstellar + ncreate
                 write(*, "(3F15.10, 2X, 3ES15.7,2X,i6)") xstellar(istellar, 1), xstellar(istellar, 2), xstellar(istellar, 3), &
                     & mstellar(istellar), tstellar(istellar), ltstellar(istellar), id_stellar(istellar)
@@ -302,3 +288,40 @@ subroutine sample_powerlaw(x, a, b, alpha, n)
     end do
 
 end subroutine sample_powerlaw
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+subroutine print_stellar_properties
+    use amr_commons
+    use sink_feedback_parameters
+    use constants, only: M_sun, yr2sec
+    implicit none
+    integer::i,istellar
+    real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,scale_m
+
+    if(myid==1.and.nstellar>0.and.mod(nstep_coarse,ncontrol)==0) then
+        ! Scaling factors
+        call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
+        scale_m=scale_d*scale_l**ndim
+
+        ! sort by remaining lifetime
+        do istellar=1,nstellar
+            time_remaining(istellar) = ltstellar(istellar) - (t-tstellar(istellar))
+        end do
+        call quick_sort_dp(time_remaining(1),idstellar_sort(1),nstellar)
+
+        write(*,*)'Number of stellar objects = ',nstellar
+        write(*, "('*****************************************************************************************')")
+        write(*, "('   id        x             y             z        mass[Msol]    age[yr]    lifetime[yr]')")
+        write(*, "('*****************************************************************************************')")
+        do i=1,nstellar
+            istellar=idstellar_sort(i)
+            write(*, "(I5,6(2X,1PE12.5))") id_stellar(istellar), &
+                & xstellar(istellar, 1), xstellar(istellar, 2), xstellar(istellar, 3), &
+                & mstellar(istellar)*scale_m/M_sun, (t-tstellar(istellar))*scale_t/yr2sec, ltstellar(istellar)*scale_t/yr2sec
+        end do
+        write(*,'(" *****************************************************************************************")')
+    end if
+
+  end subroutine print_stellar_properties
