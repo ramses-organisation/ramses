@@ -18,6 +18,8 @@ subroutine init_stellar
     character::co
     character(LEN=200)::comment_line
 
+    if(.not. stellar) return
+
     ! Allocate all stellar object related quantities
     allocate(xstellar(1:nstellarmax, 1:ndim))
     allocate(mstellar(1:nstellarmax))
@@ -81,7 +83,7 @@ subroutine init_stellar
 #endif
     end if
 
-    ! TODO: add possibility to manually add stellar particles on restart as for sinks
+    ! TODO: add possibility to manually add stellar particles on restart as for sinks?
     !       replaces fixes sources in namelist
 
 end subroutine init_stellar

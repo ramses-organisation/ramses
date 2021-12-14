@@ -59,7 +59,7 @@ subroutine make_stellar_from_sinks
     !this assumes that the number of sinks is larger than the number of objects
     if(nobj_new .gt. nsink) then
        write(*,*) 'number of new objects is larger than the number of sinks ',nobj_new, nsink
-       write(*,*) 'use make_stellar_from_sinks instead of make_stellar_from_sinks_glob or modify the code' 
+       write(*,*) 'use make_stellar_from_sinks instead of make_stellar_from_sinks_glob or modify the code'
        stop
     endif
   
@@ -113,6 +113,7 @@ subroutine create_stellar(ncreate, nbuf, xnew, id_new, print_table)
 #endif
     integer:: istellar
 
+    ! debugging
     write(*, *) 'ncreate', ncreate
 
     if(ncreate == 0) return
@@ -138,8 +139,8 @@ subroutine create_stellar(ncreate, nbuf, xnew, id_new, print_table)
     id_new_loc(1:ncreate_loc) = id_new(displ(myid)+1:displ(myid)+ncreate_loc)
 #else
     ncreate_loc = ncreate
-    xnew_loc = xnew
-    id_new_loc = id_new
+    xnew_loc(1:ncreate_loc, 1:ndim) = xnew(1:ncreate_loc, 1:ndim)
+    id_new_loc(1:ncreate_loc) = id_new(1:ncreate_loc)
 #endif
 
     ! Draw random masses from the IMF
