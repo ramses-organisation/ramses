@@ -95,7 +95,7 @@ merging_timescale=1d50
 &STELLAR_PARAMS
 sn_feedback_sink=.true.
 nstellarmax=10
-stellar_msink_th=200. ! threshold for stellar obj creation
+stellar_msink_th=300. ! threshold for stellar obj creation
 sn_direct=.false.
 mstellarini=100,8
 ! IMF
