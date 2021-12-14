@@ -22,6 +22,7 @@ subroutine make_sn_stellar
   use amr_commons
   use hydro_commons
   use sink_feedback_parameters
+  use constants, only:pi,pc2cm
   use mpi_mod
   implicit none
 
@@ -29,34 +30,24 @@ subroutine make_sn_stellar
   integer:: ilevel, ind, ix, iy, iz, ngrid, iskip, idim
   integer:: i, nx_loc, igrid, ncache
   integer, dimension(1:nvector), save:: ind_grid, ind_cell
-  real(dp):: dx
-  real(dp):: scale, dx_min, dx_loc, vol_loc
-  real(dp), dimension(1:3):: xbound, skip_loc
+  real(dp):: dx, scale, dx_loc, vol_loc
+  real(dp), dimension(1:3):: skip_loc
   real(dp), dimension(1:twotondim, 1:3):: xc
   logical, dimension(1:nvector), save:: ok
-
   real(dp), dimension(1:nvector, 1:ndim), save:: xx
-  real(dp):: sn_r, sn_m, sn_p, sn_e, sn_vol, sn_d, sn_ed, sn_rp
-  real(dp):: rr, pi,dens_max,pgas,dgas,ekin,mass_sn_tot,dens_max_all,mass_sn_tot_all
-  integer:: n_sn,n_sn_all,info
-  integer ,dimension(1:nvector)::cc
+  real(dp):: sn_r, sn_m, sn_p, sn_e, sn_vol, sn_d, sn_ed
+  real(dp):: rr,pgas,dgas,ekin,mass_sn_tot,mass_sn_tot_all
+  integer:: info
   real(dp),dimension(1:nvector,1:ndim)::x
   real(dp),dimension(1:3):: xshift, x_sn
-
   logical, save:: first = .true.
   real(dp), save:: xseed
-
   real(dp) ::dens_max_loc,dens_max_loc_all
-
-  real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,scale_m, pc
-
+  real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   logical, dimension(1:nstellarmax):: mark_del
-  integer:: istellar
-
-  real(dp)::T_sn,sn_ed_lim,pnorm_sn,pnorm_sn_all,vol_sn,vol_sn_all,vol_rap, mass_sn, mass_sn_all,dens_moy
-
+  integer:: istellar,isink
+  real(dp)::T_sn,sn_ed_lim,pnorm_sn,vol_sn,vol_rap
   real(dp)::pgas_check,pgas_check_all
-
   integer, parameter:: navg = 3
   integer, parameter:: nsph = 1
   real(dp), dimension(1:nsph, 1:3):: avg_center
@@ -64,7 +55,6 @@ subroutine make_sn_stellar
   real(dp), dimension(1:navg):: avg_rpow
   real(dp), dimension(1:navg, 1:nvar+3):: avg_upow
   real(dp), dimension(1:navg, 1:nsph):: avg
-
   real(dp):: norm, rad_sn
 
   if(.not. hydro)return
@@ -72,56 +62,53 @@ subroutine make_sn_stellar
 
   if(verbose)write(*,*)'Entering make_sn_stellar'
 
-  pi = acos(-1.0)
-
-  if (first) then
-     xseed = 0.5
-     call random_number(xseed)
-     first = .false.
-  endif
+  ! TC: random number for direction should be looked at more carefully
+  ! this seems pointless. RNG should be seeded first
+  !if (first) then
+  !   xseed = 0.5
+  !   call random_number(xseed)
+  !   first = .false.
+  !endif
 
   ! Mesh spacing in that level
-  xbound(1:3) = (/ dble(nx), dble(ny), dble(nz) /)
   nx_loc = icoarse_max - icoarse_min + 1
-  skip_loc=(/0.0d0,0.0d0,0.0d0/)
-  if(ndim>0)skip_loc(1)=dble(icoarse_min)
-  if(ndim>1)skip_loc(2)=dble(jcoarse_min)
-  if(ndim>2)skip_loc(3)=dble(kcoarse_min)
+  skip_loc=(/dble(icoarse_min),dble(jcoarse_min),dble(kcoarse_min)/)
   scale = boxlen / dble(nx_loc)
-  dx_min = scale * 0.5d0**nlevelmax
 
   ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
-  scale_m=scale_d*(scale_l**3)
-  pc = 3.08d18 / scale_l
 
   sn_r = 3.0d0*(0.5d0**levelmin)*scale
-  if(sn_r_sat .ne. 0) sn_r = max(sn_r, sn_r_sat * pc) !impose a minimum size of 12 pc for the radius
-!  sn_r = 2.*(0.5**levelmin)*scale
+  if(sn_r_sat .ne. 0) sn_r = max(sn_r, sn_r_sat * pc2cm / scale_l) !impose a minimum size of 12 pc for the radius
   sn_m = sn_mass_ref !note this is replaced later
   sn_p = sn_p_ref
   sn_e = sn_e_ref
-  sn_rp = 0.
+  sn_vol = 4. / 3. * pi * sn_r**3
 
-    sn_vol = 4. / 3. * pi * sn_r**3
-
-  !we loop over stellar objets to determine whether one is turning supernovae
+  !we loop over stellar objects to determine whether one is turning supernovae
   !after it happens, the object is removed from the list
   mark_del = .false.
   do istellar = 1, nstellar
     if(t - tstellar(istellar) < ltstellar(istellar)) cycle
     mark_del(istellar) = .true.
 
+    ! find correct index in sink array which will be equal or lower than id_sink due to sink merging
+    isink = id_stellar(istellar)
+    do while (id_stellar(istellar) .ne. idsink(isink))
+      isink = isink - 1
+    end do
+
     ! the mass of the massive stars 
     sn_m = mstellar(istellar) 
 
     !remove the mass that is dumped in the grid
-    msink(id_stellar(istellar)) = msink(id_stellar(istellar)) - sn_m
+    msink(isink) = msink(isink) - sn_m
 
     !the velocity dispersion times the life time of the object
     rad_sn = ltstellar(istellar)*Vdisp
 
     !find a random point within a sphere of radius < 1
+    !TC: this should be done better
     norm=2.
     do while (norm .gt. 1)
        norm=0.
@@ -136,135 +123,41 @@ subroutine make_sn_stellar
     end do
     !special treatment for the z-coordinates to maintain it at low altitude
     xshift(3) = xshift(3) * min(rad_sn,100.)
+    !TC: this 100 doesn't even have units...
 
-!    x_sn(:) = xstellar(istellar, :) + xshift(:)
-    !place the supernovae around sink particles
-    x_sn(:) = xsink(id_stellar(istellar), :) + xshift(:)
+    ! place the supernovae around sink particles
+    x_sn(:) = xsink(isink, :) + xshift(:)
 
     !apply periodic boundary conditions (only along x and y)
     !PH note that this should also be modified for the shearing box 24/01/2017
+    ! TODO: check which BC!
+    ! if BC -> aply, else: move SN back in the box
     if( x_sn(1) .lt. 0) x_sn(1) = boxlen - x_sn(1) 
     if( x_sn(2) .lt. 0) x_sn(2) = boxlen - x_sn(2) 
     if( x_sn(1) .gt. boxlen) x_sn(1) = - boxlen + x_sn(1) 
     if( x_sn(2) .gt. boxlen) x_sn(2) = - boxlen + x_sn(2) 
 
-
-
-    if(.true.) then
-      avg_center(1, :) = x_sn(:)
-      avg_radius = sn_r
-      avg_rpow = 0.0d0
-      avg_upow = 0.0d0
-      ! avg_rpow(1) = 0 ; avg_upow(1, :) = 0 -> integrand(1) = 1
-      ! avg_rpow(2) = 0 ; avg_upow(2, 1) = 1 -> integrand(2) = density
-      avg_upow(2, 1) = 1.0d0
-      ! avg_rpow(3) = 1 ; avg_upow(3, :) = 0 -> integrand(3) = radius
-      avg_rpow(3) = 1.0d0
-      call sphere_average(navg, nsph, avg_center, avg_radius, avg_rpow, avg_upow, avg)
-      vol_sn = avg(1, 1)
-      mass_sn = avg(2, 1) + vol_sn * sn_d ! region average + ejecta
-      pnorm_sn = avg(3, 1)
-    else
-    !do a first path to compute the volume of the cells that are enclosed in the supernovae radius
-    !this is to correct for the grid effects
-    vol_sn = 0. ; vol_sn_all=0.
-    mass_sn = 0. ; mass_sn_all=0.
-    pnorm_sn = 0. ; pnorm_sn_all=0.
-
-    do ilevel = levelmin, nlevelmax
-      ! Computing local volume (important for averaging hydro quantities)
-      dx = 0.5d0**ilevel
-      dx_loc = dx * scale
-      vol_loc = dx_loc**ndim
-
-      ! Cell center position relative to grid center position
-      do ind=1,twotondim
-        iz = (ind - 1) / 4
-        iy = (ind - 1 - 4 * iz) / 2
-        ix = (ind - 1 - 2 * iy - 4 * iz)
-        if(ndim>0) xc(ind,1) = (dble(ix) - 0.5d0) * dx
-        if(ndim>1) xc(ind,2) = (dble(iy) - 0.5d0) * dx
-        if(ndim>2) xc(ind,3) = (dble(iz) - 0.5d0) * dx
-      end do
-
-      ! Loop over grids
-      ncache=active(ilevel)%ngrid
-      do igrid = 1, ncache, nvector
-        ngrid = min(nvector, ncache - igrid + 1)
-        do i = 1, ngrid
-          ind_grid(i) = active(ilevel)%igrid(igrid + i - 1)
-        end do
-
-        ! Loop over cells
-        do ind = 1, twotondim
-          ! Gather cell indices
-          iskip = ncoarse + (ind - 1) * ngridmax
-          do i = 1, ngrid
-            ind_cell(i) = iskip + ind_grid(i)
-          end do
-
-          ! Gather cell center positions
-          do i = 1, ngrid
-            xx(i, :) = xg(ind_grid(i), :) + xc(ind, :)
-          end do
-          ! Rescale position from coarse grid units to code units
-          do idim=1,ndim
-             do i=1,ngrid
-                xx(i,idim)=(xx(i,idim)-skip_loc(idim))*scale
-             end do
-          end do
-
-          ! Flag leaf cells
-          do i = 1, ngrid
-            ok(i) = (son(ind_cell(i)) == 0)
-          end do
-
-          do i = 1, ngrid
-            if(ok(i)) then
-
-                rr = 0.
-                do idim=1,ndim
-                   rr = rr + ( (xx(i,idim) - x_sn(idim)) / sn_r)**2
-                enddo
-
-                if(rr < 1.) then
-                  vol_sn = vol_sn + vol_loc
-                  mass_sn = mass_sn + vol_loc * (uold(ind_cell(i), 1) + sn_d)
-                  pnorm_sn = pnorm_sn + vol_loc * sqrt(rr)
-                endif
-            endif
-          end do
-          !  End loop over sublist of cells
-        end do
-        ! End loop over cells
-      end do
-      ! End loop over grids
-    end do
-    ! End loop over levels
-
-#ifndef WITHOUTMPI
-    call MPI_ALLREDUCE(vol_sn,vol_sn_all,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
-    call MPI_ALLREDUCE(mass_sn,mass_sn_all,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
-    call MPI_ALLREDUCE(pnorm_sn,pnorm_sn_all,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
-
-    vol_sn  = vol_sn_all
-    mass_sn = mass_sn_all
-    pnorm_sn = pnorm_sn_all
-#endif
-    end if
+    avg_center(1, :) = x_sn(:)
+    avg_radius = sn_r
+    avg_rpow = 0.0d0
+    avg_upow = 0.0d0
+    ! avg_rpow(1) = 0 ; avg_upow(1, :) = 0 -> integrand(1) = 1
+    ! avg_rpow(2) = 0 ; avg_upow(2, 1) = 1 -> integrand(2) = density
+    avg_upow(2, 1) = 1.0d0
+    ! avg_rpow(3) = 1 ; avg_upow(3, :) = 0 -> integrand(3) = radius
+    avg_rpow(3) = 1.0d0
+    call sphere_average(navg, nsph, avg_center, avg_radius, avg_rpow, avg_upow, avg)
+    vol_sn = avg(1, 1)
+    pnorm_sn = avg(3, 1)
 
     !compute energy and mass density
     sn_d = sn_m / vol_sn
     sn_ed = sn_e / vol_sn
 
-    dens_moy = mass_sn / vol_sn
-
     dens_max_loc = 0.
     mass_sn_tot = 0.
     dens_max_loc_all = 0.
     mass_sn_tot_all = 0.
-    n_sn=0.
-
     pgas_check=0.
 
     !now loop over cells again and damp energies, mass and momentum
@@ -338,9 +231,6 @@ subroutine make_sn_stellar
 
                   !compute velocity of the gas within this cell assuming 
                   !energy equipartition
-                  !pgas = sqrt(eff_sn*sn_ed / max(dens_moy,dgas) ) * dgas 
-                  !for cells where dgas < dens_moy, take the same velocity as if
-                  !the density were equal to dens_moy
                   pgas = min(sn_p / pnorm_sn * rr /  dgas , Vsat) * dgas
                   pgas_check = pgas_check + pgas * vol_loc
 
@@ -366,9 +256,6 @@ subroutine make_sn_stellar
                   sn_ed_lim = T_sn * dgas / (gamma-1.)
 
                   uold(ind_cell(i), 2+ndim) = uold(ind_cell(i), 2+ndim) + ekin + sn_ed_lim
-                  n_sn = n_sn + 1
-
-                  !write(*,*) 'put SN, myid , n_sn ',myid, n_sn, 'x,y,z: ',x_sn(1),x_sn(2),x_sn(3), 'density ',dgas
 
                 end if
 
@@ -382,14 +269,11 @@ subroutine make_sn_stellar
     end do
     ! End loop over levels
 
-
 #ifndef WITHOUTMPI
-    call MPI_ALLREDUCE(n_sn,n_sn_all,1,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
     call MPI_ALLREDUCE(mass_sn_tot,mass_sn_tot_all,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
     call MPI_ALLREDUCE(dens_max_loc,dens_max_loc_all,1,MPI_DOUBLE_PRECISION,MPI_MAX,MPI_COMM_WORLD,info)
     call MPI_ALLREDUCE(pgas_check,pgas_check_all,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
 #else
-    n_sn_all = n_sn
     mass_sn_tot_all = mass_sn_tot
     dens_max_loc_all = dens_max_loc
     pgas_check_all = pgas_check
@@ -397,10 +281,6 @@ subroutine make_sn_stellar
 
     if(myid == 1) write(*, *) "SN momentum (injected, expected):", pgas_check_all, sn_p
     if(myid == 1) write(*, *) "Physical units:", pgas_check_all * scale_d * scale_l**3 * scale_v, sn_p * scale_d * scale_l**3 * scale_v
-
-  !write(*,*) '4 n_sn ', n_sn_all
-
-  !  if(myid .eq. cc(1)) write(*,*) '4 n_sn ', n_sn_all
 
     !calculate grid effect
     vol_rap = vol_sn / sn_vol
@@ -424,6 +304,7 @@ subroutine make_sn_stellar
       call make_virtual_fine_dp(uold(1, ivar), ilevel)
     enddo
   enddo
+
 end subroutine make_sn_stellar
 !################################################################
 !################################################################

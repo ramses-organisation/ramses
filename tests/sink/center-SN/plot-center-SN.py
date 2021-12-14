@@ -8,7 +8,7 @@ import visu_ramses
 import numpy as np
 from scipy.interpolate import griddata
 
-out_end = 17
+out_end = 2
 
 # Fundamental constants
 G = 6.67259e-8 #cm^3 g^-1 s^-2             # gravitational constant
@@ -26,10 +26,6 @@ unit_l=3.08567758128200e+18
 unit_v=unit_l/unit_t
 
 data = visu_ramses.load_snapshot(out_end)
-for key in data["stellars"].keys():
-    data["data"]["stellar_"+key] = data["stellars"][key]
-for key in ['x', 'y', 'z']:
-    data["data"]["sink_"+key] = data["sinks"][key]
 
 x      = data["data"]["x"]
 y      = data["data"]["y"]
@@ -62,14 +58,14 @@ z2 = griddata(points,temperature,(grid_x,grid_y, grid_z),method='nearest')
 fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(10, 5))
 
 im1 = ax[0].imshow(z1[:,:,int(2**7/2.)], origin="lower", aspect='equal', extent=[xmin, xmax, ymin, ymax])
-im2 = ax[1].imshow(z2[:,:,int(2**7/2.)], origin="lower", aspect='equal', extent=[xmin, xmax, ymin, ymax])
+im2 = ax[1].imshow(np.log10(z2[:,:,int(2**7/2.)]), origin="lower", aspect='equal', extent=[xmin, xmax, ymin, ymax])
 
 plt.colorbar(im1, ax=ax[0], label='Density [H/cc]')
-plt.colorbar(im2, ax=ax[1], label='temperature [K]')
+plt.colorbar(im2, ax=ax[1], label='log(temperature [K])')
 
-ax[0].scatter(data["data"]["sink_x"],[data["data"]["sink_y"]], s = 20, marker='x')
-ax[1].scatter(data["data"]["sink_x"],[data["data"]["sink_y"]], s = 20, marker='x')
+ax[0].scatter(data["sinks"]['x'],data["sinks"]['y'], s = 20, marker='x', color='red')
+ax[1].scatter(data["sinks"]['x'],data["sinks"]['y'], s = 20, marker='x', color='red')
 
-fig.savefig('stellar_spawn.pdf', bbox_inches="tight")
+fig.savefig('center-SN.pdf', bbox_inches="tight")
 
-visu_ramses.check_solution(data["data"],'stellar_spawn',overwrite=False)
+visu_ramses.check_solution(data["data"],'center-SN',overwrite=False)
