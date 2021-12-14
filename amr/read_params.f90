@@ -298,8 +298,7 @@ subroutine read_params
 #if NDIM==3
   if (sink)call read_sink_params
   if (clumpfind .or. sink)call read_clumpfind_params
-  if (stellar)call read_stellar_params
-  if (sink)call read_sink_feedback_params(nml_ok)
+  if (sink.and.stellar)call read_stellar_params
   if (unbind)call read_unbinding_params
   if (make_mergertree)call read_mergertree_params
 #if USE_TURB==1

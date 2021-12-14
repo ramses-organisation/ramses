@@ -24,7 +24,7 @@ subroutine make_stellar_from_sinks
   nbuf = 0
 
   if(stellar_strategy=='local')then
-    ! Check for each sink whether a stellar particle should be created
+    ! Check for each sink whether a stellar particle (or multiple) should be created
     do isink = 1, nsink
         do while(dmfsink(isink) .gt. stellar_msink_th)
           dmfsink(isink) = dmfsink(isink) - stellar_msink_th
@@ -312,16 +312,16 @@ subroutine print_stellar_properties
         call quick_sort_dp(time_remaining(1),idstellar_sort(1),nstellar)
 
         write(*,*)'Number of stellar objects = ',nstellar
-        write(*, "('*****************************************************************************************')")
-        write(*, "('   id        x             y             z        mass[Msol]    age[yr]    lifetime[yr]')")
-        write(*, "('*****************************************************************************************')")
+        write(*, "('*******************************************************************************************')")
+        write(*, "('   id        x             y             z         mass[Msol]     age[yr]     lifetime[yr]')")
+        write(*, "('*******************************************************************************************')")
         do i=1,nstellar
             istellar=idstellar_sort(i)
             write(*, "(I5,6(2X,1PE12.5))") id_stellar(istellar), &
                 & xstellar(istellar, 1), xstellar(istellar, 2), xstellar(istellar, 3), &
                 & mstellar(istellar)*scale_m/M_sun, (t-tstellar(istellar))*scale_t/yr2sec, ltstellar(istellar)*scale_t/yr2sec
         end do
-        write(*,'(" *****************************************************************************************")')
+        write(*,'("*******************************************************************************************")')
     end if
 
   end subroutine print_stellar_properties

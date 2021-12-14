@@ -1,39 +1,3 @@
-subroutine read_sink_feedback_params(nml_ok)
-
-  ! Read FEEDBACK_PARAMS namelist
-  !-------------------------------------------------------------------------
-    use amr_parameters,only:dp
-    use amr_commons
-    use sink_feedback_parameters
-    implicit none
-    logical::nml_ok
-    real(dp)::scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2
-  !-------------------------------------------------------------------------
-    namelist/sink_feedback_params/  Tsat, Vsat, sn_r_sat, sn_p_ref, sn_e_ref, sn_mass_ref, &
-          & FB_nsource, FB_on, FB_start, FB_end, &
-          & FB_pos_x, FB_pos_y, FB_pos_z, &
-          & FB_mejecta, FB_energy, FB_thermal, &
-          & FB_radius, Vdisp
-    rewind(1)
-    read(1,NML=sink_feedback_params,END=101)
-  101 continue
-  
-        call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
-  
-        !normalise the supernova quantities
-        sn_p_ref = sn_p_ref / (scale_d * scale_v * scale_l**3)
-        sn_e_ref = sn_e_ref / (scale_d * scale_v**2 * scale_l**3)
-        sn_mass_ref = sn_mass_ref / (scale_d * scale_l**3) !1 solar mass ejected
-  
-        !normalise Vsat which is assumed to be in KM/S
-        Vsat = Vsat * 1.e5 / scale_v
-  
-        !normalise Vdisp which is assumed to be in KM/S
-        Vdisp = Vdisp * 1.e5 / scale_v
-    
-end subroutine read_sink_feedback_params
-
-
 subroutine read_stellar_params()
   use cooling_module, only: mH
   use amr_commons, only: dp, myid, stellar
@@ -51,7 +15,9 @@ subroutine read_stellar_params()
                          & stf_K, stf_m0, stf_a, stf_b, stf_c, &
                          & hii_t, &
                          & sn_feedback_sink,stellar_strategy,stellar_seed, &
-                         & mstellarini
+                         & mstellarini, &
+                         & Tsat, Vsat, sn_r_sat, sn_p_ref, sn_e_ref, sn_mass_ref, &
+                         & Vdisp
 
   real(dp):: scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   real(dp):: msun, Myr, km_s
@@ -108,6 +74,17 @@ subroutine read_stellar_params()
 
   !Careful: normalised age of the time during which the star is emitting HII ionising flux
   hii_t = hii_t * Myr 
+
+  !normalise the supernova quantities
+  sn_p_ref = sn_p_ref / (scale_d * scale_v * scale_l**3)
+  sn_e_ref = sn_e_ref / (scale_d * scale_v**2 * scale_l**3)
+  sn_mass_ref = sn_mass_ref / (scale_d * scale_l**3) !1 solar mass ejected
+
+  !normalise Vsat which is assumed to be in KM/S
+  Vsat = Vsat * 1.e5 / scale_v
+
+  !normalise Vdisp which is assumed to be in KM/S
+  Vdisp = Vdisp * 1.e5 / scale_v
 
 111 return
 
