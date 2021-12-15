@@ -1,7 +1,7 @@
 module sink_feedback_parameters
   use amr_parameters,only:dp,ndim
 
-  ! namelist parameters SINK_FEEDBACK_PARAMS
+  ! namelist parameters
 
   logical::sn_feedback_sink = .false. !SN feedback emanates from the sink
 
@@ -15,40 +15,6 @@ module sink_feedback_parameters
 
   real(dp):: Vdisp=1.     ! dispersion velocity of the stellar objects [km/s] 
                           ! determines how far SN can explode from the sink
-
-  ! Use the supernova module?
-  logical::FB_on = .false.
-
-  !series of supernovae specified by "hand"
-  ! Number of supernovae (max limit and number active in namelist)
-  integer,parameter::NSNMAX=1000
-  integer::FB_nsource=0
-
-  ! Feedback start and end times (NOTE: supernova ignores FB_end)
-  real(dp),dimension(1:NSNMAX)::FB_start = 1d10
-  real(dp),dimension(1:NSNMAX)::FB_end = 1d10
-  
-  ! Source position in units from 0 to 1
-  real(dp),dimension(1:NSNMAX)::FB_pos_x = 0.5d0
-  real(dp),dimension(1:NSNMAX)::FB_pos_y = 0.5d0
-  real(dp),dimension(1:NSNMAX)::FB_pos_z = 0.5d0
-
-  real(dp),dimension(1:NSNMAX)::FB_mejecta = 1.d0   ! Ejecta mass in solar masses (/year for winds)
-  real(dp),dimension(1:NSNMAX)::FB_energy = 1.d51   ! Energy of source in ergs (/year for winds)
-
-  ! Use a thermal dump? (Otherwise add kinetic energy)
-  ! Note that if FB_radius is 0 it's thermal anyway
-  logical,dimension(1:NSNMAX)::FB_thermal = .false.
-
-  ! Radius to deposit energy inside in number of cells (at highest level)
-  real(dp),dimension(1:NSNMAX)::FB_radius = 12d0
-
-  ! Timestep to ensure winds are deposited properly
-  ! NOT A USER-SETTABLE PARAMETER
-  real(dp),dimension(1:NSNMAX)::FB_dtnew = 0d0
-
-
-  ! namelist parameters STELLAR_PARAMS
 
   ! Stellar object related arrays, those parameters are read in  read_stellar_params 
   logical:: sn_direct = .false.        ! explode immediately instead of after lifetime
@@ -69,7 +35,7 @@ module sink_feedback_parameters
   real(dp)::stf_c=1.142166657042991d0 
 
   !     hii_t: fiducial HII region lifetime, it is normalised in code units in read_stellar 
-  real(dp):: hii_t
+  real(dp):: hii_t=0
   real(dp):: stellar_msink_th ! sink mass threshold for stellar object creation (Msun)
 
   ! Allow users to pre-set stellar mass selection for physics comparison runs, etc

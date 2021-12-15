@@ -278,7 +278,7 @@ subroutine sample_powerlaw(x, a, b, alpha, n)
 
     do i = 1, n
         call Ranf(localseed, u)
-        write(*,*) 'random number generated ', u
+        !write(*,*) 'random number generated ', u
         !call random_number(u)
         ! u follows an uniform law between 0 and 1
         ! Scale it to b^p..a^p

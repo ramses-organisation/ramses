@@ -299,7 +299,9 @@ recursive subroutine amr_step(ilevel,icount)
   ! Update photon packages according to star particles and sink particles
                                call timer('radiative transfer','start')
   if(rt .and. rt_star) call update_star_RT_feedback(ilevel)
-  if(rt .and. rt_sink) call update_sink_RT_feedback(ilevel)
+#if NDIM==3
+  if(rt .and. rt_sink) call update_sink_RT_feedback
+#endif
 #endif
 
 #if USE_TURB==1
@@ -622,7 +624,9 @@ subroutine rt_step(ilevel)
      if (i_substep > 1) call rt_set_unew(ilevel)
 
      if(rt_star) call star_RT_feedback(ilevel,dtnew(ilevel))
+#if NDIM==3
      if(rt_sink) call sink_RT_feedback(ilevel,dtnew(ilevel))
+#endif
 
      ! Hyperbolic solver
      if(rt_advect) call rt_godunov_fine(ilevel,dtnew(ilevel))

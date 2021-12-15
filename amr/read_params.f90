@@ -281,6 +281,12 @@ subroutine read_params
      npartmax=int(nparttot/int(ncpu,kind=8),kind=4)
   endif
   if(myid>1)verbose=.false.
+
+  if(stellar.and.(.not.sink))then
+     if(myid==1)write(*,*)'Error in the namelist:'
+     if(myid==1)write(*,*)'sink=.true. is needed if stellar=.true. !!!'
+     nml_ok=.false.
+  endif
   if(sink.and.(.not.pic))then
      pic=.true.
   endif

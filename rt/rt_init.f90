@@ -241,6 +241,11 @@ SUBROUTINE read_rt_params(nml_ok)
      endif
   endif
 
+  if(rt_sink.and.(.not.stellar))then
+     write(*,*) 'Enable stellar particles to use rt_sink'
+     nml_ok=.false.
+  endif
+
   call read_rt_groups(nml_ok)
 END SUBROUTINE read_rt_params
 
