@@ -1743,6 +1743,7 @@ subroutine update_sink(ilevel)
   use amr_commons
   use pm_commons
   use hydro_commons
+  use sink_feedback_parameters
   use constants, only: twopi, M_sun, yr2sec
   use mpi_mod
   implicit none
@@ -1754,7 +1755,7 @@ subroutine update_sink(ilevel)
   ! updated by summing the conributions from all levels.
   !----------------------------------------------------------------------------
 
-  integer::lev,isink,jsink,nx_loc,idim
+  integer::lev,isink,jsink,nx_loc,idim,istellar
   logical::iyoung,jyoung,overlap,merge_flag
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   real(dp)::dteff,dx_loc,scale,dx_min
@@ -1875,6 +1876,16 @@ subroutine update_sink(ilevel)
                  msum_overlap(jsink)=0
                  delta_mass(jsink)=0
                  dmfsink(jsink)=0
+
+                 ! check whether there are stellar particles attached to the merged in sink
+                 if(stellar)then
+                     do istellar = 1, nstellar
+                         if(id_stellar(istellar).eq.idsink(jsink))then
+                             id_stellar(istellar) = idsink(isink)
+                         endif
+                     end do
+                 endif
+
               end if
            end if
         end do

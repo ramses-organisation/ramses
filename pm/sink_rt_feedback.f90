@@ -142,7 +142,11 @@ SUBROUTINE gather_ioni_flux(dt,sink_ioni_flux)
   do istellar=1,nstellar 
      ! find index in sink array of sink with id = id_stellar 
      isink = id_stellar(istellar)
+     do while (id_stellar(istellar) .ne. idsink(isink))
+       isink = isink - 1
+     end do
      M_stellar = mstellar(istellar)
+     Flux_stellar = 0
      ! Reset the photon counter
      nphotons = 0d0
      ! Use fit to Vacca+ 1996
