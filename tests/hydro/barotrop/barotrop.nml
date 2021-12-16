@@ -4,21 +4,23 @@ It consists of a collapsing uniform sphere with central overdensity.
 &RUN_PARAMS
 hydro=.true.
 poisson=.true.
-nsubcycle=15*1
+nsubcycle=20*1
 ncontrol=50
 /
 
 &AMR_PARAMS
 levelmin=5
 levelmax=16
-ngridmax=1000
+ngridmax=5000
 boxlen=1.
+nexpand=20*10
 /
 
 &REFINE_PARAMS
 interpol_var=1
 interpol_type=0
-jeans_refine=15*8
+jeans_refine=20*20
+err_grad_d=1d3
 /
 
 &HYDRO_PARAMS

@@ -1326,6 +1326,7 @@ subroutine cmpflxm(qm,im1,im2,jm1,jm2,km1,km2, &
   real(dp),dimension(1:nvar)::qleft,qright
   real(dp),dimension(1:nvar+1)::fgdnv
   real(dp)::zero_flux, bn_mean, entho
+  logical::check_switch_solver=.false.
 
 #if NVAR>8
   integer::n
@@ -1372,19 +1373,41 @@ subroutine cmpflxm(qm,im1,im2,jm1,jm2,km1,km2, &
               ! Solve 1D Riemann problem
               zero_flux = one
               IF(ischeme.NE.1)THEN
+              if(allow_switch_solver .and. ((iriemann.eq.2).or.(iriemann.eq.3)))then
+                 ! check for high B**2/P
+                 check_switch_solver = ( (qright(4)**2 + qright(6)**2 + qright(8)**2)/qright(2) .gt. switch_solv_B ) .or. &
+                                     & ( (qleft(4)**2 + qleft(6)**2 + qleft(8)**2)/qleft(2)     .gt. switch_solv_B )
+                 ! check for strong density discontinuities
+                 check_switch_solver = check_switch_solver .or. &
+                                     & ( qleft(1)/qright(1) .gt. switch_solv_dens ) .or. &
+                                     & ( qright(1)/qleft(1) .gt. switch_solv_dens )
+                 ! check for very small densities
+                 check_switch_solver = check_switch_solver .or. &
+                                     & ( MIN(qleft(1), qright(1)) .lt. switch_solv_min_dens )
+              else
+                 check_switch_solver = .false.
+              endif
               SELECT CASE (iriemann)
               CASE (1)
-                 CALL athena_roe    (qleft,qright,fgdnv,zero_flux)
+                    CALL athena_roe    (qleft,qright,fgdnv,zero_flux)
               CASE (0)
-                 CALL lax_friedrich (qleft,qright,fgdnv,zero_flux)
+                    CALL lax_friedrich (qleft,qright,fgdnv,zero_flux)
               CASE (2)
-                 CALL hll           (qleft,qright,fgdnv)
+                 if(check_switch_solver)  then
+                    CALL lax_friedrich (qleft,qright,fgdnv,zero_flux)
+                 else
+                    CALL hll           (qleft,qright,fgdnv)
+                 endif
               CASE (3)
-                 CALL hlld          (qleft,qright,fgdnv)
+                 if(check_switch_solver)  then
+                    CALL lax_friedrich (qleft,qright,fgdnv,zero_flux) 
+                 else
+                    CALL hlld          (qleft,qright,fgdnv)
+                 endif
               CASE (4)
-                 CALL lax_friedrich (qleft,qright,fgdnv,zero_flux)
+                 CALL lax_friedrich    (qleft,qright,fgdnv,zero_flux)
               CASE (5)
-                 CALL hydro_acoustic(qleft,qright,fgdnv)
+                 CALL hydro_acoustic   (qleft,qright,fgdnv)
               CASE DEFAULT
                  write(*,*)'unknown riemann solver'
                  call clean_stop
@@ -1470,6 +1493,7 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
   REAL(dp) :: rstarLL,rstarLR,rstarRL,rstarRR,AstarLL,AstarLR,AstarRL,AstarRR,BstarLL,BstarLR,BstarRL,BstarRR
   REAL(dp) :: EstarLLx,EstarLRx,EstarRLx,EstarRRx,EstarLLy,EstarLRy,EstarRLy,EstarRRy,EstarLL,EstarLR,EstarRL,EstarRR
   REAL(dp) :: AstarT,AstarB,BstarR,BstarL
+  REAL(dp) :: rmin,Smax
 
 #if NENER>0
   INTEGER :: irad
@@ -1573,6 +1597,8 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
                   rLR=qLR(l,1); pLR=qLR(l,2); uLR=qLR(l,3); vLR=qLR(l,4); ALR=qLR(l,6); BLR=qLR(l,7) ; CLR=qLR(l,8)
                   rRL=qRL(l,1); pRL=qRL(l,2); uRL=qRL(l,3); vRL=qRL(l,4); ARL=qRL(l,6); BRL=qRL(l,7) ; CRL=qRL(l,8)
                   rRR=qRR(l,1); pRR=qRR(l,2); uRR=qRR(l,3); vRR=qRR(l,4); ARR=qRR(l,6); BRR=qRR(l,7) ; CRR=qRR(l,8)
+                  rmin=MIN(rLL, rLR, rRL, rRR)
+
 #if NENER>0
                   do irad = 1,nener
                      pLL = pLL + qLL(l,8+irad)
@@ -1654,6 +1680,7 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
                   SR=max(uLL,uLR,uRL,uRR)+max(cfastLLx,cfastLRx,cfastRLx,cfastRRx)
                   SB=min(vLL,vLR,vRL,vRR)-max(cfastLLy,cfastLRy,cfastRLy,cfastRRy)
                   ST=max(vLL,vLR,vRL,vRR)+max(cfastLLy,cfastLRy,cfastRLy,cfastRRy)
+                  Smax = max(abs(SR), abs(ST), abs(SL), abs(SB))
 
                   ELL=uLL*BLL-vLL*ALL
                   ELR=uLR*BLR-vLR*ALR
@@ -1739,7 +1766,13 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
                           & -SAT*SAB/(SAT-SAB)*(AstarT-AstarB)+SAR*SAL/(SAR-SAL)*(BstarR-BstarL)
                   endif
 
-                  emf(l,i,j,k) = E
+                  if(allow_switch_solver2D .and. (rmin < switch_solv_min_dens)) then
+                     ! switch to llf
+                     emf(l,i,j,k) = forth*(ERR+ERL+ELR+ELL)+half*Smax*(qRR(l,6)-qLL(l,6))-half*Smax*(qRR(l,7)-qLL(l,7))
+                  else
+                     ! keep hlld (iriemann2d=5)
+                     emf(l,i,j,k) = E
+                  endif
 
                else if(iriemann2d==3)then
 
