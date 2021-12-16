@@ -331,5 +331,23 @@ SUBROUTINE sink_RT_vsweep_stellar(ind_grid,ind_part,ind_grid_part,ng,np,dt,ileve
   end do
 
 END SUBROUTINE sink_RT_vsweep_stellar
+!*************************************************************************
+!*************************************************************************
+!*************************************************************************
+!*************************************************************************
+subroutine vaccafit(M,S)
+   use amr_parameters,only:dp
+   use sink_feedback_parameters
+   implicit none
+   ! perform a fit of the Vacca et al. 96 ionising flux
+   ! M - stellar mass / solar masses
+   ! S - photon emission rate in / s
+ 
+   real(dp),intent(in)::M
+   real(dp),intent(out)::S
+   
+   S = stf_K * (M / stf_m0)**stf_a / (1. + (M / stf_m0)**stf_b)**stf_c
+ 
+end subroutine
 #endif
 #endif

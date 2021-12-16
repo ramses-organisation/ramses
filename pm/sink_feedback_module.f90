@@ -1,22 +1,3 @@
-subroutine vaccafit(M,S)
-  use amr_parameters,only:dp
-  use sink_feedback_parameters
-  implicit none
-  ! This routine is called in sink_RT_feedback
-  ! perform a fit of the Vacca et al. 96 ionising flux
-  ! M - stellar mass / solar masses
-  ! S - photon emission rate in / s
-
-  real(dp),intent(in)::M
-  real(dp),intent(out)::S
-  
-  S = stf_K * (M / stf_m0)**stf_a / (1. + (M / stf_m0)**stf_b)**stf_c
-
-end subroutine
-!################################################################
-!################################################################
-!################################################################
-!################################################################
 subroutine make_sn_stellar
   use pm_commons
   use amr_commons
@@ -40,7 +21,6 @@ subroutine make_sn_stellar
   integer:: info
   real(dp),dimension(1:nvector,1:ndim)::x
   real(dp),dimension(1:3):: xshift, x_sn
-  logical, save:: first = .true.
   real(dp), save:: xseed
   real(dp) ::dens_max_loc,dens_max_loc_all
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
@@ -63,12 +43,7 @@ subroutine make_sn_stellar
   if(verbose)write(*,*)'Entering make_sn_stellar'
 
   ! TC: random number for direction should be looked at more carefully
-  ! this seems pointless. RNG should be seeded first
-  !if (first) then
-  !   xseed = 0.5
-  !   call random_number(xseed)
-  !   first = .false.
-  !endif
+  ! RNG should be seeded first
 
   ! Mesh spacing in that level
   nx_loc = icoarse_max - icoarse_min + 1
