@@ -132,16 +132,6 @@ subroutine dump_all
      filename=trim(filedir)//'part_'//trim(nchar)//'.out'
      filename_desc=TRIM(filedir)//'part_file_descriptor.txt'
      call backup_part(filename, filename_desc)
-     if(sink)then
-        filename=TRIM(filedir)//'sink_'//TRIM(nchar)//'.csv'
-        call output_sink_csv(filename)
-     end if
-     ! TC: why are csv also written here?
-     ! can remove? TODO: Check with mpi
-     if(stellar)then
-        filename=TRIM(filedir)//'stellar_'//TRIM(nchar)//'.csv'
-        call output_stellar_csv(filename)
-     end if
 #ifndef WITHOUTMPI
      if(synchro_when_io) call MPI_BARRIER(MPI_COMM_WORLD,info)
 #endif
