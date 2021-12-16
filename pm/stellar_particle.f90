@@ -29,7 +29,7 @@ subroutine make_stellar_from_sinks
           dmfsink(isink) = dmfsink(isink) - stellar_msink_th
           nbuf = nbuf + 1
           if(nbuf > nbufmax) then
-            call create_stellar(nbufmax, nbufmax, buf_id, .true.)
+            call create_stellar(nbufmax, nbufmax, buf_id)
             nbuf = 1
           end if
           ! save ID and position of sink
@@ -57,7 +57,7 @@ subroutine make_stellar_from_sinks
     !this assumes that the number of sinks is larger than the number of objects
     if(nobj_new .gt. nsink) then
        write(*,*) 'number of new objects is larger than the number of sinks ',nobj_new, nsink
-       write(*,*) 'use make_stellar_from_sinks instead of make_stellar_from_sinks_glob or modify the code'
+       write(*,*) "use stellar_strategy='local'"
        stop
     endif
   
@@ -68,7 +68,7 @@ subroutine make_stellar_from_sinks
   
        nbuf = nbuf + 1
        if(nbuf > nbufmax) then
-          call create_stellar(nbufmax, nbufmax, buf_id, .true.)
+          call create_stellar(nbufmax, nbufmax, buf_id)
           nbuf = 1
        end if
 
@@ -77,18 +77,18 @@ subroutine make_stellar_from_sinks
 
   endif
 
-  call create_stellar(nbuf, nbufmax, buf_id, .true.)
+  call create_stellar(nbuf, nbufmax, buf_id)
 
-   if (write_stellar)then
+  if (write_stellar)then
     call print_stellar_properties
-   end if
+  end if
 
 end subroutine make_stellar_from_sinks
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine create_stellar(ncreate, nbuf, id_new, print_table)
+subroutine create_stellar(ncreate, nbuf, id_new)
     use amr_commons, only: dp, myid, ncpu, ndim, t
     use sink_feedback_parameters
     use constants, only:M_sun
@@ -99,8 +99,7 @@ subroutine create_stellar(ncreate, nbuf, id_new, print_table)
     !------------------------------------------------------------------------
     integer, intent(in):: ncreate, nbuf
     integer, dimension(1:nbuf), intent(in):: id_new
-    logical, intent(in):: print_table
-
+    logical:: print_table=.false.
     integer:: ncreate_loc
     real(dp), dimension(1:ncreate):: mnew_loc, ltnew_loc
     real(dp), dimension(1:ncreate):: mnew, tnew, ltnew
@@ -135,11 +134,11 @@ subroutine create_stellar(ncreate, nbuf, id_new, print_table)
 #endif
 
     ! Draw random masses from the IMF
-    !if(imf_low==imf_high)then
-    !        mnew_loc = imf_low !c.u.
-    !else
+    if(imf_low==imf_high)then
+            mnew_loc = imf_low !c.u.
+    else
         call sample_powerlaw(mnew_loc, imf_low, imf_high, imf_index, ncreate_loc)
-    !endif
+    endif
 
     ! Compute lifetime
     ltnew_loc(1:ncreate_loc) = lt_t0 * exp(lt_a * (log(lt_m0 / mnew_loc))**lt_b)
@@ -161,6 +160,8 @@ subroutine create_stellar(ncreate, nbuf, id_new, print_table)
     ! Set stellar masses and lifetimes
     ! EITHER: use mnew
     ! OR: use mstellarini if this has non-zero values (sets first stellar objects to have specific mass)
+    !TC: remove mstellarini? I can think of only a few cases where this is useful.
+    !    Maybe not worth having this extra loop and checks. Can set imf_low==imf_high instead
     do istellar = nstellar+1, nstellar+ncreate
        if(istellar .ge. nstellarini) then 
           mstellar(istellar) = mnew(istellar-nstellar)
@@ -180,7 +181,7 @@ subroutine create_stellar(ncreate, nbuf, id_new, print_table)
 
     ! debugging
     if(myid == 1) then
-        write(*, "('Created ', I5, ' stellar objects:')") ncreate
+        write(*, "('Created ', I5, ' stellar objects')") ncreate
         if(print_table) then
             write(*, "('*****************************************************')")
             write(*, "('       Mass          Birth          LifeT       id   ')")
@@ -272,12 +273,9 @@ subroutine sample_powerlaw(x, a, b, alpha, n)
 
     do i = 1, n
         call Ranf(localseed, u)
-        !write(*,*) 'random number generated ', u
-        !call random_number(u)
         ! u follows an uniform law between 0 and 1
         ! Scale it to b^p..a^p
         u = b**p + (a**p - b**p) * u
-        ! Calculate x(i)
         x(i) = u**q
     end do
 
@@ -306,15 +304,15 @@ subroutine print_stellar_properties
         call quick_sort_dp(time_remaining(1),idstellar_sort(1),nstellar)
 
         write(*,*)'Number of stellar objects = ',nstellar
-        write(*, "('*****************************************************')")
-        write(*, "('   id        mass[Msol]     age[yr]     lifetime[yr]')")
-        write(*, "('*****************************************************')")
+        write(*, "('***********************************************')")
+        write(*, "('   id    mass[Msol]     age[yr]    lifetime[yr]')")
+        write(*, "('***********************************************')")
         do i=1,nstellar
             istellar=idstellar_sort(i)
             write(*, "(I5,3(2X,1PE12.5))") id_stellar(istellar), &
                 & mstellar(istellar)*scale_m/M_sun, (t-tstellar(istellar))*scale_t/yr2sec, ltstellar(istellar)*scale_t/yr2sec
         end do
-        write(*,'("*******************************************************************************************")')
+        write(*,"('***********************************************')")
     end if
 
   end subroutine print_stellar_properties

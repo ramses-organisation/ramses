@@ -83,7 +83,7 @@ subroutine make_sn_stellar
     rad_sn = ltstellar(istellar)*Vdisp
 
     !find a random point within a sphere of radius < 1
-    !TC: this should be done better
+    !TC: can this be done more efficiently?
     norm=2.
     do while (norm .gt. 1)
        norm=0.
@@ -98,7 +98,7 @@ subroutine make_sn_stellar
     end do
     !special treatment for the z-coordinates to maintain it at low altitude
     xshift(3) = xshift(3) * min(rad_sn,100.)
-    !TC: this 100 doesn't even have units...
+    !TC: this 100 doesn't have units, while rad_sn is in c.u.
 
     ! place the supernovae around sink particles
     x_sn(:) = xsink(isink, :) + xshift(:)
@@ -142,7 +142,6 @@ subroutine make_sn_stellar
       dx = 0.5d0**ilevel
       dx_loc = dx * scale
       vol_loc = dx_loc**ndim
-
 
       ! Cell center position relative to grid center position
       do ind=1,twotondim
@@ -254,12 +253,13 @@ subroutine make_sn_stellar
     pgas_check_all = pgas_check
 #endif
 
-    if(myid == 1) write(*, *) "SN momentum (injected, expected):", pgas_check_all, sn_p
+    if(myid == 1) write(*, *) "SN event: momentum (injected, expected)=", pgas_check_all, sn_p
     if(myid == 1) write(*, *) "Physical units:", pgas_check_all * scale_d * scale_l**3 * scale_v, sn_p * scale_d * scale_l**3 * scale_v
 
     !calculate grid effect
     vol_rap = vol_sn / sn_vol
 
+    !TC: should be outputted to the log
     if(myid .eq. 1) then 
        open(103,file='supernovae2.txt',form='formatted',status='unknown',access='append')
          write(103,112) t,x_sn(1),x_sn(2),x_sn(3),dens_max_loc_all,mass_sn_tot_all,vol_rap,pgas_check_all,sn_p

@@ -97,11 +97,13 @@ sn_feedback_sink=.true.
 nstellarmax=10
 stellar_msink_th=300. ! threshold for stellar obj creation
 sn_direct=.false.
-mstellarini=100,8
+!mstellarini=100,8
 ! IMF
 imf_index=-2.35
-imf_low=8
-imf_high=120
+!imf_low=8
+!imf_high=120
+imf_high=100
+imf_low=100
 ! Stellar lifetime model
 lt_a=0.23840797
 lt_b=2.20522946

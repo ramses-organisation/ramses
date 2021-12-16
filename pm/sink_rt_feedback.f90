@@ -155,6 +155,7 @@ SUBROUTINE gather_ioni_flux(dt,sink_ioni_flux)
         !remember vaccafits is in code units because the corresponding parameters have been normalised in read_stellar_params (stf_K and stf_m0) 
         call vaccafit(M_stellar,Flux_stellar)
         ! HII-ionising is group 1 if no IR, else group 3 (IR is group 1, optical is group 2)
+        ! TC: what if you use different photon groups?
         if (ngroups.eq.3) then
            nphotons(1) = Flux_stellar
         else
@@ -162,6 +163,7 @@ SUBROUTINE gather_ioni_flux(dt,sink_ioni_flux)
         endif
      endif
 
+     ! debugging
      !if(myid==1)then
      !   write(*,*)'Emitting ',Flux_stellar,' photons from stellar ', id_stellar(istellar)
      !endif
@@ -219,7 +221,6 @@ SUBROUTINE sink_RT_vsweep_stellar(ind_grid,ind_part,ind_grid_part,ng,np,dt,ileve
   integer ,dimension(1:nvector,1:twotondim),save::nbors_father_grids
   ! Particle based arrays
   logical,dimension(1:nvector),save::ok
-  !real(dp),dimension(1:nvector,ngroups),save::part_NpInp
   real(dp),dimension(1:nvector,1:ndim),save::x
   integer ,dimension(1:nvector,3),save::id=0,igd=0,icd=0
   integer ,dimension(1:nvector),save::igrid,icell,indp,kg

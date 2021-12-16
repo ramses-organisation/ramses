@@ -13,7 +13,7 @@ module sink_feedback_parameters
 
   ! Allow users to pre-set stellar mass selection for physics comparison runs, etc
   ! Every time mstellar is added to, instead of a random value, use mstellarini
-  integer,parameter::nstellarini=5000
+  integer,parameter::nstellarini=100
   real(dp),dimension(nstellarini)::mstellarini ! List of stellar masses to use
 
   ! STELLAR_PARAMS namelist: SN feedback parameters

@@ -740,7 +740,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
   integer,dimension(1:nvector)::ind_grid_part,ind_part
   logical::on_creation
   integer::j,nx_loc,isink,ivar,idim,ind
-  real(dp)::d,e,density,volume,d_floor
+  real(dp)::d,e,density,volume
 #ifdef SOLVERmhd
   real(dp)::bx1,bx2,by1,by2,bz1,bz2
 #endif

@@ -49,8 +49,7 @@ module rt_parameters
   logical::rt_isTconst=.false.         ! Const rates activated?                          !
   logical::rt_star=.false.             ! Activate radiation from star particles?         !
   logical::rt_AGN=.false.              ! Activate radiation from sink particles on central cloud !
-  logical::rt_sink=.false.             ! Radiative transfer on sinks activated
-  !T.C. should do same things as rt_AGN?
+  logical::rt_sink=.false.             ! Activate radiation from sinks
   real(dp)::rt_esc_frac=1d0            ! Escape fraction of light from stellar particles !
   logical::rt_is_init_xion=.false.     ! Initialize ionization from T profile?           !
   character(LEN=10)::rt_flux_scheme='glf'                                                !
