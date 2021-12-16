@@ -600,9 +600,8 @@ subroutine grow_sink(ilevel,on_creation)
   call compute_accretion_rate(.false.)
 
   ! Reset new sink variables
-  msink_new=0d0; msmbh_new=0d0
+  msink_new=0d0; msmbh_new=0d0; dmfsink_new=0d0
   xsink_new=0d0; vsink_new=0d0; lsink_new=0d0; delta_mass_new=0d0
-  dmfsink_new=0d0
 
   ! Loop over cpus
   do icpu=1,ncpu
@@ -664,19 +663,19 @@ subroutine grow_sink(ilevel,on_creation)
 #ifndef WITHOUTMPI
      call MPI_ALLREDUCE(msink_new,msink_all,nsinkmax,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
      call MPI_ALLREDUCE(msmbh_new,msmbh_all,nsinkmax,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
+     call MPI_ALLREDUCE(dmfsink_new,dmfsink_all,nsinkmax,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
      call MPI_ALLREDUCE(xsink_new,xsink_all,nsinkmax*ndim,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
      call MPI_ALLREDUCE(vsink_new,vsink_all,nsinkmax*ndim,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
      call MPI_ALLREDUCE(lsink_new,lsink_all,nsinkmax*ndim,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
      call MPI_ALLREDUCE(delta_mass_new,delta_mass_all,nsinkmax,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
-     call MPI_ALLREDUCE(dmfsink_new,dmfsink_all,nsinkmax,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
 #else
      msink_all=msink_new
      msmbh_all=msmbh_new
+     dmfsink_all=dmfsink_new
      xsink_all=xsink_new
      vsink_all=vsink_new
      lsink_all=lsink_new
      delta_mass_all=delta_mass_new
-     dmfsink_all=dmfsink_new
 #endif
   endif
 
@@ -939,8 +938,8 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
 
            ! Add accreted properties to sink variables
            msink_new(isink)=msink_new(isink)+m_acc
-           dmfsink_new(isink)=dmfsink_new(isink)+m_acc
            msmbh_new(isink)=msmbh_new(isink)+m_acc_smbh
+           dmfsink_new(isink)=dmfsink_new(isink)+m_acc
            xsink_new(isink,1:ndim)=xsink_new(isink,1:ndim)+x_acc(1:ndim)
            vsink_new(isink,1:ndim)=vsink_new(isink,1:ndim)+p_acc(1:ndim)
            lsink_new(isink,1:ndim)=lsink_new(isink,1:ndim)+l_acc(1:ndim)
@@ -1554,6 +1553,7 @@ subroutine make_sink_from_clump(ilevel)
 #ifndef WITHOUTMPI
   call MPI_ALLREDUCE(msink_new ,msink_all ,nsinkmax,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
   call MPI_ALLREDUCE(msmbh_new ,msmbh_all ,nsinkmax,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
+  call MPI_ALLREDUCE(dmfsink_new ,dmfsink_all ,nsinkmax,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
   call MPI_ALLREDUCE(xsink_new ,xsink_all ,nsinkmax*ndim,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
   call MPI_ALLREDUCE(vsink_new ,vsink_all ,nsinkmax*ndim,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
   call MPI_ALLREDUCE(lsink_new ,lsink_all ,nsinkmax*ndim,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
@@ -1562,10 +1562,10 @@ subroutine make_sink_from_clump(ilevel)
   call MPI_ALLREDUCE(idsink_new,idsink_all,nsinkmax,MPI_INTEGER         ,MPI_SUM,MPI_COMM_WORLD,info)
   call MPI_ALLREDUCE(tsink_new ,tsink_all ,nsinkmax,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
   call MPI_ALLREDUCE(new_born_new,new_born_all,nsinkmax,MPI_LOGICAL,MPI_LOR,MPI_COMM_WORLD,info)
-  call MPI_ALLREDUCE(dmfsink_new ,dmfsink_all ,nsinkmax,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
 #else
   msink_all=msink_new
   msmbh_all=msmbh_new
+  dmfsink_all=dmfsink_new
   xsink_all=xsink_new
   vsink_all=vsink_new
   lsink_all=lsink_new
@@ -1574,12 +1574,12 @@ subroutine make_sink_from_clump(ilevel)
   idsink_all=idsink_new
   tsink_all=tsink_new
   new_born_all=new_born_new
-  dmfsink_all=dmfsink_new
 #endif
   do isink=1,nsink
      if(oksink_all(isink)==1)then
         msink(isink)=msink_all(isink)
         msmbh(isink)=msmbh_all(isink)
+        dmfsink(isink)=dmfsink_all(isink)
         xsink(isink,1:ndim)=xsink_all(isink,1:ndim)
         vsink(isink,1:ndim)=vsink_all(isink,1:ndim)
         lsink(isink,1:ndim)=lsink_all(isink,1:ndim)
@@ -1591,7 +1591,6 @@ subroutine make_sink_from_clump(ilevel)
         fsink_partial(isink,1:ndim,levelmin:nlevelmax)=0.0
         vsold(isink,1:ndim,ilevel)=vsink_all(isink,1:ndim)
         vsnew(isink,1:ndim,ilevel)=vsink_all(isink,1:ndim)
-        dmfsink(isink)=dmfsink_all(isink)
      endif
   end do
 #endif
@@ -1857,13 +1856,13 @@ subroutine update_sink(ilevel)
                  ! Compute merged quantities
                  msink(isink)        = mcom
                  msmbh(isink)        = msmbh(isink)+msmbh(jsink)
+                 dmfsink(isink)      = dmfsink(isink)+dmfsink(jsink)
                  delta_mass(isink)   = delta_mass(isink)+delta_mass(jsink)
                  xsink(isink,1:ndim) = xcom(1:ndim)
                  vsink(isink,1:ndim) = vcom(1:3)
                  lsink(isink,1:ndim) = lcom(1:ndim)+lsink(isink,1:ndim)+lsink(jsink,1:ndim)
                  tsink(isink)        = min(tsink(isink),tsink(jsink))
                  idsink(isink)       = min(idsink(isink),idsink(jsink))
-                 dmfsink(isink)      = dmfsink(isink)+dmfsink(jsink) 
 
                  ! Store jump in new sink coordinates
                  do lev=levelmin,nlevelmax
@@ -1873,9 +1872,9 @@ subroutine update_sink(ilevel)
                  ! Zero mass of the sink that was merged in
                  msink(jsink)=0
                  msmbh(jsink)=0
+                 dmfsink(jsink)=0
                  msum_overlap(jsink)=0
                  delta_mass(jsink)=0
-                 dmfsink(jsink)=0
 
                  ! check whether there are stellar particles attached to the merged in sink
                  if(stellar)then
@@ -2184,6 +2183,7 @@ subroutine clean_merged_sinks
         do j=i,nsink
            msink(j)=msink(j+1)
            msmbh(j)=msmbh(j+1)
+           dmfsink(j)=dmfsink(j+1)
            xsink(j,1:ndim)=xsink(j+1,1:ndim)
            vsink(j,1:ndim)=vsink(j+1,1:ndim)
            lsink(j,1:ndim)=lsink(j+1,1:ndim)
@@ -2192,12 +2192,12 @@ subroutine clean_merged_sinks
            idsink(j)=idsink(j+1)
            msum_overlap(j)=msum_overlap(j+1)
            delta_mass(j)=delta_mass(j+1)
-           dmfsink(j)=dmfsink(j+1)
         end do
 
         ! Whipe last position in the sink list
         msink(nsink+1)=0d0
         msmbh(nsink+1)=0d0
+        dmfsink(nsink+1)=0d0
         xsink(nsink+1,1:ndim)=0d0
         vsink(nsink+1,1:ndim)=0d0
         lsink(nsink+1,1:ndim)=0d0
@@ -2206,7 +2206,6 @@ subroutine clean_merged_sinks
         idsink(nsink+1)=0
         msum_overlap(nsink+1)=0d0
         delta_mass(nsink+1)=0d0
-        dmfsink(nsink+1)=0d0
      else
         i=i+1
      end if
@@ -2985,6 +2984,7 @@ subroutine synchronize_sink_info
 
   call MPI_BCAST(msink,      nsinkmax, MPI_DOUBLE_PRECISION, 1, MPI_COMM_WORLD, info)
   call MPI_BCAST(msmbh,      nsinkmax, MPI_DOUBLE_PRECISION, 1, MPI_COMM_WORLD, info)
+  call MPI_BCAST(dmfsink,    nsinkmax, MPI_DOUBLE_PRECISION, 1, MPI_COMM_WORLD, info)
   call MPI_BCAST(xsink,    3*nsinkmax, MPI_DOUBLE_PRECISION, 1, MPI_COMM_WORLD, info)
   call MPI_BCAST(vsink,    3*nsinkmax, MPI_DOUBLE_PRECISION, 1, MPI_COMM_WORLD, info)
   call MPI_BCAST(lsink,    3*nsinkmax, MPI_DOUBLE_PRECISION, 1, MPI_COMM_WORLD, info)
@@ -2992,7 +2992,6 @@ subroutine synchronize_sink_info
   call MPI_BCAST(idsink,     nsinkmax, MPI_INTEGER,          1, MPI_COMM_WORLD, info)
   call MPI_BCAST(tsink,      nsinkmax, MPI_DOUBLE_PRECISION, 1, MPI_COMM_WORLD, info)
   call MPI_BCAST(new_born,   nsinkmax, MPI_LOGICAL,          1, MPI_COMM_WORLD, info)
-  call MPI_BCAST(dmfsink,    nsinkmax, MPI_DOUBLE_PRECISION, 1, MPI_COMM_WORLD, info)
 
 end subroutine synchronize_sink_info
 #endif

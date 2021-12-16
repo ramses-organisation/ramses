@@ -6,13 +6,11 @@ module pm_commons
 
   implicit none
 
-  !to compute the feedback from the sink
-  real(kind=8),allocatable,dimension(:)::dmfsink,dmfsink_new,dmfsink_all
-
   ! Sink particle related arrays
   real(dp),allocatable,dimension(:)    ::msink,xmsink
   real(dp),allocatable,dimension(:)    ::msink_new,msink_all
   real(dp),allocatable,dimension(:)    ::msmbh,msmbh_new,msmbh_all
+  real(dp),allocatable,dimension(:)    ::dmfsink,dmfsink_new,dmfsink_all
   real(dp),allocatable,dimension(:)    ::oksink_new,oksink_all
   real(dp),allocatable,dimension(:)    ::tsink,tsink_new,tsink_all
   real(dp),allocatable,dimension(:)    ::dMsink_overdt,dMBHoverdt
