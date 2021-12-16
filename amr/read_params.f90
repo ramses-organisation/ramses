@@ -284,7 +284,7 @@ subroutine read_params
 
   if(stellar.and.(.not.sink))then
      if(myid==1)write(*,*)'Error in the namelist:'
-     if(myid==1)write(*,*)'sink=.true. is needed if stellar=.true. !!!'
+     if(myid==1)write(*,*)'sink=.true. is needed if stellar=.true. !'
      nml_ok=.false.
   endif
   if(sink.and.(.not.pic))then
@@ -304,7 +304,7 @@ subroutine read_params
 #if NDIM==3
   if (sink)call read_sink_params
   if (clumpfind .or. sink)call read_clumpfind_params
-  if (sink.and.stellar)call read_stellar_params
+  if (stellar)call read_stellar_params
   if (unbind)call read_unbinding_params
   if (make_mergertree)call read_mergertree_params
 #if USE_TURB==1

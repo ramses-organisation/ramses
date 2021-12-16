@@ -23,16 +23,14 @@ subroutine init_sink
   character::co
   character(LEN=200)::comment_line
 
-  allocate(dmfsink(1:nsinkmax))
-  dmfsink=0.0
-
   ! Allocate all sink related quantities...
   allocate(idsink(1:nsinkmax))
   idsink=0 ! Important: need to set idsink to zero
   allocate(msink(1:nsinkmax))
   allocate(msmbh(1:nsinkmax))
+  allocate(dmfsink(1:nsinkmax))
   allocate(xsink(1:nsinkmax,1:ndim))
-  msink=0d0; msmbh=0d0; xsink=boxlen/2
+  msink=0d0; msmbh=0d0; dmfsink=0d0; xsink=boxlen/2
 
   allocate(xsink_graddescent(1:nsinkmax,1:ndim))
   allocate(graddescent_over_dt(1:nsinkmax))
@@ -53,9 +51,6 @@ subroutine init_sink
   allocate(rho_sink_tff(levelmin:nlevelmax))
   msum_overlap=0; rho_sink_tff=0d0
 
-  allocate(dmfsink_new(1:nsinkmax))
-  allocate(dmfsink_all(1:nsinkmax))
-
   ! Temporary sink variables
   allocate(wden(1:nsinkmax))
   allocate(wmom(1:nsinkmax,1:ndim))
@@ -71,8 +66,10 @@ subroutine init_sink
   wden_new=0d0; wmom_new=0d0; weth_new=0d0; wvol_new=0d0; wdiv_new=0d0
   allocate(msink_new(1:nsinkmax))
   allocate(msmbh_new(1:nsinkmax))
+  allocate(dmfsink_new(1:nsinkmax))
   allocate(msmbh_all(1:nsinkmax))
   allocate(msink_all(1:nsinkmax))
+  allocate(dmfsink_all(1:nsinkmax))
   allocate(tsink_new(1:nsinkmax))
   allocate(tsink_all(1:nsinkmax))
   allocate(idsink_new(1:nsinkmax))

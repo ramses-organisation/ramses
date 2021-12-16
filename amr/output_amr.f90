@@ -61,7 +61,6 @@ subroutine dump_all
         filename=TRIM(filedir)//'cooling_'//TRIM(nchar)//'.out'
         call output_cool(filename)
      end if
-     ! TC: why are csv also written here?
      if(sink)then
         filename=TRIM(filedir)//'sink_'//TRIM(nchar)//'.csv'
         call output_sink_csv(filename)
@@ -137,6 +136,8 @@ subroutine dump_all
         filename=TRIM(filedir)//'sink_'//TRIM(nchar)//'.csv'
         call output_sink_csv(filename)
      end if
+     ! TC: why are csv also written here?
+     ! can remove? TODO: Check with mpi
      if(stellar)then
         filename=TRIM(filedir)//'stellar_'//TRIM(nchar)//'.csv'
         call output_stellar_csv(filename)

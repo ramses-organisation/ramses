@@ -201,10 +201,12 @@ recursive subroutine amr_step(ilevel,icount)
   ! Feedback on sink particles
   !----------------------------------------------------
   if(stellar) then
-   if(ilevel==levelmin)call make_stellar_from_sinks
+     if(ilevel==levelmin)call make_stellar_from_sinks
+     ! TC: should this be done after create_sink? Only on coarse step?
   endif
   if (sn_feedback_sink) then
      call make_sn_stellar
+     ! TC: should this be done only on coarse step? And where?
   endif
 
   !--------------------
