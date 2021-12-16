@@ -3,6 +3,8 @@
 ! 5 additional low mass sinks around to verify SN is done on the correct sink
 ! initially 2 sinks close together which merge before stellar particle is born (sink_id != isink)
 
+! TODO: make work on 4 cpus
+
 &RUN_PARAMS
 hydro=.true.
 rt=.false.
