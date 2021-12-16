@@ -47,7 +47,6 @@ module sink_feedback_parameters
 
   ! stellar object arrays
   integer:: nstellar = 0 ! current number of stellar objects
-  real(dp), allocatable, dimension(:, :):: xstellar                   ! position
   real(dp), allocatable, dimension(:):: mstellar, tstellar, ltstellar ! mass, birth time, life time
   real(dp), allocatable, dimension(:):: time_remaining                ! time before explosion (for outputting only) 
   integer, allocatable, dimension(:):: id_stellar, idstellar_sort     !the id  of the sink to which it belongs

@@ -14,14 +14,13 @@ subroutine init_stellar
     character(len=5):: nchar, ncharcpu
     integer:: idim
     integer::sid
-    real(dp)::sm,sx1,sx2,sx3,stform,stlife
+    real(dp)::sm,stform,stlife
     character::co
     character(LEN=200)::comment_line
 
     if(.not. stellar) return
 
     ! Allocate all stellar object related quantities
-    allocate(xstellar(1:nstellarmax, 1:ndim))
     allocate(mstellar(1:nstellarmax))
     allocate(tstellar(1:nstellarmax))
     allocate(ltstellar(1:nstellarmax))
@@ -59,14 +58,10 @@ subroutine init_stellar
         read(ilun,'(A200)')comment_line
         do
             read(ilun,'(I10,6(A1,ES21.10))',end=104)sid,co,sm,co,&
-                                sx1,co,sx2,co,sx3,co, &
                                 stform,co,stlife
             nstellar=nstellar+1
             id_stellar(nstellar)=sid
             mstellar(nstellar)=sm
-            xstellar(nstellar,1)=sx1
-            xstellar(nstellar,2)=sx2
-            xstellar(nstellar,3)=sx3
             tstellar(nstellar)=stform
             ltstellar(nstellar)=stlife
         end do
@@ -84,8 +79,5 @@ subroutine init_stellar
         end if
 #endif
     end if
-
-    ! TODO: add possibility to manually add stellar particles on restart as for sinks?
-    !       replaces fixes sources in namelist
 
 end subroutine init_stellar
