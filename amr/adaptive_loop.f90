@@ -30,7 +30,6 @@ subroutine adaptive_loop
 #endif
 
   call init_amr                      ! Initialize AMR variables
-  if(myid==1)write(*,*)'after init_amr'
   call init_time                     ! Initialize time variables
   if(hydro)call init_hydro           ! Initialize hydro variables
 #ifdef RT
