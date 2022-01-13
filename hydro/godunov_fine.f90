@@ -95,18 +95,31 @@ subroutine set_unew(ilevel)
      iskip=ncoarse+(ind-1)*ngridmax
      do ivar=1,nvar
         do i=1,reception(icpu,ilevel)%ngrid
+#ifdef LIGHT_MPI_COMM
            unew(reception(icpu,ilevel)%pcomm%igrid(i)+iskip,ivar)=0
+#else
+           unew(reception(icpu,ilevel)%igrid(i)+iskip,ivar)=0
+#endif
         end do
      end do
      if(momentum_feedback>0)then
         do i=1,reception(icpu,ilevel)%ngrid
+#ifdef LIGHT_MPI_COMM
            pstarnew(reception(icpu,ilevel)%pcomm%igrid(i)+iskip) = 0
+#else
+           pstarnew(reception(icpu,ilevel)%igrid(i)+iskip) = 0
+#endif
         end do
      endif
      if(pressure_fix)then
         do i=1,reception(icpu,ilevel)%ngrid
+#ifdef LIGHT_MPI_COMM
            divu(reception(icpu,ilevel)%pcomm%igrid(i)+iskip) = 0
            enew(reception(icpu,ilevel)%pcomm%igrid(i)+iskip) = 0
+#else
+           divu(reception(icpu,ilevel)%igrid(i)+iskip) = 0
+           enew(reception(icpu,ilevel)%igrid(i)+iskip) = 0
+#endif
         end do
      end if
   end do
