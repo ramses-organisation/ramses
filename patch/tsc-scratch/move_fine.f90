@@ -1162,10 +1162,10 @@ subroutine StoppingRate(nn,dt,indp,vol,v,nu,c,dgr,xtondim)
   ivar_dust=9
   rd = 0.62665706865775*grain_size !*sqrt(gamma) constant for epstein drag law.
 
-  if ((constant_t_stop).and.(nu_stop .lt. 0.0))then ! add a "constant_nu_stop" option so you can turn drag totally off.
+  if ((constant_t_stop).and.(stopping_rate .lt. 0.0))then ! add a "constant_nu_stop" option so you can turn drag totally off.
     nu(1:nvector)=1./t_stop ! Or better yet, add pre-processor directives to turn drag off.
-  else if ((constant_t_stop) .and. (nu_stop .ge. 0.0))then
-    nu(1:nvector)=nu_stop
+  else if ((constant_t_stop) .and. (stopping_rate .ge. 0.0))then
+    nu(1:nvector)=stopping_rate
   else
      !dgr(1:nn) = 0.0D0 ! I don't have to do this twice... It's done previously...
      !if(boris)then

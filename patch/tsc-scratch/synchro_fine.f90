@@ -1664,10 +1664,10 @@ subroutine InitStoppingRate(nn,dt,indp,vol,v,nu,xtondim)
    ! isothermal sound speed... Need to get this right. This works for now,
          ! but only if you have scaled things so that the sound speed is 1.
 
-     if ((constant_t_stop).and.(nu_stop .lt. 0.0))then ! add a "constant_nu_stop" option so you can turn drag totally off.
+     if ((constant_t_stop).and.(stopping_rate .lt. 0.0))then ! add a "constant_nu_stop" option so you can turn drag totally off.
        nu(1:nvector)=1./t_stop ! Or better yet, add pre-processor directives to turn drag off.
-     else if ((constant_t_stop) .and. (nu_stop .ge. 0.0))then
-       nu(1:nvector)=nu_stop
+     else if ((constant_t_stop) .and. (stopping_rate .ge. 0.0))then
+       nu(1:nvector)=stopping_rate
      else
      dgr(1:nn) = 0.0D0
      if(boris)then

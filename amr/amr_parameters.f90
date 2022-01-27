@@ -172,7 +172,7 @@ module amr_parameters
   ! PIC dust parameters
   real(dp)::charge_to_mass=0.0       ! Charge to mass ratio for dust grains
   real(dp)::t_stop=0.0               ! Stopping time for dust grains
-  real(dp)::nu_stop=-1.0             ! When greater than or equal to zero, overrides t_stop for constant_t_stop==.true. Allows for zero drag.
+  real(dp)::stopping_rate=-1.0       ! When greater than or equal to zero, overrides t_stop for constant_t_stop==.true. Allows for zero drag.
   real(dp)::grain_size=0.0           ! Grain size parameter rho_d^i r_d/(rho_g l_0). May wan to get rid of t_stop.
   logical::boris=.false.             ! Activate boris pusher for PIC solver for grain dynamics
   logical::constant_t_stop=.false.    ! Dictates whether stopping time is constant t_stop, or uses grain_size, gas density, velocity, etc.
