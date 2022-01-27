@@ -1162,8 +1162,10 @@ subroutine StoppingRate(nn,dt,indp,vol,v,nu,c,dgr,xtondim)
   ivar_dust=9
   rd = 0.62665706865775*grain_size !*sqrt(gamma) constant for epstein drag law.
 
-  if (constant_t_stop)then ! add a "constant_nu_stop" option so you can turn drag totally off.
+  if ((constant_t_stop).and.(nu_stop .lt. 0.0))then ! add a "constant_nu_stop" option so you can turn drag totally off.
     nu(1:nvector)=1./t_stop ! Or better yet, add pre-processor directives to turn drag off.
+  else if ((constant_t_stop) .and. (nu_stop .ge. 0.0))then
+    nu(1:nvector)=nu_stop
   else
      !dgr(1:nn) = 0.0D0 ! I don't have to do this twice... It's done previously...
      !if(boris)then
@@ -1175,7 +1177,7 @@ subroutine StoppingRate(nn,dt,indp,vol,v,nu,c,dgr,xtondim)
     ! endif
 
      wh(1:nn,1:ndim) = 0.0D0 ! Set to the drift velocity post-Lorentz force
-     if(boris)then
+     if(boris .and. supersonic_drag)then
         do ind=1,xtondim
           do idim=1,ndim
             do j=1,nn
