@@ -820,8 +820,8 @@ subroutine virtual_tree_fine(ilevel)
     ! Allocate reception buffer
     allocate(emission_part(ilevel)%cpuid(emission_part(ilevel)%nactive))
     allocate(emission_part(ilevel)%nparts(emission_part(ilevel)%nactive))
-    allocate(emission_part(ilevel)%f8(emission_part(ilevel)%nparts_tot*particle_data_width_int))
-    allocate(emission_part(ilevel)%u(emission_part(ilevel)%nparts_tot*particle_data_width))
+    allocate(emission_part(ilevel)%f8(emission_part(ilevel)%nparts_tot*particle_data_width_int,1))
+    allocate(emission_part(ilevel)%u(emission_part(ilevel)%nparts_tot*particle_data_width,1))
   endif
 
   iactive=1
@@ -855,18 +855,18 @@ subroutine virtual_tree_fine(ilevel)
      buf_count=ncache*particle_data_width_int
      countrecv=countrecv+1
 #ifndef LONGINT
-     call MPI_IRECV(emission_part(ilevel)%f8(offset_f),buf_count, &
+     call MPI_IRECV(emission_part(ilevel)%f8(offset_f,1),buf_count, &
           & MPI_INTEGER,emission_part(ilevel)%cpuid(iactive)-1, &
           & tagf,MPI_COMM_WORLD,reqrecv(countrecv),info)
 #else
-     call MPI_IRECV(emission_part(ilevel)%f8(offset_f),buf_count, &
+     call MPI_IRECV(emission_part(ilevel)%f8(offset_f,1),buf_count, &
           & MPI_INTEGER8,emission_part(ilevel)%cpuid(iactive)-1, &
           & tagf,MPI_COMM_WORLD,reqrecv(countrecv),info)
 #endif
      offset_f=offset_f+buf_count
      buf_count=ncache*particle_data_width
      countrecv=countrecv+1
-     call MPI_IRECV(emission_part(ilevel)%u(offset_u),buf_count, &
+     call MPI_IRECV(emission_part(ilevel)%u(offset_u,1),buf_count, &
           & MPI_DOUBLE_PRECISION,emission_part(ilevel)%cpuid(iactive)-1, &
           & tagu,MPI_COMM_WORLD,reqrecv(countrecv),info)
      offset_u=offset_u+buf_count
@@ -1002,7 +1002,7 @@ subroutine virtual_tree_fine(ilevel)
      if (MC_tracer) then
         do ipart = 1, ncache
 #ifdef LIGHT_MPI_COMM
-           jpart = emission_part(ilevel)%f8(offset_f+(ipart-1)*particle_data_width_int)
+           jpart = emission_part(ilevel)%f8(offset_f+(ipart-1)*particle_data_width_int,1)
 #else
            jpart = emission(icpu,ilevel)%fp(ipart,1)
 #endif
@@ -1016,7 +1016,7 @@ subroutine virtual_tree_fine(ilevel)
 #ifdef LIGHT_MPI_COMM
               if ( (partp(jpart) > 0) .and. &
                    (partp(jpart) <= ncache)) then
-                 partp(jpart) = emission_part(ilevel)%f8(offset_f+(partp(jpart)-1)*particle_data_width_int)
+                 partp(jpart) = emission_part(ilevel)%f8(offset_f+(partp(jpart)-1)*particle_data_width_int,1)
 #else
               if ( (partp(jpart) > 0) .and. &
                    (partp(jpart) <= size(emission(icpu,ilevel)%fp(:, 1))) ) then
@@ -1030,7 +1030,7 @@ subroutine virtual_tree_fine(ilevel)
 
                  do ipart2 = 1, ncache
 #ifdef LIGHT_MPI_COMM
-                    jpart2 = emission_part(ilevel)%f8(offset_f+(ipart2-1)*particle_data_width_int)
+                    jpart2 = emission_part(ilevel)%f8(offset_f+(ipart2-1)*particle_data_width_int,1)
 #else
                     jpart2 = emission(icpu,ilevel)%fp(ipart2, 1)
 #endif
@@ -1065,10 +1065,10 @@ subroutine virtual_tree_fine(ilevel)
   ! Deallocate temporary communication buffers
 #ifdef LIGHT_MPI_COMM
   if(emission_part(ilevel)%nactive>0)then
-    deallocate(emmission_part(ilevel)%cpuid)
-    deallocate(emmission_part(ilevel)%nparts)
-    deallocate(emmission_part(ilevel)%f8)
-    deallocate(emmission_part(ilevel)%u)
+    deallocate(emission_part(ilevel)%cpuid)
+    deallocate(emission_part(ilevel)%nparts)
+    deallocate(emission_part(ilevel)%f8)
+    deallocate(emission_part(ilevel)%u)
   endif
   do icpu=1,ncpu
      ncache=reception(icpu,ilevel)%npart
@@ -1090,6 +1090,8 @@ subroutine virtual_tree_fine(ilevel)
         deallocate(reception(icpu,ilevel)%up)
      end if
   end do
+#endif
+
 #endif
 
 111 format('   Entering virtual_tree_fine for level ',I2)
@@ -1225,7 +1227,7 @@ subroutine empty_comm(ind_com,np,ilevel,icpu)
 #endif
   integer,dimension(1:nvector)::ind_com
 
-  integer::i,idim,igrid,nparts
+  integer::i,j,idim,igrid,nparts
   integer,dimension(1:nvector),save::ind_list,ind_part
   logical,dimension(1:nvector),save::ok=.true.
   integer::current_property
@@ -1250,7 +1252,7 @@ subroutine empty_comm(ind_com,np,ilevel,icpu)
   ! Compute parent grid index
   do i=1,np
 #ifdef LIGHT_MPI_COMM
-     igrid=int(emission_part(ilevel)%f8(offset+ind_com(i)), 4)
+     igrid=int(emission_part(ilevel)%f8(offset+ind_com(i),1), 4)
      ind_list(i)=emission(ilevel)%igrid(offset_ig+igrid)
 #else
      igrid=int(emission(icpu,ilevel)%fp(ind_com(i),1), 4)
@@ -1266,9 +1268,9 @@ subroutine empty_comm(ind_com,np,ilevel,icpu)
   do i=1,np
 #ifdef LIGHT_MPI_COMM
      step=offset+(ind_com(i)-1)*particle_data_width_int
-     levelp(ind_part(i))=emission_part(ilevel)%f8(step+1)
-     idp   (ind_part(i))=emission_part(ilevel)%f8(step+2)
-     typep(ind_part(i)) =int2part(int(emission_part(ilevel)%f8(step+3), 4))
+     levelp(ind_part(i))=emission_part(ilevel)%f8(step+1,1)
+     idp   (ind_part(i))=emission_part(ilevel)%f8(step+2,1)
+     typep(ind_part(i)) =int2part(int(emission_part(ilevel)%f8(step+3,1), 4))
 #else
      levelp(ind_part(i))=int(emission(icpu,ilevel)%fp(ind_com(i),2), 4)
      idp   (ind_part(i))=int(emission(icpu,ilevel)%fp(ind_com(i),3))
@@ -1343,7 +1345,7 @@ subroutine empty_comm(ind_com,np,ilevel,icpu)
         ! the communicator of the star particle
 #ifdef LIGHT_MPI_COMM
         step=offset+(ind_com(i)-1)*particle_data_width_int
-        partp(ind_part(i)) = emission_part(ilevel)%f8(step+4)
+        partp(ind_part(i)) = emission_part(ilevel)%f8(step+4,1)
 #else
         partp(ind_part(i)) = emission(icpu,ilevel)%fp(ind_com(i), 5)
 #endif
@@ -1351,7 +1353,7 @@ subroutine empty_comm(ind_com,np,ilevel,icpu)
         ! Use the communicator as a tmp array mapping index in comm to index in array
         ! of all particles
 #ifdef LIGHT_MPI_COMM
-        emission_part(ilevel)%f8(step) = ind_part(i)
+        emission_part(ilevel)%f8(step,1) = ind_part(i)
 #else
         emission(icpu,ilevel)%fp(ind_com(i), 1) = ind_part(i)
 #endif   

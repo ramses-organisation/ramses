@@ -854,7 +854,11 @@ subroutine make_fine_mask(ilevel)
       do ind=1,twotondim
          iskip_amr = ncoarse+(ind-1)*ngridmax
          do igrid_mg=1,ngrid
+#ifdef LIGHT_MPI_COMM
+            igrid_amr = reception(icpu,ilevel)%pcomm%igrid(igrid_mg)
+#else
             igrid_amr = reception(icpu,ilevel)%igrid(igrid_mg)
+#endif
             icell_amr = iskip_amr + igrid_amr
             ! Init mask to 1.0 on virtual cells :
             f(icell_amr,3) = 1.0d0
