@@ -97,7 +97,7 @@ subroutine read_hydro_params(nml_ok)
 
   ! Dust grains parameters
   namelist/grain_params/boris,t_stop,charge_to_mass,grain_size,constant_t_stop&
-  & ,dust_to_gas,accel_gr,second_order,trajectories
+  & ,dust_to_gas,accel_gr,second_order,trajectories,supersonic_drag
 
   ! Units parameters
   namelist/units_params/units_density,units_time,units_length
@@ -273,7 +273,7 @@ subroutine read_hydro_params(nml_ok)
     ! set T2 for computations
     T2_eos = T_eos/mu_gas
   endif
-  
+
   !--------------------------------------------------
   ! Check whether illegally trying non-eq chemistry
   !--------------------------------------------------
