@@ -762,7 +762,8 @@ subroutine make_virtual_reverse_dp(xx,ilevel)
 #ifdef LIGHT_MPI_COMM
   countrecv=0
   offset=1
-  do idx=1,emission(ilevel)%nactive / 2
+  do idx=1,emission(ilevel)%nactive
+     if (emission(ilevel)%cpuid(idx) > myid) exit
      ncache=emission(ilevel)%ngrids(idx)*twotondim
      countrecv=countrecv+1
      ! request to send
@@ -807,13 +808,15 @@ subroutine make_virtual_reverse_dp(xx,ilevel)
   ! Receive all messages
 #ifdef LIGHT_MPI_COMM
   countrecv=0
-  do idx=emission(ilevel)%nactive / 2+1,emission(ilevel)%nactive
-     ncache=emission(ilevel)%ngrids(idx)*twotondim
-     countrecv=countrecv+1
-     ! request to send
-     call MPI_SEND(countrecv,0, MPI_INTEGER, emission(ilevel)%cpuid(idx)-1,101,MPI_COMM_WORLD,info)
-     call MPI_RECV(emission(ilevel)%u(offset,1),ncache,MPI_DOUBLE_PRECISION,&
-          & emission(ilevel)%cpuid(idx)-1,tag,MPI_COMM_WORLD,MPI_STATUS_IGNORE,info)
+  do idx=1,emission(ilevel)%nactive
+     ncache=emission(ilevel)%ngrids(idx)*twotondim 
+     if (emission(ilevel)%cpuid(idx) > myid) then
+         countrecv=countrecv+1
+         ! request to send
+         call MPI_SEND(countrecv,0, MPI_INTEGER, emission(ilevel)%cpuid(idx)-1,101,MPI_COMM_WORLD,info)
+         call MPI_RECV(emission(ilevel)%u(offset,1),ncache,MPI_DOUBLE_PRECISION,&
+                       & emission(ilevel)%cpuid(idx)-1,tag,MPI_COMM_WORLD,MPI_STATUS_IGNORE,info)
+     end if
      offset=offset+ncache
   end do
 #else
@@ -914,7 +917,6 @@ subroutine make_virtual_reverse_dp(xx,ilevel)
 #else
         call MPI_ISEND(reception(icpu,ilevel)%u,ncache*twotondim, &
              & MPI_DOUBLE_PRECISION,icpu-1,tag,MPI_COMM_WORLD,reqsend(countsend),info)
-
 #endif
      end if
   end do
@@ -1056,7 +1058,8 @@ subroutine make_virtual_reverse_int(xx,ilevel)
 #ifdef LIGHT_MPI_COMM
   countrecv=0
   offset=1
-  do idx=1,emission(ilevel)%nactive / 2
+  do idx=1,emission(ilevel)%nactive
+     if (emission(ilevel)%cpuid(idx) > myid) exit
      ncache=emission(ilevel)%ngrids(idx)*twotondim
      countrecv=countrecv+1
      ! request to send
@@ -1076,7 +1079,7 @@ subroutine make_virtual_reverse_int(xx,ilevel)
         call MPI_RECV(emission(icpu,ilevel)%f,ncache*twotondim, &
              & MPI_INTEGER,icpu-1,tag,MPI_COMM_WORLD,MPI_STATUS_IGNORE,info)
      end if
-  end do 
+  end do
 #endif
 
   ! Send all messages
@@ -1101,13 +1104,15 @@ subroutine make_virtual_reverse_int(xx,ilevel)
   ! Receive all messages
 #ifdef LIGHT_MPI_COMM
   countrecv=0
-  do idx=emission(ilevel)%nactive/ 2 + 1,emission(ilevel)%nactive
+  do idx=1,emission(ilevel)%nactive
      ncache=emission(ilevel)%ngrids(idx)*twotondim
-     countrecv=countrecv+1
-     ! request to send
-     call MPI_SEND(countrecv,0, MPI_INTEGER, emission(ilevel)%cpuid(idx)-1,101,MPI_COMM_WORLD,info)
-     call MPI_RECV(emission(ilevel)%f(offset,1),ncache, MPI_INTEGER, &
-                   & emission(ilevel)%cpuid(idx)-1,tag,MPI_COMM_WORLD,MPI_STATUS_IGNORE,info)
+     if (emission(ilevel)%cpuid(idx) > myid) then
+        countrecv=countrecv+1
+        ! request to send
+        call MPI_SEND(countrecv,0, MPI_INTEGER, emission(ilevel)%cpuid(idx)-1,101,MPI_COMM_WORLD,info)
+        call MPI_RECV(emission(ilevel)%f(offset,1),ncache, MPI_INTEGER, &
+                      & emission(ilevel)%cpuid(idx)-1,tag,MPI_COMM_WORLD,MPI_STATUS_IGNORE,info)
+     end if
      offset=offset+ncache
   end do
 #else
@@ -1559,6 +1564,7 @@ end do
     if(icpu==myid) cycle
     ngrids=recvbuf(icpu)
     if(ngrids>0) then
+      if (verbose) write(*,*) "[CPU #", myid, "] Setting cpuid(", idx, ")=", icpu
       emission(ilevel)%cpuid(idx)=icpu
       emission(ilevel)%ngrids(idx)=ngrids
       call MPI_IRECV(emission(ilevel)%igrid(offset),ngrids, &
