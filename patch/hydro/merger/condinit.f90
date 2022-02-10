@@ -4,7 +4,7 @@
 !=== Author : D.Chapon                                                          ===
 !=== Date : 2010/09/01                                                          ===
 !==================================================================================
-module merger_parameters!{{{
+module merger_parameters
   use amr_commons
   !--------------------!
   ! Galactic merger IC !
@@ -63,7 +63,7 @@ module merger_parameters!{{{
   ! - set 'Mgas_disk2' to 0.0                            !
   ! - set 'gal_center2' to values larger than Lbox*2     !
   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!
-end module merger_parameters!}}}
+end module merger_parameters
 
 module merger_commons
 
@@ -72,12 +72,10 @@ module merger_commons
 
 end module merger_commons
 
-subroutine read_merger_params! {{{
+subroutine read_merger_params
   use merger_parameters
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   logical::nml_ok=.true.
   character(LEN=80)::infile
 
@@ -212,7 +210,6 @@ subroutine read_merger_params! {{{
   end if
 
 end subroutine read_merger_params
-! }}}
 
 
 subroutine condinit(x,u,dx,nn)
@@ -236,7 +233,10 @@ subroutine condinit(x,u,dx,nn)
   ! scalars in the hydro solver.
   ! U(:,:) and Q(:,:) are in user units.
   !================================================================
-  integer::ivar,i, ind_gal
+#if NENER>0 || NVAR>NDIM+2+NENER
+  integer::ivar
+#endif
+  integer::i, ind_gal
   real(dp),dimension(1:nvector,1:nvar),save::q   ! Primitive variables
   real(dp)::v,M,rho,dzz,zint, HH, rdisk, dpdr,dmax
   real(dp)::r, rr, rr1, rr2, abs_z
@@ -431,17 +431,25 @@ subroutine condinit(x,u,dx,nn)
 #if NDIM>2
   u(1:nn,ndim+2)=u(1:nn,ndim+2)+0.5D0*q(1:nn,1)*q(1:nn,4)**2
 #endif
-  ! pressure -> total fluid energy
+  ! thermal pressure -> total fluid energy
   ! E = Ec + P / (gamma - 1)
   u(1:nn,ndim+2)=u(1:nn,ndim+2)+q(1:nn,ndim+2)/(gamma-1.0d0)
+#if NENER>0
+  ! radiative pressure -> radiative energy
+  ! radiative energy -> total fluid energy
+  do ivar=1,nener
+     u(1:nn,ndim+2+ivar)=q(1:nn,ndim+2+ivar)/(gamma_rad(ivar)-1.0d0)
+     u(1:nn,ndim+2)=u(1:nn,ndim+2)+u(1:nn,ndim+2+ivar)
+  enddo
+#endif
+#if NVAR>NDIM+2+NENER
   ! passive scalars
-  do ivar=ndim+3,nvar
+  do ivar=ndim+3+nener,nvar
      u(1:nn,ivar)=q(1:nn,1)*q(1:nn,ivar)
   end do
-
+#endif
 
 contains
-!{{{
 function find_Vcirc(rayon, indice)
 implicit none
 real(dp), intent(in)    :: rayon
@@ -511,7 +519,6 @@ real(dp) :: norm2
 norm2 = sqrt(dot_product(x,x))
 
 end function norm2
-!}}}
 
 end subroutine condinit
 
@@ -520,7 +527,6 @@ end subroutine condinit
 
 !-------------------------------------------------------------------------------------
 ! Circular velocity files reading
-! {{{
 subroutine read_vcirc_files
   use merger_commons
   implicit none
@@ -571,5 +577,4 @@ subroutine read_vcirc_files
 
 
 end subroutine read_vcirc_files
-! }}}
 !--------------------------------------------------------------------------------------
