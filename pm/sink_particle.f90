@@ -1758,7 +1758,7 @@ subroutine update_sink(ilevel)
   logical::iyoung,jyoung,overlap,merge_flag
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   real(dp)::dteff,dx_loc,scale,dx_min
-  real(dp)::t_larson1,rr,rmax,rmax2,factG,v1_v2,mcom,fsink_norm,vsink_norm
+  real(dp)::t_larson1,rr,rmax,rmax2,factG,v1_v2,mcom,fsink_norm
   real(dp),dimension(1:ndim)::xcom,vcom,lcom,r_rel
   logical,dimension(1:ndim)::period
   real(dp),dimension(1:nsink,1:ndim)::xsinkold, fsinkold

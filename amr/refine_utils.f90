@@ -974,7 +974,7 @@ subroutine kill_grid(ind_cell,ilevel,nn,ibound,boundary_region)
      ! Enforce equilibrium on ionization states when merging, to
      ! prevent unnatural values (e.g when merging hot and cold cells).
      do i=1,nn
-        call calc_equilibrium_xion(uold(ind_cell(i),1:nvar) &
+        call calc_equilibrium_xion(uold(ind_cell(i),:) &
              , rtuold(ind_cell(i),1:nrtvar), xion)
         uold(ind_cell(i),iIons:iIons+nIons-1)=xion*uold(ind_cell(i),1)
      enddo
