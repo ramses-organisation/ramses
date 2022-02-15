@@ -116,7 +116,6 @@ subroutine diffine1(ind_grid,ncache,dtdiff,ilevel)
   real(dp),dimension(1:nvector,1:twotondim,1:6   ),save::B2
 
   logical ,dimension(1:nvector,-1:4,-1:4,-1:4),save::ok
-  logical ,dimension(1:nvector,-1:4,-1:4,-1:4),save::buffer
   real(dp),dimension(1:nvector, 0:4,-1:4,-1:4),save::Bx
   real(dp),dimension(1:nvector,-1:4, 0:4,-1:4),save::By
   real(dp),dimension(1:nvector,-1:4,-1:4, 0:4),save::Bz
@@ -251,10 +250,8 @@ subroutine diffine1(ind_grid,ncache,dtdiff,ilevel)
         do i=1,ncache
            if(exist_nbor(i))then
               ok(i,i3,j3,k3)=son(ind_cell(i))>0
-              buffer(i,i3,j3,k3)=.false.
            else
               ok(i,i3,j3,k3)=.false.
-              buffer(i,i3,j3,k3)=.true.
            end if
         end do
 
@@ -272,7 +269,7 @@ subroutine diffine1(ind_grid,ncache,dtdiff,ilevel)
   ! Compute current
   !----------------
   emfx=0.0d0; emfy=0.0d0; emfz=0.0d0
-  call cmp_current(Bx,By,Bz,emfx,emfy,emfz,buffer,2,2,2,ncache,dx_loc,dx_loc,dx_loc)
+  call cmp_current(Bx,By,Bz,emfx,emfy,emfz,2,2,2,ncache,dx_loc,dx_loc,dx_loc)
 
   !-------------------------------------------------
   ! Reset current along direction x at refined edges
@@ -652,7 +649,7 @@ end subroutine diffine1
 !###########################################################
 !###########################################################
 !###########################################################
-subroutine cmp_current(Bx,By,Bz,Ex_arete,Ey_arete,Ez_arete,buffer, &
+subroutine cmp_current(Bx,By,Bz,Ex_arete,Ey_arete,Ez_arete, &
      & Nx,Ny,Nz,ngrid,dx,dy,dz)
   use amr_parameters,ONLY:dp,nvector
   implicit none
@@ -660,7 +657,6 @@ subroutine cmp_current(Bx,By,Bz,Ex_arete,Ey_arete,Ez_arete,buffer, &
   real(dp),dimension(1:nvector, 0:Nx+2,-1:Ny+2,-1:Nz+2) :: Bx
   real(dp),dimension(1:nvector,-1:Nx+2, 0:Ny+2,-1:Nz+2) :: By
   real(dp),dimension(1:nvector,-1:Nx+2,-1:Ny+2, 0:Nz+2) :: Bz
-  logical ,dimension(1:nvector,-1:Nx+2,-1:Ny+2,-1:Nz+2) :: buffer
   real(dp)::dx,dy,dz
   real(dp),dimension(1:nvector, 1:Nx  , 1:Ny+1, 1:Nz+1) :: Ex_arete
   real(dp),dimension(1:nvector, 1:Nx+1, 1:Ny  , 1:Nz+1) :: Ey_arete
