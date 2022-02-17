@@ -197,6 +197,8 @@ module amr_parameters
   logical ::sf_log_properties=.false.   ! Log in ascii files birth properties of stars and supernovae
   logical ::sf_imf=.false.              ! Activate IMF sampling for SN feedback when resolution allows it
   logical ::sf_compressive=.false.      ! Advect compressive and solenoidal turbulence terms separately
+  logical ::cooling_frig = .false.      ! Use cooling module from Audit & Hennebelle 2005 instead of ramses classical cooling 
+  real(dp)::p_UV=1                      ! background UV field in units G0 (Habing field - 1.274e-4 erg cm-2 s-1 sr-1)
 
   ! EOS parameters
   character(len=20)::barotropic_eos_form='legacy'  !Type of barotropic EOS: choose from:

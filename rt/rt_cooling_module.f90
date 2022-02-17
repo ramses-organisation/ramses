@@ -6,6 +6,7 @@
 
 module rt_cooling_module
   use cooling_module,only:X, Y
+  use amr_parameters,only:cooling_frig
   use rt_parameters
   use coolrates_module
   use constants
@@ -534,12 +535,18 @@ contains
           end do
        endif
        if(haardt_madau) Hrate= Hrate + SUM(nN(:)*UVrates(:,2)) * ss_factor
+
+       !for now Photoelectic heating is taken into account in cooling frig as an average value
+       !for now we remove it but let us think about it PH 01/09/2021
+       if(.not. cooling_frig) then
        if(iPEH_group .gt. 0 .and. rt_advect) then
           ! Photoelectric heating Bakes & Tielens 1994
           ! and Wolfire 2003, [erg cm-3 s-1]
           Hrate = Hrate + 1.3d-24 * eff_peh * G0 * nH(icell)             &
                 * Zsolar(icell) * f_dust
        endif
+       endif
+
        if(isH2) then
           !UV pumping, Baczynski 2015
           cdex  = 1d-12 * (1.4 * exp(-18100. / (TK + 1200.)) * xH2       &
@@ -576,9 +583,17 @@ contains
        Crate = compCoolrate(TK,ne,nN,nI,dCdT2)       ! Cooling
        dCdT2 = dCdT2 * mu                            ! dC/dT2 = mu * dC/dT
        metal_tot=0d0 ; metal_prime=0d0             ! Metal cooling
-       if(Zsolar(icell) .gt. 0d0) &
+
+       !ramses standard metal cooling
+       if(.not. cooling_frig) then
+          if(Zsolar(icell) .gt. 0d0) &
             call rt_cmp_metals(T2(icell),nH(icell),mu,metal_tot          &
                               ,metal_prime,a_exp)
+       else
+            ! frig cooling
+            call rt_metal_cool(T2(icell),nH(icell),dXion(1),mu,metal_tot,metal_prime,xH2,a_exp)
+       endif
+
        X_nHkb= X/(1.5 * nH(icell) * kB)            ! Multiplication factor
        rate  = X_nHkb*(Hrate - Crate - Zsolar(icell)*metal_tot)
        dRate = -X_nHkb*(dCdT2 + Zsolar(icell)*metal_prime)     ! dRate/dT2
@@ -1188,6 +1203,135 @@ subroutine rt_cmp_metals(T2,nH,mu,metal_tot,metal_prime,aexp)
        metal_prime * metal_tot/TT * mu
 
 end subroutine rt_cmp_metals
+
+!=========================================================================
+! Calculates metal cooling rates using tables that include photon flux
+! Sam Geen
+SUBROUTINE rt_metal_cool(Tin,Nin,xin,mu,metal_tot,metal_prime,XH2,aexp)
+  implicit none
+  ! Taken from the equilibrium cooling_module of RAMSES
+  ! Compute cooling enhancement due to metals
+  ! Tin          => Temperature in Kelvin, divided by mu
+  ! Nin          => Hydrogen number density (H/cc)
+  ! xin          => Hydrogen ionisation fraction (0->1)
+  ! mu           => Average mass per particle in terms of mH
+  ! ne           => Electron number density
+  ! metal_tot   <=  Metal cooling contribution to de/dt / (nH*ne) [erg s-1 cm-3]
+  ! metal_prime <=  d(metal_tot)/dT2 / (nH*ne) [erg s-1 cm-3 K-1]
+  real(dp),intent(in)::Tin,Nin,xin,mu,aexp
+  real(dp)::T1,T2,nH,cool1,cool2,eps,XH2
+  real(dp),intent(out)::metal_tot,metal_prime
+
+  ! Set a reference temperature to calculate gradient wrt T
+  eps = 1d-5 ! A small value
+  T1 = Tin*mu
+  T2 = Tin*(1+eps)*mu
+  
+  ! Call a function mixing the two cooling functions
+  call rt_metal_cool_mashup(T1,Nin,xin,mu,cool1,XH2,aexp)
+  call rt_metal_cool_mashup(T2,Nin,xin,mu,cool2,XH2,aexp)
+  
+  ! Don't cool below 10K to prevent bound errors, but allow heating
+  if ((Tin*mu .gt. 10d0) .or. (cool1 .lt. 0d0)) then
+     ! Calculate gradient and output
+     metal_tot = cool1
+     ! T2 = T*(1+eps), so T2-T == eps*T
+     metal_prime = (cool2 - cool1) / (Tin * mu * eps)
+     ! NOTE !!!! NEED TO MULTIPLY BY nH*ne AFTER THIS IS OVER!!!!
+     ! EXCLAMATION MARK EXCLAMATION MARK
+  else
+     ! Prevent runaway cooling below 10K
+     metal_tot = 0d0
+     metal_prime = 0d0
+  endif
+
+END SUBROUTINE rt_metal_cool
+
+!=========================================================================
+! Mixes Patrick Hennebelle's cooling function with Alex Riching's table
+! Uses a sigmoid function centred at x=0.1 with a +/-0.05 spread to switch
+SUBROUTINE rt_metal_cool_mashup(T,N,x,mu,cool,XH2,aexp)
+  implicit none
+  ! Taken from the equilibrium cooling_module of RAMSES
+  ! Compute cooling enhancement due to metals
+  ! T            => Temperature in Kelvin *with mu included*
+  ! N            => Hydrogen number density (H/cc)
+  ! x            => Hydrogen ionisation fraction (0->1)
+  ! cool         <=  Metal cooling [erg s-1 cm-3]
+  ! XH2          => fraction of H2
+  real(dp),intent(in)::T,N,x,mu,XH2,aexp
+  real(dp)::coolph,coolphoto,drefdt
+  real(dp),intent(out)::cool
+  real(dp),parameter::scaleup=1d30
+
+  cool = 0d0
+  coolph = 0d0
+  coolphoto = 0d0
+
+  ! Get equilibrium metal cooling
+  if (T < 10035.d0) then
+     ! Patrick's low-temperature cooling function
+     !call cooling_low(T,N,coolph)
+     !note dRefDT not used here
+     call hot_cold_2(T,N,coolph,dRefDT,XH2)    
+
+     cool = -coolph
+  else
+     call rt_cmp_metals(T/mu,N,mu,cool,dRefdT,aexp)
+     ! Leave this out for now until thinking about it. Thoughts:
+     ! 1) The is in CIE, not NEQ (see Sutherland & Dopita, 1993)
+     ! 2) This seems to include hydrogen, which we already have in RAMSES-RT
+     ! 3) Pretty close agreement > 10^6 with rt_cmp_cooling anyway
+     !call hot_cold_2(T,N,coolph,dRefdT)
+     !cool = -coolph
+  end if
+  ! Handle photoionisation in range where it matters (based on Ferland 2003)
+  ! Add a threshold in x to make sure neutral gas is actually treated properly
+  ! This is because sometimes the multiplier truncates cooling for low values
+  ! Sam Geens's advice
+  if ((T .lt. 1d5).and.(T .gt. 5000d0) .and.(x .gt.1d-2) .and. (N .lt. 1.d5) ) then
+     ! Prevent floating point underflows by scaling up
+     cool = cool*scaleup
+     call cool_ferlandlike(T/mu,N,coolphoto)
+     ! If the cooling is above this value just use this anyway
+     if (coolphoto*scaleup .gt.cool) then
+        cool = cool*(1d0-x) + coolphoto*x*scaleup
+     endif
+     ! Scale back down again to the physical value
+     cool = cool/scaleup
+  endif
+
+END SUBROUTINE rt_metal_cool_mashup
+
+!=========================================================================
+SUBROUTINE cool_ferlandlike(T,N,cool)
+  implicit none
+  ! Linear fit to Ferland 2003
+  ! Similar to Osterbrock may with a floor below 10^3 K (assume no photoequilibrium < 1000 K...)
+  ! Modified to meet our neq_chem metal cooling peak in rt_cmp_metals
+  ! Compute cooling enhancement due to metals
+  ! T            => Temperature in Kelvin *with mu included*
+  ! N            => Hydrogen number density (H/cc)
+  ! x            => Hydrogen ionisation fraction (0->1)
+  ! cool         <=  Metal cooling [erg s-1 cm-3]
+  real(dp),intent(in)::T,N
+  real(dp),intent(out)::cool
+  ! First piece: flat cooling @ 3d-24
+  real(dp),parameter::cool0=3d-24
+  real(dp),parameter::T0=9000d0
+  ! Second piece: linear fit to meet rt_cmp_metals @ 1e5
+  real(dp),parameter::cool1=2.2d-22
+  real(dp),parameter::T1=1d5
+  if (T < T0) then
+     cool = cool0
+  else
+     cool = (log10(T) - log10(T0)) * (log10(cool1)-log10(cool0)) / &
+          & (log10(T1)-log10(T0)) + log10(cool0)
+     cool = 10d0**cool
+  end if
+  cool = cool*N*N ! N*Ne (fully ionised)
+
+END SUBROUTINE cool_ferlandlike
 
 !*************************************************************************
 FUNCTION getMu(xion, Tmu)
