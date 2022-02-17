@@ -1566,7 +1566,6 @@ end do
     if(icpu==myid) cycle
     ngrids=recvbuf(icpu)
     if(ngrids>0) then
-      if (verbose) write(*,*) "[CPU #", myid, "] Setting cpuid(", idx, ")=", icpu
       emission(ilevel)%cpuid(idx)=icpu
       emission(ilevel)%ngrids(idx)=ngrids
       call MPI_IRECV(emission(ilevel)%igrid(offset),ngrids, &
