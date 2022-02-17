@@ -894,6 +894,7 @@ subroutine iterate(i_n,t_rad_spec,h_rad_spec,nbin_T,aexp)
   real(kind=8) ::cool_tot,heat_tot,cool_com,heat_com,metal_tot,metal_prime
   real(kind=8) ::cool_tot_eps,heat_tot_eps,cool_com_eps,heat_com_eps
   real(kind=8),dimension(1:6) :: n_spec,n_spec_eps
+  real(kind=8) ::dXion  ! T.C. precision fixed!?
 
   nH=10d0**table%nH(i_n)
   do i_T = 1,nbin_T
@@ -916,12 +917,13 @@ subroutine iterate(i_n,t_rad_spec,h_rad_spec,nbin_T,aexp)
      table%cool_com_prime(i_n,i_T)=(log10(cool_com_eps)-log10(cool_com))/0.01d0
      table%heat_com_prime(i_n,i_T)=(log10(heat_com_eps)-log10(heat_com))/0.01d0
      ! Compute metal contribution for solar metallicity
-     !if(cooling_frig)then
-        ! dXion = ?
-     !   call rt_metal_cool(T2,nH,dXion,mu,metal_tot,metal_prime,aexp)
-     !else
+     if(cooling_frig)then
+        ! TC: dXion = ?
+        dXion = 0
+        call rt_metal_cool(T2,nH,dXion,mu,metal_tot,metal_prime,aexp)
+     else
         call cmp_metals(T2,nH,mu,metal_tot,metal_prime,aexp)
-     !endif
+     endif
      table%metal(i_n,i_T)=log10(metal_tot)
      table%metal_prime(i_n,i_T)=metal_prime
   end do
