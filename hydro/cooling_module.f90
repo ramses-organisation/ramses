@@ -917,13 +917,7 @@ subroutine iterate(i_n,t_rad_spec,h_rad_spec,nbin_T,aexp)
      table%cool_com_prime(i_n,i_T)=(log10(cool_com_eps)-log10(cool_com))/0.01d0
      table%heat_com_prime(i_n,i_T)=(log10(heat_com_eps)-log10(heat_com))/0.01d0
      ! Compute metal contribution for solar metallicity
-     if(cooling_frig)then
-        ! TC: dXion = ?
-        dXion = 0
-        call rt_metal_cool(T2,nH,dXion,mu,metal_tot,metal_prime,aexp)
-     else
-        call cmp_metals(T2,nH,mu,metal_tot,metal_prime,aexp)
-     endif
+     call cmp_metals(T2,nH,mu,metal_tot,metal_prime,aexp)
      table%metal(i_n,i_T)=log10(metal_tot)
      table%metal_prime(i_n,i_T)=metal_prime
   end do

@@ -89,6 +89,7 @@ SUBROUTINE rt_metal_cool_mashup(T,N,x,mu,cool,XH2,aexp)
   ! Add a threshold in x to make sure neutral gas is actually treated properly
   ! This is because sometimes the multiplier truncates cooling for low values
   ! Sam Geens's advice
+  ! Important for HII regions
   if ((T .lt. 1d5).and.(T .gt. 5000d0) .and.(x .gt.1d-2) .and. (N .lt. 1.d5) ) then
      ! Prevent floating point underflows by scaling up
      cool = cool*scaleup
