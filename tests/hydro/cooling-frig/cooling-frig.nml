@@ -49,11 +49,9 @@ units_length=3.0857d18
 &COOLING_PARAMS
 isothermal=.false.
 cooling=.true.
-z_ave=1.0
-mu_gas=1.4d0
-!dist_screen = 0.03 !in fraction of boxlen
-!p_UV_min=0.25
 cooling_frig=.true.
+mu_gas=1.4d0
+z_ave=1.0
 /
 
 &TURB_PARAMS

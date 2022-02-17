@@ -894,7 +894,6 @@ subroutine iterate(i_n,t_rad_spec,h_rad_spec,nbin_T,aexp)
   real(kind=8) ::cool_tot,heat_tot,cool_com,heat_com,metal_tot,metal_prime
   real(kind=8) ::cool_tot_eps,heat_tot_eps,cool_com_eps,heat_com_eps
   real(kind=8),dimension(1:6) :: n_spec,n_spec_eps
-  real(kind=8) ::dXion  ! T.C. precision fixed!?
 
   nH=10d0**table%nH(i_n)
   do i_T = 1,nbin_T

@@ -6,7 +6,6 @@
 
 module rt_cooling_module
   use cooling_module,only:X, Y
-  use amr_parameters,only:cooling_frig
   use rt_parameters
   use coolrates_module
   use constants
@@ -535,18 +534,12 @@ contains
           end do
        endif
        if(haardt_madau) Hrate= Hrate + SUM(nN(:)*UVrates(:,2)) * ss_factor
-
-       !for now Photoelectic heating is taken into account in cooling frig as an average value
-       !for now we remove it but let us think about it PH 01/09/2021
-       if(.not. cooling_frig) then
        if(iPEH_group .gt. 0 .and. rt_advect) then
           ! Photoelectric heating Bakes & Tielens 1994
           ! and Wolfire 2003, [erg cm-3 s-1]
           Hrate = Hrate + 1.3d-24 * eff_peh * G0 * nH(icell)             &
                 * Zsolar(icell) * f_dust
        endif
-       endif
-
        if(isH2) then
           !UV pumping, Baczynski 2015
           cdex  = 1d-12 * (1.4 * exp(-18100. / (TK + 1200.)) * xH2       &
@@ -583,17 +576,9 @@ contains
        Crate = compCoolrate(TK,ne,nN,nI,dCdT2)       ! Cooling
        dCdT2 = dCdT2 * mu                            ! dC/dT2 = mu * dC/dT
        metal_tot=0d0 ; metal_prime=0d0             ! Metal cooling
-
-       !ramses standard metal cooling
-       if(.not. cooling_frig) then
-          if(Zsolar(icell) .gt. 0d0) &
+       if(Zsolar(icell) .gt. 0d0) &
             call rt_cmp_metals(T2(icell),nH(icell),mu,metal_tot          &
                               ,metal_prime,a_exp)
-       else
-            ! frig cooling
-            call rt_metal_cool(T2(icell),nH(icell),dXion(1),mu,metal_tot,metal_prime,xH2,a_exp)
-       endif
-
        X_nHkb= X/(1.5 * nH(icell) * kB)            ! Multiplication factor
        rate  = X_nHkb*(Hrate - Crate - Zsolar(icell)*metal_tot)
        dRate = -X_nHkb*(dCdT2 + Zsolar(icell)*metal_prime)     ! dRate/dT2

@@ -4,7 +4,7 @@
 !=======================================================================
 subroutine solve_cooling_frig(nH,T2,zsolar,boost,dt,deltaT2,ncell)
 !=======================================================================
-  use amr_parameters, only:dp
+  use amr_parameters, only:dp,mu_gas
   implicit none
   ! BRIDGE FUNCTION WITH SAME INTERFACE AS solve_cooling
   ! Input/output variables to this function
@@ -23,10 +23,8 @@ subroutine solve_cooling_frig(nH,T2,zsolar,boost,dt,deltaT2,ncell)
   ! Temporary variables
   integer::i
   real(kind=8)::TT_ini, mu
-  ! HARD-CODED mu TO MAKE TEMPERATURE AGREE WITH HENNEBELLE CODE
-  ! TC: this is ugly, we can do better
-  ! if RT: get mu from rt_cooling
-  mu = 1.4
+  ! mu = 1.4 for Hennebelle code
+  mu = mu_gas
   do i=1,ncell
      NN = nH(i) ! NOTE!! THE CODE BELOW ASSUMES scale_nH=1 !!
                 ! SO WE LEAVE THIS AS IT IS TO KEEP UNITS CONSISTENCY
