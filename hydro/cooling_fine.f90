@@ -350,7 +350,6 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
      !==========================================
 
      if(cooling)then
-        ! TC: should this be done for cooling_frig ?
         ! Compute thermal temperature by subtracting polytrope
         do i=1,nleaf
            T2(i) = min(max(T2(i)-T2min(i),T2_min_fix),T2max)
@@ -469,20 +468,20 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
      else
         ! Compute net cooling at constant nH
         if(cooling.and..not.neq_chem)then
-            if(cooling_frig) then
-               ! Use cooling from module_cooling_frig described in Audit & Hennebelle 2005
-               call solve_cooling_frig(nH,T2,Zsolar,boost,dtcool,delta_T2,nleaf)
-            else
-               ! Use classical ramses cooling
-               call solve_cooling(nH,T2,Zsolar,boost,dtcool,delta_T2,nleaf)
-            endif
-     endif
+           if(cooling_frig) then
+              ! Use cooling from cooling_module_frig described in Audit & Hennebelle 2005
+              call solve_cooling_frig(nH,T2,dtcool,delta_T2,nleaf)
+           else
+              ! Use classical ramses cooling
+              call solve_cooling(nH,T2,Zsolar,boost,dtcool,delta_T2,nleaf)
+           endif
+        endif
 #else
      ! Compute net cooling at constant nH
      if(cooling.and..not.neq_chem)then
         if(cooling_frig) then
-           ! Use cooling from module_cooling_frig described in Audit & Hennebelle 2005
-           call solve_cooling_frig(nH,T2,Zsolar,boost,dtcool,delta_T2,nleaf)
+           ! Use cooling from cooling_module_frig described in Audit & Hennebelle 2005
+           call solve_cooling_frig(nH,T2,dtcool,delta_T2,nleaf)
         else
            ! Use classical ramses cooling
            call solve_cooling(nH,T2,Zsolar,boost,dtcool,delta_T2,nleaf)
