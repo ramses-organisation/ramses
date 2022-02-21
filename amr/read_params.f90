@@ -28,6 +28,22 @@ subroutine read_params
 #elif NDIM==3
   integer, parameter :: max_level_wout_quadhilbert = 19
 #endif
+
+#ifdef LIGHT_MPI_COMM
+   ! RAMSES legacy communicator (from amr_commons.f90)
+   type communicator_legacy
+      integer                            ::ngrid_legacy
+      integer                            ::npart_legacy
+      integer     ,dimension(:)  ,pointer::igrid_legacy
+      integer     ,dimension(:,:),pointer::f_legacy
+      real(kind=8),dimension(:,:),pointer::u_legacy
+      integer(i8b),dimension(:,:),pointer::fp_legacy
+      real(kind=8),dimension(:,:),pointer::up_legacy
+   end type communicator_legacy
+   real(kind=8)::mem_used_legacy_buff, mem_used_new_buff
+   type(communicator_legacy),allocatable,dimension(:,:)::emission_reception_legacy  ! 2D (ncpu,nlevelmax) data emission/reception "heavy" buffer
+#endif
+
   !--------------------------------------------------
   ! Namelist definitions
   !--------------------------------------------------
@@ -177,6 +193,37 @@ subroutine read_params
   rewind(1)
   read(1,NML=poisson_params,END=81)
 81 continue
+
+
+#ifdef LIGHT_MPI_COMM
+  if(myid==1 .and. ncpu .gt. 100) then
+    write(*,*) "--------------------------------------------------------------------------------------------------------------"
+    write(*,*) "> Using Light MPI Communicator data structures to reduce memory footprint advocated by P. Wautelet (IDRIS) in"
+    write(*,*) "  http://www.idris.fr/docs/docu/support-avance/ramses.html"
+    write(*,*) ""
+
+    allocate(emission_reception_legacy(1:100, 1:levelmax))
+    mem_used_legacy_buff = dble(sizeof(emission_reception_legacy)*2)*ncpu/100.0
+    deallocate(emission_reception_legacy)
+    write(*,*) "  * Old MPI communication structures (emission+reception) would have allocated : ", mem_used_legacy_buff/1.0e6," MB"
+    write(*,*) "      - reception(1:ncpu,1:nlevelmax) : ", mem_used_legacy_buff/2.0e6," MB"
+    write(*,*) "      - emission(1:ncpu,1:nlevelmax)  : ", mem_used_legacy_buff/2.0e6," MB"
+
+    allocate(reception(1:100, 1:levelmax))
+    allocate(emission(1:levelmax))
+    allocate(emission_part(1:levelmax))
+    mem_used_new_buff = dble(sizeof(emission)) + dble(sizeof(reception))*ncpu/100.0 + dble(sizeof(emission_part))
+    deallocate(reception)
+    deallocate(emission)
+    deallocate(emission_part)
+    write(*,*) "  * New MPI communication structures (emission+reception) use : ", mem_used_new_buff/1.0e6," MB"
+    write(*,*) "       - emission(1:nlevelmax)         : ", dble(sizeof(emission))/1.0e6," MB"
+    write(*,*) "       - emission_part(1:nlevelmax)    : ", dble(sizeof(emission_part))/1.0e6," MB"
+    write(*,*) "       - reception(1:ncpu,1:nlevelmax) : ", dble(sizeof(reception))*ncpu/1.0e8," MB"
+    write(*,*) "    => Overall memory economy : ", (mem_used_legacy_buff-mem_used_new_buff)/1.0e6,"MB"
+    write(*,*) "--------------------------------------------------------------------------------------------------------------"
+  endif
+#endif
 
   !-------------------------------------------------
   ! Read optional nrestart command-line argument
