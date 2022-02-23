@@ -3,6 +3,7 @@
 ! 5 additional low mass sinks around to verify SN is done on the correct sink
 ! initially 2 sinks close together which merge before stellar particle is born (sink_id != isink)
 ! Initial dmf = initial mass
+! TC: there is something weird with msbh in ic_sink
 
 &RUN_PARAMS
 hydro=.true.
