@@ -13,7 +13,6 @@ subroutine make_stellar_from_sinks
   real(dp):: mass_total
   integer:: iobj,nobj_new
   real(dp), dimension(1:nsink) :: dmfsink_sort
-  logical::write_stellar=.true.
 
   if(.not. hydro) return
   if(ndim /= 3) return
@@ -23,63 +22,62 @@ subroutine make_stellar_from_sinks
   nbuf = 0
 
   if(stellar_strategy=='local')then
-    ! Check for each sink whether a stellar particle (or multiple) should be created
-    do isink = 1, nsink
+     ! Check for each sink whether a stellar particle (or multiple) should be created
+     do isink = 1, nsink
         do while(dmfsink(isink) .gt. stellar_msink_th)
-          dmfsink(isink) = dmfsink(isink) - stellar_msink_th
-          nbuf = nbuf + 1
-          if(nbuf > nbufmax) then
-            call create_stellar(nbufmax, nbufmax, buf_id)
-            nbuf = 1
-          end if
-          ! save ID and position of sink
-          buf_id(nbuf) = idsink(isink)
+           dmfsink(isink) = dmfsink(isink) - stellar_msink_th
+           nbuf = nbuf + 1
+           if(nbuf > nbufmax) then
+              call create_stellar(nbufmax, nbufmax, buf_id)
+              nbuf = 1
+           end if
+           ! save ID of sink
+           buf_id(nbuf) = idsink(isink)
         end do
-      end do
+     end do
   else !global
+     ! Determine how many new stellar objects must be created by summing all the mass
+     ! within sinks and looking at how many objects have been created already.
+     ! It then places them on the sinks which have the largest dmfsink, i.e. recently accreted gas
 
-    ! Determine how many new stellar objects must be created by summing all the mass
-    ! within sinks and looking at how many objects have been created already.
-    ! It then places them on the sinks which have the largest dmfsink, i.e. recently accreted gas  
+     !compare the total number of objects formed and the mass of the sinks
+     mass_total = sum(dmfsink)
 
-    !compare the total number of objects formed and the mass of the sinks
-    mass_total = sum(dmfsink)
+     !number of objects to be created
+     nobj_new = mass_total / stellar_msink_th
 
-    !number of objects to be created
-    nobj_new = mass_total / stellar_msink_th
+     !order the sinks by recently accreted mass
+     dmfsink_sort = dmfsink
+     call quick_sort_dp(dmfsink_sort,idsink_sort,nsink)
 
-    !order the sinks by recently accreted mass
-    dmfsink_sort = dmfsink
-    call quick_sort_dp(dmfsink_sort,idsink_sort,nsink)
-  
-    !loop over the sinks ranked by recently accreted mass
-    !one object per sink is assumed
-    !this assumes that the number of sinks is larger than the number of objects
-    if(nobj_new .gt. nsink) then
-       write(*,*) 'number of new objects is larger than the number of sinks ',nobj_new, nsink
-       write(*,*) "use stellar_strategy='local'"
-       stop
-    endif
-  
-    do iobj = nsink - nobj_new + 1, nsink
-       isink = idsink_sort(iobj)
-       !note with this formulation dmfsink can be negative
-       dmfsink(isink) = dmfsink(isink) - stellar_msink_th
-  
-       nbuf = nbuf + 1
-       if(nbuf > nbufmax) then
-          call create_stellar(nbufmax, nbufmax, buf_id)
-          nbuf = 1
-       end if
+     !loop over the sinks ranked by recently accreted mass
+     !one object per sink is assumed
+     !this assumes that the number of sinks is larger than the number of objects
+     if(nobj_new .gt. nsink) then
+        write(*,*) 'number of new objects is larger than the number of sinks ',nobj_new, nsink
+        write(*,*) "use stellar_strategy='local'"
+        stop
+     endif
 
-       buf_id(nbuf) = idsink(isink)
-    end do
+     do iobj = nsink - nobj_new + 1, nsink
+        isink = idsink_sort(iobj)
+        !note with this formulation dmfsink can be negative
+        dmfsink(isink) = dmfsink(isink) - stellar_msink_th
+
+        nbuf = nbuf + 1
+        if(nbuf > nbufmax) then
+           call create_stellar(nbufmax, nbufmax, buf_id)
+           nbuf = 1
+        end if
+
+        buf_id(nbuf) = idsink(isink)
+     end do
 
   endif
 
   call create_stellar(nbuf, nbufmax, buf_id)
 
-  if (write_stellar)then
+  if (stellar_info)then
     call print_stellar_properties
   end if
 
@@ -99,7 +97,6 @@ subroutine create_stellar(ncreate, nbuf, id_new)
     !------------------------------------------------------------------------
     integer, intent(in):: ncreate, nbuf
     integer, dimension(1:nbuf), intent(in):: id_new
-    logical:: print_table=.false.
     integer:: ncreate_loc
     real(dp), dimension(1:ncreate):: mnew_loc, ltnew_loc
     real(dp), dimension(1:ncreate):: mnew, tnew, ltnew
@@ -111,7 +108,7 @@ subroutine create_stellar(ncreate, nbuf, id_new)
     integer:: istellar
 
     if(ncreate == 0) return
-    
+
     ! Check that there is enough space
     if(ncreate + nstellar > nstellarmax) then
         if(myid == 1) write(*, *) 'Not enough space for new stellar objects! Increase nstellarmax.'
@@ -134,19 +131,15 @@ subroutine create_stellar(ncreate, nbuf, id_new)
 #endif
 
     ! Draw random masses from the IMF
-    if(imf_low==imf_high)then
-            mnew_loc = imf_low !c.u.
-    else
-        call sample_powerlaw(mnew_loc, imf_low, imf_high, imf_index, ncreate_loc)
-    endif
+    call sample_powerlaw(mnew_loc, imf_low, imf_high, imf_index, ncreate_loc)
 
     ! Compute lifetime
     ltnew_loc(1:ncreate_loc) = lt_t0 * exp(lt_a * (log(lt_m0 / mnew_loc))**lt_b)
 
     ! Communicate data
 #ifndef WITHOUTMPI
-    call MPI_ALLGATHERV(  mnew_loc, ncreate_loc, MPI_DOUBLE_PRECISION, mnew,    narr, displ, MPI_DOUBLE_PRECISION, MPI_COMM_WORLD, info)
-    call MPI_ALLGATHERV( ltnew_loc, ncreate_loc, MPI_DOUBLE_PRECISION, ltnew,   narr, displ, MPI_DOUBLE_PRECISION, MPI_COMM_WORLD, info)
+    call MPI_ALLGATHERV(  mnew_loc, ncreate_loc, MPI_DOUBLE_PRECISION, mnew, narr, displ, MPI_DOUBLE_PRECISION, MPI_COMM_WORLD, info)
+    call MPI_ALLGATHERV( ltnew_loc, ncreate_loc, MPI_DOUBLE_PRECISION, ltnew, narr, displ, MPI_DOUBLE_PRECISION, MPI_COMM_WORLD, info)
 #else
     mnew = mnew_loc
     ltnew = ltnew_loc
@@ -161,7 +154,7 @@ subroutine create_stellar(ncreate, nbuf, id_new)
     ! EITHER: use mnew
     ! OR: use mstellarini if this has non-zero values (sets first stellar objects to have specific mass)
     !TC: remove mstellarini? I can think of only a few cases where this is useful.
-    !    Maybe not worth having this extra loop and checks. Can set imf_low==imf_high instead
+    !    Maybe not worth having this extra loop and checks
     do istellar = nstellar+1, nstellar+ncreate
        if(istellar .ge. nstellarini) then 
           mstellar(istellar) = mnew(istellar-nstellar)
@@ -179,18 +172,8 @@ subroutine create_stellar(ncreate, nbuf, id_new)
     !mstellar(nstellar+1:nstellar+ncreate) = mnew
     ltstellar(nstellar+1:nstellar+ncreate) = ltnew
 
-    ! debugging
     if(myid == 1) then
         write(*, "('Created ', I5, ' stellar objects')") ncreate
-        if(print_table) then
-            write(*, "('*****************************************************')")
-            write(*, "('       Mass          Birth          LifeT       id   ')")
-            write(*, "('*****************************************************')")
-            do istellar = nstellar + 1, nstellar + ncreate
-                write(*, "(3ES15.7,2X,i6)") mstellar(istellar), &
-                    & tstellar(istellar), ltstellar(istellar), id_stellar(istellar)
-            end do
-        end if
     end if
 
     if(sn_direct) then
@@ -251,8 +234,7 @@ end subroutine delete_stellar
 subroutine sample_powerlaw(x, a, b, alpha, n)
     ! Sample from a power-law between a and b, with an index of alpha (for the PDF)
     use amr_commons  ,only:ncpu,myid
-    use pm_commons   ,only:localseed
-    use pm_parameters,only:stellar_seed
+    use pm_commons   ,only:localseed,iseed
     use random
     implicit none
     real(8), dimension(1:n), intent(out):: x
@@ -267,7 +249,7 @@ subroutine sample_powerlaw(x, a, b, alpha, n)
 
     ! If necessary, initialize random number generator
     if(localseed(1)==-1)then
-        call rans(ncpu,stellar_seed,allseed)
+        call rans(ncpu,iseed,allseed)
         localseed=allseed(myid,1:IRandNumSize)
     end if
 
@@ -298,19 +280,19 @@ subroutine print_stellar_properties
         scale_m=scale_d*scale_l**ndim
 
         ! sort by remaining lifetime
-        do istellar=1,nstellar
-            time_remaining(istellar) = ltstellar(istellar) - (t-tstellar(istellar))
-        end do
-        call quick_sort_dp(time_remaining(1),idstellar_sort(1),nstellar)
+        !do istellar=1,nstellar
+        !    time_remaining(istellar) = ltstellar(istellar) - (t-tstellar(istellar))
+        !end do
+        !call quick_sort_dp(time_remaining(1),idstellar_sort(1),nstellar)
 
         write(*,*)'Number of stellar objects = ',nstellar
         write(*, "('***********************************************')")
         write(*, "('   id    mass[Msol]     age[yr]    lifetime[yr]')")
         write(*, "('***********************************************')")
         do i=1,nstellar
-            istellar=idstellar_sort(i)
-            write(*, "(I5,3(2X,1PE12.5))") id_stellar(istellar), &
-                & mstellar(istellar)*scale_m/M_sun, (t-tstellar(istellar))*scale_t/yr2sec, ltstellar(istellar)*scale_t/yr2sec
+            !istellar=idstellar_sort(i)
+            write(*, "(I5,3(2X,1PE12.5))") id_stellar(i), &
+                & mstellar(i)*scale_m/M_sun, (t-tstellar(i))*scale_t/yr2sec, ltstellar(i)*scale_t/yr2sec
         end do
         write(*,"('***********************************************')")
     end if

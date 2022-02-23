@@ -24,9 +24,7 @@ subroutine init_stellar
     allocate(mstellar(1:nstellarmax))
     allocate(tstellar(1:nstellarmax))
     allocate(ltstellar(1:nstellarmax))
-    allocate(time_remaining(1:nstellarmax))
     allocate(id_stellar(1:nstellarmax))
-    allocate(idstellar_sort(1:nstellarmax))
     
     ! Load stellar particles from the restart
     if(nrestart > 0) then
@@ -57,7 +55,7 @@ subroutine init_stellar
         read(ilun,'(A200)')comment_line
         read(ilun,'(A200)')comment_line
         do
-            read(ilun,'(I10,6(A1,ES21.10))',end=104)sid,co,sm,co,&
+            read(ilun,'(I10,3(A1,ES21.10))',end=104)sid,co,sm,co,&
                                 stform,co,stlife
             nstellar=nstellar+1
             id_stellar(nstellar)=sid

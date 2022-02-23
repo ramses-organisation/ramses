@@ -1,6 +1,7 @@
 ! Uniform density 10 H/cc, uniform T=10 initially
 ! 1 massive sink in the middle
 ! should spawn 3 stellar particle
+! Initial dmf = initial mass
 
 &RUN_PARAMS
 hydro=.true.

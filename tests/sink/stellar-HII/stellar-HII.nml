@@ -2,7 +2,7 @@
 ! 1 massive sink in the middle (id=6)
 ! 5 additional low mass sinks around to verify SN is done on the correct sink
 ! initially 2 sinks close together which merge before stellar particle is born (sink_id != isink)
-
+! Initial dmf = initial mass
 ! TODO: make work on 4 cpus
 
 &RUN_PARAMS
@@ -101,10 +101,11 @@ sn_feedback_sink=.false.
 nstellarmax=10
 stellar_msink_th=300. ! threshold for stellar obj creation
 sn_direct=.false.
+mstellarini=100,100,100,100,100,100
 ! IMF
 imf_index=-2.35
-imf_low=100
-imf_high=100
+imf_low=8
+imf_high=120
 ! Stellar lifetime model
 lt_a=0.23840797
 lt_b=2.20522946
@@ -112,10 +113,6 @@ lt_m0=148.158972
 lt_t0=3.26515722
 ! HII lifetime (for HII emittion?)
 hii_t=1000.0 ! Myr
-! SN properties
-Vsat=300
-Tsat=1d5
-Vdisp=0.
 /
 
 &RT_PARAMS

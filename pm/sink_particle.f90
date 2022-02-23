@@ -1365,10 +1365,10 @@ subroutine make_sink_from_clump(ilevel)
   end do
 
   ! Set new sink variables to zero
-  msink_new=0d0; msmbh_new=0d0
+  msink_new=0d0; msmbh_new=0d0; dmfsink_new=0d0
   xsink_new=0d0; vsink_new=0d0; lsink_new=0d0; delta_mass_new=0d0
   tsink_new=0d0; oksink_new=0d0; idsink_new=0; new_born_new=.false.
-  dmfsink_new=0d0
+
 
   ! Count number of new sinks (flagged cells)
   ntot=0

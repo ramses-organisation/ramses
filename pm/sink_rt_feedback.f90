@@ -1,5 +1,4 @@
 #ifdef RT
-#if NDIM==3
 !*************************************************************************
 !*************************************************************************
 !*************************************************************************
@@ -139,20 +138,21 @@ SUBROUTINE gather_ioni_flux(dt,sink_ioni_flux)
 
   sink_ioni_flux = 0d0
 
-  do istellar=1,nstellar 
-     ! find index in sink array of sink with id = id_stellar 
+  do istellar=1,nstellar
+     ! Find index in sink array of sink to which the stellar object belongs
+     ! Remark: will be equal or lower than id_sink due to sink merging
      isink = id_stellar(istellar)
      do while (id_stellar(istellar) .ne. idsink(isink))
        isink = isink - 1
      end do
      M_stellar = mstellar(istellar)
-     Flux_stellar = 0
      ! Reset the photon counter
      nphotons = 0d0
+     Flux_stellar = 0
      ! Use fit to Vacca+ 1996
      !check whether the object is emitting
      if (t - tstellar(istellar) < hii_t) then
-        !remember vaccafits is in code units because the corresponding parameters have been normalised in read_stellar_params (stf_K and stf_m0) 
+        !remember vaccafits is in code units because the corresponding parameters have been normalised in read_stellar_params (stf_K and stf_m0)
         call vaccafit(M_stellar,Flux_stellar)
         ! HII-ionising is group 1 if no IR, else group 3 (IR is group 1, optical is group 2)
         ! TC: what if you use different photon groups?
@@ -162,11 +162,6 @@ SUBROUTINE gather_ioni_flux(dt,sink_ioni_flux)
            nphotons(3) = Flux_stellar
         endif
      endif
-
-     ! debugging
-     !if(myid==1)then
-     !   write(*,*)'Emitting ',Flux_stellar,' photons from stellar ', id_stellar(istellar)
-     !endif
 
      do ig=1,ngroups
         ! Remove negative photon counts
@@ -238,7 +233,10 @@ SUBROUTINE sink_RT_vsweep_stellar(ind_grid,ind_part,ind_grid_part,ng,np,dt,ileve
   ! Mesh spacing in ilevel
   dx = 0.5D0**ilevel
   nx_loc = (icoarse_max - icoarse_min + 1)
-  skip_loc = (/dble(icoarse_min),dble(jcoarse_min),dble(kcoarse_min)/)
+  skip_loc = (/0.0d0,0.0d0,0.0d0/)
+  if(ndim>0)skip_loc(1) = dble(icoarse_min)
+  if(ndim>1)skip_loc(2) = dble(jcoarse_min)
+  if(ndim>2)skip_loc(3) = dble(kcoarse_min)
   scale = boxlen/dble(nx_loc) 
   dx_loc = dx*scale
 
@@ -321,7 +319,7 @@ SUBROUTINE sink_RT_vsweep_stellar(ind_grid,ind_part,ind_grid_part,ng,np,dt,ileve
   do j=1,np
      if( ok(j) ) then                                      !   ilevel cell
         ! Get sink index
-        isink=-idp(ind_part(j))   
+        isink=-idp(ind_part(j))
         ! deposit the photons onto the grid
         do ig=1,ngroups
            rtunew(indp(j),iGroups(ig))=rtunew(indp(j),iGroups(ig)) + &
@@ -336,19 +334,23 @@ END SUBROUTINE sink_RT_vsweep_stellar
 !*************************************************************************
 !*************************************************************************
 !*************************************************************************
-subroutine vaccafit(M,S)
-   use amr_parameters,only:dp
-   use sink_feedback_parameters
-   implicit none
-   ! perform a fit of the Vacca et al. 96 ionising flux
-   ! M - stellar mass / solar masses
-   ! S - photon emission rate in / s
- 
-   real(dp),intent(in)::M
-   real(dp),intent(out)::S
-   
-   S = stf_K * (M / stf_m0)**stf_a / (1. + (M / stf_m0)**stf_b)**stf_c
- 
-end subroutine
-#endif
+SUBROUTINE vaccafit(M,S)
+  ! perform a fit of the Vacca et al. 96 ionising flux
+  ! M - stellar mass / solar masses
+  ! S - photon emission rate in / s
+
+  use amr_parameters,only:dp
+  use sink_feedback_parameters
+  implicit none
+
+  real(dp),intent(in)::M
+  real(dp),intent(out)::S
+
+  S = stf_K * (M / stf_m0)**stf_a / (1. + (M / stf_m0)**stf_b)**stf_c
+
+END SUBROUTINE
+!################################################################
+!################################################################
+!################################################################
+!################################################################
 #endif

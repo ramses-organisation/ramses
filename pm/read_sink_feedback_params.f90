@@ -1,7 +1,7 @@
 subroutine read_stellar_params()
-  use cooling_module, only: mH
-  use amr_commons, only: dp, myid, stellar
-  use pm_commons, only: stellar_seed
+  use amr_commons, only: myid
+  use pm_commons, only: iseed
+  use amr_parameters, only: dp,stellar
   use sink_feedback_parameters
   use constants, only:M_sun
   implicit none
@@ -14,13 +14,15 @@ subroutine read_stellar_params()
                          & lt_t0, lt_m0, lt_a, lt_b, &
                          & stf_K, stf_m0, stf_a, stf_b, stf_c, &
                          & hii_t, &
-                         & sn_feedback_sink,stellar_strategy,stellar_seed, &
+                         & sn_feedback_sink,stellar_strategy,iseed, &
                          & mstellarini, &
                          & Tsat, Vsat, sn_r_sat, sn_p_ref, sn_e_ref, sn_mass_ref, &
-                         & Vdisp
+                         & Vdisp, stellar_info
 
   real(dp):: scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   real(dp):: msun, Myr, km_s
+
+  call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
 
   ! Initialise mstellarini (should be zero if not set in the namelist)
   mstellarini = 0d0
@@ -39,8 +41,8 @@ subroutine read_stellar_params()
       call clean_stop
   end if
 
-  if(imf_low <= 0.0d0 .or. imf_low > imf_high) then
-      if(myid == 1) write(*, *) '0 < imf_low <= imf_high has to be respected'
+  if(imf_low <= 0.0d0 .or. imf_low >= imf_high) then
+      if(myid == 1) write(*, *) '0 < imf_low < imf_high has to be respected'
       call clean_stop
   end if
 

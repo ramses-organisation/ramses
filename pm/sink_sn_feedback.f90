@@ -21,6 +21,7 @@ subroutine make_sn_stellar
   integer:: info
   real(dp),dimension(1:nvector,1:ndim)::x
   real(dp),dimension(1:3):: xshift, x_sn
+  logical, save:: first = .true.
   real(dp), save:: xseed
   real(dp) ::dens_max_loc,dens_max_loc_all
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
@@ -44,10 +45,18 @@ subroutine make_sn_stellar
 
   ! TC: random number for direction should be looked at more carefully
   ! RNG should be seeded first
+  if (first) then
+     xseed = 0.5
+     call random_number(xseed)
+     first = .false.
+  endif
 
   ! Mesh spacing in that level
   nx_loc = icoarse_max - icoarse_min + 1
-  skip_loc=(/dble(icoarse_min),dble(jcoarse_min),dble(kcoarse_min)/)
+  skip_loc=(/0.0d0,0.0d0,0.0d0/)
+  if(ndim>0)skip_loc(1)=dble(icoarse_min)
+  if(ndim>1)skip_loc(2)=dble(jcoarse_min)
+  if(ndim>2)skip_loc(3)=dble(kcoarse_min)
   scale = boxlen / dble(nx_loc)
 
   ! Conversion factor from user units to cgs units
@@ -105,7 +114,7 @@ subroutine make_sn_stellar
 
     !apply periodic boundary conditions (only along x and y)
     !PH note that this should also be modified for the shearing box 24/01/2017
-    ! TODO: check which BC!
+    ! TC: TODO: check which BC!
     ! if BC -> aply, else: move SN back in the box
     if( x_sn(1) .lt. 0) x_sn(1) = boxlen - x_sn(1) 
     if( x_sn(2) .lt. 0) x_sn(2) = boxlen - x_sn(2) 
