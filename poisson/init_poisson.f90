@@ -37,6 +37,18 @@ subroutine init_poisson
   !------------------------------------------------------
   ! Allocate communicators for coarser multigrid levels
   allocate(active_mg    (1:ncpu,1:nlevelmax-1))
+#ifdef LIGHT_MPI_COMM
+  allocate(emission_mg  (1:nlevelmax-1))
+  do ilevel=1,nlevelmax-1
+     do i=1,ncpu
+        active_mg   (i,ilevel)%ngrid=0
+        active_mg   (i,ilevel)%npart=0
+        nullify(active_mg(i,ilevel)%pcomm)
+     enddo
+     emission_mg (ilevel)%ngrids_tot=0
+     emission_mg (ilevel)%nactive=0
+  end do
+#else
   allocate(emission_mg  (1:ncpu,1:nlevelmax-1))
   do ilevel=1,nlevelmax-1
      do i=1,ncpu
@@ -46,6 +58,7 @@ subroutine init_poisson
         emission_mg (i,ilevel)%npart=0
      end do
   end do
+#endif
   allocate(safe_mode(1:nlevelmax))
   safe_mode = .false.
 
