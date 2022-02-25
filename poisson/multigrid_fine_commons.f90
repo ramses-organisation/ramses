@@ -99,7 +99,7 @@ subroutine multigrid_fine(ilevel,icount)
       do icpu=1,ncpu
          if(active_mg(icpu,ilevel-1)%ngrid==0) cycle
 #ifdef LIGHT_MPI_COMM
-         active_mg(icpu,ilevel-1)%pcomm%u(4,:)=2*active_mg(icpu,ilevel-1)%pcomm%u(4,:)-1d0
+         active_mg(icpu,ilevel-1)%pcomm%u(:,4)=2*active_mg(icpu,ilevel-1)%pcomm%u(:,4)-1d0
 #else
          active_mg(icpu,ilevel-1)%u(:,4)=2*active_mg(icpu,ilevel-1)%u(:,4)-1d0
 #endif
@@ -108,7 +108,7 @@ subroutine multigrid_fine(ilevel,icount)
       ! Check active mask state
       if(active_mg(myid,ilevel-1)%ngrid>0) then
 #ifdef LIGHT_MPI_COMM
-         allmasked=(maxval(active_mg(myid,ilevel-1)%pcomm%u(4,:))<=0d0)
+         allmasked=(maxval(active_mg(myid,ilevel-1)%pcomm%u(:,4))<=0d0)
 #else
          allmasked=(maxval(active_mg(myid,ilevel-1)%u(:,4))<=0d0)
 #endif
@@ -141,7 +141,7 @@ subroutine multigrid_fine(ilevel,icount)
          do icpu=1,ncpu
             if(active_mg(icpu,ifine-1)%ngrid==0) cycle
 #ifdef LIGHT_MPI_COMM
-            active_mg(icpu,ifine-1)%pcomm%u(4,:)=2*active_mg(icpu,ifine-1)%pcomm%u(4,:)-1d0
+            active_mg(icpu,ifine-1)%pcomm%u(:,4)=2*active_mg(icpu,ifine-1)%pcomm%u(:,4)-1d0
 #else
             active_mg(icpu,ifine-1)%u(:,4)=2*active_mg(icpu,ifine-1)%u(:,4)-1d0
 #endif
@@ -150,7 +150,7 @@ subroutine multigrid_fine(ilevel,icount)
          ! Check active mask state
          if(active_mg(myid,ifine-1)%ngrid>0) then
 #ifdef LIGHT_MPI_COMM
-            allmasked=(maxval(active_mg(myid,ifine-1)%pcomm%u(4,:))<=0d0)
+            allmasked=(maxval(active_mg(myid,ifine-1)%pcomm%u(:,4))<=0d0)
 #else
             allmasked=(maxval(active_mg(myid,ifine-1)%u(:,4))<=0d0)
 #endif
@@ -213,7 +213,7 @@ subroutine multigrid_fine(ilevel,icount)
       do icpu=1,ncpu
          if(active_mg(icpu,ilevel-1)%ngrid==0) cycle
 #ifdef LIGHT_MPI_COMM
-         active_mg(icpu,ilevel-1)%pcomm%u(2,:)=0.0d0
+         active_mg(icpu,ilevel-1)%pcomm%u(:,2)=0.0d0
 #else
          active_mg(icpu,ilevel-1)%u(:,2)=0.0d0
 #endif
@@ -227,7 +227,7 @@ subroutine multigrid_fine(ilevel,icount)
          do icpu=1,ncpu
             if(active_mg(icpu,ilevel-1)%ngrid==0) cycle
 #ifdef LIGHT_MPI_COMM
-            active_mg(icpu,ilevel-1)%pcomm%u(1,:)=0.0d0
+            active_mg(icpu,ilevel-1)%pcomm%u(:,1)=0.0d0
 #else
             active_mg(icpu,ilevel-1)%u(:,1)=0.0d0
 #endif
@@ -346,7 +346,7 @@ recursive subroutine recursive_multigrid_coarse(ifinelevel, safe)
       do icpu=1,ncpu
          if(active_mg(icpu,ifinelevel-1)%ngrid==0) cycle
 #ifdef LIGHT_MPI_COMM
-         active_mg(icpu,ifinelevel-1)%pcomm%u(2,:)=0.0d0
+         active_mg(icpu,ifinelevel-1)%pcomm%u(:,2)=0.0d0
 #else
          active_mg(icpu,ifinelevel-1)%u(:,2)=0.0d0
 #endif
@@ -360,7 +360,7 @@ recursive subroutine recursive_multigrid_coarse(ifinelevel, safe)
       do icpu=1,ncpu
          if(active_mg(icpu,ifinelevel-1)%ngrid==0) cycle
 #ifdef LIGHT_MPI_COMM
-         active_mg(icpu,ifinelevel-1)%pcomm%u(1,:)=0.0d0
+         active_mg(icpu,ifinelevel-1)%pcomm%u(:,1)=0.0d0
 #else
          active_mg(icpu,ifinelevel-1)%u(:,1)=0.0d0
 #endif
@@ -574,8 +574,11 @@ subroutine build_parent_comms_mg(active_f_comm_igrid, active_f_comm_ngrid, ifine
    active_mg(myid,icoarselevel)%ngrid=nact_tot
    if(nact_tot>0) then
 #ifdef LIGHT_MPI_COMM
+      if (.not. associated(active_mg(myid,icoarselevel)%pcomm)) then
+          allocate(active_mg(myid,icoarselevel)%pcomm)
+      end if
       allocate( active_mg(myid,icoarselevel)%pcomm%igrid(1:nact_tot) )
-      allocate( active_mg(myid,icoarselevel)%pcomm%u(1:4,1:nact_tot*twotondim) )
+      allocate( active_mg(myid,icoarselevel)%pcomm%u(1:nact_tot*twotondim,1:4) )
       allocate( active_mg(myid,icoarselevel)%pcomm%f(1:twotondim,1:nact_tot) )
       active_mg(myid,icoarselevel)%pcomm%igrid=0
       active_mg(myid,icoarselevel)%pcomm%u=0.0d0
@@ -736,7 +739,7 @@ subroutine build_parent_comms_mg(active_f_comm_igrid, active_f_comm_ngrid, ifine
      allocate(emission_mg(icoarselevel)%cpuid(emission_mg(icoarselevel)%nactive))
      allocate(emission_mg(icoarselevel)%ngrids(emission_mg(icoarselevel)%nactive))
      allocate(emission_mg(icoarselevel)%igrid(emission_mg(icoarselevel)%ngrids_tot))
-     allocate(emission_mg(icoarselevel)%u(1:4,1:emission_mg(icoarselevel)%ngrids_tot*twotondim))
+     allocate(emission_mg(icoarselevel)%u(1:emission_mg(icoarselevel)%ngrids_tot*twotondim,1:4))
      allocate(emission_mg(icoarselevel)%f(1:twotondim,1:emission_mg(icoarselevel)%ngrids_tot))
    end if
 
@@ -831,7 +834,7 @@ subroutine build_parent_comms_mg(active_f_comm_igrid, active_f_comm_ngrid, ifine
           allocate(active_mg(icpu,icoarselevel)%pcomm)
         end if
         allocate(active_mg(icpu,icoarselevel)%pcomm%igrid(1:ngrids))
-        allocate(active_mg(icpu,icoarselevel)%pcomm%u(1:4,1:ngrids*twotondim))
+        allocate(active_mg(icpu,icoarselevel)%pcomm%u(1:ngrids*twotondim,1:4))
         allocate(active_mg(icpu,icoarselevel)%pcomm%f(1:twotondim,1:ngrids))
         active_mg(icpu,icoarselevel)%pcomm%igrid=0
         active_mg(icpu,icoarselevel)%pcomm%u=0.0d0
@@ -1197,7 +1200,7 @@ subroutine make_virtual_mg_dp(ivar,ilevel)
      if(ncache>0) then
        countrecv=countrecv+1
 #ifdef LIGHT_MPI_COMM
-       call MPI_IRECV(active_mg(icpu,ilevel)%pcomm%u(ivar,1),ncache*twotondim, &
+       call MPI_IRECV(active_mg(icpu,ilevel)%pcomm%u(1,ivar),ncache*twotondim, &
             & MPI_DOUBLE_PRECISION,icpu-1,tag,MPI_COMM_WORLD,reqrecv(countrecv),info)
 #else
        call MPI_IRECV(active_mg(icpu,ilevel)%u(1,ivar),ncache*twotondim, &
@@ -1215,7 +1218,7 @@ subroutine make_virtual_mg_dp(ivar,ilevel)
       iskip=(j-1)*active_mg(myid,ilevel)%ngrid
       do i=1,emission_mg(ilevel)%ngrids(idx)
         icell=emission_mg(ilevel)%igrid(offset+i)+iskip
-        emission_mg(ilevel)%u(1, offset*twotondim+step+i)=active_mg(myid,ilevel)%pcomm%u(ivar,icell)
+        emission_mg(ilevel)%u(offset*twotondim+step+i,1)=active_mg(myid,ilevel)%pcomm%u(icell,ivar)
       end do
     end do
     offset=offset+emission_mg(ilevel)%ngrids(idx)
@@ -1242,7 +1245,7 @@ subroutine make_virtual_mg_dp(ivar,ilevel)
    do idx=1,emission_mg(ilevel)%nactive
       ncache=emission_mg(ilevel)%ngrids(idx)*twotondim
       countsend=countsend+1
-      call MPI_ISEND(emission_mg(ilevel)%u(1,offset),ncache,MPI_DOUBLE_PRECISION,&
+      call MPI_ISEND(emission_mg(ilevel)%u(offset,1),ncache,MPI_DOUBLE_PRECISION,&
                      emission_mg(ilevel)%cpuid(idx)-1,tag,MPI_COMM_WORLD,reqsend(countsend),info)
       offset=offset+ncache
    end do
@@ -1309,9 +1312,8 @@ subroutine make_virtual_mg_int(ilevel)
    do idx=1,emission_mg(ilevel)%nactive
       do j=1,twotondim
          step=(j-1)*emission_mg(ilevel)%ngrids(idx)
-         iskip=(j-1)*active_mg(myid,ilevel)%ngrid
          do i=1,emission_mg(ilevel)%ngrids(idx)
-            icell=emission_mg(ilevel)%igrid(offset+i)+iskip
+            icell=emission_mg(ilevel)%igrid(offset+i)
             emission_mg(ilevel)%f(j,offset+i)=active_mg(myid,ilevel)%pcomm%f(j,icell)
          end do
       end do
@@ -1388,7 +1390,7 @@ subroutine make_reverse_mg_dp(ivar,ilevel)
   do idx=1,emission_mg(ilevel)%nactive
     ncache=emission_mg(ilevel)%ngrids(idx)*twotondim
     countrecv=countrecv+1
-    call MPI_IRECV(emission_mg(ilevel)%u(1,offset),ncache,MPI_DOUBLE_PRECISION,&
+    call MPI_IRECV(emission_mg(ilevel)%u(offset,1),ncache,MPI_DOUBLE_PRECISION,&
                    emission_mg(ilevel)%cpuid(idx)-1,tag,MPI_COMM_WORLD,reqrecv(countrecv),info)
     offset=offset+ncache
   end do
@@ -1411,7 +1413,7 @@ subroutine make_reverse_mg_dp(ivar,ilevel)
      if(ncache>0) then
        countsend=countsend+1
 #ifdef LIGHT_MPI_COMM
-       call MPI_ISEND(active_mg(icpu,ilevel)%pcomm%u(ivar,1),ncache*twotondim, &
+       call MPI_ISEND(active_mg(icpu,ilevel)%pcomm%u(1,ivar),ncache*twotondim, &
             & MPI_DOUBLE_PRECISION,icpu-1,tag,MPI_COMM_WORLD,reqsend(countsend),info)
 #else
        call MPI_ISEND(active_mg(icpu,ilevel)%u(1,ivar),ncache*twotondim, &
@@ -1432,8 +1434,8 @@ subroutine make_reverse_mg_dp(ivar,ilevel)
          iskip=(j-1)*active_mg(myid,ilevel)%ngrid
          do i=1,emission_mg(ilevel)%ngrids(idx)
             icell=emission_mg(ilevel)%igrid(offset+i)+iskip
-            active_mg(myid,ilevel)%pcomm%u(ivar,icell)=active_mg(myid,ilevel)%pcomm%u(ivar,icell)+ &
-                      emission_mg(ilevel)%u(1,offset*twotondim+step+i)
+            active_mg(myid,ilevel)%pcomm%u(icell,ivar)=active_mg(myid,ilevel)%pcomm%u(icell,ivar)+ &
+                      emission_mg(ilevel)%u(offset*twotondim+step+i,1)
          end do
       end do
       offset=offset+emission_mg(ilevel)%ngrids(idx)

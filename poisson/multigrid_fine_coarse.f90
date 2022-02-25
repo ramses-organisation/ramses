@@ -78,7 +78,7 @@ subroutine restrict_mask_coarse(ifinelevel,allmasked)
                   iskip_f_mg=(ind_f_cell-1)*active_mg(cpu_amr,ifinelevel)%ngrid
                   icell_f_mg=iskip_f_mg+igrid_f_mg
 #ifdef LIGHT_MPI_COMM
-                  ngpmask=ngpmask+active_mg(cpu_amr,ifinelevel)%pcomm%u(4,icell_f_mg)
+                  ngpmask=ngpmask+active_mg(cpu_amr,ifinelevel)%pcomm%u(icell_f_mg,4)
 #else
                   ngpmask=ngpmask+active_mg(cpu_amr,ifinelevel)%u(icell_f_mg,4)
 #endif
@@ -88,7 +88,7 @@ subroutine restrict_mask_coarse(ifinelevel,allmasked)
          end if
          ! Store cell mask
 #ifdef LIGHT_MPI_COMM
-         active_mg(myid,icoarselevel)%pcomm%u(4,icell_c_mg)=ngpmask
+         active_mg(myid,icoarselevel)%pcomm%u(icell_c_mg,4)=ngpmask
 #else
          active_mg(myid,icoarselevel)%u(icell_c_mg,4)=ngpmask
 #endif
@@ -147,9 +147,9 @@ subroutine restrict_mask_coarse_reverse(ifinelevel)
          icell_c_mg=iskip_c_mg+igrid_c_mg
          ! Stack cell volume fraction in coarse cell
 #ifdef LIGHT_MPI_COMM
-         ngpmask=(1d0+active_mg(myid,ifinelevel)%pcomm%u(4,icell_f_mg))/2/dtwotondim
-         active_mg(cpu_amr,icoarselevel)%pcomm%u(4,icell_c_mg)=&
-              &   active_mg(cpu_amr,icoarselevel)%pcomm%u(4,icell_c_mg)+ngpmask
+         ngpmask=(1d0+active_mg(myid,ifinelevel)%pcomm%u(icell_f_mg,4))/2/dtwotondim
+         active_mg(cpu_amr,icoarselevel)%pcomm%u(icell_c_mg,4)=&
+              &   active_mg(cpu_amr,icoarselevel)%pcomm%u(icell_c_mg,4)+ngpmask
 #else
          ngpmask=(1d0+active_mg(myid,ifinelevel)%u(icell_f_mg,4))/2/dtwotondim
          active_mg(cpu_amr,icoarselevel)%u(icell_c_mg,4)=&
@@ -210,7 +210,7 @@ subroutine cmp_residual_mg_coarse(ilevel)
          icell_mg = igrid_mg + iskip_mg
 
 #ifdef LIGHT_MPI_COMM
-         phi_c = active_mg(myid,ilevel)%pcomm%u(1,icell_mg)
+         phi_c = active_mg(myid,ilevel)%pcomm%u(icell_mg,1)
 #else
          phi_c = active_mg(myid,ilevel)%u(icell_mg,1)
 #endif
@@ -238,7 +238,7 @@ subroutine cmp_residual_mg_coarse(ilevel)
                   icell_nbor_mg = igrid_nbor_mg + &
                       (jjj(idim,inbor,ind)-1)*active_mg(cpu_nbor_amr,ilevel)%ngrid
 #ifdef LIGHT_MPI_COMM
-                  nb_sum = nb_sum + active_mg(cpu_nbor_amr,ilevel)%pcomm%u(1,icell_nbor_mg)
+                  nb_sum = nb_sum + active_mg(cpu_nbor_amr,ilevel)%pcomm%u(icell_nbor_mg,1)
 #else
                   nb_sum = nb_sum + active_mg(cpu_nbor_amr,ilevel)%u(icell_nbor_mg,1)
 #endif
@@ -246,8 +246,8 @@ subroutine cmp_residual_mg_coarse(ilevel)
             end do
          else ! PERFORM SCAN
 #ifdef LIGHT_MPI_COMM
-            if(active_mg(myid,ilevel)%pcomm%u(4,icell_mg)<=0.0) then
-               active_mg(myid,ilevel)%pcomm%u(3,icell_mg)=0
+            if(active_mg(myid,ilevel)%pcomm%u(icell_mg,4)<=0.0) then
+               active_mg(myid,ilevel)%pcomm%u(icell_mg,3)=0
 #else
             if(active_mg(myid,ilevel)%u(icell_mg,4)<=0.0) then
                active_mg(myid,ilevel)%u(icell_mg,3)=0
@@ -271,7 +271,7 @@ subroutine cmp_residual_mg_coarse(ilevel)
                      ! Virtual phi value on unrefnd neighbor cell : -phi_c/mask_c
                      ! (simulates mask=-1.0 for the nonexistent refined cell)
 #ifdef LIGHT_MPI_COMM
-                     nb_sum = nb_sum - phi_c/active_mg(myid,ilevel)%pcomm%u(4,icell_mg)
+                     nb_sum = nb_sum - phi_c/active_mg(myid,ilevel)%pcomm%u(icell_mg,4)
 #else
                      nb_sum = nb_sum - phi_c/active_mg(myid,ilevel)%u(icell_mg,4)
 #endif
@@ -280,7 +280,7 @@ subroutine cmp_residual_mg_coarse(ilevel)
                      igrid_nbor_mg  = lookup_mg(igrid_nbor_amr)
                      if(igrid_nbor_mg<=0) then
 #ifdef LIGHT_MPI_COMM
-                        nb_sum=nb_sum-phi_c/active_mg(myid,ilevel)%pcomm%u(4,icell_mg)
+                        nb_sum=nb_sum-phi_c/active_mg(myid,ilevel)%pcomm%u(icell_mg,4)
 #else
                         nb_sum=nb_sum-phi_c/active_mg(myid,ilevel)%u(icell_mg,4)
 #endif
@@ -290,14 +290,14 @@ subroutine cmp_residual_mg_coarse(ilevel)
                      icell_nbor_mg  = igrid_nbor_mg + &
                        (jjj(idim,inbor,ind)-1)*active_mg(cpu_nbor_amr,ilevel)%ngrid
 #ifdef LIGHT_MPI_COMM
-                     if(active_mg(cpu_nbor_amr,ilevel)%pcomm%u(4,icell_nbor_mg)<=0.0) then
+                     if(active_mg(cpu_nbor_amr,ilevel)%pcomm%u(icell_nbor_mg,4)<=0.0) then
 #else
                      if(active_mg(cpu_nbor_amr,ilevel)%u(icell_nbor_mg,4)<=0.0) then
 #endif
                         ! Neighbor cell is masked : compute its virtual phi with the mask
 #ifdef LIGHT_MPI_COMM
                         nb_sum = nb_sum + phi_c * &
-                           (active_mg(cpu_nbor_amr,ilevel)%pcomm%u(4,icell_nbor_mg)/active_mg(myid,ilevel)%pcomm%u(4,icell_mg))
+                           (active_mg(cpu_nbor_amr,ilevel)%pcomm%u(icell_nbor_mg,4)/active_mg(myid,ilevel)%pcomm%u(icell_mg,4))
 #else
                         nb_sum = nb_sum + phi_c * &
                            (active_mg(cpu_nbor_amr,ilevel)%u(icell_nbor_mg,4)/active_mg(myid,ilevel)%u(icell_mg,4))
@@ -305,7 +305,7 @@ subroutine cmp_residual_mg_coarse(ilevel)
                      else
                         ! Neighbor cell is active, use its true potential
 #ifdef LIGHT_MPI_COMM
-                        nb_sum = nb_sum + active_mg(cpu_nbor_amr,ilevel)%pcomm%u(1,icell_nbor_mg)
+                        nb_sum = nb_sum + active_mg(cpu_nbor_amr,ilevel)%pcomm%u(icell_nbor_mg,1)
 #else
                         nb_sum = nb_sum + active_mg(cpu_nbor_amr,ilevel)%u(icell_nbor_mg,1)
 #endif
@@ -317,8 +317,8 @@ subroutine cmp_residual_mg_coarse(ilevel)
 
          ! Store ***MINUS THE RESIDUAL***
 #ifdef LIGHT_MPI_COMM
-         active_mg(myid,ilevel)%pcomm%u(3,icell_mg) = &
-          -oneoverdx2*( nb_sum - dtwondim*phi_c )+active_mg(myid,ilevel)%pcomm%u(2,icell_mg)
+         active_mg(myid,ilevel)%pcomm%u(icell_mg,3) = &
+          -oneoverdx2*( nb_sum - dtwondim*phi_c )+active_mg(myid,ilevel)%pcomm%u(icell_mg,2)
 #else
          active_mg(myid,ilevel)%u(icell_mg,3) = &
           -oneoverdx2*( nb_sum - dtwondim*phi_c )+active_mg(myid,ilevel)%u(icell_mg,2)
@@ -355,8 +355,8 @@ subroutine cmp_uvar_norm2_coarse(ivar, ilevel, norm2)
       do igrid_mg=1,ngrid
          icell_mg = iskip_mg + igrid_mg
 #ifdef LIGHT_MPI_COMM
-         if(active_mg(myid,ilevel)%pcomm%u(4,icell_mg)<=0.0 .and. ivar/=4) cycle
-         norm2 = norm2 + active_mg(myid,ilevel)%pcomm%u(ivar,icell_mg)**2
+         if(active_mg(myid,ilevel)%pcomm%u(icell_mg,4)<=0.0 .and. ivar/=4) cycle
+         norm2 = norm2 + active_mg(myid,ilevel)%pcomm%u(icell_mg,ivar)**2
 #else
          if(active_mg(myid,ilevel)%u(icell_mg,4)<=0.0 .and. ivar/=4) cycle
          norm2 = norm2 + active_mg(myid,ilevel)%u(icell_mg,ivar)**2
@@ -393,7 +393,7 @@ end subroutine cmp_uvar_norm2_coarse
 !       do igrid_mg=1,ngrid
 !          icell_mg = iskip_mg + igrid_mg
 ! #ifdef LIGHT_MPI_COMM
-!          if(active_mg(myid,ilevel)%pcomm%u(4,icell_mg)<=0.0) cycle
+!          if(active_mg(myid,ilevel)%pcomm%u(icell_mg,4)<=0.0) cycle
 !          norm2 = norm2 + active_mg(myid,ilevel)%f(ind,igrid)**2
 ! #else
 !          if(active_mg(myid,ilevel)%u(icell_mg,4)<=0.0) cycle
@@ -494,7 +494,7 @@ subroutine gauss_seidel_mg_coarse(ilevel,safe,redstep)
                       (jjj(idim,inbor,ind)-1)*active_mg(cpu_nbor_amr,ilevel)%ngrid
 #ifdef LIGHT_MPI_COMM
                   nb_sum = nb_sum + &
-                      active_mg(cpu_nbor_amr,ilevel)%pcomm%u(1,icell_nbor_mg)
+                      active_mg(cpu_nbor_amr,ilevel)%pcomm%u(icell_nbor_mg,1)
 #else
                   nb_sum = nb_sum + &
                       active_mg(cpu_nbor_amr,ilevel)%u(icell_nbor_mg,1)
@@ -503,7 +503,7 @@ subroutine gauss_seidel_mg_coarse(ilevel,safe,redstep)
             end do
             ! Update the potential, solving for potential on icell_amr
 #ifdef LIGHT_MPI_COMM
-            active_mg(myid,ilevel)%pcomm%u(1,icell_mg)=(nb_sum-dx2*active_mg(myid,ilevel)%pcomm%u(2,icell_mg))/dtwondim
+            active_mg(myid,ilevel)%pcomm%u(icell_mg,1)=(nb_sum-dx2*active_mg(myid,ilevel)%pcomm%u(icell_mg,2))/dtwondim
 #else
             active_mg(myid,ilevel)%u(icell_mg,1)=(nb_sum-dx2*active_mg(myid,ilevel)%u(icell_mg,2))/dtwondim
 #endif
@@ -511,8 +511,8 @@ subroutine gauss_seidel_mg_coarse(ilevel,safe,redstep)
             ! Use the finer "solve" Gauss-Seidel near boundaries,
             ! with all necessary checks
 #ifdef LIGHT_MPI_COMM
-            if(active_mg(myid,ilevel)%pcomm%u(4,icell_mg)<=0.0) cycle
-            if(safe .and. active_mg(myid,ilevel)%pcomm%u(4,icell_mg)<1.0) cycle
+            if(active_mg(myid,ilevel)%pcomm%u(icell_mg,4)<=0.0) cycle
+            if(safe .and. active_mg(myid,ilevel)%pcomm%u(icell_mg,4)<1.0) cycle
 #else
             if(active_mg(myid,ilevel)%u(icell_mg,4)<=0.0) cycle
             if(safe .and. active_mg(myid,ilevel)%u(icell_mg,4)<1.0) cycle
@@ -537,7 +537,7 @@ subroutine gauss_seidel_mg_coarse(ilevel,safe,redstep)
                   if(igrid_nbor_amr==0) then
                      ! No neighbor cell, set mask=-1 on nonexistent neighbor cell
 #ifdef LIGHT_MPI_COMM
-                     weight = weight - 1.0d0/active_mg(myid,ilevel)%pcomm%u(4,icell_mg)
+                     weight = weight - 1.0d0/active_mg(myid,ilevel)%pcomm%u(icell_mg,4)
 #else
                      weight = weight - 1.0d0/active_mg(myid,ilevel)%u(icell_mg,4)
 #endif
@@ -547,7 +547,7 @@ subroutine gauss_seidel_mg_coarse(ilevel,safe,redstep)
                      if(igrid_nbor_mg<=0) then
                         ! No MG neighbor
 #ifdef LIGHT_MPI_COMM
-                        weight = weight - 1.0d0/active_mg(myid,ilevel)%pcomm%u(4,icell_mg)
+                        weight = weight - 1.0d0/active_mg(myid,ilevel)%pcomm%u(icell_mg,4)
 #else
                         weight = weight - 1.0d0/active_mg(myid,ilevel)%u(icell_mg,4)
 #endif
@@ -555,13 +555,13 @@ subroutine gauss_seidel_mg_coarse(ilevel,safe,redstep)
                         icell_nbor_mg  = igrid_nbor_mg  + (jjj(idim,inbor,ind)-1)*active_mg(cpu_nbor_amr,ilevel)%ngrid
 
 #ifdef LIGHT_MPI_COMM
-                        if(active_mg(cpu_nbor_amr,ilevel)%pcomm%u(4,icell_nbor_mg)<=0.0) then
+                        if(active_mg(cpu_nbor_amr,ilevel)%pcomm%u(icell_nbor_mg,4)<=0.0) then
                            ! Neighbor cell is masked
                            weight = weight + &
-                           active_mg(cpu_nbor_amr,ilevel)%pcomm%u(4,icell_nbor_mg)/active_mg(myid,ilevel)%pcomm%u(4,icell_mg)
+                           active_mg(cpu_nbor_amr,ilevel)%pcomm%u(icell_nbor_mg,4)/active_mg(myid,ilevel)%pcomm%u(icell_mg,4)
                         else
                            ! Neighbor cell is active, increment neighbor sum
-                           nb_sum = nb_sum + active_mg(cpu_nbor_amr,ilevel)%pcomm%u(1,icell_nbor_mg)
+                           nb_sum = nb_sum + active_mg(cpu_nbor_amr,ilevel)%pcomm%u(icell_nbor_mg,1)
                         end if
 #else
                         if(active_mg(cpu_nbor_amr,ilevel)%u(icell_nbor_mg,4)<=0.0) then
@@ -579,7 +579,7 @@ subroutine gauss_seidel_mg_coarse(ilevel,safe,redstep)
             end do
             ! Update the potential, solving for potential on icell_amr
 #ifdef LIGHT_MPI_COMM
-            active_mg(myid,ilevel)%pcomm%u(1,icell_mg) = (nb_sum - dx2*active_mg(myid,ilevel)%pcomm%u(2,icell_mg)) &
+            active_mg(myid,ilevel)%pcomm%u(icell_mg,1) = (nb_sum - dx2*active_mg(myid,ilevel)%pcomm%u(icell_mg,2)) &
                      / (dtwondim - weight)
 #else
             active_mg(myid,ilevel)%u(icell_mg,1) = (nb_sum - dx2*active_mg(myid,ilevel)%u(icell_mg,2)) &
@@ -631,7 +631,7 @@ subroutine restrict_residual_coarse(ifinelevel)
          igrid_f_amr = son(icell_c_amr)
          if(igrid_f_amr==0) then
 #ifdef LIGHT_MPI_COMM
-            active_mg(myid,icoarselevel)%pcomm%u(2,icell_c_mg) = 0.0d0    ! Nullify residual (coarser RHS)
+            active_mg(myid,icoarselevel)%pcomm%u(icell_c_mg,2) = 0.0d0    ! Nullify residual (coarser RHS)
 #else
             active_mg(myid,icoarselevel)%u(icell_c_mg,2) = 0.0d0    ! Nullify residual (coarser RHS)
 #endif
@@ -643,7 +643,7 @@ subroutine restrict_residual_coarse(ifinelevel)
          if(igrid_f_mg<=0) then
             ! Son grid is not in MG hierarchy
 #ifdef LIGHT_MPI_COMM
-            active_mg(myid,icoarselevel)%pcomm%u(2,icell_c_mg) = 0.0d0    ! Nullify residual (coarser RHS)
+            active_mg(myid,icoarselevel)%pcomm%u(icell_c_mg,2) = 0.0d0    ! Nullify residual (coarser RHS)
 #else
             active_mg(myid,icoarselevel)%u(icell_c_mg,2) = 0.0d0    ! Nullify residual (coarser RHS)
 #endif
@@ -657,8 +657,8 @@ subroutine restrict_residual_coarse(ifinelevel)
             icell_f_mg = igrid_f_mg + (ind_f-1)*active_mg(cpu_amr,ifinelevel)%ngrid
 
 #ifdef LIGHT_MPI_COMM
-            if (active_mg(cpu_amr,ifinelevel)%pcomm%u(4,icell_f_mg)<=0.0) cycle
-            val = val + active_mg(cpu_amr,ifinelevel)%pcomm%u(3,icell_f_mg)
+            if (active_mg(cpu_amr,ifinelevel)%pcomm%u(icell_f_mg,4)<=0.0) cycle
+            val = val + active_mg(cpu_amr,ifinelevel)%pcomm%u(icell_f_mg,3)
 #else
             if (active_mg(cpu_amr,ifinelevel)%u(icell_f_mg,4)<=0.0) cycle
             val = val + active_mg(cpu_amr,ifinelevel)%u(icell_f_mg,3)
@@ -668,9 +668,9 @@ subroutine restrict_residual_coarse(ifinelevel)
          ! Store restricted residual into RHS of coarse level
 #ifdef LIGHT_MPI_COMM
          if(w>0) then
-            active_mg(myid,icoarselevel)%pcomm%u(2,icell_c_mg) = val/w
+            active_mg(myid,icoarselevel)%pcomm%u(icell_c_mg,2) = val/w
          else
-            active_mg(myid,icoarselevel)%pcomm%u(2,icell_c_mg) = 0
+            active_mg(myid,icoarselevel)%pcomm%u(icell_c_mg,2) = 0
          end if
 #else
          if(w>0) then
@@ -720,7 +720,7 @@ subroutine restrict_residual_coarse_reverse(ifinelevel)
          icell_f_mg=iskip_f_mg+igrid_f_mg
          ! Is fine cell masked?
 #ifdef LIGHT_MPI_COMM
-         if(active_mg(myid,ifinelevel)%pcomm%u(4,icell_f_mg)<=0d0) cycle
+         if(active_mg(myid,ifinelevel)%pcomm%u(icell_f_mg,4)<=0d0) cycle
 #else
          if(active_mg(myid,ifinelevel)%u(icell_f_mg,4)<=0d0) cycle
 #endif
@@ -743,12 +743,12 @@ subroutine restrict_residual_coarse_reverse(ifinelevel)
 
          ! Is coarse cell masked?
 #ifdef LIGHT_MPI_COMM
-         if(active_mg(cpu_amr,icoarselevel)%pcomm%u(4,icell_c_mg)<=0d0) cycle
+         if(active_mg(cpu_amr,icoarselevel)%pcomm%u(icell_c_mg,4)<=0d0) cycle
 
          ! Stack fine cell residual in coarse cell rhs
-         res=active_mg(myid,ifinelevel)%pcomm%u(3,icell_f_mg)/dtwotondim
-         active_mg(cpu_amr,icoarselevel)%pcomm%u(2,icell_c_mg)=&
-            active_mg(cpu_amr,icoarselevel)%pcomm%u(2,icell_c_mg)+res
+         res=active_mg(myid,ifinelevel)%pcomm%u(icell_f_mg,3)/dtwotondim
+         active_mg(cpu_amr,icoarselevel)%pcomm%u(icell_c_mg,2)=&
+            active_mg(cpu_amr,icoarselevel)%pcomm%u(icell_c_mg,2)+res
 #else
          if(active_mg(cpu_amr,icoarselevel)%u(icell_c_mg,4)<=0d0) cycle
 
@@ -844,7 +844,7 @@ subroutine interpolate_and_correct_coarse(ifinelevel)
             do i=1,nbatch
                icell_f_mg  = iskip_f_mg + istart+i-1
 #ifdef LIGHT_MPI_COMM
-               if(active_mg(cpu_amr(i),ifinelevel)%pcomm%u(4,icell_f_mg)<=0.0) then
+               if(active_mg(cpu_amr(i),ifinelevel)%pcomm%u(icell_f_mg,4)<=0.0) then
 #else
                if(active_mg(cpu_amr(i),ifinelevel)%u(icell_f_mg,4)<=0.0) then
 #endif
@@ -860,7 +860,7 @@ subroutine interpolate_and_correct_coarse(ifinelevel)
 
                icell_c_mg  = (ind_c-1)*active_mg(cpu_c_amr,icoarselevel)%ngrid + igrid_c_mg
 #ifdef LIGHT_MPI_COMM
-               corr(i)=corr(i)+coeff*active_mg(cpu_c_amr,icoarselevel)%pcomm%u(1,icell_c_mg)
+               corr(i)=corr(i)+coeff*active_mg(cpu_c_amr,icoarselevel)%pcomm%u(icell_c_mg,1)
 #else
                corr(i)=corr(i)+coeff*active_mg(cpu_c_amr,icoarselevel)%u(icell_c_mg,1)
 #endif
@@ -871,7 +871,7 @@ subroutine interpolate_and_correct_coarse(ifinelevel)
          do i=1,nbatch
             icell_f_mg  = iskip_f_mg + istart+i-1
 #ifdef LIGHT_MPI_COMM
-            active_mg(cpu_amr(i),ifinelevel)%pcomm%u(1,icell_f_mg) = active_mg(cpu_amr(i),ifinelevel)%pcomm%u(1,icell_f_mg) + corr(i)
+            active_mg(cpu_amr(i),ifinelevel)%pcomm%u(icell_f_mg,1) = active_mg(cpu_amr(i),ifinelevel)%pcomm%u(icell_f_mg,1) + corr(i)
 #else
             active_mg(cpu_amr(i),ifinelevel)%u(icell_f_mg,1) = active_mg(cpu_amr(i),ifinelevel)%u(icell_f_mg,1) + corr(i)
 #endif
@@ -926,7 +926,7 @@ subroutine set_scan_flag_coarse(ilevel)
          icell_mg  = iskip_mg  + igrid_mg
 
 #ifdef LIGHT_MPI_COMM
-         if(active_mg(myid,ilevel)%pcomm%u(4,icell_mg)==1d0) then
+         if(active_mg(myid,ilevel)%pcomm%u(icell_mg,4)==1d0) then
 #else
          if(active_mg(myid,ilevel)%u(icell_mg,4)==1d0) then
 #endif
@@ -954,7 +954,7 @@ subroutine set_scan_flag_coarse(ilevel)
                         icell_nbor_mg  = igrid_nbor_mg  + &
                                  (jjj(idim,inbor,ind)-1)*active_mg(cpu_nbor_amr,ilevel)%ngrid
 #ifdef LIGHT_MPI_COMM
-                        if(active_mg(cpu_nbor_amr,ilevel)%pcomm%u(4,icell_nbor_mg)<=0.0) then
+                        if(active_mg(cpu_nbor_amr,ilevel)%pcomm%u(icell_nbor_mg,4)<=0.0) then
 #else
                         if(active_mg(cpu_nbor_amr,ilevel)%u(icell_nbor_mg,4)<=0.0) then
 #endif
