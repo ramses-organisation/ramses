@@ -43,7 +43,7 @@ subroutine init_poisson
      do i=1,ncpu
         active_mg   (i,ilevel)%ngrid=0
         active_mg   (i,ilevel)%npart=0
-        nullify(active_mg(i,ilevel)%pcomm)
+        allocate(active_mg(i,ilevel)%pcomm)
      enddo
      emission_mg (ilevel)%ngrids_tot=0
      emission_mg (ilevel)%nactive=0

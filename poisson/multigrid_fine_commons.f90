@@ -574,9 +574,6 @@ subroutine build_parent_comms_mg(active_f_comm_igrid, active_f_comm_ngrid, ifine
    active_mg(myid,icoarselevel)%ngrid=nact_tot
    if(nact_tot>0) then
 #ifdef LIGHT_MPI_COMM
-      if (.not. associated(active_mg(myid,icoarselevel)%pcomm)) then
-          allocate(active_mg(myid,icoarselevel)%pcomm)
-      end if
       allocate( active_mg(myid,icoarselevel)%pcomm%igrid(1:nact_tot) )
       allocate( active_mg(myid,icoarselevel)%pcomm%u(1:nact_tot*twotondim,1:4) )
       allocate( active_mg(myid,icoarselevel)%pcomm%f(1:twotondim,1:nact_tot) )
@@ -830,9 +827,6 @@ subroutine build_parent_comms_mg(active_f_comm_igrid, active_f_comm_ngrid, ifine
       active_mg(icpu,icoarselevel)%ngrid=ngrids
       if(ngrids>0) then
 #ifdef LIGHT_MPI_COMM
-        if (.not. associated(active_mg(icpu,icoarselevel)%pcomm)) then
-          allocate(active_mg(icpu,icoarselevel)%pcomm)
-        end if
         allocate(active_mg(icpu,icoarselevel)%pcomm%igrid(1:ngrids))
         allocate(active_mg(icpu,icoarselevel)%pcomm%u(1:ngrids*twotondim,1:4))
         allocate(active_mg(icpu,icoarselevel)%pcomm%f(1:twotondim,1:ngrids))
