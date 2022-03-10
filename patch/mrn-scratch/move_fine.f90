@@ -262,7 +262,8 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,xtondim)
   real(dp),dimension(1:nvector,1:ndim),save::vv
   real(dp),dimension(1:nvector,1:ndim),save::bb,uu
   real(dp),dimension(1:nvector,1:twotondim,1:ndim),save::big_vv,big_ww
-  real(dp),dimension(1:nvector),save:: nu_stop,mov,dgr,ddgr,ciso ! ERM: fluid density interpolated to grain pos. and stopping times
+  real(dp),dimension(1:nvector),save:: nu_stop,mov,dgr,ddgr,ciso
+  real(dp),dimension(1:nvector),save:: grain_sizes,grain_charges! ERM: fluid density interpolated to grain pos. and stopping times
   integer ,dimension(1:nvector,1:ndim),save::ig,id,igg,igd,icg,icd
   real(dp),dimension(1:nvector,1:twotondim),save::vol
   integer ,dimension(1:nvector,1:twotondim),save::igrid,icell,indp,kg
@@ -838,18 +839,19 @@ end do
   ! endif
 
 #if trajectories(1)>0
-      !Various fields interpolated to particle positions
-       do j=1,np
-           if( ANY(trajectories .eq. idp(ind_part(j))) )then
-              write(25+myid,*)t-dtnew(ilevel),idp(ind_part(j)),dgr(j),ddgr(j), & ! Old time
-                   & xp(ind_part(j),1),xp(ind_part(j),2),xp(ind_part(j),3),& ! Old particle position
-                   & vp(ind_part(j),1),vp(ind_part(j),2),vp(ind_part(j),3),& ! Old particle velocity
-                   &  uu(j,1),uu(j,2),uu(j,3),& ! Old fluid velocity
-                   &  bb(j,1),bb(j,2),bb(j,3)! Old magnetic field.
-                   ! & new_vp(j,1),new_vp(j,2),new_vp(j,3) ! NEW particle velocity (for comparison)
-           endif
-     end do
+        !Various fields interpolated to particle positions
+         do j=1,np
+             if( ANY(trajectories .eq. idp(ind_part(j))) )then
+                write(25+myid,*)t-dtnew(ilevel),idp(ind_part(j)),dgr(j),ddgr(j), & ! Old time
+                     & xp(ind_part(j),1),xp(ind_part(j),2),xp(ind_part(j),3),& ! Old particle position
+                     & vp(ind_part(j),1),vp(ind_part(j),2),vp(ind_part(j),3),& ! Old particle velocity
+                     &  uu(j,1),uu(j,2),uu(j,3),& ! Old fluid velocity
+                     &  bb(j,1),bb(j,2),bb(j,3)! Old magnetic field.
+                     ! & new_vp(j,1),new_vp(j,2),new_vp(j,3) ! NEW particle velocity (for comparison)
+             endif
+       end do
 #endif
+
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! ERM: Block here is only used for computing variable stopping times.
 
@@ -902,13 +904,26 @@ end do
   end do
 
   if(boris.and.hydro)then
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    ! GRAIN SIZES AND CHARGES
+    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+    if (ddex.ne.0.0)then
+      do j=1,np ! construct charges and grain sizes
+        grain_sizes(j)=grain_size*1.0d1**(ddex*idp(ind_part(j))*0.5d0**(3.*levelmin)/ndust)
+        grain_charges(j)=charge_to_mass*(grain_sizes(j)/grain_size)**charge_slope
+      end do
+    else
+      grain_sizes(1:np)=grain_size
+      grain_charges(1:np)=charge_to_mass
+    endif
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! STOPPING RATE
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! We compute this before the EM kick for the sole reason that we had to do
   ! that in init_dust_fine. For second order accuracy, things will be more
   ! complicated.
-  call StoppingRate(np,dtnew(ilevel),indp,vol,vv,nu_stop,ciso,dgr,xtondim)
+  call StoppingRate(np,dtnew(ilevel),indp,vol,vv,nu_stop,ciso,dgr,grain_sizes,xtondim)
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! LORENTZ KICK
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -925,7 +940,7 @@ end do
     ! We want to evolve each of the subclouds. Knowing the new w will
     ! allow us to compute the evolution of the sub-clouds with the drag too.
     vv(1:np,1:ndim)=new_vp(1:np,1:ndim)
-    call EMKick(np,dtnew(ilevel),indp,ctm,ok,vol,mov,vv,big_vv,big_ww,xtondim)
+    call EMKick(np,dtnew(ilevel),indp,grain_charges,ok,vol,mov,vv,big_vv,big_ww,xtondim)
     ! big_vv now contains changes to sub-cloud velocities. vv is still the old
     ! velocity. As well, unew's dust slot contains u**n+du**EM
     !write(*,*)'big_vv=',big_vv(1,1,1),big_vv(1,1,2),big_vv(1,1,3)
@@ -1055,7 +1070,7 @@ end subroutine move1
 !#########################################################################
 !#########################################################################
 !#########################################################################
-subroutine EMKick(nn,dt,indp,ctm,ok,vol,mov,v,big_v,big_w,xtondim)
+subroutine EMKick(nn,dt,indp,ctms,ok,vol,mov,v,big_v,big_w,xtondim)
   ! This subroutine will compute changes to sub-cloud velocity in big_v,
   ! as well as set unew's dust momentum slot to being u+du**EM.
   use amr_parameters
@@ -1064,10 +1079,9 @@ subroutine EMKick(nn,dt,indp,ctm,ok,vol,mov,v,big_v,big_w,xtondim)
   implicit none
   integer ::ivar_dust,xtondim ! cell-centered dust variables start.
   integer ::nn ! number of cells
-  real(dp) ::dt! timestep
-  real(dp) ::ctm ! charge-to-mass ratio
+  real(dp) ::dt,ctmav! timestep, average charge to mass ratio
   logical ,dimension(1:nvector)::ok
-  real(dp),dimension(1:nvector)::mov
+  real(dp),dimension(1:nvector)::mov,ctms !mass over volume, charge to mass ratios
   real(dp),dimension(1:nvector,1:xtondim)::vol
   integer ,dimension(1:nvector,1:xtondim)::indp
   real(dp),dimension(1:nvector,1:xtondim,1:ndim)::big_v,big_w
@@ -1083,6 +1097,7 @@ subroutine EMKick(nn,dt,indp,ctm,ok,vol,mov,v,big_v,big_w,xtondim)
         den_gas=uold(indp(i,ind),1)
         den_dust=uold(indp(i,ind),ivar_dust)
         mu=den_dust/max(den_gas,smallr)
+        ctmav=unew(indp(i,ind),ivar_dust+1)
         do idim=1,3
           B(idim)=0.5D0*(uold(indp(i,ind),idim+5)+uold(indp(i,ind),idim+nvar))
           w(idim)=uold(indp(i,ind),idim+ivar_dust)/max(uold(indp(i,ind),ivar_dust),smallr)&
@@ -1090,43 +1105,43 @@ subroutine EMKick(nn,dt,indp,ctm,ok,vol,mov,v,big_v,big_w,xtondim)
         end do
 
         big_w(i,ind,1)=-1.*& !velocity changes to drift
-        &(ctm*dt*(2.*B(2)**2*ctm*dt*(1.+mu)**2*w(1)+&
-        &B(2)*(-2.*B(1)*ctm*dt*(1.+mu)**2*w(2) + 4.*(1.+mu)*w(3)) +&
-        & B(3)*(2.*B(3)*ctm*dt*(1.+mu)**2*w(1)-4.*(1.+mu)*w(2) - 2*B(1)*ctm*dt*(1.+mu)**2*w(3))))/&
-        &((4.+(B(1)**2+B(2)**2+B(3)**2)*ctm**2*dt**2*(1.+mu)**2))
+        &(ctmav*dt*(2.*B(2)**2*ctmav*dt*(1.+mu)**2*w(1)+&
+        &B(2)*(-2.*B(1)*ctmav*dt*(1.+mu)**2*w(2) + 4.*(1.+mu)*w(3)) +&
+        & B(3)*(2.*B(3)*ctmav*dt*(1.+mu)**2*w(1)-4.*(1.+mu)*w(2) - 2*B(1)*ctmav*dt*(1.+mu)**2*w(3))))/&
+        &((4.+(B(1)**2+B(2)**2+B(3)**2)*ctmav**2*dt**2*(1.+mu)**2))
 
         big_w(i,ind,2)=-1.*& !velocity changes to drift
-        &(ctm*dt*(2.*B(3)**2*ctm*dt*(1.+mu)**2*w(2)+&
-        &B(3)*(-2.*B(2)*ctm*dt*(1.+mu)**2*w(3) + 4.*(1.+mu)*w(1)) +&
-        & B(1)*(2.*B(1)*ctm*dt*(1.+mu)**2*w(2)-4.*(1.+mu)*w(3) - 2*B(2)*ctm*dt*(1.+mu)**2*w(1))))/&
-        &((4.+(B(1)**2+B(2)**2+B(3)**2)*ctm**2*dt**2*(1.+mu)**2))
+        &(ctmav*dt*(2.*B(3)**2*ctmav*dt*(1.+mu)**2*w(2)+&
+        &B(3)*(-2.*B(2)*ctmav*dt*(1.+mu)**2*w(3) + 4.*(1.+mu)*w(1)) +&
+        & B(1)*(2.*B(1)*ctmav*dt*(1.+mu)**2*w(2)-4.*(1.+mu)*w(3) - 2*B(2)*ctmav*dt*(1.+mu)**2*w(1))))/&
+        &((4.+(B(1)**2+B(2)**2+B(3)**2)*ctmav**2*dt**2*(1.+mu)**2))
 
         big_w(i,ind,3)=-1.*& !velocity changes to drift
-        &(ctm*dt*(2.*B(1)**2*ctm*dt*(1.+mu)**2*w(3)+&
-        &B(1)*(-2.*B(3)*ctm*dt*(1.+mu)**2*w(1) + 4.*(1.+mu)*w(2)) +&
-        & B(2)*(2.*B(2)*ctm*dt*(1.+mu)**2*w(3)-4.*(1.+mu)*w(1) - 2*B(3)*ctm*dt*(1.+mu)**2*w(2))))/&
-        &((4.+(B(1)**2+B(2)**2+B(3)**2)*ctm**2*dt**2*(1.+mu)**2))
+        &(ctmav*dt*(2.*B(1)**2*ctmav*dt*(1.+mu)**2*w(3)+&
+        &B(1)*(-2.*B(3)*ctmav*dt*(1.+mu)**2*w(1) + 4.*(1.+mu)*w(2)) +&
+        & B(2)*(2.*B(2)*ctmav*dt*(1.+mu)**2*w(3)-4.*(1.+mu)*w(1) - 2*B(3)*ctmav*dt*(1.+mu)**2*w(2))))/&
+        &((4.+(B(1)**2+B(2)**2+B(3)**2)*ctmav**2*dt**2*(1.+mu)**2))
 
         do idim=1,ndim
           vtemp(idim) = v(i,idim)-uold(indp(i,ind),1+idim)/max(uold(indp(i,ind),1),smallr)&
-          &+0.5*mu*big_w(i,ind,idim)/(1.+mu)
-          big_w(i,ind,idim)=w(idim)+big_w(i,ind,idim)
+          &+0.5*mu*big_w(i,ind,idim)/(1.+mu) ! v^n - u^(n+1)
+          big_w(i,ind,idim)=w(idim)+big_w(i,ind,idim) !w^(n+1)
         end do
 
         big_v(i,ind,1)=v(i,1)+& ! subcloud velocity update
-        &(ctm*dt*(-2.*B(2)**2*ctm*dt*vtemp(1) + B(2)*(2.*B(1)*ctm*dt*vtemp(2) - 4.*vtemp(3)) +&
-        & B(3)*(-2.*B(3)*ctm*dt*vtemp(1) + 4.*vtemp(2) + 2.*B(1)*ctm*dt*vtemp(3))))/&
-        &(4. + (B(1)**2 + B(2)**2 + B(3)**2)*ctm**2*dt**2)
+        &(ctms(i)*dt*(-2.*B(2)**2*ctms(i)*dt*vtemp(1) + B(2)*(2.*B(1)*ctms(i)*dt*vtemp(2) - 4.*vtemp(3)) +&
+        & B(3)*(-2.*B(3)*ctms(i)*dt*vtemp(1) + 4.*vtemp(2) + 2.*B(1)*ctms(i)*dt*vtemp(3))))/&
+        &(4. + (B(1)**2 + B(2)**2 + B(3)**2)*ctms(i)**2*dt**2)
 
         big_v(i,ind,2)=v(i,2)+&
-        &(ctm*dt*(-2.*B(3)**2*ctm*dt*vtemp(2) + B(3)*(2.*B(2)*ctm*dt*vtemp(3) - 4.*vtemp(1)) +&
-        & B(1)*(-2.*B(1)*ctm*dt*vtemp(2) + 4.*vtemp(3) + 2.*B(2)*ctm*dt*vtemp(1))))/&
-        &(4. + (B(1)**2 + B(2)**2 + B(3)**2)*ctm**2*dt**2)
+        &(ctms(i)*dt*(-2.*B(3)**2*ctms(i)*dt*vtemp(2) + B(3)*(2.*B(2)*ctms(i)*dt*vtemp(3) - 4.*vtemp(1)) +&
+        & B(1)*(-2.*B(1)*ctms(i)*dt*vtemp(2) + 4.*vtemp(3) + 2.*B(2)*ctms(i)*dt*vtemp(1))))/&
+        &(4. + (B(1)**2 + B(2)**2 + B(3)**2)*ctms(i)**2*dt**2)
 
         big_v(i,ind,3)=v(i,3)+&
-        &(ctm*dt*(-2.*B(1)**2*ctm*dt*vtemp(3) + B(1)*(2.*B(3)*ctm*dt*vtemp(1) - 4.*vtemp(2)) +&
-        & B(2)*(-2.*B(2)*ctm*dt*vtemp(3) + 4.*vtemp(1) + 2.*B(3)*ctm*dt*vtemp(2))))/&
-        &(4. + (B(1)**2 + B(2)**2 + B(3)**2)*ctm**2*dt**2)
+        &(ctms(i)*dt*(-2.*B(1)**2*ctms(i)*dt*vtemp(3) + B(1)*(2.*B(3)*ctms(i)*dt*vtemp(1) - 4.*vtemp(2)) +&
+        & B(2)*(-2.*B(2)*ctms(i)*dt*vtemp(3) + 4.*vtemp(1) + 2.*B(3)*ctms(i)*dt*vtemp(2))))/&
+        &(4. + (B(1)**2 + B(2)**2 + B(3)**2)*ctms(i)**2*dt**2)
      end do
   end do
 end subroutine EMKick
@@ -1134,7 +1149,7 @@ end subroutine EMKick
 !#########################################################################
 !#########################################################################
 !#########################################################################
-subroutine StoppingRate(nn,dt,indp,vol,v,nu,c,dgr,xtondim)
+subroutine StoppingRate(nn,dt,indp,vol,v,nu,c,dgr,gs,xtondim)
   ! The following subroutine will alter its last argument, nu
   ! to be a half-step advanced. Because we are operator splitting,
   ! one must use the updated dust and gas velocities.
@@ -1151,18 +1166,18 @@ subroutine StoppingRate(nn,dt,indp,vol,v,nu,c,dgr,xtondim)
   real(dp),dimension(1:nvector) ::nu,c
   real(dp),dimension(1:nvector,1:xtondim)::vol
   integer ,dimension(1:nvector,1:xtondim)::indp
-  real(dp),dimension(1:nvector) ::dgr! gas density at grain.
+  real(dp),dimension(1:nvector) ::dgr,gs! gas density at grain, grain size array
   real(dp),dimension(1:nvector,1:ndim) ::v! grain velocity
   real(dp),dimension(1:nvector,1:xtondim,1:ndim)::big_v
   real(dp),dimension(1:nvector,1:ndim),save ::wh! drift at half step.
   integer ::i,j,idim,ind
   ivar_dust=9
-  rd = 0.62665706865775*grain_size !*sqrt(gamma) constant for epstein drag law.
+  rd = 0.62665706865775 !*sqrt(gamma) constant for epstein drag law.
 
   if ((constant_t_stop).and.(stopping_rate .lt. 0.0))then ! add a "constant_nu_stop" option so you can turn drag totally off.
-    nu(1:nvector)=1./t_stop ! Or better yet, add pre-processor directives to turn drag off.
+    nu(1:nvector)=(1./t_stop)*grain_size/gs(1:nvector) ! Or better yet, add pre-processor directives to turn drag off.
   else if ((constant_t_stop) .and. (stopping_rate .ge. 0.0))then
-    nu(1:nvector)=stopping_rate
+    nu(1:nvector)=stopping_rate*grain_size/gs(1:nvector)
   else
      !dgr(1:nn) = 0.0D0 ! I don't have to do this twice... It's done previously...
      !if(boris)then
@@ -1186,7 +1201,7 @@ subroutine StoppingRate(nn,dt,indp,vol,v,nu,c,dgr,xtondim)
         end do
      endif
      do i=1,nn
-       nu(i)=(dgr(i)*c(i)/rd)*sqrt(1.+&
+       nu(i)=(dgr(i)*c(i)/(rd*gs(i)))*sqrt(1.+&
        &0.22089323345553233*&
        &(wh(i,1)**2+wh(i,2)**2+wh(i,3)**2)&
        &/(c(i)*c(i)))
