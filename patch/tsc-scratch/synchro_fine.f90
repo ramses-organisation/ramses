@@ -856,14 +856,14 @@ subroutine init_dust_fine(ilevel)
 #endif
 
   ! Reset unew to zero for dust ``stopping time''
-  do ind=1,xtondim
+  do ind=1,twotondim
      iskip=ncoarse+(ind-1)*ngridmax
         do i=1,active(ilevel)%ngrid
            unew(active(ilevel)%igrid(i)+iskip,ivar_dust)=0.0D0
         end do
   end do
   do icpu=1,ncpu
-     do ind=1,xtondim
+     do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
            do i=1,reception(icpu,ilevel)%ngrid
               unew(reception(icpu,ilevel)%igrid(i)+iskip,ivar_dust)=0.0D0
@@ -873,7 +873,7 @@ subroutine init_dust_fine(ilevel)
 
   ! Reset uold to zero for dust mass and momentum densities
   do icpu=1,ncpu
-     do ind=1,xtondim
+     do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
         do ivar=ivar_dust,ivar_dust+3
            do i=1,reception(icpu,ilevel)%ngrid
@@ -882,7 +882,7 @@ subroutine init_dust_fine(ilevel)
         end do
      end do
   end do
-  do ind=1,xtondim
+  do ind=1,twotondim
      iskip=ncoarse+(ind-1)*ngridmax
      do ivar=ivar_dust,ivar_dust+3
         do i=1,active(ilevel)%ngrid
@@ -894,7 +894,7 @@ subroutine init_dust_fine(ilevel)
 !!!!!!!!!!!!!!!!!!!!!!! NEW !!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! Reset dust variables in physical boundaries
    do ibound=1,nboundary
-      do ind=1,xtondim
+      do ind=1,twotondim
          iskip=ncoarse+(ind-1)*ngridmax
          do ivar=ivar_dust,ivar_dust+ndim
             do i=1,boundary(ibound,ilevel)%ngrid
@@ -907,7 +907,7 @@ subroutine init_dust_fine(ilevel)
    end do
 
    do ibound=1,nboundary
-      do ind=1,xtondim
+      do ind=1,twotondim
          iskip=ncoarse+(ind-1)*ngridmax
          do ivar=ivar_dust,ivar_dust+ndim
             do i=1,boundary(ibound,ilevel)%ngrid
@@ -1019,7 +1019,7 @@ subroutine init_dust(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,xtondim)
 
   ctm = charge_to_mass
   ts = t_stop
-  rd = sqrt(gamma)*0.62665706865775*grain_size ! constant for epstein drag law
+  rd = 0.62665706865775*grain_size ! constant for epstein drag law. used to havesqrt(gamma)*
 
   ! Mesh spacing in that level
   dx=0.5D0**ilevel
@@ -1539,7 +1539,7 @@ subroutine init_dust(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,xtondim)
 
   ! I don't think we actually want to do this until after the Lorentz kick
   call InitStoppingRate(np,dtnew(ilevel),indp,vol,vv,nu_stop,xtondim)
-
+  ! Will have to deposit the grain charges eventually too
   do ind=1,xtondim
      do j=1,np ! deposit the dust mass weighted stopping time.
         if(ok(j))then
@@ -1651,7 +1651,7 @@ subroutine InitStoppingRate(nn,dt,indp,vol,v,nu,xtondim)
   integer ::ivar_dust ! cell-centered dust variables start.
   real(dp) ::dt ! timestep.
   real(dp)::rd,cs! ERM: Grain size parameter
-  real(dp),dimension(1:nvector) ::nu
+  real(dp),dimension(1:nvector) ::nu,c
   real(dp),dimension(1:nvector,1:xtondim)::vol
   integer ,dimension(1:nvector,1:xtondim)::indp
   real(dp),dimension(1:nvector),save ::dgr! gas density at grain.
@@ -1660,24 +1660,37 @@ subroutine InitStoppingRate(nn,dt,indp,vol,v,nu,xtondim)
   real(dp),dimension(1:nvector,1:ndim),save ::w! drift at half step.
   integer ::i,j,idim,ind
   ivar_dust=9
-  rd = sqrt(gamma)*0.62665706865775*grain_size !constant for epstein drag law.
-  cs=1.0 ! isothermal sound speed... Need to get this right. This works for now,
+  rd = 0.62665706865775*grain_size !constant for epstein drag law. #used to have *sqrt(gamma)
+   ! isothermal sound speed... Need to get this right. This works for now,
          ! but only if you have scaled things so that the sound speed is 1.
 
-  if (constant_t_stop)then
-    nu(1:nvector)=1./t_stop
-  else
+     if ((constant_t_stop).and.(stopping_rate .lt. 0.0))then ! add a "constant_nu_stop" option so you can turn drag totally off.
+       nu(1:nvector)=1./t_stop ! Or better yet, add pre-processor directives to turn drag off.
+     else if ((constant_t_stop) .and. (stopping_rate .ge. 0.0))then
+       nu(1:nvector)=stopping_rate
+     else
      dgr(1:nn) = 0.0D0
      if(boris)then
         do ind=1,xtondim
             do j=1,nn
                dgr(j)=dgr(j)+uold(indp(j,ind),1)*vol(j,ind)
+               c(j)=c(j)+vol(j,ind)*&
+               & sqrt((uold(indp(j,ind),5) - &
+               &0.125D0*(uold(indp(j,ind),1+5)+uold(indp(j,ind),1+nvar))*(uold(indp(j,ind),1+5)+uold(indp(j,ind),1+nvar)) &
+               &-0.125D0*(uold(indp(j,ind),2+5)+uold(indp(j,ind),2+nvar))*(uold(indp(j,ind),2+5)+uold(indp(j,ind),2+nvar)) &
+               &-0.125D0*(uold(indp(j,ind),3+5)+uold(indp(j,ind),3+nvar))*(uold(indp(j,ind),3+5)+uold(indp(j,ind),3+nvar)) &
+               &- 0.5D0*(&
+               & uold(indp(j,ind),1+1)*uold(indp(j,ind),1+1)+ &
+               & uold(indp(j,ind),2+1)*uold(indp(j,ind),2+1)+ &
+               & uold(indp(j,ind),3+1)*uold(indp(j,ind),3+1) &
+               &)/max(uold(indp(j,ind),1),smallr))&! Subtract from total energy agnetic and kinetic energies
+               &*(gamma-1.0D0)/max(uold(indp(j,ind),1),smallr))
            end do
         end do
      endif
 
      w(1:nn,1:ndim) = 0.0D0 ! Set to the drift velocity post-Lorentz force
-     if(boris)then
+     if(boris .and. supersonic_drag)then
         do ind=1,xtondim
           do idim=1,ndim
             do j=1,nn
@@ -1689,10 +1702,10 @@ subroutine InitStoppingRate(nn,dt,indp,vol,v,nu,xtondim)
         end do
      endif
      do i=1,nn
-       nu(i)=(dgr(i)*cs/rd)*sqrt(1.+&
+       nu(i)=(dgr(i)*c(i)/rd)*sqrt(1.+&
        &0.22089323345553233*&
        &(w(i,1)**2+w(i,2)**2+w(i,3)**2)&
-       &/(cs*cs))
+       &/(c(i)*c(i)))
      end do
   endif
 end subroutine InitStoppingRate
