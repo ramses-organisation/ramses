@@ -255,6 +255,7 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,xtondim)
   real(dp),dimension(1:nvector,1:ndim),save::x0
   integer ,dimension(1:nvector,1:threetondim),save::nbors_father_cells
   integer ,dimension(1:nvector,1:twotondim),save::nbors_father_grids
+  real(dp),dimension(1:nvector),save:: grain_sizes,grain_charges! ERM: fluid density interpolated to grain pos. and stopping times
   ! Particle-based arrays
 #ifndef TSC
   logical ,dimension(1:nvector),save::ok
@@ -263,7 +264,6 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,xtondim)
   real(dp),dimension(1:nvector,1:ndim),save::bb,uu
   real(dp),dimension(1:nvector,1:twotondim,1:ndim),save::big_vv,big_ww
   real(dp),dimension(1:nvector),save:: nu_stop,mov,dgr,ddgr,ciso
-  real(dp),dimension(1:nvector),save:: grain_sizes,grain_charges! ERM: fluid density interpolated to grain pos. and stopping times
   integer ,dimension(1:nvector,1:ndim),save::ig,id,igg,igd,icg,icd
   real(dp),dimension(1:nvector,1:twotondim),save::vol
   integer ,dimension(1:nvector,1:twotondim),save::igrid,icell,indp,kg
