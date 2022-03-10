@@ -838,7 +838,7 @@ end do
   !    end do
   ! endif
 
-#if trajectories(1)>0
+ if (trajectories(1)>0)then
         !Various fields interpolated to particle positions
          do j=1,np
              if( ANY(trajectories .eq. idp(ind_part(j))) )then
@@ -850,7 +850,7 @@ end do
                      ! & new_vp(j,1),new_vp(j,2),new_vp(j,3) ! NEW particle velocity (for comparison)
              endif
        end do
-#endif
+ endif
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! ERM: Block here is only used for computing variable stopping times.
