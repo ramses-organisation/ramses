@@ -114,7 +114,11 @@ subroutine authorize_fine(ilevel)
         ! Gather nvector grids
         ngrid=MIN(nvector,ncache-igrid+1)
         do i=1,ngrid
+#ifdef LIGHT_MPI_COMM
+           ind_grid(i)=reception(icpu,ilevel)%pcomm%igrid(igrid+i-1)
+#else
            ind_grid(i)=reception(icpu,ilevel)%igrid(igrid+i-1)
+#endif
         end do
         ! Loop over cells
         do ind=1,twotondim
@@ -230,7 +234,11 @@ subroutine authorize_fine(ilevel)
         do igrid=1,ncache,nvector
            ngrid=MIN(nvector,ncache-igrid+1)
            do i=1,ngrid
+#ifdef LIGHT_MPI_COMM
+              ind_grid(i)=reception(icpu,ilevel)%pcomm%igrid(igrid+i-1)
+#else
               ind_grid(i)=reception(icpu,ilevel)%igrid(igrid+i-1)
+#endif
            end do
            do ind=1,twotondim
               iskip=ncoarse+(ind-1)*ngridmax
@@ -250,7 +258,11 @@ subroutine authorize_fine(ilevel)
         do igrid=1,ncache,nvector
            ngrid=MIN(nvector,ncache-igrid+1)
            do i=1,ngrid
+#ifdef LIGHT_MPI_COMM
+              ind_grid(i)=reception(icpu,ilevel)%pcomm%igrid(igrid+i-1)
+#else
               ind_grid(i)=reception(icpu,ilevel)%igrid(igrid+i-1)
+#endif
            end do
            call getnborgrids(ind_grid,igridn,ngrid)
            do ind=1,twotondim
@@ -265,7 +277,11 @@ subroutine authorize_fine(ilevel)
         do igrid=1,ncache,nvector
            ngrid=MIN(nvector,ncache-igrid+1)
            do i=1,ngrid
+#ifdef LIGHT_MPI_COMM
+              ind_grid(i)=reception(icpu,ilevel)%pcomm%igrid(igrid+i-1)
+#else
               ind_grid(i)=reception(icpu,ilevel)%igrid(igrid+i-1)
+#endif
            end do
            do ind=1,twotondim
               iskip=ncoarse+(ind-1)*ngridmax
@@ -368,41 +384,96 @@ subroutine make_virtual_fine_dp(xx,ilevel)
   ! at level ilevel for any double precision array in the AMR grid.
   ! -------------------------------------------------------------------
 #ifndef WITHOUTMPI
+
   integer::icpu,i,j,ncache,iskip,step
+#ifdef LIGHT_MPI_COMM
+  integer::ind,idx,offset
+#endif
   integer::countsend,countrecv
   integer::info,tag=101
-  integer,dimension(ncpu)::reqsend,reqrecv
+#ifdef LIGHT_MPI_COMM
+  integer,dimension(ncpu)::reqrecv
+  integer,allocatable,dimension(:)::reqsend
+#else
+   integer,dimension(ncpu)::reqsend,reqrecv
+#endif
+
 #endif
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
 
 #ifndef WITHOUTMPI
+
+#ifdef LIGHT_MPI_COMM
+  allocate(reqsend(emission(ilevel)%nactive))
+
+  ! Allocate temporary communication buffers
+  do icpu=1,ncpu
+     ncache=reception(icpu,ilevel)%ngrid
+     if(ncache>0) then
+        if (.not. associated(reception(icpu,ilevel)%pcomm)) then
+           allocate(reception(icpu,ilevel)%pcomm)
+        end if
+        allocate(reception(icpu,ilevel)%pcomm%u(1:ncache*twotondim, 1:1))
+     end if
+  end do
+  allocate(emission(ilevel)%u(1:emission(ilevel)%ngrids_tot*twotondim, 1:1))
+#endif
+
   ! Receive all messages
   countrecv=0
   do icpu=1,ncpu
      ncache=reception(icpu,ilevel)%ngrid
      if(ncache>0) then
        countrecv=countrecv+1
+#ifdef LIGHT_MPI_COMM
+       call MPI_IRECV(reception(icpu,ilevel)%pcomm%u,ncache*twotondim, &
+            & MPI_DOUBLE_PRECISION,icpu-1,tag,MPI_COMM_WORLD,reqrecv(countrecv),info)
+#else
        call MPI_IRECV(reception(icpu,ilevel)%u,ncache*twotondim, &
             & MPI_DOUBLE_PRECISION,icpu-1,tag,MPI_COMM_WORLD,reqrecv(countrecv),info)
+#endif
      end if
   end do
 
   ! Gather emission array
-  do icpu=1,ncpu
-    if (emission(icpu,ilevel)%ngrid>0) then
-      do j=1,twotondim
-        step=(j-1)*emission(icpu,ilevel)%ngrid
-        iskip=ncoarse+(j-1)*ngridmax
-        do i=1,emission(icpu,ilevel)%ngrid
-          emission(icpu,ilevel)%u(i+step,1)=xx(emission(icpu,ilevel)%igrid(i)+iskip)
-        end do
+#ifdef LIGHT_MPI_COMM
+  offset=0
+  do idx=1,emission(ilevel)%nactive
+    do j=1,twotondim
+      step=(j-1)*emission(ilevel)%ngrids(idx)
+      iskip=ncoarse+(j-1)*ngridmax
+      do i=1,emission(ilevel)%ngrids(idx)
+        emission(ilevel)%u(offset*twotondim+i+step,1)=xx(emission(ilevel)%igrid(offset+i)+iskip)
       end do
-    end if
+    end do
+    offset=offset+emission(ilevel)%ngrids(idx)
   end do
+#else
+  do icpu=1,ncpu
+     if (emission(icpu,ilevel)%ngrid>0) then
+       do j=1,twotondim
+         step=(j-1)*emission(icpu,ilevel)%ngrid
+         iskip=ncoarse+(j-1)*ngridmax
+         do i=1,emission(icpu,ilevel)%ngrid
+           emission(icpu,ilevel)%u(i+step,1)=xx(emission(icpu,ilevel)%igrid(i)+iskip)
+         end do
+       end do
+     end if
+  end do  
+#endif
 
   ! Send all messages
+#ifdef LIGHT_MPI_COMM
+  offset=1
+  do idx=1,emission(ilevel)%nactive
+    ncache=emission(ilevel)%ngrids(idx)*twotondim
+    call MPI_ISEND(emission(ilevel)%u(offset,1),ncache,MPI_DOUBLE_PRECISION,&
+                   emission(ilevel)%cpuid(idx)-1,tag,MPI_COMM_WORLD,reqsend(idx),info)
+    offset=offset+ncache
+  end do
+#else
   countsend=0
   do icpu=1,ncpu
      ncache=emission(icpu,ilevel)%ngrid
@@ -412,6 +483,7 @@ subroutine make_virtual_fine_dp(xx,ilevel)
             & MPI_DOUBLE_PRECISION,icpu-1,tag,MPI_COMM_WORLD,reqsend(countsend),info)
      end if
   end do
+#endif
 
   ! Wait for full completion of receives
   call MPI_WAITALL(countrecv,reqrecv,statuses,info)
@@ -423,14 +495,32 @@ subroutine make_virtual_fine_dp(xx,ilevel)
         step=(j-1)*reception(icpu,ilevel)%ngrid
         iskip=ncoarse+(j-1)*ngridmax
         do i=1,reception(icpu,ilevel)%ngrid
-          xx(reception(icpu,ilevel)%igrid(i)+iskip)=reception(icpu,ilevel)%u(i+step,1)
+#ifdef LIGHT_MPI_COMM
+          xx(reception(icpu,ilevel)%pcomm%igrid(i)+iskip)=reception(icpu,ilevel)%pcomm%u(i+step,1)
+#else
+         xx(reception(icpu,ilevel)%igrid(i)+iskip)=reception(icpu,ilevel)%u(i+step,1)
+#endif
         end do
       end do
     end if
   end do
 
   ! Wait for full completion of sends
-  call MPI_WAITALL(countsend,reqsend,statuses,info)
+#ifdef LIGHT_MPI_COMM  
+  call MPI_WAITALL(emission(ilevel)%nactive,reqsend,statuses,info)
+
+  ! Deallocate temporary communication buffers
+  do icpu=1,ncpu
+     ncache=reception(icpu,ilevel)%ngrid
+     if(ncache>0)deallocate(reception(icpu,ilevel)%pcomm%u)
+  end do
+  deallocate(emission(ilevel)%u)
+
+  deallocate(reqsend)
+#else
+  call MPI_WAITALL(countsend,reqsend,statuses,info) 
+#endif
+
 #endif
 
 111 format('   Entering make_virtual_fine for level ',I2)
@@ -454,41 +544,96 @@ subroutine make_virtual_fine_int(xx,ilevel)
   ! at level ilevel for any integer array in the AMR grid.
   ! -------------------------------------------------------------------
 #ifndef WITHOUTMPI
+
   integer::icpu,i,j,ncache,iskip,step
+#ifdef LIGHT_MPI_COMM
+  integer::ind,idx,offset
+#endif
   integer::countsend,countrecv
   integer::info,tag=101
+#ifdef LIGHT_MPI_COMM
+  integer,dimension(ncpu)::reqrecv
+  integer,allocatable,dimension(:)::reqsend
+#else
   integer,dimension(ncpu)::reqsend,reqrecv
+#endif
+
 #endif
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
 
 #ifndef WITHOUTMPI
+
+#ifdef LIGHT_MPI_COMM
+  allocate(reqsend(emission(ilevel)%nactive))
+
+  ! Allocate temporary communication buffers
+  do icpu=1,ncpu
+     ncache=reception(icpu,ilevel)%ngrid
+     if(ncache>0) then
+        if (.not. associated(reception(icpu,ilevel)%pcomm)) then
+           allocate(reception(icpu,ilevel)%pcomm)
+        end if
+        allocate(reception(icpu,ilevel)%pcomm%f(1:ncache*twotondim,1:1))
+     end if
+  end do
+  allocate(emission(ilevel)%f(1:emission(ilevel)%ngrids_tot*twotondim, 1:1))
+#endif
+
   ! Receive all messages
   countrecv=0
   do icpu=1,ncpu
      ncache=reception(icpu,ilevel)%ngrid
      if(ncache>0) then
        countrecv=countrecv+1
+#ifdef LIGHT_MPI_COMM
+       call MPI_IRECV(reception(icpu,ilevel)%pcomm%f,ncache*twotondim, &
+            & MPI_INTEGER,icpu-1,tag,MPI_COMM_WORLD,reqrecv(countrecv),info)
+#else
        call MPI_IRECV(reception(icpu,ilevel)%f,ncache*twotondim, &
             & MPI_INTEGER,icpu-1,tag,MPI_COMM_WORLD,reqrecv(countrecv),info)
+#endif
      end if
   end do
 
   ! Gather emission array
-  do icpu=1,ncpu
-    if (emission(icpu,ilevel)%ngrid>0) then
-      do j=1,twotondim
-        step=(j-1)*emission(icpu,ilevel)%ngrid
-        iskip=ncoarse+(j-1)*ngridmax
-        do i=1,emission(icpu,ilevel)%ngrid
-          emission(icpu,ilevel)%f(i+step,1)=xx(emission(icpu,ilevel)%igrid(i)+iskip)
-        end do
+#ifdef LIGHT_MPI_COMM
+  offset=0
+  do idx=1,emission(ilevel)%nactive
+    do j=1,twotondim
+      step=(j-1)*emission(ilevel)%ngrids(idx)
+      iskip=ncoarse+(j-1)*ngridmax
+      do i=1,emission(ilevel)%ngrids(idx)
+        emission(ilevel)%f(offset*twotondim+i+step,1)=xx(emission(ilevel)%igrid(offset+i)+iskip)
       end do
-    end if
+    end do
+    offset=offset+emission(ilevel)%ngrids(idx)
   end do
+#else
+  do icpu=1,ncpu
+     if (emission(icpu,ilevel)%ngrid>0) then
+       do j=1,twotondim
+         step=(j-1)*emission(icpu,ilevel)%ngrid
+         iskip=ncoarse+(j-1)*ngridmax
+         do i=1,emission(icpu,ilevel)%ngrid
+           emission(icpu,ilevel)%f(i+step,1)=xx(emission(icpu,ilevel)%igrid(i)+iskip)
+         end do
+       end do
+     end if
+  end do
+#endif
 
   ! Send all messages
+#ifdef LIGHT_MPI_COMM
+  offset=1
+  do idx=1,emission(ilevel)%nactive
+    ncache=emission(ilevel)%ngrids(idx)*twotondim
+    call MPI_ISEND(emission(ilevel)%f(offset,1),ncache,MPI_INTEGER,&
+                   emission(ilevel)%cpuid(idx)-1,tag,MPI_COMM_WORLD,reqsend(idx),info)
+    offset=offset+ncache
+  end do
+#else
   countsend=0
   do icpu=1,ncpu
      ncache=emission(icpu,ilevel)%ngrid
@@ -498,6 +643,7 @@ subroutine make_virtual_fine_int(xx,ilevel)
             & MPI_INTEGER,icpu-1,tag,MPI_COMM_WORLD,reqsend(countsend),info)
      end if
   end do
+#endif
 
   ! Wait for full completion of receives
   call MPI_WAITALL(countrecv,reqrecv,statuses,info)
@@ -509,14 +655,32 @@ subroutine make_virtual_fine_int(xx,ilevel)
         step=(j-1)*reception(icpu,ilevel)%ngrid
         iskip=ncoarse+(j-1)*ngridmax
         do i=1,reception(icpu,ilevel)%ngrid
+#ifdef LIGHT_MPI_COMM
+          xx(reception(icpu,ilevel)%pcomm%igrid(i)+iskip)=reception(icpu,ilevel)%pcomm%f(i+step,1)
+#else
           xx(reception(icpu,ilevel)%igrid(i)+iskip)=reception(icpu,ilevel)%f(i+step,1)
+#endif
         end do
       end do
     end if
   end do
 
   ! Wait for full completion of sends
+#ifdef LIGHT_MPI_COMM
+  call MPI_WAITALL(emission(ilevel)%nactive,reqsend,statuses,info)
+
+  ! Deallocate temporary communication buffers
+  do icpu=1,ncpu
+     ncache=reception(icpu,ilevel)%ngrid
+     if(ncache>0)deallocate(reception(icpu,ilevel)%pcomm%f)
+  end do
+  deallocate(emission(ilevel)%f)
+
+  deallocate(reqsend)
+#else
   call MPI_WAITALL(countsend,reqsend,statuses,info)
+#endif
+
 #endif
 
 111 format('   Entering make_virtual_fine for level ',I2)
@@ -538,9 +702,17 @@ subroutine make_virtual_reverse_dp(xx,ilevel)
   ! -------------------------------------------------------------------
 #ifndef WITHOUTMPI
   integer::icpu,i,j,ncache,iskip,step,icell,ibuf
+#ifdef LIGHT_MPI_COMM
+  integer::ind,idx,offset
+#endif
   integer::countsend,countrecv
   integer::info,tag=101
+#ifdef LIGHT_MPI_COMM
+  integer,dimension(ncpu)::reqsend
+  integer,allocatable,dimension(:)::reqrecv
+#else
   integer,dimension(ncpu)::reqsend,reqrecv
+#endif
   integer,dimension(MPI_STATUS_SIZE,ncpu)::statuses
   integer::switchlevel=3
 #endif
@@ -549,24 +721,58 @@ subroutine make_virtual_reverse_dp(xx,ilevel)
   if(verbose)write(*,111)ilevel
 
 #ifndef WITHOUTMPI
+
+#ifdef LIGHT_MPI_COMM
+  ! Allocate temporary communication buffers
+  do icpu=1,ncpu
+     ncache=reception(icpu,ilevel)%ngrid
+     if(ncache>0) then
+        if (.not. associated(reception(icpu,ilevel)%pcomm)) then
+           allocate(reception(icpu,ilevel)%pcomm)
+        end if
+        allocate(reception(icpu,ilevel)%pcomm%u(1:ncache*twotondim, 1:1))
+     end if
+  end do
+  allocate(emission(ilevel)%u(1:emission(ilevel)%ngrids_tot*twotondim, 1:1))
+#endif
+  
   if(ilevel.LE.switchlevel)then
 
  ! Gather emission array
   do icpu=1,ncpu
-     if (reception(icpu,ilevel)%ngrid>0) then
-        do j=1,twotondim
-           step=(j-1)*reception(icpu,ilevel)%ngrid
-           iskip=ncoarse+(j-1)*ngridmax
-           do i=1,reception(icpu,ilevel)%ngrid
-              icell=reception(icpu,ilevel)%igrid(i)+iskip
-              ibuf=i+step
-              reception(icpu,ilevel)%u(ibuf,1)=xx(icell)
-           end do
+    if (reception(icpu,ilevel)%ngrid>0) then
+      do j=1,twotondim
+        step=(j-1)*reception(icpu,ilevel)%ngrid
+        iskip=ncoarse+(j-1)*ngridmax
+        do i=1,reception(icpu,ilevel)%ngrid
+           ibuf=i+step
+#ifdef LIGHT_MPI_COMM
+           icell=reception(icpu,ilevel)%pcomm%igrid(i)+iskip
+           reception(icpu,ilevel)%pcomm%u(ibuf,1)=xx(icell)
+#else
+           icell=reception(icpu,ilevel)%igrid(i)+iskip
+           reception(icpu,ilevel)%u(ibuf,1)=xx(icell)
+#endif
         end do
-     end if
+      end do
+   end if
   end do
 
   ! Receive all messages
+#ifdef LIGHT_MPI_COMM
+  countrecv=0
+  offset=1
+  do idx=1,emission(ilevel)%nactive
+     if (emission(ilevel)%cpuid(idx) > myid) exit
+     ncache=emission(ilevel)%ngrids(idx)*twotondim
+     countrecv=countrecv+1
+     ! request to send
+     call MPI_SEND(countrecv,0, MPI_INTEGER, emission(ilevel)%cpuid(idx)-1,101,MPI_COMM_WORLD,info)
+     call MPI_RECV(emission(ilevel)%u(offset,1),ncache,MPI_DOUBLE_PRECISION,&
+          & emission(ilevel)%cpuid(idx)-1,tag,MPI_COMM_WORLD,MPI_STATUS_IGNORE,info)
+     offset=offset+ncache
+  end do
+#else
   countrecv=0
   do icpu=1,myid-1
      ncache=emission(icpu,ilevel)%ngrid
@@ -578,6 +784,7 @@ subroutine make_virtual_reverse_dp(xx,ilevel)
              & MPI_DOUBLE_PRECISION,icpu-1,tag,MPI_COMM_WORLD,MPI_STATUS_IGNORE,info)
      end if
   end do
+#endif
 
   ! Send all messages
   countsend=0
@@ -588,12 +795,32 @@ subroutine make_virtual_reverse_dp(xx,ilevel)
         ! wait for request to send
         call MPI_RECV(countrecv,0, MPI_INTEGER, icpu-1,101,MPI_COMM_WORLD, &
              & MPI_STATUS_IGNORE, info)
+#ifdef LIGHT_MPI_COMM
+        call MPI_SEND(reception(icpu,ilevel)%pcomm%u,ncache*twotondim, &
+             & MPI_DOUBLE_PRECISION,icpu-1,tag,MPI_COMM_WORLD,info)
+#else
         call MPI_SEND(reception(icpu,ilevel)%u,ncache*twotondim, &
              & MPI_DOUBLE_PRECISION,icpu-1,tag,MPI_COMM_WORLD,info)
+#endif
      end if
   end do
 
   ! Receive all messages
+#ifdef LIGHT_MPI_COMM
+  countrecv=0
+  offset=1
+  do idx=1,emission(ilevel)%nactive
+     ncache=emission(ilevel)%ngrids(idx)*twotondim 
+     if (emission(ilevel)%cpuid(idx) > myid) then
+         countrecv=countrecv+1
+         ! request to send
+         call MPI_SEND(countrecv,0, MPI_INTEGER, emission(ilevel)%cpuid(idx)-1,101,MPI_COMM_WORLD,info)
+         call MPI_RECV(emission(ilevel)%u(offset,1),ncache,MPI_DOUBLE_PRECISION,&
+                       & emission(ilevel)%cpuid(idx)-1,tag,MPI_COMM_WORLD,MPI_STATUS_IGNORE,info)
+     end if
+     offset=offset+ncache
+  end do
+#else
   countrecv=0
   do icpu=myid+1,ncpu
      ncache=emission(icpu,ilevel)%ngrid
@@ -605,8 +832,23 @@ subroutine make_virtual_reverse_dp(xx,ilevel)
              & MPI_DOUBLE_PRECISION,icpu-1,tag,MPI_COMM_WORLD,MPI_STATUS_IGNORE,info)
      end if
   end do
+#endif
 
   ! Scatter reception array
+#ifdef LIGHT_MPI_COMM
+  offset=0
+  do idx=1,emission(ilevel)%nactive
+    do j=1,twotondim
+      step=(j-1)*emission(ilevel)%ngrids(idx)
+      iskip=ncoarse+(j-1)*ngridmax
+      do i=1,emission(ilevel)%ngrids(idx)
+        xx(emission(ilevel)%igrid(offset+i)+iskip)= xx(emission(ilevel)%igrid(offset+i)+iskip) &
+                                                    & + emission(ilevel)%u(offset*twotondim+i+step,1)
+      end do
+    end do
+    offset=offset+emission(ilevel)%ngrids(idx)
+  end do
+#else
   do icpu=1,ncpu
      if (emission(icpu,ilevel)%ngrid>0) then
         do j=1,twotondim
@@ -619,9 +861,22 @@ subroutine make_virtual_reverse_dp(xx,ilevel)
         end do
      end if
   end do
+#endif
 
   else
 
+#ifdef LIGHT_MPI_COMM
+  allocate(reqrecv(emission(ilevel)%nactive))
+
+  ! Receive all messages
+  offset=1
+  do idx=1,emission(ilevel)%nactive
+    ncache=emission(ilevel)%ngrids(idx)*twotondim
+    call MPI_IRECV(emission(ilevel)%u(offset,1),ncache,MPI_DOUBLE_PRECISION,&
+                   emission(ilevel)%cpuid(idx)-1,tag,MPI_COMM_WORLD,reqrecv(idx),info)
+    offset=offset+ncache
+  end do
+#else
   ! Receive all messages
   countrecv=0
   do icpu=1,ncpu
@@ -632,18 +887,23 @@ subroutine make_virtual_reverse_dp(xx,ilevel)
              & MPI_DOUBLE_PRECISION,icpu-1,tag,MPI_COMM_WORLD,reqrecv(countrecv),info)
      end if
   end do
+#endif
 
   ! Gather emission array
   do icpu=1,ncpu
-     if (reception(icpu,ilevel)%ngrid>0) then
-        do j=1,twotondim
-           step=(j-1)*reception(icpu,ilevel)%ngrid
-           iskip=ncoarse+(j-1)*ngridmax
-           do i=1,reception(icpu,ilevel)%ngrid
-              reception(icpu,ilevel)%u(i+step,1)=xx(reception(icpu,ilevel)%igrid(i)+iskip)
-           end do
+    if (reception(icpu,ilevel)%ngrid>0) then
+      do j=1,twotondim
+        step=(j-1)*reception(icpu,ilevel)%ngrid
+        iskip=ncoarse+(j-1)*ngridmax
+        do i=1,reception(icpu,ilevel)%ngrid
+#ifdef LIGHT_MPI_COMM
+          reception(icpu,ilevel)%pcomm%u(i+step,1)=xx(reception(icpu,ilevel)%pcomm%igrid(i)+iskip)
+#else
+          reception(icpu,ilevel)%u(i+step,1)=xx(reception(icpu,ilevel)%igrid(i)+iskip)
+#endif
         end do
-     end if
+      end do
+   end if
   end do
 
   ! Send all messages
@@ -652,32 +912,69 @@ subroutine make_virtual_reverse_dp(xx,ilevel)
      ncache=reception(icpu,ilevel)%ngrid
      if(ncache>0) then
        countsend=countsend+1
+#ifdef LIGHT_MPI_COMM
+        call MPI_ISEND(reception(icpu,ilevel)%pcomm%u,ncache*twotondim, &
+             & MPI_DOUBLE_PRECISION,icpu-1,tag,MPI_COMM_WORLD,reqsend(countsend),info)
+#else
         call MPI_ISEND(reception(icpu,ilevel)%u,ncache*twotondim, &
              & MPI_DOUBLE_PRECISION,icpu-1,tag,MPI_COMM_WORLD,reqsend(countsend),info)
+#endif
      end if
   end do
 
   ! Wait for full completion of receives
+#ifdef LIGHT_MPI_COMM
+  call MPI_WAITALL(emission(ilevel)%nactive,reqrecv,statuses,info)
+#else
   call MPI_WAITALL(countrecv,reqrecv,statuses,info)
+#endif
 
   ! Scatter reception array
-  do icpu=1,ncpu
-    if (emission(icpu,ilevel)%ngrid>0) then
-      do j=1,twotondim
-        step=(j-1)*emission(icpu,ilevel)%ngrid
-        iskip=ncoarse+(j-1)*ngridmax
-        do i=1,emission(icpu,ilevel)%ngrid
-           xx(emission(icpu,ilevel)%igrid(i)+iskip)= &
-                & xx(emission(icpu,ilevel)%igrid(i)+iskip) + emission(icpu,ilevel)%u(i+step,1)
-        end do
+#ifdef LIGHT_MPI_COMM
+  offset=0
+  do idx=1,emission(ilevel)%nactive
+    do j=1,twotondim
+      step=(j-1)*emission(ilevel)%ngrids(idx)
+      iskip=ncoarse+(j-1)*ngridmax
+      do i=1,emission(ilevel)%ngrids(idx)
+        xx(emission(ilevel)%igrid(offset+i)+iskip)= xx(emission(ilevel)%igrid(offset+i)+iskip) &
+                                                    +emission(ilevel)%u(offset*twotondim+i+step,1)
       end do
-    end if
+    end do
+    offset=offset+emission(ilevel)%ngrids(idx)
   end do
+#else
+  do icpu=1,ncpu
+     if (emission(icpu,ilevel)%ngrid>0) then
+       do j=1,twotondim
+         step=(j-1)*emission(icpu,ilevel)%ngrid
+         iskip=ncoarse+(j-1)*ngridmax
+         do i=1,emission(icpu,ilevel)%ngrid
+            xx(emission(icpu,ilevel)%igrid(i)+iskip)= &
+               & xx(emission(icpu,ilevel)%igrid(i)+iskip) + emission(icpu,ilevel)%u(i+step,1)
+         end do
+       end do
+     end if
+   end do
+#endif
 
   ! Wait for full completion of sends
   call MPI_WAITALL(countsend,reqsend,statuses,info)
 
+#ifdef LIGHT_MPI_COMM
+  deallocate(reqrecv)
+#endif
+
   endif
+
+#ifdef LIGHT_MPI_COMM
+  ! Deallocate temporary communication buffers
+  do icpu=1,ncpu
+     ncache=reception(icpu,ilevel)%ngrid
+     if(ncache>0)deallocate(reception(icpu,ilevel)%pcomm%u)
+  end do
+  deallocate(emission(ilevel)%u)
+#endif
 
 #endif
 
@@ -699,18 +996,42 @@ subroutine make_virtual_reverse_int(xx,ilevel)
   ! at level ilevel in a reverse way for integer arrays.
   ! -------------------------------------------------------------------
 #ifndef WITHOUTMPI
+
   integer::icpu,i,j,ncache,iskip,step,icell,ibuf
+#ifdef LIGHT_MPI_COMM
+  integer::ind,idx,offset
+#endif
   integer::countsend,countrecv
   integer::info,tag=101
-  integer,dimension(ncpu)::reqsend,reqrecv
+#ifdef LIGHT_MPI_COMM
+  integer,dimension(ncpu)::reqsend
+  integer,allocatable,dimension(:)::reqrecv
+#else
+   integer,dimension(ncpu)::reqsend,reqrecv
+#endif
   integer,dimension(MPI_STATUS_SIZE,ncpu)::statuses
   integer::switchlevel=3
+
 #endif
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
 
 #ifndef WITHOUTMPI
+
+#ifdef LIGHT_MPI_COMM
+  ! Allocate temporary communication buffers
+  do icpu=1,ncpu
+     ncache=reception(icpu,ilevel)%ngrid
+     if(ncache>0) then
+        if (.not. associated(reception(icpu,ilevel)%pcomm)) then
+           allocate(reception(icpu,ilevel)%pcomm)
+        end if
+        allocate(reception(icpu,ilevel)%pcomm%f(1:ncache*twotondim, 1:1))
+     end if
+  end do
+  allocate(emission(ilevel)%f(1:emission(ilevel)%ngrids_tot*twotondim, 1:1))
+#endif
 
   if(ilevel.le.switchlevel) then
 
@@ -721,15 +1042,34 @@ subroutine make_virtual_reverse_int(xx,ilevel)
            step=(j-1)*reception(icpu,ilevel)%ngrid
            iskip=ncoarse+(j-1)*ngridmax
            do i=1,reception(icpu,ilevel)%ngrid
-              icell=reception(icpu,ilevel)%igrid(i)+iskip
               ibuf=i+step
+#ifdef LIGHT_MPI_COMM
+              icell=reception(icpu,ilevel)%pcomm%igrid(i)+iskip
+              reception(icpu,ilevel)%pcomm%f(ibuf,1)=xx(icell)
+#else
+              icell=reception(icpu,ilevel)%igrid(i)+iskip
               reception(icpu,ilevel)%f(ibuf,1)=xx(icell)
+#endif
            end do
         end do
      end if
   end do
 
   ! Receive all messages
+#ifdef LIGHT_MPI_COMM
+  countrecv=0
+  offset=1
+  do idx=1,emission(ilevel)%nactive
+     if (emission(ilevel)%cpuid(idx) > myid) exit
+     ncache=emission(ilevel)%ngrids(idx)*twotondim
+     countrecv=countrecv+1
+     ! request to send
+     call MPI_SEND(countrecv,0, MPI_INTEGER, emission(ilevel)%cpuid(idx)-1,101,MPI_COMM_WORLD,info)
+     call MPI_RECV(emission(ilevel)%f(offset,1),ncache, MPI_INTEGER, &
+          & emission(ilevel)%cpuid(idx)-1,tag,MPI_COMM_WORLD,MPI_STATUS_IGNORE,info)
+     offset=offset+ncache
+  end do
+#else
   countrecv=0
   do icpu=1,myid-1
      ncache=emission(icpu,ilevel)%ngrid
@@ -741,6 +1081,7 @@ subroutine make_virtual_reverse_int(xx,ilevel)
              & MPI_INTEGER,icpu-1,tag,MPI_COMM_WORLD,MPI_STATUS_IGNORE,info)
      end if
   end do
+#endif
 
   ! Send all messages
   countsend=0
@@ -751,12 +1092,32 @@ subroutine make_virtual_reverse_int(xx,ilevel)
         ! wait for request to send
         call MPI_RECV(countrecv,0, MPI_INTEGER, icpu-1,101,MPI_COMM_WORLD, &
              & MPI_STATUS_IGNORE, info)
+#ifdef LIGHT_MPI_COMM
+        call MPI_SEND(reception(icpu,ilevel)%pcomm%f,ncache*twotondim, &
+                      & MPI_INTEGER,icpu-1,tag,MPI_COMM_WORLD,info)
+#else
         call MPI_SEND(reception(icpu,ilevel)%f,ncache*twotondim, &
-             & MPI_INTEGER,icpu-1,tag,MPI_COMM_WORLD,info)
+                      & MPI_INTEGER,icpu-1,tag,MPI_COMM_WORLD,info)
+#endif
      end if
   end do
 
   ! Receive all messages
+#ifdef LIGHT_MPI_COMM
+  countrecv=0
+  offset = 1
+  do idx=1,emission(ilevel)%nactive
+     ncache=emission(ilevel)%ngrids(idx)*twotondim
+     if (emission(ilevel)%cpuid(idx) > myid) then
+        countrecv=countrecv+1
+        ! request to send
+        call MPI_SEND(countrecv,0, MPI_INTEGER, emission(ilevel)%cpuid(idx)-1,101,MPI_COMM_WORLD,info)
+        call MPI_RECV(emission(ilevel)%f(offset,1),ncache, MPI_INTEGER, &
+                      & emission(ilevel)%cpuid(idx)-1,tag,MPI_COMM_WORLD,MPI_STATUS_IGNORE,info)
+     end if
+     offset=offset+ncache
+  end do
+#else
   countrecv=0
   do icpu=myid+1,ncpu
      ncache=emission(icpu,ilevel)%ngrid
@@ -765,26 +1126,54 @@ subroutine make_virtual_reverse_int(xx,ilevel)
         ! request to send
         call MPI_SEND(countrecv,0, MPI_INTEGER, icpu-1,101,MPI_COMM_WORLD,info)
         call MPI_RECV(emission(icpu,ilevel)%f,ncache*twotondim, &
-             & MPI_INTEGER,icpu-1,tag,MPI_COMM_WORLD,MPI_STATUS_IGNORE,info)
+                      & MPI_INTEGER,icpu-1,tag,MPI_COMM_WORLD,MPI_STATUS_IGNORE,info)
      end if
   end do
+#endif
 
   ! Scatter reception array
+#ifdef LIGHT_MPI_COMM
+  offset=0
+  do idx=1,emission(ilevel)%nactive
+     do j=1,twotondim
+        step=(j-1)*emission(ilevel)%ngrids(idx)
+        iskip=ncoarse+(j-1)*ngridmax
+        do i=1,emission(ilevel)%ngrids(idx)
+           xx(emission(ilevel)%igrid(offset+i)+iskip)= xx(emission(ilevel)%igrid(offset+i)+iskip) &
+                                                       & + emission(ilevel)%f(offset*twotondim+i+step,1)
+        end do
+     end do
+     offset=offset+emission(ilevel)%ngrids(idx)
+  end do
+#else
   do icpu=1,ncpu
      if (emission(icpu,ilevel)%ngrid>0) then
         do j=1,twotondim
            step=(j-1)*emission(icpu,ilevel)%ngrid
            iskip=ncoarse+(j-1)*ngridmax
            do i=1,emission(icpu,ilevel)%ngrid
-              xx(emission(icpu,ilevel)%igrid(i)+iskip)= &
-                   & xx(emission(icpu,ilevel)%igrid(i)+iskip) + emission(icpu,ilevel)%f(i+step,1)
+              xx(emission(icpu,ilevel)%igrid(i)+iskip)= xx(emission(icpu,ilevel)%igrid(i)+iskip) &
+                                                        & + emission(icpu,ilevel)%f(i+step,1)
            end do
         end do
      end if
   end do
+#endif
 
   else
 
+#ifdef LIGHT_MPI_COMM
+  allocate(reqrecv(emission(ilevel)%nactive))
+
+  ! Receive all messages
+  offset=1
+  do idx=1,emission(ilevel)%nactive
+    ncache=emission(ilevel)%ngrids(idx)*twotondim
+    call MPI_IRECV(emission(ilevel)%f(offset,1),ncache,MPI_INTEGER,&
+                   emission(ilevel)%cpuid(idx)-1,tag,MPI_COMM_WORLD,reqrecv(idx),info)
+    offset=offset+ncache
+  end do
+#else
   ! Receive all messages
   countrecv=0
   do icpu=1,ncpu
@@ -795,6 +1184,7 @@ subroutine make_virtual_reverse_int(xx,ilevel)
              & MPI_INTEGER,icpu-1,tag,MPI_COMM_WORLD,reqrecv(countrecv),info)
      end if
   end do
+#endif
 
   ! Gather emission array
   do icpu=1,ncpu
@@ -803,7 +1193,11 @@ subroutine make_virtual_reverse_int(xx,ilevel)
            step=(j-1)*reception(icpu,ilevel)%ngrid
            iskip=ncoarse+(j-1)*ngridmax
            do i=1,reception(icpu,ilevel)%ngrid
+#ifdef LIGHT_MPI_COMM
+              reception(icpu,ilevel)%pcomm%f(i+step,1)=xx(reception(icpu,ilevel)%pcomm%igrid(i)+iskip)
+#else
               reception(icpu,ilevel)%f(i+step,1)=xx(reception(icpu,ilevel)%igrid(i)+iskip)
+#endif
            end do
         end do
      end if
@@ -815,32 +1209,70 @@ subroutine make_virtual_reverse_int(xx,ilevel)
      ncache=reception(icpu,ilevel)%ngrid
      if(ncache>0) then
        countsend=countsend+1
+#ifdef LIGHT_MPI_COMM
+        call MPI_ISEND(reception(icpu,ilevel)%pcomm%f,ncache*twotondim, &
+             & MPI_INTEGER,icpu-1,tag,MPI_COMM_WORLD,reqsend(countsend),info)
+#else
         call MPI_ISEND(reception(icpu,ilevel)%f,ncache*twotondim, &
              & MPI_INTEGER,icpu-1,tag,MPI_COMM_WORLD,reqsend(countsend),info)
+#endif
      end if
   end do
 
   ! Wait for full completion of receives
+#ifdef LIGHT_MPI_COMM
+  call MPI_WAITALL(emission(ilevel)%nactive,reqrecv,statuses,info)
+#else
   call MPI_WAITALL(countrecv,reqrecv,statuses,info)
+#endif
 
   ! Scatter reception array
+#ifdef LIGHT_MPI_COMM
+  offset=0
+  do idx=1,emission(ilevel)%nactive
+    do j=1,twotondim
+      step=(j-1)*emission(ilevel)%ngrids(idx)
+      iskip=ncoarse+(j-1)*ngridmax
+      do i=1,emission(ilevel)%ngrids(idx)
+        xx(emission(ilevel)%igrid(offset+i)+iskip)= xx(emission(ilevel)%igrid(offset+i)+iskip) &
+                                                    & + emission(ilevel)%f(offset*twotondim+i+step,1)
+      end do
+    end do
+    offset=offset+emission(ilevel)%ngrids(idx)
+  end do
+#else
   do icpu=1,ncpu
      if (emission(icpu,ilevel)%ngrid>0) then
         do j=1,twotondim
            step=(j-1)*emission(icpu,ilevel)%ngrid
            iskip=ncoarse+(j-1)*ngridmax
            do i=1,emission(icpu,ilevel)%ngrid
-              xx(emission(icpu,ilevel)%igrid(i)+iskip)= &
-                   & xx(emission(icpu,ilevel)%igrid(i)+iskip) + emission(icpu,ilevel)%f(i+step,1)
+              xx(emission(icpu,ilevel)%igrid(i)+iskip)= xx(emission(icpu,ilevel)%igrid(i)+iskip) &
+                                                        & + emission(icpu,ilevel)%f(i+step,1)
            end do
         end do
      end if
   end do
+#endif
 
   ! Wait for full completion of sends
   call MPI_WAITALL(countsend,reqsend,statuses,info)
 
+#ifdef LIGHT_MPI_COMM
+  deallocate(reqrecv)
+#endif
+  
   endif
+
+#ifdef LIGHT_MPI_COMM
+  ! Deallocate temporary communication buffers
+  do icpu=1,ncpu
+     ncache=reception(icpu,ilevel)%ngrid
+     if(ncache>0)deallocate(reception(icpu,ilevel)%pcomm%f)
+  end do
+  deallocate(emission(ilevel)%f)
+#endif
+
 
 #endif
 
@@ -862,12 +1294,20 @@ subroutine build_comm(ilevel)
   ! Array flag2 is used as temporary work space.
   ! -------------------------------------------------------------------
   integer::icpu,ibound
+#ifdef LIGHT_MPI_COMM
+  integer::idx,offset, ngrids
+#endif
   integer::ncache,ind,iskip
   integer::i,j,k,nxny
   integer::igrid,jgrid,ngrid
 #ifndef WITHOUTMPI
   integer::info,tag=101
-  integer,dimension(ncpu)::reqsend,reqrecv
+#ifdef LIGHT_MPI_COMM
+  integer,dimension(ncpu)::reqsend
+  integer,allocatable,dimension(:)::reqrecv
+#else
+   integer,dimension(ncpu)::reqsend,reqrecv
+#endif
   integer,dimension(ncpu)::sendbuf,recvbuf
   integer,dimension(MPI_STATUS_SIZE,ncpu)::statuses
   integer::countsend,countrecv
@@ -921,7 +1361,11 @@ subroutine build_comm(ilevel)
         do igrid=1,ncache,nvector
            ngrid=MIN(nvector,ncache-igrid+1)
            do i=1,ngrid
+#ifdef LIGHT_MPI_COMM
+              ind_grid(i)=reception(icpu,ilevel-1)%pcomm%igrid(igrid+i-1)
+#else
               ind_grid(i)=reception(icpu,ilevel-1)%igrid(igrid+i-1)
+#endif
            end do
            do ind=1,twotondim
               iskip=ncoarse+(ind-1)*ngridmax
@@ -998,42 +1442,82 @@ subroutine build_comm(ilevel)
   ! Compute number and index of virtual boundary grids
   !----------------------------------------------------
 #ifndef WITHOUTMPI
+
+#ifdef LIGHT_MPI_COMM
+   if (emission(ilevel)%nactive>0) then
+     emission(ilevel)%nactive=0
+     emission(ilevel)%ngrids_tot=0
+     deallocate(emission(ilevel)%cpuid)
+     deallocate(emission(ilevel)%ngrids)
+     deallocate(emission(ilevel)%igrid)
+   end if
+#endif
    do icpu=1,ncpu
       ncache=0
       if(icpu.ne.myid)ncache=numbl(icpu,ilevel)
       ! Reset old communicators
+#ifndef LIGHT_MPI_COMM
       if(emission(icpu,ilevel)%ngrid>0)then
          emission(icpu,ilevel)%ngrid=0
          deallocate(emission(icpu,ilevel)%igrid)
          deallocate(emission(icpu,ilevel)%u)
          deallocate(emission(icpu,ilevel)%f)
       end if
+#endif
       if(reception(icpu,ilevel)%ngrid>0)then
          reception(icpu,ilevel)%ngrid=0
+#ifdef LIGHT_MPI_COMM
+         deallocate(reception(icpu,ilevel)%pcomm%igrid)
+#else
          deallocate(reception(icpu,ilevel)%igrid)
          deallocate(reception(icpu,ilevel)%u)
          deallocate(reception(icpu,ilevel)%f)
+#endif
       end if
       if(ncache>0)then
          ! Allocate grid index to new communicator
          reception(icpu,ilevel)%ngrid=ncache
+#ifdef LIGHT_MPI_COMM
+         if (.not. associated(reception(icpu,ilevel)%pcomm)) then
+            allocate(reception(icpu,ilevel)%pcomm)
+         end if
+         allocate(reception(icpu,ilevel)%pcomm%igrid(1:ncache))
+#else
          allocate(reception(icpu,ilevel)%igrid(1:ncache))
+#endif
          ! Gather all grids
          igrid=headl(icpu,ilevel)
          do jgrid=1,numbl(icpu,ilevel)
+#ifdef LIGHT_MPI_COMM
+            reception(icpu,ilevel)%pcomm%igrid(jgrid)=igrid
+#else
             reception(icpu,ilevel)%igrid(jgrid)=igrid
+#endif
             igrid=next(igrid)
          end do
          ! Allocate temporary communication buffer
+#ifdef LIGHT_MPI_COMM
+         allocate(reception(icpu,ilevel)%pcomm%f(1:ncache, 1:1))
+         do i=1,ncache
+            reception(icpu,ilevel)%pcomm%f(i,1) = &
+            & flag2(father(reception(icpu,ilevel)%pcomm%igrid(i)))
+         end do
+#else
          allocate(reception(icpu,ilevel)%f(1:ncache,1:1))
          do i=1,ncache
             reception(icpu,ilevel)%f(i,1) = &
             & flag2(father(reception(icpu,ilevel)%igrid(i)))
          end do
+#endif
+
          ! Fill up lookup_mg for reception
          if(poisson)then
             do i=1,ncache
+#ifdef LIGHT_MPI_COMM
+               lookup_mg(reception(icpu,ilevel)%pcomm%igrid(i))= -reception(icpu,ilevel)%pcomm%f(i,1)
+#else
                lookup_mg(reception(icpu,ilevel)%igrid(i))= -reception(icpu,ilevel)%f(i,1)
+#endif
             end do
          end if
       end if
@@ -1046,13 +1530,52 @@ subroutine build_comm(ilevel)
   call MPI_ALLTOALL(sendbuf,1,MPI_INTEGER,recvbuf,1,MPI_INTEGER,MPI_COMM_WORLD,info)
 
   ! Allocate grid index
+#ifdef LIGHT_MPI_COMM
+  ! Count entries
+  emission(ilevel)%nactive=0
+  emission(ilevel)%ngrids_tot=0
   do icpu=1,ncpu
-     emission(icpu,ilevel)%ngrid=recvbuf(icpu)
-     ncache=emission(icpu,ilevel)%ngrid
-     if(ncache>0)allocate(emission(icpu,ilevel)%igrid(1:ncache))
+    if(icpu==myid) cycle
+    ngrids=recvbuf(icpu)
+    if(ngrids>0) then
+      emission(ilevel)%nactive=emission(ilevel)%nactive+1
+      emission(ilevel)%ngrids_tot=emission(ilevel)%ngrids_tot+ngrids
+    end if
   end do
+  ! Allocate structures
+  if(emission(ilevel)%nactive>0)then
+    allocate(emission(ilevel)%cpuid (emission(ilevel)%nactive))
+    allocate(emission(ilevel)%ngrids(emission(ilevel)%nactive))
+    allocate(emission(ilevel)%igrid (emission(ilevel)%ngrids_tot))
+  end if
+  allocate(reqrecv(emission(ilevel)%nactive))
+#else
+  ! Allocate grid index
+  do icpu=1,ncpu
+   emission(icpu,ilevel)%ngrid=recvbuf(icpu)
+   ncache=emission(icpu,ilevel)%ngrid
+   if(ncache>0)allocate(emission(icpu,ilevel)%igrid(1:ncache))
+end do
+#endif
 
   ! Receive grid list
+#ifdef LIGHT_MPI_COMM
+  idx=1
+  offset=1
+  do icpu=1,ncpu
+    if(icpu==myid) cycle
+    ngrids=recvbuf(icpu)
+    if(ngrids>0) then
+      emission(ilevel)%cpuid(idx)=icpu
+      emission(ilevel)%ngrids(idx)=ngrids
+      call MPI_IRECV(emission(ilevel)%igrid(offset),ngrids, &
+           & MPI_INTEGER,icpu-1,tag,MPI_COMM_WORLD,reqrecv(idx),info)
+      idx=idx+1
+      offset=offset+ngrids
+    end if
+    if(idx>emission(ilevel)%nactive) exit
+  end do
+#else
   countrecv=0
   do icpu=1,ncpu
      ncache=emission(icpu,ilevel)%ngrid
@@ -1062,6 +1585,7 @@ subroutine build_comm(ilevel)
              & MPI_INTEGER,icpu-1,tag,MPI_COMM_WORLD,reqrecv(countrecv),info)
      end if
   end do
+#endif
 
   ! Send global index
   countsend=0
@@ -1069,8 +1593,13 @@ subroutine build_comm(ilevel)
      ncache=reception(icpu,ilevel)%ngrid
      if(ncache>0) then
         countsend=countsend+1
+#ifdef LIGHT_MPI_COMM
+        call MPI_ISEND(reception(icpu,ilevel)%pcomm%f,ncache, &
+             & MPI_INTEGER,icpu-1,tag,MPI_COMM_WORLD,reqsend(countsend),info)
+#else
         call MPI_ISEND(reception(icpu,ilevel)%f,ncache, &
              & MPI_INTEGER,icpu-1,tag,MPI_COMM_WORLD,reqsend(countsend),info)
+#endif
      end if
   end do
 
@@ -1078,27 +1607,39 @@ subroutine build_comm(ilevel)
   call MPI_WAITALL(countsend,reqsend,statuses,info)
 
   ! Wait for full completion of receives
+#ifdef LIGHT_MPI_COMM
+  call MPI_WAITALL(emission(ilevel)%nactive,reqrecv,statuses,info)
+#else
   call MPI_WAITALL(countrecv,reqrecv,statuses,info)
+#endif
 
   ! Deallocate temporary communication buffers
   do icpu=1,ncpu
      ncache=reception(icpu,ilevel)%ngrid
+#ifdef LIGHT_MPI_COMM
+     if(ncache>0)deallocate(reception(icpu,ilevel)%pcomm%f)
+#else
      if(ncache>0)deallocate(reception(icpu,ilevel)%f)
+#endif
   end do
 
+#ifdef LIGHT_MPI_COMM
+  deallocate(reqrecv)
+#else
   ! Allocate temporary communication buffers
   do icpu=1,ncpu
-     ncache=emission(icpu,ilevel)%ngrid
-     if(ncache>0)then
-        allocate(emission(icpu,ilevel)%u(1:ncache*twotondim,1:1))
-        allocate(emission(icpu,ilevel)%f(1:ncache*twotondim,1:1))
-     endif
-     ncache=reception(icpu,ilevel)%ngrid
-     if(ncache>0)then
-        allocate(reception(icpu,ilevel)%u(1:ncache*twotondim,1:1))
-        allocate(reception(icpu,ilevel)%f(1:ncache*twotondim,1:1))
-     endif
+    ncache=emission(icpu,ilevel)%ngrid
+    if(ncache>0)then
+      allocate(emission(icpu,ilevel)%u(1:ncache*twotondim,1:1))
+      allocate(emission(icpu,ilevel)%f(1:ncache*twotondim,1:1))
+    endif
+    ncache=reception(icpu,ilevel)%ngrid
+    if(ncache>0)then
+      allocate(reception(icpu,ilevel)%u(1:ncache*twotondim,1:1))
+      allocate(reception(icpu,ilevel)%f(1:ncache*twotondim,1:1))
+    endif
   end do
+#endif
 
 #endif
 

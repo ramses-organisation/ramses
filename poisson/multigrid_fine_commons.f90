@@ -74,10 +74,14 @@ subroutine multigrid_fine(ilevel,icount)
    ! ---------------------------------------------------------------------
 
    ! @ finer level
-   call build_parent_comms_mg(active(ilevel),ilevel)
+   call build_parent_comms_mg(active(ilevel)%igrid, active(ilevel)%ngrid, ilevel)
    ! @ coarser levels
    do ifine=(ilevel-1),2,-1
-      call build_parent_comms_mg(active_mg(myid,ifine),ifine)
+#ifdef LIGHT_MPI_COMM
+      call build_parent_comms_mg(active_mg(myid,ifine)%pcomm%igrid, active_mg(myid,ifine)%ngrid, ifine)
+#else
+      call build_parent_comms_mg(active_mg(myid,ifine)%igrid, active_mg(myid,ifine)%ngrid, ifine)
+#endif
    end do
 
    ! ---------------------------------------------------------------------
@@ -94,12 +98,20 @@ subroutine multigrid_fine(ilevel,icount)
       ! Convert volume fraction to mask value
       do icpu=1,ncpu
          if(active_mg(icpu,ilevel-1)%ngrid==0) cycle
+#ifdef LIGHT_MPI_COMM
+         active_mg(icpu,ilevel-1)%pcomm%u(:,4)=2*active_mg(icpu,ilevel-1)%pcomm%u(:,4)-1d0
+#else
          active_mg(icpu,ilevel-1)%u(:,4)=2*active_mg(icpu,ilevel-1)%u(:,4)-1d0
+#endif
       end do
 
       ! Check active mask state
       if(active_mg(myid,ilevel-1)%ngrid>0) then
+#ifdef LIGHT_MPI_COMM
+         allmasked=(maxval(active_mg(myid,ilevel-1)%pcomm%u(:,4))<=0d0)
+#else
          allmasked=(maxval(active_mg(myid,ilevel-1)%u(:,4))<=0d0)
+#endif
       else
          allmasked=.true.
       end if
@@ -128,12 +140,20 @@ subroutine multigrid_fine(ilevel,icount)
          ! Convert volume fraction to mask value
          do icpu=1,ncpu
             if(active_mg(icpu,ifine-1)%ngrid==0) cycle
+#ifdef LIGHT_MPI_COMM
+            active_mg(icpu,ifine-1)%pcomm%u(:,4)=2*active_mg(icpu,ifine-1)%pcomm%u(:,4)-1d0
+#else
             active_mg(icpu,ifine-1)%u(:,4)=2*active_mg(icpu,ifine-1)%u(:,4)-1d0
+#endif
          end do
 
          ! Check active mask state
          if(active_mg(myid,ifine-1)%ngrid>0) then
+#ifdef LIGHT_MPI_COMM
+            allmasked=(maxval(active_mg(myid,ifine-1)%pcomm%u(:,4))<=0d0)
+#else
             allmasked=(maxval(active_mg(myid,ifine-1)%u(:,4))<=0d0)
+#endif
          else
             allmasked=.true.
          end if
@@ -192,7 +212,11 @@ subroutine multigrid_fine(ilevel,icount)
       ! First clear the rhs in coarser reception comms
       do icpu=1,ncpu
          if(active_mg(icpu,ilevel-1)%ngrid==0) cycle
+#ifdef LIGHT_MPI_COMM
+         active_mg(icpu,ilevel-1)%pcomm%u(:,2)=0.0d0
+#else
          active_mg(icpu,ilevel-1)%u(:,2)=0.0d0
+#endif
       end do
       ! Restrict and do reverse-comm
       call restrict_residual_fine_reverse(ilevel)
@@ -202,7 +226,11 @@ subroutine multigrid_fine(ilevel,icount)
          ! Reset correction at upper level before solve
          do icpu=1,ncpu
             if(active_mg(icpu,ilevel-1)%ngrid==0) cycle
+#ifdef LIGHT_MPI_COMM
+            active_mg(icpu,ilevel-1)%pcomm%u(:,1)=0.0d0
+#else
             active_mg(icpu,ilevel-1)%u(:,1)=0.0d0
+#endif
          end do
 
          ! Multigrid-solve the upper level
@@ -317,7 +345,11 @@ recursive subroutine recursive_multigrid_coarse(ifinelevel, safe)
       ! First clear the rhs in coarser reception comms
       do icpu=1,ncpu
          if(active_mg(icpu,ifinelevel-1)%ngrid==0) cycle
+#ifdef LIGHT_MPI_COMM
+         active_mg(icpu,ifinelevel-1)%pcomm%u(:,2)=0.0d0
+#else
          active_mg(icpu,ifinelevel-1)%u(:,2)=0.0d0
+#endif
       end do
 
       ! Restrict and do reverse-comm
@@ -327,7 +359,11 @@ recursive subroutine recursive_multigrid_coarse(ifinelevel, safe)
       ! Reset correction from upper level before solve
       do icpu=1,ncpu
          if(active_mg(icpu,ifinelevel-1)%ngrid==0) cycle
+#ifdef LIGHT_MPI_COMM
+         active_mg(icpu,ifinelevel-1)%pcomm%u(:,1)=0.0d0
+#else
          active_mg(icpu,ifinelevel-1)%u(:,1)=0.0d0
+#endif
       end do
 
       ! Multigrid-solve the upper level
@@ -357,7 +393,7 @@ end subroutine recursive_multigrid_coarse
 ! ------------------------------------------------------------------------
 ! Multigrid communicator building
 ! ------------------------------------------------------------------------
-subroutine build_parent_comms_mg(active_f_comm, ifinelevel)
+subroutine build_parent_comms_mg(active_f_comm_igrid, active_f_comm_ngrid, ifinelevel)
    use amr_commons
    use poisson_commons
    use mpi_mod
@@ -366,12 +402,13 @@ subroutine build_parent_comms_mg(active_f_comm, ifinelevel)
 #ifndef WITHOUTMPI
    integer, dimension (MPI_STATUS_SIZE, ncpu) :: statuses
 #endif
-   type(communicator), intent(in) :: active_f_comm
 
+   integer, dimension(*), intent(in)::active_f_comm_igrid
+   integer, intent(in) :: active_f_comm_ngrid
    integer, intent(in) :: ifinelevel
 
    integer :: icoarselevel
-   integer :: ngrids, cur_grid, cur_cpu, cur_cell
+   integer :: ngrids, cur_grid, cur_cpu, cur_cell,idx,offset
    integer :: i, nbatch, ind, istart
 
    integer, dimension(1:nvector), save :: ind_cell_father
@@ -382,8 +419,19 @@ subroutine build_parent_comms_mg(active_f_comm, ifinelevel)
    integer :: nact_tot, nreq_tot, nreq_tot2
 
 #ifndef WITHOUTMPI
+#ifdef LIGHT_MPI_COMM
+   ! Send/recv Multigrid temporary communicator (light) used in build_parent_comms_mg subroutine
+   type communicator_mg
+     integer                       ::ngrid
+     integer, dimension(:), pointer::igrid
+   end type communicator_mg
+
+   type(communicator_mg), dimension(1:ncpu) :: comm_send, comm_receive
+   type(communicator_mg), dimension(1:ncpu) :: comm_send2, comm_receive2
+#else
    type(communicator), dimension(1:ncpu) :: comm_send, comm_receive
    type(communicator), dimension(1:ncpu) :: comm_send2, comm_receive2
+#endif
    integer :: icpu, newgrids
    integer, dimension(1:ncpu) :: recvbuf, recvbuf2
    integer, dimension(1:ncpu) :: reqsend, reqrecv
@@ -403,12 +451,12 @@ subroutine build_parent_comms_mg(active_f_comm, ifinelevel)
    ! ---------------------------------------------------------------------
 
    ! Loop over the AMR active communicator first
-   ngrids = active_f_comm%ngrid
+   ngrids = active_f_comm_ngrid
    do istart=1,ngrids,nvector
       nbatch=min(nvector,ngrids-istart+1)
       ! Gather grid indices and retrieve parent cells
       do i=1,nbatch
-         ind_cell_father(i)=father( active_f_comm%igrid(istart+i-1) )
+         ind_cell_father(i)=father( active_f_comm_igrid(istart+i-1) )
       end do
 
       ! Compute neighbouring father cells and grids
@@ -492,7 +540,7 @@ subroutine build_parent_comms_mg(active_f_comm, ifinelevel)
       if(ngrids>0) then
          countsend=countsend+1
          call MPI_ISEND(comm_send(icpu)%igrid, ngrids, MPI_INTEGER, &
-            & icpu-1, tag, MPI_COMM_WORLD, reqsend(countsend), info)
+            & icpu-1, tag, MPI_COMM_WORLD, reqsend(countsend), info) 
       end if
    end do
 
@@ -525,15 +573,28 @@ subroutine build_parent_comms_mg(active_f_comm, ifinelevel)
 
    active_mg(myid,icoarselevel)%ngrid=nact_tot
    if(nact_tot>0) then
+#ifdef LIGHT_MPI_COMM
+      allocate( active_mg(myid,icoarselevel)%pcomm%igrid(1:nact_tot) )
+      allocate( active_mg(myid,icoarselevel)%pcomm%u(1:nact_tot*twotondim,1:4) )
+      allocate( active_mg(myid,icoarselevel)%pcomm%f(1:twotondim,1:nact_tot) )
+      active_mg(myid,icoarselevel)%pcomm%igrid=0
+      active_mg(myid,icoarselevel)%pcomm%u=0.0d0
+      active_mg(myid,icoarselevel)%pcomm%f=0
+#else
       allocate( active_mg(myid,icoarselevel)%igrid(1:nact_tot) )
       allocate( active_mg(myid,icoarselevel)%u(1:nact_tot*twotondim,1:4) )
       allocate( active_mg(myid,icoarselevel)%f(1:nact_tot*twotondim,1:1) )
       active_mg(myid,icoarselevel)%igrid=0
       active_mg(myid,icoarselevel)%u=0.0d0
       active_mg(myid,icoarselevel)%f=0
+#endif
    end if
    do i=1,nact_tot
+#ifdef LIGHT_MPI_COMM
+      active_mg(myid,icoarselevel)%pcomm%igrid(i)=flag2(i)
+#else
       active_mg(myid,icoarselevel)%igrid(i)=flag2(i)
+#endif
    end do
 
    ! ---------------------------------------------------------------------
@@ -546,7 +607,11 @@ subroutine build_parent_comms_mg(active_f_comm, ifinelevel)
       nbatch=min(nvector,ngrids-istart+1)
       ! Gather grid indices and retrieve parent cells
       do i=1,nbatch
+#ifdef LIGHT_MPI_COMM
+         ind_cell_father(i)=father( active_mg(myid,icoarselevel)%pcomm%igrid(istart+i-1) )
+#else
          ind_cell_father(i)=father( active_mg(myid,icoarselevel)%igrid(istart+i-1) )
+#endif
       end do
 
       ! Compute neighbouring father cells
@@ -632,25 +697,74 @@ subroutine build_parent_comms_mg(active_f_comm, ifinelevel)
    call MPI_WAITALL(countrecv, reqrecv, statuses, info)
 
    ! Compute local MG indices of inbound grids, alloc & fill emission comms
+#ifdef LIGHT_MPI_COMM
+   emission_mg(icoarselevel)%nactive=0
+   emission_mg(icoarselevel)%ngrids_tot=0
+#endif
    do icpu=1,ncpu
-      if(icpu==myid) cycle
-      newgrids=0
-      do i=1,recvbuf2(icpu)
-         ! MAP AMR -> MG INDICES IN PLACE
-         comm_receive2(icpu)%igrid(i)=lookup_mg(comm_receive2(icpu)%igrid(i))
-         if(comm_receive2(icpu)%igrid(i)>0) newgrids=newgrids+1
-      end do
-      ! Allocate emission communicators
-      ngrids=recvbuf(icpu)+newgrids
-      emission_mg(icpu,icoarselevel)%ngrid=ngrids
-      if(ngrids>0) then
-         allocate(emission_mg(icpu,icoarselevel)%igrid(1:ngrids))
-         allocate(emission_mg(icpu,icoarselevel)%u(1:ngrids*twotondim,1:4) )
-         allocate(emission_mg(icpu,icoarselevel)%f(1:ngrids*twotondim,1:1))
-         emission_mg(icpu,icoarselevel)%igrid=0
-         emission_mg(icpu,icoarselevel)%u=0.0d0
-         emission_mg(icpu,icoarselevel)%f=0
-      end if
+     if(icpu==myid) cycle
+     newgrids=0
+     do i=1,recvbuf2(icpu)
+       ! MAP AMR -> MG INDICES IN PLACE
+       comm_receive2(icpu)%igrid(i)=lookup_mg(comm_receive2(icpu)%igrid(i))
+       if(comm_receive2(icpu)%igrid(i)>0) newgrids=newgrids+1
+     end do
+     ! Allocate emission communicators
+     ngrids=recvbuf(icpu)+newgrids
+#ifdef LIGHT_MPI_COMM
+     reqrecv(icpu)=ngrids ! reqrecv is reused to store ngrids
+#else
+     emission_mg(icpu,icoarselevel)%ngrid=ngrids
+#endif
+     if(ngrids>0) then
+#ifdef LIGHT_MPI_COMM
+       emission_mg(icoarselevel)%nactive=emission_mg(icoarselevel)%nactive+1
+       emission_mg(icoarselevel)%ngrids_tot=emission_mg(icoarselevel)%ngrids_tot+ngrids
+#else
+       allocate(emission_mg(icpu,icoarselevel)%igrid(1:ngrids))
+       allocate(emission_mg(icpu,icoarselevel)%u(1:ngrids*twotondim,1:4) )
+       allocate(emission_mg(icpu,icoarselevel)%f(1:ngrids*twotondim,1:1))
+       emission_mg(icpu,icoarselevel)%igrid=0
+       emission_mg(icpu,icoarselevel)%u=0.0d0
+       emission_mg(icpu,icoarselevel)%f=0
+#endif
+     end if
+#ifdef LIGHT_MPI_COMM
+   end do
+
+   if(emission_mg(icoarselevel)%nactive>0)then
+     allocate(emission_mg(icoarselevel)%cpuid(emission_mg(icoarselevel)%nactive))
+     allocate(emission_mg(icoarselevel)%ngrids(emission_mg(icoarselevel)%nactive))
+     allocate(emission_mg(icoarselevel)%igrid(emission_mg(icoarselevel)%ngrids_tot))
+     allocate(emission_mg(icoarselevel)%u(1:emission_mg(icoarselevel)%ngrids_tot*twotondim,1:4))
+     allocate(emission_mg(icoarselevel)%f(1:twotondim,1:emission_mg(icoarselevel)%ngrids_tot))
+   end if
+
+   offset=0
+   idx=1
+   do icpu=1,ncpu
+     if(icpu==myid) cycle
+     ngrids=reqrecv(icpu) ! reqrecv is reused to store ngrids
+     if(ngrids>0) then
+       emission_mg(icoarselevel)%cpuid(idx)=icpu
+       emission_mg(icoarselevel)%ngrids(idx)=ngrids
+       ! First part: activation request emission grids
+       do i=1,recvbuf(icpu)
+         emission_mg(icoarselevel)%igrid(offset+i)=lookup_mg(comm_receive(icpu)%igrid(i))
+       end do
+       ! Second part: new emission grids
+       cur_grid=recvbuf(icpu)
+       do i=1,recvbuf2(icpu)
+         if(comm_receive2(icpu)%igrid(i)>0) then
+           cur_grid=cur_grid+1
+           emission_mg(icoarselevel)%igrid(offset+cur_grid)=comm_receive2(icpu)%igrid(i)
+         end if
+       end do
+       offset=offset+ngrids
+       idx=idx+1
+     end if
+     if(idx>emission_mg(icoarselevel)%nactive) exit
+#else
       ! First part: activation request emission grids
       do i=1,recvbuf(icpu)
          emission_mg(icpu,icoarselevel)%igrid(i)=lookup_mg(comm_receive(icpu)%igrid(i))
@@ -663,6 +777,7 @@ subroutine build_parent_comms_mg(active_f_comm, ifinelevel)
             emission_mg(icpu,icoarselevel)%igrid(cur_grid)=comm_receive2(icpu)%igrid(i)
          end if
       end do
+#endif
    end do
 
    ! Wait for completion of sends
@@ -711,12 +826,21 @@ subroutine build_parent_comms_mg(active_f_comm, ifinelevel)
       ngrids=nreq(icpu)+newgrids
       active_mg(icpu,icoarselevel)%ngrid=ngrids
       if(ngrids>0) then
+#ifdef LIGHT_MPI_COMM
+        allocate(active_mg(icpu,icoarselevel)%pcomm%igrid(1:ngrids))
+        allocate(active_mg(icpu,icoarselevel)%pcomm%u(1:ngrids*twotondim,1:4))
+        allocate(active_mg(icpu,icoarselevel)%pcomm%f(1:twotondim,1:ngrids))
+        active_mg(icpu,icoarselevel)%pcomm%igrid=0
+        active_mg(icpu,icoarselevel)%pcomm%u=0.0d0
+        active_mg(icpu,icoarselevel)%pcomm%f=0
+#else
          allocate(active_mg(icpu,icoarselevel)%igrid(1:ngrids))
          allocate(active_mg(icpu,icoarselevel)%u(1:ngrids*twotondim,1:4))
          allocate(active_mg(icpu,icoarselevel)%f(1:ngrids*twotondim,1:1))
          active_mg(icpu,icoarselevel)%igrid=0
          active_mg(icpu,icoarselevel)%u=0.0d0
          active_mg(icpu,icoarselevel)%f=0
+#endif
       end if
    end do
 
@@ -726,7 +850,11 @@ subroutine build_parent_comms_mg(active_f_comm, ifinelevel)
       cur_cpu =cpu_map(father(cur_grid))
       nreq(cur_cpu)=nreq(cur_cpu)+1
       ! Add to reception comm
+#ifdef LIGHT_MPI_COMM
+      active_mg(cur_cpu,icoarselevel)%pcomm%igrid(nreq(cur_cpu))=cur_grid
+#else
       active_mg(cur_cpu,icoarselevel)%igrid(nreq(cur_cpu))=cur_grid
+#endif
       ! Backup lookup_mg into flag2
       flag2(cur_grid)=lookup_mg(cur_grid)
       ! Update lookup_mg
@@ -741,7 +869,11 @@ subroutine build_parent_comms_mg(active_f_comm, ifinelevel)
       if(comm_send2(cur_cpu)%igrid(nreq2(cur_cpu))>0) then
          indx(cur_cpu)=indx(cur_cpu)+1
          ! Add to reception comm
+#ifdef LIGHT_MPI_COMM
+         active_mg(cur_cpu,icoarselevel)%pcomm%igrid(indx(cur_cpu))=cur_grid
+#else
          active_mg(cur_cpu,icoarselevel)%igrid(indx(cur_cpu))=cur_grid
+#endif
          ! Backup lookup_mg
          flag2(cur_grid)=-lookup_mg(cur_grid)
          ! Update lookup_mg
@@ -788,7 +920,11 @@ subroutine cleanup_mg_level(ilevel)
    ! ---------------------------------------------------------------------
    do icpu=1,ncpu
       do igrid=1,active_mg(icpu,ilevel)%ngrid
+#ifdef LIGHT_MPI_COMM
+         cur_grid=active_mg(icpu,ilevel)%pcomm%igrid(igrid)
+#else
          cur_grid=active_mg(icpu,ilevel)%igrid(igrid)
+#endif
          cur_cpu=cpu_map(father(cur_grid))
          if(cur_cpu==myid) then
             lookup_mg(cur_grid)=0
@@ -803,11 +939,30 @@ subroutine cleanup_mg_level(ilevel)
    ! ---------------------------------------------------------------------
    do icpu=1,ncpu
       if(active_mg(icpu,ilevel)%ngrid>0)then
+#ifdef LIGHT_MPI_COMM
+         deallocate(active_mg(icpu,ilevel)%pcomm%igrid)
+         deallocate(active_mg(icpu,ilevel)%pcomm%u)
+         deallocate(active_mg(icpu,ilevel)%pcomm%f)
+#else
          deallocate(active_mg(icpu,ilevel)%igrid)
          deallocate(active_mg(icpu,ilevel)%u)
          deallocate(active_mg(icpu,ilevel)%f)
+#endif
       endif
       active_mg(icpu,ilevel)%ngrid=0
+#ifdef LIGHT_MPI_COMM
+   enddo
+   if(emission_mg(ilevel)%nactive>0)then
+      emission_mg(ilevel)%nactive=0
+      emission_mg(ilevel)%ngrids_tot=0
+      deallocate(emission_mg(ilevel)%cpuid)
+      deallocate(emission_mg(ilevel)%ngrids)
+      deallocate(emission_mg(ilevel)%igrid)
+      deallocate(emission_mg(ilevel)%u)
+      deallocate(emission_mg(ilevel)%f)
+    endif
+
+#else
       if(emission_mg(icpu,ilevel)%ngrid>0)then
          deallocate(emission_mg(icpu,ilevel)%igrid)
          deallocate(emission_mg(icpu,ilevel)%u)
@@ -815,6 +970,7 @@ subroutine cleanup_mg_level(ilevel)
       endif
       emission_mg(icpu,ilevel)%ngrid=0
    end do
+#endif
 
 end subroutine cleanup_mg_level
 
@@ -854,7 +1010,11 @@ subroutine make_fine_mask(ilevel)
       do ind=1,twotondim
          iskip_amr = ncoarse+(ind-1)*ngridmax
          do igrid_mg=1,ngrid
+#ifdef LIGHT_MPI_COMM
+            igrid_amr = reception(icpu,ilevel)%pcomm%igrid(igrid_mg)
+#else
             igrid_amr = reception(icpu,ilevel)%igrid(igrid_mg)
+#endif
             icell_amr = iskip_amr + igrid_amr
             ! Init mask to 1.0 on virtual cells :
             f(icell_amr,3) = 1.0d0
@@ -1018,7 +1178,7 @@ subroutine make_virtual_mg_dp(ivar,ilevel)
   use mpi_mod
 
   implicit none
-  integer::ilevel,ivar
+  integer::ilevel,ivar,idx,offset
 #ifndef WITHOUTMPI
   integer,dimension(MPI_STATUS_SIZE,ncpu)::statuses
   integer::icell,icpu,i,j,ncache,iskip,step
@@ -1033,12 +1193,31 @@ subroutine make_virtual_mg_dp(ivar,ilevel)
      ncache=active_mg(icpu,ilevel)%ngrid
      if(ncache>0) then
        countrecv=countrecv+1
+#ifdef LIGHT_MPI_COMM
+       call MPI_IRECV(active_mg(icpu,ilevel)%pcomm%u(1,ivar),ncache*twotondim, &
+            & MPI_DOUBLE_PRECISION,icpu-1,tag,MPI_COMM_WORLD,reqrecv(countrecv),info)
+#else
        call MPI_IRECV(active_mg(icpu,ilevel)%u(1,ivar),ncache*twotondim, &
             & MPI_DOUBLE_PRECISION,icpu-1,tag,MPI_COMM_WORLD,reqrecv(countrecv),info)
+#endif
      end if
   end do
 
   ! Gather emission array
+#ifdef LIGHT_MPI_COMM
+  offset=0
+  do idx=1,emission_mg(ilevel)%nactive
+    do j=1,twotondim
+      step=(j-1)*emission_mg(ilevel)%ngrids(idx)
+      iskip=(j-1)*active_mg(myid,ilevel)%ngrid
+      do i=1,emission_mg(ilevel)%ngrids(idx)
+        icell=emission_mg(ilevel)%igrid(offset+i)+iskip
+        emission_mg(ilevel)%u(offset*twotondim+step+i,1)=active_mg(myid,ilevel)%pcomm%u(icell,ivar)
+      end do
+    end do
+    offset=offset+emission_mg(ilevel)%ngrids(idx)
+  end do
+#else
   do icpu=1,ncpu
      if (emission_mg(icpu,ilevel)%ngrid>0) then
         do j=1,twotondim
@@ -1051,17 +1230,31 @@ subroutine make_virtual_mg_dp(ivar,ilevel)
         end do
      end if
   end do
+#endif
 
   ! Send all messages
-  countsend=0
-  do icpu=1,ncpu
-     ncache=emission_mg(icpu,ilevel)%ngrid
-     if(ncache>0) then
-       countsend=countsend+1
+#ifdef LIGHT_MPI_COMM
+   offset=1
+   countsend=0
+   do idx=1,emission_mg(ilevel)%nactive
+      ncache=emission_mg(ilevel)%ngrids(idx)*twotondim
+      countsend=countsend+1
+      call MPI_ISEND(emission_mg(ilevel)%u(offset,1),ncache,MPI_DOUBLE_PRECISION,&
+                     emission_mg(ilevel)%cpuid(idx)-1,tag,MPI_COMM_WORLD,reqsend(countsend),info)
+      offset=offset+ncache
+   end do
+#else
+   countsend=0
+   do icpu=1,ncpu
+      ncache=emission_mg(icpu,ilevel)%ngrid
+      if(ncache>0) then
+        countsend=countsend+1
+ 
        call MPI_ISEND(emission_mg(icpu,ilevel)%u,ncache*twotondim, &
             & MPI_DOUBLE_PRECISION,icpu-1,tag,MPI_COMM_WORLD,reqsend(countsend),info)
      end if
   end do
+#endif
 
   ! Wait for full completion of receives
   call MPI_WAITALL(countrecv,reqrecv,statuses,info)
@@ -1085,7 +1278,7 @@ subroutine make_virtual_mg_int(ilevel)
 
 #ifndef WITHOUTMPI
   integer,dimension(MPI_STATUS_SIZE,ncpu)::statuses
-  integer::icpu,i,j,ncache,iskip,step,icell
+  integer::icpu,i,j,ncache,iskip,step,icell,idx,offset
   integer::countsend,countrecv
   integer::info,tag=101
   integer,dimension(ncpu)::reqsend,reqrecv
@@ -1097,12 +1290,30 @@ subroutine make_virtual_mg_int(ilevel)
      ncache=active_mg(icpu,ilevel)%ngrid
      if(ncache>0) then
        countrecv=countrecv+1
+#ifdef LIGHT_MPI_COMM
+       call MPI_IRECV(active_mg(icpu,ilevel)%pcomm%f(1,1),ncache*twotondim, &
+            & MPI_INTEGER,icpu-1,tag,MPI_COMM_WORLD,reqrecv(countrecv),info)
+#else
        call MPI_IRECV(active_mg(icpu,ilevel)%f(1,1),ncache*twotondim, &
             & MPI_INTEGER,icpu-1,tag,MPI_COMM_WORLD,reqrecv(countrecv),info)
+#endif
      end if
   end do
 
   ! Gather emission array
+#ifdef LIGHT_MPI_COMM
+   offset=0
+   do idx=1,emission_mg(ilevel)%nactive
+      do j=1,twotondim
+         step=(j-1)*emission_mg(ilevel)%ngrids(idx)
+         do i=1,emission_mg(ilevel)%ngrids(idx)
+            icell=emission_mg(ilevel)%igrid(offset+i)
+            emission_mg(ilevel)%f(j,offset+i)=active_mg(myid,ilevel)%pcomm%f(j,icell)
+         end do
+      end do
+      offset=offset+emission_mg(ilevel)%ngrids(idx)
+   end do
+#else
   do icpu=1,ncpu
      if (emission_mg(icpu,ilevel)%ngrid>0) then
         do j=1,twotondim
@@ -1115,9 +1326,20 @@ subroutine make_virtual_mg_int(ilevel)
         end do
      end if
   end do
+#endif
 
   ! Send all messages
   countsend=0
+#ifdef LIGHT_MPI_COMM
+   offset=1
+   do idx=1,emission_mg(ilevel)%nactive
+      ncache=emission_mg(ilevel)%ngrids(idx)*twotondim
+      countsend=countsend+1
+      call MPI_ISEND(emission_mg(ilevel)%f(1,offset),ncache,MPI_INTEGER,&
+                     emission_mg(ilevel)%cpuid(idx)-1,tag,MPI_COMM_WORLD,reqsend(countsend),info)
+      offset=offset+emission_mg(ilevel)%ngrids(idx)
+   end do
+#else
   do icpu=1,ncpu
      ncache=emission_mg(icpu,ilevel)%ngrid
      if(ncache>0) then
@@ -1126,6 +1348,7 @@ subroutine make_virtual_mg_int(ilevel)
             & MPI_INTEGER,icpu-1,tag,MPI_COMM_WORLD,reqsend(countsend),info)
      end if
   end do
+#endif
 
   ! Wait for full completion of receives
   call MPI_WAITALL(countrecv,reqrecv,statuses,info)
@@ -1145,7 +1368,7 @@ subroutine make_reverse_mg_dp(ivar,ilevel)
   use poisson_commons
   use mpi_mod
   implicit none
-  integer::ilevel,ivar
+  integer::ilevel,ivar,offset,idx
 
 #ifndef WITHOUTMPI
   integer,dimension(MPI_STATUS_SIZE,ncpu)::statuses
@@ -1156,6 +1379,16 @@ subroutine make_reverse_mg_dp(ivar,ilevel)
 
   ! Receive all messages
   countrecv=0
+#ifdef LIGHT_MPI_COMM
+  offset=1
+  do idx=1,emission_mg(ilevel)%nactive
+    ncache=emission_mg(ilevel)%ngrids(idx)*twotondim
+    countrecv=countrecv+1
+    call MPI_IRECV(emission_mg(ilevel)%u(offset,1),ncache,MPI_DOUBLE_PRECISION,&
+                   emission_mg(ilevel)%cpuid(idx)-1,tag,MPI_COMM_WORLD,reqrecv(countrecv),info)
+    offset=offset+ncache
+  end do
+#else
   do icpu=1,ncpu
      ncache=emission_mg(icpu,ilevel)%ngrid
      if(ncache>0) then
@@ -1164,6 +1397,7 @@ subroutine make_reverse_mg_dp(ivar,ilevel)
             & MPI_DOUBLE_PRECISION,icpu-1,tag,MPI_COMM_WORLD,reqrecv(countrecv),info)
      end if
   end do
+#endif
 
   ! Send all messages
   countsend=0
@@ -1172,8 +1406,13 @@ subroutine make_reverse_mg_dp(ivar,ilevel)
      ncache=active_mg(icpu,ilevel)%ngrid
      if(ncache>0) then
        countsend=countsend+1
+#ifdef LIGHT_MPI_COMM
+       call MPI_ISEND(active_mg(icpu,ilevel)%pcomm%u(1,ivar),ncache*twotondim, &
+            & MPI_DOUBLE_PRECISION,icpu-1,tag,MPI_COMM_WORLD,reqsend(countsend),info)
+#else
        call MPI_ISEND(active_mg(icpu,ilevel)%u(1,ivar),ncache*twotondim, &
             & MPI_DOUBLE_PRECISION,icpu-1,tag,MPI_COMM_WORLD,reqsend(countsend),info)
+#endif
      end if
   end do
 
@@ -1181,6 +1420,21 @@ subroutine make_reverse_mg_dp(ivar,ilevel)
   call MPI_WAITALL(countrecv,reqrecv,statuses,info)
 
   ! Gather emission array
+#ifdef LIGHT_MPI_COMM
+   offset=0
+   do idx=1,emission_mg(ilevel)%nactive
+      do j=1,twotondim
+         step=(j-1)*emission_mg(ilevel)%ngrids(idx)
+         iskip=(j-1)*active_mg(myid,ilevel)%ngrid
+         do i=1,emission_mg(ilevel)%ngrids(idx)
+            icell=emission_mg(ilevel)%igrid(offset+i)+iskip
+            active_mg(myid,ilevel)%pcomm%u(icell,ivar)=active_mg(myid,ilevel)%pcomm%u(icell,ivar)+ &
+                      emission_mg(ilevel)%u(offset*twotondim+step+i,1)
+         end do
+      end do
+      offset=offset+emission_mg(ilevel)%ngrids(idx)
+   end do
+#else
   do icpu=1,ncpu
      if (emission_mg(icpu,ilevel)%ngrid>0) then
         do j=1,twotondim
@@ -1194,6 +1448,7 @@ subroutine make_reverse_mg_dp(ivar,ilevel)
         end do
      end if
   end do
+#endif
 
   ! Wait for full completion of sends
   call MPI_WAITALL(countsend,reqsend,statuses,info)
@@ -1214,7 +1469,7 @@ subroutine make_reverse_mg_int(ilevel)
 
 #ifndef WITHOUTMPI
   integer,dimension(MPI_STATUS_SIZE,ncpu)::statuses
-  integer::icell
+  integer::icell, offset,idx
   integer::icpu,i,j,ncache,iskip,step
   integer::countsend,countrecv
   integer::info,tag=101
@@ -1222,6 +1477,16 @@ subroutine make_reverse_mg_int(ilevel)
 
   ! Receive all messages
   countrecv=0
+#ifdef LIGHT_MPI_COMM
+  offset=1
+  do idx=1,emission_mg(ilevel)%nactive
+    ncache=emission_mg(ilevel)%ngrids(idx)*twotondim
+    countrecv=countrecv+1
+    call MPI_IRECV(emission_mg(ilevel)%f(1, offset),ncache,MPI_INTEGER,&
+                   emission_mg(ilevel)%cpuid(idx)-1,tag,MPI_COMM_WORLD,reqrecv(countrecv),info)
+    offset=offset+emission_mg(ilevel)%ngrids(idx)
+  end do
+#else
   do icpu=1,ncpu
      ncache=emission_mg(icpu,ilevel)%ngrid
      if(ncache>0) then
@@ -1230,6 +1495,7 @@ subroutine make_reverse_mg_int(ilevel)
             & MPI_INTEGER,icpu-1,tag,MPI_COMM_WORLD,reqrecv(countrecv),info)
      end if
   end do
+#endif
 
   ! Send all messages
   countsend=0
@@ -1238,8 +1504,13 @@ subroutine make_reverse_mg_int(ilevel)
      ncache=active_mg(icpu,ilevel)%ngrid
      if(ncache>0) then
        countsend=countsend+1
+#ifdef LIGHT_MPI_COMM
+       call MPI_ISEND(active_mg(icpu,ilevel)%pcomm%f,ncache*twotondim, &
+            & MPI_INTEGER,icpu-1,tag,MPI_COMM_WORLD,reqsend(countsend),info)
+#else
        call MPI_ISEND(active_mg(icpu,ilevel)%f,ncache*twotondim, &
             & MPI_INTEGER,icpu-1,tag,MPI_COMM_WORLD,reqsend(countsend),info)
+#endif
      end if
   end do
 
@@ -1247,6 +1518,19 @@ subroutine make_reverse_mg_int(ilevel)
   call MPI_WAITALL(countrecv,reqrecv,statuses,info)
 
   ! Gather emission array
+#ifdef LIGHT_MPI_COMM
+   offset=0
+   do idx=1,emission_mg(ilevel)%nactive
+      do j=1,twotondim
+         do i=1,emission_mg(ilevel)%ngrids(idx)
+            icell=emission_mg(ilevel)%igrid(offset+i)
+            active_mg(myid,ilevel)%pcomm%f(j,icell)=active_mg(myid,ilevel)%pcomm%f(j,icell)+ &
+                      emission_mg(ilevel)%f(j,offset+i)
+         end do
+      end do
+      offset=offset+emission_mg(ilevel)%ngrids(idx)
+   end do
+#else
   do icpu=1,ncpu
      if (emission_mg(icpu,ilevel)%ngrid>0) then
         do j=1,twotondim
@@ -1260,6 +1544,7 @@ subroutine make_reverse_mg_int(ilevel)
         end do
      end if
   end do
+#endif
 
   ! Wait for full completion of sends
   call MPI_WAITALL(countsend,reqsend,statuses,info)
@@ -1321,7 +1606,11 @@ subroutine dump_mg_levels(ilevel,idout)
       write(10,*) ngrids
       do igrid=1,ngrids
          do idim=1,ndim
+#ifdef LIGHT_MPI_COMM
+            write(10,*) xg(active_mg(myid,i)%pcomm%igrid(igrid),idim)
+#else
             write(10,*) xg(active_mg(myid,i)%igrid(igrid),idim)
+#endif
          end do
       end do
 
@@ -1332,7 +1621,11 @@ subroutine dump_mg_levels(ilevel,idout)
          write(10,*) ngrids
          do igrid=1,ngrids
             do idim=1,ndim
+#ifdef LIGHT_MPI_COMM
+               write(10,*) xg(active_mg(icpu,i)%pcomm%igrid(igrid),idim)
+#else
                write(10,*) xg(active_mg(icpu,i)%igrid(igrid),idim)
+#endif
             end do
          end do
       end do

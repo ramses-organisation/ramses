@@ -118,11 +118,67 @@ module amr_commons
 #endif
   end type communicator
 
+
+#ifdef LIGHT_MPI_COMM
+  ! ----------- Optimized MPI buffer communicator structures suggested by P. Wautelet on the IDRIS page ------------ !
+  ! ----------- http://www.idris.fr/docs/docu/support-avance/ramses.html to reduce the memory footprint ------------ !
+  ! ----------- D. Chapon (CEA Saclay - IRFU).                                                          ------------ !  
+  ! Actual communication structure holding the data allocatable arrays
+  type point_comm
+     integer          ,dimension(:),  pointer::igrid
+     integer          ,dimension(:,:),pointer::f
+     integer(kind=i8b),dimension(:,:),pointer::f8
+     real(kind=8)     ,dimension(:,:),pointer::u
+#ifdef ATON
+     real(kind=8)     ,dimension(:,:),pointer::u_radiation
+#endif
+  end type point_comm
+
+  ! Light communication (intermediate) structure
+  type communicator_light
+     integer                            ::ngrid
+     integer                            ::npart
+     type(point_comm), pointer          ::pcomm
+  end type communicator_light
+
+  type communicator_varoct
+    integer :: nactive    ! Number of processes sharing data with current process
+    integer :: ngrids_tot ! Total number of octs to share
+    integer,     allocatable,dimension(:)  :: cpuid  ! Number of the active process
+    integer,     allocatable,dimension(:)  :: ngrids ! Number of octs to share with each active process
+    integer,     allocatable,dimension(:)  :: igrid
+    real(kind=8),allocatable,dimension(:,:):: u
+    integer,     allocatable,dimension(:,:):: f
+#ifdef ATON
+    real(kind=8),allocatable,dimension(:) ::u_radiation
+#endif
+
+  end type communicator_varoct
+
+  type communicator_varpart
+    integer :: nactive    ! Number of processes sharing data with current process
+    integer :: nparts_tot ! Total number of particles to share
+    integer,     allocatable,dimension(:)       :: cpuid  ! Number of the active process
+    integer,     allocatable,dimension(:)       :: nparts ! Number of particles to share with each active process
+    real(kind=8),allocatable,dimension(:,:)     :: u
+    integer,     allocatable,dimension(:,:)     :: f
+    integer(kind=i8b),allocatable,dimension(:,:):: f8
+  end type communicator_varpart
+#endif
+
   ! Active grid, emission and reception communicators
-  type(communicator),allocatable,dimension(:)  ::active
-  type(communicator),allocatable,dimension(:,:)::boundary
-  type(communicator),allocatable,dimension(:,:)::emission
-  type(communicator),allocatable,dimension(:,:)::reception
+  type(communicator),allocatable,dimension(:)  ::active               ! 1D (1:nlevelmax) array => leave as is
+  type(communicator),allocatable,dimension(:,:)::boundary             ! 2D (1:MAXBOUND, 1:nlevelmax) array => leave as is
+#ifdef LIGHT_MPI_COMM
+  type(communicator_light),  allocatable,dimension(:,:)::reception       ! 2D (ncpu,nlevelmax) light reception buffer
+  type(communicator_varoct), allocatable,dimension(:)  ::emission        ! 1D (nlevelmax) AMR data emission buffer
+  type(communicator_varpart),allocatable,dimension(:)  ::emission_part   ! 1D (nlevelmax) point data emission buffer
+! ---------------------------------------------------------------------------------------------------------------------------- !
+#else
+  type(communicator),allocatable,dimension(:,:)::emission    ! 2D (ncpu,nlevelmax) data emission "heavy" buffer
+  type(communicator),allocatable,dimension(:,:)::reception   ! 2D (ncpu, nlevelmax) data reception "heavy" buffer
+#endif
+
 
   ! Types for physical boundary conditions
   CHARACTER(LEN=20)::type_hydro  ='hydro'

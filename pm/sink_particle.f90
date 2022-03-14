@@ -2886,7 +2886,11 @@ subroutine set_unew_sink(ilevel)
      do ivar=1,nvar
 #endif
         do i=1,reception(icpu,ilevel)%ngrid
+#ifdef LIGHT_MPI_COMM
+           unew(reception(icpu,ilevel)%pcomm%igrid(i)+iskip,ivar)=0
+#else
            unew(reception(icpu,ilevel)%igrid(i)+iskip,ivar)=0
+#endif
         end do
      end do
   end do
