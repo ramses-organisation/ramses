@@ -808,6 +808,7 @@ subroutine make_virtual_reverse_dp(xx,ilevel)
   ! Receive all messages
 #ifdef LIGHT_MPI_COMM
   countrecv=0
+  offset=1
   do idx=1,emission(ilevel)%nactive
      ncache=emission(ilevel)%ngrids(idx)*twotondim 
      if (emission(ilevel)%cpuid(idx) > myid) then
@@ -1104,6 +1105,7 @@ subroutine make_virtual_reverse_int(xx,ilevel)
   ! Receive all messages
 #ifdef LIGHT_MPI_COMM
   countrecv=0
+  offset = 1
   do idx=1,emission(ilevel)%nactive
      ncache=emission(ilevel)%ngrids(idx)*twotondim
      if (emission(ilevel)%cpuid(idx) > myid) then
