@@ -129,7 +129,11 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
   ! Typical ISM density in H/cc
   nISM = n_star; nCOM=0
   if(cosmo)then
+#ifdef grackle
+     nCOM = del_star*omega_b*rhoc*(h0/100)**2/aexp**3*grackle_HydrogenFractionByMass/mH
+#else
      nCOM = del_star*omega_b*rhoc*(h0/100)**2/aexp**3*X/mH
+#endif
   endif
   nISM = MAX(nCOM,nISM)
   polytrope_rho_cu = polytrope_rho/scale_d
@@ -178,9 +182,15 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
 
      ! Compute metallicity in solar units
      if(metal)then
+#ifdef grackle
+        do i=1,nleaf
+           Zsolar(i)=uold(ind_leaf(i),imetal)/nH(i)/grackle_SolarMetalFractionByMass
+        end do
+#else
         do i=1,nleaf
            Zsolar(i)=uold(ind_leaf(i),imetal)/nH(i)/0.02d0
         end do
+#endif
      else
         do i=1,nleaf
            Zsolar(i)=z_ave
@@ -430,12 +440,12 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
            if(metal)then
               gr_metal_density(i) = uold(ind_leaf(i),imetal)
            else
-              gr_metal_density(i) = uold(ind_leaf(i),1)*0.02d0*z_ave
+              gr_metal_density(i) = uold(ind_leaf(i),1)*grackle_SolarMetalFractionByMass*z_ave
            endif
            gr_energy(i) = T2(i)/(scale_T2*(gamma-1.0d0))
-           gr_HI_density(i) = X*gr_density(i)
-           gr_HeI_density(i) = (1.0d0-X)*gr_density(i)
-           gr_DI_density(i) = 2*3.4d-5*gr_density(i)
+           gr_HI_density(i) = grackle_HydrogenFractionByMass*gr_density(i)
+           gr_HeI_density(i) = (1.0d0-grackle_HydrogenFractionByMass)*gr_density(i)
+           gr_DI_density(i) = grackle_DeuteriumToHydrogenRatio*gr_density(i)
         enddo
         ! Update grid properties
         my_grackle_fields%grid_rank = gr_rank

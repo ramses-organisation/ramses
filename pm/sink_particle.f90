@@ -883,8 +883,15 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
                  m_acc_smbh=0
               end if
            else
-              m_acc      = dMsink_overdt(isink)*dtnew(ilevel)*weight/volume
-              m_acc_smbh = dMsmbh_overdt(isink)*dtnew(ilevel)*weight/volume
+              if (bondi_accretion)then
+                 m_acc      = dMsink_overdt(isink)*dtnew(ilevel)*weight/volume
+                 m_acc_smbh = dMsmbh_overdt(isink)*dtnew(ilevel)*weight/volume
+              end if
+
+              if (threshold_accretion.and.d_sink>0.0)then
+                 m_acc=c_acc*weight*(d-d_sink)
+              end if
+
               if (agn_acc_method=='mass') then
                  m_acc      = m_acc * (d/density)
                  m_acc_smbh = m_acc_smbh * (d/density)
@@ -1741,7 +1748,7 @@ subroutine update_sink(ilevel)
   logical::iyoung,jyoung,overlap,merge_flag
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   real(dp)::dteff,dx_loc,scale,dx_min
-  real(dp)::t_larson1,rr,rmax,rmax2,factG,v1_v2,mcom,fsink_norm,vsink_norm
+  real(dp)::t_larson1,rr,rmax,rmax2,factG,v1_v2,mcom,fsink_norm
   real(dp),dimension(1:ndim)::xcom,vcom,lcom,r_rel
   logical,dimension(1:ndim)::period
   real(dp),dimension(1:nsink,1:ndim)::xsinkold, fsinkold
@@ -2466,7 +2473,7 @@ subroutine read_sink_params()
   integer::nx_loc
   namelist/sink_params/n_sink,rho_sink,d_sink,accretion_scheme,merging_timescale,&
        ir_cloud_massive,sink_soft,mass_sink_direct_force,ir_cloud,nsinkmax,create_sinks,&
-       mass_sink_seed,mass_smbh_seed,&
+       mass_sink_seed,mass_smbh_seed,c_acc,&
        eddington_limit,acc_sink_boost,mass_merger_vel_check,&
        clump_core,verbose_AGN,T2_AGN,T2_min,cone_opening,mass_halo_AGN,mass_clump_AGN,mass_star_AGN,&
        AGN_fbk_frac_ener,AGN_fbk_frac_mom,T2_max,boost_threshold_density,&
@@ -2518,6 +2525,7 @@ subroutine read_sink_params()
 
   ! Check for accretion scheme
   if (accretion_scheme=='bondi')bondi_accretion=.true.
+  if (accretion_scheme=='threshold')threshold_accretion=.true.
 
   ! For sink formation and accretion a threshold must be given
   if (create_sinks .or. (accretion_scheme .ne. 'none'))then

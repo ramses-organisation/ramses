@@ -1,6 +1,6 @@
 subroutine move_tracer_fine(ilevel)
    use amr_commons, only: headl, numbl, next, nvector, myid
-   use pm_commons, only: xp, vp, partp, typep, headp, numbp, nextp, move_flag
+   use pm_commons, only: typep, headp, numbp, nextp, move_flag
    use pm_commons, only: is_gas_tracer, is_star_tracer, is_cloud_tracer, part_t
    implicit none
 
