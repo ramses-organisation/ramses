@@ -4,10 +4,6 @@ subroutine read_turb_params(nml_ok)
   use turb_commons
   implicit none
   logical, intent(inout) ::nml_ok
-  !--------------------------------------------------
-  ! Local variables
-  !--------------------------------------------------
-  integer       :: ierr          ! Error variable
 
   !--------------------------------------------------
   ! Namelist definitions

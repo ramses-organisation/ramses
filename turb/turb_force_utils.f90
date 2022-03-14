@@ -153,7 +153,7 @@ subroutine gaussian_cmplx(G)
    call kiss64_double(ndim, kiss64_state, Rnd(1:ndim))
    arg = (Rnd(1:ndim) * 2.0 * PI) - 1.0
 
-   G = cmplx(mag * cos(arg), mag * sin(arg))
+   G = cmplx(mag * cos(arg), mag * sin(arg), kind=cdp)
 
    ! Method 2: Gaussian real and imaginary components
 !    do d=1,ndim
@@ -187,19 +187,21 @@ subroutine add_turbulence(turb_field, dt)
                                            ! Wiener process
 
    integer              :: i, j, k         ! Loop variables
-   integer              :: ii,jj,kk        ! Hermitian pair
    integer              :: halfway         ! Half of grid size
 
 #if defined(HERMITIAN_FIELD)
+   integer              :: ii,jj,kk        ! Hermitian pair
    logical              :: hermitian_pair  ! Do we need to take conjugate?
    logical              :: own_conjg       ! Are we are own conjugate pair?
 #endif
    
-   real(kind=dp)        :: unitk(1:NDIM)       ! Unit vector parallel to k
    complex(kind=cdp)    :: complex_vec(1:NDIM) ! Complex Fourier vector
+#if NDIM>1
+   real(kind=dp)        :: unitk(1:NDIM)       ! Unit vector parallel to k
    complex(kind=cdp)    :: unitk_cmplx(1:NDIM) ! Unit vector parallel to k
    complex(kind=cdp)    :: comp_cmplx(1:NDIM)  ! Compressive component
    complex(kind=cdp)    :: sol_cmplx(1:NDIM)   ! Solenoidal components
+#endif
 
    halfway = TURB_GS / 2 ! integer division
 
@@ -262,7 +264,7 @@ subroutine add_turbulence(turb_field, dt)
 #if NDIM>1
             ! Helmholtz decomposition!
             call find_unitk(i, j, k, halfway, unitk)
-            unitk_cmplx = cmplx(unitk)
+            unitk_cmplx = cmplx(unitk, kind=cdp)
             comp_cmplx = unitk_cmplx *  dot_product(unitk_cmplx,complex_vec)
             sol_cmplx = complex_vec - comp_cmplx
             complex_vec = comp_cmplx*comp_frac + sol_cmplx*sol_frac
@@ -490,7 +492,7 @@ subroutine power_rms_norm(power_in, P)
    integer                    :: d               ! Dimension counter
 
    do d=1,NDIM
-      complex_field(d,:,:,:) = cmplx(power_in)
+      complex_field(d,:,:,:) = cmplx(power_in, kind=cdp)
    end do
 
 #if NDIM==1

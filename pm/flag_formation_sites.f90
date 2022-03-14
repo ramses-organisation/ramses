@@ -1252,8 +1252,7 @@ subroutine rho_star_only(ilevel)
   ! level ilevel contribute also to the level density field
   ! (boundary particles) using buffer grids.
   !------------------------------------------------------------------
-  integer::iskip,icpu,ind,i,nx_loc,ibound
-  real(dp)::dx,scale,dx_loc
+  integer::iskip,icpu,ind,i,ibound
 
   if(.not. poisson)return
   if(.not. star)return
