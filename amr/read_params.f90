@@ -40,8 +40,8 @@ subroutine read_params
       integer(i8b),dimension(:,:),pointer::fp_legacy
       real(kind=8),dimension(:,:),pointer::up_legacy
    end type communicator_legacy
-   real(kind=8)::mem_used_legacy_buff, mem_used_new_buff
-   type(communicator_legacy),allocatable,dimension(:,:)::emission_reception_legacy  ! 2D (ncpu,nlevelmax) data emission/reception "heavy" buffer
+   real(kind=8)::mem_used_legacy_buff, mem_used_new_buff,mem_used_legacy_buff_mg, mem_used_new_buff_mg
+   type(communicator_legacy),allocatable,dimension(:,:)::emission_reception_legacy  ! 2D (ncpu,nlevelmax) data emission/reception/active_mg/emission_mg "heavy" buffer
 #endif
 
   !--------------------------------------------------
@@ -194,7 +194,7 @@ subroutine read_params
   read(1,NML=poisson_params,END=81)
 81 continue
 
-
+#ifndef WITHOUTMPI
 #ifdef LIGHT_MPI_COMM
   if(myid==1 .and. ncpu .gt. 100) then
     write(*,*) "--------------------------------------------------------------------------------------------------------------"
@@ -208,6 +208,15 @@ subroutine read_params
     write(*,*) "  * Old MPI communication structures (emission+reception) would have allocated : ", mem_used_legacy_buff/1.0e6," MB"
     write(*,*) "      - reception(1:ncpu,1:nlevelmax) : ", mem_used_legacy_buff/2.0e6," MB"
     write(*,*) "      - emission(1:ncpu,1:nlevelmax)  : ", mem_used_legacy_buff/2.0e6," MB"
+    if (poisson) then
+        allocate(emission_reception_legacy(1:100, 1:levelmax-1))
+        mem_used_legacy_buff_mg = dble(sizeof(emission_reception_legacy)*2)*ncpu/100.0
+        deallocate(emission_reception_legacy)
+        write(*,*) "  * Old Poisson-related MPI communication structures (active_mg+emission_mg) would have allocated : ", mem_used_legacy_buff_mg/1.0e6," MB"
+        write(*,*) "      - active_mg(1:ncpu,1:nlevelmax-1) : ", mem_used_legacy_buff_mg/2.0e6," MB"
+        write(*,*) "      - emission_mg(1:ncpu,1:nlevelmax-1) : ", mem_used_legacy_buff_mg/2.0e6," MB"
+        mem_used_legacy_buff = mem_used_legacy_buff + mem_used_legacy_buff_mg
+    endif
 
     allocate(reception(1:100, 1:levelmax))
     allocate(emission(1:levelmax))
@@ -220,9 +229,21 @@ subroutine read_params
     write(*,*) "       - emission(1:nlevelmax)         : ", dble(sizeof(emission))/1.0e6," MB"
     write(*,*) "       - emission_part(1:nlevelmax)    : ", dble(sizeof(emission_part))/1.0e6," MB"
     write(*,*) "       - reception(1:ncpu,1:nlevelmax) : ", dble(sizeof(reception))*ncpu/1.0e8," MB"
+    if (poisson) then
+        allocate(reception(1:100, 1:levelmax-1)) ! active_mg 
+        allocate(emission(1:levelmax-1)) ! emission_mg
+        mem_used_new_buff_mg = dble(sizeof(emission)) + dble(sizeof(reception))*ncpu/100.0
+        deallocate(reception)
+        deallocate(emission)
+        write(*,*) "  * New Poisson-related MPI communication structures (emission_mg+active_mg) use : ", mem_used_new_buff_mg/1.0e6," MB"
+        write(*,*) "       - emission_mg(1:nlevelmax-1)         : ", dble(sizeof(emission))/1.0e6," MB"
+        write(*,*) "       - active_mg(1:ncpu,1:nlevelmax-1) : ", dble(sizeof(reception))*ncpu/1.0e8," MB"
+        mem_used_new_buff = mem_used_new_buff + mem_used_new_buff_mg
+    endif
     write(*,*) "    => Overall memory economy : ", (mem_used_legacy_buff-mem_used_new_buff)/1.0e6,"MB"
     write(*,*) "--------------------------------------------------------------------------------------------------------------"
   endif
+#endif
 #endif
 
   !-------------------------------------------------
