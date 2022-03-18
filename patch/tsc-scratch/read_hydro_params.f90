@@ -49,7 +49,7 @@ subroutine read_hydro_params(nml_ok)
        & ,riemann2d,slope_mag_type,eta_mag &
 #endif
        & ,pressure_fix,beta_fix,scheme,riemann &
-       & ,strict_equilibrium
+       & ,strict_equilibrium, dens_llf
 
   ! Refinement parameters
   namelist/refine_params/x_refine,y_refine,z_refine,r_refine &
@@ -97,7 +97,7 @@ subroutine read_hydro_params(nml_ok)
 
   ! Dust grains parameters
   namelist/grain_params/boris,t_stop,charge_to_mass,grain_size,constant_t_stop&
-  & ,dust_to_gas,accel_gr,second_order,trajectories
+  & ,dust_to_gas,accel_gr,second_order,trajectories,supersonic_drag,stopping_rate
 
   ! Units parameters
   namelist/units_params/units_density,units_time,units_length
@@ -260,6 +260,18 @@ subroutine read_hydro_params(nml_ok)
      if(myid==1)write(*,*)'Error: metals need nvar >= ndim+3'
      if(myid==1)write(*,*)'Modify hydro_parameters.f90 and recompile'
      nml_ok=.false.
+  endif
+
+  !--------------------------------------------------
+  ! Check EOS parameters
+  !--------------------------------------------------
+  if(isothermal .and. .not. barotropic_eos)then
+    barotropic_eos=.true.
+    if(myid==1)write(*,*)'WARNING: The isothermal keyword is replaced by "barotropic_eos". Running with barotropic_eos=.true.'
+  endif
+  if(barotropic_eos)then
+    ! set T2 for computations
+    T2_eos = T_eos/mu_gas
   endif
 
   !--------------------------------------------------

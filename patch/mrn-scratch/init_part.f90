@@ -14,7 +14,7 @@
   !------------------------------------------------------------
   integer::npart2,ndim2,ncpu2
   integer::ipart,jpart,ipart_old,ilevel,idim
-  integer::i,igrid,ncache,ngrid,iskip
+  integer::i,igrid,ncache,ngrid,iskip,idust
   integer::ind,ix,iy,iz,ilun,icpu
   integer::i1,i2,i3
   integer::i1_min=0,i1_max=0,i2_min=0,i2_max=0,i3_min=0,i3_max=0
@@ -287,6 +287,9 @@ contains
     !----------------------------------------------------
     ipart=0
     ! Loop over initial condition levels
+    do idust=1,ndust !ndust should ideally be consistent with how the ICs were generated
+    ! Being consistent means there are factors of ndust in varous exponents and
+    ! the denominator of the grain mass.
     do ilevel=levelmin,nlevelmax
 
        if(initfile(ilevel)==' ')cycle
@@ -634,7 +637,8 @@ contains
                             idp(ipart) = init_array_id(i1,i2,i3)
                           end if
                           if (read_mass) then
-                            mp(ipart) = 0.5d0**(3*ilevel) * init_array_m(i1,i2,i3)
+                            mp(ipart) = 0.5d0**(3*ilevel) * init_array_m(i1,i2,i3)*&
+                            &1.0d1**(0.5*ddex*idp(ipart)*(idust-1.0)*0.5d0**(3*levelmin)/ndust)
                           end if
                          endif
                       end if
@@ -668,9 +672,10 @@ contains
 
     end do
     ! End loop over levels
-
+    end do ! End of the loop that made ndust copies of the dust grains
     ! Initial particle number
     npart=ipart
+
 
     ! Move particle according to Zeldovich approximation
     if(.not. read_pos .and. cosmo)then
