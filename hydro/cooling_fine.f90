@@ -476,6 +476,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
               call solve_cooling(nH,T2,Zsolar,boost,dtcool,delta_T2,nleaf)
            endif
         endif
+     endif
 #else
      ! Compute net cooling at constant nH
      if(cooling.and..not.neq_chem)then
