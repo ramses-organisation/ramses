@@ -224,7 +224,7 @@ subroutine init_time
         gr_RT_heating_rate(i) = 0d0
      enddo
   else
-     if(cooling.and..not.(neq_chem.or.rt).and..not.cooling_frig)then
+     if(cooling.and..not.(neq_chem.or.rt).and..not.cooling_ism)then
         if(myid==1)write(*,*)'Computing cooling model'
         Nmodel=-1
         if(.not. haardt_madau)then
@@ -250,7 +250,7 @@ subroutine init_time
      end if
   endif
 #else
-  if(cooling.and..not.(neq_chem.or.rt).and..not.cooling_frig) then
+  if(cooling.and..not.(neq_chem.or.rt).and..not.cooling_ism) then
      if(myid==1)write(*,*)'Computing cooling model'
      Nmodel=-1
      if(.not. haardt_madau)then

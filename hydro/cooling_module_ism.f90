@@ -1,8 +1,8 @@
 !! Cooling from frig version (Audit & Hennebelle 2005)
-!! solve_cooling_frig is used if there is no RT
+!! solve_cooling_ism is used if there is no RT
 !! Authors: Patrick Hennebelle, Benjamin Godard
 !=======================================================================
-subroutine solve_cooling_frig(nH,T2,dt,deltaT2,ncell)
+subroutine solve_cooling_ism(nH,T2,dt,deltaT2,ncell)
 !=======================================================================
   use amr_parameters, only:mu_gas
   implicit none
@@ -27,7 +27,7 @@ subroutine solve_cooling_frig(nH,T2,dt,deltaT2,ncell)
      call calc_temp(NN,TT,dt)
      deltaT2(i) = (TT - TT_ini) / mu
   end do
-end subroutine solve_cooling_frig
+end subroutine solve_cooling_ism
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

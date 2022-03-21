@@ -49,7 +49,7 @@ units_length=3.0857d18
 &COOLING_PARAMS
 isothermal=.false.
 cooling=.true.
-cooling_frig=.true.
+cooling_ism=.true.
 mu_gas=1.4d0
 z_ave=1.0
 /
