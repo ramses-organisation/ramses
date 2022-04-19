@@ -408,7 +408,7 @@ subroutine build_parent_comms_mg(active_f_comm_igrid, active_f_comm_ngrid, ifine
    integer, intent(in) :: ifinelevel
 
    integer :: icoarselevel
-   integer :: ngrids, cur_grid, cur_cpu, cur_cell,idx,offset
+   integer :: ngrids, cur_grid, cur_cpu, cur_cell
    integer :: i, nbatch, ind, istart
 
    integer, dimension(1:nvector), save :: ind_cell_father
@@ -420,6 +420,7 @@ subroutine build_parent_comms_mg(active_f_comm_igrid, active_f_comm_ngrid, ifine
 
 #ifndef WITHOUTMPI
 #ifdef LIGHT_MPI_COMM
+   integer :: idx,offset
    ! Send/recv Multigrid temporary communicator (light) used in build_parent_comms_mg subroutine
    type communicator_mg
      integer                       ::ngrid
@@ -1178,13 +1179,16 @@ subroutine make_virtual_mg_dp(ivar,ilevel)
   use mpi_mod
 
   implicit none
-  integer::ilevel,ivar,idx,offset
+  integer::ilevel,ivar
 #ifndef WITHOUTMPI
   integer,dimension(MPI_STATUS_SIZE,ncpu)::statuses
   integer::icell,icpu,i,j,ncache,iskip,step
   integer::countsend,countrecv
   integer::info,tag=101
   integer,dimension(ncpu)::reqsend,reqrecv
+#ifdef LIGHT_MPI_COMM
+  integer::idx,offset
+#endif
 
   ! Receive all messages
   countrecv=0
@@ -1278,11 +1282,13 @@ subroutine make_virtual_mg_int(ilevel)
 
 #ifndef WITHOUTMPI
   integer,dimension(MPI_STATUS_SIZE,ncpu)::statuses
-  integer::icpu,i,j,ncache,iskip,step,icell,idx,offset
+  integer::icpu,i,j,ncache,iskip,step,icell
   integer::countsend,countrecv
   integer::info,tag=101
   integer,dimension(ncpu)::reqsend,reqrecv
-
+#ifdef LIGHT_MPI_COMM
+  integer::idx,offset
+#endif
   ! Receive all messages
   countrecv=0
   do icpu=1,ncpu
@@ -1368,7 +1374,7 @@ subroutine make_reverse_mg_dp(ivar,ilevel)
   use poisson_commons
   use mpi_mod
   implicit none
-  integer::ilevel,ivar,offset,idx
+  integer::ilevel,ivar
 
 #ifndef WITHOUTMPI
   integer,dimension(MPI_STATUS_SIZE,ncpu)::statuses
@@ -1376,6 +1382,9 @@ subroutine make_reverse_mg_dp(ivar,ilevel)
   integer::countsend,countrecv
   integer::info,tag=101
   integer,dimension(ncpu)::reqsend,reqrecv
+#ifdef LIGHT_MPI_COMM
+  integer::idx,offset
+#endif
 
   ! Receive all messages
   countrecv=0
@@ -1469,11 +1478,13 @@ subroutine make_reverse_mg_int(ilevel)
 
 #ifndef WITHOUTMPI
   integer,dimension(MPI_STATUS_SIZE,ncpu)::statuses
-  integer::icell, offset,idx
-  integer::icpu,i,j,ncache,iskip,step
+  integer::icell,icpu,i,j,ncache,iskip,step
   integer::countsend,countrecv
   integer::info,tag=101
   integer,dimension(ncpu)::reqsend,reqrecv
+#ifdef LIGHT_MPI_COMM
+  integer::idx,offset
+#endif
 
   ! Receive all messages
   countrecv=0

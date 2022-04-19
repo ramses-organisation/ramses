@@ -653,8 +653,11 @@ subroutine virtual_tree_fine(ilevel)
   ! This subroutine move particles across processors boundaries.
   !-----------------------------------------------------------------------
 #ifndef WITHOUTMPI
-  integer::ip,ipcom,npart1,next_part,ncache,ncache_tot, offset_np
-  integer::icpu,igrid,ipart,jpart,iactive
+#ifdef LIGHT_MPI_COMM
+  integer:: offset_np, iactive
+#endif
+  integer::ip,ipcom,npart1,next_part,ncache,ncache_tot
+  integer::icpu,igrid,ipart,jpart
   integer::info,buf_count,tagf=102,tagu=102
   integer::countsend,countrecv
   integer,dimension(MPI_STATUS_SIZE,2*ncpu)::statuses
@@ -1213,13 +1216,13 @@ subroutine empty_comm(ind_com,np,ilevel,icpu)
   implicit none
   integer::np,ilevel
 #ifdef LIGHT_MPI_COMM
-  integer::iactive,offset_np,offset_ig,found_cpu,particle_data_width,particle_data_width_int
+  integer::iactive,offset_np,offset_ig,found_cpu,particle_data_width,particle_data_width_int,j,nparts
 #else
   integer::icpu
 #endif
   integer,dimension(1:nvector)::ind_com
 
-  integer::i,j,idim,igrid,nparts
+  integer::i,idim,igrid
   integer,dimension(1:nvector),save::ind_list,ind_part
   logical,dimension(1:nvector),save::ok=.true.
   integer::current_property
