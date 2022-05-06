@@ -6,11 +6,11 @@
 # Do we want a debug build? 1=Yes, 0=No
 DEBUG = 0
 # Compiler flavor: GNU or INTEL
-COMPILER = INTEL
+COMPILER = GNU
 # Size of vector cache
 NVECTOR = 32
 # Number of dimensions
-NDIM = 3
+NDIM = 2
 # Float precision size
 NPRE = 8
 # hydro/mhd solver
@@ -23,9 +23,9 @@ RT = 0
 USE_TURB=0
 # Use MPI? 1=Yes, 0=No
 MPI = 1
-MPIF90 = ftn
+MPIF90 = mpif90
 # Root name of executable
-EXEC = ramsesMHD_eiger
+EXEC = ramsesMHD_testentropy
 # Number of additional energies
 NENER = 0
 # Use Grackle cooling? 1=Yes, 0=No
