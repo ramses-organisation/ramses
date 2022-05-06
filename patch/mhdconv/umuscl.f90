@@ -896,7 +896,7 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,req,peq,qpeq,dx,dy,dz,dt,ng
   real(dp)::seq_l, seq_r, seq_t, seq_b, seq_f, seq_p
   real(dp)::dreqx, dreqy, dreqz = 0.d0
   real(dp)::dpeqx, dpeqy, dpeqz = 0.d0
-  read(dp)::dseqx, dseqy, dseqz = 0.d0
+  real(dp)::dseqx, dseqy, dseqz = 0.d0
 #if NENER>0
   real(dp),dimension(1:nener)::e, dex, dey, dez, se0
   integer ::irad
