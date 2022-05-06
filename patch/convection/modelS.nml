@@ -10,8 +10,8 @@ nsubcycle=30*1
 /
 
 &AMR_PARAMS 
-levelmin=7
-levelmax=7
+levelmin=6
+levelmax=6
 ngridmax=200000
 nexpand=1
 boxlen=245.0
