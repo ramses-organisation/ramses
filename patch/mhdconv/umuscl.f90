@@ -892,7 +892,7 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,req,peq,qpeq,dx,dy,dz,dt,ng
   REAL(dp)::dBLx, dBRx, dBLz, dBRz
   REAL(dp)::dCLx, dCRx, dCLy, dCRy
   REAL(DP)::sAL0, sAR0, sBL0, sBR0, sCL0, sCR0
-  real(dp)::qreq, qreq4, qpeq4, seq, qseq, 
+  real(dp)::qreq, qreq4, qpeq4, seq, qseq
   real(dp)::seq_l, seq_r, seq_t, seq_b, seq_f, seq_p
   real(dp)::dreqx, dreqy, dreqz = 0.d0
   real(dp)::dpeqx, dpeqy, dpeqz = 0.d0
