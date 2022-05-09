@@ -1486,8 +1486,8 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,req,peq,qpeq,dx,dy,dz,dt,ng
                  seq_r = peq(l,i+1,j,k)/(req(l,i+1,j,k)**gamma)
                  dseqx = half*(half*(seq_r - seq_l))
                  ! Top and bottom
-                 seq_t = peq(l,i,j-1,k)/(req(l,i,j-1,k)**gamma)
-                 seq_b = peq(l,i,j+1,k)/(req(l,i,j+1,k)**gamma)
+                 seq_b = peq(l,i,j-1,k)/(req(l,i,j-1,k)**gamma)
+                 seq_t = peq(l,i,j+1,k)/(req(l,i,j+1,k)**gamma)
                  dseqy = half*(half*(seq_t - seq_b))
                  ! Front and Posterior (back)
                  seq_p = peq(l,i,j,k-1)/(req(l,i,j,k-1)**gamma)
