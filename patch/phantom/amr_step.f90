@@ -231,10 +231,10 @@ recursive subroutine amr_step(ilevel,icount)
         ! Note: only the array f(:,:), now pointing to f_mond(:,:), is used.
         if (mond) then
            f => f_mond
-           call synchro_hydro_fine(ilevel,-0.5*dtnew(ilevel))
+           call synchro_hydro_fine(ilevel,-0.5*dtnew(ilevel),1)
            f => f_newton ! Change it back
         else
-           call synchro_hydro_fine(ilevel,-0.5*dtnew(ilevel))
+           call synchro_hydro_fine(ilevel,-0.5*dtnew(ilevel),1)
         endif
         !~~~~~~~~~~ end ~~~~~~~~~~
      endif
@@ -347,10 +347,10 @@ recursive subroutine amr_step(ilevel,icount)
         ! Note: only the array f(:,:), now pointing to f_mond(:,:), is used.
         if (mond) then
            f => f_mond    ! MONDian force field
-           call synchro_hydro_fine(ilevel,+0.5*dtnew(ilevel))
+           call synchro_hydro_fine(ilevel,+0.5*dtnew(ilevel),1)
            f => f_newton  ! Change it back
         else
-           call synchro_hydro_fine(ilevel,+0.5*dtnew(ilevel))
+           call synchro_hydro_fine(ilevel,+0.5*dtnew(ilevel),1)
         endif
         !~~~~~~~~~~ end ~~~~~~~~~~
 
@@ -508,10 +508,10 @@ recursive subroutine amr_step(ilevel,icount)
         ! Note: only the array f(:,:), now pointing to f_mond(:,:), is used.
         if (mond) then
            f => f_mond
-           call synchro_hydro_fine(ilevel,+0.5*dtnew(ilevel))
+           call synchro_hydro_fine(ilevel,+0.5*dtnew(ilevel),1)
            f => f_newton ! Change it back
         else
-           call synchro_hydro_fine(ilevel,+0.5*dtnew(ilevel))
+           call synchro_hydro_fine(ilevel,+0.5*dtnew(ilevel),1)
         endif
         !~~~~~~~~~~ end ~~~~~~~~~~
      endif

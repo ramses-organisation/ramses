@@ -7,6 +7,9 @@ subroutine dump_all
   use pm_commons
   use hydro_commons
   use cooling_module
+#ifdef grackle
+  use grackle_parameters
+#endif
 #if USE_TURB==1
   use turb_commons
 #endif
@@ -58,8 +61,15 @@ subroutine dump_all
      filename=TRIM(filedir)//'patches.txt'
      call output_patch(filename)
      if(cooling .and. .not. neq_chem)then
+#ifdef grackle
+        if(use_grackle==0) then
+           filename=TRIM(filedir)//'cooling_'//TRIM(nchar)//'.out'
+           call output_cool(filename)
+        end if
+#else
         filename=TRIM(filedir)//'cooling_'//TRIM(nchar)//'.out'
         call output_cool(filename)
+#endif
      end if
      if(sink)then
         filename=TRIM(filedir)//'sink_'//TRIM(nchar)//'.csv'
@@ -658,6 +668,7 @@ end subroutine savegadget
 subroutine create_output_dirs(filedir)
   use mpi_mod
   use amr_commons
+  use file_module, ONLY: mkdir
   implicit none
   character(LEN=80), intent(in):: filedir
 #ifdef NOSYSTEM
@@ -670,6 +681,7 @@ subroutine create_output_dirs(filedir)
 #ifndef WITHOUTMPI
   integer :: info
 #endif
+  integer, parameter :: mode = int(O'755')
   
   if (.not.withoutmkdir) then
     if (myid==1) then
@@ -680,8 +692,9 @@ subroutine create_output_dirs(filedir)
 #else
       filecmd='mkdir -p '//TRIM(filedir)
       ierr=1
-      call system(filecmd,ierr)
+!      call system(filecmd,ierr)
 !      call EXECUTE_COMMAND_LINE(filecmd,exitstat=ierr,wait=.true.)
+      call mkdir(TRIM(filedir),mode,ierr) 
       if(ierr.ne.0 .and. ierr.ne.127)then
         write(*,*) 'Error - Could not create ',TRIM(filedir),' error code=',ierr
 #ifndef WITHOUTMPI

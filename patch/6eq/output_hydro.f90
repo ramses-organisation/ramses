@@ -27,7 +27,10 @@ subroutine backup_hydro(filename, filename_desc)
   character(len=100) :: field_name
   real(dp)::ekin,erad,ff,gg,ee,dtot,vv
   real(dp),dimension(1:nvector),save::gg_mat,ee_mat,pp,cc
-
+#if NVAR > NDIM + 3*NMAT
+  integer::ipscal,npscal
+#endif
+  
   if (verbose) write(*,*)'Entering backup_hydro'
 
   call title(myid, nchar)
@@ -110,7 +113,7 @@ subroutine backup_hydro(filename, filename_desc)
                   end do
                   xdp(i) = uold(ind_grid(i)+iskip, ivar)/dtot
                 end do
-                field_name = 'velocity_' // dim_keys(ivar - 1)
+                field_name = 'velocity_' // dim_keys(ivar - 2*nmat)
                 call generic_dump(field_name, info_var_count, xdp, unit_out, dump_info_flag, unit_info)
               end do
 #if NENER > 0
@@ -148,6 +151,20 @@ subroutine backup_hydro(filename, filename_desc)
                 call generic_dump(field_name, info_var_count, xdp, unit_out, dump_info_flag, unit_info)
               end do
 
+#if NVAR > NDIM + 3*NMAT
+              ! Write passive scalars
+              npscal = (nvar - ndim - 3*nmat) / nmat
+              do imat = 1, nmat
+                 do ipscal = 1, npscal
+                    ivar = ndim + 3*nmat + npscal*(imat-1) + ipscal
+                    do i = 1, ncache
+                       xdp(i) = uold(ind_grid(i)+iskip, ivar) / uold(ind_grid(i)+iskip, nmat+imat)
+                    end do
+                    write(field_name, '("passive_scalar_", i0.2)') ivar-ndim-3*nmat
+                    call generic_dump(field_name, info_var_count, xdp, unit_out, dump_info_flag, unit_info)
+                 end do
+              end do
+#endif
               ! We did one output, deactivate dumping of variables
               dump_info_flag = .false.
            end do

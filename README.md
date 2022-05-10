@@ -4,7 +4,7 @@
 [4]: https://bitbucket.org/rteyssie/ramses/wiki/ramses_ug.pdf
 [5]: https://bitbucket.org/vperret/dice
 [6]: https://bitbucket.org/ohahn/music
-[7]: https://github.com/nvaytet/osyris
+[7]: https://github.com/osyris-project/osyris
 [8]: https://github.com/pynbody/pynbody
 
 

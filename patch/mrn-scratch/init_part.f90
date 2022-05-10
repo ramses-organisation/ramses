@@ -14,7 +14,7 @@
   !------------------------------------------------------------
   integer::npart2,ndim2,ncpu2
   integer::ipart,jpart,ipart_old,ilevel,idim
-  integer::i,igrid,ncache,ngrid,iskip
+  integer::i,igrid,ncache,ngrid,iskip,idust
   integer::ind,ix,iy,iz,ilun,icpu
   integer::i1,i2,i3
   integer::i1_min=0,i1_max=0,i2_min=0,i2_max=0,i3_min=0,i3_max=0
@@ -271,7 +271,7 @@ contains
     real(dp),dimension(1:3)::xbound
     real(dp),dimension(1:3)::skip_loc
     real(dp)::scale
-    
+
     ! Local constants
     nxny=nx*ny
     xbound(1:3)=(/dble(nx),dble(ny),dble(nz)/)
@@ -287,6 +287,9 @@ contains
     !----------------------------------------------------
     ipart=0
     ! Loop over initial condition levels
+    do idust=1,ndust !ndust should ideally be consistent with how the ICs were generated
+    ! Being consistent means there are factors of ndust in varous exponents and
+    ! the denominator of the grain mass.
     do ilevel=levelmin,nlevelmax
 
        if(initfile(ilevel)==' ')cycle
@@ -327,11 +330,11 @@ contains
                 ind_cell(i)=iskip+ind_grid(i)
              end do
              do i=1,ngrid
-                xx1=xg(ind_grid(i),1)+xc(ind,1)
+                xx1=xg(ind_grid(i),1)+xc(ind,1) - skip_loc(1)
                 xx1=(xx1*(dxini(ilevel)/dx)-xoff1(ilevel))/dxini(ilevel)
-                xx2=xg(ind_grid(i),2)+xc(ind,2)
+                xx2=xg(ind_grid(i),2)+xc(ind,2) - skip_loc(2)
                 xx2=(xx2*(dxini(ilevel)/dx)-xoff2(ilevel))/dxini(ilevel)
-                xx3=xg(ind_grid(i),3)+xc(ind,3)
+                xx3=xg(ind_grid(i),3)+xc(ind,3) - skip_loc(3)
                 xx3=(xx3*(dxini(ilevel)/dx)-xoff3(ilevel))/dxini(ilevel)
                 i1_min=MIN(i1_min,int(xx1)+1)
                 i1_max=MAX(i1_max,int(xx1)+1)
@@ -350,7 +353,8 @@ contains
                    if(ndim>0)xp(ipart,1)=(xg(ind_grid(i),1)+xc(ind,1)-skip_loc(1))*scale
                    if(ndim>1)xp(ipart,2)=(xg(ind_grid(i),2)+xc(ind,2)-skip_loc(2))*scale
                    if(ndim>2)xp(ipart,3)=(xg(ind_grid(i),3)+xc(ind,3)-skip_loc(3))*scale
-                   mp(ipart)=0.5d0**(3*ilevel)*(1.0d0-omega_b/omega_m)
+                   mp(ipart)=dust_to_gas*0.5d0**(3*ilevel)
+                   !*(1.0d0-omega_b/omega_m) these are not DM particles in  this patch
                 end if
              end do
           end do
@@ -407,6 +411,7 @@ contains
          allocate(init_array_m(i1_min:i1_max,i2_min:i2_max,i3_min:i3_max))
        end if
 
+       if(myid==1)write(*,*)i1_min,i1_max,i2_min,i2_max,i3_min,i3_max
        ! Loop over input variables
        do idim=1,ndim
 
@@ -607,11 +612,11 @@ contains
                       ind_cell(i)=iskip+ind_grid(i)
                    end do
                    do i=1,ngrid
-                      xx1=xg(ind_grid(i),1)+xc(ind,1)
+                      xx1=xg(ind_grid(i),1)+xc(ind,1) - skip_loc(1)
                       xx1=(xx1*(dxini(ilevel)/dx)-xoff1(ilevel))/dxini(ilevel)
-                      xx2=xg(ind_grid(i),2)+xc(ind,2)
+                      xx2=xg(ind_grid(i),2)+xc(ind,2) - skip_loc(2)
                       xx2=(xx2*(dxini(ilevel)/dx)-xoff2(ilevel))/dxini(ilevel)
-                      xx3=xg(ind_grid(i),3)+xc(ind,3)
+                      xx3=xg(ind_grid(i),3)+xc(ind,3) - skip_loc(3)
                       xx3=(xx3*(dxini(ilevel)/dx)-xoff3(ilevel))/dxini(ilevel)
                       i1=int(xx1)+1
                       i1=int(xx1)+1
@@ -632,7 +637,8 @@ contains
                             idp(ipart) = init_array_id(i1,i2,i3)
                           end if
                           if (read_mass) then
-                            mp(ipart) = 0.5d0**(3*ilevel) * init_array_m(i1,i2,i3)
+                            mp(ipart) = 0.5d0**(3*ilevel) * init_array_m(i1,i2,i3)*&
+                            &1.0d1**(0.5*ddex*idp(ipart)*(idust-1.0)*0.5d0**(3*levelmin)/ndust)
                           end if
                          endif
                       end if
@@ -666,9 +672,10 @@ contains
 
     end do
     ! End loop over levels
-
+    end do ! End of the loop that made ndust copies of the dust grains
     ! Initial particle number
     npart=ipart
+
 
     ! Move particle according to Zeldovich approximation
     if(.not. read_pos .and. cosmo)then

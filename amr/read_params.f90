@@ -80,7 +80,7 @@ subroutine read_params
   write(*,*)'       written by Romain Teyssier (University of Zurich)       '
   write(*,*)'               (c) CEA 1999-2007, UZH 2008-2014                '
   write(*,*)' '
-  write(*,'(" Working with nproc = ",I4," for ndim = ",I1)')ncpu,ndim
+  write(*,'(" Working with nproc = ",I5," for ndim = ",I1)')ncpu,ndim
   ! Check nvar is not too small
 #ifdef SOLVERhydro
   write(*,'(" Using solver = hydro with nvar = ",I2)')nvar
@@ -222,6 +222,10 @@ subroutine read_params
      do i=1,noutput
         tout(i)=dble(i)*delta_tout
      end do
+     if(tout(noutput).LT.tend)then
+        noutput=noutput+1
+        tout(noutput)=tend
+     endif
   else if(aend>0)then
      if(delta_aout==0)delta_aout=aend
      noutput=MIN(int(aend/delta_aout),MAXOUT)

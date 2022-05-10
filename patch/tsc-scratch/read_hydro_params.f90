@@ -49,7 +49,7 @@ subroutine read_hydro_params(nml_ok)
        & ,riemann2d,slope_mag_type,eta_mag &
 #endif
        & ,pressure_fix,beta_fix,scheme,riemann &
-       & ,strict_equilibrium
+       & ,strict_equilibrium, dens_llf
 
   ! Refinement parameters
   namelist/refine_params/x_refine,y_refine,z_refine,r_refine &
@@ -96,7 +96,8 @@ subroutine read_hydro_params(nml_ok)
        & ,sf_log_properties,sf_imf,sf_compressive
 
   ! Dust grains parameters
-  namelist/grain_params/boris,t_stop,charge_to_mass,grain_size,constant_t_stop
+  namelist/grain_params/boris,t_stop,charge_to_mass,grain_size,constant_t_stop&
+  & ,dust_to_gas,accel_gr,second_order,trajectories,supersonic_drag,stopping_rate
 
   ! Units parameters
   namelist/units_params/units_density,units_time,units_length
@@ -262,6 +263,18 @@ subroutine read_hydro_params(nml_ok)
   endif
 
   !--------------------------------------------------
+  ! Check EOS parameters
+  !--------------------------------------------------
+  if(isothermal .and. .not. barotropic_eos)then
+    barotropic_eos=.true.
+    if(myid==1)write(*,*)'WARNING: The isothermal keyword is replaced by "barotropic_eos". Running with barotropic_eos=.true.'
+  endif
+  if(barotropic_eos)then
+    ! set T2 for computations
+    T2_eos = T_eos/mu_gas
+  endif
+
+  !--------------------------------------------------
   ! Check whether illegally trying non-eq chemistry
   !--------------------------------------------------
 #ifndef RT
@@ -422,21 +435,12 @@ subroutine read_hydro_params(nml_ok)
   !--------------------------------------------------
   ! Compute boundary conservative variables
   !--------------------------------------------------
-  do i=1,nboundary
+    do i=1,nboundary
      boundary_var(i,1)=MAX(d_bound(i),smallr)
      boundary_var(i,2)=d_bound(i)*u_bound(i)
-#if NDIM>1 || SOLVERmhd
-     boundary_var(i,3)=d_bound(i)*v_bound(i)
-#endif
-#if NDIM>2 || SOLVERmhd
-     boundary_var(i,4)=d_bound(i)*w_bound(i)
-#endif
-     ek_bound=0.0d0
-     do idim=1,ndim
-        ek_bound=ek_bound+0.5d0*boundary_var(i,idim+1)**2/boundary_var(i,1)
-     end do
-     boundary_var(i,ndim+2)=ek_bound+P_bound(i)/(gamma-1.0d0)
 #ifdef SOLVERmhd
+     boundary_var(i,3)=d_bound(i)*v_bound(i)
+     boundary_var(i,4)=d_bound(i)*w_bound(i)
      boundary_var(i,6)=A_bound(i)
      boundary_var(i,7)=B_bound(i)
      boundary_var(i,8)=C_bound(i)
@@ -446,6 +450,18 @@ subroutine read_hydro_params(nml_ok)
      ek_bound=0.5d0*d_bound(i)*(u_bound(i)**2+v_bound(i)**2+w_bound(i)**2)
      em_bound=0.5d0*(A_bound(i)**2+B_bound(i)**2+C_bound(i)**2)
      boundary_var(i,5)=ek_bound+em_bound+P_bound(i)/(gamma-1.0d0)
+#else
+#if NDIM>1
+     boundary_var(i,3)=d_bound(i)*v_bound(i)
+#endif
+#if NDIM>2
+     boundary_var(i,4)=d_bound(i)*w_bound(i)
+#endif
+     ek_bound=0.0d0
+     do idim=1,ndim
+        ek_bound=ek_bound+0.5d0*boundary_var(i,idim+1)**2/boundary_var(i,1)
+     end do
+     boundary_var(i,ndim+2)=ek_bound+P_bound(i)/(gamma-1.0d0)
 #endif
   end do
 

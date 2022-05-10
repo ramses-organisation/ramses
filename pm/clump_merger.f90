@@ -472,6 +472,9 @@ subroutine write_clump_properties(to_file)
   n_rel=n_rel_tot
   call MPI_ALLREDUCE(rel_mass,rel_mass_tot,1,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
   rel_mass=rel_mass_tot
+#else
+  n_rel_tot = n_rel
+  rel_mass_tot = rel_mass
 #endif
   if(myid==1)then
      if(clinfo)write(*,'(A,1PE12.5)')' Total mass [code units] above threshold =',tot_mass
@@ -507,9 +510,8 @@ subroutine merge_clumps(action)
   real(dp),dimension(1:npeaks_max)::peakd
   logical::do_merge=.false.
 
-  integer::mergelevel_max_global
-
 #ifndef WITHOUTMPI
+  integer::mergelevel_max_global
   integer::nmove_all,nsurvive_all,nzero_all
 #endif
 

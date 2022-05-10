@@ -34,13 +34,17 @@ riemann='hllc'
 /
 
 &COOLING_PARAMS
-isothermal=.true.
+barotropic_eos=.true.
+barotropic_eos_form='double_polytrope'
+T_eos=4.29
+polytrope_index=2
+polytrope_rho=1.660539d-14 ! g/cm3 = 1d10 H/cc
 /
 
-&SF_PARAMS
-T2_star=4.29
-g_star=2.0
-n_star=1d10
+&UNIT_PARAMS
+unit_d=0.443201646421875d-17 !
+unit_t=0.183887441975074d+13 !1/(G*d0)**0.5
+unit_l=25*0.478712000000000d+18 !25*32000 AU
 /
 
 &REFINE_PARAMS

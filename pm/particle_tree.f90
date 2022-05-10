@@ -647,21 +647,16 @@ subroutine virtual_tree_fine(ilevel)
   logical::ok_free
   integer::particle_data_width, particle_data_width_int
   integer,dimension(1:nvector),save::ind_part,ind_list,ind_com
-#endif
   ! MC tracer
-  integer :: ipart2, jpart2
   real(dp) :: dx, d2min, d2, x1(1:ndim), x2(1:ndim)
-
-  dx=0.5D0**ilevel
+  integer :: ipart2, jpart2
+#endif
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
 
-#ifdef WITHOUTMPI
-  return
-#endif
-
 #ifndef WITHOUTMPI
+  dx=0.5D0**ilevel
   ! Count particle sitting in virtual boundaries
   do icpu=1,ncpu
      reception(icpu,ilevel)%npart=0

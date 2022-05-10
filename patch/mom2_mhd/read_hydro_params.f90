@@ -49,7 +49,8 @@ subroutine read_hydro_params(nml_ok)
        & ,riemann2d,slope_mag_type,eta_mag &
 #endif
        & ,pressure_fix,beta_fix,scheme,riemann &
-       & ,strict_equilibrium
+       & ,strict_equilibrium &
+       & ,dt_debug, dens_llf
 
   ! Refinement parameters
   namelist/refine_params/x_refine,y_refine,z_refine,r_refine &
@@ -94,9 +95,6 @@ subroutine read_hydro_params(nml_ok)
   namelist/sf_params/m_star,n_star,T2_star,g_star,del_star &
        & ,eps_star,jeans_ncells,sf_virial,sf_trelax,sf_tdiss,sf_model&
        & ,sf_log_properties,sf_imf,sf_compressive
-
-  ! Dust grains parameters
-  namelist/grain_params/boris,t_stop,charge_to_mass,grain_size,constant_t_stop
 
   ! Units parameters
   namelist/units_params/units_density,units_time,units_length
@@ -156,9 +154,6 @@ subroutine read_hydro_params(nml_ok)
   rewind(1)
   read(1,NML=units_params,END=108)
 108 continue
-  rewind(1)
-  read(1,NML=grain_params,END=109)
-109 continue
 #ifdef grackle
   rewind(1)
   read(1,NML=grackle_params)
@@ -271,7 +266,7 @@ subroutine read_hydro_params(nml_ok)
      nml_ok=.false.
   endif
 #endif
-
+  
   !--------------------------------------------------
   ! Check for non-thermal energies
   !--------------------------------------------------
