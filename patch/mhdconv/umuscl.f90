@@ -1480,7 +1480,7 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,req,peq,qpeq,dx,dy,dz,dt,ng
                  w   = q(l,i,j,k,iw)
                  ! slope for equilibrium profile 
                  ! 1/2*(seq(i+1)-seq(i-1))
-                 ! the extra 1/2 comes from the dt, and is the same as in dax calculation
+                 ! the extra 1/2 comes from the half timestep, and is the same as in drx,dry,drz calculation
                  ! Left and right
                  seq_l = peq(l,i-1,j,k)/(req(l,i-1,j,k)**gamma)
                  seq_r = peq(l,i+1,j,k)/(req(l,i+1,j,k)**gamma)
