@@ -268,8 +268,8 @@ SUBROUTINE  trace1d(q,dq,qm,qp,req,peq,qpeq,dx,dt,ngrid)
   INTEGER ::i, j, k, l, n, irad
   INTEGER ::ilo,ihi,jlo,jhi,klo,khi
   INTEGER ::ir, iu, iv, iw, ip, iA, iB, iC
-  real(dp)::qreq
-  real(dp)::dreqx, dpeqx = 0.d0
+  real(dp)::qreq, seq, qseq, seq_l, seq_r
+  real(dp)::dreqx, dpeqx, dseqx = 0.d0
   REAL(dp)::dtdx
   REAL(dp)::r, u, v, w, p, A, B, C
   REAL(dp)::drx, dux, dvx, dwx, dpx, dAx, dBx, dCx
@@ -407,13 +407,24 @@ SUBROUTINE  trace1d(q,dq,qm,qp,req,peq,qpeq,dx,dt,ngrid)
         DO j = jlo, jhi
            DO i = ilo, ihi
               DO l = 1, ngrid
-                 a   = q(l,i,j,k,n )           ! Cell centered values
+                 seq = peq(l,i,j,k)/(req(l,i,j,k)**gamma) ! entropy equilibrium profile
+                 a   = q(l,i,j,k,n ) + seq     ! Cell centered values
                  u   = q(l,i,j,k,iu)
+                 ! slope for equilibrium profile 
+                 ! 1/2*(seq(i+1)-seq(i-1))
+                 ! the extra 1/2 comes from the dt, and is the same as in dax calculation
+                 seq_l = peq(l,i-1,j,k)/(req(l,i-1,j,k)**gamma)
+                 seq_r = peq(l,i+1,j,k)/(req(l,i+1,j,k)**gamma)
+                 dseqx = half*(half*(seq_r - seq_l))
                  dax = half * dq(l,i,j,k,n,1)  ! TVD slope
-                 sa0 = -u*dax                  ! Source terms
+                 sa0 = -u*(dax+dseqx)          ! Source terms (with equilibrium)
                  a   = a + sa0*dtdx            ! Predicted state
-                 qp(l,i,j,k,n,1) = a - dax     ! Right state
-                 qm(l,i,j,k,n,1) = a + dax     ! Left state
+                 ! To compute the right and left states, remove seq in the cell center and add extrapolated 
+                 ! seq to the interface to have same eq. value on the left and right of interface
+                 qseq = half*(seq+seq_l)
+                 qp(l,i,j,k,n,1) = a - dax - seq + qseq    ! Right state
+                 qseq = half*(seq+seq_r)
+                 qm(l,i,j,k,n,1) = a + dax - seq + qseq    ! Left state
               END DO
            END DO
         END DO
@@ -467,9 +478,10 @@ SUBROUTINE trace2d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,req,peq,qpeq,dx,dy,dt,ngrid
   REAL(dp)::AL, AR, BL, BR
   REAL(dp)::dALy, dARy, dBLx, dBRx
   REAL(DP)::sAL0, sAR0, sBL0, sBR0
-  real(dp)::qreq, qreq4, qpeq4
+  real(dp)::qreq, qreq4, qpeq4, seq, qseq, seq_l, seq_r, seq_t, seq_b
   real(dp)::dreqx, dreqy = 0.d0
   real(dp)::dpeqx, dpeqy = 0.d0
+  real(dp)::dseqx, dseqy = 0.d0
 #if NENER>0
   INTEGER::irad
   REAL(dp),dimension(1:nener)::e, dex, dey, se0
@@ -792,17 +804,34 @@ SUBROUTINE trace2d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,req,peq,qpeq,dx,dy,dt,ngrid
         DO j = jlo, jhi
            DO i = ilo, ihi
               DO l = 1, ngrid
-                 r   = q(l,i,j,k,n )              ! Cell centered values
+                 seq = peq(l,i,j,k)/(req(l,i,j,k)**gamma) ! entropy equilibrium profile
+                 r   = q(l,i,j,k,n ) + seq        ! Cell centered values
                  u   = q(l,i,j,k,iu)
                  v   = q(l,i,j,k,iv)
+                 ! slope for equilibrium profile 
+                 ! 1/2*(seq(i+1)-seq(i-1))
+                 ! the extra 1/2 comes from the dt, and is the same as in dax calculation
+                 seq_l = peq(l,i-1,j,k)/(req(l,i-1,j,k)**gamma)
+                 seq_r = peq(l,i+1,j,k)/(req(l,i+1,j,k)**gamma)
+                 dseqx = half*(half*(seq_r - seq_l))
+                 seq_b = peq(l,i,j-1,k)/(req(l,i,j-1,k)**gamma)
+                 seq_t = peq(l,i,j+1,k)/(req(l,i,j+1,k)**gamma)
+                 dseqy = half*(half*(seq_t - seq_b))
+                 
                  drx = half * dq(l,i,j,k,n,1)     ! TVD slopes
                  dry = half * dq(l,i,j,k,n,2)
-                 sr0 = -u*drx*dtdx -v*dry*dtdy    ! Source terms
+                 sr0 = -u*(drx+dseqx)*dtdx -v*(dry+dseqx)*dtdy    ! Source terms
                  r   = r + sr0                    ! Predicted state
-                 qp(l,i,j,k,n,1) = r - drx        ! Right state
-                 qm(l,i,j,k,n,1) = r + drx        ! Left state
-                 qp(l,i,j,k,n,2) = r - dry        ! Top state
-                 qm(l,i,j,k,n,2) = r + dry        ! Bottom state
+                 ! To compute the right,left,top,bottom states, remove seq in the cell center and add extrapolated 
+                 ! seq to the interface to have same eq. value on the left and right of interface
+                 qseq = half*(seq+seq_l)
+                 qp(l,i,j,k,n,1) = r - drx - seq + qseq       ! Right state
+                 qseq = half*(seq+seq_r)
+                 qm(l,i,j,k,n,1) = r + drx - seq + qseq       ! Left state
+                 qseq = half*(seq+seq_b)
+                 qp(l,i,j,k,n,2) = r - dry - seq + qseq       ! Top state
+                 qseq = half*(seq+seq_t)
+                 qm(l,i,j,k,n,2) = r + dry - seq + qseq       ! Bottom state
               END DO
            END DO
         END DO
@@ -863,9 +892,11 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,req,peq,qpeq,dx,dy,dz,dt,ng
   REAL(dp)::dBLx, dBRx, dBLz, dBRz
   REAL(dp)::dCLx, dCRx, dCLy, dCRy
   REAL(DP)::sAL0, sAR0, sBL0, sBR0, sCL0, sCR0
-  real(dp)::qreq, qreq4, qpeq4
+  real(dp)::qreq, qreq4, qpeq4, seq, qseq
+  real(dp)::seq_l, seq_r, seq_t, seq_b, seq_f, seq_p
   real(dp)::dreqx, dreqy, dreqz = 0.d0
   real(dp)::dpeqx, dpeqy, dpeqz = 0.d0
+  real(dp)::dseqx, dseqy, dseqz = 0.d0
 #if NENER>0
   real(dp),dimension(1:nener)::e, dex, dey, dez, se0
   integer ::irad
@@ -1442,21 +1473,46 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,req,peq,qpeq,dx,dy,dz,dt,ng
         DO j = jlo, jhi
            DO i = ilo, ihi
               DO l = 1, ngrid
-                 r   = q(l,i,j,k,n )            ! Cell centered values
+                 seq = peq(l,i,j,k)/(req(l,i,j,k)**gamma) ! entropy equilibrium profile
+                 r   = q(l,i,j,k,n ) + seq        ! Cell centered values
                  u   = q(l,i,j,k,iu)
                  v   = q(l,i,j,k,iv)
                  w   = q(l,i,j,k,iw)
+                 ! slope for equilibrium profile 
+                 ! 1/2*(seq(i+1)-seq(i-1))
+                 ! the extra 1/2 comes from the half timestep, and is the same as in drx,dry,drz calculation
+                 ! Left and right
+                 seq_l = peq(l,i-1,j,k)/(req(l,i-1,j,k)**gamma)
+                 seq_r = peq(l,i+1,j,k)/(req(l,i+1,j,k)**gamma)
+                 dseqx = half*(half*(seq_r - seq_l))
+                 ! Top and bottom
+                 seq_b = peq(l,i,j-1,k)/(req(l,i,j-1,k)**gamma)
+                 seq_t = peq(l,i,j+1,k)/(req(l,i,j+1,k)**gamma)
+                 dseqy = half*(half*(seq_t - seq_b))
+                 ! Front and Posterior (back)
+                 seq_p = peq(l,i,j,k-1)/(req(l,i,j,k-1)**gamma)
+                 seq_f = peq(l,i,j,k+1)/(req(l,i,j,k+1)**gamma)
+                 dseqz = half*(half*(seq_f - seq_p))
+                 
                  drx = half * dq(l,i,j,k,n,1)   ! TVD slopes
                  dry = half * dq(l,i,j,k,n,2)
                  drz = half * dq(l,i,j,k,n,3)
-                 sr0 = -u*drx*dtdx -v*dry*dtdy -w*drz*dtdz   ! Source terms
+                 sr0 = -u*(drx+dseqx)*dtdx -v*(dry+dseqy)*dtdy -w*(drz+dseqz)*dtdz   ! Source terms
                  r   = r + sr0                  ! Predicted state
-                 qp(l,i,j,k,n,1) = r - drx      ! Right state
-                 qm(l,i,j,k,n,1) = r + drx      ! Left state
-                 qp(l,i,j,k,n,2) = r - dry      ! Top state
-                 qm(l,i,j,k,n,2) = r + dry      ! Bottom state
-                 qp(l,i,j,k,n,3) = r - drz      ! Front state
-                 qm(l,i,j,k,n,3) = r + drz      ! Back state
+                 ! To compute the r,l,t,b,f,p states, remove seq in the cell center and add extrapolated 
+                 ! seq to the interface to have same eq. value on the left and right of interface
+                 qseq = half*(seq+seq_l)
+                 qp(l,i,j,k,n,1) = r - drx - seq + qseq       ! Right state
+                 qseq = half*(seq+seq_r)
+                 qm(l,i,j,k,n,1) = r + drx - seq + qseq       ! Left state
+                 qseq = half*(seq+seq_b)
+                 qp(l,i,j,k,n,2) = r - dry - seq + qseq       ! Top state
+                 qseq = half*(seq+seq_t)
+                 qm(l,i,j,k,n,2) = r + dry - seq + qseq       ! Bottom state
+                 qseq = half*(seq+seq_p)
+                 qp(l,i,j,k,n,3) = r - drz - seq + qseq       ! Front state
+                 qseq = half*(seq+seq_f)
+                 qm(l,i,j,k,n,3) = r + drz - seq + qseq       ! Back state
               END DO
            END DO
         END DO
@@ -2312,6 +2368,8 @@ subroutine ctoprim(uin,q,bf,req,peq,gravin,dt,ngrid)
            do i = iu1, iu2
               do l = 1, ngrid
                  q(l,i,j,k,n) = uin(l,i,j,k,n)/q(l,i,j,k,1)
+                 ! remove entropy equilibrium profile
+                 q(l,i,j,k,n) = q(l,i,j,k,n) - peq(l,i,j,k)/(req(l,i,j,k)**gamma)
               end do
            end do
         end do
