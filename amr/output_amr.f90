@@ -7,6 +7,9 @@ subroutine dump_all
   use pm_commons
   use hydro_commons
   use cooling_module
+#ifdef grackle
+  use grackle_parameters
+#endif
 #if USE_TURB==1
   use turb_commons
 #endif
@@ -58,8 +61,15 @@ subroutine dump_all
      filename=TRIM(filedir)//'patches.txt'
      call output_patch(filename)
      if(cooling .and. .not. neq_chem)then
+#ifdef grackle
+        if(use_grackle==0) then
+           filename=TRIM(filedir)//'cooling_'//TRIM(nchar)//'.out'
+           call output_cool(filename)
+        end if
+#else
         filename=TRIM(filedir)//'cooling_'//TRIM(nchar)//'.out'
         call output_cool(filename)
+#endif
      end if
      if(sink)then
         filename=TRIM(filedir)//'sink_'//TRIM(nchar)//'.csv'
