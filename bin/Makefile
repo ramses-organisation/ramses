@@ -13,7 +13,7 @@ NVECTOR = 32
 NDIM = 1
 # Float precision size
 NPRE = 8
-# hydro/mhd solver
+# hydro/mhd/rhd solver
 SOLVER = hydro
 # Patch
 PATCH =
@@ -35,6 +35,7 @@ NMETALS = 0
 # ATON flages: Uncomment to enable ATON
 ATON_FLAGS = #-DATON
 # Number of ions for RT
+# use 1 for HI+HII, +1 for added H2, +2 for added HeI, HeII, HeIII
 NIONS = 0
 # Number of photon groups for RT
 NGROUPS = 0
