@@ -55,11 +55,7 @@ tend=0.23
 courant_factor=0.5
 slope_type=2
 scheme='muscl'
-<<<<<<< HEAD
-eos_name='mie-grueneisen'
-=======
 eos_name='stiffened gas'
->>>>>>> remotes/rteyssie/ramses/master
 /
 
 &REFINE_PARAMS 

@@ -145,19 +145,11 @@ subroutine add_pdv_source_terms(ilevel)
   integer::ilevel
   !-------------------------------------------------------------------
   ! Update volume fraction using compressibility source terms
-<<<<<<< HEAD
-
-  integer ,dimension(1:nvector),save::ind_cell
-  integer ::i,ivar,imat,idim,ind,iskip
-  logical ,dimension(1:nvector),save::body
-  real(dp),dimension(1:nvector),save::pp,cc,ekin,kappa_hat
-=======
   !-------------------------------------------------------------------
   integer::i,ivar,imat,idim,ind,iskip,ncache,igrid,ngrid
   logical,dimension(1:nvector),save::body
   integer,dimension(1:nvector),save::ind_grid,ind_cell
   real(dp),dimension(1:nvector),save::pp,cc,ekin,kappa_hat,ffmax
->>>>>>> remotes/rteyssie/ramses/master
   real(dp),dimension(1:nvector,1:npri),save::qq
   real(dp),dimension(1:nvector,1:nmat),save::ff,gg,fg,kappa_mat
   real(dp)::g0,p0,a0,b0,df_over_f,rloc,skip_loc,dx,eps,scale,dx_loc
@@ -181,67 +173,15 @@ subroutine add_pdv_source_terms(ilevel)
      xc(ind)=(dble(ix)-0.5D0)*dx
   end do
 
-<<<<<<< HEAD
-     ! Volume fraction and fluid density
-     do imat=1,nmat
-        do i=1,ncache
-           ff(i,imat)=uold(ind_cell(i),imat+npri)
-           gg(i,imat)=uold(ind_cell(i),imat+npri+nmat)
-        end do
-     end do
-     ! Total density
-     do i=1,ncache
-        qq(i,1)=uold(ind_cell(i),1)
-     end do
-     ! Specific kinetic energy
-     ekin(1:ncache)=zero
-     do idim=1,ndim
-        do i=1,ncache
-           qq(i,idim+1)=uold(ind_cell(i),idim+1)/qq(i,1)
-           ekin(i)=ekin(i)+half*qq(i,idim+1)**2
-        end do
-     end do
-     ! Total internal energy
-     do i=1,ncache
-        qq(i,npri)=uold(ind_cell(i),npri)-qq(i,1)*ekin(i)
-     end do
-     ! Pressure from eos
-     call eos(ff,gg,qq,pp,cc,kappa_mat,kappa_hat,ncache)
-
-     ! Source terms for fluid density (Godunov-like advection)
-     do imat=1,nmat
-        ivar=npri+nmat+imat
-        do i=1,ncache
-           ! Material compressibility
-           df_over_f = kappa_hat(i)/kappa_mat(i,imat)
-
-           ! Explicit time integration
-!           unew(ind_cell(i),ivar)=unew(ind_cell(i),ivar) &
-!                & +uold(ind_cell(i),ivar)*divu(ind_cell(i))*(df_over_f-one)
-
-           ! Implicit time integration
-           unew(ind_cell(i),ivar)=unew(ind_cell(i),ivar)/(1d0 &
-                & - divu(ind_cell(i))*(df_over_f-one))
-=======
   ! Loop over active grids by vector sweeps
   ncache=active(ilevel)%ngrid
   do igrid=1,ncache,nvector
->>>>>>> remotes/rteyssie/ramses/master
 
      ! Gather nvector grids
      ngrid=MIN(nvector,ncache-igrid+1)
      do i=1,ngrid
         ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
      end do
-<<<<<<< HEAD
-     ! Source terms for volume fraction (Godunov-like advection)
-     do imat=1,nmat
-        ivar=npri+imat
-        do i=1,ncache
-           ! No compressibility in volume fraction
-           df_over_f  = one !kappa_hat(i)/kappa_mat(i,imat) 
-=======
->>>>>>> remotes/rteyssie/ramses/master
 
      ! Loop over cells
      do ind=1,twotondim

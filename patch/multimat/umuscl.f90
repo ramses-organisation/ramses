@@ -219,12 +219,6 @@ subroutine ctoprim(uin,q,f,g,c,gravin,dt,ngrid)
 
      ! Call eos routine
      call eos(ff,gg,qq,pp,cc,kappa_mat,kappa_hat,ngrid)
-<<<<<<< HEAD
-
-     ! Pressure overwrites internal energy
-     qq(1:ngrid,npri)=pp(1:ngrid)
-=======
->>>>>>> remotes/rteyssie/ramses/master
 
      ! Save in output arrays
 
@@ -744,14 +738,6 @@ subroutine cmpgdnv(fm,gm,qm,im1,im2,jm1,jm2,km1,km2, &
   real(dp),dimension(1:nvector,ip1:ip2,jp1:jp2,kp1:kp2)::c
 
   ! local variables
-<<<<<<< HEAD
-  integer ::i, j, k, n, l, idim, jdim, imat
-  real(dp),dimension(1:nvector,1:npri),save::qleft,qright,qgdnv
-  real(dp),dimension(1:nvector,1:nmat),save::fleft,fright,fgdnv
-  real(dp),dimension(1:nvector,1:nmat),save::gleft,gright,ggdnv
-  real(dp),dimension(1:nvector,1:nmat),save::kappa_matgdnv
-  real(dp),dimension(1:nvector),save::etot,ekin,cleft,cright,egdnv,cgdnv,kappa_hatgdnv
-=======
   integer ::i, j, k, n, l, idim, jdim, imat, ivar
   real(dp),dimension(1:nvector,1:npri+1),save::qleft,qright
   real(dp),dimension(1:nvector,1:nmat),save::fleft,fright
@@ -759,7 +745,6 @@ subroutine cmpgdnv(fm,gm,qm,im1,im2,jm1,jm2,km1,km2, &
   real(dp),dimension(1:nvector,1:nvar),save::fgdnv
   real(dp),dimension(1:nvector),save::ugdnv
   real(dp),dimension(1:nvector),save::cleft,cright
->>>>>>> remotes/rteyssie/ramses/master
   logical ,dimension(1:nvector),save::wall,body
 
   idim= ln -1
@@ -887,26 +872,6 @@ subroutine cmpgdnv(fm,gm,qm,im1,im2,jm1,jm2,km1,km2, &
 #endif
      ! Tangential velocity 2
 #if NDIM>2
-<<<<<<< HEAD
-     ! Transverse momentum 2
-     do l = 1, ngrid
-        flx(l,i,j,k,lt2) = flx(l,i,j,k,1)*qgdnv(l,4)
-     end do
-#endif           
-     ! Call inverse eos routine
-     call eosinv(fgdnv,ggdnv,qgdnv,egdnv,cgdnv,kappa_matgdnv,kappa_hatgdnv,ngrid)
-     
-     ! Total energy
-     do l = 1, ngrid
-        etot(l)=egdnv(l)
-     end do
-     do jdim = 1,ndim
-        do l = 1, ngrid
-           etot(l)=etot(l)+half*qgdnv(l,1)*qgdnv(l,jdim+1)**2
-        end do
-     end do
-=======
->>>>>>> remotes/rteyssie/ramses/master
      do l = 1, ngrid
         flx(l,i,j,k,lt2) = fgdnv(l,4)
      end do

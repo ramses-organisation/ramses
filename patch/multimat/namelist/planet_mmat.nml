@@ -25,11 +25,7 @@ bound_type= 2, 2
 /
 
 &MATERIAL_PARAMS
-<<<<<<< HEAD
-eos_params(1,1:4)=3,5.45,0.55,8.9
-=======
 eos_params(1,1:4)=3,3.1,40.6,8.9
->>>>>>> remotes/rteyssie/ramses/master
 eos_params(2,1:4)=1.4,4.176,0,0.05
 /
 
@@ -51,11 +47,7 @@ p_region =1e-4,1e-4,1e-4
 &OUTPUT_PARAMS
 foutput=75
 noutput=1
-<<<<<<< HEAD
-tend=2.5e-2
-=======
 tend=1.3e-2
->>>>>>> remotes/rteyssie/ramses/master
 /
 
 &HYDRO_PARAMS
