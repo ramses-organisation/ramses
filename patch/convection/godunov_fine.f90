@@ -194,22 +194,24 @@ subroutine set_uold(ilevel)
      end if
 #if NVAR>NDIM+2 
      ! Correct total energy using the entropy
-     do i=1,active(ilevel)%ngrid
-        ind_cell=active(ilevel)%igrid(i)+iskip
-        d=max(uold(ind_cell,1),smallr)
-        u=0; v=0; w=0
-        if(ndim>0)u=uold(ind_cell,2)/d
-        if(ndim>1)v=uold(ind_cell,3)/d
-        if(ndim>2)w=uold(ind_cell,4)/d
-        e_kin=0.5d0*d*(u**2+v**2+w**2)
+     if(entropy_fix)then
+       do i=1,active(ilevel)%ngrid
+         ind_cell=active(ilevel)%igrid(i)+iskip
+         d=max(uold(ind_cell,1),smallr)
+         u=0; v=0; w=0
+         if(ndim>0)u=uold(ind_cell,2)/d
+         if(ndim>1)v=uold(ind_cell,3)/d
+         if(ndim>2)w=uold(ind_cell,4)/d
+         e_kin=0.5d0*d*(u**2+v**2+w**2)
 #if NENER>0
-        do irad=1,nener
+         do irad=1,nener
            e_kin=e_kin+uold(ind_cell,ndim+2+irad)
-        end do
+         end do
 #endif
-        e_prim=uold(ind_cell,ndim+3)/(gamma-1.0)*d**(gamma-1.0)
-        uold(ind_cell,ndim+2)=e_prim+e_kin
-     end do
+         e_prim=uold(ind_cell,ndim+3)/(gamma-1.0)*d**(gamma-1.0)
+         uold(ind_cell,ndim+2)=e_prim+e_kin
+       end do
+     end if
 #endif
 
   end do
@@ -516,7 +518,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
   integer::i1min,i1max,j1min,j1max,k1min,k1max
   integer::i2min,i2max,j2min,j2max,k2min,k2max
   integer::i3min,i3max,j3min,j3max,k3min,k3max
-  real(dp)::dx,scale,oneontwotondim
+  real(dp)::dx,scale,oneontwotondim,d
 
   oneontwotondim = 1d0/dble(twotondim)
 
@@ -672,6 +674,41 @@ subroutine godfine1(ind_grid,ncache,ilevel)
   !-----------------------------------------------
   ! JRCC : Add req_loc, peq_loc to unsplit call
   call unsplit(uloc,req_loc,peq_loc,gloc,ploc,flux,tmp,dx,dx,dx,dtnew(ilevel),ncache)
+  !--------------------------------------
+  ! Store the fluxes for later use
+  !--------------------------------------
+  if (MC_tracer) then
+     do idim=1,ndim
+        i0=0; j0=0; k0=0
+        if(idim==1)i0=1
+        if(idim==2)j0=1
+        if(idim==3)k0=1
+        do k2=k2min,k2max
+           do j2=j2min,j2max
+              do i2=i2min,i2max
+                 ind_son=1+i2+2*j2+4*k2
+                 iskip=ncoarse+(ind_son-1)*ngridmax
+                 do i=1,ncache
+                    ind_cell(i)=iskip+ind_grid(i)
+                 end do
+                 i3=1+i2
+                 j3=1+j2
+                 k3=1+k2
+                 do i=1,ncache
+                    d = max(uold(ind_cell(i),1), smallr)
+                    ! Copy left flux
+                    fluxes(ind_cell(i),(idim-1)*2+1)= flux(i,i3   ,j3   ,k3,   1,idim)&
+                         / d
+                    ! Copy right flux
+                    fluxes(ind_cell(i),(idim-1)*2+2)=-flux(i,i3+i0,j3+j0,k3+k0,1,idim)&
+                         / d
+                 end do
+              end do
+           end do
+        end do
+     end do
+  end if
+  
   !------------------------------------------------
   ! Reset flux along direction at refined interface
   !------------------------------------------------
