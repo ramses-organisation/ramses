@@ -141,7 +141,7 @@ subroutine create_cloud_from_sink
   ! Particles are produced in the right MPI domain and inserted in the
   ! linked list at level 1.
   ! The cloud radius is dble(ir_cloud)*dx_min, where dx_min is
-  ! the cell size at levelmax. For cosmo runs, the cloud radius is
+  ! the cell size at levelmax_sink. For cosmo runs, the cloud radius is
   ! dx_min/aexp (therefore it is constant in *physical* units).
   !----------------------------------------------------------------------------
 
@@ -193,7 +193,7 @@ subroutine create_cloud_from_sink
   ! Mesh spacing in that level
   nx_loc=(icoarse_max-icoarse_min+1)
   scale=boxlen/dble(nx_loc)
-  dx_min=scale*0.5D0**nlevelmax/aexp
+  dx_min=scale*0.5D0**nlevelmax_sink/aexp
 
   rmax=dble(ir_cloud)*dx_min
   rmass=dble(ir_cloud_massive)*dx_min
@@ -508,7 +508,7 @@ subroutine collect_acczone_avg_np(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   ! Compute volume of each cloud particle
   nx_loc=(icoarse_max-icoarse_min+1)
   scale=boxlen/dble(nx_loc)
-  dx_cloud=(0.5D0**nlevelmax)*scale/aexp/2 ! factor of 2 hard-coded
+  dx_cloud=(0.5D0**nlevelmax_sink)*scale/aexp/2 ! factor of 2 hard-coded
   vol_cloud=dx_cloud**ndim
 
   ! Copy cloud particle coordinates
@@ -789,7 +789,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
   scale=boxlen/dble(nx_loc)
   dx_loc=dx*scale
   vol_loc=dx_loc**ndim
-  dx_min=scale*0.5D0**nlevelmax/aexp
+  dx_min=scale*0.5D0**nlevelmax_sink/aexp
   vol_min=dx_min**ndim
 
   ! Compute volume of each cloud particle
@@ -1035,7 +1035,7 @@ subroutine compute_accretion_rate(write_sinks)
   scale_m=scale_d*scale_l**ndim
   nx_loc=(icoarse_max-icoarse_min+1)
   scale=boxlen/dble(nx_loc)
-  dx_min=scale*0.5D0**nlevelmax/aexp
+  dx_min=scale*0.5D0**nlevelmax_sink/aexp
   d_star=n_star/scale_nH
 
   ! Compute sink particle accretion rate by averaging contributions from all levels
@@ -1206,7 +1206,7 @@ subroutine print_sink_properties(dMEDoverdt,dMEDoverdt_smbh,rho_inf,r2)
   skip_loc(2)=dble(jcoarse_min)
   skip_loc(3)=dble(kcoarse_min)
   scale=boxlen/dble(nx_loc)
-  dx_min=0.5D0**nlevelmax*scale/aexp
+  dx_min=0.5D0**nlevelmax_sink*scale/aexp
 
   ! Scaling factors
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
@@ -1500,7 +1500,7 @@ subroutine make_sink_from_clump(ilevel)
               x(1)=(xg(ind_grid_new(i),1)+xc(ind,1)-skip_loc(1))*scale
               x(2)=(xg(ind_grid_new(i),2)+xc(ind,2)-skip_loc(2))*scale
               x(3)=(xg(ind_grid_new(i),3)+xc(ind,3)-skip_loc(3))*scale
-              call true_max(x(1),x(2),x(3),nlevelmax)
+              call true_max(x(1),x(2),x(3),nlevelmax_sink)
 
               ! Give a tiny bit of mass to the sink...
               delta_d=d*1d-10
@@ -1772,10 +1772,10 @@ subroutine update_sink(ilevel)
   period(3)=(nz==1)
 
   ! Mesh spacing in that level
-  dx_loc=0.5D0**nlevelmax
+  !dx_loc=0.5D0**nlevelmax! this is not used
   nx_loc=(icoarse_max-icoarse_min+1)
   scale=boxlen/dble(nx_loc)
-  dx_min=scale*0.5D0**nlevelmax/aexp
+  dx_min=scale*0.5D0**nlevelmax_sink/aexp
   rmax=dble(ir_cloud)*dx_min ! Linking length in physical units
   rmax2=rmax*rmax
 
@@ -2054,7 +2054,7 @@ subroutine update_cloud(ilevel)
      end do
   end if
 
-  sink_jump(1:nsink,1:ndim,ilevel:nlevelmax)=0d0
+  sink_jump(1:nsink,1:ndim,ilevel:nlevelmax_sink)=0d0
 
 111 format('   Entering update_cloud for level ',I2)
 
@@ -2262,7 +2262,7 @@ subroutine f_gas_sink(ilevel)
   scale=boxlen/dble(nx_loc)
   dx_loc=dx*scale
   vol_loc=dx_loc**ndim
-  dx_min=scale*0.5D0**nlevelmax/aexp
+  dx_min=scale*0.5D0**nlevelmax_sink/aexp
   ssoft=sink_soft*dx_min
 
   ! Set position of cell centers relative to grid centre
@@ -2396,7 +2396,7 @@ subroutine f_gas_sink(ilevel)
 #endif
   rho_sink_tff(ilevel)=rho_tff_tot
 
-  if (ilevel==nlevelmax)call make_virtual_fine_dp(phi(1),ilevel)
+  if (ilevel==nlevelmax_sink)call make_virtual_fine_dp(phi(1),ilevel)
 
 #endif
 end subroutine f_gas_sink
@@ -2496,7 +2496,7 @@ subroutine read_sink_params()
   integer::nx_loc
   namelist/sink_params/n_sink,rho_sink,d_sink,accretion_scheme,merging_timescale,&
        ir_cloud_massive,sink_soft,mass_sink_direct_force,ir_cloud,nsinkmax,create_sinks,&
-       mass_sink_seed,mass_smbh_seed,c_acc,&
+       mass_sink_seed,mass_smbh_seed,c_acc,nlevelmax_sink,&
        eddington_limit,acc_sink_boost,mass_merger_vel_check,&
        clump_core,verbose_AGN,T2_AGN,T2_min,cone_opening,mass_halo_AGN,mass_clump_AGN,mass_star_AGN,&
        AGN_fbk_frac_ener,AGN_fbk_frac_mom,T2_max,boost_threshold_density,&
@@ -2527,6 +2527,10 @@ subroutine read_sink_params()
      if(myid==1)write(*,*)'sink particles do currently not work in a single-level cartesian grid'
      if(myid==1)write(*,*)'because they need level 1 to be activated.'
      call clean_stop
+  end if
+
+  if (nlevelmax_sink .eq. 0) then
+     nlevelmax_sink = nlevelmax
   end if
 
   if (create_sinks .and. accretion_scheme=='none')then
@@ -2574,7 +2578,7 @@ subroutine read_sink_params()
            if(myid==1)write(*,*)'No value for T2_star given. Do not know what to do...'
            call clean_stop
         else
-           dx_min=0.5d0**nlevelmax*scale
+           dx_min=0.5d0**nlevelmax_sink*scale
            d_sink=T2_star/scale_T2 *pi/16/(dx_min**2)
            if(myid==1)write(*,*)'d_sink = ',d_sink
            if(myid==1)write(*,*)'rho_sink = ',d_sink*scale_d
@@ -2798,6 +2802,7 @@ end subroutine cic_get_cells
 !##############################################################################
 !##############################################################################
 !##############################################################################
+! not used
 subroutine cic_get_vals(fluid_var,ind_grid,xpart,ind_grid_part,ng,np,ilevel,ilevel_only)
   use amr_commons
   use pm_commons

@@ -3,7 +3,6 @@ recursive subroutine amr_step(ilevel,icount)
   use pm_commons
   use hydro_commons
   use poisson_commons
-  use tracer_utils, only: reset_tracer_move_flag
 #ifdef RT
   use rt_hydro_commons
   use SED_module
@@ -11,15 +10,12 @@ recursive subroutine amr_step(ilevel,icount)
   use coolrates_module, only: update_coolrates_tables
   use rt_cooling_module, only: update_UVrates
 #endif
-#if USE_TURB==1
-  use turb_commons
-#endif
   use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
   integer::mpi_err
 #endif
-  integer, intent(in)::ilevel,icount
+  integer::ilevel,icount
   !-------------------------------------------------------------------!
   ! This routine is the adaptive-mesh/adaptive-time-step main driver. !
   ! Each routine is called using a specific order, don't change it,   !
@@ -226,7 +222,7 @@ recursive subroutine amr_step(ilevel,icount)
 
      ! Remove gravity source term with half time step and old force
      if(hydro)then
-        call synchro_hydro_fine(ilevel,-0.5*dtnew(ilevel),1)
+        call synchro_hydro_fine(ilevel,-0.5*dtnew(ilevel))
      endif
 
      ! Compute gravitational potential
@@ -259,7 +255,7 @@ recursive subroutine amr_step(ilevel,icount)
                                call timer('poisson','start')
 
         ! Add gravity source term with half time step and new force
-        call synchro_hydro_fine(ilevel,+0.5*dtnew(ilevel),1)
+        call synchro_hydro_fine(ilevel,+0.5*dtnew(ilevel))
 
         ! Update boundaries
 #ifdef SOLVERmhd
@@ -288,15 +284,6 @@ recursive subroutine amr_step(ilevel,icount)
   ! Update photon packages according to star particles
                                call timer('radiative transfer','start')
   if(rt .and. rt_star) call update_star_RT_feedback(ilevel)
-#endif
-
-#if USE_TURB==1
-  ! Compute turbulent forcing
-                               call timer('turb','start')
-  if (turb .and. turb_type/=3) then
-     ! Calculate turbulent acceleration on each cell in this level
-     call calc_turb_forcing(ilevel)
-  end if
 #endif
 
   !----------------------
@@ -380,16 +367,6 @@ recursive subroutine amr_step(ilevel,icount)
 #else
      end do
 #endif
-     ! MC Tracer
-     ! Communicate fluxes accross boundaries
-     if(MC_tracer)then
-                                call timer('tracer','start')
-        do ivar=1,twondim
-           call make_virtual_reverse_dp(fluxes(1,ivar),ilevel-1)
-           call make_virtual_fine_dp(fluxes(1,ivar),ilevel-1)
-        end do
-     end if
-
      if(momentum_feedback>0)then
         call make_virtual_reverse_dp(pstarnew(1),ilevel)
      endif
@@ -405,7 +382,7 @@ recursive subroutine amr_step(ilevel,icount)
      ! Add gravity source term with half time step and old force
      ! in order to complete the time step
                                call timer('poisson','start')
-     if(poisson)call synchro_hydro_fine(ilevel,+0.5*dtnew(ilevel),1)
+     if(poisson)call synchro_hydro_fine(ilevel,+0.5*dtnew(ilevel))
 
      ! Restriction operator
                                call timer('hydro upload fine','start')
@@ -442,8 +419,6 @@ recursive subroutine amr_step(ilevel,icount)
   if((hydro).and.(.not.static_gas)) then
     if(neq_chem.or.cooling.or.T2_star>0.0)call cooling_fine(ilevel)
   endif
-
-  !JRCC
   !--------------------
   ! call energy_fine
   !--------------------
@@ -553,14 +528,7 @@ recursive subroutine amr_step(ilevel,icount)
      if(icount==2)dtnew(ilevel-1)=dtold(ilevel)+dtnew(ilevel)
   end if
 
-  ! Reset move flag flag
-  if(MC_tracer) then
-                                call timer('tracer','start')
-     ! Decrease the move flag by 1
-     call reset_tracer_move_flag(ilevel)
-  end if
-
-999 format(' Entering amr_step(',i1,') for level',i2)
+999 format(' Entering amr_step',i1,' for level',i2)
 
 end subroutine amr_step
 
