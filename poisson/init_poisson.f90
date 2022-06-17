@@ -79,11 +79,19 @@ subroutine init_poisson
      read(ilun)ndim2
      read(ilun)nlevelmax2
      read(ilun)nboundary2
+#ifdef OUTPUT_PARTICLE_DENSITY
+     if(ndim2.ne.ndim+2)then
+#else
      if(ndim2.ne.ndim+1)then
+#endif
         if(ndim2.ne.ndim)then
            write(*,*)'File poisson.tmp is not compatible'
            write(*,*)'Found   =',ndim2
+#ifdef OUTPUT_PARTICLE_DENSITY
+           write(*,*)'Expected=',ndim+2
+#else
            write(*,*)'Expected=',ndim+1
+#endif
            call clean_stop
         else
            if(myid==1) write(*,*)'Assuming pre commit bce4454 output format'
@@ -117,6 +125,13 @@ subroutine init_poisson
               ! Loop over cells
               do ind=1,twotondim
                  iskip=ncoarse+(ind-1)*ngridmax
+#ifdef OUTPUT_PARTICLE_DENSITY
+                 ! Read density
+                 read(ilun)xx
+                 do i=1,ncache
+                    rho(ind_grid(i)+iskip)=xx(i)
+                 end do
+#endif
                  ! Read potential
                  read(ilun)xx
                  do i=1,ncache
