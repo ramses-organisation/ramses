@@ -19,7 +19,8 @@ subroutine read_hydro_params(nml_ok)
   namelist/init_params/filetype,initfile,multiple,nregion,region_type &
        & ,x_center,y_center,z_center,aexp_ini &
        & ,length_x,length_y,length_z,exp_region &
-       & ,d_region,u_region,v_region,w_region,p_region,alpha,beta,crit,delta_rho &
+       & ,d_region,u_region,v_region,w_region,p_region &
+       & ,alpha_dense_core,beta_dense_core,crit_dense_core,delta_rho &
 #if NENER>0
        & ,prad_region &
 #endif
@@ -43,7 +44,7 @@ subroutine read_hydro_params(nml_ok)
        & ,d_bound,u_bound,v_bound,w_bound,p_bound &
        & ,A_bound,B_bound,C_bound
   namelist/physics_params/cooling,haardt_madau,metal,isothermal &
-       & ,m_star,t_star,n_star,T2_star,g_star,del_star,eps_star,jeans_ncells &
+       & ,m_star,n_star,T2_star,g_star,del_star,eps_star,jeans_ncells &
        & ,eta_sn,yield,rbubble,f_ek,ndebris,f_w,mass_gmc,kappa_IR &
        & ,J21,a_spec,z_ave,z_reion,eta_mag,delayed_cooling &
        & ,self_shielding,smbh,agn,B_ave,t_diss
@@ -132,14 +133,12 @@ subroutine read_hydro_params(nml_ok)
   !--------------------------------------------------
   nexpand_bound=2
 
-  !--------------------------------------------------
+    !--------------------------------------------------
   ! Check for star formation
   !--------------------------------------------------
-  if(t_star>0)then
-     star=.true.
-     pic=.true.
-  else if(eps_star>0)then
-     t_star=0.1635449*(n_star/0.1)**(-0.5)/eps_star
+  if(eps_star>0)then
+     ! For historical reference:
+     ! t_star=0.1635449d0*(n_star/0.1d0)**(-0.5d0)/eps_star
      star=.true.
      pic=.true.
   endif
