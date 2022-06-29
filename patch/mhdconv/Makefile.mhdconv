@@ -10,22 +10,22 @@ COMPILER = GNU
 # Size of vector cache
 NVECTOR = 32
 # Number of dimensions
-NDIM = 1
+NDIM = 2
 # Float precision size
 NPRE = 8
 # hydro/mhd/rhd solver
-SOLVER = hydro
+SOLVER = mhd
 # Patch
-PATCH =
+PATCH = '../patch/mhdconv'
 # Use RT? 1=Yes, 0=No
 RT = 0
 # Use turbulence? 1=Yes, 0=No (requires fftw3)
 USE_TURB=0
 # Use MPI? 1=Yes, 0=No
-MPI = 0
+MPI = 1
 MPIF90 = mpif90
 # Root name of executable
-EXEC = ramses
+EXEC = ramsesMHD_testentropy
 # Number of additional energies
 NENER = 0
 # Use Grackle cooling? 1=Yes, 0=No
@@ -40,9 +40,7 @@ NIONS = 0
 # Number of photon groups for RT
 NGROUPS = 0
 # Number of passive scalars
-NPSCAL = 0
-# Light MPI communicator structure (for > 10k MPI processes)
-LIGHT_MPI_COMM = 0
+NPSCAL = 1
 
 # Compute NVAR
 NVAR = 2+$(NDIM)
@@ -77,9 +75,6 @@ ifeq ($(USE_TURB),1)
    DEFINES += -DUSE_TURB
 endif
 
-ifeq ($(LIGHT_MPI_COMM), 1)
-   DEFINES += -DLIGHT_MPI_COMM
-endif
 #############################################################################
 # Fortran compiler options and directives
 
