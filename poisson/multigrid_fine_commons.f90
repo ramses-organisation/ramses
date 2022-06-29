@@ -22,7 +22,6 @@
 ! ------------------------------------------------------------------------
 ! Main multigrid routine, called by amr_step
 ! ------------------------------------------------------------------------
-
 subroutine multigrid_fine(ilevel,icount)
    use amr_commons
    use poisson_commons
@@ -39,6 +38,7 @@ subroutine multigrid_fine(ilevel,icount)
    logical :: allmasked
    real(kind=8) :: err, last_err
    real(kind=8) :: res_norm2, i_res_norm2
+   type(communicator_mg):: active_local
 #ifndef WITHOUTMPI
    logical :: allmasked_tot
    real(kind=8) :: res_norm2_tot, i_res_norm2_tot
@@ -74,14 +74,18 @@ subroutine multigrid_fine(ilevel,icount)
    ! ---------------------------------------------------------------------
 
    ! @ finer level
-   call build_parent_comms_mg(active(ilevel)%igrid, active(ilevel)%ngrid, ilevel)
+   active_local%igrid => active(ilevel)%igrid
+   active_local%ngrid = active(ilevel)%ngrid
+   call build_parent_comms_mg(active_local, ilevel)
    ! @ coarser levels
    do ifine=(ilevel-1),2,-1
+      active_local%ngrid = active_mg(myid,ifine)%ngrid
 #ifdef LIGHT_MPI_COMM
-      call build_parent_comms_mg(active_mg(myid,ifine)%pcomm%igrid, active_mg(myid,ifine)%ngrid, ifine)
+      active_local%igrid => active_mg(myid,ifine)%pcomm%igrid
 #else
-      call build_parent_comms_mg(active_mg(myid,ifine)%igrid, active_mg(myid,ifine)%ngrid, ifine)
+      active_local%igrid => active_mg(myid,ifine)%igrid
 #endif
+      call build_parent_comms_mg(active_local, ifine)
    end do
 
    ! ---------------------------------------------------------------------
@@ -393,7 +397,7 @@ end subroutine recursive_multigrid_coarse
 ! ------------------------------------------------------------------------
 ! Multigrid communicator building
 ! ------------------------------------------------------------------------
-subroutine build_parent_comms_mg(active_f_comm_igrid, active_f_comm_ngrid, ifinelevel)
+subroutine build_parent_comms_mg(active_loc, ifinelevel)
    use amr_commons
    use poisson_commons
    use mpi_mod
@@ -402,9 +406,7 @@ subroutine build_parent_comms_mg(active_f_comm_igrid, active_f_comm_ngrid, ifine
 #ifndef WITHOUTMPI
    integer, dimension (MPI_STATUS_SIZE, ncpu) :: statuses
 #endif
-
-   integer, dimension(*), intent(in)::active_f_comm_igrid
-   integer, intent(in) :: active_f_comm_ngrid
+   type(communicator_mg), intent(in):: active_loc
    integer, intent(in) :: ifinelevel
 
    integer :: icoarselevel
@@ -421,12 +423,6 @@ subroutine build_parent_comms_mg(active_f_comm_igrid, active_f_comm_ngrid, ifine
 #ifndef WITHOUTMPI
 #ifdef LIGHT_MPI_COMM
    integer :: idx,offset
-   ! Send/recv Multigrid temporary communicator (light) used in build_parent_comms_mg subroutine
-   type communicator_mg
-     integer                       ::ngrid
-     integer, dimension(:), pointer::igrid
-   end type communicator_mg
-
    type(communicator_mg), dimension(1:ncpu) :: comm_send, comm_receive
    type(communicator_mg), dimension(1:ncpu) :: comm_send2, comm_receive2
 #else
@@ -452,12 +448,12 @@ subroutine build_parent_comms_mg(active_f_comm_igrid, active_f_comm_ngrid, ifine
    ! ---------------------------------------------------------------------
 
    ! Loop over the AMR active communicator first
-   ngrids = active_f_comm_ngrid
+   ngrids = active_loc%ngrid
    do istart=1,ngrids,nvector
       nbatch=min(nvector,ngrids-istart+1)
       ! Gather grid indices and retrieve parent cells
       do i=1,nbatch
-         ind_cell_father(i)=father( active_f_comm_igrid(istart+i-1) )
+         ind_cell_father(i)=father( active_loc%igrid(istart+i-1) )
       end do
 
       ! Compute neighbouring father cells and grids

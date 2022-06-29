@@ -20,6 +20,12 @@ module poisson_commons
   type(communicator), allocatable, dimension(:,:) :: emission_mg
 #endif
 
+  ! Send/recv Multigrid temporary communicator (light) used in build_parent_comms_mg subroutine
+  type communicator_mg
+    integer                       ::ngrid
+    integer, dimension(:), pointer::igrid
+  end type communicator_mg
+
   ! Minimum MG level
   integer :: levelmin_mg
 
