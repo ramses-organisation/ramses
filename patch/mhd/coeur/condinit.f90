@@ -40,11 +40,11 @@ subroutine condinit(x,u,dx,nn)
   ! cloud density equal to unity
   d0 = 1.0
   ! cloud rotation
-  omega0 = sqrt(beta*4.*pi)
+  omega0 = sqrt(beta_dense_core*4.*pi)
   ! cloud pressure
-  p0 = alpha*d0*8.*pi/15.
+  p0 = alpha_dense_core*d0*8.*pi/15.
   ! vertical magnetic field
-  B0 = sqrt(4.*pi/5.)/0.53*crit
+  B0 = sqrt(4.*pi/5.)/0.53*crit_dense_core
 
   DO i=1,nn
      xx=x(i,1)-x0
