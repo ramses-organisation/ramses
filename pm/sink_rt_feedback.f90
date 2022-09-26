@@ -139,12 +139,15 @@ SUBROUTINE gather_ioni_flux(dt,sink_ioni_flux)
   sink_ioni_flux = 0d0
 
   do istellar=1,nstellar
-     ! Find index in sink array of sink to which the stellar object belongs
-     ! Remark: will be equal or lower than id_sink due to sink merging
-     isink = id_stellar(istellar)
-     do while (id_stellar(istellar) .ne. idsink(isink))
-       isink = isink - 1
+    ! find corresponding sink
+     isink = 1
+     do while ((isink.le.nsink) .and. (id_stellar(istellar) .ne. idsink(isink)))
+       isink = isink + 1
      end do
+     if (isink.gt.nsink) then
+       write(*,*)"BUG: COULD NOT FIND SINK"
+       call clean_stop
+     endif
      M_stellar = mstellar(istellar)
      ! Reset the photon counter
      nphotons = 0d0
@@ -154,13 +157,7 @@ SUBROUTINE gather_ioni_flux(dt,sink_ioni_flux)
      if (t - tstellar(istellar) < hii_t) then
         !remember vaccafits is in code units because the corresponding parameters have been normalised in read_stellar_params (stf_K and stf_m0)
         call vaccafit(M_stellar,Flux_stellar)
-        ! HII-ionising is group 1 if no IR, else group 3 (IR is group 1, optical is group 2)
-        ! TC: what if you use different photon groups?
-        if (ngroups.eq.3) then
-           nphotons(1) = Flux_stellar
-        else
-           nphotons(3) = Flux_stellar
-        endif
+        nphotons(feedback_photon_group) = Flux_stellar
      endif
 
      do ig=1,ngroups

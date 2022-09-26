@@ -7,7 +7,6 @@
 
 &RUN_PARAMS
 hydro=.true.
-rt=.false.
 nrestart=0
 nremap=10
 poisson=.true.
@@ -43,7 +42,6 @@ boxlen=250. ! pc
 /
 
 &OUTPUT_PARAMS
-!foutput=1
 tend=0.18
 /
 
@@ -78,14 +76,6 @@ sink_refine=.true.
 &POISSON_PARAMS
 gravity_type=0
 /
-
-!&SF_PARAMS
-!m_star=1.0
-!n_star=3.e5
-!T2_star=10.
-!g_star=1.0  ! 1.0 gives flat relation
-!eps_star=1e-10
-!/
 
 &SINK_PARAMS
 create_sinks=.false.

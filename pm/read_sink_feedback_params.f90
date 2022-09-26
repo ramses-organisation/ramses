@@ -3,6 +3,9 @@ subroutine read_stellar_params()
   use pm_commons, only: iseed
   use amr_parameters, only: dp,stellar
   use sink_feedback_parameters
+#ifdef RT
+  use rt_parameters, only: nGroups
+#endif
   use constants, only:M_sun
   implicit none
 
@@ -13,10 +16,10 @@ subroutine read_stellar_params()
                          & imf_index, imf_low, imf_high, &
                          & lt_t0, lt_m0, lt_a, lt_b, &
                          & stf_K, stf_m0, stf_a, stf_b, stf_c, &
-                         & hii_t, &
+                         & hii_t, feedback_photon_group, &
                          & sn_feedback_sink,stellar_strategy,iseed, &
                          & mstellarini, &
-                         & Tsat, Vsat, sn_r_sat, sn_p_ref, sn_e_ref, sn_mass_ref, &
+                         & Tsat, Vsat, sn_r_sat, sn_p_ref, sn_e_ref, &
                          & Vdisp, stellar_info
 
   real(dp):: scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
@@ -75,12 +78,26 @@ subroutine read_stellar_params()
   stf_m0 = stf_m0 * msun 
 
   !Careful: normalised age of the time during which the star is emitting HII ionising flux
-  hii_t = hii_t * Myr 
+  hii_t = hii_t * Myr
+
+  ! photon group for HII radiation from sinks
+#ifdef RT
+  if (feedback_photon_group<=0) then
+     ! if not specified by user, use default
+     ! HII-ionising is group 1 if no IR, else group 3 (IR is group 1, optical is group 2)
+     if (ngroups.eq.3) then
+        feedback_photon_group = 1
+     else if (ngroups.eq.4) then
+        feedback_photon_group = 2
+     else
+        feedback_photon_group = 3
+     endif
+  endif
+#endif
 
   !normalise the supernova quantities
   sn_p_ref = sn_p_ref / (scale_d * scale_v * scale_l**3)
   sn_e_ref = sn_e_ref / (scale_d * scale_v**2 * scale_l**3)
-  sn_mass_ref = sn_mass_ref / (scale_d * scale_l**3) !1 solar mass ejected
 
   !normalise Vsat which is assumed to be in KM/S
   Vsat = Vsat * 1.e5 / scale_v

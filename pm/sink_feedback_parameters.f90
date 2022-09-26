@@ -22,8 +22,7 @@ module sink_feedback_parameters
   logical::sn_direct = .false.        ! explode immediately instead of after lifetime
 
   real(dp):: sn_e_ref=1.d51      ! SN energy for forcing by sinks [erg]
-  real(dp):: sn_p_ref=4.d43      ! SN momentum [g cm/s]
-  real(dp):: sn_mass_ref=2.e33   ! SN mass [g]
+  real(dp):: sn_p_ref=4.d43      ! SN momentum [g cm/s] for 10 H/cc (Iffrig and Hennebelle 2015)
 
   real(dp):: Tsat=1.d99   ! maximum temperature in SN remnants
   real(dp):: Vsat=1.d99   ! maximum velocity in SN remnants
@@ -45,7 +44,8 @@ module sink_feedback_parameters
   real(dp)::stf_b=4.353614230584390d0
   real(dp)::stf_c=1.142166657042991d0 
 
-  real(dp):: hii_t=0 !fiducial HII region lifetime [yr?], it is normalised in code units in read_stellar 
+  real(dp):: hii_t=0 !fiducial HII region lifetime [yr?], it is normalised in code units in read_stellar
+  integer:: feedback_photon_group=-1 ! index of the photon group where to put the radiation
 
   ! commons
 
