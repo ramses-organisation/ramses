@@ -1,5 +1,5 @@
 ! Uniform density 10 H/cc, uniform T=10 initially
-! 1 massive sink in the middle (id=6)
+! one massive sink in the middle (id=6) and one in the corner
 ! 5 additional low mass sinks around to verify SN is done on the correct sink
 ! initially 2 sinks close together which merge before stellar particle is born (sink_id != isink)
 ! Initial dmf = initial mass
@@ -90,18 +90,12 @@ n_sink=1d2 ! ramses doens't like it if you don't set this
 sn_feedback_sink=.false.
 nstellarmax=10
 stellar_msink_th=300. ! threshold for stellar obj creation
-sn_direct=.false.
-mstellarini=100,100,100,100,100,100
+mstellarini=50,50,50,50,50,50
 ! IMF
 imf_index=-2.35
 imf_low=8
 imf_high=120
-! Stellar lifetime model
-lt_a=0.23840797
-lt_b=2.20522946
-lt_m0=148.158972
-lt_t0=3.26515722
-! HII lifetime (for HII emittion?)
+! HII lifetime
 hii_t=1000.0 ! Myr
 /
 
@@ -117,7 +111,6 @@ rt_c_fraction=1d-6
 rt_otsa=.false.
 /
 
-! RT only initialised in half the box??
 &RT_GROUPS
 group_csn(1,:)= 3.8808E-18, 7.6280E-22, 0.0000
 group_cse(1,:)= 3.6627E-18, 1.1054E-21, 0.0000

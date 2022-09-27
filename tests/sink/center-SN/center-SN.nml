@@ -3,7 +3,6 @@
 ! 5 additional low mass sinks around to verify SN is done on the correct sink
 ! initially 2 sinks close together which merge before stellar particle is born (sink_id != isink)
 ! Initial dmf = initial mass
-! TC: there is something weird with msbh in ic_sink
 
 &RUN_PARAMS
 hydro=.true.
@@ -42,7 +41,6 @@ boxlen=250. ! pc
 /
 
 &OUTPUT_PARAMS
-!foutput=1
 tend=0.18
 /
 
@@ -78,13 +76,6 @@ sink_refine=.true.
 gravity_type=0
 /
 
-&SF_PARAMS
-m_star=1.0
-n_star=3.e5
-T2_star=10.
-g_star=1.0  ! 1.0 gives flat relation
-eps_star=1e-10
-/
 
 &SINK_PARAMS
 create_sinks=.false.
@@ -92,6 +83,7 @@ nsinkmax=10
 mass_sink_seed=1 ! in M_sun
 accretion_scheme='bondi'
 merging_timescale=1d50
+n_sink=1d2 ! ramses doens't like it if you don't set this
 /
 
 &STELLAR_PARAMS

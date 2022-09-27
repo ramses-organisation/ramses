@@ -15,7 +15,6 @@ subroutine read_stellar_params()
   namelist/stellar_params/ nstellarmax, stellar_msink_th, sn_direct, &
                          & imf_index, imf_low, imf_high, &
                          & lt_t0, lt_m0, lt_a, lt_b, &
-                         & stf_K, stf_m0, stf_a, stf_b, stf_c, &
                          & hii_t, feedback_photon_group, &
                          & sn_feedback_sink,stellar_strategy,iseed, &
                          & mstellarini, &

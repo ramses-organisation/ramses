@@ -76,33 +76,20 @@ sink_refine=.true.
 gravity_type=0
 /
 
-&SF_PARAMS
-m_star=1.0
-n_star=3.e5
-T2_star=10.
-g_star=1.0  ! 1.0 gives flat relation
-eps_star=1e-10
-/
-
 &SINK_PARAMS
 create_sinks=.false.
 nsinkmax=1
 mass_sink_seed=1 ! in M_sun
 accretion_scheme='bondi'
+n_sink=1d2 ! ramses doens't like it if you don't set this
 /
 
 &STELLAR_PARAMS
 sn_feedback_sink=.false.
 nstellarmax=10
 stellar_msink_th=200. ! threshold for stellar obj creation
-sn_direct=.false.
 ! IMF
 imf_index=-2.35
 imf_low=8
 imf_high=120
-! Stellar lifetime model
-lt_a=0.23840797
-lt_b=2.20522946
-lt_m0=148.158972
-lt_t0=3.26515722
 /
