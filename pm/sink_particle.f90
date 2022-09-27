@@ -1369,7 +1369,6 @@ subroutine make_sink_from_clump(ilevel)
   xsink_new=0d0; vsink_new=0d0; lsink_new=0d0; delta_mass_new=0d0
   tsink_new=0d0; oksink_new=0d0; idsink_new=0; new_born_new=.false.
 
-
   ! Count number of new sinks (flagged cells)
   ntot=0
   ntot_sink_cpu=0
