@@ -2,12 +2,12 @@
 BINDIR=.
 
 # Ifort configuration
-F90=ifort
-CFLAGS=-Ofast -cpp
+#F90=ifort
+#CFLAGS=-Ofast -cpp
 
 # Gfortran configuration
-# F90=gfortran
-# CFLAGS=-ffree-line-length-none -std=f2008 -Ofast -Wall -x f95-cpp-input -J..
+F90=gfortran
+CFLAGS=-ffree-line-length-none -std=f2008 -Ofast -Wall -x f95-cpp-input -J..
 
 LFLAGS=-I../
 
