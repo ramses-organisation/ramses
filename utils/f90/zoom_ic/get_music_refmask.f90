@@ -10,6 +10,7 @@ program get_music_refmask
   integer::ncpu2,npart2,ndim2,levelmin,levelmax,ilevel
   integer::ncpu_read
   real(KIND=8)::mtot,boxlen,t,mass,btime,unit_l,aexp,unit_t
+  real(KIND=8)::h0,omega_m,omega_l,omega_k,omega_b,unit_d
   real(KIND=8)::xmin=0,xmax=1,ymin=0,ymax=1,zmin=0,zmax=1,r,xc=0.5,yc=0.5,zc=0.5,rad=-1
   integer::imin,imax,jmin,jmax,kmin,kmax,lmin,ipart
   real(KIND=8)::deltax
