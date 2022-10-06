@@ -9,7 +9,7 @@ CFLAGS=-Ofast -cpp
 # F90=gfortran
 # CFLAGS=-ffree-line-length-none -std=f2008 -Ofast -Wall -x f95-cpp-input -J..
 
-LFLAGS=
+LFLAGS=-L ../
 
 MODOBJ=
 
