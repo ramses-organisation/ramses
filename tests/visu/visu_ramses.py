@@ -356,7 +356,7 @@ def load_snapshot(nout):
         print("Total particles loaded: %i" % npart_read)
 
     # This is the master data dictionary.
-    data = {"data": {}, "info": info, "sinks": {"nsinks": 0}}
+    data = {"data": {}, "info": info, "sinks": {"nsinks": 0}, "stellars": {"nstellars": 0}}
     for i in range(len(list_vars)):
         theKey = list_vars[i]
         data["data"][theKey] = master_data_array[:,i]
@@ -403,6 +403,30 @@ def load_snapshot(nout):
                         data["sinks"][entry][i] = np.nan
             data["sinks"]["id"] = np.int32(data["sinks"]["id"])
             data["sinks"]["level"] = np.int32(data["sinks"]["level"])
+    except IOError:
+        pass
+
+    # Read stellar particles if present
+    stellarfile = infile+"/stellar_"+infile.split("_")[-1]+".csv"
+    try:
+        with open(stellarfile) as f:
+            content = f.readlines()
+        # Read the file header to get information on fields
+        stellar_vars = content[0].rstrip().replace(" # ", "").split(",")
+        stellar_units = content[1].rstrip().replace(" # ", "").split(",")
+        data["stellars"]["nstellars"] = len(content) - 2
+        if data["stellars"]["nstellars"] > 0:
+            for entry in stellar_vars:
+                data["stellars"][entry] = np.zeros(data["stellars"]["nstellars"], dtype=np.float64)
+            for i in range(data["stellars"]["nstellars"]):
+                line = content[i+2].rstrip().split(",")
+                for j, entry in enumerate(stellar_vars):
+                    # Try to convert to float
+                    try:
+                        data["stellars"][entry][i] = np.float64(line[j])
+                    except ValueError:
+                        data["stellars"][entry][i] = np.nan
+            data["stellars"]["id"] = np.int32(data["stellars"]["id"])
     except IOError:
         pass
 

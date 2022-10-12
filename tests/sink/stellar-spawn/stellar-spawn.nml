@@ -1,0 +1,95 @@
+! Uniform density 10 H/cc, uniform T=10 initially
+! 1 massive sink in the middle
+! should spawn 3 stellar particle
+! Initial dmf = initial mass
+
+&RUN_PARAMS
+hydro=.true.
+rt=.false.
+nrestart=0
+nremap=10
+poisson=.true.
+pic=.true.
+sink=.true.
+stellar=.true.
+nsubcycle=1,1
+verbose=.false.
+/
+
+&INIT_PARAMS
+nregion=1
+region_type(1)='square'
+x_center=125
+y_center=125
+z_center=125
+length_x=250
+length_y=250
+length_z=250
+exp_region=10.0
+d_region=1d1		   	  ! 10 hydrogen atoms per cc
+p_region=3300.1987634209013
+/
+
+&AMR_PARAMS
+levelmin=6
+levelmax=7
+ngridmax=350000
+npartmax=2200
+nexpand=4,4,4,4,4
+boxlen=250. ! pc
+/
+
+&OUTPUT_PARAMS
+foutput=1
+tend=0.25
+/
+
+&HYDRO_PARAMS
+gamma=1.666666667
+courant_factor=0.8
+riemann='hllc'
+slope_type=1
+pressure_fix=.true.
+beta_fix=0.5
+/
+
+&COOLING_PARAMS
+cooling=.false.
+metal=.false.
+z_ave=1.0
+/
+
+&UNITS_PARAMS
+units_density = 1.66d-24 ! 1 H/cc
+units_time    = 3.004683525921981d15 !95.21470899675022 Myr
+units_length  = 3.08567758128200d18 ! 1 pc
+/
+
+&REFINE_PARAMS
+jeans_refine=8,8,8
+interpol_type=0
+interpol_var=1
+sink_refine=.true.
+/
+
+&POISSON_PARAMS
+gravity_type=0
+/
+
+&SINK_PARAMS
+create_sinks=.false.
+nsinkmax=1
+mass_sink_seed=1 ! in M_sun
+accretion_scheme='bondi'
+n_sink=1d2 ! ramses doens't like it if you don't set this
+/
+
+&STELLAR_PARAMS
+sn_feedback_sink=.false.
+nstellarmax=10
+stellar_msink_th=200. ! threshold for stellar obj creation
+! IMF
+imf_index=-2.35
+imf_low=8
+imf_high=120
+/
