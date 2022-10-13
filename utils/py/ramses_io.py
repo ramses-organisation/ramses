@@ -74,20 +74,70 @@ def rd_map(filename):
     
     return m
 
-
 class Part:
-    def __init__(self,np,ndim):
-        self.np = np
-        self.ndim = ndim
-	self.xp = np.zeros([np,ndim])
-	self.vp = np.zeros([np,ndim])
-	self.mp = np.zeros([np])
+    def __init__(self,nnp,nndim):
+        self.np = nnp
+        self.ndim = nndim
+        self.xp = np.zeros([nndim,nnp])
+        self.vp = np.zeros([nndim,nnp])
+        self.mp = np.zeros([nnp])
 
 def rd_part(nout):
-    car=str(nout).zfill(5)
-    filename="output_"+car+"+/part_"+car+".out00001"
+    car1=str(nout).zfill(5)
+    filename="output_"+car1+"/part_"+car1+".out00001"
+    ncpu = 1
+    ndim = 1
     with FortranFile(filename, 'r') as f:
-        ncpu = f.read_reals('i')
-        ndim = f.read_reals('i')
-        npart = f.read_reals('i')
+        ncpu2 = f.read_ints('i')
+        ndim2 = f.read_ints('i')
 
+    ncpu = ncpu2[0]
+    ndim = ndim2[0]
+    npart = 0
+    for icpu in range(0,ncpu):
+        car1 = str(nout).zfill(5)
+        car2 = str(icpu+1).zfill(5)
+        filename="output_"+car1+"/part_"+car1+".out"+car2
+        with FortranFile(filename, 'r') as f:
+            ncpu2 = f.read_ints('i')
+            ndim2 = f.read_ints('i')
+            npart2 = f.read_ints('i')
+        npart = npart + npart2[0]
+    print("Found ",npart," particles")
+    print("Reading data...")
+
+    p = Part(npart,ndim)
+    p.np = npart
+    p.ndim = ndim
+    ipart = 0
+
+    for	icpu in	range(0,ncpu):
+        car1 = str(nout).zfill(5)
+        car2 = str(icpu+1).zfill(5)
+        filename = "output_"+car1+"/part_"+car1+".out"+car2
+
+        with FortranFile(filename, 'r') as f:
+            ncpu2 = f.read_ints('i')
+            ndim2 = f.read_ints('i')
+            npart2 = f.read_ints('i')
+            npart2 = npart2[0]
+            
+            dummy1 = f.read_reals('f8')
+            dummy2 = f.read_reals('f4')
+            dummy3 = f.read_reals('f8')
+            dummy4 = f.read_reals('f8')
+            dummy5 = f.read_reals('f4')
+
+            for idim in range(0,ndim):
+                xp = f.read_reals('f8')
+                p.xp[idim,ipart:ipart+npart2] = xp
+
+            for idim in range(0,ndim):
+                xp = f.read_reals('f8')
+                p.vp[idim,ipart:ipart+npart2] = xp
+
+            xp = f.read_reals('f8')
+            p.mp[ipart:ipart+npart2] = xp
+
+        ipart = ipart + npart2
+    return p
