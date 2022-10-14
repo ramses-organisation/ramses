@@ -144,6 +144,7 @@ class Level:
         self.ngrid = 0
         self.ndim = nndim
         self.xg = np.empty(shape=(nndim,0))
+        self.refined = np.empty(shape=(2**nndim,0),dtype=bool)
 
 def rd_amr(nout):
     car1 = str(nout).zfill(5)
@@ -224,7 +225,7 @@ def rd_amr(nout):
                         index = f.read_ints("i")
                         nextg = f.read_ints("i")
                         prevg = f.read_ints("i")
-                        xg = np.zeros([3,ncache])
+                        xg = np.zeros([ndim,ncache])
                         for idim in range(0,ndim):
                             xg[idim,:] = f.read_reals('f8')-xbound[idim]
                         if(ibound == icpu):
@@ -233,8 +234,13 @@ def rd_amr(nout):
                         father = f.read_ints("i")
                         for ind in range(0,2*ndim):
                             nbor = f.read_ints("i")
+                        son = np.zeros([2**ndim,ncache])
                         for ind in range(0,2**ndim):
-                            son = f.read_ints("i")
+                            son[ind,:] = f.read_ints("i")
+                        if(ibound == icpu):
+                            ref = np.zeros([2**ndim,ncache],dtype=bool)
+                            ref = np.where(son > 0, True, False)
+                            amr[ilevel].refined=np.append(amr[ilevel].refined,ref,axis=1)
                         for ind in range(0,2**ndim):
                             cpumap = f.read_ints("i")
                         for ind in range(0,2**ndim):
