@@ -3,6 +3,7 @@ import matplotlib
 from matplotlib import pyplot as plt
 from scipy.io import FortranFile
 from tqdm import tqdm
+import time
 
 class Cool:
     def __init__(self,n1,n2):
@@ -100,15 +101,18 @@ def rd_part(nout):
             ndim2, = f.read_ints('i')
             npart2, = f.read_ints('i')
         npart = npart + npart2
-    print("Found ",npart," particles")
-    print("Reading data...")
-
+        
+    txt = "Found "+str(npart)+" particles"
+    tqdm.write(txt)
+    tqdm.write("Reading particle data...")
+    time.sleep(0.5)
+    
     p = Part(npart,ndim)
     p.np = npart
     p.ndim = ndim
     ipart = 0
 
-    for	icpu in	range(0,ncpu):
+    for	icpu in	tqdm(range(0,ncpu)):
         car1 = str(nout).zfill(5)
         car2 = str(icpu+1).zfill(5)
         filename = "output_"+car1+"/part_"+car1+".out"+car2
@@ -155,7 +159,10 @@ def rd_amr(nout):
         nx,ny,nz = f.read_ints('i')
         nlevelmax, = f.read_ints('i')
 
-    print("ncpu =",ncpu,"ndim =",ndim,"nlevelmax =",nlevelmax)
+    txt = "ncpu="+str(ncpu)+" ndim="+str(ndim)+" nlevelmax="+str(nlevelmax)
+    tqdm.write(txt)
+    tqdm.write("Reading grid data...")
+    time.sleep(0.5)
 
     amr=[]
     for ilevel in range(0,nlevelmax):
@@ -267,7 +274,10 @@ def rd_hydro(nout):
         nboundary, = f.read_ints('i')
         gamma, = f.read_reals('f8')
         
-    print("ncpu =",ncpu,"ndim =",ndim,"nvar =",nvar,"nlevelmax =",nlevelmax,"gamma =",gamma)
+    txt = "ncpu="+str(ncpu)+" ndim="+str(ndim)+" nvar="+str(nvar)+" nlevelmax="+str(nlevelmax)+" gamma="+str(gamma)
+    tqdm.write(txt)
+    tqdm.write("Reading hydro data...")
+    time.sleep(0.5)
 
     hydro=[]
     for ilevel in range(0,nlevelmax):
@@ -304,3 +314,49 @@ def rd_hydro(nout):
 
     return hydro
     
+class Cell:
+    def __init__(self,nndim,nnvar):
+        self.ncell = 0
+        self.ndim = nndim
+        self.nvar = nnvar
+        self.x = np.empty(shape=(nndim,0))
+        self.u = np.empty(shape=(nnvar,0))
+
+def rd_cell(nout):
+    
+    a = rd_amr(nout)
+    h = rd_hydro(nout)
+
+    nlevelmax = len(a)
+    ndim = a[0].ndim
+    nvar = h[0].nvar
+    
+    offset = np.zeros([ndim,2**ndim])
+    offset[0,:]=[-0.5,0.5,-0.5,0.5,-0.5,0.5,-0.5,0.5]
+    offset[1,:]=[-0.5,-0.5,0.5,0.5,-0.5,-0.5,0.5,0.5]
+    offset[2,:]=[-0.5,-0.5,-0.5,-0.5,0.5,0.5,0.5,0.5]
+
+    ncell = 0
+    for ilev in range(0,nlevelmax):
+        ncell = ncell + np.count_nonzero(a[ilev].refined == False)
+
+    print("Found",ncell,"leaf cells")
+    print("Extracting leaf cells...")
+
+    c = Cell(ndim,nvar)
+        
+    for ilev in range(0,nlevelmax):
+        dx = 1./2**ilev
+        for ind in range(0,2**ndim):
+            nc = np.count_nonzero(a[ilev].refined[ind] == False)
+            if (nc > 0):
+                xc = np.zeros([ndim,nc])
+                for idim in range(0,ndim):
+                    xc[idim,:]= a[ilev].xg[idim,np.where(a[ilev].refined[ind] == False)]+offset[idim,ind]*dx/2
+                c.x = np.append(c.x,xc,axis=1)
+                uc = np.zeros([nvar,nc])
+                for ivar in range(0,nvar):
+                    uc[ivar,:]= h[ilev].u[ivar,ind,np.where(a[ilev].refined[ind] == False)]
+                c.u = np.append(c.u,uc,axis=1)
+
+    return c
