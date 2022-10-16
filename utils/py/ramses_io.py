@@ -321,6 +321,7 @@ class Cell:
         self.nvar = nnvar
         self.x = np.empty(shape=(nndim,0))
         self.u = np.empty(shape=(nnvar,0))
+        self.dx = np.empty(shape=(0))
 
 def rd_cell(nout):
     
@@ -358,5 +359,6 @@ def rd_cell(nout):
                 for ivar in range(0,nvar):
                     uc[ivar,:]= h[ilev].u[ivar,ind,np.where(a[ilev].refined[ind] == False)]
                 c.u = np.append(c.u,uc,axis=1)
-
+                dd = np.ones(nc)*dx
+                c.dx = np.append(c.dx,dd)
     return c
