@@ -366,10 +366,9 @@ def rd_cell(nout):
     return c
 
 class Info:
-    def __init__(self):
-        self.nlevelmax = 0
-        self.ndim = 0
-
+    def __init__(self,nncpu):
+        self.bound_key = np.empty(shape=(nncpu+1),dtype=np.double)
+        
 def rd_info(nout):
     car1 = str(nout).zfill(5)
     filename = "output_"+car1+"/amr_"+car1+".out00001"
@@ -380,16 +379,19 @@ def rd_info(nout):
         nlevelmax, = f.read_ints('i')
 
         txt = "ncpu="+str(ncpu)+" ndim="+str(ndim)+" nlevelmax="+str(nlevelmax)
-        tqdm.write(txt)
-        tqdm.write("Reading info data...")
-        time.sleep(0.5)
-        
-        i = Info()
-        
+        print(txt)
+        print("Reading info data...")
+                
+        i = Info(ncpu)
+        i.nlevelmax = nlevelmax
+        i.ndim = ndim
+
         ngridmax, = f.read_ints('i')
         nboundary, = f.read_ints('i')
         ngrid_current, = f.read_ints('i')
         boxlen, = f.read_reals('f8')
+
+        i.boxlen = boxlen
         
         noutput,iout,ifout = f.read_ints('i')
         tout = f.read_reals('f8')
@@ -402,6 +404,14 @@ def rd_info(nout):
         omega_m,omega_l,omega_k,omega_b,h0,aexp_ini,boxlen_ini = f.read_reals('f8')
         aexp,hexp,aexp_old,epot_tot_int,epot_tot_old = f.read_reals('f8')
         mass_sph, = f.read_reals('f8')
+        
+        i.omega_m = omega_m
+        i.omega_l = omega_l
+        i.omega_k = omega_k
+        i.omega_b = omega_b
+        i.h0 = h0
+        i.aexp = aexp
+        i.t = t
         
         headl = f.read_ints('i')
         taill = f.read_ints('i')
@@ -422,8 +432,22 @@ def rd_info(nout):
         
         ordering = f.read_ints("i")
         
-        bound_key = f.read_ints("i8")
-
+        bound_key = f.read_ints("f8")
+        
+        i.bound_key[:] = bound_key
+        
     filename = "output_"+car1+"/info_"+car1+".txt"
+    data = ascii.read(filename, header_start=0, data_start=0, data_end=18, delimiter='=', names=["field","value"])
+    name = np.array(data["field"])
+    val = np.array(data["value"])
+    
+    i.ordering, = val[np.where(name=="ordering type")]
+    unit_l, = val[np.where(name=="unit_l")]
+    unit_d, = val[np.where(name=="unit_d")]
+    unit_t, = val[np.where(name=="unit_t")]
 
+    i.unit_l = float(unit_l)
+    i.unit_d = float(unit_d)
+    i.unit_t = float(unit_t)
+    
     return i
