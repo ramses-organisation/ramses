@@ -3,6 +3,8 @@ import matplotlib
 from matplotlib import pyplot as plt
 from scipy.io import FortranFile
 from tqdm import tqdm
+from astropy.io import ascii
+
 import time
 
 class Cool:
@@ -360,3 +362,66 @@ def rd_cell(nout):
                 c.u = np.append(c.u,uc,axis=1)
 
     return c
+
+class Info:
+    def __init__(self):
+        self.nlevelmax = 0
+        self.ndim = 0
+
+def rd_info(nout):
+    car1 = str(nout).zfill(5)
+    filename = "output_"+car1+"/amr_"+car1+".out00001"
+    with FortranFile(filename, 'r') as f:
+        ncpu, = f.read_ints('i')
+        ndim, = f.read_ints('i')
+        nx,ny,nz = f.read_ints('i')
+        nlevelmax, = f.read_ints('i')
+
+        txt = "ncpu="+str(ncpu)+" ndim="+str(ndim)+" nlevelmax="+str(nlevelmax)
+        tqdm.write(txt)
+        tqdm.write("Reading info data...")
+        time.sleep(0.5)
+        
+        i = Info()
+        
+        ngridmax, = f.read_ints('i')
+        nboundary, = f.read_ints('i')
+        ngrid_current, = f.read_ints('i')
+        boxlen, = f.read_reals('f8')
+        
+        noutput,iout,ifout = f.read_ints('i')
+        tout = f.read_reals('f8')
+        aout = f.read_reals('f8')
+        t, = f.read_reals('f8')
+        dtold = f.read_reals('f8')
+        dtnew = f.read_reals('f8')
+        nstep,nstep_coarse = f.read_ints('i')
+        einit,mass_tot_0,rho_tot = f.read_reals('f8')
+        omega_m,omega_l,omega_k,omega_b,h0,aexp_ini,boxlen_ini = f.read_reals('f8')
+        aexp,hexp,aexp_old,epot_tot_int,epot_tot_old = f.read_reals('f8')
+        mass_sph, = f.read_reals('f8')
+        
+        headl = f.read_ints('i')
+        taill = f.read_ints('i')
+        numbl = f.read_ints('i')
+        numbl = numbl.reshape(nlevelmax,ncpu)
+        
+        numbtot = f.read_ints('i')
+        
+        xbound=[0,0,0]
+        if ( nboundary > 0 ):
+            headb = f.read_ints('i')
+            tailb = f.read_ints('i')
+            numbb = f.read_ints('i')
+            numbb = numbb.reshape(nlevelmax,nboundary)
+            xbound = [float(nx//2),float(ny//2),float(nz//2)]
+            
+        headf,tailf,numbf,used_mem,used_mem_tot = f.read_ints('i')
+        
+        ordering = f.read_ints("i")
+        
+        bound_key = f.read_ints("i8")
+
+    filename = "output_"+car1+"/info_"+car1+".txt"
+
+    return i
