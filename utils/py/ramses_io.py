@@ -385,7 +385,8 @@ def rd_info(nout):
         i = Info(ncpu)
         i.nlevelmax = nlevelmax
         i.ndim = ndim
-
+        i.ncpu = ncpu
+        
         ngridmax, = f.read_ints('i')
         nboundary, = f.read_ints('i')
         ngrid_current, = f.read_ints('i')
@@ -451,3 +452,191 @@ def rd_info(nout):
     i.unit_t = float(unit_t)
     
     return i
+
+def hilbert3d(x,y,z,bit_length):
+    
+    state_diagram = [ 1, 2, 3, 2, 4, 5, 3, 5,
+                      0, 1, 3, 2, 7, 6, 4, 5,
+                      2, 6, 0, 7, 8, 8, 0, 7,
+                      0, 7, 1, 6, 3, 4, 2, 5,
+                      0, 9,10, 9, 1, 1,11,11,
+                      0, 3, 7, 4, 1, 2, 6, 5,
+                      6, 0, 6,11, 9, 0, 9, 8,
+                      2, 3, 1, 0, 5, 4, 6, 7,
+                      11,11, 0, 7, 5, 9, 0, 7,
+                      4, 3, 5, 2, 7, 0, 6, 1,
+                      4, 4, 8, 8, 0, 6,10, 6,
+                      6, 5, 1, 2, 7, 4, 0, 3,
+                      5, 7, 5, 3, 1, 1,11,11,
+                      4, 7, 3, 0, 5, 6, 2, 1,
+                      6, 1, 6,10, 9, 4, 9,10,
+                      6, 7, 5, 4, 1, 0, 2, 3,
+                      10, 3, 1, 1,10, 3, 5, 9,
+                      2, 5, 3, 4, 1, 6, 0, 7,
+                      4, 4, 8, 8, 2, 7, 2, 3,
+                      2, 1, 5, 6, 3, 0, 4, 7,
+                      7, 2,11, 2, 7, 5, 8, 5,
+                      4, 5, 7, 6, 3, 2, 0, 1,
+                      10, 3, 2, 6,10, 3, 4, 4,
+                      6, 1, 7, 0, 5, 2, 4, 3]
+
+    state_diagram = np.array(state_diagram)
+    state_diagram = state_diagram.reshape((8,2,12),order='F')
+
+    n = len(x)
+    order = np.zeros(n,dtype="double")
+    x_bit_mask = np.zeros(bit_length  ,dtype="bool")
+    y_bit_mask = np.zeros(bit_length  ,dtype="bool")
+    z_bit_mask = np.zeros(bit_length  ,dtype="bool")
+    i_bit_mask = np.zeros(3*bit_length,dtype=bool)
+    
+    for ip in  range(0,n):
+        
+        for i in range(0,bit_length):
+            x_bit_mask[i] = x[ip] & (1 << i)
+            y_bit_mask[i] = y[ip] & (1 << i)
+            z_bit_mask[i] = z[ip] & (1 << i)
+            
+        for i in range(0,bit_length):
+            i_bit_mask[3*i+2] = x_bit_mask[i]
+            i_bit_mask[3*i+1] = y_bit_mask[i]
+            i_bit_mask[3*i  ] = z_bit_mask[i]
+            
+        cstate = 0
+        for i in range(bit_length-1,-1,-1):
+            b2 = 0
+            if (i_bit_mask[3*i+2]):
+                b2 = 1
+            b1 = 0
+            if (i_bit_mask[3*i+1]):
+                b1 = 1
+            b0 = 0
+            if (i_bit_mask[3*i  ]):
+                b0 = 1
+            sdigit = b2*4 + b1*2 + b0
+            nstate = state_diagram[sdigit,0,cstate]
+            hdigit = state_diagram[sdigit,1,cstate]
+            i_bit_mask[3*i+2] = hdigit & (1 << 2)
+            i_bit_mask[3*i+1] = hdigit & (1 << 1)
+            i_bit_mask[3*i  ] = hdigit & (1 << 0)
+            cstate = nstate
+            
+        order[ip]= 0
+        for i in range(0,3*bit_length):
+            b0 = 0
+            if (i_bit_mask[i]):
+                b0 = 1
+            order[ip] = order[ip] + float(b0)*2.**i
+                
+    return order
+
+def hilbert2d(x,y,bit_length):
+    
+    state_diagram = [ 1, 0, 2, 0, 
+                      0, 1, 3, 2, 
+                      0, 3, 1, 1, 
+                      0, 3, 1, 2, 
+                      2, 2, 0, 3, 
+                      2, 1, 3, 0, 
+                      3, 1, 3, 2, 
+                      2, 3, 1, 0 ]
+    
+    state_diagram = np.array(state_diagram)    
+    state_diagram = state_diagram.reshape((4,2,4), order='F')
+    
+    n = len(x)
+    order = np.zeros(n,dtype="double")
+    x_bit_mask = np.zeros(bit_length  ,dtype="bool")
+    y_bit_mask = np.zeros(bit_length  ,dtype="bool")
+    i_bit_mask = np.zeros(2*bit_length,dtype=bool)
+    
+    for ip in  range(0,n):
+        
+        for i in range(0,bit_length):
+            x_bit_mask[i] = bool(x[ip] & (1 << i))
+            y_bit_mask[i] = bool(y[ip] & (1 << i))
+            
+        for i in range(0,bit_length):
+            i_bit_mask[2*i+1] = x_bit_mask[i]
+            i_bit_mask[2*i  ] = y_bit_mask[i]
+            
+        cstate = 0
+        for i in range(bit_length-1,-1,-1):
+            b1 = 0
+            if (i_bit_mask[2*i+1]):
+                b1 = 1
+            b0 = 0
+            if (i_bit_mask[2*i  ]):
+                b0 = 1
+            sdigit = b1*2 + b0
+            nstate = state_diagram[sdigit,0,cstate]
+            hdigit = state_diagram[sdigit,1,cstate]
+            i_bit_mask[2*i+1] = hdigit & (1 << 1)
+            i_bit_mask[2*i  ] = hdigit & (1 << 0)
+            cstate = nstate
+            
+        order[ip]= 0
+        for i in range(0,2*bit_length):
+            b0 = 0
+            if (i_bit_mask[i]):
+                b0 = 1
+            order[ip] = order[ip] + float(b0)*2.**i
+                
+    return order
+
+def get_cpu_list(info,center,radius):
+    
+    center = np.array(center)
+    
+    for ilevel in range(0,info.nlevelmax):
+        dx = 1/2**ilevel
+        if (dx < 2*radius):
+            break
+
+    levelmin = np.max([ilevel,1])
+    bit_length = levelmin-1
+    nmax = 2**bit_length
+    ndim = info.ndim
+    ncpu = info.ncpu
+    nlevelmax = info.nlevelmax
+    dkey = 2**(ndim*(nlevelmax+1-bit_length))
+    ibound = [0, 0, 0, 0, 0, 0]
+    if(bit_length > 0):
+        ibound[0:3] = (center-radius)*nmax
+        ibound[3:6] = (center+radius)*nmax
+        ibound[0:3] = np.array(ibound[0:3]).astype(int)
+        ibound[3:6] = np.array(ibound[3:6]).astype(int)
+        ndom = 8
+        idom = [ibound[0], ibound[3], ibound[0], ibound[3], ibound[0], ibound[3], ibound[0], ibound[3]]
+        jdom = [ibound[1], ibound[1], ibound[4], ibound[4], ibound[1], ibound[1], ibound[4], ibound[4]]
+        kdom = [ibound[2], ibound[2], ibound[2], ibound[2], ibound[5], ibound[5], ibound[5], ibound[5]]
+        order_min = hilbert3d(idom,jdom,kdom,bit_length)
+    else:
+        ndom = 1
+        order_min = np.array([0.])
+        
+    bounding_min = order_min*dkey
+    bounding_max = (order_min+1)*dkey
+
+    cpu_min = np.zeros(ndom, dtype=int)
+    cpu_max = np.zeros(ndom, dtype=int)
+    for icpu in range(0,ncpu):
+        for idom in range(0,ndom):
+            if( (info.bound_key[icpu] <= bounding_min[idom]) and (info.bound_key[icpu+1] > bounding_min[idom]) ):
+                cpu_min[idom] = icpu+1
+            if( (info.bound_key[icpu] < bounding_max[idom]) and (info.bound_key[icpu+1] >= bounding_max[idom]) ):
+                cpu_max[idom] = icpu+1
+
+
+    ncpu_read = 0
+    cpu_read = np.zeros(ncpu, dtype=bool)
+    cpu_list = []
+    for idom in range(0,ndom):
+        for icpu in range(cpu_min[idom]-1,cpu_max[idom]):
+            if ( not cpu_read[icpu] ):
+                cpu_list.append(icpu+1)
+                ncpu_read = ncpu_read+1
+                cpu_read[icpu] = True
+
+    return cpu_list
+    
