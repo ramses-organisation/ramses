@@ -8,7 +8,16 @@ from astropy.io import ascii
 import time
 
 class Cool:
+    """
+    This is the class for RAMSES cooling table.
+    """
     def __init__(self,n1,n2):
+        """
+        This function initialize the cooling table. 
+        Args:
+            n1: number of points for the gas density axis
+            n2: number of points for the gas temperature axis
+        """
         self.n1 = n1
         self.n2 = n2
         self.nH = np.zeros([n1])
@@ -29,6 +38,15 @@ def clean_spec(dat,n1,n2):
     return dat
 
 def rd_cool(filename):
+    """This function reads a RAMSES cooling table file (unformatted Fortran binary) 
+    and store it in a cooling object.
+
+    Args:
+        filename: the complete path (including the name) of the cooling table file.
+
+    Returns:
+        A cooling table (Cool) object.
+    """
     with FortranFile(filename, 'r') as f:
         n1, n2 = f.read_ints('i')
         c = Cool(n1,n2)
@@ -57,12 +75,29 @@ def rd_cool(filename):
         return c
 
 class Map:
+    """This class defines a map object.
+    """
     def __init__(self,nx,ny):
+        """This function initalize a map object.
+        
+        Args:
+            nx: number of pixels in the x direction
+            ny: number of pixels in the y direction
+        """
         self.nx = nx
         self.ny = ny
         self.data = np.zeros([nx,ny])
 
 def rd_map(filename):
+    """This function reads a RAMSES map file (unformatted Fortran binary) 
+    as produced by the RAMSES utilities amr2map or part2map and store it in a map object.
+
+    Args:
+        filename: the complete path (including the name) of the map file.
+
+    Returns:
+        A map (class Map) object.
+    """
     with FortranFile(filename, 'r') as f:
         t, dx, dy, dz = f.read_reals('f8')
         nx, ny = f.read_ints('i')
@@ -86,17 +121,28 @@ class Part:
         self.vp = np.zeros([nndim,nnp])
         self.mp = np.zeros([nnp])
 
-def rd_part(nout):
+def rd_part(nout,**kwargs):
+    
     car1 = str(nout).zfill(5)
     filename = "output_"+car1+"/part_"+car1+".out00001"
     with FortranFile(filename, 'r') as f:
         ncpu, = f.read_ints('i')
         ndim, = f.read_ints('i')
 
+    center = kwargs.get("center")
+    radius = kwargs.get("radius")
+
+    if ( not (center is None)  and not (radius is None) ):
+        info = rd_info(nout)
+        cpulist = get_cpu_list(info,**kwargs)
+        print("Will open only",len(cpulist),"files")
+    else:
+        cpulist = range(1,ncpu+1)
+
     npart = 0
-    for icpu in range(0,ncpu):
+    for icpu in cpulist:
         car1 = str(nout).zfill(5)
-        car2 = str(icpu+1).zfill(5)
+        car2 = str(icpu).zfill(5)
         filename="output_"+car1+"/part_"+car1+".out"+car2
         with FortranFile(filename, 'r') as f:
             ncpu2, = f.read_ints('i')
@@ -114,9 +160,9 @@ def rd_part(nout):
     p.ndim = ndim
     ipart = 0
 
-    for	icpu in	tqdm(range(0,ncpu)):
+    for	icpu in	tqdm(cpulist):
         car1 = str(nout).zfill(5)
-        car2 = str(icpu+1).zfill(5)
+        car2 = str(icpu).zfill(5)
         filename = "output_"+car1+"/part_"+car1+".out"+car2
 
         with FortranFile(filename, 'r') as f:
@@ -142,17 +188,26 @@ def rd_part(nout):
             p.mp[ipart:ipart+npart2] = xp
 
         ipart = ipart + npart2
+
+    if ( not (center is None)  and not (radius is None) ):
+        # Filtering particles
+        r = np.sqrt((p.xp[0]-center[0])**2+(p.xp[1]-center[1])**2+(p.xp[2]-center[2])**2)
+        p.np = np.count_nonzero(r < radius)
+        p.mp = p.mp[r < radius]
+        p.xp = p.xp[:,r < radius]
+        p.vp = p.vp[:,r < radius]
+
     return p
 
 class Level:
-    def __init__(self,iilev,nndim):
-        self.level = iilev
+    def __init__(self,nndim):
+        self.level = 0
         self.ngrid = 0
         self.ndim = nndim
         self.xg = np.empty(shape=(nndim,0))
         self.refined = np.empty(shape=(2**nndim,0),dtype=bool)
 
-def rd_amr(nout):
+def rd_amr(nout,**kwargs):
     car1 = str(nout).zfill(5)
     filename = "output_"+car1+"/amr_"+car1+".out00001"
     with FortranFile(filename, 'r') as f:
@@ -164,16 +219,72 @@ def rd_amr(nout):
     txt = "ncpu="+str(ncpu)+" ndim="+str(ndim)+" nlevelmax="+str(nlevelmax)
     tqdm.write(txt)
     tqdm.write("Reading grid data...")
+
+    center = kwargs.get("center")
+    radius = kwargs.get("radius")
+
+    if ( not (center is None)  and not (radius is None) ):
+        info = rd_info(nout)
+        cpulist = get_cpu_list(info,**kwargs)
+        print("Will open only",len(cpulist),"files")
+    else:
+        cpulist = range(1,ncpu+1)
+
     time.sleep(0.5)
 
     amr=[]
     for ilevel in range(0,nlevelmax):
-        amr.append(Level(ilevel,ndim))
+        amr.append(Level(ndim))
 
-    for icpu in tqdm(range(0,ncpu)):
+    # Reading and computing total AMR grids count
+    for icpu in cpulist:
 
         car1 = str(nout).zfill(5)
-        car2 = str(icpu+1).zfill(5)
+        car2 = str(icpu).zfill(5)
+        filename = "output_"+car1+"/amr_"+car1+".out"+car2
+
+        with FortranFile(filename, 'r') as f:
+            ncpu2, = f.read_ints('i')
+            ndim2, = f.read_ints('i')
+            nx2,ny2,nz2 = f.read_ints('i')
+            nlevelmax2, = f.read_ints('i')
+            ngridmax, = f.read_ints('i')
+            nboundary, = f.read_ints('i')
+            ngrid_current, = f.read_ints('i')
+            boxlen, = f.read_reals('f8')
+
+            noutput,iout,ifout = f.read_ints('i')
+            tout = f.read_reals('f8')
+            aout = f.read_reals('f8')
+            t, = f.read_reals('f8')
+            dtold = f.read_reals('f8')
+            dtnew = f.read_reals('f8')
+            nstep,nstep_coarse = f.read_ints('i')
+            einit,mass_tot_0,rho_tot = f.read_reals('f8')
+            omega_m,omega_l,omega_k,omega_b,h0,aexp_ini,boxlen_ini = f.read_reals('f8')
+            aexp,hexp,aexp_old,epot_tot_int,epot_tot_old = f.read_reals('f8')
+            mass_sph, = f.read_reals('f8')
+
+            headl = f.read_ints('i')
+            taill = f.read_ints('i')
+            numbl = f.read_ints('i')
+            numbl = numbl.reshape(nlevelmax,ncpu)
+
+            for ilevel in range(0,nlevelmax):
+                amr[ilevel].ngrid = amr[ilevel].ngrid + numbl[ilevel,icpu-1]
+
+    # Allocating memory
+    for ilevel in range(0,nlevelmax):
+        amr[ilevel].xg = np.zeros([ndim,amr[ilevel].ngrid],dtype=float)
+        amr[ilevel].refined = np.zeros([2**ndim,amr[ilevel].ngrid],dtype=bool)
+
+    iskip = np.zeros(nlevelmax, dtype=int)
+    
+    # Reading and storing data
+    for icpu in tqdm(cpulist):
+
+        car1 = str(nout).zfill(5)
+        car2 = str(icpu).zfill(5)
         filename = "output_"+car1+"/amr_"+car1+".out"+car2
 
         with FortranFile(filename, 'r') as f:
@@ -236,36 +347,37 @@ def rd_amr(nout):
                         prevg = f.read_ints("i")
                         xg = np.zeros([ndim,ncache])
                         for idim in range(0,ndim):
-                            xg[idim,:] = f.read_reals('f8')-xbound[idim]
-                        if(ibound == icpu):
-                            amr[ilevel].xg=np.append(amr[ilevel].xg,xg,axis=1)
-                            amr[ilevel].ngrid=amr[ilevel].ngrid+ncache
+                            xg[idim,:] = (f.read_reals('f8')-xbound[idim])*boxlen
+                        if(ibound == icpu-1):
+                            amr[ilevel].xg[:,iskip[ilevel]:iskip[ilevel]+ncache] = xg
                         father = f.read_ints("i")
                         for ind in range(0,2*ndim):
                             nbor = f.read_ints("i")
                         son = np.zeros([2**ndim,ncache])
                         for ind in range(0,2**ndim):
                             son[ind,:] = f.read_ints("i")
-                        if(ibound == icpu):
+                        if(ibound == icpu-1):
                             ref = np.zeros([2**ndim,ncache],dtype=bool)
                             ref = np.where(son > 0, True, False)
-                            amr[ilevel].refined=np.append(amr[ilevel].refined,ref,axis=1)
+                            amr[ilevel].refined[:,iskip[ilevel]:iskip[ilevel]+ncache] = ref
                         for ind in range(0,2**ndim):
                             cpumap = f.read_ints("i")
                         for ind in range(0,2**ndim):
-                            flag1 = f.read_ints("i")                        
+                            flag1 = f.read_ints("i")
+                        if(ibound == icpu-1):
+                            iskip[ilevel] = iskip[ilevel] + ncache
 
     return amr
 
 class Hydro:
-    def __init__(self,iilev,nndim,nnvar):
-        self.level = iilev
+    def __init__(self,nndim,nnvar):
+        self.level = 0
         self.ngrid = 0
         self.ndim = nndim
         self.nvar = nnvar
         self.u = np.empty(shape=(nnvar,2**nndim,0))
 
-def rd_hydro(nout):
+def rd_hydro(nout,**kwargs):
     car1 = str(nout).zfill(5)
     filename = "output_"+car1+"/hydro_"+car1+".out00001"
     with FortranFile(filename, 'r') as f:
@@ -279,16 +391,28 @@ def rd_hydro(nout):
     txt = "ncpu="+str(ncpu)+" ndim="+str(ndim)+" nvar="+str(nvar)+" nlevelmax="+str(nlevelmax)+" gamma="+str(gamma)
     tqdm.write(txt)
     tqdm.write("Reading hydro data...")
+
+    center = kwargs.get("center")
+    radius = kwargs.get("radius")
+
+    if ( not (center is None)  and not (radius is None) ):
+        info = rd_info(nout)
+        cpulist = get_cpu_list(info,**kwargs)
+        print("Will open only",len(cpulist),"files")
+    else:
+        cpulist = range(1,ncpu+1)
+
     time.sleep(0.5)
 
     hydro=[]
     for ilevel in range(0,nlevelmax):
-        hydro.append(Hydro(ilevel,ndim,nvar))
+        hydro.append(Hydro(ndim,nvar))
+        hydro[ilevel].level = ilevel
 
-    for icpu in tqdm(range(0,ncpu)):
+    for icpu in tqdm(cpulist):
 
         car1 = str(nout).zfill(5)
-        car2 = str(icpu+1).zfill(5)
+        car2 = str(icpu).zfill(5)
         filename = "output_"+car1+"/hydro_"+car1+".out"+car2
 
         with FortranFile(filename, 'r') as f:
@@ -310,7 +434,7 @@ def rd_hydro(nout):
                             for ivar in range(0,nvar):
                                 uu[ivar,ind,:] = f.read_reals('f8')
                             
-                        if(ibound == icpu):
+                        if(ibound == icpu-1):
                             hydro[ilevel].u = np.append(hydro[ilevel].u,uu,axis=2)
                             hydro[ilevel].ngrid = hydro[ilevel].ngrid + ncache                        
 
@@ -325,10 +449,13 @@ class Cell:
         self.u = np.empty(shape=(nnvar,0))
         self.dx = np.empty(shape=(0))
 
-def rd_cell(nout):
+def rd_cell(nout,**kwargs):
     
-    a = rd_amr(nout)
-    h = rd_hydro(nout)
+    a = rd_amr(nout,**kwargs)
+    h = rd_hydro(nout,**kwargs)
+
+    center = kwargs.get("center")
+    radius = kwargs.get("radius")
 
     nlevelmax = len(a)
     ndim = a[0].ndim
@@ -347,7 +474,8 @@ def rd_cell(nout):
     print("Extracting leaf cells...")
 
     c = Cell(ndim,nvar)
-        
+    c.nc = ncell
+    
     for ilev in range(0,nlevelmax):
         dx = 1./2**ilev
         for ind in range(0,2**ndim):
@@ -363,6 +491,41 @@ def rd_cell(nout):
                 c.u = np.append(c.u,uc,axis=1)
                 dd = np.ones(nc)*dx
                 c.dx = np.append(c.dx,dd)
+
+    if ( not (center is None)  and not (radius is None) ):
+        # Filtering cells
+        r = np.sqrt((c.x[0]-center[0])**2+(c.x[1]-center[1])**2+(c.x[2]-center[2])**2) - dx
+        c.nc = np.count_nonzero(r < radius)
+        c.u  = c.u[:,r < radius]
+        c.x  = c.x[:,r < radius]
+        c.dx = c.dx[r < radius]
+
+    return c
+
+def save_cell(c,filename):
+
+    with open(filename,'wb') as f:
+        np.save(f,c.nc)
+        np.save(f,c.ndim)
+        np.save(f,c.nvar)
+        np.save(f,c.dx)
+        np.save(f,c.x)
+        np.save(f,c.u)
+
+def load_cell(filename):
+
+    with open(filename,'rb') as f:
+        nc = np.load(f)
+        ndim = np.load(f)
+        nvar = np.load(f)
+        c = Cell(ndim,nvar)
+        c.nc = nc
+        c.ndim = ndim
+        c.nvar = nvar
+        c.dx = np.append(c.dx,np.load(f))
+        c.x  = np.append(c.x, np.load(f),axis=1)
+        c.u  = np.append(c.u, np.load(f),axis=1)
+
     return c
 
 class Info:
@@ -584,13 +747,16 @@ def hilbert2d(x,y,bit_length):
                 
     return order
 
-def get_cpu_list(info,center,radius):
-    
+def get_cpu_list(info,**kwargs):
+
+    center = kwargs.get("center")
+    radius = kwargs.get("radius")
     center = np.array(center)
+    radius = float(radius)
     
     for ilevel in range(0,info.nlevelmax):
         dx = 1/2**ilevel
-        if (dx < 2*radius):
+        if (dx < 2*radius/info.boxlen):
             break
 
     levelmin = np.max([ilevel,1])
@@ -602,8 +768,8 @@ def get_cpu_list(info,center,radius):
     dkey = 2**(ndim*(nlevelmax+1-bit_length))
     ibound = [0, 0, 0, 0, 0, 0]
     if(bit_length > 0):
-        ibound[0:3] = (center-radius)*nmax
-        ibound[3:6] = (center+radius)*nmax
+        ibound[0:3] = (center-radius)*nmax/info.boxlen
+        ibound[3:6] = (center+radius)*nmax/info.boxlen
         ibound[0:3] = np.array(ibound[0:3]).astype(int)
         ibound[3:6] = np.array(ibound[3:6]).astype(int)
         ndom = 8
