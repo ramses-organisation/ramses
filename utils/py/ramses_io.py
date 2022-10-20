@@ -477,13 +477,13 @@ def rd_cell(nout,**kwargs):
     c.nc = ncell
     
     for ilev in range(0,nlevelmax):
-        dx = 1./2**ilev
+        dx = 0.5/2**ilev
         for ind in range(0,2**ndim):
             nc = np.count_nonzero(a[ilev].refined[ind] == False)
             if (nc > 0):
                 xc = np.zeros([ndim,nc])
                 for idim in range(0,ndim):
-                    xc[idim,:]= a[ilev].xg[idim,np.where(a[ilev].refined[ind] == False)]+offset[idim,ind]*dx/2
+                    xc[idim,:]= a[ilev].xg[idim,np.where(a[ilev].refined[ind] == False)]+offset[idim,ind]*dx
                 c.x = np.append(c.x,xc,axis=1)
                 uc = np.zeros([nvar,nc])
                 for ivar in range(0,nvar):
