@@ -235,7 +235,7 @@ def rd_amr(nout,**kwargs):
     amr=[]
     for ilevel in range(0,nlevelmax):
         amr.append(Level(ndim))
-
+        
     # Reading and computing total AMR grids count
     for icpu in cpulist:
 
@@ -252,6 +252,7 @@ def rd_amr(nout,**kwargs):
             nboundary, = f.read_ints('i')
             ngrid_current, = f.read_ints('i')
             boxlen, = f.read_reals('f8')
+            amr[0].boxlen = boxlen
 
             noutput,iout,ifout = f.read_ints('i')
             tout = f.read_reals('f8')
@@ -460,11 +461,16 @@ def rd_cell(nout,**kwargs):
     nlevelmax = len(a)
     ndim = a[0].ndim
     nvar = h[0].nvar
+    boxlen = a[0].boxlen
     
     offset = np.zeros([ndim,2**ndim])
-    offset[0,:]=[-0.5,0.5,-0.5,0.5,-0.5,0.5,-0.5,0.5]
-    offset[1,:]=[-0.5,-0.5,0.5,0.5,-0.5,-0.5,0.5,0.5]
-    offset[2,:]=[-0.5,-0.5,-0.5,-0.5,0.5,0.5,0.5,0.5]
+    if (ndim == 2):
+        offset[0,:]=[-0.5,0.5,-0.5,0.5]
+        offset[1,:]=[-0.5,-0.5,0.5,0.5]
+    if (ndim == 3):
+        offset[0,:]=[-0.5,0.5,-0.5,0.5,-0.5,0.5,-0.5,0.5]
+        offset[1,:]=[-0.5,-0.5,0.5,0.5,-0.5,-0.5,0.5,0.5]
+        offset[2,:]=[-0.5,-0.5,-0.5,-0.5,0.5,0.5,0.5,0.5]
 
     ncell = 0
     for ilev in range(0,nlevelmax):
@@ -477,7 +483,7 @@ def rd_cell(nout,**kwargs):
     c.nc = ncell
     
     for ilev in range(0,nlevelmax):
-        dx = 0.5/2**ilev
+        dx = 0.5*boxlen/2**ilev
         for ind in range(0,2**ndim):
             nc = np.count_nonzero(a[ilev].refined[ind] == False)
             if (nc > 0):
