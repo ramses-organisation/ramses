@@ -476,6 +476,8 @@ def rd_cell(nout,**kwargs):
     for ilev in range(0,nlevelmax):
         ncell = ncell + np.count_nonzero(a[ilev].refined == False)
 
+
+    time.sleep(0.5)
     print("Found",ncell,"leaf cells")
     print("Extracting leaf cells...")
 
@@ -812,3 +814,64 @@ def get_cpu_list(info,**kwargs):
 
     return cpu_list
     
+def visu2d(c,**kwargs):
+
+    ivar = kwargs.get("ivar",0)
+    log = kwargs.get("log",None)
+    
+    px = 1/plt.rcParams['figure.dpi'] 
+    fig, ax = plt.subplots(figsize=(1000*px,1000*px))
+    plt.subplots_adjust(left=0.1, right=0.9, top=0.9, bottom=0.1)
+    plt.scatter(c.x[0],c.x[1],s=0.0001)
+    ymin, ymax = ax.get_ylim()
+
+    vv = c.u[ivar]
+    if( not (log is None)):
+        vv = np.log10(c.u[ivar])
+
+    print(np.min(vv),np.max(vv))
+
+    plt.scatter(c.x[0],c.x[1],c=vv,s=(c.dx*800/(ymax-ymin))**2,cmap="viridis",marker="s")
+
+
+def visu3d(c, **kwargs):
+
+    ivar = kwargs.get("ivar",0)
+    log = kwargs.get("log",None)
+    axis = kwargs.get("axis","z")
+    vmin = kwargs.get("vmin",None)
+    vmax = kwargs.get("vmax",None)
+
+    if(ivar>=0) and ivar<c.nvar:
+        vv=c.u[ivar]
+    elif(ivar == 25):
+        vv=c.u[4]/c.u[0]
+    elif(ivar == 35):
+        vv=c.u[10]/c.u[0]
+    else:
+        vv=c.dx
+    if( not (log is None)):
+        vv = np.log10(vv)
+
+    if(axis == "z"):
+        i1=0
+        i2=1
+    if(axis == "y"):
+        i1=0
+        i2=2
+    if(axis == "x"):
+        i1=1
+        i2=2
+                
+    print("min=",np.min(vv)," max=",np.max(vv))
+
+    px = 1/plt.rcParams['figure.dpi'] 
+    fig, ax = plt.subplots(figsize=(1000*px,1000*px))
+    plt.subplots_adjust(left=0.1, right=0.9, top=0.9, bottom=0.1)
+    plt.scatter(c.x[i1],c.x[i2],s=0.0001)
+    ymin, ymax = ax.get_ylim()
+    ind = np.argsort(np.log10(c.u[0]))
+        
+    ax.set_aspect("equal")
+    plt.scatter(c.x[i1,ind],c.x[i2,ind],c=vv[ind],s=(c.dx[ind]*800/(ymax-ymin))**2,cmap="viridis",marker="s",vmin=vmin,vmax=vmax)
+    plt.colorbar(location="bottom",shrink=0.7)
