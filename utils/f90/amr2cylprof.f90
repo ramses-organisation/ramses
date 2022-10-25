@@ -151,7 +151,7 @@ program amr2cylprof
   write(*,*)ymin,ymax
   write(*,*)zmin,zmax
 
-  ncell=2000000
+  ncell=10000000
   allocate(x(1:ncell),y(1:ncell),z(1:ncell))
   allocate(l(1:ncell),var(1:ncell,1:nvarin))
   x=0D0; y=0D0; z=0D0; l=0; var=0D0

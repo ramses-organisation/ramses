@@ -33,7 +33,7 @@ program histo_main
   real(KIND=8)::xx,yy,dxx,dyy,dd,dt
   real(KIND=8),dimension(:,:),allocatable::x,xg,histo
   real(KIND=8)::dmin=0.0,dmax=0.0,tmin=0.0,tmax=0.0
-  real(KIND=8)::h0,unit_l,unit_d,unit_t,total_mass,mmm
+  real(KIND=8)::h0,unit_l,unit_d,unit_t,total_mass,total_volume,mmm,vvv
   real(KIND=8)::emag_dens=0,emag_diff=0,vol_dens=0,vol_diff=0
   real(KIND=8),dimension(:,:,:),allocatable::var
   real(KIND=8),dimension(:)  ,allocatable::rho,pre
@@ -44,7 +44,7 @@ program histo_main
   character(LEN=5)::nchar,ncharcpu
   character(LEN=80)::ordering
   character(LEN=128)::nomfich,repository,outfich,filetype='bin'
-  logical::ok,ok_cell
+  logical::ok,ok_cell,volume_weighted=.false.
   real(KIND=8),dimension(:),allocatable::bound_key
   logical,dimension(:),allocatable::cpu_read
   integer,dimension(:),allocatable::cpu_list
@@ -269,6 +269,7 @@ program histo_main
   !----------------------------------------------
 
   total_mass=0d0
+  total_volume=0d0
   ! Loop over processor files
   do k=1,ncpu_read
      icpu=cpu_list(k)
@@ -470,12 +471,17 @@ program histo_main
                     ihx=MIN(ihx,nhx-1)
                     ihy=MAX(ihy,0)
                     ihy=MIN(ihy,nhy-1)
+                    vvv=dx**3
                     mmm=rho(i)*(dx*unit_l)**3/2d33
                     total_mass=total_mass+mmm
-                    histo(ihx+1,ihy+1)=histo(ihx+1,ihy+1)+mmm
-
+                    total_volume=total_volume+vvv
+                    if(volume_weighted)then
+                       histo(ihx+1,ihy+1)=histo(ihx+1,ihy+1)+vvv
+                    else
+                       histo(ihx+1,ihy+1)=histo(ihx+1,ihy+1)+mmm
+                    endif
                     if(type==34)then
-                       if(pre(i)>1d-13)then
+                       if(pre(i)>1d-16)then
                           emag_dens=emag_dens+pre(i)**2/2*dx**3
                           vol_dens=vol_dens+dx**3
                        else
@@ -503,6 +509,7 @@ program histo_main
   ! End loop over cpus
 
   write(*,*)'Total mass=',total_mass
+  write(*,*)'Total volume=',total_volume
   
   if(type==34)then
      emag_dens=emag_dens/vol_dens
@@ -521,7 +528,11 @@ program histo_main
      write(*,*)'Ecriture des donnees du fichier '//TRIM(nomfich)
      open(unit=10,file=nomfich,form='unformatted')
      write(10)nhx,nhy
-     write(10)real(histo/total_mass)
+     if(volume_weighted)then
+        write(10)real(histo/total_volume)
+     else
+        write(10)real(histo/total_mass)
+     endif
      write(10)dymin,dymax
      write(10)tymin,tymax
      close(10)
@@ -535,7 +546,11 @@ program histo_main
      dt=(tymax-tymin)/nhy
      do i=1,nhx
         do j=1,nhy
-           write(10,*)dymin+i*dd,tymin+j*dt,histo(i,j)/total_mass
+           if(volume_weighted)then
+              write(10,*)dymin+i*dd,tymin+j*dt,histo(i,j)/total_volume
+           else
+              write(10,*)dymin+i*dd,tymin+j*dt,histo(i,j)/total_mass
+           endif
         end do
         write(10,*) " "
      end do
@@ -616,6 +631,8 @@ contains
           read (arg,*) type
        case ('-fil')
           read (arg,*) filetype
+       case ('-vol')
+          read (arg,*) volume_weighted
        case ('-gcc') ! if set to one, density output in g/cc
           read (arg,*) gcc
        case ('-sil') ! if set to one, silent mode

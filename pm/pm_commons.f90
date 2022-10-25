@@ -10,6 +10,7 @@ module pm_commons
   real(dp),allocatable,dimension(:)    ::msink,xmsink
   real(dp),allocatable,dimension(:)    ::msink_new,msink_all
   real(dp),allocatable,dimension(:)    ::msmbh,msmbh_new,msmbh_all
+  real(dp),allocatable,dimension(:)    ::dmfsink,dmfsink_new,dmfsink_all !count mass in sink since last stellar object creation
   real(dp),allocatable,dimension(:)    ::oksink_new,oksink_all
   real(dp),allocatable,dimension(:)    ::tsink,tsink_new,tsink_all
   real(dp),allocatable,dimension(:)    ::dMsink_overdt,dMBHoverdt

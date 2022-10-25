@@ -147,14 +147,15 @@ endif
 VPATH += ../hydro:../pm:../poisson:../amr:../io
 #############################################################################
 # All objects
-MODOBJ = mpi_mod.o amr_parameters.o amr_commons.o random.o pm_parameters.o \
+MODOBJ = mpi_mod.o amr_parameters.o amr_commons.o random.o pm_parameters.o sink_feedback_parameters.o \
          pm_commons.o poisson_parameters.o dump_utils.o constants.o file_module.o
 ifeq ($(GRACKLE),1)
    MODOBJ += grackle_parameters.o
 endif
 MODOBJ += poisson_commons.o hydro_parameters.o hydro_commons.o \
           cooling_module.o bisection.o sparse_mat.o clfind_commons.o \
-          gadgetreadfile.o write_makefile.o write_patch.o write_gitinfo.o
+          gadgetreadfile.o write_makefile.o write_patch.o write_gitinfo.o \
+          sink_sn_feedback.o
 ifeq ($(RT),1)
    MODOBJ += rt_parameters.o rt_hydro_commons.o coolrates_module.o \
              rt_spectra.o rt_cooling_module.o rt_flux_module.o
@@ -173,7 +174,9 @@ PMOBJ = init_part.o output_part.o rho_fine.o synchro_fine.o move_fine.o \
         newdt_fine.o particle_tree.o add_list.o remove_list.o star_formation.o \
         sink_particle.o feedback.o clump_finder.o clump_merger.o \
         flag_formation_sites.o init_sink.o output_sink.o \
-        unbinding.o merger_tree.o move_tracer.o init_tracer.o
+        unbinding.o merger_tree.o move_tracer.o init_tracer.o \
+        read_sink_feedback_params.o sink_rt_feedback.o \
+        stellar_particle.o init_stellar.o output_stellar.o
 # Poisson solver objects
 POISSONOBJ = init_poisson.o phi_fine_cg.o interpol_phi.o force_fine.o \
              multigrid_coarse.o multigrid_fine_commons.o multigrid_fine_fine.o \

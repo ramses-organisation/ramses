@@ -379,7 +379,7 @@ contains
     real(dp) :: euler   = 2.7182818284590
     real(dp) :: log10_2 = 0.301029995663981 ! log_10(2)
 
-    integer, parameter :: quadp = selected_real_kind(16) ! need quad precision for some exponents...
+    integer, parameter :: quadp = kind(1.0_8) ! need quad precision for some exponents...
     real(quadp) :: f0, fm, logMM1, sig, xi_scale
 
     call random_number(xi_scale)  ! temporarily store random number in xi
