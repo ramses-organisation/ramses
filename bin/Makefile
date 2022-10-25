@@ -172,7 +172,7 @@ AMROBJ = read_params.o init_amr.o init_time.o init_refine.o tracer_utils.o adapt
 # Particle-Mesh objects
 PMOBJ = init_part.o output_part.o rho_fine.o synchro_fine.o move_fine.o \
         newdt_fine.o particle_tree.o add_list.o remove_list.o star_formation.o \
-        sink_particle.o feedback.o clump_finder.o clump_merger.o \
+        sink_particle.o feedback.o clump_finder.o clump_merger.o output_clump.o \
         flag_formation_sites.o init_sink.o output_sink.o \
         unbinding.o merger_tree.o move_tracer.o init_tracer.o \
         read_sink_feedback_params.o sink_rt_feedback.o \
