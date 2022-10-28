@@ -4,6 +4,7 @@ from matplotlib import pyplot as plt
 from scipy.io import FortranFile
 from tqdm import tqdm
 from astropy.io import ascii
+import os
 
 import time
 
@@ -813,7 +814,7 @@ def get_cpu_list(info,**kwargs):
                 cpu_read[icpu] = True
 
     return cpu_list
-    
+
 def visu2d(c,**kwargs):
 
     ivar = kwargs.get("ivar",0)
@@ -875,3 +876,121 @@ def visu3d(c, **kwargs):
     ax.set_aspect("equal")
     plt.scatter(c.x[i1,ind],c.x[i2,ind],c=vv[ind],s=(c.dx[ind]*800/(ymax-ymin))**2,cmap="viridis",marker="s",vmin=vmin,vmax=vmax)
     plt.colorbar(location="bottom",shrink=0.7)
+
+def mk_movie(**kwargs):
+    '''The function mk_movie() takes 2D data files containing maps and converts them into a sequence of images, 
+    before combining them into a movie. 
+    It requires a standard set of python packages and the Linux packages ffmpeg and convert (ImageMagick).
+    
+    Args:
+    
+        start: starting index of the sequence of numpy array you wish to turn into image frames.
+    
+        stop: number of arrays you wish to be turned into plots. 
+            This will be the variable "snum" for the end product. 
+            For now, if you wish to test out the function, 
+            you can try out other smaller values to adjust the image for your preferences.
+            
+        path: path leading to the directory where your files are stored, Default: "."
+    
+        prefix: starting name of a typical file. Ex: if you have 50 files, called "fig01.npy", "fig02.npy" … "fig50.npy", write in "fig".
+    
+        fill: This is for the zfill parameter. If your files are standardized into "fig001.npy", "fig002.npy"… "fig100.npy", write in 3, for example. If this is not how your files are formatted, write in the number 1.
+    
+        suffix: suffix at the end of a file: Ex: ".npy", ".map", etc…
+    
+        cmap: write in what color you wish your array to be displayed in (value for cmap). Options include "Reds", "Blues", and more.
+    
+        cbar: write "YES" for this parameter if you want your figure to have a colorbar. Write anything else if not.
+    
+        cbunit: units of the colormapping to be displayed next to the colorbar: Ex: "Concentration [code units]" If you do not plan on using a colorbar, write in any script.
+    
+        tunit: units of time displayed by rd_img. Ex: "seconds", "minutes", "hours", "[code units]"
+    
+        bunit: units of the box size displayed by rd_img. Ex: "cm", "kpc", "Mpc", "[code units]" …
+    
+        fname: starting name of each of your images.
+    
+        mvname: what you want your movie to be called.
+        
+    Returns:
+    
+        info: a string stating that the movie was done.
+    
+    Exemple:
+    
+        info = mk_movie(start=100,stop=2000,path="../movie1",prefix="dens_",fill=5,suffix=".map",cmap="Reds", 
+                cbar="YES", cbunit="log Density [H/cc]", tunit="Gyr",
+                fname="img", mvname="movie", vmin=-1, vmax=6)
+    
+    
+    By default, the movie's framerate is 30 frames per second, at a resolution of 420p
+    You can edit this function and its parameters according to what fits your model best.
+    
+    As it runs, the function will print the files it is currently converting.
+    Authors: Thomas Decugis and Romain Teyssier (Princeton University, October 2022)
+    '''
+    start = kwargs.get("start",1)
+    stop = kwargs.get("stop",1)
+    prefix = kwargs.get("prefix")
+    suffix = kwargs.get("suffix")
+    fill = kwargs.get("fill",5)
+    path = kwargs.get("path",".")
+    vmin = kwargs.get("vmin",None)
+    vmax = kwargs.get("vmax",None)
+    cmap = kwargs.get("cmap","Reds")
+    cbar = kwargs.get("cbar",None)
+    cbunit = kwargs.get("cbunit",None)
+    tunit = kwargs.get("tunit"," ")
+    bsize = kwargs.get("bsize",1)
+    bunit = kwargs.get("bunit","[code units]")
+    fname = kwargs.get("fname","frame")
+    mvname = kwargs.get("mvname","movie")
+    
+    cmd="curl https://communications.princeton.edu/sites/g/files/toruqf1876/files/styles/freeform_750w/public/media/pusig2-size-web-range_1.jpg > logo_essai.jpg"
+    os.system(cmd)
+    concom = "convert logo_essai.jpg -resize 280x200 logo_essai.png"
+    os.system(concom)
+
+    for snapshot in range(start, stop + 1): 
+        ar = path + "/" + str(prefix) + str(snapshot).zfill(fill) + str(suffix)
+        print(ar) #prints file that function is working on.
+
+        map =rd_map(ar)
+        time = map.time
+        array = map.data
+        
+        if (not (cbar is None)):
+            px = 1/plt.rcParams['figure.dpi']
+            fig, ax = plt.subplots(figsize=(1001*px,1001*px))
+            plt.subplots_adjust(left=0.1, right=0.9, top=0.9, bottom=0.1)
+            print(np.min(array),np.max(array))
+            shw = ax.imshow(array, cmap = cmap, vmin=vmin, vmax=vmax, origin="lower", extent=[0,bsize,0,bsize])
+            bar = plt.colorbar(shw,shrink=0.8)
+            bar.set_label(cbunit, fontsize=18) 
+            bar.ax.tick_params(labelsize=18) 
+            plt.ylabel(bunit,fontsize=18)
+
+        else:
+            plt.imshow(array, cmap = cmap)#if you wish to graph model in a specific way, modify this program
+
+        ax = plt.gca()
+        txt = f'a = {time:4.2f}' + tunit
+        label = ax.set_xlabel(txt, fontsize = 18, color = "black")
+        ax.xaxis.set_label_coords(0.1, 0.95)
+        ax.tick_params(axis='both', labelsize=18)
+        newname = str(fname)+ str(snapshot) + ".png" 
+        print(newname)
+        plt.savefig(newname) #saves created images as pngs under the name that was given
+        if snapshot == start:
+            plt.show()
+        plt.close(fig)
+        com = "convert logo_essai.png -bordercolor white -border 0.1 " + newname + " +swap -geometry +100+850 -composite " + newname
+        os.system(com)
+    print("Input files converted into frames: done")
+    moviecom = "ffmpeg -y -r 30 -f image2 -s 1000x1000 -start_number " +str(start)+" -i " + str(fname) + "%d.png" + " -vcodec libx264 -crf 25  -pix_fmt yuv420p " + str(mvname) + ".mp4" 
+    os.system(moviecom)
+    ok = "Movie: done"
+    print(ok)
+    return ok 
+
