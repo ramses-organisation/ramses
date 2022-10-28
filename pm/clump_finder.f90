@@ -313,6 +313,11 @@ subroutine clump_finder(create_output,keep_alive)
         if(ivar_clump==0 .or. ivar_clump==-1)then
            if(pic)call output_part_clump_id()
         endif
+        ! output the clump field
+        if (output_clump_field)then
+           if(myid==1)write(*,*)"Outputing clump field to disc"
+           call write_clump_field
+        end if
      endif
 
   end if
@@ -876,7 +881,7 @@ subroutine read_clumpfind_params()
   namelist/clumpfind_params/ivar_clump,&
        & relevance_threshold,density_threshold,&
        & saddle_threshold,mass_threshold,clinfo,&
-       & n_clfind,rho_clfind,age_cut_clfind
+       & n_clfind,rho_clfind,age_cut_clfind,output_clump_field
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
 
   ! Read namelist file

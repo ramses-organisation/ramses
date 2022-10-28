@@ -18,6 +18,7 @@ module clfind_commons
   real(dp)::age_cut_clfind=0
   logical::merge_unbound=.false.
   logical::clinfo=.false.
+  logical::output_clump_field=.false. !output the clump ID field
 
   ! Peak communicator arrays
   integer,allocatable,dimension(:)::peak_send_cnt,peak_send_oft
