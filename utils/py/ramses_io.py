@@ -819,6 +819,8 @@ def visu2d(c,**kwargs):
 
     ivar = kwargs.get("ivar",0)
     log = kwargs.get("log",None)
+    vmin = kwargs.get("vmin",None)
+    vmax = kwargs.get("vmax",None)
     
     px = 1/plt.rcParams['figure.dpi'] 
     fig, ax = plt.subplots(figsize=(1000*px,1000*px))
@@ -828,12 +830,13 @@ def visu2d(c,**kwargs):
 
     vv = c.u[ivar]
     if( not (log is None)):
-        vv = np.log10(c.u[ivar])
+        vv = np.log10(np.abs(c.u[ivar]))
 
     print(np.min(vv),np.max(vv))
 
-    plt.scatter(c.x[0],c.x[1],c=vv,s=(c.dx*800/(ymax-ymin))**2,cmap="viridis",marker="s")
-
+    ax.set_aspect("equal")
+    plt.scatter(c.x[0],c.x[1],c=vv,s=(c.dx*800/(ymax-ymin))**2,cmap="viridis",marker="s",vmin=vmin,vmax=vmax)
+    plt.colorbar(shrink=0.8)
 
 def visu3d(c, **kwargs):
 
@@ -875,7 +878,7 @@ def visu3d(c, **kwargs):
         
     ax.set_aspect("equal")
     plt.scatter(c.x[i1,ind],c.x[i2,ind],c=vv[ind],s=(c.dx[ind]*800/(ymax-ymin))**2,cmap="viridis",marker="s",vmin=vmin,vmax=vmax)
-    plt.colorbar(location="bottom",shrink=0.7)
+    plt.colorbar(shrink=0.8)
 
 def mk_movie(**kwargs):
     '''The function mk_movie() takes 2D data files containing maps and converts them into a sequence of images, 
