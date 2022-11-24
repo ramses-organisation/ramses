@@ -41,6 +41,8 @@ NIONS = 0
 NGROUPS = 0
 # Number of passive scalars
 NPSCAL = 0
+# Light MPI communicator structure (for > 10k MPI processes)
+LIGHT_MPI_COMM = 0
 
 # Compute NVAR
 NVAR = 2+$(NDIM)
@@ -75,6 +77,9 @@ ifeq ($(USE_TURB),1)
    DEFINES += -DUSE_TURB
 endif
 
+ifeq ($(LIGHT_MPI_COMM), 1)
+   DEFINES += -DLIGHT_MPI_COMM
+endif
 #############################################################################
 # Fortran compiler options and directives
 
