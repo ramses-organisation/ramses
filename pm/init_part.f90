@@ -953,7 +953,7 @@ contains
                 & MPI_INTEGER,icpu-1,&
                 & tagu,MPI_COMM_WORLD,reqsend(countsend),info)
 #else
-          call MPI_ISEND(emission_part(1)%f8(sendbuf_cum(icpu)+ncache),buf_count, &
+          call MPI_ISEND(emission_part(1)%f8(sendbuf_cum(icpu)+ncache,1),buf_count, &
                 & MPI_INTEGER8,icpu-1,&
                 & tagu,MPI_COMM_WORLD,reqsend(countsend),info)
 #endif
