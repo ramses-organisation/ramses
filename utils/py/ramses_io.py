@@ -90,7 +90,7 @@ class Map:
         self.data = np.zeros([nx,ny])
 
 def rd_map(filename):
-    """This function reads a RAMSES map file (unformatted Fortran binary) 
+    """This function reads a RAMSES map file (unformatted Fortran binary)
     as produced by the RAMSES utilities amr2map or part2map and store it in a map object.
 
     Args:
@@ -113,6 +113,53 @@ def rd_map(filename):
     m.ny = ny
     
     return m
+
+class Histo:
+    """This class defines a histogram object.
+    """
+    def __init__(self,nx,ny):
+        """This function initalize a histogram object.
+
+        Args:
+            nx: number of pixels in the x direction
+            ny: number of pixels in the y direction
+        """
+        self.nx = nx
+        self.ny = ny
+        self.h = np.zeros([nx,ny])
+        self.lxmin
+        self.lxmax
+        self.lymin
+        self.lymax
+
+def rd_histo(filename):
+    """This function reads a RAMSES histogram file (unformatted Fortran binary)
+    as produced by the RAMSES utilities histo and store it in a Histo object.
+
+    Args:
+        filename: the complete path (including the name) of the histo file.
+
+    Returns:
+        A histogram (class Histo) object.
+    """
+    with FortranFile(filename, 'r') as f:
+        nx, ny = f.read_ints('i')
+        dat = f.read_reals('f4')
+        lxmin, lxmax = f.read_reals('f8')
+        lymin, lymax = f.read_reals('f8')
+
+    dat = np.array(dat)
+    dat = dat.reshape(ny, nx)
+    h = Histo(nx,ny)
+    h.data = dat
+    h.nx = nx
+    h.ny = ny
+    h.lxmin = lxmin
+    h.lxmax = lxmax
+    h.lymin = lymin
+    h.lymax = lymax
+
+    return h
 
 class Part:
     def __init__(self,nnp,nndim):
