@@ -1000,7 +1000,7 @@ subroutine interpol_mag(B1,ind1,B2,nn)
   call interpol_faces(B1,u,v,w,nn)
 
   ! Get fine B from refined faces, if any
-  call copy_from_refined_faces(B1,ind1,u,v,w,nn)
+  call copy_from_refined_faces(ind1,u,v,w,nn)
 
   ! Compute interpolated fine B inside coarse cell.
   call cmp_central_faces(u,v,w,nn)
@@ -1221,12 +1221,11 @@ end subroutine interpol_faces
 !###########################################################
 !###########################################################
 !###########################################################
-subroutine copy_from_refined_faces(b1,ind1,u,v,w,nn)
+subroutine copy_from_refined_faces(ind1,u,v,w,nn)
   use amr_commons
   use hydro_commons, ONLY: nvar,uold
   implicit none
   integer::nn
-  real(dp),dimension(1:nvector,0:twondim,1:6)::b1
   integer ,dimension(1:nvector,0:twondim)::ind1
   real(dp),dimension(1:nvector,-1:1,0:1,0:1)::u
   real(dp),dimension(1:nvector,0:1,-1:1,0:1)::v

@@ -144,7 +144,7 @@ subroutine init_turb
       afield_next = afield_next * turb_norm * turb_rms
    else
       ! Not a restart - set up initial field and perform FFT
-      turb_next = cmplx(0.0_dp, 0.0_dp)
+      turb_next = cmplx(0, 0, kind=cdp)
       call add_turbulence(turb_next, turb_dt)
 
       ! Fourier transform

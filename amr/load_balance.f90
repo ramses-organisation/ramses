@@ -129,7 +129,11 @@ subroutine load_balance
            if(icpu==myid)then
               igrid=active(ilevel)%igrid(i)
            else
+#ifdef LIGHT_MPI_COMM
+              igrid=reception(icpu,ilevel)%pcomm%igrid(i)
+#else
               igrid=reception(icpu,ilevel)%igrid(i)
+#endif
            end if
            kcpu=cpu_map (father(igrid))
            jcpu=cpu_map2(father(igrid))
@@ -159,7 +163,11 @@ subroutine load_balance
            if(icpu==myid)then
               igrid=active(ilevel)%igrid(i)
            else
+#ifdef LIGHT_MPI_COMM
+              igrid=reception(icpu,ilevel)%pcomm%igrid(i)
+#else
               igrid=reception(icpu,ilevel)%igrid(i)
+#endif
            end if
            kcpu=cpu_map (father(igrid))
            jcpu=cpu_map2(father(igrid))
@@ -402,7 +410,11 @@ subroutine cmp_new_cpu_map
               end do
            else
               do i=1,ngrid
+#ifdef LIGHT_MPI_COMM
+                 ind_grid(i)=reception(icpu,ilevel)%pcomm%igrid(igrid+i-1)
+#else
                  ind_grid(i)=reception(icpu,ilevel)%igrid(igrid+i-1)
+#endif
               end do
            end if
            ! Loop over cells

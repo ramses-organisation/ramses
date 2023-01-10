@@ -37,6 +37,18 @@ subroutine init_poisson
   !------------------------------------------------------
   ! Allocate communicators for coarser multigrid levels
   allocate(active_mg    (1:ncpu,1:nlevelmax-1))
+#ifdef LIGHT_MPI_COMM
+  allocate(emission_mg  (1:nlevelmax-1))
+  do ilevel=1,nlevelmax-1
+     do i=1,ncpu
+        active_mg   (i,ilevel)%ngrid=0
+        active_mg   (i,ilevel)%npart=0
+        allocate(active_mg(i,ilevel)%pcomm)
+     enddo
+     emission_mg (ilevel)%ngrids_tot=0
+     emission_mg (ilevel)%nactive=0
+  end do
+#else
   allocate(emission_mg  (1:ncpu,1:nlevelmax-1))
   do ilevel=1,nlevelmax-1
      do i=1,ncpu
@@ -46,6 +58,7 @@ subroutine init_poisson
         emission_mg (i,ilevel)%npart=0
      end do
   end do
+#endif
   allocate(safe_mode(1:nlevelmax))
   safe_mode = .false.
 
@@ -79,11 +92,19 @@ subroutine init_poisson
      read(ilun)ndim2
      read(ilun)nlevelmax2
      read(ilun)nboundary2
+#ifdef OUTPUT_PARTICLE_DENSITY
+     if(ndim2.ne.ndim+2)then
+#else
      if(ndim2.ne.ndim+1)then
+#endif
         if(ndim2.ne.ndim)then
            write(*,*)'File poisson.tmp is not compatible'
            write(*,*)'Found   =',ndim2
+#ifdef OUTPUT_PARTICLE_DENSITY
+           write(*,*)'Expected=',ndim+2
+#else
            write(*,*)'Expected=',ndim+1
+#endif
            call clean_stop
         else
            if(myid==1) write(*,*)'Assuming pre commit bce4454 output format'
@@ -117,6 +138,13 @@ subroutine init_poisson
               ! Loop over cells
               do ind=1,twotondim
                  iskip=ncoarse+(ind-1)*ngridmax
+#ifdef OUTPUT_PARTICLE_DENSITY
+                 ! Read density
+                 read(ilun)xx
+                 do i=1,ncache
+                    rho(ind_grid(i)+iskip)=xx(i)
+                 end do
+#endif
                  ! Read potential
                  read(ilun)xx
                  do i=1,ncache

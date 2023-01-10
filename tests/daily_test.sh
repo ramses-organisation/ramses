@@ -13,13 +13,13 @@
 ############################################################################
 
 # The source directory:
-SRC="/home/ubuntu";
+SRC="/home/rt3504";
 
 # Test frequency: (YY:MM:DD:hh:mm:ss)
 TEST_FREQ="00:00:01:00:00:00";
 
 # Test time offset: (YY:MM:DD:hh:mm:ss)
-TEST_OFFS="00:00:00:03:00:00";
+TEST_OFFS="00:00:00:17:04:00";
 
 # Wiki file
 WIKIFILE="AutoTests.md";
@@ -34,7 +34,7 @@ UPDATEWIKI=true;
 hline="============================================================";
 
 RAMSESDIR="${SRC}/ramses/tests";
-WIKIDIR="${SRC}/ramses/wiki";
+WIKIDIR="${SRC}/wiki";
 WIKISTOREDIR="daily_tests";
 LOGFILE="${SRC}/${LOGFILE}";
 COMMIT_URL="https://bitbucket.org/rteyssie/ramses/commits/";

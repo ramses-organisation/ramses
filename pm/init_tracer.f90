@@ -60,7 +60,9 @@ subroutine load_tracers
     real(dp):: xx1, xx2, xx3
     integer(1), dimension(1:nvector) :: ixx
     real(kind=8),dimension(1:nvector,1:3)::xx,vv
+#ifndef WITHOUTMPI
     integer,dimension(1:nvector)::cc
+#endif
     integer::i,ipart,jpart,icpu,buf_count
     logical::eof
     integer ,dimension(1:nvector)::ii
@@ -207,9 +209,8 @@ subroutine load_tracers_inplace
     use mpi_mod
     implicit none
     integer :: nx_loc, icpu, jgrid, igrid, j, icell, iskip
-    integer :: ix
 #if NDIM > 1
-    integer :: iy
+    integer :: ix, iy
 #if NDIM > 2
     integer :: iz
 #endif

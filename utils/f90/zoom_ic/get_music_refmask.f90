@@ -9,7 +9,8 @@ program get_music_refmask
   integer::ncpu,ndim,npart,i,j,k,icpu,ipos,nstar,nstart,ico
   integer::ncpu2,npart2,ndim2,levelmin,levelmax,ilevel
   integer::ncpu_read
-  real(KIND=8)::mtot,t,mass,btime,unit_l,aexp,unit_t
+  real(KIND=8)::mtot,boxlen,t,mass,btime,unit_l,aexp,unit_t
+  real(KIND=8)::h0,omega_m,omega_l,omega_k,omega_b,unit_d
   real(KIND=8)::xmin=0,xmax=1,ymin=0,ymax=1,zmin=0,zmax=1,r,xc=0.5,yc=0.5,zc=0.5,rad=-1
   integer::imin,imax,jmin,jmax,kmin,kmax,lmin,ipart
   real(KIND=8)::deltax
@@ -32,6 +33,7 @@ program get_music_refmask
   integer::outputmode
   character(LEN=1)::proj='z'
   character(LEN=5)::nchar,ncharcpu
+  character(LEN=80)::GMGM
   character(LEN=80)::ordering
   character(LEN=128)::nomfich,repository,filetype='bin',grafic
   character(LEN=128)::repository2, outputname
@@ -65,31 +67,32 @@ program get_music_refmask
      stop
   endif
   open(unit=10,file=nomfich,form='formatted',status='old')
-  read(10,'("ncpu        =",I11)')ncpu
-  read(10,'("ndim        =",I11)')ndim
-  read(10,'("levelmin    =",I11)')levelmin
-  read(10,'("levelmax    =",I11)')levelmax
+  read(10,'(A13,I11)')GMGM,ncpu
+  read(10,'(A13,I11)')GMGM,ndim
+  read(10,'(A13,I11)')GMGM,levelmin
+  read(10,'(A13,I11)')GMGM,levelmax
   read(10,*)
   read(10,*)
   read(10,*)
   write(*,*)ncpu,ndim,levelmin,levelmax
 
-  read(10,*)
-  read(10,'("time        =",E23.15)')t
-  read(10,'("aexp        =",E23.15)')aexp
-  read(10,*)
-  read(10,*)
-  read(10,*)
-  read(10,*)
-  read(10,*)
-  read(10,'("unit_l      =",E23.15)')unit_l
-  read(10,*)
-  read(10,'("unit_t      =",E23.15)')unit_t
+  read(10,'(A13,E23.15)')GMGM,boxlen
+  read(10,'(A13,E23.15)')GMGM,t
+  read(10,'(A13,E23.15)')GMGM,aexp
+  read(10,'(A13,E23.15)')GMGM,h0
+  read(10,'(A13,E23.15)')GMGM,omega_m
+  read(10,'(A13,E23.15)')GMGM,omega_l
+  read(10,'(A13,E23.15)')GMGM,omega_k
+  read(10,'(A13,E23.15)')GMGM,omega_b
+  read(10,'(A13,E23.15)')GMGM,unit_l
+  read(10,'(A13,E23.15)')GMGM,unit_d
+  read(10,'(A13,E23.15)')GMGM,unit_t
+
 
   read(10,*)
-  read(10,'("ordering type=",A80)') ordering
-  read(10,*)
+  read(10,'(A14,A80)')GMGM,ordering
   write(*,'(" ordering type=",A20)') TRIM(ordering)
+  read(10,*)
   allocate(cpu_list(1:ncpu))
   if(TRIM(ordering).eq.'hilbert')then
      allocate(bound_key(0:ncpu))

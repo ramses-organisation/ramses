@@ -7,6 +7,9 @@ subroutine dump_all
   use pm_commons
   use hydro_commons
   use cooling_module
+#ifdef grackle
+  use grackle_parameters
+#endif
 #if USE_TURB==1
   use turb_commons
 #endif
@@ -57,14 +60,26 @@ subroutine dump_all
      call output_makefile(filename)
      filename=TRIM(filedir)//'patches.txt'
      call output_patch(filename)
-     if(cooling .and. .not. neq_chem)then
+     if(cooling .and. .not. neq_chem .and. .not. cooling_ism)then
+#ifdef grackle
+        ! hack to prevent segfault
+        if(use_grackle==0) then
+           filename=TRIM(filedir)//'cooling_'//TRIM(nchar)//'.out'
+           call output_cool(filename)
+        end if
+#else
         filename=TRIM(filedir)//'cooling_'//TRIM(nchar)//'.out'
         call output_cool(filename)
+#endif
      end if
      if(sink)then
         filename=TRIM(filedir)//'sink_'//TRIM(nchar)//'.csv'
         call output_sink_csv(filename)
      endif
+     if(stellar)then
+        filename=TRIM(filedir)//'stellar_'//TRIM(nchar)//'.csv'
+        call output_stellar_csv(filename)
+     end if
      ! Copy namelist file to output directory
      filename=TRIM(filedir)//'namelist.txt'
      OPEN(10, FILE=namelist_file, ACCESS="STREAM", ACTION="READ")
@@ -128,10 +143,6 @@ subroutine dump_all
      filename=trim(filedir)//'part_'//trim(nchar)//'.out'
      filename_desc=TRIM(filedir)//'part_file_descriptor.txt'
      call backup_part(filename, filename_desc)
-     if(sink)then
-        filename=TRIM(filedir)//'sink_'//TRIM(nchar)//'.csv'
-        call output_sink_csv(filename)
-     end if
 #ifndef WITHOUTMPI
      if(synchro_when_io) call MPI_BARRIER(MPI_COMM_WORLD,info)
 #endif

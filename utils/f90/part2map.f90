@@ -486,7 +486,7 @@ program part2map
                  if(iyp1<0)iyp1=iyp1+ny
                  if(iyp1>=ny)iyp1=iyp1-ny
               endif
-              if(ix>=0.and.ix<nx.and.iy>=0.and.iy<ny.and.ddx>0.and.ddy>0)then
+              if(ix>=0.and.ix<nx.and.iy>=0.and.iy<ny.and.ddx>=0.and.ddy>=0)then
                  map(ix  ,iy  )=map(ix  ,iy  )+m(i)*dex*dey*weight
                  map(ix  ,iyp1)=map(ix  ,iyp1)+m(i)*dex*ddy*weight
                  map(ixp1,iy  )=map(ixp1,iy  )+m(i)*ddx*dey*weight

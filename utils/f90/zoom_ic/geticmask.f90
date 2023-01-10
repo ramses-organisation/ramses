@@ -35,11 +35,11 @@ program icmask
   logical::gid=.false.,fid=.false.
   integer::impi,maxid,idd
   real(KIND=8)::vfact
-  real(kind=8),dimension(:),allocatable::bound_key
+  real(KIND=8),dimension(:),allocatable::bound_key
   logical,dimension(:),allocatable::cpu_read
   integer,dimension(:),allocatable::cpu_list
   integer(kind=4)::np1,np2,np3
-  real::dx,x1o,x2o,x3o,astart,omegam,omegav,h0,x1or,x2or,x3or,dxor,omegak
+  real(KIND=8)::dx,x1o,x2o,x3o,astart,omegam,omegav,h0,x1or,x2or,x3or,dxor,omegak
 
   call read_params
 
@@ -132,7 +132,7 @@ program icmask
   ! Compute projected mass using CIC smoothing
   !----------------------------------------------
   mtot=0.0d0
-  !nstart=1
+  nstar=0
   ipart=0
   do k=1,ncpu_read
      icpu=cpu_list(k)

@@ -4,7 +4,7 @@
 [4]: https://bitbucket.org/rteyssie/ramses/wiki/ramses_ug.pdf
 [5]: https://bitbucket.org/vperret/dice
 [6]: https://bitbucket.org/ohahn/music
-[7]: https://github.com/nvaytet/osyris
+[7]: https://github.com/osyris-project/osyris
 [8]: https://github.com/pynbody/pynbody
 
 
@@ -15,7 +15,7 @@ Ramses is an open source code to model astrophysical systems, featuring self-gra
 
 You can go to the user's guide in [PDF here][4] and in the [WIKI here][1].
 
-Check regularly the [automatic test page][2]. Visit the code web site [here][3].
+Check regularly the [automatic test page][2].
 
 Download the code by cloning the git repository using 
 ```

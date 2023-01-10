@@ -24,6 +24,7 @@ subroutine read_hydro_params(nml_ok)
        & ,x_center,y_center,z_center,aexp_ini &
        & ,length_x,length_y,length_z,exp_region &
        & ,d_region,u_region,v_region,w_region,p_region,gamma_region &
+       & ,pert_r, pert_dx, heating_r, heating_dx &
 #ifdef SOLVERmhd
        & ,A_region,B_region,C_region,B_ave &
 #if NVAR>8+NENER
@@ -49,7 +50,7 @@ subroutine read_hydro_params(nml_ok)
        & ,riemann2d,slope_mag_type,eta_mag &
 #endif
        & ,pressure_fix,beta_fix,scheme,riemann &
-       & ,strict_equilibrium
+       & ,strict_equilibrium, entropy_fix
 
   ! Refinement parameters
   namelist/refine_params/x_refine,y_refine,z_refine,r_refine &

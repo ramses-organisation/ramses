@@ -47,6 +47,8 @@ subroutine read_hydro_params(nml_ok)
 #endif
 #ifdef SOLVERmhd
        & ,riemann2d,slope_mag_type,eta_mag &
+       & ,allow_switch_solver, allow_switch_solver2D &
+       & ,switch_solv_B,switch_solv_dens,switch_solv_min_dens &
 #endif
        & ,pressure_fix,beta_fix,scheme,riemann &
        & ,strict_equilibrium
@@ -89,7 +91,8 @@ subroutine read_hydro_params(nml_ok)
   ! Cooling / basic chemistry parameters
   namelist/cooling_params/cooling,metal,isothermal,haardt_madau,J21 &
        & ,barotropic_eos,barotropic_eos_form,polytrope_rho,polytrope_index,T_eos,mu_gas &
-       & ,a_spec,self_shielding, z_ave,z_reion,ind_rsink,T2max,neq_chem
+       & ,a_spec,self_shielding,z_ave,z_reion,ind_rsink,T2max,neq_chem &
+       & ,cooling_ism
 
   ! Star formation parameters
   namelist/sf_params/m_star,n_star,T2_star,g_star,del_star &

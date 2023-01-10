@@ -45,7 +45,6 @@ subroutine output_frame()
   real(dp)::xleft,xright,yleft,yright,xcentre,ycentre
   real(dp)::xxleft,xxright,yyleft,yyright,xxcentre,yycentre
   real(dp)::xpf,ypf
-  character(len=10)::varname
   real(dp)::dx_frame,dy_frame,dx,dx_loc,dx_min
   real(dp)::dx_cell,dy_cell,dvol,dx_proj,weight=0
   integer,dimension(1:nvector)::ind_grid,ind_cell

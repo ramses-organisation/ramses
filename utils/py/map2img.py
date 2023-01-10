@@ -22,7 +22,7 @@ with FortranFile(path_to_output, 'r') as f:
 print(nx,ny)
 # reshape the output
 dat = np.array(dat)
-dat = dat.reshape(nx, ny)
+dat = dat.reshape(ny, nx)
 dat = np.transpose(dat)
 # plot the map
 my_dpi = 96

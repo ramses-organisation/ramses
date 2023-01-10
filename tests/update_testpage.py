@@ -8,7 +8,7 @@ MonthsDict = {'Jan': 1, 'Feb': 2, 'Mar': 3,
               'Jul': 7, 'Aug': 8, 'Sep': 9,
               'Oct': 10, 'Nov': 11, 'Dec': 12}
 
-MonthsDictReverse = dict((v, k) for k, v in MonthsDict.iteritems())
+MonthsDictReverse = dict((v, k) for k, v in MonthsDict.items())
 
 
 def wiki_entry(date, commit, success):
@@ -82,7 +82,7 @@ def rebuild_wiki(logs, wiki):
     today = datetime.today()
     today = date(today.year, today.month, today.day)
 
-    for i in xrange(len(all_dates)):
+    for i in range(len(all_dates)):
         # getting the current day of the wiki
         current = all_dates[~i]
         # setting the limit
@@ -109,9 +109,9 @@ def rebuild_wiki(logs, wiki):
         wikifile.write('\n')
         # table entries
 
-        for j in xrange(len(months)):
+        for j in range(len(months)):
             new_month = True
-            for i in xrange(len(months[j])):
+            for i in range(len(months[j])):
                 current = months[j][i]
                 last = months[j][-1]
 
@@ -127,7 +127,7 @@ def rebuild_wiki(logs, wiki):
                     wikifile.write('| Mon | Tue | Wed | Thu | Fri | Sat | Sun |\n')
                     wikifile.write('|'+7*' ---: |'+'\n')
                     row = ''
-                    for _ in xrange(current.weekday()+1):
+                    for _ in range(current.weekday()+1):
                         row += '| '
 
                 row += wiki_entry(months[j][i],

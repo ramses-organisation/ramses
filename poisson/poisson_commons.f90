@@ -12,8 +12,19 @@ module poisson_commons
   integer, allocatable, dimension(:) :: lookup_mg   ! Lookup table
 
   ! Communicator arrays for multigrid levels
+#ifdef LIGHT_MPI_COMM
+  type(communicator_light), allocatable, dimension(:,:) :: active_mg
+  type(communicator_varoct), allocatable, dimension(:) :: emission_mg
+#else
   type(communicator), allocatable, dimension(:,:) :: active_mg
   type(communicator), allocatable, dimension(:,:) :: emission_mg
+#endif
+
+  ! Send/recv Multigrid temporary communicator (light) used in build_parent_comms_mg subroutine
+  type communicator_mg
+    integer                       ::ngrid
+    integer, dimension(:), pointer::igrid
+  end type communicator_mg
 
   ! Minimum MG level
   integer :: levelmin_mg

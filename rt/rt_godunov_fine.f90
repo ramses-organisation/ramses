@@ -65,7 +65,11 @@ SUBROUTINE rt_set_unew(ilevel)
      iskip=ncoarse+(ind-1)*ngridmax
      do ivar=1,nrtvar
         do i=1,reception(icpu,ilevel)%ngrid
+#ifdef LIGHT_MPI_COMM
+           rtunew(reception(icpu,ilevel)%pcomm%igrid(i)+iskip,ivar)=0.0
+#else
            rtunew(reception(icpu,ilevel)%igrid(i)+iskip,ivar)=0.0
+#endif
         end do
      end do
   end do

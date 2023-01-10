@@ -2,14 +2,14 @@
 BINDIR=.
 
 # Ifort configuration
-F90=ifort
-CFLAGS=-Ofast -cpp
+#F90=ifort
+#CFLAGS=-Ofast -cpp
 
 # Gfortran configuration
-# F90=gfortran
-# CFLAGS=-ffree-line-length-none -std=f2008 -Ofast -Wall -x f95-cpp-input -J..
+F90=gfortran
+CFLAGS=-ffree-line-length-none -std=f2008 -Ofast -Wall -x f95-cpp-input -J..
 
-LFLAGS=
+LFLAGS=-I../
 
 MODOBJ=
 
@@ -24,6 +24,6 @@ geticmask: $(MODOBJ) ../utils.o geticmask.o
 
 # Make a specific object file
 %.o: %.f90
-	$(F90) $(CFLAGS) -c $^ -o $@
+	$(F90) $(LFLAGS) $(CFLAGS) -c $^ -o $@
 clean:
 	rm *.o *.mod

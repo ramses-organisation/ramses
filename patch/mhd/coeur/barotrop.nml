@@ -10,8 +10,8 @@ nsubcycle=6*1,2
 /
 
 &AMR_PARAMS 
-levelmin=6
-levelmax=18
+levelmin=5
+levelmax=15
 ngridmax=1000000
 nexpand=2
 boxlen=4.0
@@ -29,10 +29,10 @@ kbound_max= 0, 0, 0, 0,-1,+1
 /
 
 &INIT_PARAMS
-alpha=0.35
-beta=0.0
-crit=0.0
-delta_rho=0.0
+alpha_dense_core=0.35
+beta_dense_core=0.03
+crit_dense_core=0.2
+delta_rho=0.1
 /
 
 &OUTPUT_PARAMS

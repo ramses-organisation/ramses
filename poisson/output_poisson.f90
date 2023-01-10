@@ -33,10 +33,13 @@ subroutine backup_poisson(filename)
      endif
 #endif
 
-
   open(unit=ilun,file=fileloc,form='unformatted')
   write(ilun)ncpu
+#ifdef OUTPUT_PARTICLE_DENSITY
+  write(ilun)ndim+2
+#else
   write(ilun)ndim+1
+#endif
   write(ilun)nlevelmax
   write(ilun)nboundary
   do ilevel=1,nlevelmax
@@ -61,6 +64,13 @@ subroutine backup_poisson(filename)
            ! Loop over cells
            do ind=1,twotondim
               iskip=ncoarse+(ind-1)*ngridmax
+#ifdef OUTPUT_PARTICLE_DENSITY
+              ! Write density
+              do i=1,ncache
+                 xdp(i)=rho(ind_grid(i)+iskip)
+              end do
+              write(ilun)xdp
+#endif
               ! Write potential
               do i=1,ncache
                  xdp(i)=phi(ind_grid(i)+iskip)

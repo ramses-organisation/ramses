@@ -157,7 +157,7 @@ subroutine update_cosmomag(ilevel,exp_scale)
   !--------------------------------------------------------------------------
   ! This routine updates magnetic field to scale with cosmic expansion
   !--------------------------------------------------------------------------
-  integer::i,ind,iskip,ind_cell,icpu,ncache
+  integer::i,ind,iskip,ind_cell,icpu
   real(dp)::exp_scale
 
   do ind=1,twotondim

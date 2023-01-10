@@ -11,6 +11,7 @@ recursive subroutine amr_step(ilevel,icount)
   use coolrates_module, only: update_coolrates_tables
   use rt_cooling_module, only: update_UVrates
 #endif
+  use sink_feedback_parameters, only: sn_feedback_sink
 #if USE_TURB==1
   use turb_commons
 #endif
@@ -149,6 +150,7 @@ recursive subroutine amr_step(ilevel,icount)
      call MPI_BARRIER(MPI_COMM_WORLD,mpi_err)
      call MPI_ALLREDUCE(output_now,output_now_all,1,MPI_LOGICAL,MPI_LOR,MPI_COMM_WORLD,mpi_err)
 #endif
+     if(foutput>0)then
      if(mod(nstep_coarse,foutput)==0.or.aexp>=aout(iout).or.t>=tout(iout).or.output_now_all.EQV..true.)then
                                call timer('io','start')
         if(.not.ok_defrag)then
@@ -169,7 +171,8 @@ recursive subroutine amr_step(ilevel,icount)
         endif
 
      endif
-
+     endif
+  
      ! Dump lightcone
      if(lightcone .and. ndim==3) call output_cone()
 
@@ -197,6 +200,16 @@ recursive subroutine amr_step(ilevel,icount)
                                call timer('feedback','start')
      if(hydro.and.star.and.eta_sn>0.and.f_w>0)call kinetic_feedback
 
+  endif
+
+  !----------------------------------------------------
+  ! Feedback on sink particles
+  !----------------------------------------------------
+  if(stellar) then
+     call make_stellar_from_sinks
+  endif
+  if (sn_feedback_sink) then
+     call make_sn_stellar
   endif
 
   !--------------------
@@ -288,9 +301,12 @@ recursive subroutine amr_step(ilevel,icount)
 
 #ifdef RT
   ! Turn on RT in case of rt_stars and first stars just created:
-  ! Update photon packages according to star particles
+  ! Update photon packages according to star particles and sink particles
                                call timer('radiative transfer','start')
   if(rt .and. rt_star) call update_star_RT_feedback(ilevel)
+#if NDIM==3
+  if(rt .and. rt_sink) call update_sink_RT_feedback
+#endif
 #endif
 
 #if USE_TURB==1
@@ -643,6 +659,9 @@ subroutine rt_step(ilevel)
      if (i_substep > 1) call rt_set_unew(ilevel)
 
      if(rt_star) call star_RT_feedback(ilevel,dtnew(ilevel))
+#if NDIM==3
+     if(rt_sink) call sink_RT_feedback(ilevel,dtnew(ilevel))
+#endif
 
      ! Hyperbolic solver
      if(rt_advect) call rt_godunov_fine(ilevel,dtnew(ilevel))

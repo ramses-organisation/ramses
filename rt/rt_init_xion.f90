@@ -147,7 +147,13 @@ SUBROUTINE calc_equilibrium_xion(vars, rtvars, xion)
   use cooling_module,only:Y
   use rt_cooling_module,only:UVrates,signc
   implicit none
+#ifdef SOLVERmhd
+  integer::neul=5
+  real(dp),dimension(nvar+3)::vars
+#else
+  integer::neul=ndim+2
   real(dp),dimension(nvar)::vars
+#endif
   real(dp),dimension(nrtvar)::rtvars
   real(dp),dimension(nIons)::xion
   integer::ip, iI, idim
@@ -155,11 +161,6 @@ SUBROUTINE calc_equilibrium_xion(vars, rtvars, xion)
   real(dp)::scale_Np,scale_Fp,nH,T2,ekk,err,emag,mu,Zsolar,ss_factor
   real(dp),dimension(nIons)::phI_rates       ! Photoionization rates [s-1]
   real(dp),dimension(7)::nSpec               !          Species abundances
-#ifdef SOLVERmhd
-  integer::neul=5
-#else
-  integer::neul=ndim+2
-#endif
 #if NENER>0
   integer::irad
 #endif

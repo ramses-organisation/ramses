@@ -72,6 +72,14 @@ module hydro_parameters
 #if NVAR>NDIM+2+NENER
   real(dp),dimension(1:MAXREGION,1:NVAR-NDIM-2-NENER)::var_region=0
 #endif
+! Perturbation parameters
+  real(dp)::pert_r=0. ! 0.0 = no pert, 1.0 = 1% pert in density
+  real(dp)::pert_dx=0. ! size of the perturbation layer
+
+  ! Heating parameters
+  real(dp)::heating_r=0. ! Heating ration in erg/g/s
+  real(dp)::heating_dx=0. ! size of the heating layer
+
   ! Hydro solver parameters
   integer ::niter_riemann=10
   integer ::slope_type=1

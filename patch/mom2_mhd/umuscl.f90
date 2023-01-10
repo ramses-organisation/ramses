@@ -1461,7 +1461,7 @@ subroutine cmpflxm(qm,im1,im2,jm1,jm2,km1,km2, &
              if(ln==2)then
                 snleft  = pin(l,i-1,j,k)
                 snright = pin(l,i,j,k)
-             endif 
+             endif
              if(ln==3)then
                 snleft  = pin(l,i,j-1,k)
                 snright = pin(l,i,j,k)
@@ -1513,7 +1513,7 @@ subroutine cmpflxm(qm,im1,im2,jm1,jm2,km1,km2, &
               CASE (2)
                  CALL hll           (qleft,qright,fgdnv)
               CASE (3)
-                 if (rmin > 1D-2) then
+                 if (rmin > dens_llf) then
                     CALL hlld          (qleft,qright,snleft,snright,fgdnv)
                  else
                     CALL lax_friedrich (qleft,qright,fgdnv,zero_flux)
@@ -1632,9 +1632,9 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
 
            ! Pressure
            DO l = 1, ngrid
-              qLL (l,2) = qRT(l,i,j,k,5,xdim) 
+              qLL (l,2) = qRT(l,i,j,k,5,xdim)
               qRL (l,2) = qLT(l,i,j,k,5,xdim)
-              qLR (l,2) = qRB(l,i,j,k,5,xdim) 
+              qLR (l,2) = qRB(l,i,j,k,5,xdim)
               qRR (l,2) = qLB(l,i,j,k,5,xdim)
            END DO
 
@@ -1744,7 +1744,7 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
 #endif
                   qtmp(is) = qLL(l,is)
                   ! Supernova pressure in qtmp(is)
-                  call find_speed_fast(qtmp,qtmp(is),cfastLLx) 
+                  call find_speed_fast(qtmp,qtmp(is),cfastLLx)
                   qtmp(1)=qLR(l,1); qtmp(2)=qLR(l,2); qtmp(7)=qLR(l,5); qtmp(8)=qLR(l,8)
                   qtmp(3)=qLR(l,3); qtmp(4)=qLR(l,6); qtmp(5)=qLR(l,4); qtmp(6)=qLR(l,7)
 #if NENER>0
@@ -3021,7 +3021,7 @@ subroutine turb_dynamo(uin,q,alphaT,ngrid)
       d0   = nISM/scale_nH
 
    ! B field cap is 100 microGauss in cgs unit, convert to code unit
-   b_lim = 100D-6 / sqrt(4 * 3.14159 * scale_d) * (scale_t / scale_l) 
+   b_lim = 100D-6 / sqrt(4 * 3.14159 * scale_d) * (scale_t / scale_l)
 
    do k = ku1, ku2
       do j = ju1, ju2
@@ -3068,7 +3068,7 @@ subroutine turb_emf(alphaT,bf,dt,dx,emfx,emfy,emfz,ngrid)
    real(dp),dimension(1:nvector,1:3,1:3,1:3)::emfx
    real(dp),dimension(1:nvector,1:3,1:3,1:3)::emfy
    real(dp),dimension(1:nvector,1:3,1:3,1:3)::emfz
- 
+
    ilo=MIN(1,iu1+2); ihi=MAX(1,iu2-2)
    jlo=MIN(1,ju1+2); jhi=MAX(1,ju2-2)
    klo=MIN(1,ku1+2); khi=MAX(1,ku2-2)
@@ -3098,7 +3098,7 @@ subroutine turb_emf(alphaT,bf,dt,dx,emfx,emfy,emfz,ngrid)
          END DO
       END DO
    END DO
- 
+
   ! EMF correction in x direction, assuming 3-dimension grid
    DO i=ilo,ihi
       DO j=jf1,jf2
@@ -3110,7 +3110,6 @@ subroutine turb_emf(alphaT,bf,dt,dx,emfx,emfy,emfz,ngrid)
             END DO
          END DO
       END DO
-   END DO 
- 
-end subroutine turb_emf
+   END DO
 
+end subroutine turb_emf

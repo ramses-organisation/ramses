@@ -668,7 +668,6 @@ contains
 
     end do
     ! End loop over levels
-
     ! Initial particle number
     npart=ipart
 

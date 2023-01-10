@@ -30,7 +30,6 @@ subroutine unsplit(uin,req,peq,gravin,pin,flux,tmp,dx,dy,dz,dt,ngrid)
   real(dp)::dx,dy,dz,dt
 
   ! Input states
-  ! JRCC : Add declaration of req, peq (scalars)
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2)::pin,req,peq
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::uin
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:ndim)::gravin
@@ -68,7 +67,7 @@ subroutine unsplit(uin,req,peq,gravin,pin,flux,tmp,dx,dy,dz,dt,ngrid)
   jlo=MIN(1,ju1+2); jhi=MAX(1,ju2-2)
   klo=MIN(1,ku1+2); khi=MAX(1,ku2-2)
 
-  ! Translate to primative variables, compute sound speeds
+  ! Translate to primitive variables, compute sound speeds
   ! JRCC : Add req, peq in ctoprim call
   call ctoprim(uin,qin,cin,req,peq,gravin,dt,ngrid)
 
@@ -104,8 +103,8 @@ subroutine unsplit(uin,req,peq,gravin,pin,flux,tmp,dx,dy,dz,dt,ngrid)
 
   ! Solve for 1D flux in X direction
   ! JRCC : Add qpeq to cmpflxm call
-  call cmpflxm(qm,iu1+1,iu2+1,ju1  ,ju2  ,ku1  ,ku2  , &
-       &       qp,iu1  ,iu2  ,ju1  ,ju2  ,ku1  ,ku2  , &
+  call cmpflxm(qm  , iu1+1,iu2+1,ju1  ,ju2  ,ku1  ,ku2  , &
+       &       qp  , iu1  ,iu2  ,ju1  ,ju2  ,ku1  ,ku2  , &
        &       qpeq, if1  ,if2  ,jlo  ,jhi  ,klo  ,khi  , 2,3,4,fx,tx,ngrid)
   ! Save flux in output array
   do i=if1,if2
@@ -128,8 +127,8 @@ subroutine unsplit(uin,req,peq,gravin,pin,flux,tmp,dx,dy,dz,dt,ngrid)
   ! Solve for 1D flux in Y direction
 #if NDIM>1
   ! JRCC : Add qpeq to cmpflxm call
-  call cmpflxm(qm,iu1  ,iu2  ,ju1+1,ju2+1,ku1  ,ku2  , &
-       &       qp,iu1  ,iu2  ,ju1  ,ju2  ,ku1  ,ku2  , &
+  call cmpflxm(qm  , iu1  ,iu2  ,ju1+1,ju2+1,ku1  ,ku2  , &
+       &       qp  , iu1  ,iu2  ,ju1  ,ju2  ,ku1  ,ku2  , &
        &       qpeq, ilo  ,ihi  ,jf1  ,jf2  ,klo  ,khi  , 3,2,4,fx,tx,ngrid)
   ! Save flux in output array
   do i=ilo,ihi
@@ -153,8 +152,8 @@ subroutine unsplit(uin,req,peq,gravin,pin,flux,tmp,dx,dy,dz,dt,ngrid)
   ! Solve for 1D flux in Z direction
 #if NDIM>2
 ! JRCC : Add qpeq to cmpflxm call
-  call cmpflxm(qm,iu1  ,iu2  ,ju1  ,ju2  ,ku1+1,ku2+1, &
-       &       qp,iu1  ,iu2  ,ju1  ,ju2  ,ku1  ,ku2  , &
+  call cmpflxm(qm  , iu1  ,iu2  ,ju1  ,ju2  ,ku1+1,ku2+1, &
+       &       qp  , iu1  ,iu2  ,ju1  ,ju2  ,ku1  ,ku2  , &
        &       qpeq, ilo  ,ihi  ,jlo  ,jhi  ,kf1  ,kf2  , 4,2,3,fx,tx,ngrid)
   ! Save flux in output array
   do i=ilo,ihi
@@ -214,6 +213,7 @@ subroutine trace1d(q,dq,qm,qp,req,peq,qpeq,dx,dt,ngrid)
   real(dp)::dtdx
   real(dp)::r, u, p
   real(dp)::drx, dux, dpx
+  real(dp)::dreqx, dpeqx = 0.d0
   real(dp)::sr0, su0, sp0
 #if NENER>0
   integer::irad
@@ -255,10 +255,15 @@ subroutine trace1d(q,dq,qm,qp,req,peq,qpeq,dx,dt,ngrid)
                  dex(irad) = dq(l,i,j,k,ip+irad,1)
               end do
 #endif
+              ! Slopes for equilibrium profiles
+              if(strict_equilibrium>0) then
+                dreqx = half*(req(l,i+1,j,k) - req(l,i-1,j,k))
+                dpeqx = half*(peq(l,i+1,j,k) - peq(l,i-1,j,k)) 
+              end if
 
               ! Source terms (including transverse derivatives)
-              sr0 = -u*drx - (dux)*r
-              sp0 = -u*dpx - (dux)*gamma*p
+              sr0 = -u*drx -u*dreqx - (dux)*r
+              sp0 = -u*dpx -u*dpeqx - (dux)*gamma*p
               su0 = -u*dux - (dpx)/r
 #if NENER>0
               do irad=1,nener
@@ -356,6 +361,8 @@ subroutine trace2d(q,dq,qm,qp,req,peq,qpeq,dx,dy,dt,ngrid)
   real(dp)::r, u, v, p
   real(dp)::drx, dux, dvx, dpx
   real(dp)::dry, duy, dvy, dpy
+  real(dp)::dreqx, dreqy = 0.d0
+  real(dp)::dpeqx, dpeqy = 0.d0
   real(dp)::sr0, su0, sv0, sp0
 #if NENER>0
   integer ::irad
@@ -411,9 +418,18 @@ subroutine trace2d(q,dq,qm,qp,req,peq,qpeq,dx,dy,dt,ngrid)
               end do
 #endif
 
+              ! Slopes for equilibrium profiles
+              if(strict_equilibrium>0) then
+                dreqx = half*(req(l,i+1,j,k) - req(l,i-1,j,k))
+                dpeqx = half*(peq(l,i+1,j,k) - peq(l,i-1,j,k))
+
+                dreqy = half*(req(l,i,j+1,k) - req(l,i,j-1,k))
+                dpeqy = half*(peq(l,i,j+1,k) - peq(l,i,j-1,k))
+              end if 
+
               ! source terms (with transverse derivatives)
-              sr0 = -u*drx-v*dry - (dux+dvy)*r
-              sp0 = -u*dpx-v*dpy - (dux+dvy)*gamma*p
+              sr0 = -u*drx-v*dry -u*dreqx-v*dreqy - (dux+dvy)*r
+              sp0 = -u*dpx-v*dpy -u*dpeqx-v*dpeqy - (dux+dvy)*gamma*p
               su0 = -u*dux-v*duy - (dpx    )/r
               sv0 = -u*dvx-v*dvy - (dpy    )/r
 #if NENER>0
@@ -456,7 +472,6 @@ subroutine trace2d(q,dq,qm,qp,req,peq,qpeq,dx,dy,dt,ngrid)
 #endif
 
               ! Top state at bottom interface
-              
               qreq = half*(req(l,i,j,k) + req(l,i,j-1,k))
               qp(l,i,j,k,ir,2) = r - req(l,i,j,k) - half*dry + sr0*dtdy*half + qreq
               qp(l,i,j,k,iu,2) = u - half*duy + su0*dtdy*half
@@ -472,7 +487,6 @@ subroutine trace2d(q,dq,qm,qp,req,peq,qpeq,dx,dy,dt,ngrid)
 #endif
 
               ! Bottom state at top interface
-
               qreq = half*(req(l,i,j+1,k) + req(l,i,j,k))
               qm(l,i,j,k,ir,2) = r - req(l,i,j,k) + half*dry + sr0*dtdy*half + qreq
               qm(l,i,j,k,iu,2) = u + half*duy + su0*dtdy*half
@@ -553,6 +567,8 @@ subroutine trace3d(q,dq,qm,qp,req,peq,qpeq,dx,dy,dz,dt,ngrid)
   real(dp)::drx, dux, dvx, dwx, dpx
   real(dp)::dry, duy, dvy, dwy, dpy
   real(dp)::drz, duz, dvz, dwz, dpz
+  real(dp)::dreqx,dreqy,dreqz = 0.d0
+  real(dp)::dpeqx,dpeqy,dpeqz = 0.d0
   real(dp)::sr0, su0, sv0, sw0, sp0
 #if NENER>0
   integer ::irad
@@ -577,6 +593,7 @@ subroutine trace3d(q,dq,qm,qp,req,peq,qpeq,dx,dy,dz,dt,ngrid)
            do l = 1, ngrid
 
               ! Cell centered values
+              ! JRCC : compute rho from rho' and req
               r   =  q(l,i,j,k,ir) + req(l,i,j,k)
               u   =  q(l,i,j,k,iu)
               v   =  q(l,i,j,k,iv)
@@ -622,10 +639,21 @@ subroutine trace3d(q,dq,qm,qp,req,peq,qpeq,dx,dy,dz,dt,ngrid)
                  dez(irad) = dq(l,i,j,k,ip+irad,3)
               end do
 #endif
+              ! Slopes for equilibrium profiles
+              if(strict_equilibrium>0) then
+                dreqx = half*(req(l,i+1,j,k) - req(l,i-1,j,k))
+                dpeqx = half*(peq(l,i+1,j,k) - peq(l,i-1,j,k))
 
+                dreqy = half*(req(l,i,j+1,k) - req(l,i,j-1,k))
+                dpeqy = half*(peq(l,i,j+1,k) - peq(l,i,j-1,k))
+                
+                dreqz = half*(req(l,i,j,k+1) - req(l,i,j,k-1))
+                dpeqz = half*(peq(l,i,j,k+1) - peq(l,i,j,k-1))
+              end if 
+              
               ! Source terms (including transverse derivatives)
-              sr0 = -u*drx-v*dry-w*drz - (dux+dvy+dwz)*r
-              sp0 = -u*dpx-v*dpy-w*dpz - (dux+dvy+dwz)*gamma*p
+              sr0 = -u*drx-v*dry-w*drz -u*dreqx-v*dreqy-w*dreqz - (dux+dvy+dwz)*r
+              sp0 = -u*dpx-v*dpy-w*dpz -u*dpeqx-v*dpeqy-w*dpeqz - (dux+dvy+dwz)*gamma*p
               su0 = -u*dux-v*duy-w*duz - (dpx        )/r
               sv0 = -u*dvx-v*dvy-w*dvz - (dpy        )/r
               sw0 = -u*dwx-v*dwy-w*dwz - (dpz        )/r
@@ -640,15 +668,13 @@ subroutine trace3d(q,dq,qm,qp,req,peq,qpeq,dx,dy,dz,dt,ngrid)
 #endif
 
               ! Right state at left interface
-              qreq = half*(req(l,i,j,k)+req(l,i-1,j,k))
-              qp(l,i,j,k,ir,1) = r - req(l,i,j,k) - half*drx + sr0*dtdx*half + qreq
-              ! JRCC : Add to right state at left interface the difference between equilibrium pressures at interface
-              ! JRCC : To do this, compute left iterface qpeq(l,i,j,k,1)
-              qpeq(l,i-1,j,k,1) = half*(peq(l,i,j,k) + peq(l,i-1,j,k))
-              qp(l,i,j,k,ip,1) = p - peq(l,i,j,k) - half*dpx + sp0*dtdx*half + qpeq(l,i-1,j,k,1)
+              qreq = half*(req(l,i,j,k) + req(l,i-1,j,k))
+              qp(l,i,j,k,ir,1) = r - req(l,i,j,k) - half*drx + sr0*dtdx*half + qreq 
               qp(l,i,j,k,iu,1) = u - half*dux + su0*dtdx*half
               qp(l,i,j,k,iv,1) = v - half*dvx + sv0*dtdx*half
               qp(l,i,j,k,iw,1) = w - half*dwx + sw0*dtdx*half
+              qpeq(l,i-1,j,k,1) = half*(peq(l,i,j,k) + peq(l,i-1,j,k))
+              qp(l,i,j,k,ip,1) = p - peq(l,i,j,k) - half*dpx + sp0*dtdx*half + qpeq(l,i-1,j,k,1)
 !              qp(l,i,j,k,ir,1) = max(smallr, qp(l,i,j,k,ir,1))
               if(qp(l,i,j,k,ir,1)<smallr)qp(l,i,j,k,ir,1)=r
 #if NENER>0
@@ -658,15 +684,13 @@ subroutine trace3d(q,dq,qm,qp,req,peq,qpeq,dx,dy,dz,dt,ngrid)
 #endif
 
               ! Left state at right interface
-              qreq = half*(req(l,i+1,j,k)+req(l,i,j,k))
+              qreq = half*(req(l,i+1,j,k) + req(l,i,j,k))
               qm(l,i,j,k,ir,1) = r - req(l,i,j,k) + half*drx + sr0*dtdx*half + qreq
-              ! JRCC : Add to left state at right interface the difference between equilibrium pressures at interface
-              ! JRCC : To do this, compute right iterface qpeq(l,i+1,j,k,1)
-              qpeq(l,i,j,k,1) = half*(peq(l,i+1,j,k) + peq(l,i,j,k))
-              qm(l,i,j,k,ip,1) = p - peq(l,i,j,k) + half*dpx + sp0*dtdx*half + qpeq(l,i,j,k,1)
               qm(l,i,j,k,iu,1) = u + half*dux + su0*dtdx*half
               qm(l,i,j,k,iv,1) = v + half*dvx + sv0*dtdx*half
               qm(l,i,j,k,iw,1) = w + half*dwx + sw0*dtdx*half
+              qpeq(l,i,j,k,1) = half*(peq(l,i+1,j,k) + peq(l,i,j,k))
+              qm(l,i,j,k,ip,1) = p - peq(l,i,j,k) + half*dpx + sp0*dtdx*half + qpeq(l,i,j,k,1)
 !              qm(l,i,j,k,ir,1) = max(smallr, qm(l,i,j,k,ir,1))
               if(qm(l,i,j,k,ir,1)<smallr)qm(l,i,j,k,ir,1)=r
 #if NENER>0
@@ -676,15 +700,13 @@ subroutine trace3d(q,dq,qm,qp,req,peq,qpeq,dx,dy,dz,dt,ngrid)
 #endif
 
               ! Top state at bottom interface
-              qreq = half*(req(l,i,j,k)+req(l,i,j-1,k))
+              qreq = half*(req(l,i,j,k) + req(l,i,j-1,k))
               qp(l,i,j,k,ir,2) = r - req(l,i,j,k) - half*dry + sr0*dtdy*half + qreq
-              ! JRCC : Add to top state at bottom interface the difference between equilibrium pressures at interface
-              ! JRCC : To do this, compute bottom iterface qpeq(l,i,j,k,2)
-              qpeq(l,i,j-1,k,2) = half*(peq(l,i,j,k) + peq(l,i,j-1,k))
-              qp(l,i,j,k,ip,2) = p - peq(l,i,j,k) - half*dpy + sp0*dtdy*half + qpeq(l,i,j-1,k,2)
               qp(l,i,j,k,iu,2) = u - half*duy + su0*dtdy*half
               qp(l,i,j,k,iv,2) = v - half*dvy + sv0*dtdy*half
               qp(l,i,j,k,iw,2) = w - half*dwy + sw0*dtdy*half
+              qpeq(l,i,j-1,k,2) = half*(peq(l,i,j,k) + peq(l,i,j-1,k))
+              qp(l,i,j,k,ip,2) = p - peq(l,i,j,k) - half*dpy + sp0*dtdy*half + qpeq(l,i,j-1,k,2)
 !              qp(l,i,j,k,ir,2) = max(smallr, qp(l,i,j,k,ir,2))
               if(qp(l,i,j,k,ir,2)<smallr)qp(l,i,j,k,ir,2)=r
 #if NENER>0
@@ -694,15 +716,13 @@ subroutine trace3d(q,dq,qm,qp,req,peq,qpeq,dx,dy,dz,dt,ngrid)
 #endif
 
               ! Bottom state at top interface
-              qreq = half*(req(l,i,j+1,k)+req(l,i,j,k))
+              qreq = half*(req(l,i,j+1,k) + req(l,i,j,k))
               qm(l,i,j,k,ir,2) = r - req(l,i,j,k) + half*dry + sr0*dtdy*half + qreq
-              ! JRCC : Add to bottom state at top interface the difference between equilibrium pressures at interface
-              ! JRCC : To do this, compute top iterface qpeq(l,i,j+1,k,2)
-              qpeq(l,i,j,k,2) = half*(peq(l,i,j+1,k) + peq(l,i,j,k))
-              qm(l,i,j,k,ip,2) = p - peq(l,i,j,k) + half*dpy + sp0*dtdy*half + qpeq(l,i,j,k,2)
               qm(l,i,j,k,iu,2) = u + half*duy + su0*dtdy*half
               qm(l,i,j,k,iv,2) = v + half*dvy + sv0*dtdy*half
               qm(l,i,j,k,iw,2) = w + half*dwy + sw0*dtdy*half
+              qpeq(l,i,j,k,2) = half*(peq(l,i,j+1,k) + peq(l,i,j,k))
+              qm(l,i,j,k,ip,2) = p - peq(l,i,j,k) + half*dpy + sp0*dtdy*half + qpeq(l,i,j,k,2)
 !              qm(l,i,j,k,ir,2) = max(smallr, qm(l,i,j,k,ir,2))
               if(qm(l,i,j,k,ir,2)<smallr)qm(l,i,j,k,ir,2)=r
 #if NENER>0
@@ -712,15 +732,13 @@ subroutine trace3d(q,dq,qm,qp,req,peq,qpeq,dx,dy,dz,dt,ngrid)
 #endif
 
               ! Back state at front interface
-              qreq = half*(req(l,i,j,k)+req(l,i,j,k-1))
+              qreq = half*(req(l,i,j,k) + req(l,i,j,k-1))
               qp(l,i,j,k,ir,3) = r - req(l,i,j,k) - half*drz + sr0*dtdz*half + qreq
-              ! JRCC : Add to back state at front interface the difference between equilibrium pressures at interface
-              ! JRCC : To do this, compute front iterface qpeq(l,i,j,k,3)
-              qpeq(l,i,j,k-1,3) = half*(peq(l,i,j,k) + peq(l,i,j,k-1))
-              qp(l,i,j,k,ip,3) = p - peq(l,i,j,k) - half*dpz + sp0*dtdz*half + qpeq(l,i,j,k-1,3)
               qp(l,i,j,k,iu,3) = u - half*duz + su0*dtdz*half
               qp(l,i,j,k,iv,3) = v - half*dvz + sv0*dtdz*half
               qp(l,i,j,k,iw,3) = w - half*dwz + sw0*dtdz*half
+              qpeq(l,i,j,k-1,3) = half*(peq(l,i,j,k) + peq(l,i,j,k-1))
+              qp(l,i,j,k,ip,3) = p - peq(l,i,j,k) - half*dpz + sp0*dtdz*half + qpeq(l,i,j,k-1,3)
 !              qp(l,i,j,k,ir,3) = max(smallr, qp(l,i,j,k,ir,3))
               if(qp(l,i,j,k,ir,3)<smallr)qp(l,i,j,k,ir,3)=r
 #if NENER>0
@@ -730,15 +748,13 @@ subroutine trace3d(q,dq,qm,qp,req,peq,qpeq,dx,dy,dz,dt,ngrid)
 #endif
 
               ! Front state at back interface
-              qreq = half*(req(l,i,j,k+1)+req(l,i,j,k))
+              qreq = half*(req(l,i,j,k+1) + req(l,i,j,k))
               qm(l,i,j,k,ir,3) = r - req(l,i,j,k) + half*drz + sr0*dtdz*half + qreq
-              ! JRCC : Add to front state at back interface the difference between equilibrium pressures at interface
-              ! JRCC : To do this, compute back iterface qpeq(l,i,j,k+1,3)
-              qpeq(l,i,j,k,3) = half*(peq(l,i,j,k+1) + peq(l,i,j,k))
-              qm(l,i,j,k,ip,3) = p - peq(l,i,j,k) + half*dpz + sp0*dtdz*half + half*qpeq(l,i,j,k+1,3) + qpeq(l,i,j,k,3)
               qm(l,i,j,k,iu,3) = u + half*duz + su0*dtdz*half
               qm(l,i,j,k,iv,3) = v + half*dvz + sv0*dtdz*half
               qm(l,i,j,k,iw,3) = w + half*dwz + sw0*dtdz*half
+              qpeq(l,i,j,k,3) = half*(peq(l,i,j,k+1) + peq(l,i,j,k))
+              qm(l,i,j,k,ip,3) = p - peq(l,i,j,k) + half*dpz + sp0*dtdz*half + qpeq(l,i,j,k,3)
 !              qm(l,i,j,k,ir,3) = max(smallr, qm(l,i,j,k,ir,3))
               if(qm(l,i,j,k,ir,3)<smallr)qm(l,i,j,k,ir,3)=r
 #if NENER>0
@@ -1005,7 +1021,6 @@ subroutine ctoprim(uin,q,c,req,peq,gravin,dt,ngrid)
               enddo
 #endif
               ! Compute thermal pressure
-
               eint = MAX(uin(l,i,j,k,ndim+2)*oneoverrho-eken-erad,smalle)
               q(l,i,j,k,ndim+2) = (gamma-one)*q(l,i,j,k,1)*eint
 

@@ -32,7 +32,7 @@ subroutine move_fine(ilevel)
 #endif
 
   ! Set unew = uold in the active region
-  do ind=1,xtondim
+  do ind=1,twotondim
      iskip=ncoarse+(ind-1)*ngridmax
      do ivar=2,4
         do i=1,active(ilevel)%ngrid
@@ -43,7 +43,7 @@ subroutine move_fine(ilevel)
   end do
   ! Set unew reception cells to zero
   do icpu=1,ncpu
-     do ind=1,xtondim
+     do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
         do ivar=2,4
            do i=1,reception(icpu,ilevel)%ngrid
@@ -94,7 +94,7 @@ subroutine move_fine(ilevel)
      call make_virtual_reverse_dp(unew(1,ivar),ilevel)
   end do
 
-  do ind=1,xtondim
+  do ind=1,twotondim
      iskip=ncoarse+(ind-1)*ngridmax
      do ivar=2,4
         do i=1,active(ilevel)%ngrid
@@ -136,11 +136,11 @@ subroutine move_fine_static(ilevel)
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
-  #ifdef TSC
+#ifdef TSC
     xtondim=threetondim
-  #else
+#else
     xtondim=twotondim
-  #endif
+#endif
 
   ! Update particles position and velocity
   ig=0
@@ -262,7 +262,7 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,xtondim)
   real(dp),dimension(1:nvector,1:ndim),save::vv
   real(dp),dimension(1:nvector,1:ndim),save::bb,uu
   real(dp),dimension(1:nvector,1:twotondim,1:ndim),save::big_vv,big_ww
-  real(dp),dimension(1:nvector),save:: nu_stop,mov ! ERM: fluid density interpolated to grain pos. and stopping times
+  real(dp),dimension(1:nvector),save:: nu_stop,mov,dgr,ddgr,ciso ! ERM: fluid density interpolated to grain pos. and stopping times
   integer ,dimension(1:nvector,1:ndim),save::ig,id,igg,igd,icg,icd
   real(dp),dimension(1:nvector,1:twotondim),save::vol
   integer ,dimension(1:nvector,1:twotondim),save::igrid,icell,indp,kg
@@ -272,7 +272,7 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,xtondim)
   real(dp),dimension(1:nvector,1:ndim),save::vv,cl,cr,cc,wl,wr,wc
   real(dp),dimension(1:nvector,1:ndim),save::bb,uu
   real(dp),dimension(1:nvector,1:threetondim,1:ndim),save::big_vv,big_ww
-  real(dp),dimension(1:nvector),save:: nu_stop,mov ! ERM: fluid density interpolated to grain pos. and stopping times
+  real(dp),dimension(1:nvector),save:: nu_stop,mov,dgr,ddgr,ciso ! ERM: fluid density interpolated to grain pos. and stopping times
   integer ,dimension(1:nvector,1:ndim),save::igl,igr,igc,icl,icr,icc
   real(dp),dimension(1:nvector,1:threetondim),save::vol
   integer ,dimension(1:nvector,1:threetondim),save::igrid,icell,indp,kg
@@ -799,21 +799,57 @@ end do
      end do
   endif
 
-  if(trajectories(1)>0)then!Various fields interpolated to particle positions
-     do index_part=trajectories(1),trajectories(2)
-        do j=1,np
-           if(idp(ind_part(j)).EQ.index_part)then
-              write(25+myid,*)t-dtnew(ilevel),idp(ind_part(j)),& ! Old time
+  dgr(1:np) = 0.0D0 ! Gas density. Only used for trajectory file.
+  ddgr(1:np) = 0.0D0 ! Dust density.
+  ciso(1:np) = 0.0D0 ! Isothermal sound speed (squared).
+  if(boris)then
+     do ind=1,xtondim
+         do j=1,np
+            dgr(j)=dgr(j)+uold(indp(j,ind),1)*vol(j,ind)
+            ddgr(j)=ddgr(j)+uold(indp(j,ind),ivar_dust)*vol(j,ind)
+            ciso(j)=ciso(j)+vol(j,ind)*&
+            & sqrt((uold(indp(j,ind),5) - &
+            &0.125D0*(uold(indp(j,ind),1+5)+uold(indp(j,ind),1+nvar))*(uold(indp(j,ind),1+5)+uold(indp(j,ind),1+nvar)) &
+            &-0.125D0*(uold(indp(j,ind),2+5)+uold(indp(j,ind),2+nvar))*(uold(indp(j,ind),2+5)+uold(indp(j,ind),2+nvar)) &
+            &-0.125D0*(uold(indp(j,ind),3+5)+uold(indp(j,ind),3+nvar))*(uold(indp(j,ind),3+5)+uold(indp(j,ind),3+nvar)) &
+            &- 0.5D0*(&
+            & uold(indp(j,ind),1+1)*uold(indp(j,ind),1+1)+ &
+            & uold(indp(j,ind),2+1)*uold(indp(j,ind),2+1)+ &
+            & uold(indp(j,ind),3+1)*uold(indp(j,ind),3+1) &
+            &)/max(uold(indp(j,ind),1),smallr))&! Subtract from total energy agnetic and kinetic energies
+            &*(gamma-1.0D0)/max(uold(indp(j,ind),1),smallr))! P/rho = ciso**2, to be interpolated.
+        end do
+     end do
+  endif
+
+  ! if(trajectories(1)>0)then!Various fields interpolated to particle positions
+  !    do index_part=trajectories(1),trajectories(2)
+  !       do j=1,np
+  !          if(idp(ind_part(j)).EQ.index_part)then
+  !             write(25+myid,*)t-dtnew(ilevel),idp(ind_part(j)),dgr(j),ddgr(j), & ! Old time
+  !                  & xp(ind_part(j),1),xp(ind_part(j),2),xp(ind_part(j),3),& ! Old particle position
+  !                  & vp(ind_part(j),1),vp(ind_part(j),2),vp(ind_part(j),3),& ! Old particle velocity
+  !                  &  uu(j,1),uu(j,2),uu(j,3),& ! Old fluid velocity
+  !                  &  bb(j,1),bb(j,2),bb(j,3)! Old magnetic field.
+  !                  ! & new_vp(j,1),new_vp(j,2),new_vp(j,3) ! NEW particle velocity (for comparison)
+  !          endif
+  !       end do
+  !    end do
+  ! endif
+
+if (trajectories(1)>0)then
+      !Various fields interpolated to particle positions
+       do j=1,np
+           if( ANY(trajectories .eq. idp(ind_part(j))) )then
+              write(25+myid,*)t-dtnew(ilevel),idp(ind_part(j)),dgr(j),ddgr(j), & ! Old time
                    & xp(ind_part(j),1),xp(ind_part(j),2),xp(ind_part(j),3),& ! Old particle position
                    & vp(ind_part(j),1),vp(ind_part(j),2),vp(ind_part(j),3),& ! Old particle velocity
                    &  uu(j,1),uu(j,2),uu(j,3),& ! Old fluid velocity
                    &  bb(j,1),bb(j,2),bb(j,3)! Old magnetic field.
                    ! & new_vp(j,1),new_vp(j,2),new_vp(j,3) ! NEW particle velocity (for comparison)
            endif
-        end do
      end do
-  endif
-
+endif
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! ERM: Block here is only used for computing variable stopping times.
 
@@ -872,7 +908,7 @@ end do
   ! We compute this before the EM kick for the sole reason that we had to do
   ! that in init_dust_fine. For second order accuracy, things will be more
   ! complicated.
-    call StoppingRate(np,dtnew(ilevel),indp,vol,vv,nu_stop,xtondim)
+  call StoppingRate(np,dtnew(ilevel),indp,vol,vv,nu_stop,ciso,dgr,xtondim)
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! LORENTZ KICK
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -895,9 +931,10 @@ end do
     !write(*,*)'big_vv=',big_vv(1,1,1),big_vv(1,1,2),big_vv(1,1,3)
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
   ! DRAG KICK
-  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
     call DragKick(np,dtnew(ilevel),indp,ok,vol,nu_stop,big_vv,big_ww,vv,xtondim)
+    ! Was just "DragKick"
     !write(*,*)'big_vv+=',big_vv(1,1,1),big_vv(1,1,2),big_vv(1,1,3)
     ! DragKick will modify big_ww as well as big_vv, but not vv.
     ! Now kick the dust given these quantities.
@@ -978,7 +1015,7 @@ end do
   end do
   do idim=1,ndim
      do j=1,np
-        xp(ind_part(j),idim)=new_xp(j,idim)
+        xp(ind_part(j),idim)=new_xp(j,idim) ! This is where you'd do the monte-carlo bit?
      end do
   end do
 
@@ -992,6 +1029,18 @@ end do
            end if
         end do
      end do
+  end do
+
+  ! Deposit minus final dust energy onto gas energy.
+  do ind=1,xtondim
+        do j=1,np
+           if(ok(j))then
+              unew(indp(j,ind),5)=unew(indp(j,ind),5)&
+              &-0.5*mp(ind_part(j))*&
+              &(new_vp(j,idim)*new_vp(j,idim)-vp(ind_part(j),idim)*vp(ind_part(j),idim))&
+              &*vol(j,ind)/vol_loc
+           end if
+        end do
   end do
 
   ! Store new velocity
@@ -1085,7 +1134,7 @@ end subroutine EMKick
 !#########################################################################
 !#########################################################################
 !#########################################################################
-subroutine StoppingRate(nn,dt,indp,vol,v,nu,xtondim)
+subroutine StoppingRate(nn,dt,indp,vol,v,nu,c,dgr,xtondim)
   ! The following subroutine will alter its last argument, nu
   ! to be a half-step advanced. Because we are operator splitting,
   ! one must use the updated dust and gas velocities.
@@ -1099,33 +1148,33 @@ subroutine StoppingRate(nn,dt,indp,vol,v,nu,xtondim)
   integer ::ivar_dust,xtondim  ! cell-centered dust variables start.
   real(dp) ::dt ! timestep.
   real(dp)::rd,cs! ERM: Grain size parameter
-  real(dp),dimension(1:nvector) ::nu
+  real(dp),dimension(1:nvector) ::nu,c
   real(dp),dimension(1:nvector,1:xtondim)::vol
   integer ,dimension(1:nvector,1:xtondim)::indp
-  real(dp),dimension(1:nvector),save ::dgr! gas density at grain.
+  real(dp),dimension(1:nvector) ::dgr! gas density at grain.
   real(dp),dimension(1:nvector,1:ndim) ::v! grain velocity
   real(dp),dimension(1:nvector,1:xtondim,1:ndim)::big_v
   real(dp),dimension(1:nvector,1:ndim),save ::wh! drift at half step.
   integer ::i,j,idim,ind
   ivar_dust=9
   rd = 0.62665706865775*grain_size !*sqrt(gamma) constant for epstein drag law.
-  cs=1.0 ! isothermal sound speed... Need to get this right. This works for now,
-         ! but only if you have scaled things so that the sound speed is 1.
 
-  if (constant_t_stop)then
-    nu(1:nvector)=1./t_stop
+  if ((constant_t_stop).and.(stopping_rate .lt. 0.0))then ! add a "constant_nu_stop" option so you can turn drag totally off.
+    nu(1:nvector)=1./t_stop ! Or better yet, add pre-processor directives to turn drag off.
+  else if ((constant_t_stop) .and. (stopping_rate .ge. 0.0))then
+    nu(1:nvector)=stopping_rate
   else
-     dgr(1:nn) = 0.0D0
-     if(boris)then
-        do ind=1,xtondim
-            do j=1,nn
-               dgr(j)=dgr(j)+uold(indp(j,ind),1)*vol(j,ind)
-           end do
-        end do
-     endif
+     !dgr(1:nn) = 0.0D0 ! I don't have to do this twice... It's done previously...
+     !if(boris)then
+    !    do ind=1,xtondim
+  !          do j=1,nn
+!               dgr(j)=dgr(j)+uold(indp(j,ind),1)*vol(j,ind)
+    !       end do
+    !    end do
+    ! endif
 
      wh(1:nn,1:ndim) = 0.0D0 ! Set to the drift velocity post-Lorentz force
-     if(boris)then
+     if(boris .and. supersonic_drag)then
         do ind=1,xtondim
           do idim=1,ndim
             do j=1,nn
@@ -1137,10 +1186,10 @@ subroutine StoppingRate(nn,dt,indp,vol,v,nu,xtondim)
         end do
      endif
      do i=1,nn
-       nu(i)=(dgr(i)*cs/rd)*sqrt(1.+&
+       nu(i)=(dgr(i)*c(i)/rd)*sqrt(1.+&
        &0.22089323345553233*&
        &(wh(i,1)**2+wh(i,2)**2+wh(i,3)**2)&
-       &/(cs*cs))
+       &/(c(i)*c(i)))
      end do
   endif
 end subroutine StoppingRate
@@ -1239,6 +1288,12 @@ subroutine DragKick(nn,dt,indp,ok,vol,nu,big_v,big_w,v,xtondim) ! mp is actually
 
             big_v(i,ind,idim)=(big_v(i,ind,idim)+dt*nu(i)*(1.+0.5*dt*nu(i))*up)&
             &/(1.+dt*nu(i)*(1.+0.5*dt*nu(i)))
+            ! up = -mu*big_w(i,ind,idim)*(1.+0.5*dt*nuj)/(1.+mu)+(uold(indp(i,ind),1+idim)&
+            ! &+uold(indp(i,ind),ivar_dust+idim))/&
+            ! &max(uold(indp(i,ind),1)+uold(indp(i,ind),ivar_dust),smallr)
+            !
+            ! big_v(i,ind,idim)=(big_v(i,ind,idim)+dt*nu(i)*(1.+0.5*dt*nu(i))*up)&
+            ! &/(1.+dt*nu(i)*(1.+0.5*dt*nu(i)))
           end do
           ! big_w corresponds directly to a change in the gas velocity.
        end do
@@ -1270,8 +1325,84 @@ subroutine DragKick(nn,dt,indp,ok,vol,nu,big_v,big_w,v,xtondim) ! mp is actually
    endif
 end subroutine DragKick
 
+
+subroutine DragKickAlt(nn,dt,indp,ok,vol,nu,big_v,big_w,v,xtondim) ! mp is actually mov
+  use amr_parameters
+  use hydro_parameters
+  use hydro_commons, ONLY: uold,unew,smallr,nvar,gamma
+  implicit none
+  integer::nn
+  integer ::ivar_dust, xtondim ! cell-centered dust variables start.  integer ::nn ! number of cells
+  real(dp) ::dt ! timestep
+  real(dp) ::vol_loc ! cloud volume
+  real(dp),dimension(1:nvector) ::nu,mp
+  logical ,dimension(1:nvector)::ok
+  real(dp),dimension(1:nvector,1:xtondim)::vol
+  integer ,dimension(1:nvector,1:xtondim)::indp
+  real(dp),dimension(1:nvector,1:ndim) ::v ! grain velocity
+  real(dp),dimension(1:nvector,1:xtondim,1:ndim) ::big_v,big_w
+  real(dp) ::den_dust,den_gas,mu,nuj,up
+  integer ::i,j,ind,idim! Just an index
+  ivar_dust=9
+
+  if (second_order)then
+    do ind=1,xtondim
+       do i=1,nn
+          den_gas=uold(indp(i,ind),1)
+          den_dust=uold(indp(i,ind),ivar_dust)
+          mu=den_dust/max(den_gas,smallr)
+          nuj=(1.+mu)*unew(indp(i,ind),ivar_dust)/max(uold(indp(i,ind),ivar_dust),smallr)
+          do idim=1,ndim
+            ! w = &
+            ! &uold(indp(i,ind),ivar_dust+idim)/max(uold(indp(i,ind),ivar_dust),smallr)&
+            ! &-uold(indp(i,ind),1+idim)/max(uold(indp(i,ind),1),smallr)
+
+            big_w(i,ind,idim)=big_w(i,ind,idim)&
+            &/(1.+nuj*dt+0.5*nuj*nuj*dt*dt)
+
+            up = -mu*big_w(i,ind,idim)/(1.+mu)+(uold(indp(i,ind),1+idim)&
+            &+uold(indp(i,ind),ivar_dust+idim))/&
+            &max(uold(indp(i,ind),1)+uold(indp(i,ind),ivar_dust),smallr)
+
+            big_v(i,ind,idim)= up + (big_v(i,ind,idim)-up)&
+            &/(1.+dt*nu(i)*(1.+0.5*dt*nu(i)))
+            !big_v(i,ind,idim)=(big_v(i,ind,idim)+dt*nu(i)*(1.+0.5*dt*nu(i))*up)&
+            !&/(1.+dt*nu(i)*(1.+0.5*dt*nu(i))) ! suspected error begins here?
+          end do
+          ! big_w corresponds directly to a change in the gas velocity.
+       end do
+    end do
+   else ! Change this to be the original algorithm
+     do ind=1,xtondim
+        do i=1,nn
+           den_gas=uold(indp(i,ind),1)
+           den_dust=uold(indp(i,ind),ivar_dust)
+           mu=den_dust/max(den_gas,smallr)
+           nuj=(1.+mu)*unew(indp(i,ind),ivar_dust)/max(uold(indp(i,ind),ivar_dust),smallr)
+           do idim=1,ndim
+             ! w = &
+             ! &uold(indp(i,ind),ivar_dust+idim)/max(uold(indp(i,ind),ivar_dust),smallr)&
+             ! &-uold(indp(i,ind),1+idim)/max(uold(indp(i,ind),1),smallr)
+
+             big_w(i,ind,idim)=big_w(i,ind,idim)&
+             &/(1.+nuj*dt)
+
+             up = -mu*big_w(i,ind,idim)/(1.+mu)+(uold(indp(i,ind),1+idim)&
+             &+uold(indp(i,ind),ivar_dust+idim))/&
+             &max(uold(indp(i,ind),1)+uold(indp(i,ind),ivar_dust),smallr)
+
+             big_v(i,ind,idim)=(big_v(i,ind,idim)+dt*nu(i)*up)/(1.+dt*nu(i))
+           end do
+           ! big_w corresponds directly to a change in the gas velocity.
+        end do
+     end do
+   endif
+end subroutine DragKickAlt
+!# Later on, can implement the better algorithm that does everything
+! self-consistently.
 !#########################################################################
 !#########################################################################
+
 ! subroutine StoppingRateMidpt(nn,twodt,indp,ok,vol,mov,v,big_v,nu)
 !   ! The following subroutine will alter its last argument, nu
 !   ! to be a half-step advanced. Because we are operator splitting,

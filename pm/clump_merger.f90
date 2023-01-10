@@ -510,9 +510,8 @@ subroutine merge_clumps(action)
   real(dp),dimension(1:npeaks_max)::peakd
   logical::do_merge=.false.
 
-  integer::mergelevel_max_global
-
 #ifndef WITHOUTMPI
+  integer::mergelevel_max_global
   integer::nmove_all,nsurvive_all,nzero_all
 #endif
 

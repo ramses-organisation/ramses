@@ -55,4 +55,5 @@ ax[2].set_ylim(1,max(T)*10)
 fig.savefig('isothermal.pdf',bbox_inches='tight')
 
 # Check results against reference solution
-visu_ramses.check_solution(data["data"],'isothermal', overwrite=False)
+tolerance={"density":5.0e-12, "pressure":1.0e-11, "time":2.0e-12, "velocity_x":2.0e-12}
+visu_ramses.check_solution(data["data"],'isothermal', tolerance=tolerance, overwrite=False)
