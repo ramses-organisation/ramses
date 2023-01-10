@@ -1184,7 +1184,11 @@ subroutine rho_only(ilevel)
      do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
         do i=1,reception(icpu,ilevel)%ngrid
+#ifdef LIGHT_MPI_COMM
+           rho(reception(icpu,ilevel)%pcomm%igrid(i)+iskip)=0.0D0
+#else
            rho(reception(icpu,ilevel)%igrid(i)+iskip)=0.0D0
+#endif
         end do
      end do
   end do

@@ -76,6 +76,9 @@ subroutine deallocate_amr
      deallocate(active)
   endif
   if(allocated(emission)) deallocate(emission)
+#ifdef LIGHT_MPI_COMM
+  if(allocated(emission_part)) deallocate(emission_part)
+#endif
   if(allocated(reception)) deallocate(reception)
   !
   if(allocated(father)) deallocate(father)
