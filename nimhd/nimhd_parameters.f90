@@ -42,6 +42,7 @@ module nimhd_parameters
   real(dp):: coefalfven = 1d-10  ! Meme si ca n'a rien a voir avec alfven : c'est le coefficient de seuil. Par defaut, on ne seuille pas.
   real(dp):: coefdtohm = 1d-10
   real(dp):: coefohm = 0.05d0 !CFL conditions
+  ! TC:why have different courant conditions for different nimhd effects?
   real(dp):: default_ionisrate=1d-17
   ! choose better names
   

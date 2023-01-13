@@ -349,8 +349,6 @@ subroutine computejb2(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
 
   ! computation of current on faces
 
-  if(use_nonideal_mhd) then
-
     ! face at i-1/2,j,k
   
     do k=min(1,ku1+1),max(1,ku2-1)
@@ -461,8 +459,6 @@ subroutine computejb2(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
        end do
     end do
 
-  endif
-
   if(nambipolar) then
      do k=min(1,ku1+1),max(1,ku2-1)
         do j=min(1,ju1+1),max(1,ju2-1)
@@ -472,17 +468,6 @@ subroutine computejb2(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
                  fluxh(l,i,j,k,1)=fluxter(l,i,j,k,1,1)
                  fluxh(l,i,j,k,2)=fluxter(l,i,j,k,2,2)
                  fluxh(l,i,j,k,3)=fluxter(l,i,j,k,3,3)
-              end do
-           end do
-        end do
-     end do
-  endif
-
-  if(nambipolar)then
-     do k=min(1,ku1+1),max(1,ku2-1)
-        do j=min(1,ju1+1),max(1,ju2-1)
-           do i=min(1,iu1+1),max(1,iu2-1)
-              do l = 1, ngrid
                  call crossprodbis(fluxter,bmagij,fluxquat,l,i,j,k)
                  fluxad(l,i,j,k,1)=fluxquat(l,i,j,k,1,1)
                  fluxad(l,i,j,k,2)=fluxquat(l,i,j,k,2,2)
@@ -493,223 +478,111 @@ subroutine computejb2(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
      end do
   endif
 
-  ! TC: should this indeed be done twice for ambipolar?
-  do k=min(1,ku1+1),max(1,ku2-1)
-     do j=min(1,ju1+1),max(1,ju2-1)
-        do i=min(1,iu1+1),max(1,iu2-1)   
-           do l = 1, ngrid
-              call crossprodbis(fluxter,bmagij,fluxquat,l,i,j,k)
-              fluxad(l,i,j,k,1)=fluxquat(l,i,j,k,1,1)
-              fluxad(l,i,j,k,2)=fluxquat(l,i,j,k,2,2)
-              fluxad(l,i,j,k,3)=fluxquat(l,i,j,k,3,3)
-           end do
-        end do
-     end do
-  end do
-
 end subroutine computejb2
 !###########################################################
 !###########################################################
 !###########################################################
 !###########################################################
-subroutine computdifmag(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,bmagij,fluxmd,emfohmdiss,fluxohm,jcentersquare)
+subroutine computdifmag(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,bmagij,fluxmd,emfohmdiss,fluxohm)
 
-  USE amr_parameters
-  use hydro_commons
-  use nimhd_parameters
-  USE const
-  use constants
-  IMPLICIT NONE
+   use amr_parameters
+   use hydro_commons
+   use nimhd_parameters
+   implicit none
 
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar+3)::u 
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q 
+   ! inputs
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar+3)::u 
+   integer ::ngrid
+   real(dp)::dx,dy,dz,dt
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::bemfx,bemfy,bemfz
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::jemfx,jemfy,jemfz
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3,1:3)::bmagij
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::fluxmd
 
-  INTEGER ::ngrid
-  REAL(dp)::dx,dy,dz,dt
+   ! outputs
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3):: emfohmdiss,fluxohm 
 
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::bemfx,bemfy,bemfz
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::jemfx,jemfy,jemfz
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3,1:3)::bmagij
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::fluxmd
+   ! local variables
+   integer ::i,j,k,l,h
+   real(dp)::rhox,rhoy,rhoz,epsx,epsy,epsz,bsquarex,bsquarey,bsquarez
+   real(dp)::tcellx,tcelly,tcellz,etaod2x,etaod2y,etaod2z
+   real(dp)::dtlim,ionisrate
+   real(dp)::rhof,bsqf,epsf,tcellf
+   real(dp)::etaohmdiss,etaod2,etaohmdissbricolo
+   integer , dimension(1:3) :: index_i,index_j,index_k
 
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3):: emfohmdiss,fluxohm 
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2)::jcentersquare
+   index_i = (/1,0,0/)
+   index_j = (/0,1,0/)
+   index_k = (/0,0,1/)
 
-  ! declare local variables
-  INTEGER ::i, j, k, l, m, n,h
+   dtlim = dt !neil
 
-! WARNING following quantities defined with three components even
-! if ndim<3 !
-real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::jcenter
-real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3,1:3)::jface
-real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::jemf
+   do k=min(1,ku1+1),max(1,ku2-1)
+      do j=min(1,ju1+1),max(1,ju2-1)
+         do i=min(1,iu1+1),max(1,iu2-1)
 
+            do l=1,ngrid
 
-real(dp)::computdx,computdy,computdz,tcell,rhocell,bcell,ionisrate
-real(dp)::crossprodx,crossprody,crossprodz, Cv
+               rhox=0.25d0*(u(l,i,j,k,   1)+u(l,i  ,j-1,k,   1)+u(l,i,j  ,k-1,   1)+u(l,i  ,j-1,k-1,   1))
+               rhoy=0.25d0*(u(l,i,j,k,   1)+u(l,i-1,j  ,k,   1)+u(l,i,j  ,k-1,   1)+u(l,i-1,j  ,k-1,   1))
+               rhoz=0.25d0*(u(l,i,j,k,   1)+u(l,i-1,j  ,k,   1)+u(l,i,j-1,k  ,   1)+u(l,i-1,j-1,k  ,   1))
 
-real(dp)::etaohmdiss,etaod2,tcellx,tcelly,tcellz,bsquarex,bsquarey,bsquarez,etaohmdissbricolo,dtlim
-real(dp)::pressurex,pressurey,pressurez,rhox,rhoy,rhoz,epsx,epsy,epsz
-real(dp)::etaod2x,etaod2y,etaod2z,rhof,pf,bsqf,epsf,tcellf
+               epsx=0.25d0*(u(l,i,j,k,5)+u(l,i  ,j-1,k,5)+u(l,i,j  ,k-1,5)+u(l,i  ,j-1,k-1,5))
+               epsy=0.25d0*(u(l,i,j,k,5)+u(l,i-1,j  ,k,5)+u(l,i,j  ,k-1,5)+u(l,i-1,j  ,k-1,5))
+               epsz=0.25d0*(u(l,i,j,k,5)+u(l,i-1,j  ,k,5)+u(l,i,j-1,k  ,5)+u(l,i-1,j-1,k  ,5))
 
-integer , dimension(1:3) :: index_i,index_j,index_k
+               bsquarex=bemfx(l,i,j,k,1)**2+bemfx(l,i,j,k,2)**2+bemfx(l,i,j,k,3)**2
+               bsquarey=bemfy(l,i,j,k,1)**2+bemfy(l,i,j,k,2)**2+bemfy(l,i,j,k,3)**2
+               bsquarez=bemfz(l,i,j,k,1)**2+bemfz(l,i,j,k,2)**2+bemfz(l,i,j,k,3)**2
 
-   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
-   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
+               if(ntestDADM.eq.1)then
+                     tcellx=1.0d0
+                     tcelly=1.0d0
+                     tcellz=1.0d0
+               else
+                     call ideal_gas_temperature(rhox, epsx, tcellx)
+                     call ideal_gas_temperature(rhoy, epsy, tcelly)
+                     call ideal_gas_temperature(rhoz, epsz, tcellz)
+               endif
 
-index_i = (/1,0,0/)
-index_j = (/0,1,0/)
-index_k = (/0,0,1/)
+               ionisrate=default_ionisrate 
+               etaod2x=etaohmdissbricolo(rhox,bsquarex,tcellx,dtlim,dx,ionisrate)
+               etaod2y=etaohmdissbricolo(rhoy,bsquarey,tcelly,dtlim,dx,ionisrate)
+               etaod2z=etaohmdissbricolo(rhoz,bsquarez,tcellz,dtlim,dx,ionisrate)
+               ! TC: shouldn't dy and dz be used here?  
 
-dtlim = dt !neil
+               ! WARNING dB/dt=-curl(eta*J)
+               emfohmdiss(l,i,j,k,nxx)=-etaod2x*jemfx(l,i,j,k,1)
+               emfohmdiss(l,i,j,k,nyy)=-etaod2y*jemfy(l,i,j,k,2)
+               emfohmdiss(l,i,j,k,nzz)=-etaod2z*jemfz(l,i,j,k,3)
 
-do k=min(1,ku1+1),max(1,ku2-1)
-   do j=min(1,ju1+1),max(1,ju2-1)
-      do i=min(1,iu1+1),max(1,iu2-1)
-
-         do l=1,ngrid
-
-            jemf(l,i,j,k,1)=jemfx(l,i,j,k,1)
-            jemf(l,i,j,k,2)=jemfy(l,i,j,k,2)
-            jemf(l,i,j,k,3)=jemfz(l,i,j,k,3)
-
-            rhox=0.25d0*(u(l,i,j,k,   1)+u(l,i  ,j-1,k,   1)+u(l,i,j  ,k-1,   1)+u(l,i  ,j-1,k-1,   1))
-            rhoy=0.25d0*(u(l,i,j,k,   1)+u(l,i-1,j  ,k,   1)+u(l,i,j  ,k-1,   1)+u(l,i-1,j  ,k-1,   1))
-            rhoz=0.25d0*(u(l,i,j,k,   1)+u(l,i-1,j  ,k,   1)+u(l,i,j-1,k  ,   1)+u(l,i-1,j-1,k  ,   1))
-            epsx=0.25d0*(u(l,i,j,k,5)+u(l,i  ,j-1,k,5)+u(l,i,j  ,k-1,5)+u(l,i  ,j-1,k-1,5))
-            epsy=0.25d0*(u(l,i,j,k,5)+u(l,i-1,j  ,k,5)+u(l,i,j  ,k-1,5)+u(l,i-1,j  ,k-1,5))
-            epsz=0.25d0*(u(l,i,j,k,5)+u(l,i-1,j  ,k,5)+u(l,i,j-1,k  ,5)+u(l,i-1,j-1,k  ,5))
-            if(nmagdiffu)then
-                 bsquarex=bemfx(l,i,j,k,1)**2+bemfx(l,i,j,k,2)**2+bemfx(l,i,j,k,3)**2
-                 bsquarey=bemfy(l,i,j,k,1)**2+bemfy(l,i,j,k,2)**2+bemfy(l,i,j,k,3)**2
-                 bsquarez=bemfz(l,i,j,k,1)**2+bemfz(l,i,j,k,2)**2+bemfz(l,i,j,k,3)**2
-            endif
-
-            if(ntestDADM.eq.1)then
-                  tcellx=1.0d0
-                  tcelly=1.0d0
-                  tcellz=1.0d0
-            else
-!                  print*,'x',rhox,epsx,u(l,i,j,k,2),bemfx(l,i,j,k,1)**2+bemfx(l,i,j,k,2)**2+bemfx(l,i,j,k,3)**2
-!                  if(epsy* scale_d*scale_v**2  .lt. 1d-16) print*,'y',rhoy,epsy
-!                  if(epsz* scale_d*scale_v**2  .lt. 1d-16) print*,'z',rhoz,epsz
-!                  print*,rhox,epsx,rhoy,epsy,rhoz,epsz
-                  call ideal_gas_temperature(rhox, epsx, tcellx)
-                  call ideal_gas_temperature(rhoy, epsy, tcelly)
-                  call ideal_gas_temperature(rhoz, epsz, tcellz)
-!!$                  tcelly=10.
-!!$                  tcellx=10.
-!!$                  tcellz=10.
-            endif
-            ionisrate=default_ionisrate 
-!               etaod2x=etaohmdiss(rhox,bsquarex,tcellx)
-!               etaod2y=etaohmdiss(rhoy,bsquarey,tcelly)
-!               etaod2z=etaohmdiss(rhoz,bsquarez,tcellz)
-            etaod2x=etaohmdissbricolo(rhox,bsquarex,tcellx,dtlim,dx,ionisrate)
-            etaod2y=etaohmdissbricolo(rhoy,bsquarey,tcelly,dtlim,dx,ionisrate)
-            etaod2z=etaohmdissbricolo(rhoz,bsquarez,tcellz,dtlim,dx,ionisrate)
-              
-! WARNING dB/dt=-curl(eta*J)
-            emfohmdiss(l,i,j,k,nxx)=-etaod2x*jemf(l,i,j,k,1)
-            emfohmdiss(l,i,j,k,nyy)=-etaod2y*jemf(l,i,j,k,2)
-            emfohmdiss(l,i,j,k,nzz)=-etaod2z*jemf(l,i,j,k,3)
-
-! !!!!!!!!!!!!!!!!!!!!!!!
-! !
-! ! compute j at center of cells
-! !
-! ! mandatory for non isotherm case
-! 
-! ! bmagij is the value of the magnetic field Bi where Bj 
-! ! is naturally defined; Ex bmagij(l,i,j,k,1,2) is Bx at i,j-1/2,k
-! ! and we can write it Bx,y
-
-            jcenter(l,i,j,k,1)=computdy(bmagij,nzz,nyy,l,i,j,k,dy)-computdz(bmagij,nyy,nzz,l,i,j,k,dy)
-            jcenter(l,i,j,k,2)=computdz(bmagij,nxx,nzz,l,i,j,k,dy)-computdx(bmagij,nzz,nxx,l,i,j,k,dy)
-            jcenter(l,i,j,k,3)=computdx(bmagij,nyy,nxx,l,i,j,k,dy)-computdy(bmagij,nxx,nyy,l,i,j,k,dy)
-
-! !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-! !
-! ! computation of j at faces
-! ! jface is the value of the current where Bj 
-! ! is naturally defined; Ex jface(l,i,j,k,1,2) is Jx at i,j-1/2,k
-! ! and we can write it Jx,y
-            do h = 1,3
-                  rhof=0.5d0*(u(l,i,j,k,   1)+u(l,i-index_i(h),j-index_j(h),k-index_k(h),   1))
+               do h = 1,3
+                  rhof=0.5d0*(u(l,i,j,k,1)+u(l,i-index_i(h),j-index_j(h),k-index_k(h),1))
                   epsf=0.5d0*(u(l,i,j,k,5)+u(l,i-index_i(h),j-index_j(h),k-index_k(h),5))
                   bsqf=bmagij(l,i,j,k,1,h)**2+bmagij(l,i,j,k,2,h)**2+bmagij(l,i,j,k,3,h)**2
 
                   ! Compute gas temperature in cgs
                   if(ntestDADM.eq.1)then
-                       tcellf=1.0d0
+                        tcellf=1.0d0
                   else 
-                       call ideal_gas_temperature(rhof, epsf, tcellf)
+                        call ideal_gas_temperature(rhof, epsf, tcellf)
                   endif
-                    
+                     
                   etaod2=etaohmdiss(rhof,bsqf,tcellf,ionisrate)
                   fluxohm(l,i,j,k,h)=etaod2*fluxmd(l,i,j,k,h)
-                    
-                    !               rhof=0.5d0*(u(l,i,j,k,1)+u(l,i-1,j,k,1))
-                    !               pf=0.5d0*(q(l,i,j,k,5)+q(l,i-1,j,k,5))
-!               etaod2=etaohmdiss(rhof,pf)
-!               fluxohm(l,i,j,k,1)=etaod2*fluxmd(l,i,j,k,1)
-            enddo
+               enddo
 
+            end do
          end do
       end do
    end do
-end do
-! 
-! 
-!   do k=min(1,ku1+1),max(1,ku2-1) 
-! !     do j=min(1,ju1+1),ju2 
-!      do j=min(1,ju1+1),max(1,ju2-1)
-!         do i=min(1,iu1+1),max(1,iu2-1) 
-!            
-!            do l=1,ngrid
-! 
-!               rhof=0.5d0*(u(l,i,j,k,1)+u(l,i,j-1,k,1))
-!               pf=0.5d0*(q(l,i,j,k,5)+q(l,i,j-1,k,5))
-!               etaod2=etaohmdiss(rhof,pf)
-!               fluxohm(l,i,j,k,2)=etaod2*fluxmd(l,i,j,k,2)
-! 
-!            end do
-!         end do
-!      end do
-!   end do
-! 
-! 
-!  do k=min(1,ku1+1),max(1,ku2-1) 
-! !     do j=min(1,ju1+1),ju2  
-!     do j=min(1,ju1+1),max(1,ju2-1)
-!         do i=min(1,iu1+1),max(1,iu2-1) 
-!            
-!            do l=1,ngrid
-! 
-!               rhof=0.5d0*(u(l,i,j,k,1)+u(l,i,j,k-1,1))
-!               pf=0.5d0*(q(l,i,j,k,5)+q(l,i,j,k-1,5))
-!               etaod2=etaohmdiss(rhof,pf)
-!               fluxohm(l,i,j,k,3)=etaod2*fluxmd(l,i,j,k,3)
-! 
-!            end do
-!         end do
-!      end do
-!   end do
-
-! compute contribution to energy flux +eta*I*B
-
-!            do l=1,ngrid
- !             end do
- !       end do
- !    end do
- ! end do
   
 end subroutine computdifmag
 !###########################################################
 !###########################################################
 !###########################################################
 !###########################################################
-SUBROUTINE  computambip(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,florentzx,florentzy,florentzz,fluxad,bmagij,emfambdiff,fluxambdiff,jxbsquare)
+SUBROUTINE  computambip(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,florentzx,florentzy,florentzz,fluxad,bmagij,emfambdiff,fluxambdiff,jxbsquare)
 
   use amr_commons
   USE amr_parameters
@@ -719,7 +592,6 @@ SUBROUTINE  computambip(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,florentzx,floren
   IMPLICIT NONE
   
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar+3)::u 
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q 
   
   INTEGER ::ngrid
   REAL(dp)::dx,dy,dz,dt
@@ -742,7 +614,7 @@ SUBROUTINE  computambip(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,florentzx,floren
   real(dp)::bsquarexx,bsquareyy,bsquarezz
   real(dp)::betaad2,betaadbricolo,betaad
   real(dp)::rhox,rhoy,rhoz,rhocell,bcell,bcellold,tcell,ionisrate
-  real(dp)::dtlim,Cv,eps
+  real(dp)::dtlim,eps
   real(dp)::crossprodx,crossprody,crossprodz
 
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::florentz
@@ -952,10 +824,12 @@ end SUBROUTINE computambip
 !########################################################################################
 !########################################################################################
 
-! fonctions de produits vectoriels et coef nimhd
+! VECTOR FUNCTION
 
 !###########################################################
-double precision  function computdx(vec,n2,n3,l,i,j,k,dx)
+!###########################################################
+!###########################################################
+double precision function computdx(vec,n2,n3,l,i,j,k,dx)
 
    use amr_parameters,only:dp,nvector
    use hydro_parameters,only:iu1,iu2,ju1,ju2,ku1,ku2
@@ -964,13 +838,11 @@ double precision  function computdx(vec,n2,n3,l,i,j,k,dx)
    real(dp)::dx
    integer::n2,n3,l,i,j,k
 
-   computdx=(vec(l,i+1,j,k,n2,n3)-vec(l,i,j,k,n2,n3))/dx
+   computdx = (vec(l,i+1,j,k,n2,n3) - vec(l,i,j,k,n2,n3)) / dx
 
 end function computdx
-!###########################################################
-!###########################################################
-!###########################################################
-double precision  function computdy(vec,n2,n3,l,i,j,k,dx)
+
+double precision function computdy(vec,n2,n3,l,i,j,k,dx)
 
    use amr_parameters,only:dp,nvector
    use hydro_parameters,only:iu1,iu2,ju1,ju2,ku1,ku2
@@ -979,13 +851,11 @@ double precision  function computdy(vec,n2,n3,l,i,j,k,dx)
    real(dp)::dx
    integer::n2,n3,l,i,j,k
 
-   computdy=(vec(l,i,j+1,k,n2,n3)-vec(l,i,j,k,n2,n3))/dx
+   computdy = (vec(l,i,j+1,k,n2,n3) - vec(l,i,j,k,n2,n3)) / dx
 
 end function computdy
-!###########################################################
-!###########################################################
-!###########################################################
-double precision  function computdz(vec,n2,n3,l,i,j,k,dx)
+
+double precision function computdz(vec,n2,n3,l,i,j,k,dx)
 
    use amr_parameters,only:dp,nvector
    use hydro_parameters,only:iu1,iu2,ju1,ju2,ku1,ku2
@@ -994,13 +864,11 @@ double precision  function computdz(vec,n2,n3,l,i,j,k,dx)
    real(dp)::dx
    integer::n2,n3,l,i,j,k
 
-   computdz=(vec(l,i,j,k+1,n2,n3)-vec(l,i,j,k,n2,n3))/dx
+   computdz = (vec(l,i,j,k+1,n2,n3) - vec(l,i,j,k,n2,n3)) / dx
 
 end function computdz
 !###########################################################
-!###########################################################
-!###########################################################
-double precision  function computdxbis(vec,n2,l,i,j,k,dx)
+double precision function computdxbis(vec,n2,l,i,j,k,dx)
 
    use amr_parameters,only:dp,nvector
    use hydro_parameters,only:iu1,iu2,ju1,ju2,ku1,ku2
@@ -1009,12 +877,10 @@ double precision  function computdxbis(vec,n2,l,i,j,k,dx)
    real(dp)::dx
    integer::n2,l,i,j,k
 
-   computdxbis=(vec(l,i+1,j,k,n2)-vec(l,i,j,k,n2))/dx
+   computdxbis = (vec(l,i+1,j,k,n2) - vec(l,i,j,k,n2)) / dx
 
 end function computdxbis
-!###########################################################
-!###########################################################
-!###########################################################
+
 double precision  function computdybis(vec,n2,l,i,j,k,dx)
 
    use amr_parameters,only:dp,nvector
@@ -1024,12 +890,10 @@ double precision  function computdybis(vec,n2,l,i,j,k,dx)
    real(dp)::dx
    integer::n2,l,i,j,k
 
-   computdybis=(vec(l,i,j+1,k,n2)-vec(l,i,j,k,n2))/dx
+   computdybis=(vec(l,i,j+1,k,n2) - vec(l,i,j,k,n2)) / dx
 
 end function computdybis
-!###########################################################
-!###########################################################
-!###########################################################
+
 double precision  function computdzbis(vec,n2,l,i,j,k,dx)
 
    use amr_parameters,only:dp,nvector
@@ -1039,9 +903,100 @@ double precision  function computdzbis(vec,n2,l,i,j,k,dx)
    real(dp)::dx
    integer::n2,l,i,j,k
 
-   computdzbis=(vec(l,i,j,k+1,n2)-vec(l,i,j,k,n2))/dx
+   computdzbis = (vec(l,i,j,k+1,n2) - vec(l,i,j,k,n2)) / dx
 
 end function computdzbis
+!###########################################################
+subroutine crossprodbis(vec1,vec2,v1crossv2,l,i,j,k)
+
+   use amr_parameters,only:dp,nvector
+   use hydro_parameters,only:iu1,iu2,ju1,ju2,ku1,ku2
+   implicit none
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3,1:3)::vec1,vec2,v1crossv2
+   integer ::l,i,j,k 
+
+   real(dp)::v1x,v1y,v1z,v2x,v2y,v2z,crossprodx,crossprody,crossprodz
+
+   integer::n
+
+   do n=1,3
+      v1x=vec1(l,i,j,k,1,n)
+      v1y=vec1(l,i,j,k,2,n)
+      v1z=vec1(l,i,j,k,3,n)
+      
+      v2x=vec2(l,i,j,k,1,n)
+      v2y=vec2(l,i,j,k,2,n)
+      v2z=vec2(l,i,j,k,3,n)
+      
+      v1crossv2(l,i,j,k,1,n)=crossprodx(v1x,v1y,v1z,v2x,v2y,v2z)
+      v1crossv2(l,i,j,k,2,n)=crossprody(v1x,v1y,v1z,v2x,v2y,v2z)
+      v1crossv2(l,i,j,k,3,n)=crossprodz(v1x,v1y,v1z,v2x,v2y,v2z)
+   end do
+
+end subroutine crossprodbis
+
+subroutine crossprod(vec1,vec2,v1crossv2,l,i,j,k)
+
+   use amr_parameters,only:dp,nvector
+   use hydro_parameters,only:iu1,iu2,ju1,ju2,ku1,ku2
+   implicit none
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::vec1,vec2,v1crossv2
+   integer ::l,i,j,k 
+
+   real(dp)::v1x,v1y,v1z,v2x,v2y,v2z,crossprodx,crossprody,crossprodz
+
+   v1x=vec1(l,i,j,k,1)
+   v1y=vec1(l,i,j,k,2)
+   v1z=vec1(l,i,j,k,3)
+
+   v2x=vec2(l,i,j,k,1)
+   v2y=vec2(l,i,j,k,2)
+   v2z=vec2(l,i,j,k,3)
+
+   v1crossv2(l,i,j,k,1)=crossprodx(v1x,v1y,v1z,v2x,v2y,v2z)
+   v1crossv2(l,i,j,k,2)=crossprody(v1x,v1y,v1z,v2x,v2y,v2z)
+   v1crossv2(l,i,j,k,3)=crossprodz(v1x,v1y,v1z,v2x,v2y,v2z)
+
+end subroutine crossprod
+!###########################################################
+double precision function  crossprodx(v1x,v1y,v1z,v2x,v2y,v2z)
+
+   ! x component of a cross product
+   use amr_parameters,only:dp
+   implicit none
+   real(dp)::v1x,v1y,v1z,v2x,v2y,v2z
+
+   crossprodx=v1y*v2z-v1z*v2y
+
+end function crossprodx
+
+double precision function crossprody(v1x,v1y,v1z,v2x,v2y,v2z)
+
+   ! y component of a cross product
+   use amr_parameters,only:dp
+   implicit none
+   real(dp)::v1x,v1y,v1z,v2x,v2y,v2z
+
+   crossprody=v1z*v2x-v1x*v2z
+
+end function crossprody
+
+double precision function crossprodz(v1x,v1y,v1z,v2x,v2y,v2z)
+
+   ! z component of a cross product
+   use amr_parameters,only:dp
+   implicit none
+   real(dp)::v1x,v1y,v1z,v2x,v2y,v2z
+
+   crossprodz=v1x*v2y-v2x*v1y
+
+end function crossprodz
+!###########################################################
+!###########################################################
+!###########################################################
+
+! NIMHD COEFFICIENTS
+
 !###########################################################
 !###########################################################
 !###########################################################
@@ -1064,45 +1019,40 @@ double precision function gammaadbis(rhon,BBcell,BBcellold,temper,ionisrate)
    ! see Duffin & Pudritz 2008, astro-ph 08/10/08 eq (6)
    ! WARNING no mu_0 needed here
 
-   n_H_max = 2.5d+17
+   n_H_max = 2.5d+17 !H/cc
+   ! TC: Why this value?
 
    ! C shock Duffin et Pudritz
    ! gammaadbis in CGS
    !gammaadbis=gammaAD
 
+   ! TC: what is xmolaire? Why is it constant to 2? Because molecular hydrogen?
    !rhoH=rhon*xmolaire*H2_fraction*scale_d/(mu_gas*mH) ! convert in H/cc
    rhoH=rhon*2.0d0*H2_fraction*scale_d/(mu_gas*mH) ! convert in H/cc
+   rhoH = max(rhoH, n_H_max)
 
-   if(rhoH < n_H_max)then
-      gammaadbis=eta_AD_chimie(rhoH,BBcell,BBcellold,temper,ionisrate)
-   else
-      gammaadbis=eta_AD_chimie(n_H_max,BBcell,BBcellold,temper,ionisrate)
-   endif
+   gammaadbis=eta_AD_chimie(rhoH,BBcell,BBcellold,temper,ionisrate)
 
    gammaadbis=gammaadbis*scale_t*scale_d ! in code units
-
-   ! test
-   !gammaadbis=gammaAD
 
 end function gammaadbis
 !###########################################################
 !###########################################################
 !###########################################################
+! TC: for resistivity table?
 subroutine sig_x2d(ll,ii,j,k,lb,ib,sigO,sigH,sigP,bsquare)
 
    use amr_parameters,    only : dp
    use nimhd_commons
    use nimhd_parameters
-
-   use amr_commons, only : myid
    implicit none
 
    integer, intent(in)             :: j,k,ib
+   real(dp), intent(in)            :: ll,ii,lb,bsquare
+   real(dp), intent(out)           :: sigO,sigH,sigP
    real(dp)                        :: B,nH,temper,sigav
    real(dp)                        :: j_dp,k_dp,b_dp
    real(dp), dimension(nvarchimie) :: x
-   real(dp), intent(in)            :: ll,ii,lb,bsquare
-   real(dp), intent(out)           :: sigO,sigH,sigP
    integer                         :: i,kk
 
    j_dp = real(j,dp)
@@ -1130,30 +1080,26 @@ subroutine sig_x2d(ll,ii,j,k,lb,ib,sigO,sigH,sigP,bsquare)
    sigav = sum(resistivite_chimie(0,j:j+1,kk:kk+1,ib:ib+1,1)) / 8.0d0
    if(sigav .ne. resistivite_chimie(0,j,kk,ib,1))then
       sigH = 0.0_dp
-      !if(myid==1) write(*,*)'Sign inversion in Hall resistivity'
    endif
-
-   return
 
 end subroutine sig_x2d
 !###########################################################
 !###########################################################
 !###########################################################
+! TC: for resistivity table?
 subroutine sig_x3d(ll,ii,xx,j,k,xi,lb,ib,sigO,sigH,sigP,bsquare)
 
    use amr_parameters,    only : dp
    use nimhd_commons
    use nimhd_parameters
-
-   use amr_commons, only : myid
    implicit none
 
    integer, intent(in)             :: j,k,xi,ib
+   real(dp), intent(in)            :: ll,ii,xx,lb,bsquare
+   real(dp), intent(out)           :: sigO,sigH,sigP
    real(dp)                        :: B,nH,temper,sigav
    real(dp)                        :: j_dp,k_dp,xi_dp,b_dp
    real(dp), dimension(0:3)        :: x
-   real(dp), intent(in)            :: ll,ii,xx,lb,bsquare
-   real(dp), intent(out)           :: sigO,sigH,sigP
    integer                         :: i,kk
 
    j_dp = real(j,dp)
@@ -1191,15 +1137,13 @@ subroutine sig_x3d(ll,ii,xx,j,k,xi,lb,ib,sigO,sigH,sigP,bsquare)
    sigav = sum(resistivite_chimie(0,j:j+1,kk:kk+1,xi:xi+1,ib:ib+1)) / 16.0d0
    if(sigav .ne. resistivite_chimie(0,j,kk,xi,ib))then
       sigH = 0.0_dp
-      !if(myid==1) write(*,*)'Sign inversion in Hall resistivity'
    endif
-
-   return
 
 end subroutine sig_x3d
 !###########################################################
 !###########################################################
 !###########################################################
+! TC: eta_AD_chimie and eta_ohm_chimie contain a lot of duplicate code
 double precision function eta_AD_chimie(rhon,BBcell,BBcellold,temper,ionisrate)
 
    use hydro_commons
@@ -1208,67 +1152,48 @@ double precision function eta_AD_chimie(rhon,BBcell,BBcellold,temper,ionisrate)
    use nimhd_parameters
    implicit none
 
-   real(dp)     :: sigO,sigH,sigP,densionbis,BBcgs, bbcell,BBcellold
+   real(dp):: sigO,sigH,sigP,densionbis,BBcgs, bbcell,BBcellold
    real(dp)::inp,ll,rhon,ii,temper,lb,j_dp,xx
    integer :: i,j,k,ib
-   logical :: notfound
    real(dp)::ionisrate
 
    real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
    call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
 
    if(use_res==1)then
-      inp=rhon
-      ll=(1d0+(log10(inp)-log10(nminchimie))/dnchimie)
+      ll=(1d0+(log10(rhon)-log10(nminchimie))/dnchimie)
       j=floor(ll)
       j_dp=real(j,dp)
-      !ll=(1d0+(log10(inp)-log10(300d0))/(17d0/35d0))
-      !j=dble(floor(ll))
       eta_AD_chimie=(ll-j_dp)*log10(resistivite_chimie_res(6,j+1))+(1d0-(ll-j_dp))*log10(resistivite_chimie_res(6,j))
       eta_AD_chimie=10**eta_AD_chimie
-      !print*, rhon,temper,eta_AD_chimie
-      !print*, eta_AD_chimie, inp,(1.43d-7*sqrt(inp))**2
-      !stop
+
+   ! TC: extrapolate from table[density,temperature,magnetic field] ?
    else if(use_x2d==1)then
-      inp=rhon
-      ll=(1d0+(log10(inp)-log10(nminchimie))/dnchimie)
+      ll=(1d0+(log10(rhon)-log10(nminchimie))/dnchimie)
       j=floor(ll)
-      inp=temper
-      ii=(1d0+(log10(inp)-log10(tminchimie))/dtchimie)
+      ii=(1d0+(log10(temper)-log10(tminchimie))/dtchimie)
       ii=max(ii,1.0d0)
-      !ii=(1d0+(log10(inp)-log10(5d0))/(3d0/50d0))
       i=floor(ii)
       BBcgs=sqrt(BBcellold*(4d0*pi*scale_d*(scale_v)**2))
-      !!$   bbcgs=1.43d-7*sqrt(rhon/2d0/H2_fraction)
-      !!$   print*, bbcgs, sqrt(BBcellold*(4d0*pi*scale_d*(scale_v)**2)),rhon
-      inp=BBcgs
-      lb=(1d0+(log10(inp)-log10(bminchimie))/dbchimie)
+      lb=(1d0+(log10(BBcgs)-log10(bminchimie))/dbchimie)
       ib=floor(lb)
 
       call sig_x2d(ll,ii,j,i,lb,ib,sigO,sigH,sigP,BBcgs) 
       !inp=rhon/xmolaire/H2_fraction     ! inp is neutrals.cc, to fit densionbis
       inp=rhon/2d0/H2_fraction     ! inp is neutrals.cc, to fit densionbis
       eta_AD_chimie=(sigO/(sigO**2+sigH**2)-1d0/sigP)   ! resistivity in s
-      !print*,   eta_AD_chimie,inp*xmolaire*H2_fraction,BBcgs,inp,densionbis(inp),scale_d
-      !print*, eta_AD_chimie,inp*xmolaire*H2_fraction,BBcgs
 
       BBcgs=sqrt(BBcell*(4d0*pi*scale_d*(scale_v)**2))
-      !!$   (eta_AD_chimie = max(eta_AD_chimie * (1.0d0-tanh(ii/(dble(tchimie))), 1d-36)
-
       eta_AD_chimie=BBcgs**2/(eta_AD_chimie*densionbis(inp)*inp*scale_d*scale_d*c_cgs**2)  ! need B in G, output is gammaad in cgs
 
+   ! TC: extrapolate from table[density,temperature,ionisation rate,magnetic field] ?
    else if(use_x3d==1)then
       ll=(1d0+(log10(rhon)-log10(nminchimie))/dnchimie)
       j=floor(ll)
-      !ii=(1d0+(log10(temper)-log10(tminchimie))/dtchimie)
-      !    ii=max(ii,1.0d0)
-      !i=floor(ii)
       ii = max(0d0, (log10(temper)-log10(tminchimie))/dtchimie)
       i=floor(1d0+ii)
-
       xx=(1d0+(log10(ionisrate)-log10(ximinchimie))/dxichimie)
       k=floor(xx)
-
       BBcgs=sqrt(BBcellold*(4d0*pi*scale_d*(scale_v)**2))
       lb=(1d0+(log10(BBcgs)-log10(bminchimie))/dbchimie)
       ib=floor(lb)
@@ -1312,28 +1237,30 @@ double precision function eta_ohm_chimie(rhon,BBcell,temper,ionisrate)
    call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
 
    if(use_res==1)then
-      inp=rhon
-      ll=(1d0+(log10(inp)-log10(nminchimie))/dnchimie)
+      ll=(1d0+(log10(rhon)-log10(nminchimie))/dnchimie)
       j=floor(ll)
       j_dp=real(j,dp)
+      ! TC: the only difference between this and eta_AD_chimie is index 7 versus 6...
       eta_ohm_chimie=(ll-j_dp)*log10(resistivite_chimie_res(7,j+1))+(1d0-(ll-j_dp))*log10(resistivite_chimie_res(7,j))
       eta_ohm_chimie=10.0d0**eta_ohm_chimie
+      ! TC: Is this another ad-hac modif to make it go to 0?
       eta_ohm_chimie = max(eta_ohm_chimie * (1.0d0-tanh(rhon/1.0d15)), 1d-36)
+
+   ! TC: extrapolate from table[density,temperature,magnetic field] ?
    else if(use_x2d==1)then
-      inp=rhon
-      ll=(1d0+(log10(inp)-log10(nminchimie))/dnchimie)
+      ll=(1d0+(log10(rhon)-log10(nminchimie))/dnchimie)
       j=floor(ll)
-      inp=temper
-      ii=(1d0+(log10(inp)-log10(tminchimie))/dtchimie)
+      ii=(1d0+(log10(temper)-log10(tminchimie))/dtchimie)
       ii=max(ii,1.0d0)
       i=floor(ii)
       BBcgs=sqrt(BBcell*(4d0*pi*scale_d*(scale_v)**2))
-      inp=BBcgs
-      lb=(1d0+(log10(inp)-log10(bminchimie))/dbchimie)
+      lb=(1d0+(log10(BBcgs)-log10(bminchimie))/dbchimie)
       ib=floor(lb)
+
       call sig_x2d(ll,ii,j,i,lb,ib,sigO,sigH,sigP,BBcgs)
       eta_ohm_chimie = (1d0 / sigP) * c_cgs * c_cgs / (4.0_dp*pi)
       eta_ohm_chimie = max(eta_ohm_chimie * (1.0d0-tanh(rhon/1.0d15)), 1d-36)
+
    else if(use_x3d==1)then
       ll=(1d0+(log10(rhon)-log10(nminchimie))/dnchimie)
       j=floor(ll)
@@ -1344,8 +1271,10 @@ double precision function eta_ohm_chimie(rhon,BBcell,temper,ionisrate)
       BBcgs=sqrt(BBcell*(4d0*pi*scale_d*(scale_v)**2))
       lb=(1d0+(log10(BBcgs)-log10(bminchimie))/dbchimie)
       ib=floor(lb)
+
       call sig_x3d(ll,ii,xx,j,i,k,lb,ib,sigO,sigH,sigP,BBcgs)
       eta_ohm_chimie = (1d0 / sigP) * c_cgs * c_cgs / (4.0_dp*pi)
+      ! TC: why don't we do the adhoc thing here?
    endif
 
    ! Ad-hoc modification to ensure that the ohmic resistivity falls to zero when the density exceeds 1.0e15
@@ -1394,152 +1323,6 @@ double precision function densionbis(rhon)
    endif
 
 end function densionbis
-!###########################################################
-!###########################################################
-!###########################################################
-double precision function computdxvx(vec,l,i,j,k,dx,dy,dz)
-
-   use amr_parameters,only:dp,nvector
-   use hydro_parameters,only:iu1,iu2,ju1,ju2,ku1,ku2
-   use nimhd_parameters
-   implicit none
-   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::vec
-   integer l,i,j,k
-   real(dp)::dx,dy,dz
-
-   computdxvx=(vec(l,i+1,j,k,nxx)-vec(l,i,j,k,nxx))/dx 
-
-end function computdxvx
-!###########################################################
-!###########################################################
-!###########################################################
-double precision function computdyvy(vec,l,i,j,k,dx,dy,dz)
-
-   use amr_parameters,only:dp,nvector
-   use hydro_parameters,only:iu1,iu2,ju1,ju2,ku1,ku2
-   use nimhd_parameters
-   implicit none
-   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::vec
-   integer l,i,j,k
-   real(dp)::dx,dy,dz
-
-   computdyvy=(vec(l,i,j+1,k,nyy)-vec(l,i,j,k,nyy))/dy 
-
-end function computdyvy
-!###########################################################
-!###########################################################
-!###########################################################
-double precision function computdzvz(vec,l,i,j,k,dx,dy,dz)
-
-   use amr_parameters,only:dp,nvector
-   use hydro_parameters,only:iu1,iu2,ju1,ju2,ku1,ku2
-   use nimhd_parameters
-   implicit none
-   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::vec
-   integer l,i,j,k
-   real(dp)::dx,dy,dz
-
-   computdzvz=(vec(l,i,j,k+1,nzz)-vec(l,i,j,k,nzz))/dz
-
-end function computdzvz
-!###########################################################
-!###########################################################
-!###########################################################
-subroutine crossprodbis(vec1,vec2,v1crossv2,l,i,j,k)
-
-   use amr_parameters,only:dp,nvector
-   use hydro_parameters,only:iu1,iu2,ju1,ju2,ku1,ku2
-   implicit none
-   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3,1:3)::vec1,vec2,v1crossv2
-   integer ::l,i,j,k 
-
-   real(dp)::v1x,v1y,v1z,v2x,v2y,v2z,crossprodx,crossprody,crossprodz
-
-   integer::n
-
-   do n=1,3
-      v1x=vec1(l,i,j,k,1,n)
-      v1y=vec1(l,i,j,k,2,n)
-      v1z=vec1(l,i,j,k,3,n)
-      
-      v2x=vec2(l,i,j,k,1,n)
-      v2y=vec2(l,i,j,k,2,n)
-      v2z=vec2(l,i,j,k,3,n)
-      
-      v1crossv2(l,i,j,k,1,n)=crossprodx(v1x,v1y,v1z,v2x,v2y,v2z)
-      v1crossv2(l,i,j,k,2,n)=crossprody(v1x,v1y,v1z,v2x,v2y,v2z)
-      v1crossv2(l,i,j,k,3,n)=crossprodz(v1x,v1y,v1z,v2x,v2y,v2z)
-   end do
-
-end subroutine crossprodbis
-!###########################################################
-!###########################################################
-!###########################################################
-subroutine crossprod(vec1,vec2,v1crossv2,l,i,j,k)
-
-   use amr_parameters,only:dp,nvector
-   use hydro_parameters,only:iu1,iu2,ju1,ju2,ku1,ku2
-   implicit none
-   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::vec1,vec2,v1crossv2
-   integer ::l,i,j,k 
-
-   real(dp)::v1x,v1y,v1z,v2x,v2y,v2z,crossprodx,crossprody,crossprodz
-
-   v1x=vec1(l,i,j,k,1)
-   v1y=vec1(l,i,j,k,2)
-   v1z=vec1(l,i,j,k,3)
-
-   v2x=vec2(l,i,j,k,1)
-   v2y=vec2(l,i,j,k,2)
-   v2z=vec2(l,i,j,k,3)
-
-   v1crossv2(l,i,j,k,1)=crossprodx(v1x,v1y,v1z,v2x,v2y,v2z)
-   v1crossv2(l,i,j,k,2)=crossprody(v1x,v1y,v1z,v2x,v2y,v2z)
-   v1crossv2(l,i,j,k,3)=crossprodz(v1x,v1y,v1z,v2x,v2y,v2z)
-
-end subroutine crossprod
-!###########################################################
-!###########################################################
-!###########################################################
-double precision function  crossprodx(v1x,v1y,v1z,v2x,v2y,v2z)
-
-   ! function which gives the x component of a cross product of two
-   ! vectors of coordinates v1x,v1y,v1z,v2x,v2y,v2z
-   use amr_parameters,only:dp
-   implicit none
-   real(dp)::v1x,v1y,v1z,v2x,v2y,v2z
-
-   crossprodx=v1y*v2z-v1z*v2y
-
-end function crossprodx
-!###########################################################
-!###########################################################
-!###########################################################
-double precision function crossprody(v1x,v1y,v1z,v2x,v2y,v2z)
-
-   ! function which gives the y component of a cross product of two
-   ! vectors of coordinates v1x,v1y,v1z,v2x,v2y,v2z
-   use amr_parameters,only:dp
-   implicit none
-   real(dp)::v1x,v1y,v1z,v2x,v2y,v2z
-
-   crossprody=v1z*v2x-v1x*v2z
-
-end function crossprody
-!###########################################################
-!###########################################################
-!###########################################################
-double precision function crossprodz(v1x,v1y,v1z,v2x,v2y,v2z)
-
-   ! function which gives the z component of a cross product of two
-   ! vectors of coordinates v1x,v1y,v1z,v2x,v2y,v2z
-   use amr_parameters,only:dp
-   implicit none
-   real(dp)::v1x,v1y,v1z,v2x,v2y,v2z
-
-   crossprodz=v1x*v2y-v2x*v1y
-
-end function crossprodz
 !###########################################################
 !###########################################################
 !###########################################################
@@ -1637,10 +1420,11 @@ double precision function etaohmdissbricolo(rhon,BBcell,temper,dtlim,dx,ionisrat
    real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
    call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
 
+   ! function which computes the coefficient eta which
+   ! appears in ohmic dissipation dB/dt=-curl(eta*curl(B))+...
+   ! see Machida, Inutsuka, Matsumoto, ApJ, 670,1198-1213, 2007
+
    if(ntestDADM.eq.0) then
-      ! function which computes the coefficient eta which
-      ! appears in ohmic dissipation dB/dt=-curl(eta*curl(B))+...
-      ! see Machida, Inutsuka, Matsumoto, ApJ, 670,1198-1213, 2007
 
       n_H_max = 2.5d+17
 
@@ -1682,13 +1466,13 @@ double precision function etaohmdissbricolo(rhon,BBcell,temper,dtlim,dx,ionisrat
 
       etaohmdissbricolo=etaohmdissbricolo*scale_t/(scale_l)**2
 
+      ! TC: this subroutine is exactly the same as etaohmdiss except for the following part...
       ! robbery to avoid too small time step
       if(nminitimestep.eq.1) then
          if(dtlim.ne.0d0) then
             xx=etaohmdissbricolo
             if(xx.ne.0d0) then
             dtt=coefohm*dx*dx/xx   !dtohm pour la cellule
-         !    if (myid ==1) print*, dtt,bsquare,betaadbricolo,betaadbricolotemp
             else
                dtt=1d39
             endif
@@ -1697,8 +1481,6 @@ double precision function etaohmdissbricolo(rhon,BBcell,temper,dtlim,dx,ionisrat
             endif
          endif
       endif
-      
-   !   etaohmdissbricolo=etaohmdissbricolo*scale_t/(scale_l)**2
 
    elseif(ntestDADM.eq.1) then
       ! test Alfven Lessaffre
@@ -1723,45 +1505,38 @@ double precision function betaad(rhon,bsquare,temper,ionisrate)
    use nimhd_parameters
    implicit none
 
-   real(dp) ::rhon,rhotemp,bsquare,temper
+   ! rhon in code units
+   real(dp)::rhon,rhotemp,bsquare,temper
    real(dp)::gammaadbis,densionbis,ionisrate
    real(dp)::xx
 
+   ! function which computes the coefficient beta which
+   ! appears in ambipolar diffusion dB/dt=curl(gamma(j*B)*B)+...
+   ! see Duffin & Pudritz 2008, astro-ph 08/10/08 eq (5)
+   ! WARNING no mu_0 needed here because F_Lorentz used
+
    if(ntestDADM.eq.0) then
-      ! function which computes the coefficient beta which
-      ! appears in ambipolar diffusion dB/dt=curl(gamma(j*B)*B)+...
-      ! see Duffin & Pudritz 2008, astro-ph 08/10/08 eq (5)
-      ! WARNING no mu_0 needed here because F_Lorentz used
 
-      ! Warning gammaadbis and densionbis already in user units
-      ! but NOT rhon/xmneutre
-
-      !betaad=1.4d0/(gammaadbis(rhon)*densionbis(rhon)*rhon/xmneutre )
-      ! no xmneutre for Duffin and Pudritz
-
+      ! Warning gammaadbis and densionbis already in code units
       rhotemp = MAX(rhon,rho_threshold)
+      ! TC: rho_threshold is a units disaster waiting to happen
 
-      !xx=gammaadbis(rhotemp,bsquare,temper)*densionbis(rhon)*rhon
       xx=gammaadbis(rhotemp,bsquare,bsquare,temper,ionisrate)*densionbis(rhotemp)*rhotemp
-      !xx=gammaadbis(rhotemp)*densionbis(rhotemp)*rhotemp
       if(xx.ne.0d0) then
          betaad=1d0/xx 
       else
          betaad=1d39
          if(rhotemp < 1.0d+14)then
+         !TC: hard coded value in code units (not good)
             write(*,*)'WARNING gammaadbis(rhotemp,bsquare,temper,ionisrate)*densionbis(rhon)*rhon equal 0',gammaadbis(rhotemp,bsquare,bsquare,temper,ionisrate),densionbis(rhotemp),rhotemp
          endif
       endif
 
-      ! Barenblatt
-      !betaad=1d0
-
    elseif(ntestDADM.eq.1) then
       ! test Barenblatt
-      !betaadbricolo=1d0
+      !betaad=1d0
       ! test C shock
-         betaad=1d0/(gammaAD*rhon)
-      !betaadbricolo=0d0
+      betaad=1d0/(gammaAD*rhon)
    endif
 
    !rhon, gammaadbis(rhon) and densionbis(rhon) already in user units
@@ -1785,26 +1560,18 @@ double precision function betaadbricolo(rhocelln,rhon,dtlim,bsquare,bsquareold,d
    real(dp)::gammaadbis,densionbis,rhotemp,rhotemp_cell,ionisrate
    real(dp)::xx,dtt,bbcgs
 
-   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
-   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
+   ! function which computes the coefficient beta which
+   ! appears in ambipolar diffusion dB/dt=curl(gamma(j*B)*B)+...
+   ! see Duffin & Pudritz 2008, astro-ph 08/10/08 eq (5)
+   ! WARNING no mu_0 needed here because F_Lorentz used
 
    if(ntestDADM.eq.0) then
-      ! function which computes the coefficient beta which
-      ! appears in ambipolar diffusion dB/dt=curl(gamma(j*B)*B)+...
-      ! see Duffin & Pudritz 2008, astro-ph 08/10/08 eq (5)
-      ! WARNING no mu_0 needed here because F_Lorentz used
-
-      ! Warning gammaadbis and densionbis already in user units
-      ! but NOT rhon/xmneutre
-
-      !betaad=1.4d0/(gammaadbis(rhon)*densionbis(rhon)*rhon/xmneutre )
-      ! no xmneutre for Duffin and Pudritz
 
       rhotemp = MAX(rhon,rho_threshold)
       rhotemp_cell = MAX(rhocelln,rho_threshold)
 
-      !xx=gammaadbis(rhotemp_cell,bsquare,temper)*densionbis(rhocelln)*rhocelln  ! dans la cellule
       xx=gammaadbis(rhotemp_cell,bsquare,bsquareold,temper,ionisrate)*densionbis(rhotemp_cell)*rhotemp_cell  ! dans la cellule
+      ! gammaadbis and densionbis already in user units
 
       if(xx.ne.0d0) then
          betaadbricolo=1d0/xx 
@@ -1834,7 +1601,7 @@ double precision function betaadbricolo(rhocelln,rhon,dtlim,bsquare,bsquareold,d
          if(dtlim.ne.0d0) then
             xx=bsquare*betaadbricolo
             if(xx.ne.0d0) then
-            dtt=coefad*dx*dx/xx   !dtAD pour la cellule
+               dtt=coefad*dx*dx/xx   !dtAD pour la cellule
             else
                dtt=1d39
             endif
@@ -1852,8 +1619,7 @@ double precision function betaadbricolo(rhocelln,rhon,dtlim,bsquare,bsquareold,d
       ! test Barenblatt
       !betaadbricolo=1d0
       ! test C shock
-         betaadbricolo=1d0/(gammaAD*rhon)
-      !betaadbricolo=0d0
+      betaadbricolo=1d0/(gammaAD*rhon)
    endif
 
 end function betaadbricolo
