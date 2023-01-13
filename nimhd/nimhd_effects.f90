@@ -331,7 +331,7 @@ subroutine computejb2(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
      end do
   end do
 
-  if(nambipolar.or.nhall) then
+  if(nambipolar) then
   ! EMF x
     do k=min(1,ku1+1),max(1,ku2-1)
        do j=min(1,ju1+1),max(1,ju2-1)
@@ -463,7 +463,7 @@ subroutine computejb2(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
 
   endif
 
-  if(nambipolar.or.nhall) then
+  if(nambipolar) then
      do k=min(1,ku1+1),max(1,ku2-1)
         do j=min(1,ju1+1),max(1,ju2-1)
            do i=min(1,iu1+1),max(1,iu2-1)
@@ -951,157 +951,6 @@ end SUBROUTINE computambip
 !########################################################################################
 !########################################################################################
 !########################################################################################
-#if HALL==1
-subroutine computvhall(q,dx,dy,dz,ngrid,bpred,rppred,vhall)
-  USE amr_parameters
-  use hydro_commons
-  use nimhd_parameters
-  USE const
-  implicit none
-  integer :: l,i,j,k,kk,m
-  integer :: imm1,jmm1,kmm1
-  integer :: ngrid
-  REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,3,3)::bpred
-  REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,2)::rppred
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q 
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:4,1:3)::vhall
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::bijbis
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::jx,jy,jz
-  real(dp) :: dx,dy,dz
-  real(dp) :: rhoedge,nrjedge,tedge,Bedge,bedge2
-  real(dp) :: eta,ionisrate
-  real(dp) :: eta_hall_chimie
-
-!!!!!!!!!!!!!!!!!!
-!
-! bijbis(l,i,j,k,n) is the value of the magnetic field component
-! Bn at i-1/2,j-1/2,k-1/2
-!
-!!!!!!!!!!!!!!!!!!
-
-do k=min(1,ku1+1),ku2
-     do j=min(1,ju1+1),ju2
-        do i=iu1,iu2
-           do l=1,ngrid
-              bijbis(l,i,j,k,1)=0.25d0*(bpred(l,i,j,k,1,1)+bpred(l,i,j-1,k,1,1)+bpred(l,i,j,k-1,1,1)+bpred(l,i,j-1,k-1,1,1))
-           end do
-        end do
-     end do
-  end do
-
-  ! case By for Lorentz force EMF 
-  do k=min(1,ku1+1),ku2
-     do j=ju1,ju2
-        do i=min(1,iu1+1),iu2
-           do l=1,ngrid
-              bijbis(l,i,j,k,2)=0.25d0*(bpred(l,i,j,k,2,2)+bpred(l,i-1,j,k,2,2)+bpred(l,i,j,k-1,2,2)+bpred(l,i-1,j,k-1,2,2))
-           end do
-        end do
-     end do
-  end do
- 
-  ! case Bz for Lorentz force EMF 
-  do k=ku1,ku2
-     do j=min(1,ju1+1),ju2
-        do i=min(1,iu1+1),iu2
-           
-           do l=1,ngrid
-
-              bijbis(l,i,j,k,3)=0.25d0*(bpred(l,i,j,k,3,3)+bpred(l,i,j-1,k,3,3)+bpred(l,i-1,j,k,3,3)+bpred(l,i-1,j-1,k,3,3))
- 
-           end do
-        end do
-     end do
-  end do
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!
-! computation of the component of j where EMFs are located
-! jemfx(l,i,j,k,n) is the component Jn at i,j-1/2,k-1/2
-!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-do k=min(1,ku1+1),max(1,ku2-1)
-     do j=min(1,ju1+1),max(1,ju2-1)
-        do i=min(1,iu1+1),max(1,iu2-1)
-           
-           do l=1,ngrid
-
-              jx(l,i,j,k,1)=(bpred(l,i,j,k,3,3)-bpred(l,i,j-1,k,3,3))/dy-(bpred(l,i,j,k,2,2)-bpred(l,i,j,k-1,2,2))/dz 
-              jx(l,i,j,k,2)=(bpred(l,i,j,k,2,1)-bpred(l,i,j,k-1,2,1))/dz- (bijbis(l,i+1,j,k,3)-bijbis(l,i,j,k,3))/dx
-              jx(l,i,j,k,3)=(bijbis(l,i+1,j,k,2) -bijbis(l,i,j,k,2))/dx- (bpred(l,i,j,k,3,1)-bpred(l,i,j-1,k,3,1))/dy
-
-              jy(l,i,j,k,1)=(bijbis(l,i,j+1,k,3)-bijbis(l,i,j,k,3))/dy-(bpred(l,i,j,k,1,2) - bpred(l,i,j,k-1,1,2) )/dz
-              jy(l,i,j,k,2)=(bpred(l,i,j,k,1,1)-bpred(l,i,j,k-1,1,1))/dz-(bpred(l,i,j,k,3,3)-bpred(l,i-1,j,k,3,3))/dx
-              jy(l,i,j,k,3)=(bpred(l,i,j,k,3,2)-bpred(l,i-1,j,k,3,2))/dx-(bijbis(l,i,j+1,k,1)-bijbis(l,i,j,k,1))/dy
-
-              jz(l,i,j,k,1)=(bpred(l,i,j,k,1,3) -bpred(l,i,j-1,k,1,3))/dy-(bijbis(l,i,j,k+1,2)-bijbis(l,i,j,k,2))/dz
-              jz(l,i,j,k,2)=( bijbis(l,i,j,k+1,1)-bijbis(l,i,j,k,1))/dz-(bpred(l,i,j,k,2,3)-bpred(l,i-1,j,k,2,3))/dx
-              jz(l,i,j,k,3)=(bpred(l,i,j,k,2,2)-bpred(l,i-1,j,k,2,2))/dx-(bpred(l,i,j,k,1,1)-bpred(l,i,j-1,k,1,1))/dy
-
-        end do
-     end do
-  end do
-end do
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-! vhall(l,i,j,k,1,n) is nth componement of vhall at i,j-1/2,k-1/2
-do k=min(1,ku1+1),max(1,ku2-1)
-  do j=min(1,ju1+1),max(1,ju2-1)
-    do i=min(1,iu1+1),max(1,iu2-1)
-        
-      do l=1,ngrid
-        if(nhall) then
-          do kk=1,3
-            if(kk==1) then
-              imm1=0
-              jmm1=1
-              kmm1=1
-              bedge=dsqrt(sum((0.25*(bpred(l,i,j,k,2,1:3)+bpred(l,i,j,k,3,1:3)+bpred(l,i,j-1,k,3,1:3)+bpred(l,i,j,k-1,2,1:3)))**2d0))
-            else if (kk==2) then
-              imm1=1
-              jmm1=0
-              kmm1=1
-              bedge=dsqrt(sum((0.25*(bpred(l,i,j,k,1,1:3)+bpred(l,i,j,k,3,1:3)+bpred(l,i-1,j,k,3,1:3)+bpred(l,i,j,k-1,1,1:3)))**2d0))
-            else
-              imm1=1
-              jmm1=1
-              kmm1=0
-              bedge=dsqrt(sum((0.25*(bpred(l,i,j,k,2,1:3)+bpred(l,i,j,k,1,1:3)+bpred(l,i,j-1,k,1,1:3)+bpred(l,i-1,j,k,2,1:3)))**2d0))
-            end if
-
-            ! rppred (l,i,j,k,1) is the density in the cell, and rppred(l,i,j,k,2) its pressure
-            rhoedge=0.25*(rppred(l,i,j,k,1)+rppred(l,i-imm1,j-jmm1,k,1)+rppred(l,i-imm1,j,k-kmm1,1)+rppred(l,i,j-jmm1,k-kmm1,1))
-            nrjedge=0.25*(rppred(l,i,j,k,2)+rppred(l,i-imm1,j-jmm1,k,2)+rppred(l,i-imm1,j,k-kmm1,2)+rppred(l,i,j-jmm1,k-kmm1,2))
-
-            ! We take non-updated ionisation rate !!
-            ionisrate=1d-17
-            bedge2=bedge*bedge
-            call ideal_gas_temperature(rhoedge, nrjedge, tedge)
-            eta=eta_hall_chimie(rhoedge,tedge,ionisrate,bedge2)/bedge
-
-            if (kk==1)  vhall(l,i,j,k,1,1:3)=jx(l,i,j,k,1:3)*eta
-            if (kk==2)  vhall(l,i,j,k,2,1:3)=jy(l,i,j,k,1:3)*eta
-            if (kk==3)  vhall(l,i,j,k,3,1:3)=jz(l,i,j,k,1:3)*eta
-            vhall(l,i,j,k,4,kk)=ionisrate
-           end do
-         else
-           vhall(l,i,j,k,:,:)=0d0
-         end if
-
-       end do
-     end do
-  end do
-end do
-
-end subroutine computvhall
-#endif
-!###########################################################
-!###########################################################
-!###########################################################
-!###########################################################
-!###########################################################
 
 ! fonctions de produits vectoriels et coef nimhd
 
@@ -1505,65 +1354,6 @@ double precision function eta_ohm_chimie(rhon,BBcell,temper,ionisrate)
    ! eta_ohm_chimie = max(eta_ohm_chimie * (1.0d0-tanh(rhon/1.0d15)), 1d-36)
 
 end function eta_ohm_chimie
-!###########################################################
-!###########################################################
-!###########################################################
-#if HALL==1
-double precision function eta_hall_chimie(rhon,temper,ionisrate,BBcell)
-
-   use hydro_commons
-   use constants
-   use nimhd_commons,ONLY:dtchimie,dnchimie,nminchimie,tminchimie,ximinchimie,&
-                     &dbchimie,bminchimie,nchimie,tchimie,dxichimie
-   use nimhd_parameters
-
-   implicit none
-
-   real(dp) :: inp,ll,ii,lb,rhon,BBcell
-   real(dp) :: temper,sigO,sigH,sigP,BBcgs
-   real(dp) :: j_dp,ionisrate,xx
-   integer  :: j,i,ib,k
-
-   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
-   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
-
-   if(ntestDADM==1) then
-      eta_hall_chimie=rhall
-   else
-      if(use_x2d==1)then
-         inp=rhon
-         ll=(1d0+(log10(inp)-log10(nminchimie))/dnchimie)
-         j=floor(ll)
-         inp=temper
-         ii=(1d0+(log10(inp)-log10(tminchimie))/dtchimie)
-         ii=max(ii,1.0d0)
-         i=floor(ii)
-         BBcgs=sqrt(BBcell*(4d0*pi*scale_d*(scale_v)**2))
-         inp=BBcgs
-         lb=(1d0+(log10(inp)-log10(bminchimie))/dbchimie)
-         ib=floor(lb)
-         call sig_x2d(ll,ii,j,i,lb,ib,sigO,sigH,sigP,BBcgs)
-         eta_hall_chimie=sigH/(sigO**2+sigH**2) 
-         eta_hall_chimie=eta_hall_chimie * c_cgs * c_cgs / (4.0_dp*pi)
-         eta_hall_chimie=eta_hall_chimie*scale_t/(scale_l*scale_l)
-      else if(use_x3d==1)then
-         ll=(1d0+(log10(rhon)-log10(nminchimie))/dnchimie)
-         j=floor(ll)
-         ii=(1d0+(log10(temper)-log10(tminchimie))/dtchimie)
-         i=floor(ii)   
-         xx=(1d0+(log10(ionisrate)-log10(ximinchimie))/dxichimie)
-         k=floor(xx)
-         BBcgs=sqrt(BBcell*(4d0*pi*scale_d*(scale_v)**2))
-         lb=(1d0+(log10(BBcgs)-log10(bminchimie))/dbchimie)
-         ib=floor(lb)
-         call sig_x3d(ll,ii,xx,j,i,k,lb,ib,sigO,sigH,sigP,BBcgs)
-         eta_hall_chimie=sigH/(sigO**2+sigH**2) 
-         eta_hall_chimie=eta_hall_chimie * c_cgs * c_cgs / (4.0_dp*pi)
-         eta_hall_chimie=eta_hall_chimie*scale_t/(scale_l*scale_l)
-      endif
-   endif
-end function eta_hall_chimie
-#endif
 !###########################################################
 !###########################################################
 !###########################################################

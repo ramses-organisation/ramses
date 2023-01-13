@@ -34,7 +34,6 @@ subroutine courant_fine(ilevel)
   real(dp)::dtwad_loc,dtwad_all
   real(dp)::dtambdiff_loc,dtambdiff_lev,dtambdiff_all
   real(dp)::dtmagdiff_loc,dtmagdiff_lev,dtmagdiff_all
-  real(dp)::dthall_loc,dthall_lev,dthall_all
   real(dp)::tmag1,tmag2
 #endif
 
@@ -52,7 +51,6 @@ subroutine courant_fine(ilevel)
   dtambdiff_all=dtambdiff(ilevel); dtambdiff_loc=dtambdiff_all
   dtmagdiff_all=dtmagdiff(ilevel); dtmagdiff_loc=dtmagdiff_all
   dtwad_all=dtwad(ilevel); dtwad_loc=dtwad_all
-  dthall_all=dthall(ilevel); dthall_loc=dthall_all
 #endif
 
   ! Mesh spacing at that level
@@ -159,13 +157,12 @@ subroutine courant_fine(ilevel)
         if(nleaf>0)then
 #ifdef NIMHD
            !needed
-           call cmpdt(uu,gg,dx,dt_lev,nleaf,dtambdiff_lev,dtmagdiff_lev,dthall_lev)
+           call cmpdt(uu,gg,dx,dt_lev,nleaf,dtambdiff_lev,dtmagdiff_lev)
            ! remove the nimhd effects from cmpdt and make a separate call cmpdt_nimhd
            ! then take the min
            dtambdiff_loc=min(dtambdiff_loc,dtambdiff_lev)
            dtmagdiff_loc=min(dtmagdiff_loc,dtmagdiff_lev)
            dtwad_loc=min(dtwad_loc,dt_lev)
-           dthall_loc=min(dthall_loc,dthall_lev)
 #else
            call cmpdt(uu,gg,dx,dt_lev,nleaf)
 #endif
@@ -195,8 +192,6 @@ subroutine courant_fine(ilevel)
        &MPI_COMM_WORLD,info)
   call MPI_ALLREDUCE(dtwad_loc    ,dtwad_all    ,1,MPI_DOUBLE_PRECISION,MPI_MIN,&
        &MPI_COMM_WORLD,info)
-  call MPI_ALLREDUCE(dthall_loc   ,dthall_all   ,1,MPI_DOUBLE_PRECISION,MPI_MIN,&
-       &MPI_COMM_WORLD,info)
 #endif
   mass_all=comm_buffout(1)
   ekin_all=comm_buffout(2)
@@ -213,7 +208,6 @@ subroutine courant_fine(ilevel)
   dtambdiff_all=dtambdiff_loc
   dtmagdiff_all=dtmagdiff_loc
   dtwad_all=dtwad_loc
-  dthall_all=dthall_loc
 #endif
 #endif
 
@@ -227,7 +221,6 @@ subroutine courant_fine(ilevel)
   dtambdiff(ilevel)=MIN(dtambdiff(ilevel), dtambdiff_all)
   dtmagdiff(ilevel)=MIN(dtmagdiff(ilevel), dtmagdiff_all)
   dtwad(ilevel)=MIN(dtwad(ilevel), dtwad_all) 
-  dthall(ilevel)=MIN(dthall(ilevel), dthall_all)
   
   tmag1 = 1.0e+30 ; tmag2 = 1.0e+30
   
@@ -237,11 +230,7 @@ subroutine courant_fine(ilevel)
      if (nminitimestep.eq.1) then
         ! alfven time alone maybe not correct
         ! comparison with global time step
-#if HALL==1
-        tmag1=max(dtambdiff(ilevel),min(dtwad(ilevel),dthall(ilevel))*coefalfven)
-#else
         tmag1=max(dtambdiff(ilevel),dtwad(ilevel)*coefalfven)
-#endif
      else
         tmag1=dtambdiff(ilevel)
      endif
@@ -251,11 +240,7 @@ subroutine courant_fine(ilevel)
      if (nminitimestep.eq.1) then
         ! alfven time alone maybe not correct
         ! comparison with global time step
-#if HALL==1
-        tmag2=max(dtmagdiff(ilevel),min(dtwad(ilevel),dthall(ilevel))*coefdtohm)
-#else
         tmag2=max(dtmagdiff(ilevel),dtwad(ilevel)*coefdtohm)
-#endif
      else
         tmag2=dtmagdiff(ilevel)
      endif
@@ -263,8 +248,6 @@ subroutine courant_fine(ilevel)
 
    dtnew(ilevel)=MIN(dtnew(ilevel),tmag1)
    dtnew(ilevel)=MIN(dtnew(ilevel),tmag2)
-   dtnew(ilevel)=MIN(dtnew(ilevel),dthall(ilevel))
-
 #endif
 
 111 format('   Entering courant_fine for level ',I2)

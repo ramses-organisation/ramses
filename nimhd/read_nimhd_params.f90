@@ -7,14 +7,14 @@ subroutine read_nimhd_params(nml_ok)
   ! Namelist definitions
   !--------------------------------------------------
   namelist/nonidealmhd_params/nambipolar,gammaAD &
-        & ,nmagdiffu,etaMD,nhall,rHall,ntestDADM,use_x3d &
+        & ,nmagdiffu,etaMD,ntestDADM,use_x3d &
         & ,coefad, nminitimestep, coefalfven,coefdtohm
 
   ! Checks on non-ideal MHD parameters
   rewind(1)
   read(1,NML=nonidealmhd_params,END=109)
 
-  if(nambipolar.or.nmagdiffu.or.nhall)then
+  if(nambipolar.or.nmagdiffu)then
     use_nonideal_mhd = .true.
   else
     use_nonideal_mhd = .false.
@@ -49,13 +49,6 @@ subroutine read_nimhd_params(nml_ok)
       write(*,*)'Magnetic diffusion switched OFF'
     endif
 
-    if(nhall)then
-      write(*,*)'Hall effect switched ON'
-      write(*,*)'Hall resistivity',rHall
-      write(*,*)'Hall effect time coefficient',coefhall
-    else
-      write(*,*)'Hall effect switched OFF'
-    endif
   endif
 
   call read_resistivities

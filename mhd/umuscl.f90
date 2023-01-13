@@ -111,11 +111,6 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),save::fluxmd,fluxh,fluxad
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),save::emfambdiff,fluxambdiff
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),save::emfohmdiss,fluxohm 
-#if HALL==1
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3,1:3),save:: bpred
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:2),save:: rppred
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:4,1:3),save::vhall
-#endif
   integer:: ntest
 #endif  
 
@@ -124,7 +119,6 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
   integer::ilo,ihi,jlo,jhi,klo,khi
 
 #ifdef NIMHD
-  ! modif nimhd
   bmagij=0d0
   emfambdiff=0d0
   fluxambdiff=0d0
@@ -134,11 +128,6 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
   fluxmd=0d0
   fluxh=0d0
   fluxad=0d0
-#if HALL==1
-  bpred=1d0
-  rppred=0d0
-  vhall=0d0
-#endif
   
   bemfx=0d0
   bemfy=0d0
@@ -151,8 +140,6 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
   florentzz=0d0
   
   jcell=0.0d0
- 
-  ! fin modif nimhd
 #endif
 
   ilo=MIN(1,iu1+2); ihi=MAX(1,iu2-2)
@@ -190,18 +177,7 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
      call trace2d(qin,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy   ,dt,ngrid)
 #endif
 #if NDIM==3
-#if HALL==1
-     call trace3d(qin,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid,bpred,rppred)
-#else
      call trace3d(qin,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
-#endif
-
-#ifdef NIMHD
-#if HALL==1
-     if(nhall) call computvhall(qin,dx,dy,dz,ngrid,bpred,rppred,vhall)
-#endif
-#endif
-
 #endif
 
   ! Solve for 1D flux in X direction
@@ -361,19 +337,11 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
 
 #if NDIM>1
   ! Solve for EMF in Z direction
-#if HALL==1
-  CALL cmp_mag_flx(qRT,iu1+1,iu2+1,ju1+1,ju2+1,ku1  ,ku2  , &
-       &           qRB,iu1+1,iu2+1,ju1  ,ju2  ,ku1  ,ku2  , &
-       &           qLT,iu1  ,iu2  ,ju1+1,ju2+1,ku1  ,ku2  , &
-       &           qLB,iu1  ,iu2  ,ju1  ,ju2  ,ku1  ,ku2  , &
-       &               if1  ,if2  ,jf1  ,jf2  ,klo  ,khi  , 2,3,4,6,7,8,emf,ngrid,dx,vhall)
-#else
   CALL cmp_mag_flx(qRT,iu1+1,iu2+1,ju1+1,ju2+1,ku1  ,ku2  , &
        &           qRB,iu1+1,iu2+1,ju1  ,ju2  ,ku1  ,ku2  , &
        &           qLT,iu1  ,iu2  ,ju1+1,ju2+1,ku1  ,ku2  , &
        &           qLB,iu1  ,iu2  ,ju1  ,ju2  ,ku1  ,ku2  , &
        &               if1  ,if2  ,jf1  ,jf2  ,klo  ,khi  , 2,3,4,6,7,8,emf,ngrid)
-#endif
  ! Save vector in output array
   do k=klo,khi
   do j=jf1,jf2
@@ -402,19 +370,11 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
 
 #if NDIM>2
   ! Solve for EMF in Y direction
-#if HALL==1
-  CALL cmp_mag_flx(qRT,iu1+1,iu2+1,ju1,ju2,ku1+1,ku2+1, &
-       &           qLT,iu1  ,iu2  ,ju1,ju2,ku1+1,ku2+1, &
-       &           qRB,iu1+1,iu2+1,ju1,ju2,ku1  ,ku2  , &
-       &           qLB,iu1  ,iu2  ,ju1,ju2,ku1  ,ku2  , &
-       &               if1  ,if2  ,jlo,jhi,kf1  ,kf2  , 4,2,3,8,6,7,emf,ngrid,dx,vhall)
-#else
   CALL cmp_mag_flx(qRT,iu1+1,iu2+1,ju1,ju2,ku1+1,ku2+1, &
        &           qLT,iu1  ,iu2  ,ju1,ju2,ku1+1,ku2+1, &
        &           qRB,iu1+1,iu2+1,ju1,ju2,ku1  ,ku2  , &
        &           qLB,iu1  ,iu2  ,ju1,ju2,ku1  ,ku2  , &
        &               if1  ,if2  ,jlo,jhi,kf1  ,kf2  , 4,2,3,8,6,7,emf,ngrid)
-#endif
   ! Save vector in output array
   do k=kf1,kf2
   do j=jlo,jhi
@@ -429,19 +389,11 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
   end do
   end do
   ! Solve for EMF in X direction
-#if HALL==1
-  CALL cmp_mag_flx(qRT,iu1,iu2,ju1+1,ju2+1,ku1+1,ku2+1, &
-       &           qRB,iu1,iu2,ju1+1,ju2+1,ku1  ,ku2  , &
-       &           qLT,iu1,iu2,ju1  ,ju2  ,ku1+1,ku2+1, &
-       &           qLB,iu1,iu2,ju1  ,ju2  ,ku1  ,ku2  , &
-       &               ilo,ihi,jf1  ,jf2  ,kf1  ,kf2  , 3,4,2,7,8,6,emf,ngrid,dx,vhall)
-#else
   CALL cmp_mag_flx(qRT,iu1,iu2,ju1+1,ju2+1,ku1+1,ku2+1, &
        &           qRB,iu1,iu2,ju1+1,ju2+1,ku1  ,ku2  , &
        &           qLT,iu1,iu2,ju1  ,ju2  ,ku1+1,ku2+1, &
        &           qLB,iu1,iu2,ju1  ,ju2  ,ku1  ,ku2  , &
        &               ilo,ihi,jf1  ,jf2  ,kf1  ,kf2  , 3,4,2,7,8,6,emf,ngrid)
-#endif
   ! Save vector in output array
   do k=kf1,kf2
   do j=jf1,jf2
@@ -969,12 +921,7 @@ END SUBROUTINE trace2d
 !###########################################################
 !###########################################################
 #if NDIM==3
-#if HALL==1
-SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid,bpred,rppred)
-  USE nimhd_parameters
-#else
 SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
-#endif
   USE amr_parameters
   USE hydro_parameters
   USE const
@@ -995,12 +942,6 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
   REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:3)::qRB
   REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:3)::qLT
   REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:3)::qLB
-#ifdef NIMHD
-#if HALL==1
-  REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,3,3)::bpred
-  REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,2)::rppred
-#endif
-#endif
 
   ! Declare local variables
   REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),save::Ex
@@ -1210,15 +1151,6 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
                  e(irad)=e(irad)+se0(irad)
               end do
 #endif
-
-#if HALL==1
-              ! Storage of predicted density and pressure for Hall effect
-              rppred(l,i,j,k,1)=r
-              rppred(l,i,j,k,2)=p
-              qp(l,i,j,k,:,:)=1d0
-              qm(l,i,j,k,:,:)=2d0
-#endif
-
               ! Face averaged right state at left interface
               qp(l,i,j,k,ir,1) = r - drx
               qp(l,i,j,k,iu,1) = u - dux
@@ -1541,30 +1473,6 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
   END DO
 #endif
 
-
-#if HALL==1
-! bpred(l,i,j,k,1,2) is the predicted state By at i-1/2,j,k
-  if(nhall) then
-    DO k = klo, khi
-       DO j = jlo, jhi
-          DO i = ilo, ihi
-             DO l = 1, ngrid
-               bpred(l,i,j,k,1,1)=0.5*(qp(l,i,j,k,iA,1)+qm(l,i-1,j,k,iA,1))
-               bpred(l,i,j,k,1,2)=0.5*(qp(l,i,j,k,iB,1)+qm(l,i-1,j,k,iB,1))
-               bpred(l,i,j,k,1,3)=0.5*(qp(l,i,j,k,iC,1)+qm(l,i-1,j,k,iC,1))
-               bpred(l,i,j,k,2,1)=0.5*(qp(l,i,j,k,iA,2)+qm(l,i,j-1,k,iA,2))
-               bpred(l,i,j,k,2,2)=0.5*(qp(l,i,j,k,iB,2)+qm(l,i,j-1,k,iB,2))
-               bpred(l,i,j,k,2,3)=0.5*(qp(l,i,j,k,iC,2)+qm(l,i,j-1,k,iC,2))
-               bpred(l,i,j,k,3,1)=0.5*(qp(l,i,j,k,iA,3)+qm(l,i,j,k-1,iA,3))
-               bpred(l,i,j,k,3,2)=0.5*(qp(l,i,j,k,iB,3)+qm(l,i,j,k-1,iB,3))
-               bpred(l,i,j,k,3,3)=0.5*(qp(l,i,j,k,iC,3)+qm(l,i,j,k-1,iC,3))
-             END DO
-          END DO
-       END DO
-    END DO
-  end if
-#endif
-
 END SUBROUTINE trace3d
 #endif
 !###########################################################
@@ -1591,7 +1499,7 @@ subroutine cmpflxm(qm,im1,im2,jm1,jm2,km1,km2, &
   real(dp),dimension(1:nvector,ip1:ip2,jp1:jp2,kp1:kp2,1:2)::tmp
 
   ! local variables
-  integer ::i, j, k, l, idim, xdim
+  integer ::i, j, k, l, xdim
   real(dp),dimension(1:nvar)::qleft,qright
   real(dp),dimension(1:nvar+1)::fgdnv
   real(dp)::zero_flux, bn_mean, entho
@@ -1719,21 +1627,12 @@ end subroutine cmpflxm
 !###########################################################
 !###########################################################
 !###########################################################
-#if HALL==1
-SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
-       &               qRB,irb1,irb2,jrb1,jrb2,krb1,krb2, &
-       &               qLT,ilt1,ilt2,jlt1,jlt2,klt1,klt2, &
-       &               qLB,ilb1,ilb2,jlb1,jlb2,klb1,klb2, &
-       &                   ilo ,ihi ,jlo ,jhi ,klo ,khi , &
-       &                   lp1 ,lp2 ,lor ,bp1 ,bp2 ,bor ,emf,ngrid,dx,vhall)
-#else
 SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
        &               qRB,irb1,irb2,jrb1,jrb2,krb1,krb2, &
        &               qLT,ilt1,ilt2,jlt1,jlt2,klt1,klt2, &
        &               qLB,ilb1,ilb2,jlb1,jlb2,klb1,klb2, &
        &                   ilo ,ihi ,jlo ,jhi ,klo ,khi , &
        &                   lp1 ,lp2 ,lor ,bp1 ,bp2 ,bor ,emf,ngrid)
-#endif
   ! 2D Riemann solver to compute EMF at cell edges
   USE amr_parameters
   USE hydro_parameters
@@ -1757,7 +1656,7 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
   REAL(dp),DIMENSION(1:nvector,ilb1:ilb2,jlb1:jlb2,klb1:klb2):: emf
 
   ! local variables
-  INTEGER ::i, j, k, n, l, idim, xdim, m
+  INTEGER ::i, j, k, l, xdim
   REAL(dp),DIMENSION(1:nvector,1:nvar)::qLL,qRL,qLR,qRR
   REAL(dp),DIMENSION(1:nvar)::qleft,qright,qtmp
   REAL(dp),DIMENSION(1:nvar+1)::fmean_x,fmean_y
@@ -1774,11 +1673,6 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
   REAL(dp) :: rstarLL,rstarLR,rstarRL,rstarRR,AstarLL,AstarLR,AstarRL,AstarRR,BstarLL,BstarLR,BstarRL,BstarRR
   REAL(dp) :: EstarLLx,EstarLRx,EstarRLx,EstarRRx,EstarLLy,EstarLRy,EstarRLy,EstarRRy,EstarLL,EstarLR,EstarRL,EstarRR
   REAL(dp) :: AstarT,AstarB,BstarR,BstarL
-#if HALL==1
-  REAL(dp),DIMENSION(1:nvector,ilb1:ilb2,jlb1:jlb2,klb1:klb2,1:4,1:3)::vhall
-  REAL(dp) :: qLL3tmp,qLR3tmp,qRL3tmp,qRR3tmp,qLL4tmp,qLR4tmp,qRL4tmp,qRR4tmp
-  real(dp) :: dx
-#endif
   REAL(dp) :: rmin,Smax
 
 #if NENER>0
@@ -1870,29 +1764,11 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
            ! Compute final fluxes
             DO l = 1, ngrid
 
-#if HALL==1
-               qLL3tmp=qLL (l,3) - vhall(l,i,j,k,xdim,lp1-1)
-               qRL3tmp=qRL (l,3) - vhall(l,i,j,k,xdim,lp1-1)
-               qLR3tmp=qLR (l,3) - vhall(l,i,j,k,xdim,lp1-1)
-               qRR3tmp=qRR (l,3) - vhall(l,i,j,k,xdim,lp1-1)
-
-               qLL4tmp=qLL (l,4) - vhall(l,i,j,k,xdim,lp2-1)
-               qRL4tmp=qRL (l,4) - vhall(l,i,j,k,xdim,lp2-1)
-               qLR4tmp=qLR (l,4) - vhall(l,i,j,k,xdim,lp2-1)
-               qRR4tmp=qRR (l,4) - vhall(l,i,j,k,xdim,lp2-1)
-
-               ! vx*by - vy*bx at the four edge centers
-               ELL = qLL3tmp*qLL(l,7) - qLL4tmp*qLL(l,6)
-               ERL = qRL3tmp*qRL(l,7) - qRL4tmp*qRL(l,6)
-               ELR = qLR3tmp*qLR(l,7) - qLR4tmp*qLR(l,6)  
-               ERR = qRR3tmp*qRR(l,7) - qRR4tmp*qRR(l,6) 
-#else
                ! vx*by - vy*bx at the four edge centers
                ELL = qLL(l,3)*qLL(l,7) - qLL(l,4)*qLL(l,6)
                ERL = qRL(l,3)*qRL(l,7) - qRL(l,4)*qRL(l,6)
                ELR = qLR(l,3)*qLR(l,7) - qLR(l,4)*qLR(l,6)
                ERR = qRR(l,3)*qRR(l,7) - qRR(l,4)*qRR(l,6)
-#endif
 
                if(iriemann2d==5)then
 
@@ -2088,11 +1964,7 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
                      qtmp(8+irad) = qLL(l,8+irad)
                   end do
 #endif
-#if HALL==1
-                  vLLx=qtmp(3); call find_speed_fast(qtmp,cLLx,dx)
-#else
                   vLLx=qtmp(3); call find_speed_fast(qtmp,cLLx)
-#endif
                   qtmp(1)=qLR(l,1); qtmp(2)=qLR(l,2); qtmp(7)=qLR(l,5); qtmp(8)=qLR(l,8)
                   qtmp(3)=qLR(l,3); qtmp(4)=qLR(l,6); qtmp(5)=qLR(l,4); qtmp(6)=qLR(l,7)
 #if NENER>0
@@ -2100,11 +1972,7 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
                      qtmp(8+irad) = qLR(l,8+irad)
                   end do
 #endif
-#if HALL==1
-                  vLRx=qtmp(3); call find_speed_fast(qtmp,cLRx,dx)
-#else
                   vLRx=qtmp(3); call find_speed_fast(qtmp,cLRx)
-#endif
                   qtmp(1)=qRL(l,1); qtmp(2)=qRL(l,2); qtmp(7)=qRL(l,5); qtmp(8)=qRL(l,8)
                   qtmp(3)=qRL(l,3); qtmp(4)=qRL(l,6); qtmp(5)=qRL(l,4); qtmp(6)=qRL(l,7)
 #if NENER>0
@@ -2112,11 +1980,7 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
                      qtmp(8+irad) = qRL(l,8+irad)
                   end do
 #endif
-#if HALL==1
-                  vRLx=qtmp(3); call find_speed_fast(qtmp,cRLx,dx)
-#else
                   vRLx=qtmp(3); call find_speed_fast(qtmp,cRLx)
-#endif
                   qtmp(1)=qRR(l,1); qtmp(2)=qRR(l,2); qtmp(7)=qRR(l,5); qtmp(8)=qRR(l,8)
                   qtmp(3)=qRR(l,3); qtmp(4)=qRR(l,6); qtmp(5)=qRR(l,4); qtmp(6)=qRR(l,7)
 #if NENER>0
@@ -2124,11 +1988,7 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
                      qtmp(8+irad) = qRR(l,8+irad)
                   end do
 #endif
-#if HALL==1
-                  vRRx=qtmp(3); call find_speed_fast(qtmp,cRRx,dx)
-#else
                   vRRx=qtmp(3); call find_speed_fast(qtmp,cRRx)
-#endif
 
                   ! Compute 4 fast magnetosonic velocity relative to y direction
                   qtmp(1)=qLL(l,1); qtmp(2)=qLL(l,2); qtmp(7)=qLL(l,5); qtmp(8)=qLL(l,8)
@@ -2138,11 +1998,7 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
                      qtmp(8+irad) = qLL(l,8+irad)
                   end do
 #endif
-#if HALL==1
-                  vLLy=qtmp(3); call find_speed_fast(qtmp,cLLy,dx)
-#else
                   vLLy=qtmp(3); call find_speed_fast(qtmp,cLLy)
-#endif
                   qtmp(1)=qLR(l,1); qtmp(2)=qLR(l,2); qtmp(7)=qLR(l,5); qtmp(8)=qLR(l,8)
                   qtmp(3)=qLR(l,4); qtmp(4)=qLR(l,7); qtmp(5)=qLR(l,3); qtmp(6)=qLR(l,6)
 #if NENER>0
@@ -2150,11 +2006,7 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
                      qtmp(8+irad) = qLR(l,8+irad)
                   end do
 #endif
-#if HALL==1
-                  vLRy=qtmp(3); call find_speed_fast(qtmp,cLRy,dx)
-#else
                   vLRy=qtmp(3); call find_speed_fast(qtmp,cLRy)
-#endif
                   qtmp(1)=qRL(l,1); qtmp(2)=qRL(l,2); qtmp(7)=qRL(l,5); qtmp(8)=qRL(l,8)
                   qtmp(3)=qRL(l,4); qtmp(4)=qRL(l,7); qtmp(5)=qRL(l,3); qtmp(6)=qRL(l,6)
 #if NENER>0
@@ -2162,11 +2014,7 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
                      qtmp(8+irad) = qRL(l,8+irad)
                   end do
 #endif
-#if HALL==1
-                  vRLy=qtmp(3); call find_speed_fast(qtmp,cRLy,dx)
-#else
                   vRLy=qtmp(3); call find_speed_fast(qtmp,cRLy)
-#endif
                   qtmp(1)=qRR(l,1); qtmp(2)=qRR(l,2); qtmp(7)=qRR(l,5); qtmp(8)=qRR(l,8)
                   qtmp(3)=qRR(l,4); qtmp(4)=qRR(l,7); qtmp(5)=qRR(l,3); qtmp(6)=qRR(l,6)
 #if NENER>0
@@ -2174,11 +2022,7 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
                      qtmp(8+irad) = qRR(l,8+irad)
                   end do
 #endif
-#if HALL==1
-                  vRRy=qtmp(3); call find_speed_fast(qtmp,cRRy,dx)
-#else
                   vRRy=qtmp(3); call find_speed_fast(qtmp,cRRy)
-#endif
 
                   SL=min(min(vLLx,vLRx,VRLx,vRRx)-max(cLLx,cLRx,cRLx,cRRx),zero)
                   SR=max(max(vLLx,vLRx,VRLx,vRRx)+max(cLLx,cLRx,cRLx,cRRx),zero)

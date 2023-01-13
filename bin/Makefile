@@ -21,7 +21,6 @@ PATCH =
 RT = 0
 # Use non-ideal MHD? 1=Yes, 0=No
 NIMHD=0
-HALL=0
 # Use turbulence? 1=Yes, 0=No (requires fftw3)
 USE_TURB=0
 # Use MPI? 1=Yes, 0=No
@@ -77,9 +76,6 @@ ifeq ($(GRACKLE),1)
 endif
 ifeq ($(NIMHD),1)
    DEFINES += -DNIMHD
-endif
-ifeq ($(HALL),1)
-   DEFINES += -DHALL
 endif
 ifeq ($(OLD_MPI_SUPPORT),1)
    DEFINES += -DMPI_OLD

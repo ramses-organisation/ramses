@@ -212,7 +212,7 @@ subroutine update_time(ilevel)
   real(dp)::sqrt_aexp_prev
 #endif
 #ifdef NIMHD
-  real(dp)::dtad,dtwithoutad,dtmd,dthal
+  real(dp)::dtad,dtwithoutad,dtmd
 #endif
 #if USE_TURB==1
   real(kind=dp) :: cur_turb_rms
@@ -225,7 +225,6 @@ subroutine update_time(ilevel)
   dtad=dtambdiff(ilevel)
   dtwithoutad=dtwad(ilevel)
   dtmd=dtmagdiff(ilevel)
-  dthal=dthall(ilevel)
 #endif
   itest=0
 
@@ -300,7 +299,7 @@ subroutine update_time(ilevel)
            endif
 #ifdef NIMHD
            if(use_nonideal_mhd)then
-              write(*,889)dtad,dtmd,dthal,dtwithoutad,dt
+              write(*,889)dtad,dtmd,dtwithoutad,dt
            endif
 #endif
            itest=1
@@ -395,10 +394,8 @@ subroutine update_time(ilevel)
 999 format(' Level ',I2,' has ',I10,' grids (',3(I8,','),')')
 
 #ifdef NIMHD
-779 format(' Main step=',i6,' econs=',1pe9.2, &
-         & ' epot=',1pe9.2,' ekin=',1pe9.2,' eint=',1pe9.2,' emag=',1pe9.2)
 889 format(' ambip diff time=',1pe10.3,' mag diff time=',1pe10.3,&
-         & ' Hall effect time=',1pe10.3,' time ideal mhd=',1pe10.3,' time new=',1pe10.3)
+         & ' time ideal mhd=',1pe10.3,' time new=',1pe10.3)
 #endif
   
 end subroutine update_time

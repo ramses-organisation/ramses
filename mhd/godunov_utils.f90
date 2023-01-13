@@ -4,7 +4,7 @@
 !###########################################################
 #ifdef NIMHD
 !extract nimhd part and put it in a separate routine cmpdt_nimhd
-subroutine cmpdt(uu,gg,dx,dt,ncell,dtambdiff,dtohmdiss,dthallbis)
+subroutine cmpdt(uu,gg,dx,dt,ncell,dtambdiff,dtohmdiss)
 #else
 subroutine cmpdt(uu,gg,dx,dt,ncell)
 #endif
@@ -18,16 +18,12 @@ subroutine cmpdt(uu,gg,dx,dt,ncell)
   integer::ncell
   real(dp)::dx,dt
 #ifdef NIMHD
-  real(dp)::dtambdiff,dtohmdiss,dthallbis    ! ambipolar, Ohmic and Hall diffusiom times
-  real(dp)::dtambdiffb,dtohmdissb,dthallb
+  real(dp)::dtambdiff,dtohmdiss    ! ambipolar, Ohmic diffusiom times
+  real(dp)::dtambdiffb,dtohmdissb
   real(dp)::xx,betaad
   real(dp),dimension(1:nvector),save::rhoad
   real(dp)::etaohmdiss
   real(dp),dimension(1:nvector),save::tcell,ionisrate
-#if HALL==1
-  real(dp)::cw,cw1
-  real(dp)::eta_hall_chimie
-#endif
 #endif
   real(dp),dimension(1:nvector,1:nvar+3)::uu
   real(dp),dimension(1:nvector,1:ndim)::gg
@@ -104,17 +100,7 @@ subroutine cmpdt(uu,gg,dx,dt,ncell)
            cc=half*(B2(k)/rho(k)+a2(k))
            BN=half*(uu(k,5+idim)+uu(k,nvar+idim))
            cf=sqrt(cc+sqrt(cc**2-a2(k)*BN**2/rho(k)))
-#if HALL==1
-           if(nhall) then
-             cw1=abs(eta_hall_chimie(rho(k),tcell(k),ionisrate(k),B2(k))/(2.0d0*dx)) ! Whistler wave speed
-             cw = cw1+sqrt(cw1**2+B2(k)/rho(k))                  ! Whistler wave speed
-           else
-             cw=0d0
-           end if
-           ctot(k)=ctot(k)+abs(uu(k,idim+1))+cf+cw
-#else
            ctot(k)=ctot(k)+abs(uu(k,idim+1))+cf
-#endif
         end do
      end do
   endif
@@ -142,27 +128,6 @@ subroutine cmpdt(uu,gg,dx,dt,ncell)
 
 #ifdef NIMHD
   ! time step for non-ideal mhd
-
-  ! Hall effect - WARNING not working yet
-  if(.not.nhall) then
-     dthallbis=1d34
-  else
-     dthallbis=1d34
-#if HALL==1
-     do k = 1,ncell
-        xx=eta_hall_chimie(rhoad(k),tcell(k),ionisrate(k),B2(k))
-        if(xx.gt.0d0) then
-           dthallb=coefhall*dx*dx/xx
-        else
-           dthallb=1d34
-        endif
-        cw1=abs(xx)/(2.0d0*dx) ! Whistler wave speed
-        cw = cw1+sqrt(cw1**2+B2(k)/uu(k,1))                  ! Whistler wave speed
-        dthallb=coefhall*dx/cw
-        dthallbis=min(dthallbis,dthallb)      
-     end do
-#endif
-  endif
 
   ! Ohmic dissipation
   if (.not.nmagdiffu) then
@@ -468,13 +433,8 @@ SUBROUTINE lax_friedrich(qleft,qright,fgdnv,zero_flux)
   fmean =  half * ( fright + fleft ) * zero_flux
 
   ! find the largest eigenvalue in the normal direction to the interface
-#if HALL==1
-  CALL find_speed_info(qleft ,vleft ,0d0)
-  CALL find_speed_info(qright,vright,0d0)
-#else
   CALL find_speed_info(qleft ,vleft )
   CALL find_speed_info(qright,vright)
-#endif
 
   ! difference between the 2 states
   udiff  = half * ( uright - uleft )
@@ -507,13 +467,8 @@ SUBROUTINE hll(qleft,qright,fgdnv)
   CALL find_mhd_flux(qright,uright,fright)
 
   ! find the largest eigenvalue in the normal direction to the interface
-#if HALL==1
-  CALL find_speed_fast(qleft ,cfleft ,0d0)
-  CALL find_speed_fast(qright,cfright,0d0)
-#else
   CALL find_speed_fast(qleft ,cfleft )
   CALL find_speed_fast(qright,cfright)
-#endif
   vleft =qleft (3)
   vright=qright(3)
   SL=min(min(vleft,vright)-max(cfleft,cfright),zero)
@@ -596,13 +551,8 @@ SUBROUTINE hlld(qleft,qright,fgdnv)
   eintr=Pr*entho
 
   ! Find the largest eigenvalues in the normal direction to the interface
-#if HALL==1
-  CALL find_speed_fast(qleft ,cfastl,0d0)
-  CALL find_speed_fast(qright,cfastr,0d0)
-#else
   CALL find_speed_fast(qleft ,cfastl)
   CALL find_speed_fast(qright,cfastr)
-#endif
 
   ! Compute HLL wave speed
   SL=min(ul,ur)-max(cfastl,cfastr)
@@ -893,16 +843,7 @@ END SUBROUTINE find_mhd_flux
 !###########################################################
 !###########################################################
 !###########################################################
-! REMARK: as it is now, dx is always 0. I guess this is unfinished?
-! trick to help conserve angular momentum, only used in 1d riemand solver
-! set parameter whether or not to account for the whistler speed in the 
-! 1d riemann solver (dx=0 or not)
-#if HALL==1
-SUBROUTINE find_speed_info(qvar,vel_info,dx)
-  USE nimhd_parameters
-#else
 SUBROUTINE find_speed_info(qvar,vel_info)
-#endif
   USE amr_parameters
   USE const
   USE hydro_parameters
@@ -918,12 +859,6 @@ SUBROUTINE find_speed_info(qvar,vel_info)
   REAL(dp),DIMENSION(1:nvar):: qvar
   REAL(dp) :: vel_info
   REAL(dp) :: d,P,u,v,w,A,B,C,B2,c2,d2,cf
-#if HALL==1
-  REAL(dp) :: cw,cw1,eta,tcell
-  REAL(dp) :: dx
-  REAL(dp) :: ionisrate=1d-17
-  REAL(dp) :: eta_hall_chimie
-#endif
 
   d=qvar(1); P=qvar(2); u=qvar(3); A=qvar(4)
   v=qvar(5); B=qvar(6); w=qvar(7); C=qvar(8)
@@ -935,47 +870,19 @@ SUBROUTINE find_speed_info(qvar,vel_info)
   end do
 #endif
 
-#if HALL==1
-  cw=0d0
-  if(nhall .and. dx>0) then
-    call ideal_gas_temperature(d, P, tcell)
-    eta=abs(eta_hall_chimie(d,tcell,ionisrate,B2))
-    cw1=eta/(2.0d0*dx) ! Whistler wave speed
-    cw = cw1+sqrt(cw1**2+B2/d)                  ! Whistler wave speed
-  else
-    cw=0d0
-  end if
-#endif
-
   d2 = half*(B2/d+c2)
   cf = sqrt( d2 + sqrt(d2**2-c2*A*A/d) )
   vel_info = cf+abs(u)
-#if HALL==1
-  if (nhall) vel_info=abs(u)+max(cf,cw)
-#else
-  vel_info=abs(u)+cf
-#endif
 
 END SUBROUTINE find_speed_info
 !###########################################################
 !###########################################################
 !###########################################################
 !###########################################################
-! REMARK: as it is now, dx is always 0. I guess this is unfinished?
-! same as above?
-! HALL effect only works with HLL 2d riemand solver
-! separate find_speed_hll which is only used with hall effect 
-#if HALL==1
-SUBROUTINE find_speed_fast(qvar,vel_info,dx)
-#else
 SUBROUTINE find_speed_fast(qvar,vel_info)
-#endif
   USE amr_parameters
   USE const
   USE hydro_parameters
-#ifdef NIMHD
-  use nimhd_parameters
-#endif
   !! calculate the fast magnetosonic velocity
   !! the structure of qvar is : rho, Pressure, Vnormal, Bnormal,
   !! Vtransverse1,Btransverse1,Vtransverse2,Btransverse2
@@ -987,12 +894,6 @@ SUBROUTINE find_speed_fast(qvar,vel_info)
   REAL(dp),DIMENSION(1:nvar):: qvar
   REAL(dp) :: vel_info
   REAL(dp) :: d,P,u,v,w,A,B,C,B2,c2,d2,cf
-#if HALL==1
-  REAL(dp) :: dx
-  REAL(dp) :: cw,cw1,eta,tcell
-  REAL(dp) :: ionisrate=1d-17
-  REAL(dp) :: eta_hall_chimie
-#endif
 
   d=qvar(1); P=qvar(2); u=qvar(3); A=qvar(4)
   v=qvar(5); B=qvar(6); w=qvar(7); C=qvar(8)
@@ -1003,25 +904,9 @@ SUBROUTINE find_speed_fast(qvar,vel_info)
      c2 = c2 + gamma_rad(irad)*qvar(8+irad)/d
   end do
 #endif
-
-#if HALL==1
-  cw=0d0
-  if(nhall.and. dx>0) then
-    call ideal_gas_temperature(d, P, tcell)
-    eta=abs(eta_hall_chimie(d,tcell,ionisrate,B2))
-    cw1=dabs(eta/(2.0d0*dx)) ! Whistler wave speed
-    cw = cw1+dsqrt(cw1**2+B2/d)                  ! Whistler wave speed
-  else
-    cw=0d0
-  end if
-#endif
-
   d2 = half*(B2/d+c2)
   cf = sqrt( d2 + sqrt(d2**2-c2*A*A/d) )
   vel_info = cf
-#if HALL==1
-  if (nhall) vel_info=max(cf,cw)
-#endif
 
 END SUBROUTINE find_speed_fast
 !###########################################################
@@ -1195,13 +1080,8 @@ SUBROUTINE athena_roe(qleft,qright,fmean,zero_flux)
 
   IF( llf ) THEN
      fmean = half * ( fright + fleft ) * zero_flux
-#if HALL==1
-     CALL find_speed_info(qleft ,vleft ,0d0)
-     CALL find_speed_info(qright,vright,0d0)
-#else
      CALL find_speed_info(qleft ,vleft )
      CALL find_speed_info(qright,vright)
-#endif
      udiff = half * ( uright - uleft )
      fmean = fmean - MAX(vleft,vright) * udiff
      RETURN

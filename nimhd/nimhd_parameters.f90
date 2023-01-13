@@ -8,7 +8,6 @@ module nimhd_parameters
 
   logical :: nambipolar = .false. ! Ambipolar diffusion ?
   logical :: nmagdiffu  = .false. ! Magnetic  diffusion ?
-  logical :: nhall      = .false. ! Hall effect ?
   logical :: use_nonideal_mhd     ! true if any of the effects is used
 
 ! Mellon & Li 2009 (?) or Hennebelle & Teyssier 2007
@@ -27,9 +26,6 @@ module nimhd_parameters
 ! magnetic diffusion coefficient see function etaohmdiss in umsucl
   real(dp):: etaMD=1d0
 
-! Hall resistivity
-  real(dp):: rHall=1d0
-
 ! Making a test or not Yes=1 No=0
   real(dp):: ntestDADM=0
 
@@ -46,7 +42,6 @@ module nimhd_parameters
   real(dp):: coefalfven = 1d-10  ! Meme si ca n'a rien a voir avec alfven : c'est le coefficient de seuil. Par defaut, on ne seuille pas.
   real(dp):: coefdtohm = 1d-10
   real(dp):: coefohm = 0.05d0 !CFL conditions
-  real(dp):: coefhall=0.05d0 !CFL conditions
   real(dp):: default_ionisrate=1d-17
   ! choose better names
   

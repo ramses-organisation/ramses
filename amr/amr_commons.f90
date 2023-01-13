@@ -57,9 +57,6 @@ module amr_commons
   real(dp),dimension(1:MAXLEVEL)::dtambdiff,dtambdiffold ! ambiploar diffusion
   real(dp),dimension(1:MAXLEVEL)::dtwad,dtwadold         ! without ambipolar diffusion
   real(dp),dimension(1:MAXLEVEL)::dtmagdiff,dtmagdiffold ! magnetic diffusion
-  real(dp),dimension(1:MAXLEVEL)::dthall,dthallold       ! hall
-  !real(dp),dimension(1:MAXLEVEL)::dtambdiff,dtwad,dtmagdiff,dthall
-  !real(dp),dimension(1:MAXLEVEL)::dtambdiffold,dtwadold,dtmagdiffold,dthallold
 !#endif
   
   ! Pointers for each level linked list
