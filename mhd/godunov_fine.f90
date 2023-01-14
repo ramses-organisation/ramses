@@ -699,7 +699,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
   !-----------------------------------------------
 #ifdef NIMHD
    ! is there a less ugly way to do this? YES, see umuscle
-  call mag_unsplit(uloc,gloc,flux,emfx,emfy,emfz,tmp,dx,dx,dx,dtnew(ilevel),ncache,ind_grid,jcell)
+  call mag_unsplit(uloc,gloc,flux,emfx,emfy,emfz,tmp,dx,dx,dx,dtnew(ilevel),ncache,jcell)
 #else
   call mag_unsplit(uloc,gloc,flux,emfx,emfy,emfz,tmp,dx,dx,dx,dtnew(ilevel),ncache)
 #endif

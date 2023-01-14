@@ -35,8 +35,7 @@
 ! both options are still here.
 ! TODO: remove flux option
 #ifdef NIMHD
-subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid,ind_grid,jcell)
-! ind_grid can be removed (not use)
+subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid,jcell)
 ! jcell is used!
 ! instead use a nimhdin variable
 ! remove computation of current from here and put in godunov_fine
@@ -53,10 +52,9 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
 
   integer ::ngrid
 #ifdef NIMHD
-  integer,dimension(1:nvector) :: ind_grid
   ! Output courant vector in the cell
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::jcell
-  ! comment Tine: this jcell thing appears to just be 0 all the time?
+  ! TC: jcell is the current, filled in nimhd computejb2
 #endif
   real(dp)::dx,dy,dz,dt
 
@@ -100,9 +98,7 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
 
 #ifdef NIMHD
   ! comment Tine: not used but saved??
-  ! WARNING following quantities defined with three components even
-  ! if ndim<3 !
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),save::flxmagx,flxmagy,flxmagz
+  ! WARNING following quantities defined with three components even if ndim<3 !
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3,1:3),save::bmagij
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),save::bemfx,bemfy,bemfz
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),save::jemfx,jemfy,jemfz
@@ -196,25 +192,18 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
            tmp (l,i,j,k,ivar,1)=tx(l,i,j,k,ivar)*dt/dx
         end do
      end do
-  end do
-  end do
-  end do
-
 #ifdef NIMHD
-  ! Energy flux from ohmic term dB/dt=rot(-eta*J)
-  if(use_nonideal_mhd) then
-     ivar=5
-     do k=klo,khi
-        do j=jlo,jhi
-           do i=if1,if2
-              do l=1,ngrid
-                 flux(l,i,j,k,ivar,1)=flux(l,i,j,k,ivar,1)+(fluxambdiff(l,i,j,k,1)+fluxohm(l,i,j,k,1) )*dt/dx
-              end do
-           end do
+     ! Energy flux from ohmic term dB/dt=rot(-eta*J)
+     if(use_nonideal_mhd) then
+        ivar=5
+        do l=1,ngrid
+           flux(l,i,j,k,ivar,1)=flux(l,i,j,k,ivar,1)+(fluxambdiff(l,i,j,k,1)+fluxohm(l,i,j,k,1))*dt/dx
         end do
-     end do
-  endif
+     endif
 #endif
+  end do
+  end do
+  end do
 
   ! Solve for 1D flux in Y direction
 #if NDIM>1
@@ -235,27 +224,19 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
            tmp (l,i,j,k,ivar,2)=tx(l,i,j,k,ivar)*dt/dy
         end do
      end do
-  end do
-  end do
-  end do
-
 #ifdef NIMHD
-  ! Energy flux from ohmic term dB/dt=rot(-eta*J)
-  if(use_nonideal_mhd) then  
-     ivar=5
-     do k=klo,khi
-        do j=jf1,jf2
-           do i=ilo,ihi
-              do l=1,ngrid
-                 flux(l,i,j,k,ivar,2)=flux(l,i,j,k,ivar,2)+(fluxambdiff(l,i,j,k,2)+fluxohm(l,i,j,k,2))*dt/dy
-              end do
-           end do
+     ! Energy flux from ohmic term dB/dt=rot(-eta*J)
+     if(use_nonideal_mhd) then  
+        ivar=5
+        do l=1,ngrid
+           flux(l,i,j,k,ivar,2)=flux(l,i,j,k,ivar,2)+(fluxambdiff(l,i,j,k,2)+fluxohm(l,i,j,k,2))*dt/dy
         end do
-     end do
-  endif
+     endif
 #endif
+  end do
+  end do
+  end do
 #endif
-! end NDIM>1
 
   ! Solve for 1D flux in Z direction
 #if NDIM==3
@@ -276,27 +257,19 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
            tmp (l,i,j,k,ivar,3)=tx(l,i,j,k,ivar)*dt/dz
         end do
      end do
-  end do
-  end do
-  end do
-  
 #ifdef NIMHD
-  ! Energy flux from ohmic term dB/dt=rot(-eta*J)
-  if(use_nonideal_mhd) then  
-     ivar=5
-     do k=kf1,kf2
-        do j=jlo,jhi
-           do i=ilo,ihi
-              do l=1,ngrid
-                 flux(l,i,j,k,ivar,3)=flux(l,i,j,k,ivar,3)+(fluxambdiff(l,i,j,k,3)+fluxohm(l,i,j,k,3))*dt/dz
-              end do
-           end do
+     ! Energy flux from ohmic term dB/dt=rot(-eta*J)
+     if(use_nonideal_mhd) then  
+        ivar=5
+        do l=1,ngrid
+           flux(l,i,j,k,ivar,3)=flux(l,i,j,k,ivar,3)+(fluxambdiff(l,i,j,k,3)+fluxohm(l,i,j,k,3))*dt/dz
         end do
-     end do
-  endif
+     endif
 #endif
+  end do
+  end do
+  end do
 #endif
-! end NDIM==3
 
 #ifdef NIMHD
 ! emf rather than fluxes
@@ -305,7 +278,7 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
      do j=jf1,jf2
         do i=ilo,ihi
            do l=1,ngrid
-              emfx(l,i,j,k)=( emfambdiff(l,i,j,k,nxx)+emfohmdiss(l,i,j,k,nxx)  )*dt/dx
+              emfx(l,i,j,k)=( emfambdiff(l,i,j,k,nxx)+emfohmdiss(l,i,j,k,nxx) )*dt/dx
            end do
         end do
      end do
@@ -347,7 +320,7 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
      do l=1,ngrid
         emfz(l,i,j,k)=emf(l,i,j,k)*dt/dx
 #ifdef NIMHD
-        emfz(l,i,j,k)=emfz(l,i,j,k)+(emfambdiff(l,i,j,k,nzz)+emfohmdiss(l,i,j,k,nzz))*dt/dx
+        emfz(l,i,j,k)=emfz(l,i,j,k) + ( emfambdiff(l,i,j,k,nzz)+emfohmdiss(l,i,j,k,nzz) )*dt/dx
 #endif
      end do
   end do
@@ -380,7 +353,7 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
      do l=1,ngrid
         emfy(l,i,j,k)=emf(l,i,j,k)*dt/dx
 #ifdef NIMHD
-        emfy(l,i,j,k)=emfy(l,i,j,k)+ ( emfambdiff(l,i,j,k,nyy)+emfohmdiss(l,i,j,k,nyy) )*dt/dx
+        emfy(l,i,j,k)=emfy(l,i,j,k) + ( emfambdiff(l,i,j,k,nyy)+emfohmdiss(l,i,j,k,nyy) )*dt/dx
 #endif
      end do
   end do
@@ -399,7 +372,7 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
      do l=1,ngrid
         emfx(l,i,j,k)=emf(l,i,j,k)*dt/dx
 #ifdef NIMHD
-        emfx(l,i,j,k)=1d0*emfx(l,i,j,k)+( emfambdiff(l,i,j,k,nxx)+emfohmdiss(l,i,j,k,nxx))*dt/dx
+        emfx(l,i,j,k)=emfx(l,i,j,k) + ( emfambdiff(l,i,j,k,nxx)+emfohmdiss(l,i,j,k,nxx) )*dt/dx
 #endif
      end do
   end do
