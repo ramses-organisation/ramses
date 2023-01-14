@@ -582,243 +582,144 @@ end subroutine computdifmag
 !###########################################################
 !###########################################################
 !###########################################################
-SUBROUTINE  computambip(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,florentzx,florentzy,florentzz,fluxad,bmagij,emfambdiff,fluxambdiff,jxbsquare)
+subroutine computambip(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,florentzx,florentzy,florentzz,fluxad,bmagij,emfambdiff,fluxambdiff)
 
-  use amr_commons
-  USE amr_parameters
-  use hydro_commons
-  use nimhd_parameters
-  USE const
-  IMPLICIT NONE
-  
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar+3)::u 
-  
-  INTEGER ::ngrid
-  REAL(dp)::dx,dy,dz,dt
-  
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::bemfx,bemfy,bemfz
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2)::rhocellmin,bsquaremax
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::florentzx,florentzy,florentzz
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::fluxad
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3,1:3)::bmagij
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::emfambdiff
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::fluxambdiff
+   use amr_commons
+   use amr_parameters
+   use hydro_commons
+   use nimhd_parameters
+   use const
+   implicit none
 
-! declare local variables
-  INTEGER ::i, j, k, l, m, n, ntest,ic,ivar
-  real(dp)::computdx,computdy,computdz
+   ! inputs
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar+3)::u 
+   integer ::ngrid
+   real(dp)::dx,dy,dz,dt
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::bemfx,bemfy,bemfz
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::florentzx,florentzy,florentzz
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::fluxad
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3,1:3)::bmagij
 
-  real(dp)::v1x,v1y,v1z,v2x,v2y,v2z
-  real(dp)::rhofx,rhofy,rhofz
-  real(dp)::bsquarex,bsquarey,bsquarez,bsquare
-  real(dp)::bsquarexx,bsquareyy,bsquarezz
-  real(dp)::betaad2,betaadbricolo,betaad
-  real(dp)::rhox,rhoy,rhoz,rhocell,bcell,bcellold,tcell,ionisrate
-  real(dp)::dtlim,eps
-  real(dp)::crossprodx,crossprody,crossprodz
+   ! outputs
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::emfambdiff
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::fluxambdiff
 
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::florentz
+   ! declare local variables
+   INTEGER ::i, j, k, l, ntest
 
-  REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2)::jxbsquare
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::jcenter
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::jxb
+   real(dp)::v1x,v1y,v1z,v2x,v2y,v2z
+   real(dp)::rhox,rhoy,rhoz,rhofx,rhofy,rhofz
+   real(dp)::bsquarex,bsquarey,bsquarez,bsquare
+   real(dp)::bsquarexx,bsquareyy,bsquarezz
+   real(dp)::betaad2,betaadbricolo
+   real(dp)::rhocell,bcell,tcell,ionisrate
+   real(dp)::dtlim
+   real(dp)::crossprodx,crossprody,crossprodz
 
-   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
-   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
+   ! do NOT change value below Variation of betaad
+   ! to avoid too small time step allowed
+   ntest=0
 
-!modif pour voir les lieux du seuil
-!  real(dp),dimension(1:3)             :: skip_loc
-!  real(dp),dimension(1:twotondim,1:3) :: xc
-!  integer                             :: nx_loc
-!  real(dp)                            :: scale
+   dtlim=dt!*coefalfven
+   !dt est deja dtnew, qui a été choisi comme le dt normal (avec la condition de courant) ou le dt normal seuillé si le dtAD est trop faible(bricolo)
 
-
-!nx_loc = (icoarse_max -icoarse_min+1)
-!scale = dble(nx_loc)/boxlen
-!print*, dx, 0.5d0**11, 0.5d0**7/scale
-!
-!do  ind=1,twotondim
-!    iz=(ind-1)/4
-!    iy=
-
-
-
-! do NOT change value below Variation of betaad
-! to avoid too small time step allowed
-  ntest=0
-
-  dtlim=dt!*coefalfven
-!dt est deja dtnew, qui a été choisi comme le dt normal (avec la condition de courant) ou le dt normal seuillé si le dtAD est trop faible(bricolo)
-
-jxb=0.0d0
-
-jxbsquare=0.0d0
-jcenter=0.0d0
-
-  do k=min(1,ku1+1),max(1,ku2-1)
-     do j=min(1,ju1+1),max(1,ju2-1)
-        do i=min(1,iu1+1),max(1,iu2-1)
+   do k=min(1,ku1+1),max(1,ku2-1)
+      do j=min(1,ju1+1),max(1,ju2-1)
+         do i=min(1,iu1+1),max(1,iu2-1)
            
-           do l = 1, ngrid
+            do l = 1, ngrid
 
-              rhox=0.25d0*(u(l,i,j,k,1)+u(l,i,j-1,k,1)+u(l,i,j,k-1,1)+u(l,i,j-1,k-1,1))
-              rhoy=0.25d0*(u(l,i,j,k,1)+u(l,i-1,j,k,1)+u(l,i,j,k-1,1)+u(l,i-1,j,k-1,1))
-              rhoz=0.25d0*(u(l,i,j,k,1)+u(l,i-1,j,k,1)+u(l,i,j-1,k,1)+u(l,i-1,j-1,k,1))
+               rhox=0.25d0*(u(l,i,j,k,1)+u(l,i,j-1,k,1)+u(l,i,j,k-1,1)+u(l,i,j-1,k-1,1))
+               rhoy=0.25d0*(u(l,i,j,k,1)+u(l,i-1,j,k,1)+u(l,i,j,k-1,1)+u(l,i-1,j,k-1,1))
+               rhoz=0.25d0*(u(l,i,j,k,1)+u(l,i-1,j,k,1)+u(l,i,j-1,k,1)+u(l,i-1,j-1,k,1))
 
-              rhofx=0.5d0*(u(l,i,j,k,1)+u(l,i-1,j,k,1))
-              rhofy=0.5d0*(u(l,i,j,k,1)+u(l,i,j-1,k,1))
-              rhofz=0.5d0*(u(l,i,j,k,1)+u(l,i,j,k-1,1))
-              
-              rhocellmin(l,i,j,k)=min(rhox,rhoy,rhoz,rhofx,rhofy,rhofz)
+               rhofx=0.5d0*(u(l,i,j,k,1)+u(l,i-1,j,k,1))
+               rhofy=0.5d0*(u(l,i,j,k,1)+u(l,i,j-1,k,1))
+               rhofz=0.5d0*(u(l,i,j,k,1)+u(l,i,j,k-1,1))
 
-              rhocell = u(l,i,j,k,1)
+               rhocell = min(rhox,rhoy,rhoz,rhofx,rhofy,rhofz)
 
-              ! Compute gas temperature in cgs
-              if(ntestDADM.eq.1) then
-                 tcell=1.0d0
-              else
-                 call ideal_gas_temperature(u(l,i,j,k,1), u(l,i,j,k,5), tcell)
-              end if
-             
+               ! Compute gas temperature in cgs
+               if(ntestDADM.eq.1) then
+                  tcell=1.0d0
+               else
+                  call ideal_gas_temperature(u(l,i,j,k,1), u(l,i,j,k,5), tcell)
+               end if
 
-              bsquarex=bemfx(l,i,j,k,1)**2+bemfx(l,i,j,k,2)**2+bemfx(l,i,j,k,3)**2
-              bsquarey=bemfy(l,i,j,k,1)**2+bemfy(l,i,j,k,2)**2+bemfy(l,i,j,k,3)**2
-              bsquarez=bemfz(l,i,j,k,1)**2+bemfz(l,i,j,k,2)**2+bemfz(l,i,j,k,3)**2
+               bsquarex=bemfx(l,i,j,k,1)**2+bemfx(l,i,j,k,2)**2+bemfx(l,i,j,k,3)**2
+               bsquarey=bemfy(l,i,j,k,1)**2+bemfy(l,i,j,k,2)**2+bemfy(l,i,j,k,3)**2
+               bsquarez=bemfz(l,i,j,k,1)**2+bemfz(l,i,j,k,2)**2+bemfz(l,i,j,k,3)**2
 
+               bsquarexx=bmagij(l,i,j,k,1,1)**2+bmagij(l,i,j,k,2,1)**2+bmagij(l,i,j,k,3,1)**2
+               bsquareyy=bmagij(l,i,j,k,1,2)**2+bmagij(l,i,j,k,2,2)**2+bmagij(l,i,j,k,3,2)**2
+               bsquarezz=bmagij(l,i,j,k,1,3)**2+bmagij(l,i,j,k,2,3)**2+bmagij(l,i,j,k,3,3)**2
 
-              bsquarexx=bmagij(l,i,j,k,1,1)**2+bmagij(l,i,j,k,2,1)**2+bmagij(l,i,j,k,3,1)**2
-              bsquareyy=bmagij(l,i,j,k,1,2)**2+bmagij(l,i,j,k,2,2)**2+bmagij(l,i,j,k,3,2)**2
-              bsquarezz=bmagij(l,i,j,k,1,3)**2+bmagij(l,i,j,k,2,3)**2+bmagij(l,i,j,k,3,3)**2
+               bcell = max(bsquarex,bsquarey,bsquarez,bsquarexx,bsquareyy,bsquarezz)
 
-              bsquaremax(l,i,j,k)=max(bsquarex,bsquarey,bsquarez,bsquarexx,bsquareyy,bsquarezz)
-                 
-! EMF x
-  
-              v1x=florentzx(l,i,j,k,1)
-              v1y=florentzx(l,i,j,k,2)
-              v1z=florentzx(l,i,j,k,3)
-              v2x=bemfx(l,i,j,k,1)
-              v2y=bemfx(l,i,j,k,2)
-              v2z=bemfx(l,i,j,k,3)
-             
-              emfambdiff(l,i,j,k,1)=crossprodx(v1x,v1y,v1z,v2x,v2y,v2z)
-              rhox=0.25d0*(u(l,i,j,k,1)+u(l,i,j-1,k,1)+u(l,i,j,k-1,1)+u(l,i,j-1,k-1,1))
-              bcell = bsquaremax(l,i,j,k)
-              bcellold=bcell
+               ionisrate=default_ionisrate
 
-              rhocell = rhocellmin(l,i,j,k)
-! alfven time alone maybe not correct
-!             betaad2=betaadbricolo(rhox,dtlim,bsquare,dx,ntest)
-! comparison with hydro+idealMHD
-!!$              rhox= u(l,i,j,k,3)
-!!$              rhoy= u(l,i,j,k,3)
-!!$              rhoz= u(l,i,j,k,3)
-              ionisrate=default_ionisrate
-              betaad2=betaadbricolo(rhocell,rhox,dtlim,bcell,bcellold,dx,ntest,tcell,ionisrate)
-!              betaad2=betaadbricolo(rhocell,rhox,dtlim,bcellold,bcellold,dx,ntest,tcell)
+               ! EMF x
 
-              emfambdiff(l,i,j,k,1)=emfambdiff(l,i,j,k,1)*betaad2 
+               v1x=florentzx(l,i,j,k,1)
+               v1y=florentzx(l,i,j,k,2)
+               v1z=florentzx(l,i,j,k,3)
+               v2x=bemfx(l,i,j,k,1)
+               v2y=bemfx(l,i,j,k,2)
+               v2z=bemfx(l,i,j,k,3)
+               emfambdiff(l,i,j,k,1)=crossprodx(v1x,v1y,v1z,v2x,v2y,v2z)
 
-! EMF y
-              v1x=florentzy(l,i,j,k,1)
-              v1y=florentzy(l,i,j,k,2)
-              v1z=florentzy(l,i,j,k,3)
-              v2x=bemfy(l,i,j,k,1)
-              v2y=bemfy(l,i,j,k,2)
-              v2z=bemfy(l,i,j,k,3)
-             
-              emfambdiff(l,i,j,k,2)=crossprody(v1x,v1y,v1z,v2x,v2y,v2z)
+               rhox=0.25d0*(u(l,i,j,k,1)+u(l,i,j-1,k,1)+u(l,i,j,k-1,1)+u(l,i,j-1,k-1,1))
+               betaad2=betaadbricolo(rhocell,rhox,dtlim,bcell,bcell,dx,ntest,tcell,ionisrate)
+               emfambdiff(l,i,j,k,1)=emfambdiff(l,i,j,k,1)*betaad2 
 
-              rhoy=0.25d0*(u(l,i,j,k,1)+u(l,i-1,j,k,1)+u(l,i,j,k-1,1)+u(l,i-1,j,k-1,1))
-              bcell = bsquaremax(l,i,j,k)
-              bcellold=bcell
+               ! EMF y
 
-              rhocell = rhocellmin(l,i,j,k)
-! alfven time alone maybe not correct
-!             betaad2=betaadbricolo(rhoy,dtlim,bsquare,dx,ntest)
-! comparison with hydro+idealMHD 
+               v1x=florentzy(l,i,j,k,1)
+               v1y=florentzy(l,i,j,k,2)
+               v1z=florentzy(l,i,j,k,3)
+               v2x=bemfy(l,i,j,k,1)
+               v2y=bemfy(l,i,j,k,2)
+               v2z=bemfy(l,i,j,k,3)
+               emfambdiff(l,i,j,k,2)=crossprody(v1x,v1y,v1z,v2x,v2y,v2z)
 
-             betaad2=betaadbricolo(rhocell,rhoy,dtlim,bcell,bcellold,dx,ntest,tcell,ionisrate)
-!             betaad2=betaadbricolo(rhocell,rhoy,dtlim,bcellold,bcellold,dx,ntest,tcell)
-
-             emfambdiff(l,i,j,k,2)=emfambdiff(l,i,j,k,2)*betaad2            
+               rhoy=0.25d0*(u(l,i,j,k,1)+u(l,i-1,j,k,1)+u(l,i,j,k-1,1)+u(l,i-1,j,k-1,1))
+               betaad2=betaadbricolo(rhocell,rhoy,dtlim,bcell,bcell,dx,ntest,tcell,ionisrate)
+               emfambdiff(l,i,j,k,2)=emfambdiff(l,i,j,k,2)*betaad2            
                     
-! EMF z
+               ! EMF z
 
-             v1x=florentzz(l,i,j,k,1)
-             v1y=florentzz(l,i,j,k,2)
-             v1z=florentzz(l,i,j,k,3)
-             v2x=bemfz(l,i,j,k,1)
-             v2y=bemfz(l,i,j,k,2)
-             v2z=bemfz(l,i,j,k,3)
-             
-             emfambdiff(l,i,j,k,3)=crossprodz(v1x,v1y,v1z,v2x,v2y,v2z)
-              rhoz=0.25d0*(u(l,i,j,k,1)+u(l,i-1,j,k,1)+u(l,i,j-1,k,1)+u(l,i-1,j-1,k,1))
-              bcell = bsquaremax(l,i,j,k)
-              bcellold=bcell
-              rhocell = rhocellmin(l,i,j,k)
-             
-             betaad2=betaadbricolo(rhocell,rhoz,dtlim,bcell,bcellold,dx,ntest,tcell,ionisrate)
-!             betaad2=betaadbricolo(rhocell,rhoz,dtlim,bcellold,bcellold,dx,ntest,tcell)
+               v1x=florentzz(l,i,j,k,1)
+               v1y=florentzz(l,i,j,k,2)
+               v1z=florentzz(l,i,j,k,3)
+               v2x=bemfz(l,i,j,k,1)
+               v2y=bemfz(l,i,j,k,2)
+               v2z=bemfz(l,i,j,k,3)
+               emfambdiff(l,i,j,k,3)=crossprodz(v1x,v1y,v1z,v2x,v2y,v2z)
 
-             emfambdiff(l,i,j,k,3)=emfambdiff(l,i,j,k,3)*betaad2
+               rhoz=0.25d0*(u(l,i,j,k,1)+u(l,i-1,j,k,1)+u(l,i,j-1,k,1)+u(l,i-1,j-1,k,1))
+               betaad2=betaadbricolo(rhocell,rhoz,dtlim,bcell,bcell,dx,ntest,tcell,ionisrate)
+               emfambdiff(l,i,j,k,3)=emfambdiff(l,i,j,k,3)*betaad2
 
-! energy flux on faces
+               ! energy flux on faces
 
-              v2x=bmagij(l,i,j,k,1,1)
-              v2y=bmagij(l,i,j,k,2,1)
-              v2z=bmagij(l,i,j,k,3,1)
+               rhofx=0.5d0*(u(l,i,j,k,1)+u(l,i-1,j,k,1))
+               betaad2=betaadbricolo(rhocell,rhofx,dtlim,bcell,bcell,dx,ntest,tcell,ionisrate)
+               fluxambdiff(l,i,j,k,1)=-betaad2*fluxad(l,i,j,k,1)
 
-             bcell = bsquaremax(l,i,j,k)
+               rhofy=0.5d0*(u(l,i,j,k,1)+u(l,i,j-1,k,1))
+               betaad2=betaadbricolo(rhocell,rhofy,dtlim,bcell,bcell,dx,ntest,tcell,ionisrate) !TC:dy?
+               fluxambdiff(l,i,j,k,2)=-betaad2*fluxad(l,i,j,k,2)
 
-              rhocell = rhocellmin(l,i,j,k)
-              rhofx=0.5d0*(u(l,i,j,k,1)+u(l,i-1,j,k,1))
-              betaad2=betaadbricolo(rhocell,rhofx,dtlim,bcell,bcell,dx,ntest,tcell,ionisrate)
-              fluxambdiff(l,i,j,k,1)=-betaad2*fluxad(l,i,j,k,1)
+               rhofz=0.5d0*(u(l,i,j,k,1)+u(l,i,j,k-1,1))
+               betaad2=betaadbricolo(rhocell,rhofz,dtlim,bcell,bcell,dx,ntest,tcell,ionisrate) !TC: dz?
+               fluxambdiff(l,i,j,k,3)=-betaad2*fluxad(l,i,j,k,3)
 
-              v2x=bmagij(l,i,j,k,1,2)
-              v2y=bmagij(l,i,j,k,2,2)
-              v2z=bmagij(l,i,j,k,3,2)
+            end do
+         end do
+      end do
+   end do
 
-              rhofy=0.5d0*(u(l,i,j,k,1)+u(l,i,j-1,k,1))
-              bcell = bsquaremax(l,i,j,k)
-
-              betaad2=betaadbricolo(rhocell,rhofy,dtlim,bcell,bcell,dx,ntest,tcell,ionisrate)
-              fluxambdiff(l,i,j,k,2)=-betaad2*fluxad(l,i,j,k,2)
-
-              v2x=bmagij(l,i,j,k,1,3)
-              v2y=bmagij(l,i,j,k,2,3)
-              v2z=bmagij(l,i,j,k,3,3)
-!              bsquare=v2x*v2x+v2y*v2y+v2z*v2z
-              rhofz=0.5d0*(u(l,i,j,k,1)+u(l,i,j,k-1,1))
-              bcell = bsquaremax(l,i,j,k)
-
-              betaad2=betaadbricolo(rhocell,rhofz,dtlim,bcell,bcell,dx,ntest,tcell,ionisrate)
-              fluxambdiff(l,i,j,k,3)=-betaad2*fluxad(l,i,j,k,3)
-
-              v2x=u(l,i,j,k,6)
-              v2y=u(l,i,j,k,7)
-              v2z=u(l,i,j,k,8)
-             !              bsquare=v2x*v2x+v2y*v2y+v2z*v2z
-              bcellold=bcell
-
-              jcenter(l,i,j,k,1)=computdy(bmagij,nzz,nyy,l,i,j,k,dy)-computdz(bmagij,nyy,nzz,l,i,j,k,dy)
-              jcenter(l,i,j,k,2)=computdz(bmagij,nxx,nzz,l,i,j,k,dy)-computdx(bmagij,nzz,nxx,l,i,j,k,dy)
-              jcenter(l,i,j,k,3)=computdx(bmagij,nyy,nxx,l,i,j,k,dy)-computdy(bmagij,nxx,nyy,l,i,j,k,dy)
-
-              call crossprod(jcenter,u(:,:,:,:,6:8),jxb,l,i,j,k)
-
-              jxbsquare(l,i,j,k)=(jxb(l,i,j,k,1)*jxb(l,i,j,k,1)+jxb(l,i,j,k,2)*jxb(l,i,j,k,2)+jxb(l,i,j,k,3)*jxb(l,i,j,k,3))*&
-              & betaad(u(l,i,j,k,1),bcell,tcell,ionisrate)*dtlim
-
-
-
-           end do
-        end do
-     end do
-  end do
-
-end SUBROUTINE computambip
+end subroutine computambip
 !########################################################################################
 !########################################################################################
 !########################################################################################

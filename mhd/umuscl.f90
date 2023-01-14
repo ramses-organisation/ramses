@@ -104,7 +104,6 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
   ! if ndim<3 !
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),save::flxmagx,flxmagy,flxmagz
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3,1:3),save::bmagij
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),save::jcentersquare,jxbsquare
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),save::bemfx,bemfy,bemfz
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),save::jemfx,jemfy,jemfz
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),save::florentzx,florentzy,florentzz
@@ -124,7 +123,6 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
   fluxambdiff=0d0
   emfohmdiss=0d0
   fluxohm=0d0
-  jcentersquare=0d0
   fluxmd=0d0
   fluxh=0d0
   fluxad=0d0
@@ -160,9 +158,8 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
 
   ! AMBIPOLAR DIFFUSION
   if(nambipolar) then
-     call computambip(uin,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,florentzx,florentzy,florentzz,fluxad,bmagij,emfambdiff,fluxambdiff,jxbsquare)
+     call computambip(uin,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,florentzx,florentzy,florentzz,fluxad,bmagij,emfambdiff,fluxambdiff)
   endif
-  !TC: jxbsquare not used
 
   ! OHMIC DISSIPATION
   if(nmagdiffu) then
