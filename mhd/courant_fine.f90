@@ -156,16 +156,13 @@ subroutine courant_fine(ilevel)
         ! Compute CFL time-step
         if(nleaf>0)then
 #ifdef NIMHD
-           !needed
-           call cmpdt(uu,gg,dx,dt_lev,nleaf,dtambdiff_lev,dtmagdiff_lev)
-           ! remove the nimhd effects from cmpdt and make a separate call cmpdt_nimhd
-           ! then take the min
+           ! Warning: needs to be done before cmpdt because there uu is altered
+           call cmpdt_nimhd(uu,dx,nleaf,dtambdiff_lev,dtmagdiff_lev)
            dtambdiff_loc=min(dtambdiff_loc,dtambdiff_lev)
            dtmagdiff_loc=min(dtmagdiff_loc,dtmagdiff_lev)
            dtwad_loc=min(dtwad_loc,dt_lev)
-#else
-           call cmpdt(uu,gg,dx,dt_lev,nleaf)
 #endif
+           call cmpdt(uu,gg,dx,dt_lev,nleaf)
            dt_loc=min(dt_loc,dt_lev)
         end if
 
@@ -185,14 +182,6 @@ subroutine courant_fine(ilevel)
        &MPI_COMM_WORLD,info)
   call MPI_ALLREDUCE(dt_loc     ,dt_all      ,1,MPI_DOUBLE_PRECISION,MPI_MIN,&
        &MPI_COMM_WORLD,info)
-#ifdef NIMHD
-  call MPI_ALLREDUCE(dtambdiff_loc,dtambdiff_all,1,MPI_DOUBLE_PRECISION,MPI_MIN,&
-       &MPI_COMM_WORLD,info)
-  call MPI_ALLREDUCE(dtmagdiff_loc,dtmagdiff_all,1,MPI_DOUBLE_PRECISION,MPI_MIN,&
-       &MPI_COMM_WORLD,info)
-  call MPI_ALLREDUCE(dtwad_loc    ,dtwad_all    ,1,MPI_DOUBLE_PRECISION,MPI_MIN,&
-       &MPI_COMM_WORLD,info)
-#endif
   mass_all=comm_buffout(1)
   ekin_all=comm_buffout(2)
   eint_all=comm_buffout(3)
@@ -204,11 +193,6 @@ subroutine courant_fine(ilevel)
   eint_all=eint_loc
   emag_all=emag_loc
   dt_all=dt_loc
-#ifdef NIMHD
-  dtambdiff_all=dtambdiff_loc
-  dtmagdiff_all=dtmagdiff_loc
-  dtwad_all=dtwad_loc
-#endif
 #endif
 
   mass_tot=mass_tot+mass_all
@@ -218,15 +202,29 @@ subroutine courant_fine(ilevel)
   dtnew(ilevel)=MIN(dtnew(ilevel),dt_all)
 
 #ifdef NIMHD
+
+  ! Compute global quantities
+#ifndef WITHOUTMPI
+  call MPI_ALLREDUCE(dtambdiff_loc,dtambdiff_all,1,MPI_DOUBLE_PRECISION,MPI_MIN,&
+       &MPI_COMM_WORLD,info)
+  call MPI_ALLREDUCE(dtmagdiff_loc,dtmagdiff_all,1,MPI_DOUBLE_PRECISION,MPI_MIN,&
+       &MPI_COMM_WORLD,info)
+  call MPI_ALLREDUCE(dtwad_loc    ,dtwad_all    ,1,MPI_DOUBLE_PRECISION,MPI_MIN,&
+       &MPI_COMM_WORLD,info)
+#else
+  dtambdiff_all=dtambdiff_loc
+  dtmagdiff_all=dtmagdiff_loc
+  dtwad_all=dtwad_loc
+#endif
+
   dtambdiff(ilevel)=MIN(dtambdiff(ilevel), dtambdiff_all)
   dtmagdiff(ilevel)=MIN(dtmagdiff(ilevel), dtmagdiff_all)
   dtwad(ilevel)=MIN(dtwad(ilevel), dtwad_all) 
   
-  tmag1 = 1.0e+30 ; tmag2 = 1.0e+30
-  
+  ! timestep reduction due to ambipolar diffusion
   if(nambipolar) then
-     ! ambipolar diffusion
      ! WARNING this should not be done for tests
+     ! TC: what is this nminitimestep again?
      if (nminitimestep.eq.1) then
         ! alfven time alone maybe not correct
         ! comparison with global time step
@@ -234,9 +232,11 @@ subroutine courant_fine(ilevel)
      else
         tmag1=dtambdiff(ilevel)
      endif
-  endif
+     dtnew(ilevel)=MIN(dtnew(ilevel),tmag1)
+   endif
 
-  if  (nmagdiffu) then
+  ! timestep reduction due to Ohmic diffusion
+  if(nmagdiffu) then
      if (nminitimestep.eq.1) then
         ! alfven time alone maybe not correct
         ! comparison with global time step
@@ -244,10 +244,8 @@ subroutine courant_fine(ilevel)
      else
         tmag2=dtmagdiff(ilevel)
      endif
-  end if
-
-   dtnew(ilevel)=MIN(dtnew(ilevel),tmag1)
-   dtnew(ilevel)=MIN(dtnew(ilevel),tmag2)
+     dtnew(ilevel)=MIN(dtnew(ilevel),tmag2)
+   end if
 #endif
 
 111 format('   Entering courant_fine for level ',I2)

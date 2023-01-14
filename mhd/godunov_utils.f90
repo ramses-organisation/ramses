@@ -2,29 +2,73 @@
 !###########################################################
 !###########################################################
 !###########################################################
+! Non-ideal MHD timesteps
 #ifdef NIMHD
-!extract nimhd part and put it in a separate routine cmpdt_nimhd
-subroutine cmpdt(uu,gg,dx,dt,ncell,dtambdiff,dtohmdiss)
-#else
-subroutine cmpdt(uu,gg,dx,dt,ncell)
+subroutine cmpdt_nimhd(uu,dx,ncell,dtambdiff,dtohmdiss)
+   use amr_parameters
+   use hydro_parameters
+   use nimhd_parameters
+
+   implicit none
+   integer::ncell
+   real(dp)::dx
+   real(dp)::dtambdiff,dtohmdiss    ! ambipolar and Ohmic diffusion times
+   real(dp),dimension(1:nvector,1:nvar+3)::uu
+
+   real(dp)::xx,betaad,etaohmdiss
+   real(dp),dimension(1:nvector),save::B2,rho,tcell,ionisrate
+   integer::k,idim
+  
+   do k = 1,ncell
+      rho(k)=max(uu(k,1),smallr)
+      call ideal_gas_temperature(rho(k), uu(k,5), tcell(k))
+      ionisrate(k) = default_ionisrate
+   end do
+ 
+   do k = 1,ncell
+      B2(k)=0
+   end do
+   do idim = 1,3
+      do k = 1, ncell
+         B2(k)=B2(k) + (0.5d0*(uu(k,5+idim)+uu(k,nvar+idim)))**2
+      end do
+   end do
+  
+   ! Ohmic dissipation
+   dtohmdiss=1d35
+   if (nmagdiffu) then
+      do k = 1,ncell
+         xx=etaohmdiss(rho(k),B2(k),tcell(k),ionisrate(k))
+         if(xx.gt.0d0) then
+            dtohmdiss=min(dtohmdiss, coefohm*dx*dx/xx)
+         endif
+      end do
+   endif
+   
+   ! ambipolar diffusion
+   dtambdiff=1d36 !TC: can we put HUGE or something here?
+   if (nambipolar) then
+      do k = 1,ncell
+         xx=B2(k)*betaad(rho(k),B2(k),tcell(k),ionisrate(k)) 
+         if (xx.gt.0d0) then
+            dtambdiff=min(dtambdiff, coefad*dx*dx/xx)
+         endif
+      end do
+   endif
+ 
+end subroutine cmpdt_nimhd
 #endif
+!###########################################################
+!###########################################################
+!###########################################################
+!###########################################################
+subroutine cmpdt(uu,gg,dx,dt,ncell)
   use amr_parameters
   use hydro_parameters
   use const
-#ifdef NIMHD
-  use nimhd_parameters
-#endif 
   implicit none
   integer::ncell
   real(dp)::dx,dt
-#ifdef NIMHD
-  real(dp)::dtambdiff,dtohmdiss    ! ambipolar, Ohmic diffusiom times
-  real(dp)::dtambdiffb,dtohmdissb
-  real(dp)::xx,betaad
-  real(dp),dimension(1:nvector),save::rhoad
-  real(dp)::etaohmdiss
-  real(dp),dimension(1:nvector),save::tcell,ionisrate
-#endif
   real(dp),dimension(1:nvector,1:nvar+3)::uu
   real(dp),dimension(1:nvector,1:ndim)::gg
   real(dp),dimension(1:nvector),save::a2,B2,rho,ctot
@@ -41,11 +85,6 @@ subroutine cmpdt(uu,gg,dx,dt,ncell)
   do k = 1,ncell
      uu(k,1)=max(uu(k,1),smallr)
      rho(k)=uu(k,1)
-#ifdef NIMHD
-     rhoad(k)=rho(k)
-     call ideal_gas_temperature(rho(k), uu(k,5), tcell(k))
-     ionisrate(k) = default_ionisrate
-#endif
   end do
   do idim = 1,3
      do k = 1, ncell
@@ -125,44 +164,6 @@ subroutine cmpdt(uu,gg,dx,dt,ncell)
      dtcell=dx/ctot(k)*(sqrt(one+two*courant_factor*rho(k))-one)/rho(k)
      dt = min(dt,dtcell)
   end do
-
-#ifdef NIMHD
-  ! time step for non-ideal mhd
-
-  ! Ohmic dissipation
-  if (.not.nmagdiffu) then
-     dtohmdiss=1d35
-  else
-     dtohmdiss=1d35
-     do k = 1,ncell
-        xx=etaohmdiss(rhoad(k),B2(k),tcell(k),ionisrate(k))
-        if(xx.gt.0d0) then
-           dtohmdissb=coefohm*dx*dx/xx
-        else
-           dtohmdissb=1d35
-        endif
-        dtohmdiss=min(dtohmdissb,dtohmdiss)
-     end do
-  endif
-  
-  ! ambipolar diffusion
-  if (.not.nambipolar) then
-     dtambdiff=1d36
-  else
-     dtambdiff=1d36
-     do k = 1,ncell
-        xx=B2(k)*betaad(rhoad(k),B2(k),tcell(k),ionisrate(k)) 
-        if (xx.gt.0d0) then
-           !! WARNING RHOAD mandatory because rho(k) is not density cf lines above
-           dtambdiffb=coefad*dx*dx/xx
-        else
-           dtambdiffb=1d36
-        endif
-        dtambdiff=min(dtambdiffb,dtambdiff)
-     end do
-  endif
-
-#endif
 
 end subroutine cmpdt
 !###########################################################
