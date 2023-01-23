@@ -51,11 +51,6 @@ NVAR = 2+$(NDIM)
 ifeq ($(SOLVER),mhd)
    NVAR = 8
 endif
-# current is treated as a passive scalar?
-ifeq ($(NIMHD),1)
-   NPSCAL := $(NPSCAL)+3
-   SOLVER=mhd
-endif
 NVAR := $(NVAR)+$(NENER)+$(NPSCAL)+$(NMETALS)
 ifeq ($(RT),1)
    NVAR := $(NVAR)+$(NIONS)

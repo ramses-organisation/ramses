@@ -34,14 +34,7 @@
 ! 2) use fluxes (a lot of vars are estimated for this), never used, not tested
 ! both options are still here.
 ! TODO: remove flux option
-#ifdef NIMHD
-subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid,jcell)
-! jcell is used!
-! instead use a nimhdin variable
-! remove computation of current from here and put in godunov_fine
-#else
 subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
-#endif
   use amr_parameters
   use const
   use hydro_parameters
@@ -51,11 +44,6 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
   implicit none
 
   integer ::ngrid
-#ifdef NIMHD
-  ! Output courant vector in the cell
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::jcell
-  ! TC: jcell is the current, filled in nimhd computejb2
-#endif
   real(dp)::dx,dy,dz,dt
 
   ! Input states
@@ -132,8 +120,6 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
   florentzx=0d0
   florentzy=0d0
   florentzz=0d0
-  
-  jcell=0.0d0
 #endif
 
   ilo=MIN(1,iu1+2); ihi=MAX(1,iu2-2)
@@ -149,7 +135,7 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
 #ifdef NIMHD
   if(use_nonideal_mhd) then
      ! compute Lorentz Force with current
-     call computejb2(uin,qin,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,bmagij,florentzx,florentzy,florentzz,fluxmd,fluxh,fluxad,jcell)
+     call computejb2(uin,qin,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,bmagij,florentzx,florentzy,florentzz,fluxmd,fluxh,fluxad)
   endif
 
   ! AMBIPOLAR DIFFUSION
@@ -1585,9 +1571,6 @@ subroutine cmpflxm(qm,im1,im2,jm1,jm2,km1,km2, &
               ! Internal energy flux
               tmp(l,i,j,k,2) = fgdnv(nvar+1)
 
-#ifdef NIMHD
-              flx(l,i,j,k,nvar-3:nvar-1)=zero
-#endif
            end do
         end do
      end do

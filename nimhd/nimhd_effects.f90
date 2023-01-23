@@ -4,7 +4,7 @@
 !###########################################################
 !###########################################################
 !###########################################################
-subroutine computejb2(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,bmagij,florentzx,florentzy,florentzz,fluxmd,fluxh,fluxad,jcell)
+subroutine computejb2(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,bmagij,florentzx,florentzy,florentzz,fluxmd,fluxh,fluxad)
 
   USE amr_parameters
   use hydro_commons
@@ -22,7 +22,6 @@ subroutine computejb2(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::florentzx,florentzy,florentzz
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::fluxmd,fluxh,fluxad
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3,1:3)::bmagij
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::jcell
  
   ! declare local variables
   INTEGER ::i, j, k, l, m, n 
@@ -318,18 +317,6 @@ subroutine computejb2(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
 ! computation of the component of j at center of cell
 !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-  do k=min(1,ku1+1),max(1,ku2-1)
-     do j=min(1,ju1+1),max(1,ju2-1)
-        do i=min(1,iu1+1),max(1,iu2-1)
-           do l=1,ngrid
-              jcell(l,i,j,k,1)=computdy(bmagij,nzz,nyy,l,i,j,k,dy)-computdz(bmagij,nyy,nzz,l,i,j,k,dy)
-              jcell(l,i,j,k,2)=computdz(bmagij,nxx,nzz,l,i,j,k,dy)-computdx(bmagij,nzz,nxx,l,i,j,k,dy)
-              jcell(l,i,j,k,3)=computdx(bmagij,nyy,nxx,l,i,j,k,dy)-computdy(bmagij,nxx,nyy,l,i,j,k,dy)
-           end do
-        end do
-     end do
-  end do
 
   if(nambipolar) then
   ! EMF x
@@ -940,7 +927,7 @@ end function gammaadbis
 !###########################################################
 !###########################################################
 !###########################################################
-! TC: for resistivity table?
+! TC: for resistivity table
 subroutine sig_x2d(ll,ii,j,k,lb,ib,sigO,sigH,sigP,bsquare)
 
    use amr_parameters,    only : dp
@@ -987,7 +974,7 @@ end subroutine sig_x2d
 !###########################################################
 !###########################################################
 !###########################################################
-! TC: for resistivity table?
+! TC: for resistivity table
 subroutine sig_x3d(ll,ii,xx,j,k,xi,lb,ib,sigO,sigH,sigP,bsquare)
 
    use amr_parameters,    only : dp
@@ -1062,13 +1049,14 @@ double precision function eta_AD_chimie(rhon,BBcell,BBcellold,temper,ionisrate)
    call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
 
    if(use_res==1)then
+      ! 1D table: density
       ll=(1d0+(log10(rhon)-log10(nminchimie))/dnchimie)
       j=floor(ll)
       j_dp=real(j,dp)
       eta_AD_chimie=(ll-j_dp)*log10(resistivite_chimie_res(6,j+1))+(1d0-(ll-j_dp))*log10(resistivite_chimie_res(6,j))
       eta_AD_chimie=10**eta_AD_chimie
 
-   ! TC: extrapolate from table[density,temperature,magnetic field] ?
+   ! TC: extrapolate from table[density,temperature,magnetic field]
    else if(use_x2d==1)then
       ll=(1d0+(log10(rhon)-log10(nminchimie))/dnchimie)
       j=floor(ll)
@@ -1087,7 +1075,7 @@ double precision function eta_AD_chimie(rhon,BBcell,BBcellold,temper,ionisrate)
       BBcgs=sqrt(BBcell*(4d0*pi*scale_d*(scale_v)**2))
       eta_AD_chimie=BBcgs**2/(eta_AD_chimie*densionbis(inp)*inp*scale_d*scale_d*c_cgs**2)  ! need B in G, output is gammaad in cgs
 
-   ! TC: extrapolate from table[density,temperature,ionisation rate,magnetic field] ?
+   ! TC: extrapolate from table[density,temperature,ionisation rate,magnetic field]
    else if(use_x3d==1)then
       ll=(1d0+(log10(rhon)-log10(nminchimie))/dnchimie)
       j=floor(ll)
