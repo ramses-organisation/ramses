@@ -156,14 +156,17 @@ subroutine courant_fine(ilevel)
         ! Compute CFL time-step
         if(nleaf>0)then
 #ifdef NIMHD
-           ! Warning: needs to be done before cmpdt because there uu is altered
+           ! Warning: cmpdt_nimhd needs to be done before cmpdt because there uu is altered
            call cmpdt_nimhd(uu,dx,nleaf,dtambdiff_lev,dtmagdiff_lev)
            dtambdiff_loc=min(dtambdiff_loc,dtambdiff_lev)
            dtmagdiff_loc=min(dtmagdiff_loc,dtmagdiff_lev)
-           dtwad_loc=min(dtwad_loc,dt_lev)
 #endif
            call cmpdt(uu,gg,dx,dt_lev,nleaf)
            dt_loc=min(dt_loc,dt_lev)
+#ifdef NIMHD
+           ! store the ideal MHD timestep (without effect of gravity, etc.)
+           dtwad_loc=min(dtwad_loc,dt_lev)
+#endif
         end if
 
      end do
