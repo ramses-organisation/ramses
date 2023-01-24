@@ -127,10 +127,6 @@ class Histo:
         self.nx = nx
         self.ny = ny
         self.h = np.zeros([nx,ny])
-        self.lxmin
-        self.lxmax
-        self.lymin
-        self.lymax
 
 def rd_histo(filename):
     """This function reads a RAMSES histogram file (unformatted Fortran binary)

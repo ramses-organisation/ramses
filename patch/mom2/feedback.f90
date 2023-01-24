@@ -247,7 +247,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   endif
 
   ! Type II supernova specific energy from cgs to code units
-  ESN=1d51/(10.*M_sun)/scale_v**2
+  ESN=f_esn*1d51/(10.*M_sun)/scale_v**2
 
   ! Type II supernova average mass from cgs to code units
   M_SINGLE_SN=(10.*M_sun)/(scale_d*scale_l**3)
@@ -257,7 +257,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
       CASE (1)
          ! inhomogeneous medium (weak)
          ! momentum
-         p_SN = 1.11*1d5*1d5*M_sun/(scale_v*scale_d*scale_l**3)
+         p_SN = f_esn*1.11*1d5*1d5*M_sun/(scale_v*scale_d*scale_l**3)
          p_SN_z_exp = -0.114
          p_SN_n_exp = -0.190
          ! cooling radius
@@ -267,7 +267,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
       CASE (2)
          ! homogeneous medium (strong)
          ! momentum
-         p_SN = 1.42*1d5*1d5*M_sun/(scale_v*scale_d*scale_l**3)
+         p_SN = f_esn*1.42*1d5*1d5*M_sun/(scale_v*scale_d*scale_l**3)
          p_SN_z_exp = -0.137
          p_SN_n_exp = -0.160
          ! cooling radius
@@ -1041,7 +1041,7 @@ subroutine Sedov_blast(xSN,vSN,mSN,sSN,ZSN,indSN,vol_gas,dq,ekBlast,nSN)
   msne_min=mass_sne_min*M_sun/(scale_d*scale_l**3)
   mstar_max=mass_star_max*M_sun/(scale_d*scale_l**3)
   ! Supernova specific energy from cgs to code units
-  ESN=(1d51/(10d0*M_sun))/scale_v**2
+  ESN=f_esn*(1d51/(10d0*M_sun))/scale_v**2
 
   do iSN=1,nSN
      eta_sn2    = eta_sn
