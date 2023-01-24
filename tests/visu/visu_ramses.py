@@ -77,7 +77,7 @@ def load_snapshot(nout):
     son   = np.zeros([info["ngridmax"],twotondim],dtype=np.int32)
     var   = np.zeros([info["ngridmax"],twotondim,nvar_read],dtype=np.float64)
     xyz   = np.zeros([info["ngridmax"],twotondim,info["ndim"]],dtype=np.float64)
-    ref   = np.zeros([info["ngridmax"],twotondim],dtype=np.bool)
+    ref   = np.zeros([info["ngridmax"],twotondim],dtype=bool) # np.bool removed for numpy>=1.24
 
     partinfofile = infile+"/header_"+infile.split("_")[-1]+".txt"
     info["particle_count"] = {}
