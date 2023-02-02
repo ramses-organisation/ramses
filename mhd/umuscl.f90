@@ -134,12 +134,13 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
 
 #ifdef NIMHD
   if(use_nonideal_mhd) then
-     ! compute Lorentz Force with current
+     ! compute bemf (?), current j,  Lorentz force (florentz)
      call computejb2(uin,qin,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,bmagij,florentzx,florentzy,florentzz,fluxmd,fluxh,fluxad)
   endif
 
   ! AMBIPOLAR DIFFUSION
   if(nambipolar) then
+     ! use Lorentz force to calculate ...
      call computambip(uin,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,florentzx,florentzy,florentzz,fluxad,bmagij,emfambdiff,fluxambdiff)
   endif
 
@@ -179,6 +180,7 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
         end do
      end do
 #ifdef NIMHD
+     ! TC: heating by Ohmic diffusion? Remove?
      ! Energy flux from ohmic term dB/dt=rot(-eta*J)
      if(use_nonideal_mhd) then
         ivar=5
@@ -244,6 +246,7 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
         end do
      end do
 #ifdef NIMHD
+     ! TC: Ohmic heating? remove?
      ! Energy flux from ohmic term dB/dt=rot(-eta*J)
      if(use_nonideal_mhd) then  
         ivar=5

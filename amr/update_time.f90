@@ -299,7 +299,7 @@ subroutine update_time(ilevel)
            endif
 #ifdef NIMHD
            if(use_nonideal_mhd)then
-              write(*,889)dtad,dtmd,dtwithoutad,dt
+              write(*,889)dtad,dtmd,dtwithoutad
            endif
 #endif
            itest=1
@@ -394,8 +394,8 @@ subroutine update_time(ilevel)
 999 format(' Level ',I2,' has ',I10,' grids (',3(I8,','),')')
 
 #ifdef NIMHD
-889 format(' ambip diff time=',1pe10.3,' mag diff time=',1pe10.3,&
-         & ' time ideal mhd=',1pe10.3,' time new=',1pe10.3)
+889 format(' dt ambipolar=',1pe10.3,' dt ohmic=',1pe10.3,&
+         & ' dt ideal mhd=',1pe10.3)
 #endif
   
 end subroutine update_time

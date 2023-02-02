@@ -6,3 +6,8 @@ ramses2d
 ramses3d
 .DS_Store
 .mmat
+output_00*
+*.tex
+*.dat
+*.pdf
+test_exe_3d

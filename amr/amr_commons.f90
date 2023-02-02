@@ -54,9 +54,9 @@ module amr_commons
 !#ifdef NIMHD
   ! move to nimhd commons
   ! gives compilation error when in if NIMHD block
-  real(dp),dimension(1:MAXLEVEL)::dtambdiff,dtambdiffold ! ambiploar diffusion
-  real(dp),dimension(1:MAXLEVEL)::dtwad,dtwadold         ! without ambipolar diffusion
-  real(dp),dimension(1:MAXLEVEL)::dtmagdiff,dtmagdiffold ! magnetic diffusion
+  real(dp),dimension(1:MAXLEVEL)::dtambdiff,dtambdiffold ! ambipolar diffusion timestep
+  real(dp),dimension(1:MAXLEVEL)::dtmagdiff,dtmagdiffold ! magnetic diffusion timestep
+  real(dp),dimension(1:MAXLEVEL)::dtwad,dtwadold         ! ideal mhd timestep (without effects of gravity, etc)
 !#endif
   
   ! Pointers for each level linked list

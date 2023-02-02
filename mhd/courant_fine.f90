@@ -227,7 +227,6 @@ subroutine courant_fine(ilevel)
   ! timestep reduction due to ambipolar diffusion
   if(nambipolar) then
      ! WARNING this should not be done for tests
-     ! TC: what is this nminitimestep again?
      if (nminitimestep.eq.1) then
         ! alfven time alone maybe not correct
         ! comparison with global time step
