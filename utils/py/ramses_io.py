@@ -204,8 +204,11 @@ def rd_part(nout,**kwargs):
 
     if ( not (center is None)  and not (radius is None) ):
         info = rd_info(nout)
-        cpulist = get_cpu_list(info,**kwargs)
-        print("Will open only",len(cpulist),"files")
+        if(info.quadhilbert):
+            cpulist = range(1,ncpu+1)
+        else:
+            cpulist = get_cpu_list(info,**kwargs)
+            print("Will open only",len(cpulist),"files")
     else:
         cpulist = range(1,ncpu+1)
 
@@ -295,8 +298,11 @@ def rd_amr(nout,**kwargs):
 
     if ( not (center is None)  and not (radius is None) ):
         info = rd_info(nout)
-        cpulist = get_cpu_list(info,**kwargs)
-        print("Will open only",len(cpulist),"files")
+        if(info.quadhilbert):
+            cpulist = range(1,ncpu+1)
+        else:
+            cpulist = get_cpu_list(info,**kwargs)
+            print("Will open only",len(cpulist),"files")
     else:
         cpulist = range(1,ncpu+1)
 
@@ -468,8 +474,11 @@ def rd_hydro(nout,**kwargs):
 
     if ( not (center is None)  and not (radius is None) ):
         info = rd_info(nout)
-        cpulist = get_cpu_list(info,**kwargs)
-        print("Will open only",len(cpulist),"files")
+        if(info.quadhilbert):
+            cpulist = range(1,ncpu+1)
+        else:
+            cpulist = get_cpu_list(info,**kwargs)
+            print("Will open only",len(cpulist),"files")
     else:
         cpulist = range(1,ncpu+1)
 
@@ -702,8 +711,13 @@ def rd_info(nout):
         ordering = f.read_ints("i")
         
         bound_key = f.read_ints("f8")
-        
-        i.bound_key[:] = bound_key
+
+        if(len(bound_key) != ncpu+1):
+            print("Quad Hilbert not supported in python.")
+            i.quadhilbert=True
+        else:
+            i.quadhilbert=False
+            i.bound_key[:] = bound_key
         
     filename = "output_"+car1+"/info_"+car1+".txt"
     data = ascii.read(filename, header_start=0, data_start=0, data_end=18, delimiter='=', names=["field","value"])
