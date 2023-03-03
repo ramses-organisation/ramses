@@ -621,15 +621,21 @@ subroutine add_viscosity_source_terms(ilevel)
            Kturb=uold(ind_cell(i),ivirial1)
            sigma=sqrt(max(2.0*Kturb/d_old,smallc**2))
 
-        ! Implicit solution
-           unew(ind_cell(i),ivirial1)=(unew(ind_cell(i),ivirial1) &
-                &  +d_old*dx_loc*sigma*phi_diss(i)*dtnew(ilevel)) &
-                & /(1.0+sigma/dx_loc*dtnew(ilevel))
-        ! Turbulence from SN
-        !    unew(ind_cell(i),ivirial1) = unew(ind_cell(i),ivirial1)/(1.0+sigma/dx_loc*dtnew(ilevel))
+           if(nstep_coarse==0) then
+              ! Initialize ivirial with the stationary solution of the sgs model
+              unew(ind_cell(i),ivirial1) = uold(ind_cell(i),1)*dx_loc**2*phi_diss(i)
+           else
+              ! Implicit solution
+              unew(ind_cell(i),ivirial1)=(unew(ind_cell(i),ivirial1) &
+                   &  +d_old*dx_loc*sigma*phi_diss(i)*dtnew(ilevel)) &
+                   & /(1.0+sigma/dx_loc*dtnew(ilevel))
+           end if
 
-        ! Stationary solution
-        !    unew(ind_cell(i),ivirial1)=d_old*dx_loc**2*phi_diss(i)
+           ! Only turbulence from SN
+           !    unew(ind_cell(i),ivirial1) = unew(ind_cell(i),ivirial1)/(1.0+sigma/dx_loc*dtnew(ilevel))
+
+           ! Only stationary solution
+           !    unew(ind_cell(i),ivirial1)=d_old*dx_loc**2*phi_diss(i)
 
         end do
         ! End loop over grids
