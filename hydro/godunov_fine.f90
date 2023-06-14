@@ -183,7 +183,7 @@ subroutine set_uold(ilevel)
         else if(unew(active(ilevel)%igrid(i)+iskip,1).lt.smallr.and.uold(active(ilevel)%igrid(i)+iskip,1).gt.unew(active(ilevel)%igrid(i)+iskip,1))then
            ! outflow leading to density below floor: apply density floor to scalar density
            do ivar = ndim+nener+3, nvar
-              unew(active(ilevel)%igrid(i)+iskip,imetal) = uold(active(ilevel)%igrid(i)+iskip,imetal) * smallr / max(uold(active(ilevel)%igrid(i)+iskip, 1), smallr)
+              unew(active(ilevel)%igrid(i)+iskip,ivar) = uold(active(ilevel)%igrid(i)+iskip,ivar) * smallr / max(uold(active(ilevel)%igrid(i)+iskip, 1), smallr)
            end do
         end if
      end do
