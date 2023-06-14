@@ -258,7 +258,29 @@ subroutine upl(ind_cell,ncell)
   !----------------------------------
   ! Loop over cell centered variables
   !----------------------------------
-  do ivar=1,nvar
+
+  !---------------------------------------------------------------------------
+  ! L. Romano 14.06.2023 -- apply smallr, preventing errors in passive scalars
+  getx(1:ncell)=0.0d0
+  do ind_son=1,twotondim
+     iskip_son=ncoarse+(ind_son-1)*ngridmax
+     do i=1,ncell
+        ind_cell_son(i)=iskip_son+igrid_son(i)
+     end do
+     ! Update average
+     do i=1,ncell
+        getx(i)=getx(i)+max(uold(ind_cell_son(i),1), smallr)
+     end do
+  end do
+
+  ! Scatter result to cells
+  do i=1,ncell
+     uold(ind_cell(i),1)=getx(i)/dble(twotondim)
+  end do
+  !---------------------------------------------------------------------------
+
+  ! L. Romano 14.06.2023 -- ivar starts now at 2
+  do ivar=2,nvar
   if(ivar<=neul.or.ivar>neul+ndim)then
 
      ! Average conservative variable
