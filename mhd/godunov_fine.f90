@@ -220,6 +220,26 @@ subroutine set_uold(ilevel)
   ! Set uold to unew for myid cells
   do ind=1,twotondim
      iskip=ncoarse+(ind-1)*ngridmax
+
+     ! -------------------------------------------------------------------------------------------------------------------------------------------------------------
+     ! L. Romano 14.06.2023 -- Catch advection errors due to smallr
+#if NVAR > 8+NENER  
+     do i=1,active(ilevel)%ngrid
+        if(uold(active(ilevel)%igrid(i)+iskip,1).lt.smallr.and.unew(active(ilevel)%igrid(i)+iskip,1).gt.uold(active(ilevel)%igrid(i)+iskip,1))then
+           ! inflow into previously floored cell: fix concentrations
+           do ivar = 9+nener, nvar
+              unew(active(ilevel)%igrid(i)+iskip,ivar) = uold(active(ilevel)%igrid(i)+iskip,ivar) * max(unew(active(ilevel)%igrid(i)+iskip, 1), smallr) / smallr
+           end do
+        else if(unew(active(ilevel)%igrid(i)+iskip,1).lt.smallr.and.uold(active(ilevel)%igrid(i)+iskip,1).gt.unew(active(ilevel)%igrid(i)+iskip,1))then
+           ! outflow leading to density below floor: apply density floor to scalar density
+           do ivar = 9+nener, nvar
+              unew(active(ilevel)%igrid(i)+iskip,ivar) = uold(active(ilevel)%igrid(i)+iskip,ivar) * smallr / max(uold(active(ilevel)%igrid(i)+iskip, 1), smallr)
+           end do
+        end if
+     end do
+#endif
+     ! -------------------------------------------------------------------------------------------------------------------------------------------------------------
+
      do ivar=1,nvar+3
         do i=1,active(ilevel)%ngrid
            uold(active(ilevel)%igrid(i)+iskip,ivar) = unew(active(ilevel)%igrid(i)+iskip,ivar)
