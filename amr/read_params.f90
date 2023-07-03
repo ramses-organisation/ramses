@@ -3,6 +3,7 @@ subroutine read_params
   use pm_parameters
   use poisson_parameters
   use hydro_parameters
+  use sink_feedback_parameters
   use mpi_mod
   implicit none
   !--------------------------------------------------
@@ -28,6 +29,22 @@ subroutine read_params
 #elif NDIM==3
   integer, parameter :: max_level_wout_quadhilbert = 19
 #endif
+
+#ifdef LIGHT_MPI_COMM
+   ! RAMSES legacy communicator (from amr_commons.f90)
+   type communicator_legacy
+      integer                            ::ngrid_legacy
+      integer                            ::npart_legacy
+      integer     ,dimension(:)  ,pointer::igrid_legacy
+      integer     ,dimension(:,:),pointer::f_legacy
+      real(kind=8),dimension(:,:),pointer::u_legacy
+      integer(i8b),dimension(:,:),pointer::fp_legacy
+      real(kind=8),dimension(:,:),pointer::up_legacy
+   end type communicator_legacy
+   real(kind=8)::mem_used_legacy_buff, mem_used_new_buff,mem_used_legacy_buff_mg, mem_used_new_buff_mg
+   type(communicator_legacy),allocatable,dimension(:,:)::emission_reception_legacy  ! 2D (ncpu,nlevelmax) data emission/reception/active_mg/emission_mg "heavy" buffer
+#endif
+
   !--------------------------------------------------
   ! Namelist definitions
   !--------------------------------------------------
@@ -35,7 +52,7 @@ subroutine read_params
        & ,nrestart,ncontrol,nstepmax,nsubcycle,nremap,ordering &
        & ,bisec_tol,static,overload,cost_weighting,aton,nrestart_quad,restart_remap &
        & ,static_dm,static_gas,static_stars,convert_birth_times,use_proper_time,remap_pscalar &
-       & ,unbind,make_mergertree
+       & ,unbind,make_mergertree,stellar
   namelist/output_params/noutput,foutput,aout,tout &
        & ,tend,delta_tout,aend,delta_aout,gadget_output,walltime_hrs,minutes_dump
   namelist/amr_params/levelmin,levelmax,ngridmax,ngridtot &
@@ -77,8 +94,8 @@ subroutine read_params
   write(*,*)'_/    _/   _/    _/   _/    _/   _/    _/  _/         _/    _/ '
   write(*,*)'_/    _/   _/    _/   _/    _/    _/_/_/   _/_/_/_/    _/_/_/  '
   write(*,*)'                        Version 3.0                            '
-  write(*,*)'       written by Romain Teyssier (University of Zurich)       '
-  write(*,*)'               (c) CEA 1999-2007, UZH 2008-2014                '
+  write(*,*)'       written by Romain Teyssier (Princeton University)       '
+  write(*,*)'           (c) CEA 1999-2007, UZH 2008-2021, PU 2022           '
   write(*,*)' '
   write(*,'(" Working with nproc = ",I5," for ndim = ",I1)')ncpu,ndim
   ! Check nvar is not too small
@@ -177,6 +194,58 @@ subroutine read_params
   rewind(1)
   read(1,NML=poisson_params,END=81)
 81 continue
+
+#ifndef WITHOUTMPI
+#ifdef LIGHT_MPI_COMM
+  if(myid==1 .and. ncpu .gt. 100) then
+    write(*,*) "--------------------------------------------------------------------------------------------------------------"
+    write(*,*) "> Using Light MPI Communicator data structures to reduce memory footprint advocated by P. Wautelet (IDRIS) in"
+    write(*,*) "  http://www.idris.fr/docs/docu/support-avance/ramses.html"
+    write(*,*) ""
+
+    allocate(emission_reception_legacy(1:100, 1:levelmax))
+    mem_used_legacy_buff = dble(sizeof(emission_reception_legacy)*2)*ncpu/100.0
+    deallocate(emission_reception_legacy)
+    write(*,*) "  * Old MPI communication structures (emission+reception) would have allocated : ", mem_used_legacy_buff/1.0e6," MB"
+    write(*,*) "      - reception(1:ncpu,1:nlevelmax) : ", mem_used_legacy_buff/2.0e6," MB"
+    write(*,*) "      - emission(1:ncpu,1:nlevelmax)  : ", mem_used_legacy_buff/2.0e6," MB"
+    if (poisson) then
+        allocate(emission_reception_legacy(1:100, 1:levelmax-1))
+        mem_used_legacy_buff_mg = dble(sizeof(emission_reception_legacy)*2)*ncpu/100.0
+        deallocate(emission_reception_legacy)
+        write(*,*) "  * Old Poisson-related MPI communication structures (active_mg+emission_mg) would have allocated : ", mem_used_legacy_buff_mg/1.0e6," MB"
+        write(*,*) "      - active_mg(1:ncpu,1:nlevelmax-1) : ", mem_used_legacy_buff_mg/2.0e6," MB"
+        write(*,*) "      - emission_mg(1:ncpu,1:nlevelmax-1) : ", mem_used_legacy_buff_mg/2.0e6," MB"
+        mem_used_legacy_buff = mem_used_legacy_buff + mem_used_legacy_buff_mg
+    endif
+
+    allocate(reception(1:100, 1:levelmax))
+    allocate(emission(1:levelmax))
+    allocate(emission_part(1:levelmax))
+    mem_used_new_buff = dble(sizeof(emission)) + dble(sizeof(reception))*ncpu/100.0 + dble(sizeof(emission_part))
+    deallocate(reception)
+    deallocate(emission)
+    deallocate(emission_part)
+    write(*,*) "  * New MPI communication structures (emission+reception) use : ", mem_used_new_buff/1.0e6," MB"
+    write(*,*) "       - emission(1:nlevelmax)         : ", dble(sizeof(emission))/1.0e6," MB"
+    write(*,*) "       - emission_part(1:nlevelmax)    : ", dble(sizeof(emission_part))/1.0e6," MB"
+    write(*,*) "       - reception(1:ncpu,1:nlevelmax) : ", dble(sizeof(reception))*ncpu/1.0e8," MB"
+    if (poisson) then
+        allocate(reception(1:100, 1:levelmax-1)) ! active_mg 
+        allocate(emission(1:levelmax-1)) ! emission_mg
+        mem_used_new_buff_mg = dble(sizeof(emission)) + dble(sizeof(reception))*ncpu/100.0
+        deallocate(reception)
+        deallocate(emission)
+        write(*,*) "  * New Poisson-related MPI communication structures (emission_mg+active_mg) use : ", mem_used_new_buff_mg/1.0e6," MB"
+        write(*,*) "       - emission_mg(1:nlevelmax-1)         : ", dble(sizeof(emission))/1.0e6," MB"
+        write(*,*) "       - active_mg(1:ncpu,1:nlevelmax-1) : ", dble(sizeof(reception))*ncpu/1.0e8," MB"
+        mem_used_new_buff = mem_used_new_buff + mem_used_new_buff_mg
+    endif
+    write(*,*) "    => Overall memory economy : ", (mem_used_legacy_buff-mem_used_new_buff)/1.0e6,"MB"
+    write(*,*) "--------------------------------------------------------------------------------------------------------------"
+  endif
+#endif
+#endif
 
   !-------------------------------------------------
   ! Read optional nrestart command-line argument
@@ -280,6 +349,12 @@ subroutine read_params
      npartmax=int(nparttot/int(ncpu,kind=8),kind=4)
   endif
   if(myid>1)verbose=.false.
+
+  if(stellar.and.(.not.sink))then
+     if(myid==1)write(*,*)'Error in the namelist:'
+     if(myid==1)write(*,*)'sink=.true. is needed if stellar=.true. !'
+     nml_ok=.false.
+  endif
   if(sink.and.(.not.pic))then
      pic=.true.
   endif
@@ -297,6 +372,7 @@ subroutine read_params
 #if NDIM==3
   if (sink)call read_sink_params
   if (clumpfind .or. sink)call read_clumpfind_params
+  if (stellar)call read_stellar_params
   if (unbind)call read_unbinding_params
   if (make_mergertree)call read_mergertree_params
 #if USE_TURB==1

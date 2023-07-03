@@ -179,13 +179,26 @@ subroutine init_amr
 
   ! Allocate communicators
   allocate(active(1:nlevelmax))
+#ifdef LIGHT_MPI_COMM
+  allocate(emission(1:nlevelmax))
+  allocate(emission_part(1:nlevelmax))
+#else
   allocate(emission(1:ncpu,1:nlevelmax))
+#endif
   allocate(reception(1:ncpu,1:nlevelmax))
   do ilevel=1,nlevelmax
+#ifdef LIGHT_MPI_COMM
+    emission(ilevel)%nactive=0
+    emission_part(ilevel)%nactive=0
+#endif
      active(ilevel)%ngrid=0
      do i=1,ncpu
-        emission (i,ilevel)%ngrid=0
-        emission (i,ilevel)%npart=0
+#ifdef LIGHT_MPI_COMM
+        nullify(reception(i,ilevel)%pcomm)
+#else
+        emission(i,ilevel)%ngrid=0
+        emission(i,ilevel)%npart=0
+#endif
         reception(i,ilevel)%ngrid=0
         reception(i,ilevel)%npart=0
      end do

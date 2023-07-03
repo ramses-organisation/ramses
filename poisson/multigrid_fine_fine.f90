@@ -48,7 +48,11 @@ subroutine restrict_mask_fine(ifinelevel,allmasked)
 
       ! Loop over coarse grids
       do igrid_c_mg=1,active_mg(myid,icoarselevel)%ngrid
+#ifdef LIGHT_MPI_COMM
+         igrid_c_amr=active_mg(myid,icoarselevel)%pcomm%igrid(igrid_c_mg)
+#else
          igrid_c_amr=active_mg(myid,icoarselevel)%igrid(igrid_c_mg)
+#endif
          icell_c_amr=iskip_c_amr+igrid_c_amr
          icell_c_mg =iskip_c_mg +igrid_c_mg
 
@@ -66,7 +70,11 @@ subroutine restrict_mask_fine(ifinelevel,allmasked)
             ngpmask=ngpmask/dtwotondim
          end if
          ! Store cell mask
+#ifdef LIGHT_MPI_COMM
+         active_mg(myid,icoarselevel)%pcomm%u(icell_c_mg,4)=ngpmask
+#else
          active_mg(myid,icoarselevel)%u(icell_c_mg,4)=ngpmask
+#endif
          allmasked=allmasked .and. (ngpmask<=0.0)
       end do
    end do
@@ -121,8 +129,13 @@ subroutine restrict_mask_fine_reverse(ifinelevel)
 
          ! Stack cell volume fraction in coarse cell
          ngpmask=(1d0+f(icell_f_amr,3))/2/dtwotondim
+#ifdef LIGHT_MPI_COMM
+         active_mg(cpu_amr,icoarselevel)%pcomm%u(icell_c_mg,4)=&
+            active_mg(cpu_amr,icoarselevel)%pcomm%u(icell_c_mg,4)+ngpmask
+#else
          active_mg(cpu_amr,icoarselevel)%u(icell_c_mg,4)=&
             active_mg(cpu_amr,icoarselevel)%u(icell_c_mg,4)+ngpmask
+#endif
       end do
    end do
 end subroutine restrict_mask_fine_reverse
@@ -468,7 +481,11 @@ subroutine restrict_residual_fine(ifinelevel)
       iskip_c_mg  = (ind_c-1)*ngrid_c
 
       do igrid_c_mg=1,ngrid_c
+#ifdef LIGHT_MPI_COMM
+         igrid_c_amr = active_mg(myid,icoarselevel)%pcomm%igrid(igrid_c_mg)
+#else
          igrid_c_amr = active_mg(myid,icoarselevel)%igrid(igrid_c_mg)
+#endif
          icell_c_amr = igrid_c_amr + iskip_c_amr
          icell_c_mg  = igrid_c_mg  + iskip_c_mg
 
@@ -476,7 +493,11 @@ subroutine restrict_residual_fine(ifinelevel)
          igrid_f_amr = son(icell_c_amr)
          if(igrid_f_amr==0) then
             ! Nullify residual (coarser RHS)
+#ifdef LIGHT_MPI_COMM
+            active_mg(myid,icoarselevel)%pcomm%u(icell_c_mg,2) = 0.0d0
+#else
             active_mg(myid,icoarselevel)%u(icell_c_mg,2) = 0.0d0
+#endif
             cycle
          end if
 
@@ -490,7 +511,11 @@ subroutine restrict_residual_fine(ifinelevel)
             val = val + f(icell_f_amr,1)
          end do
          ! Store restricted residual into RHS of coarse level
+#ifdef LIGHT_MPI_COMM
+         active_mg(myid,icoarselevel)%pcomm%u(icell_c_mg,2) = val/dtwotondim
+#else
          active_mg(myid,icoarselevel)%u(icell_c_mg,2) = val/dtwotondim
+#endif
       end do
    end do
 end subroutine restrict_residual_fine
@@ -545,12 +570,21 @@ subroutine restrict_residual_fine_reverse(ifinelevel)
          icell_c_mg=iskip_c_mg+igrid_c_mg
 
          ! Is coarse cell masked?
+#ifdef LIGHT_MPI_COMM
+         if(active_mg(cpu_amr,icoarselevel)%pcomm%u(icell_c_mg,4)<=0d0) cycle
+#else
          if(active_mg(cpu_amr,icoarselevel)%u(icell_c_mg,4)<=0d0) cycle
+#endif
 
          ! Stack fine cell residual in coarse cell rhs
          res=f(icell_f_amr,1)/dtwotondim
+#ifdef LIGHT_MPI_COMM
+         active_mg(cpu_amr,icoarselevel)%pcomm%u(icell_c_mg,2)=&
+            active_mg(cpu_amr,icoarselevel)%pcomm%u(icell_c_mg,2)+res
+#else
          active_mg(cpu_amr,icoarselevel)%u(icell_c_mg,2)=&
             active_mg(cpu_amr,icoarselevel)%u(icell_c_mg,2)+res
+#endif
       end do
    end do
 end subroutine restrict_residual_fine_reverse
@@ -643,7 +677,11 @@ subroutine interpolate_and_correct_fine(ifinelevel)
                if(igrid_c_mg<=0) cycle
 
                icell_c_mg=(ind_c-1)*active_mg(cpu_amr,icoarselevel)%ngrid+igrid_c_mg
+#ifdef LIGHT_MPI_COMM
+               corr(i)=corr(i)+coeff*active_mg(cpu_amr,icoarselevel)%pcomm%u(icell_c_mg,1)
+#else
                corr(i)=corr(i)+coeff*active_mg(cpu_amr,icoarselevel)%u(icell_c_mg,1)
+#endif
             end do
          end do
 

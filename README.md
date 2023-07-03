@@ -15,7 +15,7 @@ Ramses is an open source code to model astrophysical systems, featuring self-gra
 
 You can go to the user's guide in [PDF here][4] and in the [WIKI here][1].
 
-Check regularly the [automatic test page][2]. Visit the code web site [here][3].
+Check regularly the [automatic test page][2].
 
 Download the code by cloning the git repository using 
 ```
