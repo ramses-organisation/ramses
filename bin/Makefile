@@ -142,7 +142,7 @@ endif
 LIBS = $(LIBMPI) $(LIBS_GRACKLE) $(LIBS_TURB)
 #############################################################################
 # Sources directories are searched in this exact order
-VPATH = $(shell [ -z $(PATCH) ] || find $(PATCH) -type d):../$(SOLVER):../aton:
+VPATH = $(PATCH):../$(SOLVER):../aton:
 ifeq ($(RT),1)
    VPATH += ../rt:
 endif
