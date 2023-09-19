@@ -1,1 +1,0 @@
-FLAGS: NDIM=3 PATCH=../tests/mhd/strat_disk SOLVER=mhd
