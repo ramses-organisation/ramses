@@ -358,7 +358,7 @@ subroutine write_clump_properties(to_file)
   end if
 
   if (to_file .or. myid==1)then
-     write(ilun,'(135A)')'   index  lev   parent      ncell    peak_x             peak_y             peak_z     '//&
+     write(ilun,'(144A)')'   index  halo   lev   parent      ncell    peak_x             peak_y             peak_z     '//&
           '        rho-               rho+               rho_av             mass_cl            relevance   '
      if(saddle_threshold>0)then
         write(ilun2,'(135A)')'     index      ncell    peak_x             peak_y             peak_z     '//&
@@ -418,8 +418,9 @@ subroutine write_clump_properties(to_file)
     do j=npeaks,1,-1
        jj=ind_sort(j)
        if (relevance(jj) > relevance_threshold .and. halo_mass(jj) > mass_threshold*particle_mass)then
-          write(ilun,'(I8,X,I2,X,I10,X,I10,8(X,1PE18.9E2))')&
+          write(ilun,'(I8,X,I8,1X,I2,X,I10,X,I10,8(X,1PE18.9E2))')&
                jj+ipeak_start(myid)&
+               ,ind_halo(jj)&
                ,lev_peak(jj)&
                ,new_peak(jj)&
                ,n_cells(jj)&
