@@ -59,14 +59,15 @@ def load_snapshot(nout, read_grav=False):
     if read_grav:
         list_vars.extend(("phi","a_x"))
         if info["ndim"]>1:
-            list_vars.extend(("a_y"))
+            list_vars.append(("a_y"))
         if info["ndim"]>2:
-            list_vars.extend(("a_z"))
+            list_vars.append(("a_z"))
 
     # Make sure we always read the coordinates
     list_vars.extend(("level","x","y","z","dx"))
     nvar_read = len(list_vars)
 
+    print('DEBUG', list_vars)
 
     # Now read the amr and hydro files =============================================
     # We have to open the files in binary format, and count all the bytes in the ===
@@ -87,6 +88,8 @@ def load_snapshot(nout, read_grav=False):
     var   = np.zeros([info["ngridmax"],twotondim,nvar_read],dtype=np.float64)
     xyz   = np.zeros([info["ngridmax"],twotondim,info["ndim"]],dtype=np.float64)
     ref   = np.zeros([info["ngridmax"],twotondim],dtype=bool) # np.bool removed for numpy>=1.24
+
+    print('DEBUG', info["ngridmax"])
 
     partinfofile = infile+"/header_"+infile.split("_")[-1]+".txt"
     info["particle_count"] = {}
@@ -137,6 +140,8 @@ def load_snapshot(nout, read_grav=False):
             grav_fname = generate_fname(nout,ftype="grav",cpuid=k+1)
             with open(grav_fname, mode='rb') as grav_file: # b is important -> binary
                 gravContent = grav_file.read()
+
+        print('DEBUG', len(gravContent))
 
         # Need to extract info from the file header on the first loop
         if k == 0:
@@ -307,9 +312,9 @@ def load_snapshot(nout, read_grav=False):
                                 #jvar += 1
                             # grav variables
                             if read_grav:
-                                for ivar in range(info["nvar"],info["nvar"]+info["ndim"]+1):
-                                    offset = 4*ninteg_grav + 8*(nlines_grav+nfloat_grav+(ind*(info["ndim"]+1)+ivar)*(ncache+1)) + nstrin_grav + 4
-                                    var[:ncache,ind,ivar] = struct.unpack("%id"%(ncache), gravContent[offset:offset+8*ncache])
+                                for ivar in range(info["ndim"]+1):
+                                    offset = 4*ninteg_grav + 8*(nlines_grav+nfloat_grav+(ind*4+ivar)*(ncache+1)) + nstrin_grav + 4
+                                    var[:ncache,ind,info["nvar"]+ivar] = struct.unpack("%id"%(ncache), gravContent[offset:offset+8*ncache])
                             # refinement lvl
                             var[:ncache,ind,-5] = float(ilevel+1)
                             for n in range(info["ndim"]):

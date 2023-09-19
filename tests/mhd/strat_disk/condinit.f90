@@ -40,7 +40,7 @@ subroutine condinit(x,u,dx,nn)
   real(dp)::By=0        ! multiplyer magn field strength for x-component
   real(dp)::Bz=0        ! multiplyer magn field strength for x-component
   real(dp)::height0=150 ! disk height [c.u.]
-  real(dp)::dens0=1.5d0 ! central density [c.u.]
+  real(dp)::dens0=0.66d0 ! central density [c.u.]
   real(dp)::temp0=8000  ! initial temperature [T]
 
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)

@@ -15,7 +15,8 @@ boxlen=1000
 /
 
 &POISSON_PARAMS
-gravity_type=0
+gravity_type=3
+gravity_params=1.42d-3, 5.49d-4, 0.18d3 ! a1, a2, z0
 /
 
 &HYDRO_PARAMS

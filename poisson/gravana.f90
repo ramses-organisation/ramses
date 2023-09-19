@@ -68,24 +68,22 @@ subroutine gravana(x,f,dx,ncell)
      a1 = gravity_params(1) ! Star potential coefficient in kpc Myr-2
      a2 = gravity_params(2) ! DM potential coefficient in Myr-2
      z0 = gravity_params(3) ! Scale height in pc
-     ! If negative value, use default values
-     if(a1 < 0d0) a1 = 1.42d-3 !kpc/Myr2
-     if(a2 < 0d0) a2 = 5.49d-4 !1/Myr2
-     if(z0 <=0d0) z0 = 0.18d3  !pc
+    ! standard values are: a1 = 1.42d-3, a2 = 5.49d-4, z0 = 0.18d3 pc
 
-     ! convert to cgs units and G=1, then to code units
+    ! The gravitational field is given by
+    ! g = -a1 z / sqrt(z^2+z0^2) - a2 z
+    ! rho = [(a1 / z0) ( (z/z0)^2 + 1)^(-3/2) + a2] / (4piG)
+
+    ! convert to code units
      call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
-     a1=kpc2cm*a1/(Myr2sec**2)/factG_in_cgs / scale_l * scale_t**2
-     a2=a2/(Myr2sec**2)/factG_in_cgs * scale_t**2
-     z0=z0*pc2cm / scale_l
+     a1 = a1 * kpc2cm / Myr2sec**2 / scale_l * scale_t**2
+     a2 = a2 / Myr2sec**2 * scale_t**2
+     z0 = z0 * pc2cm / scale_l
 
-     sigma = multipole(1)/(boxlen**2)
-     f_max=a1*0.5d0*boxlen/((0.5d0*boxlen)**2+z0**2)**0.5 + a2*(0.5d0*boxlen)
      do i=1,ncell
         ! the last dimension is vertical (1D -> x, 2D -> y, 3D -> z)
-        x(i,ndim)=x(i,ndim)-0.5d0*boxlen
-        f(i,ndim)=-a1*x(i,ndim)/((x(i,ndim))**2+z0**2)**0.5 - a2*x(i,ndim)
-        f(i,ndim) = f(i,ndim) * sigma / (2d0*f_max / 2d0*twopi)
+        rz=x(i,ndim)-0.5d0*boxlen
+        f(i,ndim)=-a1*rz/(rz**2+z0**2)**0.5 - a2*rz
      end do
   end if
 
