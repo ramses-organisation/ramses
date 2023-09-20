@@ -4,7 +4,7 @@
 !=== Author : D.Chapon                                                          ===
 !=== Date : 2010/09/01                                                          ===
 !==================================================================================
-module merger_parameters!{{{
+module merger_parameters
   use amr_commons
   !--------------------!
   ! Galactic merger IC !
@@ -74,7 +74,7 @@ module merger_parameters!{{{
   ! - set 'Mgas_disk2' to 0.0                            !
   ! - set 'gal_center2' to values larger than Lbox*2     !
   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!
-end module merger_parameters!}}}
+end module merger_parameters
 
 module merger_commons
 
@@ -83,7 +83,7 @@ module merger_commons
 
 end module merger_commons
 
-subroutine read_merger_params! {{{
+subroutine read_merger_params
   use merger_parameters
   implicit none
 #ifndef WITHOUTMPI
@@ -253,8 +253,6 @@ subroutine read_merger_params! {{{
   end if
 
 end subroutine read_merger_params
-! }}}
-
 
 subroutine condinit(x,u,dx,nn)
   use amr_parameters
