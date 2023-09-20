@@ -77,6 +77,7 @@ interpol_var=1
 &MERGER_PARAMS
 rad_profile='exponential'
 z_profile='gaussian'
+mag_topology='constant'
 gal_center1=0.0,0.0,0.0
 gal_center2=1d5,1d5,1d5 ! Well outside the box
 Mgas_disk1=8.597536
