@@ -262,7 +262,7 @@ subroutine condinit(x,u,dx,nn)
   integer ::nn                            ! Number of cells
   real(dp)::dx                            ! Cell size
 #ifdef SOLVERmhd
-  real(dp),dimension(1:nvector,1:nvar+3+ncrvars)::u ! Conservative variables
+  real(dp),dimension(1:nvector,1:nvar+3)::u ! Conservative variables
 #else
   real(dp),dimension(1:nvector,1:nvar)::u ! Conservative variables
 #endif
@@ -281,7 +281,7 @@ subroutine condinit(x,u,dx,nn)
   !================================================================
   integer::ivar,i, ind_gal
 #ifdef SOLVERmhd
-  real(dp),dimension(1:nvector,1:nvar+3+ncrvars),save::q   ! Primitive variables
+  real(dp),dimension(1:nvector,1:nvar+3),save::q   ! Primitive variables
 #else
   real(dp),dimension(1:nvector,1:nvar),save::q   ! Primitive variables
 #endif
@@ -438,15 +438,6 @@ subroutine condinit(x,u,dx,nn)
         q(i,1) = max(weight * q(i,1), 1d-7/scale_nH)
         ! P=rho*cs^2
         q(i,ndim+2)=a2*q(i,1)
-#if NCR>0
-#ifdef CRFLX
-        q(i,iCRu:iCRu+ncrvars-1)=0.0 ! Set CR vars to zero
-#else
-        do icr=1,ncr
-            q(i,ind_cr+icr)=q(i,5)*1d-10
-        enddo
-#endif
-#endif
         ! V = Vrot * (u_rot^xx_rad)/r + Vx_gal        
         !  -> Vrot = sqrt(Vcirc**2 - 3*Cs^2 + r/rho * grad(rho) * Cs)
         select case (rad_profile)
@@ -464,11 +455,6 @@ subroutine condinit(x,u,dx,nn)
         ! V = Vgal
         q(i,ndim-1:ndim+1)= vgal
         if(metal)q(i,imetal)=0.0
-#if NCR>0
-#ifdef CRFLX
-        q(i,iCRu:iCRu+ncrvars-1)=0.0 ! Set CR vars to zero
-#endif
-#endif
      endif
   enddo
 
@@ -525,12 +511,6 @@ subroutine condinit(x,u,dx,nn)
 #endif
      u(1:nn,ivar)=q(1:nn,1)*q(1:nn,ivar)
   end do
-#ifdef CRFLX
-  do ivar=iCRu,iCRu+ncrvars-1
-    u(1:nn,ivar)=q(1:nn,ivar)
-  end do
-#endif
-
 
 contains
 !{{{
@@ -613,7 +593,7 @@ subroutine mag_constant(q,nn,B_0)
   use hydro_parameters
   implicit none
 
-  real(dp),dimension(1:nvector,1:nvar+3+ncrvars)::q  ! Primitive variables
+  real(dp),dimension(1:nvector,1:nvar+3)::q  ! Primitive variables
   integer ::nn                               ! Number of cells
   real(dp)::B_0                              ! Default B-strength
 
@@ -636,7 +616,7 @@ subroutine mag_test(x,q,dx,nn,B_0,mag_radius,mag_height)
   implicit none
 
   real(dp),dimension(1:nvector,1:ndim)::x    ! Cell center position
-  real(dp),dimension(1:nvector,1:nvar+3+ncrvars)::q  ! Primitive variables
+  real(dp),dimension(1:nvector,1:nvar+3)::q  ! Primitive variables
   integer::nn                                ! Number of cells
   real(dp)::dx                               ! Cell size
   real(dp)::B_0,mag_radius,mag_height        ! Default B-strength
@@ -720,7 +700,7 @@ subroutine mag_toroidal(x,q,dx,nn,B_0,mag_radius,mag_height)
   implicit none
 
   real(dp),dimension(1:nvector,1:ndim)::x    ! Cell center position
-  real(dp),dimension(1:nvector,1:nvar+3+ncrvars)::q  ! Primitive variables
+  real(dp),dimension(1:nvector,1:nvar+3)::q  ! Primitive variables
   integer::nn                                ! Number of cells
   real(dp)::dx                               ! Cell size
   real(dp)::B_0,mag_radius,mag_height        ! Default B-strength
@@ -805,7 +785,7 @@ subroutine mag_dipole(x,q,dx,nn,B_0,mag_radius,mag_height)
   implicit none
 
   real(dp),dimension(1:nvector,1:ndim)::x    ! Cell center position
-  real(dp),dimension(1:nvector,1:nvar+3+ncrvars)::q  ! Primitive variables
+  real(dp),dimension(1:nvector,1:nvar+3)::q  ! Primitive variables
   integer::nn                                ! Number of cells
   real(dp)::dx                               ! Cell size
   real(dp)::B_0,mag_radius,mag_height        ! Default B-strength
@@ -906,7 +886,7 @@ subroutine mag_quadrupole(x,q,dx,nn,B_0,mag_radius,mag_height)
   implicit none
 
   real(dp),dimension(1:nvector,1:ndim)::x    ! Cell center position
-  real(dp),dimension(1:nvector,1:nvar+3+ncrvars)::q  ! Primitive variables
+  real(dp),dimension(1:nvector,1:nvar+3)::q  ! Primitive variables
   integer::nn                                ! Number of cells
   real(dp)::dx                               ! Cell size
   real(dp)::B_0,mag_radius,mag_height        ! Default B-strength
