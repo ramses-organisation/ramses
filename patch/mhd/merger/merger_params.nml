@@ -49,7 +49,7 @@ barotropic_eos=.true.
 barotropic_eos_form='double_polytrope'
 polytrope_index=1.6666d0
 polytrope_rho=1.66d-25
-T2_eos=1.0d4
+T_eos=1.0d4
 /
 
 &HYDRO_PARAMS
