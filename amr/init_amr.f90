@@ -312,29 +312,21 @@ subroutine init_amr
      end if
      ! Read time variables
      read(ilun)noutput2,iout2,ifout2
-     if(noutput2>MAXOUT)then
-       write(*,*) 'Error: noutput>MAXOUT'
-       call clean_stop
-     end if
      read(ilun)tout2(1:noutput2)
      read(ilun)aout2(1:noutput2)
      ! Check compatibility with current parameters
      if((ndim2.ne.ndim).or.(nx2.ne.nx).or.(ny2.ne.ny).or.(nz2.ne.nz).or.&
           & (nboundary2.ne.nboundary).or.(nlevelmax2>nlevelmax).or.&
-          & (ngrid_current>ngridmax).or.(noutput2>noutput) )then
+          & (ngrid_current>ngridmax))then
         write(*,*)'File amr.tmp is not compatible with namelist'
-        write(*,*)'         ndim   nx   ny   nz nlevelmax noutput   ngridmax nboundary'
+        write(*,*)'         ndim   nx   ny   nz nlevelmax   ngridmax nboundary'
         write(*,'("amr.tmp  =",4(I4,1x),5x,I4,4x,I4,3x,I8)')&
-             & ndim2,nx2,ny2,nz2,nlevelmax2,noutput2,ngrid_current,nboundary2
+             & ndim2,nx2,ny2,nz2,nlevelmax2,ngrid_current,nboundary2
         write(*,'("namelist =",4(I4,1x),5x,I4,4x,I4,3x,I8)')&
-             & ndim ,nx ,ny ,nz ,nlevelmax ,noutput, ngridmax     ,nboundary
+             & ndim ,nx ,ny ,nz ,nlevelmax , ngridmax     ,nboundary
         if(myid==1)write(*,*)'Restart failed'
         call clean_stop
      end if
-     ! Old output times
-     tout(1:noutput2)=tout2(1:noutput2)
-     aout(1:noutput2)=aout2(1:noutput2)
-     iout=iout2
      ifout=ifout2
      if(ifout.gt.nrestart+1) ifout=nrestart+1
      read(ilun)t
@@ -352,6 +344,20 @@ subroutine init_amr
      endif
      if(myid==1)write(*,*)'Restarting at t=',t,' nstep_coarse=',nstep_coarse
      trestart = t
+
+     ! determine moment of next output
+     tout_next = (floor(t/delta_tout)+1)*delta_tout
+     aout_next = (floor(aexp/delta_aout)+1)*delta_aout
+     iout = 1
+     if (.not.all(tout==HUGE(1.0D0))) then
+        do while(tout(iout)<=t)
+           iout = iout+1
+        enddo
+     else if(.not.all(aout==HUGE(1.0D0)))then
+        do while(aout(iout)<=aexp)
+           iout = iout+1
+        enddo
+     endif
 
      ! Compute movie frame number if applicable
      if(imovout>0) then
