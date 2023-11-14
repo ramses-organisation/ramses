@@ -17,7 +17,8 @@ tout=50.0, 65.
 
 &INIT_PARAMS
 filetype='ascii'
-initfile(1)='/data/e0/users/skarl/P-Gadget2/RomainICs/MHRES'
+initfile(1)='./agora_ic'
+B_ave=5.2e-3 ! In the patch units, this is 1 micro Gauss
 /
 
 &AMR_PARAMS
@@ -46,18 +47,20 @@ kbound_max= 0, 0,  0,  0, -1,  1
 &COOLING_PARAMS
 barotropic_eos=.true.
 barotropic_eos_form='double_polytrope'
-polytropic_index=1.6666d0
-polytropic_rho=1.66d-25
-T2_eos=1.0d4
+polytrope_index=1.6666d0
+polytrope_rho=1.66d-25
+T_eos=1.0d4
 /
 
 &HYDRO_PARAMS
 gamma=1.6666
 courant_factor=0.5
 slope_type=1
+scheme='muscl'
 pressure_fix=.true.
 beta_fix=0.5
-riemann='hllc'
+riemann='hlld'
+riemann2d='hlld'
 /
 
 &REFINE_PARAMS
@@ -70,25 +73,26 @@ interpol_var=1
 &MERGER_PARAMS
 rad_profile='exponential'
 z_profile='gaussian'
-gal_center1=-73.404,40.432,0.0
-gal_center2=73.404,-40.432,0.0
-Mgas_disk1=8.278
-Mgas_disk2=8.278
-typ_radius1=6.278
-typ_radius2=4.121
-cut_radius1=30.0
-cut_radius2=20.0
-typ_height1=1.256
-typ_height2=0.8242
-cut_height1=3.9
-cut_height2=2.4
-IG_density_factor=1.0
-Vcirc_dat_file1='/data/e0/users/skarl/P-Gadget2/RomainICs/MHRES/Vcirc_SW_M_mhres_sEOS_n4038.ascii'
-Vcirc_dat_file2='/data/e0/users/skarl/P-Gadget2/RomainICs/MHRES/Vcirc_SW_M_mhres_sEOS_n4039.ascii'
-ic_part_file_gal1='ics_SW_M_mhres_sEOS_n4038.ascii'
-ic_part_file_gal2='ics_SW_M_mhres_sEOS_n4039.ascii'
-gal_axis1=-0.433,0.75,-0.5
-gal_axis2=0.75,-0.433,-0.5
-Vgal1=80.587,-20.726,0.0
-Vgal2=-80.587,20.726,0.0
+mag_topology='constant'
+gal_center1=0.0,0.0,0.0
+gal_center2=1d5,1d5,1d5 ! Well outside the box
+Mgas_disk1=8.597536
+Mgas_disk2=0d0
+typ_radius1=3.43218
+typ_radius2=3.43218
+cut_radius1=34.0
+cut_radius2=24.0
+typ_height1=0.343218
+typ_height2=0.343218
+cut_height1=1.0
+cut_height2=1.0
+IG_density_factor=1d-4
+Vcirc_dat_file1='./agora_ic/Vcirc.dat'
+Vcirc_dat_file2='./agora_ic/Vcirc.dat'
+ic_part_file_gal1='ic_part'
+ic_part_file_gal2='ic_part'
+gal_axis1=0.0,0.0,1.0
+gal_axis2=0.0,0.0,1.0
+Vgal1=0.0,0.0,0.0
+Vgal2=0.0,0.0,0.0
 /
