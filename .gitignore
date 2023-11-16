@@ -5,4 +5,16 @@ ramses1d
 ramses2d
 ramses3d
 .DS_Store
-.mmat
+amr2cylprof
+amr2map
+amr2prof
+getstarlist
+part2birth
+part2cube
+part2list
+part2map
+part2prof
+part2sfr
+partcenter
+ramses2tipsy
+__pycache__
