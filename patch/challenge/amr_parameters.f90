@@ -80,7 +80,6 @@ module amr_parameters
   ! Output parameters
   integer::iout=1             ! Increment for output times
   integer::ifout=1            ! Increment for output files
-  integer::iback=1            ! Increment for backup files
   integer::noutput=1          ! Total number of outputs
   integer::foutput=1000000    ! Frequency of outputs
   logical::gadget_output=.false. ! Output in gadget format
