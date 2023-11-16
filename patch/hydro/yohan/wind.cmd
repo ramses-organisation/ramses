@@ -54,7 +54,7 @@ kbound_max= 0, 0, 0, 0,-1,+1
 /
 
 &POISSON_PARAMS
-gravity_type=-1
+gravity_type=-4
 gravity_params=35.,10.,0.1,0.15
 epsilon=1d-4
 /
