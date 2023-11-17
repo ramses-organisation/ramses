@@ -278,7 +278,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   endif
   
   ! Photoionization momentum injection from cgs to code units
-  cs_H2_2=(22.0*1d5/scale_v)**2 ! 22 km/s
+  cs_H2_2=f_esn*(22.0*1d5/scale_v)**2 ! 22 km/s
 
   ! Fraction of the SN energy into non-thermal component
   FRAC_NT=0.0
@@ -529,8 +529,8 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      
      ! Photo-ionization thermal feedback
      do j=1,np
-           pressure=max(uold(indp(j),1),smallr)*cs_H2_2
-           ethermal(j)=ethermal(j)+pressure
+        pressure=max(uold(indp(j),1),smallr)*cs_H2_2
+        ethermal(j)=ethermal(j)+pressure
      end do
      
      ! Use stellar momentum feedback

@@ -147,8 +147,8 @@ recursive subroutine amr_step(ilevel,icount)
      call MPI_BARRIER(MPI_COMM_WORLD,mpi_err)
      call MPI_ALLREDUCE(output_now,output_now_all,1,MPI_LOGICAL,MPI_LOR,MPI_COMM_WORLD,mpi_err)
 #endif
-     if(foutput>0)then
-     if(mod(nstep_coarse,foutput)==0.or.aexp>=aout(iout).or.t>=tout(iout).or.output_now_all.EQV..true.)then
+     if(mod(nstep_coarse,foutput)==0.or.aexp>=aout(iout).or.t>=tout(iout) &
+        &.or.aexp>=aout_next.or.t>=tout_next.or.output_now_all.EQV..true.)then
                                call timer('io','start')
         if(.not.ok_defrag)then
            call defrag
@@ -165,9 +165,13 @@ recursive subroutine amr_step(ilevel,icount)
 
         if (output_now_all.EQV..true.) then
           output_now=.false.
+          if (finish_run) then
+            ! trick to stop the code after walltime triggered output
+            tout(iout)=t
+            aout(iout)=aexp
+          endif
         endif
 
-     endif
      endif
   
      ! Dump lightcone

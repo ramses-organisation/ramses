@@ -204,8 +204,11 @@ def rd_part(nout,**kwargs):
 
     if ( not (center is None)  and not (radius is None) ):
         info = rd_info(nout)
-        cpulist = get_cpu_list(info,**kwargs)
-        print("Will open only",len(cpulist),"files")
+        if(info.quadhilbert):
+            cpulist = range(1,ncpu+1)
+        else:
+            cpulist = get_cpu_list(info,**kwargs)
+            print("Will open only",len(cpulist),"files")
     else:
         cpulist = range(1,ncpu+1)
 
@@ -295,8 +298,11 @@ def rd_amr(nout,**kwargs):
 
     if ( not (center is None)  and not (radius is None) ):
         info = rd_info(nout)
-        cpulist = get_cpu_list(info,**kwargs)
-        print("Will open only",len(cpulist),"files")
+        if(info.quadhilbert):
+            cpulist = range(1,ncpu+1)
+        else:
+            cpulist = get_cpu_list(info,**kwargs)
+            print("Will open only",len(cpulist),"files")
     else:
         cpulist = range(1,ncpu+1)
 
@@ -468,8 +474,11 @@ def rd_hydro(nout,**kwargs):
 
     if ( not (center is None)  and not (radius is None) ):
         info = rd_info(nout)
-        cpulist = get_cpu_list(info,**kwargs)
-        print("Will open only",len(cpulist),"files")
+        if(info.quadhilbert):
+            cpulist = range(1,ncpu+1)
+        else:
+            cpulist = get_cpu_list(info,**kwargs)
+            print("Will open only",len(cpulist),"files")
     else:
         cpulist = range(1,ncpu+1)
 
@@ -702,8 +711,13 @@ def rd_info(nout):
         ordering = f.read_ints("i")
         
         bound_key = f.read_ints("f8")
-        
-        i.bound_key[:] = bound_key
+
+        if(len(bound_key) != ncpu+1):
+            print("Quad Hilbert not supported in python.")
+            i.quadhilbert=True
+        else:
+            i.quadhilbert=False
+            i.bound_key[:] = bound_key
         
     filename = "output_"+car1+"/info_"+car1+".txt"
     data = ascii.read(filename, header_start=0, data_start=0, data_end=18, delimiter='=', names=["field","value"])
@@ -1088,4 +1102,61 @@ def mk_movie(**kwargs):
     ok = "Movie: done"
     print(ok)
     return ok 
+
+class HaloCat:
+   """
+   This is the class for RAMSES halo catalogue.
+   """
+   def __init__(self):
+       """
+       This function initialize the halo catalogue. 
+       """
+       self.x = np.empty(shape=(0))
+       self.y = np.empty(shape=(0))
+       self.z = np.empty(shape=(0))
+       self.m = np.empty(shape=(0))
+       self.rho = np.empty(shape=(0))
+       self.index = np.empty(shape=(0))
+
+
+def rd_halo(nout,**kwargs):
+   """
+   This function reads and compiles data for position, mass,
+   density, and index from the halo catalogue. 
+   Args: 
+       nout:output file number 
+   author: Josiah Taylor
+   """
+   car1 = str(nout).zfill(5)
+   filename = "output_"+car1+"/part_"+car1+".out00001"
+   with FortranFile(filename, 'r') as f:
+       ncpu, = f.read_ints('i')
+       ndim, = f.read_ints('i')
+   list_x = []
+   list_y = []
+   list_z = []
+   list_rho = []
+   list_mass = []
+   list_index = []
+   output = str(nout).zfill(5)
+   cat = HaloCat()
+   for i in range(0, ncpu):
+       name = str(i+1).zfill(5)
+       file_name = "output_%s/halo_%s.txt%s" % (output,output, name)
+       halo_cat = ascii.read(file_name)
+       x = halo_cat['peak_x']
+       y = halo_cat['peak_y']
+       z = halo_cat['peak_z']
+       rho = halo_cat['rho+']
+       mass = halo_cat['mass']
+       index = halo_cat['index']
+       cat.x = np.append(cat.x,x)
+       cat.y = np.append(cat.y,y)
+       cat.z = np.append(cat.z,z)
+       cat.rho = np.append(cat.rho,rho)
+       cat.m = np.append(cat.m,mass)
+       cat.index = np.append(cat.index,index)
+
+
+   return cat
 

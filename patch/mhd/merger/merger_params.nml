@@ -1,0 +1,98 @@
+&RUN_PARAMS 
+cosmo=.false.
+pic=.true.
+poisson=.true.
+hydro=.true.
+nrestart=0
+nremap=20
+nsubcycle=1,1,2,2
+ncontrol=1
+/
+
+&OUTPUT_PARAMS
+foutput=80
+noutput=2
+tout=50.0, 65.
+/
+
+&INIT_PARAMS
+filetype='ascii'
+initfile(1)='./agora_ic'
+B_ave=5.2e-3 ! In the patch units, this is 1 micro Gauss
+/
+
+&AMR_PARAMS
+levelmin=7
+levelmax=11
+ngridmax=200000
+npartmax=500000
+boxlen=400.0
+/
+
+&POISSON_PARAMS 
+epsilon=1e-4
+/
+
+&BOUNDARY_PARAMS
+nboundary=6
+bound_type= 2, 2,  2,  2,  2,  2
+ibound_min=-1, 1, -1, -1, -1, -1
+ibound_max=-1, 1,  1,  1,  1,  1
+jbound_min= 0, 0, -1,  1, -1, -1
+jbound_max= 0, 0, -1,  1,  1,  1
+kbound_min= 0, 0,  0,  0, -1,  1
+kbound_max= 0, 0,  0,  0, -1,  1
+/
+
+&COOLING_PARAMS
+barotropic_eos=.true.
+barotropic_eos_form='double_polytrope'
+polytrope_index=1.6666d0
+polytrope_rho=1.66d-25
+T_eos=1.0d4
+/
+
+&HYDRO_PARAMS
+gamma=1.6666
+courant_factor=0.5
+slope_type=1
+scheme='muscl'
+pressure_fix=.true.
+beta_fix=0.5
+riemann='hlld'
+riemann2d='hlld'
+/
+
+&REFINE_PARAMS
+mass_sph=1e-4
+m_refine=10*8.
+interpol_type=0
+interpol_var=1
+/
+
+&MERGER_PARAMS
+rad_profile='exponential'
+z_profile='gaussian'
+mag_topology='constant'
+gal_center1=0.0,0.0,0.0
+gal_center2=1d5,1d5,1d5 ! Well outside the box
+Mgas_disk1=8.597536
+Mgas_disk2=0d0
+typ_radius1=3.43218
+typ_radius2=3.43218
+cut_radius1=34.0
+cut_radius2=24.0
+typ_height1=0.343218
+typ_height2=0.343218
+cut_height1=1.0
+cut_height2=1.0
+IG_density_factor=1d-4
+Vcirc_dat_file1='./agora_ic/Vcirc.dat'
+Vcirc_dat_file2='./agora_ic/Vcirc.dat'
+ic_part_file_gal1='ic_part'
+ic_part_file_gal2='ic_part'
+gal_axis1=0.0,0.0,1.0
+gal_axis2=0.0,0.0,1.0
+Vgal1=0.0,0.0,0.0
+Vgal2=0.0,0.0,0.0
+/

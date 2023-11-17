@@ -218,6 +218,7 @@ subroutine adaptive_loop
            dumpsec = minutes_dump*60       ! Convert minutes before end to seconds
            if(wallsec-dumpsec.lt.tt2-tstart) then
               output_now=.true.
+              finish_run=.true.
               if(myid==1) write(*,*) 'Dumping snapshot before walltime runs out'
               ! Now set walltime to a negative number so we don't keep printing outputs
               walltime_hrs = -1d0

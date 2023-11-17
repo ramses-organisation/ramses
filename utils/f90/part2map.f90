@@ -375,7 +375,10 @@ program part2map
         read(1) ! Skip level
         read(1)family
         read(1)tag
-        read(1)age
+        read(1,END=101)age
+        GOTO 102
+101     age=-10.
+102     continue
      endif
      close(1)
 
