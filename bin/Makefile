@@ -20,7 +20,7 @@ PATCH =
 # Use RT? 1=Yes, 0=No
 RT = 0
 # Use turbulence? 1=Yes, 0=No (requires fftw3)
-USE_TURB=0
+USE_TURB = 0
 # Use MPI? 1=Yes, 0=No
 MPI = 0
 MPIF90 = mpif90
@@ -87,16 +87,16 @@ endif
 
 # GNU compiler (gfortran)
 ifeq ($(COMPILER),GNU)
-   FFLAGS = -x f95-cpp-input $(DEFINES)
+   FFLAGS = -cpp $(DEFINES)
    ifeq ($(MPI),1)
       F90 = $(MPIF90)
    else
       F90 = gfortran
       FFLAGS += -DWITHOUTMPI
    endif
-   F90 += -frecord-marker=4 -fbacktrace -ffree-line-length-none -g -fimplicit-none
+   F90 += -ffree-line-length-none -fimplicit-none
    ifeq ($(DEBUG),1)
-      F90 += -O0 -fbounds-check -Wuninitialized -Wall
+      F90 += -g -O0 -fbacktrace -fbounds-check -Wuninitialized -Wall
       FFLAGS += -ffpe-trap=zero,underflow,overflow,invalid -finit-real=nan
    else
       F90 += -O3
