@@ -32,8 +32,8 @@ NENER = 0
 GRACKLE = 0
 # Number of metal species
 NMETALS = 0
-# ATON flages: Uncomment to enable ATON
-ATON_FLAGS = #-DATON
+# Use ATON? 1=Yes, 0=No
+ATON = 0
 # Number of ions for RT
 # use 1 for HI+HII, +1 for added H2, +2 for added HeI, HeII, HeIII
 NIONS = 0
@@ -63,7 +63,10 @@ GITREMOTE = $(shell git config --get branch.$(GITBRANCH).remote)
 GITREPO = $(shell git config --get remote.$(GITREMOTE).url)
 BUILDDATE = $(shell date +"%D-%T")
 DEFINES = -DNVECTOR=$(NVECTOR) -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DNENER=$(NENER) \
-          -DNVAR=$(NVAR) -DSOLVER$(SOLVER) $(ATON_FLAGS)
+          -DNVAR=$(NVAR) -DSOLVER$(SOLVER)
+ifeq ($(ATON),1)
+   DEFINES += -DATON
+endif
 ifeq ($(GRACKLE),1)
    DEFINES += -Dgrackle
 endif
@@ -76,7 +79,6 @@ endif
 ifeq ($(USE_TURB),1)
    DEFINES += -DUSE_TURB
 endif
-
 ifeq ($(LIGHT_MPI_COMM), 1)
    DEFINES += -DLIGHT_MPI_COMM
 endif
