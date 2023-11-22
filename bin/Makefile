@@ -90,11 +90,14 @@ ifeq ($(COMPILER),GNU)
    FFLAGS = -cpp $(DEFINES)
    ifeq ($(MPI),1)
       F90 = $(MPIF90)
+      FC = gfortran
    else
       F90 = gfortran
+      FC = gfortran
       FFLAGS += -DWITHOUTMPI
    endif
    F90 += -ffree-line-length-none -fimplicit-none
+   FC += -ffree-line-length-none -fimplicit-none
    ifeq ($(DEBUG),1)
       F90 += -g -O0 -fbacktrace -fbounds-check -Wuninitialized -Wall
       FFLAGS += -ffpe-trap=zero,underflow,overflow,invalid -finit-real=nan
@@ -108,12 +111,15 @@ ifeq ($(COMPILER),INTEL)
    FFLAGS = -cpp $(DEFINES)
    ifeq ($(MPI),1)
       F90 = $(MPIF90)
+      FC = ifort
       FFLAGS += -DNOSYSTEM
    else
       F90 = ifort
+      FC = ifort
       FFLAGS += -DWITHOUTMPI
    endif
    F90 += -fp-model source
+   FC += -fp-model source
    ifeq ($(DEBUG),1)
       F90 += -warn all -O0 -g -traceback -check bounds
       FFLAGS += -fpe0 -ftrapuv -init=zero -init=snan -init=arrays
@@ -230,15 +236,15 @@ ramses_aton: $(MODOBJ) $(ATON_MODOBJ) $(AMRLIB) $(ATON_OBJ) ramses.o
 	rm write_patch.f90
 #############################################################################
 write_gitinfo.o: FORCE
-	$(F90) $(FFLAGS) -DPATCH=\'$(PATCH)\' -DGITBRANCH=\'$(GITBRANCH)\' \
+	$(FC) -O0 -cpp -DPATCH=\'$(PATCH)\' -DGITBRANCH=\'$(GITBRANCH)\' \
 		-DGITHASH=\'"$(GITHASH)"\' -DGITREPO=\'$(GITREPO)\' \
 		-DBUILDDATE=\'"$(BUILDDATE)"\' -c ../amr/write_gitinfo.f90 -o $@
 write_makefile.o: FORCE
 	../utils/scripts/cr_write_makefile.sh $(MAKEFILE_LIST)
-	$(F90) $(FFLAGS) -c write_makefile.f90 -o $@
+	$(FC) -O0 -c write_makefile.f90 -o $@
 write_patch.o: FORCE
 	../utils/scripts/cr_write_patch.sh $(PATCH)
-	$(F90) -O0 -c write_patch.f90 -o $@
+	$(FC) -O0 -c write_patch.f90 -o $@
 %.o:%.F
 	$(F90) $(FFLAGS) -c $^ -o $@ $(LIBS_OBJ) $(LIBS_OBJ_TURB)
 %.o:%.f90
