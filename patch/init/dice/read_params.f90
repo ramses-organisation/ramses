@@ -61,6 +61,7 @@ subroutine read_params
   use pm_parameters
   use poisson_parameters
   use hydro_parameters
+  use sink_feedback_parameters
   use mpi_mod
   use dice_commons
   implicit none
@@ -73,21 +74,44 @@ subroutine read_params
   character(LEN=5)::nchar
   integer(kind=8)::ngridtot=0
   integer(kind=8)::nparttot=0
-  real(kind=8)::delta_tout=0,tend=0
-  real(kind=8)::delta_aout=0,aend=0
+  real(kind=8)::tend=0
+  real(kind=8)::aend=0
   logical::nml_ok, info_ok
   integer,parameter::tag=1134
 #ifndef WITHOUTMPI
   integer::dummy_io,ierr,info2
 #endif
+#if NDIM==1
+  integer, parameter :: max_level_wout_quadhilbert = 61
+#elif NDIM==2
+  integer, parameter :: max_level_wout_quadhilbert = 29
+#elif NDIM==3
+  integer, parameter :: max_level_wout_quadhilbert = 19
+#endif
+
+#ifdef LIGHT_MPI_COMM
+   ! RAMSES legacy communicator (from amr_commons.f90)
+   type communicator_legacy
+      integer                            ::ngrid_legacy
+      integer                            ::npart_legacy
+      integer     ,dimension(:)  ,pointer::igrid_legacy
+      integer     ,dimension(:,:),pointer::f_legacy
+      real(kind=8),dimension(:,:),pointer::u_legacy
+      integer(i8b),dimension(:,:),pointer::fp_legacy
+      real(kind=8),dimension(:,:),pointer::up_legacy
+   end type communicator_legacy
+   real(kind=8)::mem_used_legacy_buff, mem_used_new_buff,mem_used_legacy_buff_mg, mem_used_new_buff_mg
+   type(communicator_legacy),allocatable,dimension(:,:)::emission_reception_legacy  ! 2D (ncpu,nlevelmax) data emission/reception/active_mg/emission_mg "heavy" buffer
+#endif
 
   !--------------------------------------------------
   ! Namelist definitions
   !--------------------------------------------------
-  namelist/run_params/clumpfind,cosmo,pic,sink,lightcone,poisson,hydro,rt,verbose,debug &
+  namelist/run_params/clumpfind,cosmo,pic,sink,tracer,lightcone,poisson,hydro,rt,verbose,debug &
        & ,nrestart,ncontrol,nstepmax,nsubcycle,nremap,ordering &
        & ,bisec_tol,static,overload,cost_weighting,aton,nrestart_quad,restart_remap &
-       & ,static_dm,static_gas,static_stars,convert_birth_times,use_proper_time,remap_pscalar
+       & ,static_dm,static_gas,static_stars,convert_birth_times,use_proper_time,remap_pscalar &
+       & ,unbind,make_mergertree,stellar
   namelist/output_params/noutput,foutput,aout,tout &
        & ,tend,delta_tout,aend,delta_aout,gadget_output,walltime_hrs,minutes_dump
   namelist/amr_params/levelmin,levelmax,ngridmax,ngridtot &
@@ -96,12 +120,15 @@ subroutine read_params
        & ,cg_levelmin,cic_levelmax
   namelist/lightcone_params/thetay_cone,thetaz_cone,zmax_cone
   namelist/movie_params/levelmax_frame,nw_frame,nh_frame,ivar_frame &
-       & ,xcentre_frame,ycentre_frame,zcentre_frame,movie_vars &
+       & ,xcentre_frame,ycentre_frame,zcentre_frame &
        & ,deltax_frame,deltay_frame,deltaz_frame,movie,zoom_only_frame &
        & ,imovout,imov,tstartmov,astartmov,tendmov,aendmov,proj_axis,movie_vars_txt &
        & ,theta_camera,phi_camera,dtheta_camera,dphi_camera,focal_camera,dist_camera,ddist_camera &
        & ,perspective_camera,smooth_frame,shader_frame,tstart_theta_camera,tstart_phi_camera &
        & ,tend_theta_camera,tend_phi_camera,method_frame,varmin_frame,varmax_frame
+  namelist/tracer_params/MC_tracer,tracer_feed,tracer_feed_fmt &
+       & ,tracer_mass,tracer_first_balance_part_per_cell &
+       & ,tracer_first_balance_levelmin
   namelist/dice_params/ ic_file,ic_nfile,ic_format,IG_rho,IG_T2,IG_metal &
        & ,ic_head_name,ic_pos_name,ic_vel_name,ic_id_name,ic_mass_name &
        & ,ic_u_name,ic_metal_name,ic_age_name &
@@ -136,10 +163,10 @@ subroutine read_params
   write(*,*)'_/    _/   _/    _/   _/    _/   _/    _/  _/         _/    _/ '
   write(*,*)'_/    _/   _/    _/   _/    _/    _/_/_/   _/_/_/_/    _/_/_/  '
   write(*,*)'                        Version 3.0                            '
-  write(*,*)'       written by Romain Teyssier (University of Zurich)       '
-  write(*,*)'               (c) CEA 1999-2007, UZH 2008-2014                '
+  write(*,*)'       written by Romain Teyssier (Princeton University)       '
+  write(*,*)'           (c) CEA 1999-2007, UZH 2008-2021, PU 2022           '
   write(*,*)' '
-  write(*,'(" Working with nproc = ",I4," for ndim = ",I1)')ncpu,ndim
+  write(*,'(" Working with nproc = ",I5," for ndim = ",I1)')ncpu,ndim
   ! Check nvar is not too small
 #ifdef SOLVERhydro
   write(*,'(" Using solver = hydro with nvar = ",I2)')nvar
@@ -224,6 +251,10 @@ subroutine read_params
   rewind(1)
   read(1,NML=amr_params)
   rewind(1)
+  read(1,NML=tracer_params,END=84)
+84 continue
+  if (tracer_first_balance_levelmin <= 0) tracer_first_balance_levelmin = levelmax + 1
+  rewind(1)
   read(1,NML=lightcone_params,END=83)
 83 continue
   rewind(1)
@@ -235,6 +266,58 @@ subroutine read_params
   rewind(1)
   read(1,NML=dice_params,END=106)
 106 continue
+
+#ifndef WITHOUTMPI
+#ifdef LIGHT_MPI_COMM
+  if(myid==1 .and. ncpu .gt. 100) then
+    write(*,*) "--------------------------------------------------------------------------------------------------------------"
+    write(*,*) "> Using Light MPI Communicator data structures to reduce memory footprint advocated by P. Wautelet (IDRIS) in"
+    write(*,*) "  http://www.idris.fr/docs/docu/support-avance/ramses.html"
+    write(*,*) ""
+
+    allocate(emission_reception_legacy(1:100, 1:levelmax))
+    mem_used_legacy_buff = dble(sizeof(emission_reception_legacy)*2)*ncpu/100.0
+    deallocate(emission_reception_legacy)
+    write(*,*) "  * Old MPI communication structures (emission+reception) would have allocated : ", mem_used_legacy_buff/1.0e6," MB"
+    write(*,*) "      - reception(1:ncpu,1:nlevelmax) : ", mem_used_legacy_buff/2.0e6," MB"
+    write(*,*) "      - emission(1:ncpu,1:nlevelmax)  : ", mem_used_legacy_buff/2.0e6," MB"
+    if (poisson) then
+        allocate(emission_reception_legacy(1:100, 1:levelmax-1))
+        mem_used_legacy_buff_mg = dble(sizeof(emission_reception_legacy)*2)*ncpu/100.0
+        deallocate(emission_reception_legacy)
+        write(*,*) "  * Old Poisson-related MPI communication structures (active_mg+emission_mg) would have allocated : ", mem_used_legacy_buff_mg/1.0e6," MB"
+        write(*,*) "      - active_mg(1:ncpu,1:nlevelmax-1) : ", mem_used_legacy_buff_mg/2.0e6," MB"
+        write(*,*) "      - emission_mg(1:ncpu,1:nlevelmax-1) : ", mem_used_legacy_buff_mg/2.0e6," MB"
+        mem_used_legacy_buff = mem_used_legacy_buff + mem_used_legacy_buff_mg
+    endif
+
+    allocate(reception(1:100, 1:levelmax))
+    allocate(emission(1:levelmax))
+    allocate(emission_part(1:levelmax))
+    mem_used_new_buff = dble(sizeof(emission)) + dble(sizeof(reception))*ncpu/100.0 + dble(sizeof(emission_part))
+    deallocate(reception)
+    deallocate(emission)
+    deallocate(emission_part)
+    write(*,*) "  * New MPI communication structures (emission+reception) use : ", mem_used_new_buff/1.0e6," MB"
+    write(*,*) "       - emission(1:nlevelmax)         : ", dble(sizeof(emission))/1.0e6," MB"
+    write(*,*) "       - emission_part(1:nlevelmax)    : ", dble(sizeof(emission_part))/1.0e6," MB"
+    write(*,*) "       - reception(1:ncpu,1:nlevelmax) : ", dble(sizeof(reception))*ncpu/1.0e8," MB"
+    if (poisson) then
+        allocate(reception(1:100, 1:levelmax-1)) ! active_mg 
+        allocate(emission(1:levelmax-1)) ! emission_mg
+        mem_used_new_buff_mg = dble(sizeof(emission)) + dble(sizeof(reception))*ncpu/100.0
+        deallocate(reception)
+        deallocate(emission)
+        write(*,*) "  * New Poisson-related MPI communication structures (emission_mg+active_mg) use : ", mem_used_new_buff_mg/1.0e6," MB"
+        write(*,*) "       - emission_mg(1:nlevelmax-1)         : ", dble(sizeof(emission))/1.0e6," MB"
+        write(*,*) "       - active_mg(1:ncpu,1:nlevelmax-1) : ", dble(sizeof(reception))*ncpu/1.0e8," MB"
+        mem_used_new_buff = mem_used_new_buff + mem_used_new_buff_mg
+    endif
+    write(*,*) "    => Overall memory economy : ", (mem_used_legacy_buff-mem_used_new_buff)/1.0e6,"MB"
+    write(*,*) "--------------------------------------------------------------------------------------------------------------"
+  endif
+#endif
+#endif
 
   !-------------------------------------------------
   ! Read optional nrestart command-line argument
@@ -274,20 +357,30 @@ subroutine read_params
   !-------------------------------------------------
   ! Compute time step for outputs
   !-------------------------------------------------
-  if(tend>0)then
-     if(delta_tout==0)delta_tout=tend
-     noutput=MIN(int(tend/delta_tout),MAXOUT)
-     do i=1,noutput
-        tout(i)=dble(i)*delta_tout
-     end do
-  else if(aend>0)then
-     if(delta_aout==0)delta_aout=aend
-     noutput=MIN(int(aend/delta_aout),MAXOUT)
-     do i=1,noutput
-        aout(i)=dble(i)*delta_aout
-     end do
+  ! check how many predetermined output times are listed (either give tout or aout)
+  if(noutput==0.and..not.all(tout==HUGE(1.0D0)))then
+     do while(tout(noutput+1)<HUGE(1.0D0))
+        noutput = noutput+1
+     enddo
   endif
-  noutput=MIN(noutput,MAXOUT)
+  if(noutput==0.and..not.all(aout==HUGE(1.0D0)))then
+     do while(aout(noutput+1)<HUGE(1.0D0))
+        noutput = noutput+1
+     enddo
+  endif
+  ! add final time and expansion factor to the predetermined output list
+  if(tout(noutput).LT.tend)then
+     noutput=noutput+1
+     tout(noutput)=tend
+  endif
+  if(aout(noutput).LT.aend)then
+     noutput=noutput+1
+     aout(noutput)=aend
+  endif
+  ! set periodic output params
+  tout_next=delta_tout
+  aout_next=delta_aout
+
   if(imovout>0) then
      allocate(tmovout(0:imovout))
      allocate(amovout(0:imovout))
@@ -334,6 +427,12 @@ subroutine read_params
      npartmax=int(nparttot/int(ncpu,kind=8),kind=4)
   endif
   if(myid>1)verbose=.false.
+
+  if(stellar.and.(.not.sink))then
+     if(myid==1)write(*,*)'Error in the namelist:'
+     if(myid==1)write(*,*)'sink=.true. is needed if stellar=.true. !'
+     nml_ok=.false.
+  endif
   if(sink.and.(.not.pic))then
      pic=.true.
   endif
@@ -346,11 +445,17 @@ subroutine read_params
 
   call read_hydro_params(nml_ok)
 #ifdef RT
-  call read_rt_params()
+  call read_rt_params(nml_ok)
 #endif
 #if NDIM==3
   if (sink)call read_sink_params
   if (clumpfind .or. sink)call read_clumpfind_params
+  if (stellar)call read_stellar_params
+  if (unbind)call read_unbinding_params
+  if (make_mergertree)call read_mergertree_params
+#if USE_TURB==1
+  call read_turb_params(nml_ok)
+#endif
 #endif
   if (movie)call set_movie_vars
 
@@ -378,6 +483,29 @@ subroutine read_params
      write(*,*) 'Error: nregion>MAXREGION'
      call clean_stop
   end if
+#ifndef QUADHILBERT
+  if(nlevelmax>=max_level_wout_quadhilbert) then
+     if (myid == 1) then
+        write(*,*) "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+        write(*,"(a,i2,a)")"WARNING: running with nlevelmax>=", max_level_wout_quadhilbert, " will likely fail."
+        write(*,*)"It is recommended to compiling with -DQUADHILBERT"
+        write(*,*) "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+     end if
+  end if
+#endif
+
+  !-----------------
+  ! MC tracer
+  !-----------------
+  if(MC_tracer .and. (.not. tracer))then
+     write(*,*)'Error: you have activated the MC tracer but not the tracers.'
+     call clean_stop
+  end if
+
+  if(MC_tracer .and. (.not. pic)) then
+     write(*,*)'Error: you have activated the MC tracer but pic is false.'
+     call clean_stop
+  end if
 
   !-----------------------------------
   ! Rearrange level dependent arrays
@@ -398,14 +526,14 @@ subroutine read_params
   do i=1,levelmin-1
      nexpand   (i)= 1
      nsubcycle (i)= 1
-     r_refine  (i)=-1.0
-     a_refine  (i)= 1.0
-     b_refine  (i)= 1.0
-     x_refine  (i)= 0.0
-     y_refine  (i)= 0.0
-     z_refine  (i)= 0.0
-     m_refine  (i)=-1.0
-     exp_refine(i)= 2.0
+     r_refine  (i)=-1
+     a_refine  (i)= 1
+     b_refine  (i)= 1
+     x_refine  (i)= 0
+     y_refine  (i)= 0
+     z_refine  (i)= 0
+     m_refine  (i)=-1
+     exp_refine(i)= 2
      initfile  (i)= ' '
   end do
 

@@ -1,3 +1,5 @@
+!TC: Why is this patched? In this version a useless header is read. 
+!    Does this need to be kept for dice compatibility?
 MODULE gadgetreadfilemod
 !
 ! Routines to read L-Gadget2 particle data files in Fortran
@@ -41,7 +43,12 @@ CONTAINS
 !
 ! Read and return the gadget file header for the specified file
 !
-    IMPLICIT NONE
+
+#ifndef WITHOUTMPI
+    use amr_commons,only:myid,IOGROUPSIZE,ncpu
+#endif
+    use mpi_mod
+  implicit none
 ! Input parameters
     CHARACTER(LEN=*), INTENT(IN) :: basename
     INTEGER, INTENT(IN):: ifile
@@ -51,8 +58,10 @@ CONTAINS
 ! Internal variables
     CHARACTER(LEN=256) :: filename
     CHARACTER(LEN=6) :: fileno
-
-
+    integer,parameter::tag=1104
+#ifndef WITHOUTMPI
+    integer::dummy_io,info2
+#endif
     integer::dummy_int,blck_size,head_blck
     character(LEN=4)::blck_name
 
@@ -79,6 +88,16 @@ CONTAINS
        end if
     end if
 
+    ! Wait for the token
+#ifndef WITHOUTMPI
+    if(IOGROUPSIZE>0) then
+        if (mod(myid-1,IOGROUPSIZE)/=0) then
+           call MPI_RECV(dummy_io,1,MPI_INTEGER,myid-1-1,tag,&
+                & MPI_COMM_WORLD,MPI_STATUS_IGNORE,info2)
+        end if
+     endif
+#endif
+
     !OPEN(unit=1,file=filename,status='old',action='read',form='unformatted')
     OPEN(unit=1,file=filename,status='old',action='read',form='unformatted',access='stream')
 
@@ -104,9 +123,19 @@ CONTAINS
          header%flag_stellarage,header%flag_metals,header%totalhighword, &
          header%flag_entropy_instead_u, header%flag_doubleprecision, &
          header%flag_ic_info, header%lpt_scalingfactor
-
-
     CLOSE(1)
+
+    ! Send the token
+#ifndef WITHOUTMPI
+    if(IOGROUPSIZE>0) then
+       if(mod(myid,IOGROUPSIZE)/=0 .and.(myid.lt.ncpu))then
+          dummy_io=1
+          call MPI_SEND(dummy_io,1,MPI_INTEGER,myid-1+1,tag, &
+               & MPI_COMM_WORLD,info2)
+       end if
+    endif
+#endif
+
 
   END SUBROUTINE gadgetreadheader
 
@@ -117,6 +146,11 @@ CONTAINS
 ! Read and return all data from the specified file. Output arrays must
 ! already be allocated. Use readheader to get particle numbers to do this.
 !
+#ifndef WITHOUTMPI
+    use amr_commons,only:myid,IOGROUPSIZE,ncpu
+#endif
+    use mpi_mod
+
     IMPLICIT NONE
 ! Input parameters
     CHARACTER(LEN=*), INTENT(IN) :: basename
@@ -135,7 +169,10 @@ CONTAINS
     CHARACTER(LEN=6) :: fileno
     INTEGER :: np
     logical::ok
-
+     integer,parameter::tag=1105
+#ifndef WITHOUTMPI
+    integer::dummy_io,info2
+#endif
     !     Generate the number to go on the end of the filename
     IF(ifile.LT.10)THEN
        WRITE(fileno,'(".",1i1.1)')ifile
@@ -157,6 +194,18 @@ CONTAINS
         write(*,*) 'No file '//filename
         RETURN
     end if
+
+    ! Wait for the token (this token might be moved to init_part for best performance)
+#ifndef WITHOUTMPI
+     if(IOGROUPSIZE>0) then
+        if (mod(myid-1,IOGROUPSIZE)/=0) then
+           call MPI_RECV(dummy_io,1,MPI_INTEGER,myid-1-1,tag,&
+                & MPI_COMM_WORLD,MPI_STATUS_IGNORE,info2)
+        end if
+     endif
+#endif
+
+
     OPEN(unit=1,file=filename,status='old',action='read',form='unformatted')
     ! Byte swapping doesn't appear to work if you just do READ(1)header
     READ(1)header%npart,header%mass,header%time,header%redshift, &
@@ -172,6 +221,17 @@ CONTAINS
     READ(1)id(1:np)
     CLOSE(1)
 
+    ! Send the token
+#ifndef WITHOUTMPI
+    if(IOGROUPSIZE>0) then
+       if(mod(myid,IOGROUPSIZE)/=0 .and.(myid.lt.ncpu))then
+          dummy_io=1
+          call MPI_SEND(dummy_io,1,MPI_INTEGER,myid-1+1,tag, &
+               & MPI_COMM_WORLD,info2)
+       end if
+    endif
+#endif
+
   END SUBROUTINE gadgetreadfile
 
 ! ---------------------------------------------------------------------------
@@ -181,6 +241,11 @@ CONTAINS
 ! Read and return all data from the specified file. Output arrays must
 ! already be allocated. Use readheader to get particle numbers to do this.
 !
+#ifndef WITHOUTMPI
+    use amr_commons,only:myid,IOGROUPSIZE,ncpu
+#endif
+    use mpi_mod
+
     IMPLICIT NONE
 ! Input parameters
     CHARACTER(LEN=*), INTENT(IN) :: basename
@@ -198,9 +263,10 @@ CONTAINS
     CHARACTER(LEN=256) :: filename
     CHARACTER(LEN=6) :: fileno
     INTEGER :: np
-    logical::ok
-
-
+    integer,parameter::tag=1106
+#ifndef WITHOUTMPI
+    integer::dummy_io,info2
+#endif
     !     Generate the number to go on the end of the filename
     IF(ifile.LT.10)THEN
        WRITE(fileno,'(".",1i1.1)')ifile
@@ -216,6 +282,16 @@ CONTAINS
 
     filename = TRIM(basename) // fileno
 
+    ! Wait for the token
+#ifndef WITHOUTMPI
+    if(IOGROUPSIZE>0) then
+       if (mod(myid-1,IOGROUPSIZE)/=0) then
+           call MPI_RECV(dummy_io,1,MPI_INTEGER,myid-1-1,tag,&
+                & MPI_COMM_WORLD,MPI_STATUS_IGNORE,info2)
+        end if
+     endif
+#endif
+
     OPEN(unit=1,file=filename,status='unknown',action='write',form='unformatted')
     WRITE(1)header%npart,header%mass,header%time,header%redshift, &
          header%flag_sfr,header%flag_feedback,header%nparttotal, &
@@ -230,5 +306,17 @@ CONTAINS
     WRITE(1)id(1:np)
 
     CLOSE(1)
+
+    ! Send the token
+#ifndef WITHOUTMPI
+    if(IOGROUPSIZE>0) then
+       if(mod(myid,IOGROUPSIZE)/=0 .and.(myid.lt.ncpu))then
+          dummy_io=1
+          call MPI_SEND(dummy_io,1,MPI_INTEGER,myid-1+1,tag, &
+               & MPI_COMM_WORLD,info2)
+       end if
+    endif
+#endif
+
     END SUBROUTINE gadgetwritefile
 END MODULE gadgetreadfilemod
