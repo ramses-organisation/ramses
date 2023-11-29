@@ -1953,7 +1953,7 @@ subroutine update_sink(ilevel)
               do idim=1,ndim
                  gamma_grad_descent = gamma_grad_descent + (xsink(isink,idim)-xsinkold(isink,idim))*(fsink(isink,idim)-fsinkold(isink,idim))
               enddo
-              if(gamma_grad_descent>0)then
+              if(gamma_grad_descent>0.0)then
                  gamma_grad_descent = fudge_graddescent*dtnew(ilevel)*SQRT(ABS(gamma_grad_descent)/(NORM2(fsink(isink,1:ndim)-fsinkold(isink,1:ndim)))**2)
                  ! Require thatthe sink cannot move more than half a grid
                  if(gamma_grad_descent*fsink_norm>dx_min/2.0) then
