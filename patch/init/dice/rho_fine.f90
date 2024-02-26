@@ -133,12 +133,21 @@ subroutine rho_fine(ilevel,icount)
      do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
         do i=1,reception(icpu,ilevel)%ngrid
+#ifdef LIGHT_MPI_COMM
+           rho(reception(icpu,ilevel)%pcomm%igrid(i)+iskip)=0.0D0
+           phi(reception(icpu,ilevel)%pcomm%igrid(i)+iskip)=0.0D0
+#else
            rho(reception(icpu,ilevel)%igrid(i)+iskip)=0.0D0
            phi(reception(icpu,ilevel)%igrid(i)+iskip)=0.0D0
+#endif
         end do
         if(ilevel==cic_levelmax)then
            do i=1,reception(icpu,ilevel)%ngrid
+#ifdef LIGHT_MPI_COMM
+              rho_top(reception(icpu,ilevel)%pcomm%igrid(i)+iskip)=0.0D0
+#else
               rho_top(reception(icpu,ilevel)%igrid(i)+iskip)=0.0D0
+#endif
            end do
         endif
      end do
@@ -189,8 +198,8 @@ subroutine rho_fine(ilevel,icount)
      do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
         do i=1,boundary(ibound,ilevel)%ngrid
-           phi(boundary(ibound,ilevel)%igrid(i)+iskip)=0.0
-           rho(boundary(ibound,ilevel)%igrid(i)+iskip)=0.0
+           phi(boundary(ibound,ilevel)%igrid(i)+iskip)=0
+           rho(boundary(ibound,ilevel)%igrid(i)+iskip)=0
         end do
      end do
   end do
@@ -249,6 +258,7 @@ subroutine rho_from_current_level(ilevel)
   integer,dimension(1:nvector),save::ind_part,ind_grid_part
   real(dp),dimension(1:nvector,1:ndim),save::x0
 
+  integer :: counter
   ! Mesh spacing in that level
   dx=0.5D0**ilevel
 
@@ -265,15 +275,22 @@ subroutine rho_from_current_level(ilevel)
            ind_grid(ig)=igrid
            ipart=headp(igrid)
 
+           counter = 0
            ! Loop over particles
            do jpart=1,npart1
               if(ig==0)then
                  ig=1
                  ind_grid(ig)=igrid
               end if
-              ip=ip+1
-              ind_part(ip)=ipart
-              ind_grid_part(ip)=ig
+              ! MC Tracer patch
+              if (is_not_tracer(typep(ipart))) then
+                 ip=ip+1
+                 ind_part(ip)=ipart
+                 ind_grid_part(ip)=ig
+                 ! Count the number of non-tracers
+                 counter = counter + 1
+              end if
+              ! End MC Tracer patch
               if(ip==nvector)then
                  ! Lower left corner of 3x3x3 grid-cube
                  do idim=1,ndim
@@ -291,11 +308,16 @@ subroutine rho_from_current_level(ilevel)
 #endif
                  ip=0
                  ig=0
+                 counter=0
               end if
               ipart=nextp(ipart)  ! Go to next particle
            end do
            ! End loop over particles
 
+           ! Only tracers, remove one cache line
+           if (counter == 0 .and. ig > 0) then
+              ig = ig - 1
+           end if
         end if
 
         igrid=next(igrid)   ! Go to next grid
@@ -1162,7 +1184,11 @@ subroutine cic_from_multipole(ilevel)
      do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
         do i=1,reception(icpu,ilevel)%ngrid
+#ifdef LIGHT_MPI_COMM
+           rho(reception(icpu,ilevel)%pcomm%igrid(i)+iskip)=0.0D0
+#else
            rho(reception(icpu,ilevel)%igrid(i)+iskip)=0.0D0
+#endif
         end do
      end do
   end do
@@ -1177,7 +1203,7 @@ subroutine cic_from_multipole(ilevel)
      do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
         do i=1,boundary(ibound,ilevel)%ngrid
-           rho(boundary(ibound,ilevel)%igrid(i)+iskip)=0.0
+           rho(boundary(ibound,ilevel)%igrid(i)+iskip)=0
         end do
      end do
   end do
@@ -1527,7 +1553,7 @@ subroutine tsc_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
   do j=1,np
      fam(j) = typep(ind_part(j))
      if (is_tracer(fam(j))) then
-        mmm(j)=0.
+        mmm(j)=0
      else
         mmm(j)=mp(ind_part(j))
      end if
@@ -1831,7 +1857,11 @@ subroutine tsc_from_multipole(ilevel)
      do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
         do i=1,reception(icpu,ilevel)%ngrid
+#ifdef LIGHT_MPI_COMM
+           rho(reception(icpu,ilevel)%pcomm%igrid(i)+iskip)=0.0D0
+#else
            rho(reception(icpu,ilevel)%igrid(i)+iskip)=0.0D0
+#endif
         end do
      end do
   end do
@@ -1846,7 +1876,7 @@ subroutine tsc_from_multipole(ilevel)
      do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
         do i=1,boundary(ibound,ilevel)%ngrid
-           rho(boundary(ibound,ilevel)%igrid(i)+iskip)=0.0
+           rho(boundary(ibound,ilevel)%igrid(i)+iskip)=0
         end do
      end do
   end do
@@ -2121,7 +2151,7 @@ subroutine tsc_cell(ind_grid,ngrid,ilevel)
      end do
 
      ! Update mass density and number density fields
-     do ind=1,twotondim
+     do ind=1,threetondim
         do j=1,np
            ok(j)=igrid(j,ind)>0
         end do
