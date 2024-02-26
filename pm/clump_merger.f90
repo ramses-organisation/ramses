@@ -931,6 +931,15 @@ subroutine allocate_peak_patch_arrays
   !------------------------------------------------
   lev_peak=0; new_peak=0; ind_halo=0; relevance=1
 
+  !------------------------------------------------
+  ! Allocate peak communicator arrays
+  !------------------------------------------------
+  allocate(peak_send_cnt(1:ncpu),peak_send_oft(1:ncpu))
+  allocate(peak_recv_cnt(1:ncpu),peak_recv_oft(1:ncpu))
+  allocate(npeak_alltoall(1:ncpu,1:ncpu),npeak_alltoall_tot(1:ncpu,1:ncpu))
+  ! Remark: npeak_alltoall will be large if ncpu is high. This can cause memory
+  !         errors when most of the cpu memory is already allocated for grids.
+  !         Allocating it here allows to identify a shortage of memory early on.
 
 end subroutine allocate_peak_patch_arrays
 !################################################################
@@ -972,6 +981,9 @@ subroutine deallocate_all
 
   deallocate(hkey,gkey,nkey)
 
+  deallocate(peak_send_cnt,peak_send_oft)
+  deallocate(peak_recv_cnt,peak_recv_oft)
+  deallocate(npeak_alltoall,npeak_alltoall_tot)
 
 end subroutine deallocate_all
 !################################################################
@@ -1064,8 +1076,6 @@ subroutine build_peak_communicator
   implicit none
 #ifndef WITHOUTMPI
   integer::info,ipeak,icpu
-  integer,dimension(1:ncpu,1:ncpu)::npeak_alltoall
-  integer,dimension(1:ncpu,1:ncpu)::npeak_alltoall_tot
   integer,dimension(1:ncpu)::ipeak_alltoall
 
   npeak_alltoall=0
@@ -1081,10 +1091,6 @@ subroutine build_peak_communicator
 !!$        write(*,'(129(I3,1X))')icpu,(npeak_alltoall(icpu,j),j=1,ncpu)
 !!$     end do
 !!$  end if
-  if(.not. allocated(peak_send_cnt))then
-     allocate(peak_send_cnt(1:ncpu),peak_send_oft(1:ncpu))
-     allocate(peak_recv_cnt(1:ncpu),peak_recv_oft(1:ncpu))
-  endif
   peak_send_cnt=0; peak_send_oft=0; peak_send_tot=0
   peak_recv_cnt=0; peak_recv_oft=0; peak_recv_tot=0
   do icpu=1,ncpu
