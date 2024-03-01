@@ -296,12 +296,12 @@ subroutine read_params
         noutput = noutput+1
      enddo
   endif
-  ! add final time and expansion factor to the predetermined output list
-  if(tout(noutput).LT.tend)then
+  ! add final time and expansion factor at the back of the predetermined output list
+  if(tend>0)then
      noutput=noutput+1
      tout(noutput)=tend
   endif
-  if(aout(noutput).LT.aend)then
+  if(aend>0)then
      noutput=noutput+1
      aout(noutput)=aend
   endif
