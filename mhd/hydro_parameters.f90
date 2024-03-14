@@ -1,4 +1,7 @@
 module hydro_parameters
+#ifdef grackle
+  use grackle_parameters
+#endif
   use amr_parameters
 
   ! Number of independant variables
