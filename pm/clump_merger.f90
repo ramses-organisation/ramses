@@ -936,10 +936,6 @@ subroutine allocate_peak_patch_arrays
   !------------------------------------------------
   allocate(peak_send_cnt(1:ncpu),peak_send_oft(1:ncpu))
   allocate(peak_recv_cnt(1:ncpu),peak_recv_oft(1:ncpu))
-  allocate(npeak_alltoall(1:ncpu,1:ncpu),npeak_alltoall_tot(1:ncpu,1:ncpu))
-  ! Remark: npeak_alltoall will be large if ncpu is high. This can cause memory
-  !         errors when most of the cpu memory is already allocated for grids.
-  !         Allocating it here allows to identify a shortage of memory early on.
 
 end subroutine allocate_peak_patch_arrays
 !################################################################
@@ -983,7 +979,6 @@ subroutine deallocate_all
 
   deallocate(peak_send_cnt,peak_send_oft)
   deallocate(peak_recv_cnt,peak_recv_oft)
-  deallocate(npeak_alltoall,npeak_alltoall_tot)
 
 end subroutine deallocate_all
 !################################################################
@@ -1078,31 +1073,24 @@ subroutine build_peak_communicator
   integer::info,ipeak,icpu
   integer,dimension(1:ncpu)::ipeak_alltoall
 
-  npeak_alltoall=0
+  peak_send_cnt=0; peak_recv_cnt=0
   do ipeak=npeaks+1,hfree-1
      call get_local_peak_cpu(ipeak,icpu)
-     npeak_alltoall(myid,icpu)=npeak_alltoall(myid,icpu)+1
+     peak_send_cnt(icpu)=peak_send_cnt(icpu)+1
   end do
-  call MPI_ALLREDUCE(npeak_alltoall,npeak_alltoall_tot,ncpu*ncpu,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
-  npeak_alltoall=npeak_alltoall_tot
-!!$  if(myid==1)then
-!!$     write(*,'(129(I3,1X))')0,(j,j=1,ncpu)
-!!$     do icpu=1,ncpu
-!!$        write(*,'(129(I3,1X))')icpu,(npeak_alltoall(icpu,j),j=1,ncpu)
-!!$     end do
-!!$  end if
-  peak_send_cnt=0; peak_send_oft=0; peak_send_tot=0
-  peak_recv_cnt=0; peak_recv_oft=0; peak_recv_tot=0
+  call MPI_ALLTOALL(peak_send_cnt,1,MPI_INTEGER,peak_recv_cnt,1,MPI_INTEGER,MPI_COMM_WORLD,info)
+
+  peak_send_oft=0; peak_send_tot=0
+  peak_recv_oft=0; peak_recv_tot=0
   do icpu=1,ncpu
-     peak_send_cnt(icpu)=npeak_alltoall(myid,icpu)
-     peak_recv_cnt(icpu)=npeak_alltoall(icpu,myid)
      peak_send_tot=peak_send_tot+peak_send_cnt(icpu)
      peak_recv_tot=peak_recv_tot+peak_recv_cnt(icpu)
      if(icpu<ncpu)then
-        peak_send_oft(icpu+1)=peak_send_oft(icpu)+npeak_alltoall(myid,icpu)
-        peak_recv_oft(icpu+1)=peak_recv_oft(icpu)+npeak_alltoall(icpu,myid)
+        peak_send_oft(icpu+1)=peak_send_oft(icpu)+peak_send_cnt(icpu)
+        peak_recv_oft(icpu+1)=peak_recv_oft(icpu)+peak_recv_cnt(icpu)
      endif
   end do
+
   if(allocated(peak_send_buf))then
      deallocate(peak_send_buf,peak_recv_buf)
   endif
