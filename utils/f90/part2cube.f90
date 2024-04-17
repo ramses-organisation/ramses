@@ -336,12 +336,18 @@ program part2cube
            endif
 
            if(ok_part)then
-              ddx=(x(i,idim)-xxmin)/dx
-              ddy=(x(i,jdim)-yymin)/dy
-              ddz=(x(i,kdim)-zzmin)/dz
+              ddx=(x(i,idim)-xxmin)/dx-0.5d0+1d0 ! +1 is for the int operation on ddx than can take negative values                                                                                                                             
+              ddy=(x(i,jdim)-yymin)/dy-0.5d0+1d0
+              ddz=(x(i,kdim)-zzmin)/dz-0.5d0+1d0
               ix=ddx
               iy=ddy
               iz=ddz
+              ix=ix-1
+              iy=iy-1
+              iz=iz-1
+              ddx=ddx-1d0
+              ddy=ddy-1d0
+              ddz=ddz-1d0
               ddx=ddx-ix
               ddy=ddy-iy
               ddz=ddz-iz
@@ -403,12 +409,18 @@ program part2cube
            endif
 
            if(ok_part)then
-              ddx=(x(i,idim)-xxmin)/dx
-              ddy=(x(i,jdim)-yymin)/dy
-              ddz=(x(i,kdim)-zzmin)/dz
+              ddx=(x(i,idim)-xxmin)/dx-0.5d0+1d0
+              ddy=(x(i,jdim)-yymin)/dy-0.5d0+1d0
+              ddz=(x(i,kdim)-zzmin)/dz-0.5d0+1d0
               ix=ddx
               iy=ddy
               iz=ddz
+              ix=ix-1
+              iy=iy-1
+              iz=iz-1
+              ddx=ddx-1d0
+              ddy=ddy-1d0
+              ddz=ddz-1d0
               ddx=ddx-ix
               ddy=ddy-iy
               ddz=ddz-iz

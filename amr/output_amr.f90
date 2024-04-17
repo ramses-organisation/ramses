@@ -31,6 +31,8 @@ subroutine dump_all
   call title(ifout,nchar)
   ifout=ifout+1
   if(t>=tout(iout).or.aexp>=aout(iout))iout=iout+1
+  if(t>=tout_next)tout_next=tout_next+delta_tout
+  if(aexp>=aout_next)aout_next=aout_next+delta_aout
   output_done=.true.
 
   if(IOGROUPSIZEREP>0) then

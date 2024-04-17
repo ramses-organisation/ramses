@@ -118,30 +118,6 @@ subroutine velana(x,v,dx,t,ncell)
      vy=aa*(sin(twopi*xx)+cos(twopi*zz))
      vz=aa*(cos(twopi*xx)+sin(twopi*yy))
 
-!!$     ! 1D advection test
-!!$     vx=1.0_dp
-!!$     vy=0.0_dp
-!!$     vz=0.0_dp
-
-!!$     ! Ponomarenko
-!!$     xx=xx-boxlen/2.0
-!!$     yy=yy-boxlen/2.0
-!!$     rr=sqrt(xx**2+yy**2)
-!!$     if(yy>0)then
-!!$        tt=acos(xx/rr)
-!!$     else
-!!$        tt=-acos(xx/rr)+twopi
-!!$     endif
-!!$     if(rr<1.0)then
-!!$        omega=0.609711
-!!$        vz=0.792624
-!!$     else
-!!$        omega=0.0
-!!$        vz=0.0
-!!$     endif
-!!$     vx=-sin(tt)*rr*omega
-!!$     vy=+cos(tt)*rr*omega
-
      v(i,1)=vx
 #if NDIM > 1
      v(i,2)=vy

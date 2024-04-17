@@ -248,7 +248,8 @@ program amr2cylprof
         prof(irad,ia2)=prof(irad,ia2)+var(i,1)*b_r**2
         prof(irad,ib2)=prof(irad,ib2)+var(i,1)*b_t**2
         prof(irad,ic2)=prof(irad,ic2)+var(i,1)*b_z**2
-        prof(irad,ipm)=prof(irad,ipm)+var(i,1)*0.5*(b_r**2+b_t**2+b_z**2)
+!        prof(irad,ipm)=prof(irad,ipm)+var(i,1)*0.5*(b_r**2+b_t**2+b_z**2)
+        prof(irad,ipm)=prof(irad,ipm)+0.5*(b_r**2+b_t**2+b_z**2)
 endif
 
   end do
@@ -280,7 +281,8 @@ endif
 !!$        prof(irad,ib2)=sqrt(prof(irad,ib2)*dv/(surf*height)*(unit_b/1d-6)**2-prof(irad,ib)**2)
 !!$        prof(irad,ic2)=sqrt(prof(irad,ic2)*dv/(surf*height)*(unit_b/1d-6)**2-prof(irad,ic)**2)        
 
-        prof(irad,ipm)=sqrt(2.0*prof(irad,ipm)/prof(irad,id))*unit_b/1d-6
+!        prof(irad,ipm)=sqrt(2.0*prof(irad,ipm)/prof(irad,id))*unit_b/1d-6
+        prof(irad,ipm)=sqrt(2.0*prof(irad,ipm)/prof(irad,id))*unit_v/1d5
         prof(irad,ia)=prof(irad,ia)/prof(irad,id)*unit_b/1d-6
         prof(irad,ib)=prof(irad,ib)/prof(irad,id)*unit_b/1d-6
         prof(irad,ic)=prof(irad,ic)/prof(irad,id)*unit_b/1d-6
@@ -297,7 +299,8 @@ endif
   write(*,*)'Ecriture des donnees du fichier '//TRIM(nomfich)
   open(unit=10,file=TRIM(nomfich)//".gas",form='formatted')
   if(mhd)then
-     write(10,'(A190)')" r(kpc)      S_g(Mpc2)   u_r(km/s)   u_t(km/s)   u_z(km/s)   s_r(km/s)   s_t(km/s)   s_z(km/s)   c_g(km/s)   B_r(muG)    B_t(muG)    B_z(muG)    sBr(muG)    sBt(muG)    sBz(muG)    Bstr(muG)"
+!     write(10,'(A190)')" r(kpc)      S_g(Mpc2)   u_r(km/s)   u_t(km/s)   u_z(km/s)   s_r(km/s)   s_t(km/s)   s_z(km/s)   c_g(km/s)   B_r(muG)    B_t(muG)    B_z(muG)    sBr(muG)    sBt(muG)    sBz(muG)    Bstr(muG)"
+     write(10,'(A190)')" r(kpc)      S_g(Mpc2)   u_r(km/s)   u_t(km/s)   u_z(km/s)   s_r(km/s)   s_t(km/s)   s_z(km/s)   c_g(km/s)   B_r(muG)    B_t(muG)    B_z(muG)    sBr(muG)    sBt(muG)    sBz(muG)    c_a(km/s)"
   else
      write(10,'(A106)')" r(kpc)      S_g(Mpc2)   u_r(km/s)   u_t(km/s)   u_z(km/s)   s_r(km/s)   s_t(km/s)   s_z(km/s)   c_g(km/s)"
   endif
