@@ -18,16 +18,22 @@ module nimhd_parameters
   real(dp):: rho_threshold=1d-10     ! safeguard for the ambipolar flux in high density contrast cases (in code units)
   ! useful to restrict ambipolar diff in low rho regions
   ! rename rho_min_AD or something
-  integer :: use_x1d=0               ! use abundances
+
+  ! Resistivity parameters
+  ! resistivity_method=0  -> use fixed value
+  ! resistivity_method=1  -> use analytical model
+  ! resistivity_method=2  -> use tabulated values
+
+  integer :: resistivity_method=0    ! How to determine the resistivity
+  integer :: resistivity_table_ndim=0       ! number of variables to extrapolate in table: rho, T, Xi
+  character(len=80)::res_table_name='marchand2016_table.dat' !filename of the table
+
   integer :: use_x2d=0               ! use abundances
   integer :: use_x3d=0               ! use abundance table with rho, T, Xi
   integer :: use_res=0               ! use resistivities
 
 ! magnetic diffusion coefficient see function etaohmdiss in umsucl
   real(dp):: etaMD=1d0
-
-! Making a test or not Yes=1 No=0
-  real(dp):: ntestDADM=0
 
   real(dp), parameter:: H2_fraction = 0.844d0 !remove ! H2 fraction in number of particules (equals 0.73 in mass)
 ! WARNING !! Think to change xmolaire if proportion are changed

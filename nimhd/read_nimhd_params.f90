@@ -7,7 +7,7 @@ subroutine read_nimhd_params(nml_ok)
   ! Namelist definitions
   !--------------------------------------------------
   namelist/nonidealmhd_params/nambipolar,gammaAD &
-        & ,nmagdiffu,etaMD,ntestDADM,use_x3d &
+        & ,nmagdiffu,etaMD,use_x3d,resistivity_method, &
         & ,coefad, nminitimestep, coefalfven,coefdtohm
 
   ! Checks on non-ideal MHD parameters
@@ -25,7 +25,6 @@ subroutine read_nimhd_params(nml_ok)
   if(myid==1) then
     write(*,*)'!!!!!!!!!!!!!!!  Non Ideal MHD   !!!!!!!!!!!!!!!!'
     write(*,*)'Non ideal MHD parameters'
-    write(*,*)'Making a test ? (Yes=1 No=0)',ntestDADM
     if(nambipolar) then
       write(*,*)'Ambipolar diffusion switched ON'
       write(*,*)'Ambipolar diffusion coefficient',gammaAD
@@ -51,7 +50,10 @@ subroutine read_nimhd_params(nml_ok)
 
   endif
 
-  call read_resistivities
+  ! read tabulated resistivities
+  if(resistivity_method.eq.2)then
+    call read_resistivities
+  endif
 
   109 continue
 
