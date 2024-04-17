@@ -30,8 +30,8 @@ subroutine init_time
         if(initfile(levelmin).ne.' '.and.filetype.eq.'grafic')then
            call init_file
         endif
-        t=0.0
-        aexp=1.0
+        t=0
+        aexp=1
      end if
   end if
 
@@ -152,7 +152,7 @@ subroutine init_time
      if(cosmo) then
         my_grackle_units%comoving_coordinates = 1
         ! Reonization redshift has to be later than starting redshift
-        z_reion=min(1./(1.1*aexp_ini)-1.,z_reion)
+        z_reion=min(1d0/(1.1d0*aexp_ini)-1d0,z_reion)
         ! Approximate initial temperature
         T2_start=1.356d-2/aexp_ini**2
         if(nrestart==0)then
@@ -224,7 +224,7 @@ subroutine init_time
         gr_RT_heating_rate(i) = 0d0
      enddo
   else
-     if(cooling.and..not.(neq_chem.or.rt))then
+     if(cooling.and..not.(neq_chem.or.rt).and..not.cooling_ism)then
         if(myid==1)write(*,*)'Computing cooling model'
         Nmodel=-1
         if(.not. haardt_madau)then
@@ -232,10 +232,10 @@ subroutine init_time
         endif
         if(cosmo)then
            ! Reonization redshift has to be later than starting redshift
-           z_reion=min(1./(1.1*aexp_ini)-1.,z_reion)
+           z_reion=min(1d0/(1.1d0*aexp_ini)-1d0,z_reion)
            call set_model(Nmodel,dble(J21*1d-21),-1.0d0,dble(a_spec),-1.0d0,dble(z_reion), &
                 & -1,2, &
-                & dble(h0/100.),dble(omega_b),dble(omega_m),dble(omega_l), &
+                & dble(h0/100),dble(omega_b),dble(omega_m),dble(omega_l), &
                 & dble(aexp_ini),T2_sim)
            T2_start=T2_sim
            if(nrestart==0)then
@@ -244,13 +244,13 @@ subroutine init_time
         else
            call set_model(Nmodel,dble(J21*1d-21),-1.0d0,dble(a_spec),-1.0d0,dble(z_reion), &
                 & -1,2, &
-                & dble(70./100.),dble(0.04),dble(0.3),dble(0.7), &
+                & dble(70d0/100d0),0.04d0,0.3d0,0.7d0, &
                 & dble(aexp_ini),T2_sim)
         endif
      end if
   endif
 #else
-  if(cooling.and..not.(neq_chem.or.rt))then
+  if(cooling.and..not.(neq_chem.or.rt).and..not.cooling_ism) then
      if(myid==1)write(*,*)'Computing cooling model'
      Nmodel=-1
      if(.not. haardt_madau)then
@@ -258,7 +258,7 @@ subroutine init_time
      endif
      if(cosmo)then
         ! Reonization redshift has to be later than starting redshift
-        z_reion=min(1./(1.1*aexp_ini)-1.,z_reion)
+        z_reion=min(1d0/(1.1d0*aexp_ini)-1d0,z_reion)
         call set_model(Nmodel,dble(J21*1d-21),-1.0d0,dble(a_spec),-1.0d0,dble(z_reion), &
              & -1,2, &
              & dble(h0/100.),dble(omega_b),dble(omega_m),dble(omega_l), &
@@ -284,7 +284,7 @@ subroutine init_time
      endif
      if(cosmo)then
         ! Reonization redshift has to be later than starting redshift
-        z_reion=min(1./(1.1*aexp_ini)-1.,z_reion)
+        z_reion=min(1d0/(1.1d0*aexp_ini)-1d0,z_reion)
         call rt_set_model(dble(h0/100.),dble(omega_b),dble(omega_m),dble(omega_l), &
              & dble(aexp_ini),T2_sim)
         T2_start=T2_sim
@@ -447,7 +447,7 @@ subroutine init_cosmo
   SELECT CASE (filetype)
   case ('grafic', 'ascii')
      ! Reading initial conditions parameters only
-     aexp=2.0
+     aexp=2
      nlevelmax_part=levelmin-1
      do ilevel=levelmin,nlevelmax
         if(initfile(ilevel).ne.' ')then
@@ -534,7 +534,7 @@ subroutine init_cosmo
      end if
 
      ! Compute box length in the initial conditions in units of h-1 Mpc
-     boxlen_ini=dble(nx)*2**levelmin*dxini(levelmin)*(h0/100.)
+     boxlen_ini=dble(nx)*2**levelmin*dxini(levelmin)*(h0/100)
 
   CASE ('gadget')
      if (verbose) write(*,*)'Reading in gadget format from '//TRIM(initfile(levelmin))
@@ -565,7 +565,7 @@ subroutine init_cosmo
      xoff1(levelmin)=0
      xoff2(levelmin)=0
      xoff3(levelmin)=0
-     dxini(levelmin) = boxlen_ini/(nx*2**levelmin*(h0/100.0))
+     dxini(levelmin) = boxlen_ini/(nx*2**levelmin*(h0/100))
 
   CASE ('dice')
      if (verbose) write(*,*)'Reading in gadget format from'//TRIM(initfile(levelmin))//'/'//TRIM(ic_file)

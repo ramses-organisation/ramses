@@ -1,0 +1,1 @@
+FLAGS: NDIM=2 PATCH=../tests/poisson/ana-disk-potential SOLVER=hydro

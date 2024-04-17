@@ -358,7 +358,7 @@ subroutine write_clump_properties(to_file)
   end if
 
   if (to_file .or. myid==1)then
-     write(ilun,'(135A)')'   index  lev   parent      ncell    peak_x             peak_y             peak_z     '//&
+     write(ilun,'(144A)')'   index  halo   lev   parent      ncell    peak_x             peak_y             peak_z     '//&
           '        rho-               rho+               rho_av             mass_cl            relevance   '
      if(saddle_threshold>0)then
         write(ilun2,'(135A)')'     index      ncell    peak_x             peak_y             peak_z     '//&
@@ -418,8 +418,9 @@ subroutine write_clump_properties(to_file)
     do j=npeaks,1,-1
        jj=ind_sort(j)
        if (relevance(jj) > relevance_threshold .and. halo_mass(jj) > mass_threshold*particle_mass)then
-          write(ilun,'(I8,X,I2,X,I10,X,I10,8(X,1PE18.9E2))')&
+          write(ilun,'(I8,X,I8,1X,I2,X,I10,X,I10,8(X,1PE18.9E2))')&
                jj+ipeak_start(myid)&
+               ,ind_halo(jj)&
                ,lev_peak(jj)&
                ,new_peak(jj)&
                ,n_cells(jj)&
@@ -930,6 +931,11 @@ subroutine allocate_peak_patch_arrays
   !------------------------------------------------
   lev_peak=0; new_peak=0; ind_halo=0; relevance=1
 
+  !------------------------------------------------
+  ! Allocate peak communicator arrays
+  !------------------------------------------------
+  allocate(peak_send_cnt(1:ncpu),peak_send_oft(1:ncpu))
+  allocate(peak_recv_cnt(1:ncpu),peak_recv_oft(1:ncpu))
 
 end subroutine allocate_peak_patch_arrays
 !################################################################
@@ -971,6 +977,8 @@ subroutine deallocate_all
 
   deallocate(hkey,gkey,nkey)
 
+  deallocate(peak_send_cnt,peak_send_oft)
+  deallocate(peak_recv_cnt,peak_recv_oft)
 
 end subroutine deallocate_all
 !################################################################
@@ -1063,39 +1071,26 @@ subroutine build_peak_communicator
   implicit none
 #ifndef WITHOUTMPI
   integer::info,ipeak,icpu
-  integer,dimension(1:ncpu,1:ncpu)::npeak_alltoall
-  integer,dimension(1:ncpu,1:ncpu)::npeak_alltoall_tot
   integer,dimension(1:ncpu)::ipeak_alltoall
 
-  npeak_alltoall=0
+  peak_send_cnt=0; peak_recv_cnt=0
   do ipeak=npeaks+1,hfree-1
      call get_local_peak_cpu(ipeak,icpu)
-     npeak_alltoall(myid,icpu)=npeak_alltoall(myid,icpu)+1
+     peak_send_cnt(icpu)=peak_send_cnt(icpu)+1
   end do
-  call MPI_ALLREDUCE(npeak_alltoall,npeak_alltoall_tot,ncpu*ncpu,MPI_INTEGER,MPI_SUM,MPI_COMM_WORLD,info)
-  npeak_alltoall=npeak_alltoall_tot
-!!$  if(myid==1)then
-!!$     write(*,'(129(I3,1X))')0,(j,j=1,ncpu)
-!!$     do icpu=1,ncpu
-!!$        write(*,'(129(I3,1X))')icpu,(npeak_alltoall(icpu,j),j=1,ncpu)
-!!$     end do
-!!$  end if
-  if(.not. allocated(peak_send_cnt))then
-     allocate(peak_send_cnt(1:ncpu),peak_send_oft(1:ncpu))
-     allocate(peak_recv_cnt(1:ncpu),peak_recv_oft(1:ncpu))
-  endif
-  peak_send_cnt=0; peak_send_oft=0; peak_send_tot=0
-  peak_recv_cnt=0; peak_recv_oft=0; peak_recv_tot=0
+  call MPI_ALLTOALL(peak_send_cnt,1,MPI_INTEGER,peak_recv_cnt,1,MPI_INTEGER,MPI_COMM_WORLD,info)
+
+  peak_send_oft=0; peak_send_tot=0
+  peak_recv_oft=0; peak_recv_tot=0
   do icpu=1,ncpu
-     peak_send_cnt(icpu)=npeak_alltoall(myid,icpu)
-     peak_recv_cnt(icpu)=npeak_alltoall(icpu,myid)
      peak_send_tot=peak_send_tot+peak_send_cnt(icpu)
      peak_recv_tot=peak_recv_tot+peak_recv_cnt(icpu)
      if(icpu<ncpu)then
-        peak_send_oft(icpu+1)=peak_send_oft(icpu)+npeak_alltoall(myid,icpu)
-        peak_recv_oft(icpu+1)=peak_recv_oft(icpu)+npeak_alltoall(icpu,myid)
+        peak_send_oft(icpu+1)=peak_send_oft(icpu)+peak_send_cnt(icpu)
+        peak_recv_oft(icpu+1)=peak_recv_oft(icpu)+peak_recv_cnt(icpu)
      endif
   end do
+
   if(allocated(peak_send_buf))then
      deallocate(peak_send_buf,peak_recv_buf)
   endif

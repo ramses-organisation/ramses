@@ -1,4 +1,4 @@
- subroutine init_part
+subroutine init_part
   use amr_commons
   use pm_commons
   use clfind_commons
@@ -20,6 +20,10 @@
   integer::ipart,jpart,ipart_old,ilevel,idim
   integer::i,igrid,ncache,ngrid,iskip
   integer::ind,ix,iy,iz,ilun,icpu
+#ifdef LIGHT_MPI_COMM
+  integer::idx,offset
+  integer,dimension(ncpu)::sendbuf_cum
+#endif
   integer::i1,i2,i3
   integer::i1_min=0,i1_max=0,i2_min=0,i2_max=0,i3_min=0,i3_max=0
   integer::buf_count,indglob
@@ -33,14 +37,14 @@
   integer,allocatable,dimension(:)::isp
   integer(i8b),allocatable,dimension(:)::isp8
   integer(1),allocatable,dimension(:)::ii1
-  real(kind=4),allocatable,dimension(:,:)::init_plane,init_plane_x
+  real(kind=4),allocatable,dimension(:,:)::init_plane,init_plane_x,init_plane_m
   integer(i8b),allocatable,dimension(:,:)::init_plane_id
-  real(dp),allocatable,dimension(:,:,:)::init_array,init_array_x
+  real(dp),allocatable,dimension(:,:,:)::init_array,init_array_x,init_array_m
   integer(i8b),allocatable,dimension(:,:,:)::init_array_id
   real(kind=8),dimension(1:nvector,1:3)::xx,vv
   real(kind=8),dimension(1:nvector)::mm
   type(part_t)::tmppart
-  real(kind=8)::dispmax=0.0
+  real(kind=8)::dispmax=0
 #ifndef WITHOUTMPI
   real(dp),dimension(1:nvector,1:3)::xx_dp
   integer,dimension(1:nvector)::cc
@@ -52,8 +56,8 @@
   integer::ibuf,tagu=102
   integer,parameter::tagg=1109,tagg2=1110,tagg3=1111
 #endif
-  logical::error,keep_part,eof,read_pos=.false.,ok,read_ids=.false.
-  character(LEN=80)::filename,filename_x, filename_id
+  logical::error,keep_part,eof,ok,read_pos=.false.,read_ids=.false.,read_mass=.false.
+  character(LEN=80)::filename,filename_x, filename_id, filename_m
   character(LEN=80)::fileloc
   character(LEN=20)::filetype_loc
   character(LEN=5)::nchar,ncharcpu
@@ -79,8 +83,8 @@
 
   if(verbose)write(*,*)'Entering init_part'
 
-  if(myid.eq.1)write(*,*)'WARNING: NEVER USE FAMILY CODES / TAGS > 127.'
-  if(myid.eq.1)write(*,*)'See https://bitbucket.org/rteyssie/ramses/wiki/Particle%20Families'
+  if(verbose)write(*,*)'WARNING: NEVER USE FAMILY CODES / TAGS > 127.'
+  if(verbose)write(*,*)'See https://bitbucket.org/rteyssie/ramses/wiki/Particle%20Families'
 
   if(allocated(xp))then
      if(verbose)write(*,*)'Initial conditions already set'
@@ -91,6 +95,12 @@
   allocate(xp    (npartmax,ndim))
   allocate(vp    (npartmax,ndim))
   allocate(mp    (npartmax))
+  if (MC_tracer) then
+     allocate(itmpp (npartmax))
+     allocate(partp (npartmax))
+     allocate(move_flag(npartmax))
+     move_flag = 0
+  end if
   allocate(nextp (npartmax))
   allocate(prevp (npartmax))
   allocate(levelp(npartmax))
@@ -105,14 +115,14 @@
      allocate(maskp(npartmax))
   endif
   ! DICE patch 
-  xp=0.0; vp=0.0; mp=0.0; levelp=0; idp=0
+  xp=0; vp=0; mp=0; levelp=0; idp=0
   typep(1:npartmax)%family=FAM_UNDEF; typep(1:npartmax)%tag=0
   if(star.or.sink)then
      allocate(tp(npartmax))
-     tp=0.0
+     tp=0
      if(metal)then
         allocate(zp(npartmax))
-        zp=0.0
+        zp=0
      end if
   end if
 
@@ -150,7 +160,11 @@
      read(ilun)ncpu2
      read(ilun)ndim2
      read(ilun)npart2
-     read(ilun)localseed
+     if (MC_tracer) then
+        read(ilun)localseed, tracer_seed
+     else
+        read(ilun)localseed
+     end if
      read(ilun)nstar_tot
      read(ilun)mstar_tot
      read(ilun)mstar_lost
@@ -219,6 +233,14 @@
         deallocate(xdp)
      end if
 
+     if (MC_tracer) then
+        allocate(isp(1:npart2))
+        ! Now read partp
+        read(ilun)isp
+        partp(1:npart2) = isp
+        call convert_global_index_to_local_index(npart2)
+        deallocate(isp)
+     end if
      close(ilun)
 
      ! Send the token
@@ -233,7 +255,7 @@
 #endif
      ! Get nlevelmax_part from cosmological inital conditions
      if(cosmo)then
-        min_mdm_cpu = 1.0
+        min_mdm_cpu = 1
         do ipart=1,npart2
            ! Get dark matter only
            if (is_DM(typep(ipart))) then
@@ -250,7 +272,7 @@
         ilevel = 1
         do while(.true.)
            mm1 = 0.5d0**(3*ilevel)*(1.0d0-omega_b/omega_m)
-           if((mm1.GT.0.90*min_mdm_all).AND.(mm1.LT.1.10*min_mdm_all))then
+           if((mm1 > 0.90d0*min_mdm_all).AND.(mm1 < 1.10d0*min_mdm_all))then
               nlevelmax_part = ilevel
               exit
            endif
@@ -262,6 +284,10 @@
      if(debug)write(*,*)'part.tmp read for processor ',myid
      npart=npart2
 
+     if (tracer .and. MC_tracer) then
+        ! Attempt to read mass from binary file
+        call read_tracer_mass
+     end if
   else
 
      filetype_loc=filetype
@@ -283,9 +309,14 @@
         call clean_stop
 
      end select
+
+     ! Initialize tracer particles
+     if(MC_tracer) call init_tracer
+
   end if
 
   if(sink)call init_sink
+  if(stellar)call init_stellar
 
 contains
 
@@ -417,6 +448,14 @@ contains
          allocate(init_array_id(i1_min:i1_max,i2_min:i2_max,i3_min:i3_max))
        end if
 
+       filename_m=TRIM(initfile(ilevel))//'/ic_massc'
+       INQUIRE(file=filename_m,exist=read_mass)
+       if(read_mass) then
+         if(myid==1)write(*,*)'Reading particle masses from file '//TRIM(filename_m)
+         allocate(init_plane_m(1:n1(ilevel),1:n2(ilevel)))
+         allocate(init_array_m(i1_min:i1_max,i2_min:i2_max,i3_min:i3_max))
+       end if
+
        ! Loop over input variables
        do idim=1,ndim
 
@@ -493,7 +532,7 @@ contains
                    if(debug.and.mod(i3,10)==0)write(*,*)'Reading plane ',i3
                    read(10)((init_plane(i1,i2),i1=1,n1(ilevel)),i2=1,n2(ilevel))
                 else
-                   init_plane=0.0
+                   init_plane=0
                 endif
                 buf_count=n1(ilevel)*n2(ilevel)
 #ifndef WITHOUTMPI
@@ -520,7 +559,7 @@ contains
                       if(debug.and.mod(i3,10)==0)write(*,*)'Reading plane ',i3
                       read(10)((init_plane_x(i1,i2),i1=1,n1(ilevel)),i2=1,n2(ilevel))
                    else
-                      init_plane_x=0.0
+                      init_plane_x=0
                    endif
                    buf_count=n1(ilevel)*n2(ilevel)
 #ifndef WITHOUTMPI
@@ -547,7 +586,7 @@ contains
                       if(debug.and.mod(i3,10)==0)write(*,*)'Reading plane ',i3
                       read(10)((init_plane_id(i1,i2),i1=1,n1(ilevel)),i2=1,n2(ilevel))
                    else
-                      init_plane_id=0.0
+                      init_plane_id=0
                    endif
                    buf_count=n1(ilevel)*n2(ilevel)
 #ifndef WITHOUTMPI
@@ -566,6 +605,33 @@ contains
                 end do
                 if(myid==1)close(10)
               end if
+
+              if(read_mass) then
+               if(myid==1)then
+                  open(10,file=filename_m,form='unformatted')
+                  rewind 10
+                  read(10) ! skip first line
+               end if
+               do i3=1,n3(ilevel)
+                  if(myid==1)then
+                     if(debug.and.mod(i3,10)==0)write(*,*)'Reading plane ',i3
+                     read(10)((init_plane_m(i1,i2),i1=1,n1(ilevel)),i2=1,n2(ilevel))
+                  else
+                     init_plane_m=0
+                  endif
+                  buf_count=n1(ilevel)*n2(ilevel)
+#ifndef WITHOUTMPI
+                  call MPI_BCAST(init_plane_m,buf_count,MPI_REAL,0,MPI_COMM_WORLD,info)
+#endif
+                  if(active(ilevel)%ngrid>0)then
+                     if(i3.ge.i3_min.and.i3.le.i3_max)then
+                        init_array_m(i1_min:i1_max,i2_min:i2_max,i3) = &
+                             & init_plane_m(i1_min:i1_max,i2_min:i2_max)
+                     end if
+                  endif
+               end do
+               if(myid==1)close(10)
+             end if
           endif
 
           if(active(ilevel)%ngrid>0)then
@@ -611,10 +677,13 @@ contains
                          else
                             xp(ipart,idim)=xg(ind_grid(i),idim)+xc(ind,idim)+init_array_x(i1,i2,i3)
                             dispmax=max(dispmax,abs(init_array_x(i1,i2,i3)/dx))
-                          if (read_ids) then
-                            idp(ipart) = init_array_id(i1,i2,i3)
-                          end if
                          endif
+                         if (read_ids) then
+                            idp(ipart) = init_array_id(i1,i2,i3)
+                         end if
+                         if (read_mass) then
+                            mp(ipart) = 0.5d0**(3*ilevel) * init_array_m(i1,i2,i3)
+                         end if
                       end if
                    end do
                 end do
@@ -637,6 +706,10 @@ contains
          deallocate(init_array_id)
        end if
 
+       if(read_mass) then
+         deallocate(init_plane_m)
+         deallocate(init_array_m)
+       end if
 
        if(debug)write(*,*)'npart=',ipart,'/',npartmax,' for PE=',myid
 
@@ -680,6 +753,77 @@ contains
        if(cc(1).ne.myid)sendbuf(cc(1))=sendbuf(cc(1))+1
     end do
 
+#ifdef LIGHT_MPI_COMM
+    ! Only use ilevel=1 slot in structure array
+    if (emission_part(1)%nactive>0) then
+       emission_part(1)%nactive=0
+       emission_part(1)%nparts_tot=0
+       deallocate(emission_part(1)%cpuid)
+       deallocate(emission_part(1)%nparts)
+       deallocate(emission_part(1)%u)
+       deallocate(emission_part(1)%f)
+       deallocate(emission_part(1)%f8)
+    end if
+ 
+    ! Count particles
+    offset=0
+    sendbuf_cum=0
+    do icpu=1,ncpu
+       ncache=sendbuf(icpu)
+       ! Cumulated counter of particles to send
+       sendbuf_cum(icpu)=offset
+       if(ncache>0) then
+          emission_part(1)%nactive=emission_part(1)%nactive+1
+          emission_part(1)%nparts_tot=emission_part(1)%nparts_tot+ncache
+          offset=offset+ncache
+       end if
+    end do
+ 
+    ! Allocate communicator structures (emission)
+    if(emission_part(1)%nactive>0)then
+       allocate(emission_part(1)%cpuid(emission_part(1)%nactive))
+       allocate(emission_part(1)%nparts(emission_part(1)%nactive))
+       allocate(emission_part(1)%u(emission_part(1)%nparts_tot*(twondim+1), 1:1))
+       allocate(emission_part(1)%f8(emission_part(1)%nparts_tot*2, 1:1))
+       idx=1
+       do icpu=1,ncpu
+         ncache=sendbuf(icpu)
+         if(ncache>0)then
+            emission_part(1)%nparts(idx)=ncache
+            emission_part(1)%cpuid(idx)=icpu
+            idx=idx+1
+         end if
+       end do
+ 
+       ! Fill communicator structures with particle data
+       jpart=0
+       sendbuf=0
+       do ipart=1,npart
+          xx(1,1:3)=xp(ipart,1:3)
+          xx_dp(1,1:3)=xx(1,1:3)
+          call cmp_cpumap(xx_dp,cc,1)
+          if(cc(1).ne.myid)then
+             icpu=cc(1)
+             ibuf=sendbuf(icpu)
+             emission_part(1)%u((sendbuf_cum(icpu)+ibuf)*(twondim+1),1)     = xp(ipart,1)
+             emission_part(1)%u((sendbuf_cum(icpu)+ibuf)*(twondim+1) + 1,1) = xp(ipart,2)
+             emission_part(1)%u((sendbuf_cum(icpu)+ibuf)*(twondim+1) + 2,1) = xp(ipart,3)
+             emission_part(1)%u((sendbuf_cum(icpu)+ibuf)*(twondim+1) + 3,1) = vp(ipart,1)
+             emission_part(1)%u((sendbuf_cum(icpu)+ibuf)*(twondim+1) + 4,1) = vp(ipart,2)
+             emission_part(1)%u((sendbuf_cum(icpu)+ibuf)*(twondim+1) + 5,1) = vp(ipart,3)
+             emission_part(1)%u((sendbuf_cum(icpu)+ibuf)*(twondim+1) + 6,1) = mp(ipart)
+             emission_part(1)%f8((sendbuf_cum(icpu)+ibuf)*2,1)              = part2int(typep(ipart))
+             emission_part(1)%f8((sendbuf_cum(icpu)+ibuf)*2 + 1,1)          = idp(ipart)
+          else
+             jpart=jpart+1
+             xp(jpart,1:3)=xp(ipart,1:3)
+             vp(jpart,1:3)=vp(ipart,1:3)
+             mp(jpart)    =mp(ipart)
+             idp(jpart)   =idp(ipart)
+          endif
+       end do
+    end if
+#else
     ! Allocate communication buffer in emission
     do icpu=1,ncpu
        ncache=sendbuf(icpu)
@@ -714,10 +858,10 @@ contains
           xp(jpart,1:3)=xp(ipart,1:3)
           vp(jpart,1:3)=vp(ipart,1:3)
           mp(jpart)    =mp(ipart)
-          idp(jpart)    =idp(ipart)
+          idp(jpart)   =idp(ipart)
        endif
     end do
-
+#endif
     ! Communicate virtual particle number to parent cpu
     call MPI_ALLTOALL(sendbuf,1,MPI_INTEGER,recvbuf,1,MPI_INTEGER,MPI_COMM_WORLD,info)
 
@@ -740,8 +884,13 @@ contains
     do icpu=1,ncpu
        ncache=recvbuf(icpu)
        if(ncache>0)then
-          allocate(reception(icpu,1)%up(1:ncache,1:twondim+1))
-          allocate(reception(icpu,1)%fp(1:ncache,1:2))
+#ifdef LIGHT_MPI_COMM
+         allocate(reception(icpu,1)%pcomm%u(1:ncache,1:twondim+1))
+         allocate(reception(icpu,1)%pcomm%f8(1:ncache,1:2))
+#else
+         allocate(reception(icpu,1)%up(1:ncache,1:twondim+1))
+         allocate(reception(icpu,1)%fp(1:ncache,1:2))
+#endif
        end if
     end do
 
@@ -753,9 +902,15 @@ contains
        if(ncache>0)then
           buf_count=ncache*(twondim+1)
           countrecv=countrecv+1
+#ifdef LIGHT_MPI_COMM
+          call MPI_IRECV(reception(icpu,1)%pcomm%u,buf_count, &
+               & MPI_DOUBLE_PRECISION,icpu-1,&
+               & tagu,MPI_COMM_WORLD,reqrecv(countrecv),info)
+#else
           call MPI_IRECV(reception(icpu,1)%up,buf_count, &
                & MPI_DOUBLE_PRECISION,icpu-1,&
                & tagu,MPI_COMM_WORLD,reqrecv(countrecv),info)
+#endif
        end if
     end do
 
@@ -766,9 +921,15 @@ contains
        if(ncache>0)then
           buf_count=ncache*(twondim+1)
           countsend=countsend+1
+#ifdef LIGHT_MPI_COMM
+          call MPI_ISEND(emission_part(1)%u(sendbuf_cum(icpu)+ncache,1),buf_count, &
+               & MPI_DOUBLE_PRECISION,icpu-1,&
+               & tagu,MPI_COMM_WORLD,reqsend(countsend),info)
+#else
           call MPI_ISEND(emission(icpu,1)%up,buf_count, &
                & MPI_DOUBLE_PRECISION,icpu-1,&
                & tagu,MPI_COMM_WORLD,reqsend(countsend),info)
+#endif
        end if
     end do
 
@@ -786,6 +947,17 @@ contains
        if(ncache>0)then
           buf_count=ncache * 2
           countrecv=countrecv+1
+#ifdef LIGHT_MPI_COMM
+#ifndef LONGINT
+          call MPI_IRECV(reception(icpu,1)%pcomm%f8,buf_count, &
+                & MPI_INTEGER,icpu-1,&
+                & tagu,MPI_COMM_WORLD,reqrecv(countrecv),info)
+#else
+          call MPI_IRECV(reception(icpu,1)%pcomm%f8,buf_count, &
+                & MPI_INTEGER8,icpu-1,&
+                & tagu,MPI_COMM_WORLD,reqrecv(countrecv),info)
+#endif
+#else
 #ifndef LONGINT
           call MPI_IRECV(reception(icpu,1)%fp,buf_count, &
                 & MPI_INTEGER,icpu-1,&
@@ -795,7 +967,7 @@ contains
                 & MPI_INTEGER8,icpu-1,&
                 & tagu,MPI_COMM_WORLD,reqrecv(countrecv),info)
 #endif
-
+#endif
        end if
     end do
 
@@ -806,14 +978,26 @@ contains
        if(ncache>0)then
           buf_count=ncache * 2
           countsend=countsend+1
+#ifdef LIGHT_MPI_COMM
 #ifndef LONGINT
-                    call MPI_ISEND(emission(icpu,1)%fp,buf_count, &
-                          & MPI_INTEGER,icpu-1,&
-                          & tagu,MPI_COMM_WORLD,reqsend(countsend),info)
+          call MPI_ISEND(emission_part(1)%f8(sendbuf_cum(icpu)+ncache,1),buf_count, &
+                & MPI_INTEGER,icpu-1,&
+                & tagu,MPI_COMM_WORLD,reqsend(countsend),info)
 #else
-                    call MPI_ISEND(emission(icpu,1)%fp,buf_count, &
-                          & MPI_INTEGER8,icpu-1,&
-                          & tagu,MPI_COMM_WORLD,reqsend(countsend),info)
+          call MPI_ISEND(emission_part(1)%f8(sendbuf_cum(icpu)+ncache,1),buf_count, &
+                & MPI_INTEGER8,icpu-1,&
+                & tagu,MPI_COMM_WORLD,reqsend(countsend),info)
+#endif
+#else
+#ifndef LONGINT
+          call MPI_ISEND(emission(icpu,1)%fp,buf_count, &
+                & MPI_INTEGER,icpu-1,&
+                & tagu,MPI_COMM_WORLD,reqsend(countsend),info)
+#else
+          call MPI_ISEND(emission(icpu,1)%fp,buf_count, &
+                & MPI_INTEGER8,icpu-1,&
+                & tagu,MPI_COMM_WORLD,reqsend(countsend),info)
+#endif
 #endif
        end if
     end do
@@ -829,6 +1013,16 @@ contains
     do icpu=1,ncpu
        do ibuf=1,recvbuf(icpu)
           jpart=jpart+1
+#ifdef LIGHT_MPI_COMM
+          xp(jpart,1)=reception(icpu,1)%pcomm%u(ibuf,1)
+          xp(jpart,2)=reception(icpu,1)%pcomm%u(ibuf,2)
+          xp(jpart,3)=reception(icpu,1)%pcomm%u(ibuf,3)
+          vp(jpart,1)=reception(icpu,1)%pcomm%u(ibuf,4)
+          vp(jpart,2)=reception(icpu,1)%pcomm%u(ibuf,5)
+          vp(jpart,3)=reception(icpu,1)%pcomm%u(ibuf,6)
+          mp(jpart)  =reception(icpu,1)%pcomm%u(ibuf,7)
+          idp(jpart) =reception(icpu,1)%pcomm%f8(ibuf,2)
+#else
           xp(jpart,1)=reception(icpu,1)%up(ibuf,1)
           xp(jpart,2)=reception(icpu,1)%up(ibuf,2)
           xp(jpart,3)=reception(icpu,1)%up(ibuf,3)
@@ -837,6 +1031,7 @@ contains
           vp(jpart,3)=reception(icpu,1)%up(ibuf,6)
           mp(jpart)  =reception(icpu,1)%up(ibuf,7)
           idp(jpart)  =reception(icpu,1)%fp(ibuf,2)
+#endif
        end do
     end do
 
@@ -855,15 +1050,26 @@ contains
     npart=jpart
 
     ! Deallocate communicators
-    do icpu=1,ncpu
-       if(sendbuf(icpu)>0) then
-        deallocate(emission(icpu,1)%up)
-        deallocate(emission(icpu,1)%fp)
-       end if
+#ifdef LIGHT_MPI_COMM
+    deallocate(emission_part(1)%u)
+    deallocate(emission_part(1)%f8)
+#endif
 
+    do icpu=1,ncpu
+#ifndef LIGHT_MPI_COMM
+      if(sendbuf(icpu)>0) then
+       deallocate(emission(icpu,1)%up)
+       deallocate(emission(icpu,1)%fp)
+      end if
+#endif
        if(recvbuf(icpu)>0)then
+#ifdef LIGHT_MPI_COMM
+         deallocate(reception(icpu,1)%pcomm%u)
+         deallocate(reception(icpu,1)%pcomm%f8)
+#else
          deallocate(reception(icpu,1)%up)
          deallocate(reception(icpu,1)%fp)
+#endif
        end if
     end do
 
@@ -934,16 +1140,16 @@ contains
        eof=.false.
 
        do while (.not.eof)
-          xx=0.0
+          xx=0
           if(myid==1)then
              jpart=0
              do i=1,nvector
                 read(10,*,end=111)xx1,xx2,xx3,vv1,vv2,vv3,mm1
                 jpart=jpart+1
                 indglob=indglob+1
-                xx(i,1)=xx1+boxlen/2.0
-                xx(i,2)=xx2+boxlen/2.0
-                xx(i,3)=xx3+boxlen/2.0
+                xx(i,1)=xx1+boxlen/2
+                xx(i,2)=xx2+boxlen/2
+                xx(i,3)=xx3+boxlen/2
                 vv(i,1)=vv1
                 vv(i,2)=vv2
                 vv(i,3)=vv3
@@ -1541,7 +1747,7 @@ subroutine load_gadget
      call gadgetreadheader(filename, 0, gadgetheader, ok)
      if(.not.ok) call clean_stop
      numfiles = gadgetheader%numfiles
-     gadgetvfact = SQRT(aexp) / gadgetheader%boxsize * aexp / 100.
+     gadgetvfact = sqrt(aexp) / gadgetheader%boxsize * aexp / 100d0
 #ifndef LONGINT
      allparticles=int(gadgetheader%nparttotal(2),kind=8)
 #else

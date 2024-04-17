@@ -43,16 +43,12 @@ kbound_min= 0, 0,  0,  0, -1,  1
 kbound_max= 0, 0,  0,  0, -1,  1
 /
 
-&PHYSICS_PARAMS
-isothermal=.true.
-g_star=1.6666D0
-n_star=0.1D0
-eps_star=0.0D0
-T2_star=1.0d4
-/
-
-&EOS_PARAMS
-eos_type='pseudo_cooling'
+&COOLING_PARAMS
+barotropic_eos=.true.
+barotropic_eos_form='double_polytrope'
+polytropic_index=1.6666d0
+polytropic_rho=1.66d-25
+T2_eos=1.0d4
 /
 
 &HYDRO_PARAMS

@@ -24,6 +24,7 @@ program part2prof
   real(KIND=8)::mcumstar,ucumstar,vcumstar,wcumstar,lxcumstar,lycumstar,lzcumstar
   real(KIND=8)::mcumcdm,ucumcdm,vcumcdm,wcumcdm,lxcumcdm,lycumcdm,lzcumcdm
 
+  character(LEN=80)::GMGM
   real(KIND=4),dimension(:,:),allocatable::toto
   real(KIND=8),dimension(:),allocatable::aexp_frw,hexp_frw,tau_frw,t_frw
   real(KIND=8),dimension(:,:),allocatable::x,v,prof
@@ -47,7 +48,8 @@ program part2prof
   integer::imcumcdm=8,iucumcdm=9,ivcumcdm=10,iwcumcdm=11,ilxcumcdm=12,ilycumcdm=13,ilzcumcdm=14
   integer::idstar=15,iustar=16,ivstar=17,iwstar=18,ilxstar=19,ilystar=20,ilzstar=21
   integer::imcumstar=22,iucumstar=23,ivcumstar=24,iwcumstar=25,ilxcumstar=26,ilycumstar=27,ilzcumstar=28
-
+  integer(kind=1),dimension(:),allocatable::family,tag
+  
   call read_params
 
   !-----------------------------------------------
@@ -69,32 +71,32 @@ program part2prof
      stop
   endif
   open(unit=10,file=nomfich,form='formatted',status='old')
-  read(10,'("ncpu        =",I11)')ncpu
-  read(10,'("ndim        =",I11)')ndim
-  read(10,'("levelmin    =",I11)')levelmin
-  read(10,'("levelmax    =",I11)')levelmax
-  read(10,*)
+  read(10,'(A13,I11)')GMGM,ncpu
+  read(10,'(A13,I11)')GMGM,ndim
+  read(10,'(A13,I11)')GMGM,levelmin
+  read(10,'(A13,I11)')GMGM,levelmax
+    read(10,*)
   read(10,*)
   read(10,*)
 
-  read(10,'("boxlen      =",E23.15)')boxlen
-  read(10,'("time        =",E23.15)')t
-  read(10,'("aexp        =",E23.15)')aexp
-  read(10,'("H0          =",E23.15)')h0
+  read(10,'(A13,E23.15)')GMGM,boxlen
+  read(10,'(A13,E23.15)')GMGM,t
+  read(10,'(A13,E23.15)')GMGM,aexp
+  read(10,'(A13,E23.15)')GMGM,h0
+  read(10,'(A13,E23.15)')GMGM,omega_m
+  read(10,'(A13,E23.15)')GMGM,omega_l
+  read(10,'(A13,E23.15)')GMGM,omega_k
+  read(10,'(A13,E23.15)')GMGM,omega_b
+  read(10,'(A13,E23.15)')GMGM,unit_l
+  read(10,'(A13,E23.15)')GMGM,unit_d
+  read(10,'(A13,E23.15)')GMGM,unit_t
   if(h0.eq.1.0)cosmo=.false.
-  read(10,'("omega_m     =",E23.15)')omega_m
-  read(10,'("omega_l     =",E23.15)')omega_l
-  read(10,'("omega_k     =",E23.15)')omega_k
-  read(10,'("omega_b     =",E23.15)')omega_b
-  read(10,'("unit_l      =",E23.15)')unit_l
-  read(10,'("unit_d      =",E23.15)')unit_d
-  read(10,'("unit_t      =",E23.15)')unit_t
   unit_m=unit_d*unit_l**3
   unit_v=unit_l/unit_t
   read(10,*)
 
-  read(10,'("ordering type=",A80)') ordering
-  write(*,'(" ordering type=",A20)') TRIM(ordering)
+  read(10,'(A14,A80)')GMGM,ordering
+    write(*,'(" ordering type=",A20)') TRIM(ordering)
   read(10,*)
   allocate(cpu_list(1:ncpu))
   if(TRIM(ordering).eq.'hilbert')then
@@ -270,6 +272,8 @@ program part2prof
      allocate(m(1:npart2))
      allocate(age(1:npart2))
      allocate(id(1:npart2))
+     allocate(family(1:npart2))
+     allocate(tag(1:npart2))
      age=0d0
      id=1
      allocate(x(1:npart2,1:ndim2))
@@ -289,7 +293,12 @@ program part2prof
      if(nstar>0)then
         read(1)id ! Read identity
         read(1)   ! Skip level
-        read(1)age
+        read(1)family
+        read(1)tag
+        read(1,END=101)age
+        goto 102
+101     age=-10.
+102     continue
      endif
      close(1)
 
@@ -297,6 +306,7 @@ program part2prof
         rad2=(x(i,1)-xcen)**2+(x(i,2)-ycen)**2+(x(i,3)-zcen)**2
         ok_part=(rad2<rmax**2)
         if(ok_part)then
+           write(*,*)x(i,:),m(i),age(i),id(i)
            irad=int(dble(nrad)*sqrt(rad2)/rmax)+1
            xx=x(i,1)-xcen
            yy=x(i,2)-ycen
@@ -305,7 +315,7 @@ program part2prof
            vv=v(i,2)-vcen/(unit_v/1d5)
            ww=v(i,3)-wcen/(unit_v/1d5)
            if(star)then
-              if(age(i).ne.0.0d0.and.id(i)>0)then
+              if(family(i)==2)then
                  if(cosmo)then
                     iii=1
                     do while(tau_frw(iii)>age(i).and.iii<n_frw)
@@ -321,13 +331,13 @@ program part2prof
                  ipart=ipart+1
               endif
            else
-              if(age(i).eq.0.0d0.and.id(i)>0) then
+              if(family(i)==1) then
                  ipart=ipart+1
               endif
            end if
         end if
      end do
-     deallocate(x,m,v,age,id)
+     deallocate(x,m,v,age,id,family,tag)
   end do
 
   write(*,*)'Total number of particles selected=',ipart
@@ -355,6 +365,8 @@ program part2prof
      read(1)
      allocate(m(1:npart2))
      allocate(age(1:npart2))
+     allocate(family(1:npart2))
+     allocate(tag(1:npart2))
      allocate(id(1:npart2))
      age=0d0
      id=1
@@ -375,7 +387,12 @@ program part2prof
      if(nstar>0)then
         read(1)id ! Read identity
         read(1)   ! Skip level
-        read(1)age
+        read(1)family
+        read(1)tag
+        read(1,END=103)age
+        goto 104
+103     age=-10.
+104     continue
      endif
      close(1)
 
@@ -391,7 +408,7 @@ program part2prof
            vv=v(i,2)-vcen/(unit_v/1d5)
            ww=v(i,3)-wcen/(unit_v/1d5)
            if(star)then
-              if(age(i).ne.0.0d0.and.id(i)>0)then
+              if(family(i)==2)then
                  if(cosmo)then
                     iii=1
                     do while(tau_frw(iii)>age(i).and.iii<n_frw)
@@ -412,7 +429,7 @@ program part2prof
                  mcen=mcen+mp(ipart)
               endif
            else
-              if(age(i).eq.0.0d0.and.id(i)>0) then
+              if(family(i)==1) then
                  ipart=ipart+1
                  mp(ipart)=m(i)
                  xp(ipart)=x(i,1)
@@ -423,7 +440,7 @@ program part2prof
            end if
         end if
      end do
-     deallocate(x,m,v,age,id)
+     deallocate(x,m,v,age,id,family,tag)
   end do
 
   iter=0

@@ -469,7 +469,7 @@ subroutine add_viscosity_source_terms(ilevel)
   use poisson_commons
   use pm_commons
   implicit none
-  integer::ilevel,levelmax
+  integer::ilevel
   !--------------------------------------------------------------------------
   ! This routine adds to unew the viscosity terms
   ! with only half a time step. Only the momentum and the
@@ -478,7 +478,7 @@ subroutine add_viscosity_source_terms(ilevel)
   integer::i,ind,iskip,nx_loc
   integer::ncache,igrid,ngrid,idim,id1,ig1,ih1,id2,ig2,ih2,jdim
   integer,dimension(1:3,1:2,1:8)::iii,jjj
-  real(dp)::scale,dx,dx_loc,dx_min
+  real(dp)::scale,dx,dx_loc
   real(dp)::Kturb,sigma,d_old
   real(dp)::scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2
 
@@ -501,7 +501,6 @@ subroutine add_viscosity_source_terms(ilevel)
   scale=boxlen/dble(nx_loc)
   dx=0.5d0**ilevel
   dx_loc=dx*scale
-  dx_min=(0.5**levelmax)*scale
 
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
 
@@ -622,15 +621,21 @@ subroutine add_viscosity_source_terms(ilevel)
            Kturb=uold(ind_cell(i),ivirial1)
            sigma=sqrt(max(2.0*Kturb/d_old,smallc**2))
 
-        ! Implicit solution
-           unew(ind_cell(i),ivirial1)=(unew(ind_cell(i),ivirial1) &
-                &  +d_old*dx_loc*sigma*phi_diss(i)*dtnew(ilevel)) &
-                & /(1.0+sigma/dx_loc*dtnew(ilevel))
-        ! Turbulence from SN
-        !    unew(ind_cell(i),ivirial1) = unew(ind_cell(i),ivirial1)/(1.0+sigma/dx_loc*dtnew(ilevel))
+           if(nstep_coarse==0) then
+              ! Initialize ivirial with the stationary solution of the sgs model
+              unew(ind_cell(i),ivirial1) = uold(ind_cell(i),1)*dx_loc**2*phi_diss(i)
+           else
+              ! Implicit solution
+              unew(ind_cell(i),ivirial1)=(unew(ind_cell(i),ivirial1) &
+                   &  +d_old*dx_loc*sigma*phi_diss(i)*dtnew(ilevel)) &
+                   & /(1.0+sigma/dx_loc*dtnew(ilevel))
+           end if
 
-        ! Stationary solution
-        !    unew(ind_cell(i),ivirial1)=d_old*dx_loc**2*phi_diss(i)
+           ! Only turbulence from SN
+           !    unew(ind_cell(i),ivirial1) = unew(ind_cell(i),ivirial1)/(1.0+sigma/dx_loc*dtnew(ilevel))
+
+           ! Only stationary solution
+           !    unew(ind_cell(i),ivirial1)=d_old*dx_loc**2*phi_diss(i)
 
         end do
         ! End loop over grids

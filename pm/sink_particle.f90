@@ -1756,7 +1756,7 @@ subroutine update_sink(ilevel)
   integer::lev,isink,jsink,nx_loc,idim,istellar
   logical::iyoung,jyoung,overlap,merge_flag
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
-  real(dp)::dteff,dx_loc,scale,dx_min
+  real(dp)::dteff,scale,dx_min
   real(dp)::t_larson1,rr,rmax,rmax2,factG,v1_v2,mcom,fsink_norm
   real(dp),dimension(1:ndim)::xcom,vcom,lcom,r_rel
   logical,dimension(1:ndim)::period
@@ -1771,7 +1771,6 @@ subroutine update_sink(ilevel)
   period(3)=(nz==1)
 
   ! Mesh spacing in that level
-  !dx_loc=0.5D0**nlevelmax! this is not used
   nx_loc=(icoarse_max-icoarse_min+1)
   scale=boxlen/dble(nx_loc)
   dx_min=scale*0.5D0**nlevelmax_sink/aexp
@@ -1954,17 +1953,19 @@ subroutine update_sink(ilevel)
               do idim=1,ndim
                  gamma_grad_descent = gamma_grad_descent + (xsink(isink,idim)-xsinkold(isink,idim))*(fsink(isink,idim)-fsinkold(isink,idim))
               enddo
-              gamma_grad_descent = fudge_graddescent*dtnew(ilevel)*SQRT(ABS(gamma_grad_descent)/(NORM2(fsink(isink,1:ndim)-fsinkold(isink,1:ndim)))**2)
-              ! Require thatthe sink cannot move more than half a grid
-              if(gamma_grad_descent*fsink_norm>dx_min/2.0) then
-                 xsink_graddescent(isink,1:ndim) = fsink(isink,1:ndim) * dx_min/2.0/fsink_norm
-              else
-                 xsink_graddescent(isink,1:ndim) = fsink(isink,1:ndim) * gamma_grad_descent
+              if(gamma_grad_descent>0.0)then
+                 gamma_grad_descent = fudge_graddescent*dtnew(ilevel)*SQRT(ABS(gamma_grad_descent)/(NORM2(fsink(isink,1:ndim)-fsinkold(isink,1:ndim)))**2)
+                 ! Require thatthe sink cannot move more than half a grid
+                 if(gamma_grad_descent*fsink_norm>dx_min/2.0) then
+                    xsink_graddescent(isink,1:ndim) = fsink(isink,1:ndim) * dx_min/2.0/fsink_norm
+                 else
+                    xsink_graddescent(isink,1:ndim) = fsink(isink,1:ndim) * gamma_grad_descent
+                 endif
+                 ! Uopdate the sink position
+                 xsink(isink,1:ndim)=xsink(isink,1:ndim)+ xsink_graddescent(isink,1:ndim)
+                 ! Store the descent velocity for the time-stepping
+                 graddescent_over_dt(isink) = NORM2(xsink_graddescent(isink,1:ndim))/dtnew(ilevel)
               endif
-              ! Uopdate the sink position
-              xsink(isink,1:ndim)=xsink(isink,1:ndim)+ xsink_graddescent(isink,1:ndim)
-              ! Store the descent velocity for the time-stepping
-              graddescent_over_dt(isink) = NORM2(xsink_graddescent(isink,1:ndim))/dtnew(ilevel)
            endif
         endif
         
@@ -2495,7 +2496,7 @@ subroutine read_sink_params()
   integer::nx_loc
   namelist/sink_params/n_sink,rho_sink,d_sink,accretion_scheme,merging_timescale,&
        ir_cloud_massive,sink_soft,mass_sink_direct_force,ir_cloud,nsinkmax,create_sinks,&
-       mass_sink_seed,mass_smbh_seed,c_acc,nlevelmax_sink,&
+       check_energies,mass_sink_seed,mass_smbh_seed,c_acc,nlevelmax_sink,&
        eddington_limit,acc_sink_boost,mass_merger_vel_check,&
        clump_core,verbose_AGN,T2_AGN,T2_min,cone_opening,mass_halo_AGN,mass_clump_AGN,mass_star_AGN,&
        AGN_fbk_frac_ener,AGN_fbk_frac_mom,T2_max,boost_threshold_density,&
