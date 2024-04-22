@@ -6,468 +6,452 @@
 !###########################################################
 subroutine computejb2(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,bmagij,florentzx,florentzy,florentzz,fluxmd,fluxh,fluxad)
 
-  USE amr_parameters
-  use hydro_commons
-  use nimhd_parameters
-  IMPLICIT NONE
+   USE amr_parameters
+   use hydro_commons
+   use nimhd_parameters
+   IMPLICIT NONE
 
-  ! inputs
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar+3)::u 
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q 
+   ! inputs
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar+3)::u 
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q 
 
-  INTEGER ::ngrid
-  REAL(dp)::dx,dy,dz,dt
+   INTEGER ::ngrid
+   REAL(dp)::dx,dy,dz,dt
 
-  ! outputs
+   ! outputs
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::bemfx,bemfy,bemfz
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::jemfx,jemfy,jemfz
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::florentzx,florentzy,florentzz
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::fluxmd,fluxh,fluxad
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3,1:3)::bmagij
 
+   ! declare local variables
+   INTEGER ::i, j, k, l, m, n 
+
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::bmagijbis
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::flxmagxx,flxmagxy,flxmagxz,flxmagyx,flxmagyy,flxmagyz,flxmagzx,flxmagzy,flxmagzz
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3,1:3)::jface
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::bcenter
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3,1:3)::fluxbis,fluxter,fluxquat
+   real(dp)::b12x,b12y,b12z,emag,bsquare
+   real(dp)::computdivbisx,computdivbisy,computdivbisz
+   real(dp)::computdxbis,computdybis,computdzbis
+
+   ! magnetic field at center of cells
+   do k=ku1,ku2
+      do j=ju1,ju2
+         do i=iu1,iu2
+            do l=1,ngrid
+               bcenter(l,i,j,k,nxx)=q(l,i,j,k,6)
+               bcenter(l,i,j,k,nyy)=q(l,i,j,k,7)
+               bcenter(l,i,j,k,nzz)=q(l,i,j,k,8)
+            end do
+         end do
+      end do
+   end do
+
+   !!!!!!!!!!!!!!!!!!
+   ! EMF x
+   !!!!!!!!!!!!!!!!!!
+
+   ! magnetic field at location of EMF
+
+   do k=min(1,ku1+1),ku2
+      do j=min(1,ju1+1),ju2       
+         do i=iu1,iu2
+            do l=1,ngrid
+               bemfx(l,i,j,k,1)=0.25d0*( q(l,i,j,k,6)+q(l,i,j-1,k,6)+q(l,i,j,k-1,6)+q(l,i,j-1,k-1,6) )
+            end do
+         end do
+      end do
+   end do
+
+   do k=min(1,ku1+1),ku2
+      do j=ju1,ju2       
+         do i=iu1,iu2
+            do l=1,ngrid
+               bemfx(l,i,j,k,2)=0.5d0*( u(l,i,j,k,7)+u(l,i,j,k-1,7) )
+            end do
+         end do
+      end do
+   end do
+
+   do k=ku1,ku2
+      do j=min(1,ju1+1),ju2       
+         do i=iu1,iu2
+            do l=1,ngrid
+               bemfx(l,i,j,k,3)=0.5d0*(u(l,i,j,k,8)+u(l,i,j-1,k,8))
+            end do
+         end do
+      end do
+   end do
+
+   !!!!!!!!!!!!!!!!!!
+   ! EMF y
+   !!!!!!!!!!!!!!!!!!
+
+   ! magnetic field at location of EMF
+
+   do k=min(1,ku1+1),ku2
+      do j=ju1,ju2       
+         do i=iu1,iu2
+            do l=1,ngrid
+               bemfy(l,i,j,k,1)=0.5d0*(u(l,i,j,k,6)+u(l,i,j,k-1,6))
+            end do
+         end do
+      end do
+   end do
+
+   do k=min(1,ku1+1),ku2
+      do j=ju1,ju2       
+         do i=min(1,iu1+1),iu2
+            do l=1,ngrid
+               bemfy(l,i,j,k,2)=0.25d0*(q(l,i,j,k,7)+q(l,i-1,j,k,7)+q(l,i,j,k-1,7)+q(l,i-1,j,k-1,7))
+            end do
+         end do
+      end do
+   end do
+
+   do k=ku1,ku2
+      do j=ju1,ju2       
+         do i=min(1,iu1+1),iu2
+            do l=1,ngrid
+               bemfy(l,i,j,k,3)=0.5d0*(u(l,i-1,j,k,8)+u(l,i,j,k,8))
+            end do
+         end do
+      end do
+   end do
+
+   !!!!!!!!!!!!!!!!!!
+   ! EMF z
+   !!!!!!!!!!!!!!!!!!
+
+   ! magnetic field at location of EMF
+
+   do k=ku1,ku2
+      do j=min(1,ju1+1),ju2       
+         do i=iu1,iu2
+            do l=1,ngrid
+               bemfz(l,i,j,k,1)=0.5d0*(u(l,i,j,k,6)+u(l,i,j-1,k,6))
+            end do
+         end do
+      end do
+   end do
+
+   do k=ku1,ku2
+      do j=ju1,ju2       
+         do i=min(1,iu1+1),iu2
+            do l=1,ngrid
+               bemfz(l,i,j,k,2)=0.5d0*(u(l,i,j,k,7)+u(l,i-1,j,k,7))
+            end do
+         end do
+      end do
+   end do
+
+   do k=ku1,ku2
+      do j=min(1,ju1+1),ju2       
+         do i=min(1,iu1+1),iu2
+            do l=1,ngrid
+               bemfz(l,i,j,k,3)=0.25d0*(q(l,i,j,k,8)+q(l,i-1,j,k,8)+q(l,i,j-1,k,8)+q(l,i-1,j-1,k,8))
+            end do
+         end do
+      end do
+   end do
+
+   ! bmagij is the value of the magnetic field Bi where Bj 
+   ! is naturally defined; Ex bmagij(l,i,j,k,1,2) is Bx at i,j-1/2,k
+   ! and we can write it Bx,y
+
+   do k=ku1,ku2
+      do j=ju1,ju2
+         do i=iu1,iu2
+            do l=1,ngrid
+               do m=1,3
+                  !! m+5 mandatory cf Bx=uin(l,i,j,k,6)
+                  bmagij(l,i,j,k,m,m)=u(l,i,j,k,m+5)
+               end do
+            end do
+         end do
+      end do
+   end do
+
+   ! case Bx,y
+   do k=ku1,ku2
+      do j=min(1,ju1+1),ju2
+         do i=iu1,max(1,iu2-1)
+            do l=1,ngrid
+               bmagij(l,i,j,k,1,2)=0.5d0*(q(l,i,j,k,6)+q(l,i,j-1,k,6))
+            end do
+         end do
+      end do
+   end do
+
+   ! case Bx,z
+   do k=min(1,ku1+1),ku2
+      do j=ju1,ju2
+         do i=iu1,max(1,iu2-1)
+            do l=1,ngrid
+               bmagij(l,i,j,k,1,3)=0.5d0*(q(l,i,j,k,6)+q(l,i,j,k-1,6))
+            end do
+         end do
+      end do
+   end do
+
+   ! case By,x
+   do k=ku1,ku2
+      do j=ju1,max(1,ju2-1)
+         do i=min(1,iu1+1),iu2
+            do l=1,ngrid
+               bmagij(l,i,j,k,2,1)=0.5d0*(q(l,i,j,k,7)+q(l,i-1,j,k,7))
+            end do
+         end do
+      end do
+   end do
+
+   ! case By,z
+   do k=min(1,ku1+1),ku2
+      do j=ju1,max(1,ju2-1)
+         do i=iu1,iu2
+            do l=1,ngrid
+               bmagij(l,i,j,k,2,3)=0.5d0*(q(l,i,j,k,7)+q(l,i,j,k-1,7))
+            end do
+         end do
+      end do
+   end do
+
+   ! case Bz,x
+   do k=ku1,max(1,ku2-1)
+      do j=ju1,ju2
+         do i=min(1,iu1+1),iu2
+            do l=1,ngrid
+               bmagij(l,i,j,k,3,1)=0.5d0*(q(l,i,j,k,8)+q(l,i-1,j,k,8))
+            end do
+         end do
+      end do
+   end do
+
+   ! case Bz,y
+   do k=ku1,max(1,ku2-1)
+      do j=min(1,ju1+1),ju2
+         do i=iu1,iu2
+            do l=1,ngrid
+               bmagij(l,i,j,k,3,2)=0.5d0*(q(l,i,j,k,8)+q(l,i,j-1,k,8))
+            end do
+         end do
+      end do
+   end do
+
+   !!!!!!!!!!!!!!!!!!
+   ! bmagijbis(l,i,j,k,n) is the value of the magnetic field component
+   ! Bn at i-1/2,j-1/2,k-1/2
+   !!!!!!!!!!!!!!!!!!
+
+   do k=min(1,ku1+1),ku2
+      do j=min(1,ju1+1),ju2
+         do i=iu1,iu2
+            do l=1,ngrid
+               bmagijbis(l,i,j,k,1)=0.25d0*(u(l,i,j,k,6)+u(l,i,j-1,k,6)+u(l,i,j,k-1,6)+u(l,i,j-1,k-1,6))
+            end do
+         end do
+      end do
+   end do
+
+   ! case By for Lorentz force EMF
+   do k=min(1,ku1+1),ku2
+      do j=ju1,ju2
+         do i=min(1,iu1+1),iu2
+            do l=1,ngrid
+               bmagijbis(l,i,j,k,2)=0.25d0*(u(l,i,j,k,7)+u(l,i-1,j,k,7)+u(l,i,j,k-1,7)+u(l,i-1,j,k-1,7)) 
+            end do
+         end do
+      end do
+   end do
+   
+   ! case Bz for Lorentz force EMF
+   do k=ku1,ku2
+      do j=min(1,ju1+1),ju2
+         do i=min(1,iu1+1),iu2
+            do l=1,ngrid
+               bmagijbis(l,i,j,k,3)=0.25d0*(u(l,i,j,k,8)+u(l,i-1,j,k,8)+u(l,i,j-1,k,8)+u(l,i-1,j-1,k,8)) 
+            end do
+         end do
+      end do
+   end do
+
+   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+   ! computation of the component of j where EMFs are located
+   ! jemfx(l,i,j,k,n) is the component Jn at i,j-1/2,k-1/2
+   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+   do k=min(1,ku1+1),max(1,ku2-1)
+      do j=min(1,ju1+1),max(1,ju2-1)
+         do i=min(1,iu1+1),max(1,iu2-1)
+            do l=1,ngrid
+               jemfx(l,i,j,k,1)=(u(l,i,j,k,8)-u(l,i,j-1,k,8))/dy-(u(l,i,j,k,7)-u(l,i,j,k-1,7))/dz 
+               jemfx(l,i,j,k,2)=(bmagij(l,i,j,k,1,2)-bmagij(l,i,j,k-1,1,2))/dz- (bmagijbis(l,i+1,j,k,3)-bmagijbis(l,i,j,k,3))/dx
+               jemfx(l,i,j,k,3)=(bmagijbis(l,i+1,j,k,2) -bmagijbis(l,i,j,k,2))/dx- (bmagij(l,i,j,k,1,3)-bmagij(l,i,j-1,k,1,3))/dy
+
+               jemfy(l,i,j,k,1)=(bmagijbis(l,i,j+1,k,3)-bmagijbis(l,i,j,k,3))/dy-(bmagij(l,i,j,k,2,1) - bmagij(l,i,j,k-1,2,1) )/dz
+               jemfy(l,i,j,k,2)=(u(l,i,j,k,6)-u(l,i,j,k-1,6))/dz-(u(l,i,j,k,8)-u(l,i-1,j,k,8))/dx
+               jemfy(l,i,j,k,3)=(bmagij(l,i,j,k,2,3)-bmagij(l,i-1,j,k,2,3))/dx-(bmagijbis(l,i,j+1,k,1)-bmagijbis(l,i,j,k,1))/dy
+
+               jemfz(l,i,j,k,1)=(bmagij(l,i,j,k,3,1) -bmagij(l,i,j-1,k,3,1))/dy-(bmagijbis(l,i,j,k+1,2)-bmagijbis(l,i,j,k,2))/dz
+               jemfz(l,i,j,k,2)=( bmagijbis(l,i,j,k+1,1)-bmagijbis(l,i,j,k,1))/dz-(bmagij(l,i,j,k,3,2)-bmagij(l,i-1,j,k,3,2))/dx
+               jemfz(l,i,j,k,3)=(u(l,i,j,k,7)-u(l,i-1,j,k,7))/dx-(u(l,i,j,k,6)-u(l,i,j-1,k,6))/dy
+            end do
+         end do
+      end do
+   end do
+
+   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+   ! computation of the component of j at center of cell
+   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+   if(nambipolar) then
+   ! EMF x
+      do k=min(1,ku1+1),max(1,ku2-1)
+         do j=min(1,ju1+1),max(1,ju2-1)
+            do i=min(1,iu1+1),max(1,iu2-1)
+               do l = 1, ngrid
+                  call crossprod(jemfx,bemfx,florentzx,l,i,j,k)
+                  call crossprod(jemfy,bemfy,florentzy,l,i,j,k)
+                  call crossprod(jemfz,bemfz,florentzz,l,i,j,k)
+               end do
+            end do
+         end do
+      end do
+   endif
+
+   ! computation of current on faces
+
+   ! face at i-1/2,j,k
+
+   do k=min(1,ku1+1),max(1,ku2-1)
+      do j=min(1,ju1+1),max(1,ju2-1)           
+         do i=min(1,iu1+1),iu2
+            do l=1,ngrid
+               jface(l,i,j,k,1,1)=computdybis(bemfz,3,l,i,j,k,dy)-computdzbis(bemfy,2,l,i,j,k,dz)
+            end do
+         end do
+      end do
+   end do
+
+   do k=min(1,ku1+1),max(1,ku2-1)
+      do j=ju1,ju2       
+         do i=min(1,iu1+1),iu2
+            do l=1,ngrid
+               jface(l,i,j,k,2,1)=computdzbis(bemfy,1,l,i,j,k,dz)-computdxbis(bcenter,3,l,i-1,j,k,dx)
+            end do
+         end do
+      end do
+   end do
   
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::bemfx,bemfy,bemfz
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::jemfx,jemfy,jemfz
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::florentzx,florentzy,florentzz
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::fluxmd,fluxh,fluxad
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3,1:3)::bmagij
- 
-  ! declare local variables
-  INTEGER ::i, j, k, l, m, n 
-
-  real(dp)::computdx,computdy,computdz
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::bmagijbis
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::flxmagxx,flxmagxy,flxmagxz,flxmagyx,flxmagyy,flxmagyz,flxmagzx,flxmagzy,flxmagzz
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3,1:3)::jface
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::bcenter
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3,1:3)::fluxbis,fluxter,fluxquat
-  real(dp)::b12x,b12y,b12z,emag,bsquare
-  real(dp)::computdivbisx,computdivbisy,computdivbisz
-  real(dp)::computdxbis,computdybis,computdzbis
+   do k=ku1,ku2
+      do j=min(1,ju1+1),max(1,ju2-1)       
+         do i=min(1,iu1+1),iu2
+            do l=1,ngrid
+               jface(l,i,j,k,3,1)=computdxbis(bcenter,2,l,i-1,j,k,dx)-computdybis(bemfz,1,l,i,j,k,dy)
+            end do
+         end do
+      end do
+   end do
   
-  ! magnetic field at center of cells
-  do k=ku1,ku2
-     do j=ju1,ju2
-        do i=iu1,iu2
-           do l=1,ngrid
-              bcenter(l,i,j,k,nxx)=q(l,i,j,k,6)
-              bcenter(l,i,j,k,nyy)=q(l,i,j,k,7)
-              bcenter(l,i,j,k,nzz)=q(l,i,j,k,8)
-           end do
-        end do
-     end do
-  end do
+   ! face at i,j-1/2,k
 
-!!!!!!!!!!!!!!!!!!
-!
-! EMF x
-!
-!!!!!!!!!!!!!!!!!!
+   do k=min(1,ku1+1),max(1,ku2-1) 
+      do j=min(1,ju1+1),ju2       
+         do i=iu1,iu2
+            do l=1,ngrid
+               jface(l,i,j,k,1,2)=computdybis(bcenter,3,l,i,j-1,k,dy)-computdzbis(bemfx,2,l,i,j,k,dz)
+            end do
+         end do
+      end do
+   end do
 
-  ! magnetic field at location of EMF
-
-  do k=min(1,ku1+1),ku2
-     do j=min(1,ju1+1),ju2       
-        do i=iu1,iu2
-           do l=1,ngrid
-              bemfx(l,i,j,k,1)=0.25d0*( q(l,i,j,k,6)+q(l,i,j-1,k,6)+q(l,i,j,k-1,6)+q(l,i,j-1,k-1,6) )
-           end do
-        end do
-     end do
-  end do
-
-  do k=min(1,ku1+1),ku2
-     do j=ju1,ju2       
-        do i=iu1,iu2
-           do l=1,ngrid
-              bemfx(l,i,j,k,2)=0.5d0*( u(l,i,j,k,7)+u(l,i,j,k-1,7) )
-           end do
-        end do
-     end do
-  end do
-
-  do k=ku1,ku2
-     do j=min(1,ju1+1),ju2       
-        do i=iu1,iu2
-           do l=1,ngrid
-              bemfx(l,i,j,k,3)=0.5d0*(u(l,i,j,k,8)+u(l,i,j-1,k,8))
-           end do
-        end do
-     end do
-  end do
-
-!!!!!!!!!!!!!!!!!!
-!
-! EMF y
-!
-!!!!!!!!!!!!!!!!!!
-
-  ! magnetic field at location of EMF
-
-  do k=min(1,ku1+1),ku2
-     do j=ju1,ju2       
-        do i=iu1,iu2
-           do l=1,ngrid
-              bemfy(l,i,j,k,1)=0.5d0*(u(l,i,j,k,6)+u(l,i,j,k-1,6))
-           end do
-        end do
-     end do
-  end do
-
-  do k=min(1,ku1+1),ku2
-     do j=ju1,ju2       
-        do i=min(1,iu1+1),iu2
-           do l=1,ngrid
-              bemfy(l,i,j,k,2)=0.25d0*(q(l,i,j,k,7)+q(l,i-1,j,k,7)+q(l,i,j,k-1,7)+q(l,i-1,j,k-1,7))
-           end do
-        end do
-     end do
-  end do
-
-  do k=ku1,ku2
-     do j=ju1,ju2       
-        do i=min(1,iu1+1),iu2
-           do l=1,ngrid
-              bemfy(l,i,j,k,3)=0.5d0*(u(l,i-1,j,k,8)+u(l,i,j,k,8))
-           end do
-        end do
-     end do
-  end do
-
-!!!!!!!!!!!!!!!!!!
-!
-! EMF z
-!
-!!!!!!!!!!!!!!!!!!
-
-! magnetic field at location of EMF
-
-  do k=ku1,ku2
-     do j=min(1,ju1+1),ju2       
-        do i=iu1,iu2
-           do l=1,ngrid
-              bemfz(l,i,j,k,1)=0.5d0*(u(l,i,j,k,6)+u(l,i,j-1,k,6))
-           end do
-        end do
-     end do
-  end do
-
- do k=ku1,ku2
-     do j=ju1,ju2       
-        do i=min(1,iu1+1),iu2
-           do l=1,ngrid
-              bemfz(l,i,j,k,2)=0.5d0*(u(l,i,j,k,7)+u(l,i-1,j,k,7))
-           end do
-        end do
-     end do
-  end do
-
-  do k=ku1,ku2
-     do j=min(1,ju1+1),ju2       
-        do i=min(1,iu1+1),iu2
-           do l=1,ngrid
-              bemfz(l,i,j,k,3)=0.25d0*(q(l,i,j,k,8)+q(l,i-1,j,k,8)+q(l,i,j-1,k,8)+q(l,i-1,j-1,k,8))
-           end do
-        end do
-     end do
-  end do
-
-! bmagij is the value of the magnetic field Bi where Bj 
-! is naturally defined; Ex bmagij(l,i,j,k,1,2) is Bx at i,j-1/2,k
-! and we can write it Bx,y
-
-  do k=ku1,ku2
-     do j=ju1,ju2
-        do i=iu1,iu2
-           do l=1,ngrid
-              do m=1,3
-                 !! m+5 mandatory cf Bx=uin(l,i,j,k,6)
-                 bmagij(l,i,j,k,m,m)=u(l,i,j,k,m+5)
-              end do
-           end do
-        end do
-     end do
-  end do
-
-  ! case Bx,y
-  do k=ku1,ku2
-     do j=min(1,ju1+1),ju2
-        do i=iu1,max(1,iu2-1)
-           do l=1,ngrid
-              bmagij(l,i,j,k,1,2)=0.5d0*(q(l,i,j,k,6)+q(l,i,j-1,k,6))
-           end do
-        end do
-     end do
-  end do
-
-  ! case Bx,z
-  do k=min(1,ku1+1),ku2
-     do j=ju1,ju2
-        do i=iu1,max(1,iu2-1)
-           do l=1,ngrid
-              bmagij(l,i,j,k,1,3)=0.5d0*(q(l,i,j,k,6)+q(l,i,j,k-1,6))
-           end do
-        end do
-     end do
-  end do
-
-  ! case By,x
-  do k=ku1,ku2
-     do j=ju1,max(1,ju2-1)
-        do i=min(1,iu1+1),iu2
-           do l=1,ngrid
-              bmagij(l,i,j,k,2,1)=0.5d0*(q(l,i,j,k,7)+q(l,i-1,j,k,7))
-           end do
-        end do
-     end do
-  end do
-
-  ! case By,z
-  do k=min(1,ku1+1),ku2
-     do j=ju1,max(1,ju2-1)
-        do i=iu1,iu2
-           do l=1,ngrid
-              bmagij(l,i,j,k,2,3)=0.5d0*(q(l,i,j,k,7)+q(l,i,j,k-1,7))
-           end do
-        end do
-     end do
-  end do
-
-  ! case Bz,x
-  do k=ku1,max(1,ku2-1)
-     do j=ju1,ju2
-        do i=min(1,iu1+1),iu2
-           do l=1,ngrid
-              bmagij(l,i,j,k,3,1)=0.5d0*(q(l,i,j,k,8)+q(l,i-1,j,k,8))
-           end do
-        end do
-     end do
-  end do
-
-  ! case Bz,y
-  do k=ku1,max(1,ku2-1)
-     do j=min(1,ju1+1),ju2
-        do i=iu1,iu2
-           do l=1,ngrid
-              bmagij(l,i,j,k,3,2)=0.5d0*(q(l,i,j,k,8)+q(l,i,j-1,k,8))
-           end do
-        end do
-     end do
-  end do
-
-!!!!!!!!!!!!!!!!!!
-!
-! bmagijbis(l,i,j,k,n) is the value of the magnetic field component
-! Bn at i-1/2,j-1/2,k-1/2
-!
-!!!!!!!!!!!!!!!!!!
-
-  do k=min(1,ku1+1),ku2
-     do j=min(1,ju1+1),ju2
-        do i=iu1,iu2
-           do l=1,ngrid
-              bmagijbis(l,i,j,k,1)=0.25d0*(u(l,i,j,k,6)+u(l,i,j-1,k,6)+u(l,i,j,k-1,6)+u(l,i,j-1,k-1,6))
-           end do
-        end do
-     end do
-  end do
-
-  ! case By for Lorentz force EMF
-  do k=min(1,ku1+1),ku2
-     do j=ju1,ju2
-        do i=min(1,iu1+1),iu2
-           do l=1,ngrid
-              bmagijbis(l,i,j,k,2)=0.25d0*(u(l,i,j,k,7)+u(l,i-1,j,k,7)+u(l,i,j,k-1,7)+u(l,i-1,j,k-1,7)) 
-           end do
-        end do
-     end do
-  end do
- 
-  ! case Bz for Lorentz force EMF
-  do k=ku1,ku2
-     do j=min(1,ju1+1),ju2
-        do i=min(1,iu1+1),iu2
-           do l=1,ngrid
-              bmagijbis(l,i,j,k,3)=0.25d0*(u(l,i,j,k,8)+u(l,i-1,j,k,8)+u(l,i,j-1,k,8)+u(l,i-1,j-1,k,8)) 
-           end do
-        end do
-     end do
-  end do
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!
-! computation of the component of j where EMFs are located
-! jemfx(l,i,j,k,n) is the component Jn at i,j-1/2,k-1/2
-!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-  do k=min(1,ku1+1),max(1,ku2-1)
-     do j=min(1,ju1+1),max(1,ju2-1)
-        do i=min(1,iu1+1),max(1,iu2-1)
-           do l=1,ngrid
-              jemfx(l,i,j,k,1)=(u(l,i,j,k,8)-u(l,i,j-1,k,8))/dy-(u(l,i,j,k,7)-u(l,i,j,k-1,7))/dz 
-              jemfx(l,i,j,k,2)=(bmagij(l,i,j,k,1,2)-bmagij(l,i,j,k-1,1,2))/dz- (bmagijbis(l,i+1,j,k,3)-bmagijbis(l,i,j,k,3))/dx
-              jemfx(l,i,j,k,3)=(bmagijbis(l,i+1,j,k,2) -bmagijbis(l,i,j,k,2))/dx- (bmagij(l,i,j,k,1,3)-bmagij(l,i,j-1,k,1,3))/dy
-
-              jemfy(l,i,j,k,1)=(bmagijbis(l,i,j+1,k,3)-bmagijbis(l,i,j,k,3))/dy-(bmagij(l,i,j,k,2,1) - bmagij(l,i,j,k-1,2,1) )/dz
-              jemfy(l,i,j,k,2)=(u(l,i,j,k,6)-u(l,i,j,k-1,6))/dz-(u(l,i,j,k,8)-u(l,i-1,j,k,8))/dx
-              jemfy(l,i,j,k,3)=(bmagij(l,i,j,k,2,3)-bmagij(l,i-1,j,k,2,3))/dx-(bmagijbis(l,i,j+1,k,1)-bmagijbis(l,i,j,k,1))/dy
-
-              jemfz(l,i,j,k,1)=(bmagij(l,i,j,k,3,1) -bmagij(l,i,j-1,k,3,1))/dy-(bmagijbis(l,i,j,k+1,2)-bmagijbis(l,i,j,k,2))/dz
-              jemfz(l,i,j,k,2)=( bmagijbis(l,i,j,k+1,1)-bmagijbis(l,i,j,k,1))/dz-(bmagij(l,i,j,k,3,2)-bmagij(l,i-1,j,k,3,2))/dx
-              jemfz(l,i,j,k,3)=(u(l,i,j,k,7)-u(l,i-1,j,k,7))/dx-(u(l,i,j,k,6)-u(l,i,j-1,k,6))/dy
-           end do
-        end do
-     end do
-  end do
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!
-! computation of the component of j at center of cell
-!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-  if(nambipolar) then
-  ! EMF x
-    do k=min(1,ku1+1),max(1,ku2-1)
-       do j=min(1,ju1+1),max(1,ju2-1)
-          do i=min(1,iu1+1),max(1,iu2-1)
-             do l = 1, ngrid
-                call crossprod(jemfx,bemfx,florentzx,l,i,j,k)
-                call crossprod(jemfy,bemfy,florentzy,l,i,j,k)
-                call crossprod(jemfz,bemfz,florentzz,l,i,j,k)
-             end do
-          end do
-       end do
-    end do
-  endif
-
-
-  ! computation of current on faces
-
-    ! face at i-1/2,j,k
+   do k=min(1,ku1+1),max(1,ku2-1) 
+      do j=min(1,ju1+1),ju2       
+         do i=min(1,iu1+1),max(1,iu2-1) 
+            do l=1,ngrid
+               jface(l,i,j,k,2,2)=computdzbis(bemfx,1,l,i,j,k,dz)-computdxbis(bemfz,3,l,i,j,k,dx)
+            end do
+         end do
+      end do
+   end do
   
-    do k=min(1,ku1+1),max(1,ku2-1)
-       do j=min(1,ju1+1),max(1,ju2-1)           
-          do i=min(1,iu1+1),iu2
-             do l=1,ngrid
-                jface(l,i,j,k,1,1)=computdybis(bemfz,3,l,i,j,k,dy)-computdzbis(bemfy,2,l,i,j,k,dz)
-             end do
-          end do
-       end do
-    end do
-  
-     do k=min(1,ku1+1),max(1,ku2-1)
-       do j=ju1,ju2       
-          do i=min(1,iu1+1),iu2
-             do l=1,ngrid
-                jface(l,i,j,k,2,1)=computdzbis(bemfy,1,l,i,j,k,dz)-computdxbis(bcenter,3,l,i-1,j,k,dx)
-             end do
-          end do
-       end do
-    end do
-  
-    do k=ku1,ku2
-       do j=min(1,ju1+1),max(1,ju2-1)       
-          do i=min(1,iu1+1),iu2
-             do l=1,ngrid
-                jface(l,i,j,k,3,1)=computdxbis(bcenter,2,l,i-1,j,k,dx)-computdybis(bemfz,1,l,i,j,k,dy)
-             end do
-          end do
-       end do
-    end do
-  
-    ! face at i,j-1/2,k
-  
-    do k=min(1,ku1+1),max(1,ku2-1) 
-       do j=min(1,ju1+1),ju2       
-          do i=iu1,iu2
-             do l=1,ngrid
-                jface(l,i,j,k,1,2)=computdybis(bcenter,3,l,i,j-1,k,dy)-computdzbis(bemfx,2,l,i,j,k,dz)
-             end do
-          end do
-       end do
-    end do
-  
-    do k=min(1,ku1+1),max(1,ku2-1) 
-       do j=min(1,ju1+1),ju2       
-          do i=min(1,iu1+1),max(1,iu2-1) 
-             do l=1,ngrid
-                jface(l,i,j,k,2,2)=computdzbis(bemfx,1,l,i,j,k,dz)-computdxbis(bemfz,3,l,i,j,k,dx)
-             end do
-          end do
-       end do
-    end do
-  
-    do k=ku1,ku2
-       do j=min(1,ju1+1),ju2       
-          do i=min(1,iu1+1),max(1,iu2-1) 
-             do l=1,ngrid
-                jface(l,i,j,k,3,2)=computdxbis(bemfz,2,l,i,j,k,dx)-computdybis(bcenter,1,l,i,j-1,k,dy)
-             end do
-          end do
-       end do
-    end do
-  
-    ! face at i,j,k-1/2
-  
-    do k=min(1,ku1+1),ku2
-       do j=min(1,ju1+1),max(1,ju2-1)        
-          do i=iu1,iu2
-             do l=1,ngrid
-                jface(l,i,j,k,1,3)=computdybis(bemfx,3,l,i,j,k,dy)-computdzbis(bcenter,2,l,i,j,k-1,dz)             
-             end do
-          end do
-       end do
-    end do
-  
-    do k=min(1,ku1+1),ku2
-       do j=ju1,ju2       
-          do i=min(1,iu1+1),max(1,iu2-1)
-             do l=1,ngrid
-                jface(l,i,j,k,2,3)=computdzbis(bcenter,1,l,i,j,k-1,dz)-computdxbis(bemfy,3,l,i,j,k,dx)             
-             end do
-          end do
-       end do
-    end do
-  
-    do k=min(1,ku1+1),ku2
-       do j=min(1,ju1+1),max(1,ju2-1)      
-          do i=min(1,iu1+1),max(1,iu2-1)
-             do l=1,ngrid
-                jface(l,i,j,k,3,3)=computdxbis(bemfy,2,l,i,j,k,dx)-computdybis(bemfx,1,l,i,j,k,dx)            
-             end do
-          end do
-       end do
-    end do
-  
-  
-    do k=min(1,ku1+1),max(1,ku2-1)
-       do j=min(1,ju1+1),max(1,ju2-1)
-          do i=min(1,iu1+1),max(1,iu2-1)
-             do l = 1, ngrid
-                call crossprodbis(jface,bmagij,fluxbis,l,i,j,k)
-                 fluxmd(l,i,j,k,1)=fluxbis(l,i,j,k,1,1)
-                 fluxmd(l,i,j,k,2)=fluxbis(l,i,j,k,2,2)
-                 fluxmd(l,i,j,k,3)=fluxbis(l,i,j,k,3,3)
-             end do
-          end do
-       end do
-    end do
+   do k=ku1,ku2
+      do j=min(1,ju1+1),ju2       
+         do i=min(1,iu1+1),max(1,iu2-1) 
+            do l=1,ngrid
+               jface(l,i,j,k,3,2)=computdxbis(bemfz,2,l,i,j,k,dx)-computdybis(bcenter,1,l,i,j-1,k,dy)
+            end do
+         end do
+      end do
+   end do
 
-  if(nambipolar) then
-     do k=min(1,ku1+1),max(1,ku2-1)
-        do j=min(1,ju1+1),max(1,ju2-1)
-           do i=min(1,iu1+1),max(1,iu2-1)
-              do l = 1, ngrid
-                 call crossprodbis(fluxbis,bmagij,fluxter,l,i,j,k)
-                 fluxh(l,i,j,k,1)=fluxter(l,i,j,k,1,1)
-                 fluxh(l,i,j,k,2)=fluxter(l,i,j,k,2,2)
-                 fluxh(l,i,j,k,3)=fluxter(l,i,j,k,3,3)
-                 call crossprodbis(fluxter,bmagij,fluxquat,l,i,j,k)
-                 fluxad(l,i,j,k,1)=fluxquat(l,i,j,k,1,1)
-                 fluxad(l,i,j,k,2)=fluxquat(l,i,j,k,2,2)
-                 fluxad(l,i,j,k,3)=fluxquat(l,i,j,k,3,3)
-              end do
-           end do
-        end do
-     end do
-  endif
+   ! face at i,j,k-1/2
+  
+   do k=min(1,ku1+1),ku2
+      do j=min(1,ju1+1),max(1,ju2-1)        
+         do i=iu1,iu2
+            do l=1,ngrid
+               jface(l,i,j,k,1,3)=computdybis(bemfx,3,l,i,j,k,dy)-computdzbis(bcenter,2,l,i,j,k-1,dz)             
+            end do
+         end do
+      end do
+   end do
+
+   do k=min(1,ku1+1),ku2
+      do j=ju1,ju2       
+         do i=min(1,iu1+1),max(1,iu2-1)
+            do l=1,ngrid
+               jface(l,i,j,k,2,3)=computdzbis(bcenter,1,l,i,j,k-1,dz)-computdxbis(bemfy,3,l,i,j,k,dx)             
+            end do
+         end do
+      end do
+   end do
+  
+   do k=min(1,ku1+1),ku2
+      do j=min(1,ju1+1),max(1,ju2-1)      
+         do i=min(1,iu1+1),max(1,iu2-1)
+            do l=1,ngrid
+               jface(l,i,j,k,3,3)=computdxbis(bemfy,2,l,i,j,k,dx)-computdybis(bemfx,1,l,i,j,k,dx)            
+            end do
+         end do
+      end do
+   end do
+
+
+   do k=min(1,ku1+1),max(1,ku2-1)
+      do j=min(1,ju1+1),max(1,ju2-1)
+         do i=min(1,iu1+1),max(1,iu2-1)
+            do l = 1, ngrid
+               call crossprodbis(jface,bmagij,fluxbis,l,i,j,k)
+               fluxmd(l,i,j,k,1)=fluxbis(l,i,j,k,1,1)
+               fluxmd(l,i,j,k,2)=fluxbis(l,i,j,k,2,2)
+               fluxmd(l,i,j,k,3)=fluxbis(l,i,j,k,3,3)
+            end do
+         end do
+      end do
+   end do
+
+   if(nambipolar) then
+      do k=min(1,ku1+1),max(1,ku2-1)
+         do j=min(1,ju1+1),max(1,ju2-1)
+            do i=min(1,iu1+1),max(1,iu2-1)
+               do l = 1, ngrid
+                  call crossprodbis(fluxbis,bmagij,fluxter,l,i,j,k)
+                  fluxh(l,i,j,k,1)=fluxter(l,i,j,k,1,1)
+                  fluxh(l,i,j,k,2)=fluxter(l,i,j,k,2,2)
+                  fluxh(l,i,j,k,3)=fluxter(l,i,j,k,3,3)
+                  call crossprodbis(fluxter,bmagij,fluxquat,l,i,j,k)
+                  fluxad(l,i,j,k,1)=fluxquat(l,i,j,k,1,1)
+                  fluxad(l,i,j,k,2)=fluxquat(l,i,j,k,2,2)
+                  fluxad(l,i,j,k,3)=fluxquat(l,i,j,k,3,3)
+               end do
+            end do
+         end do
+      end do
+   endif
 
 end subroutine computejb2
 !###########################################################
@@ -497,7 +481,7 @@ subroutine computdifmag(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
    integer ::i,j,k,l,h
    real(dp)::rhox,rhoy,rhoz,epsx,epsy,epsz,bsquarex,bsquarey,bsquarez
    real(dp)::tcellx,tcelly,tcellz,etaod2x,etaod2y,etaod2z
-   real(dp)::dtlim,ionisrate
+   real(dp)::ionisrate
    real(dp)::rhof,bsqf,epsf,tcellf
    real(dp)::etaohmdiss,etaod2,etaohmdissbricolo
    integer , dimension(1:3) :: index_i,index_j,index_k
@@ -505,8 +489,6 @@ subroutine computdifmag(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
    index_i = (/1,0,0/)
    index_j = (/0,1,0/)
    index_k = (/0,0,1/)
-
-   dtlim = dt !neil
 
    do k=min(1,ku1+1),max(1,ku2-1)
       do j=min(1,ju1+1),max(1,ju2-1)
@@ -537,9 +519,9 @@ subroutine computdifmag(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
                endif
 
                ionisrate=default_ionisrate 
-               etaod2x=etaohmdissbricolo(rhox,bsquarex,tcellx,dtlim,dx,ionisrate)
-               etaod2y=etaohmdissbricolo(rhoy,bsquarey,tcelly,dtlim,dx,ionisrate)
-               etaod2z=etaohmdissbricolo(rhoz,bsquarez,tcellz,dtlim,dx,ionisrate)
+               etaod2x=etaohmdissbricolo(rhox,bsquarex,tcellx,dt,dx,ionisrate)
+               etaod2y=etaohmdissbricolo(rhoy,bsquarey,tcelly,dt,dx,ionisrate)
+               etaod2z=etaohmdissbricolo(rhoz,bsquarez,tcellz,dt,dx,ionisrate)
                ! TC: shouldn't dy and dz be used here?  
 
                ! WARNING dB/dt=-curl(eta*J)
@@ -596,7 +578,7 @@ subroutine computambip(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,florentzx,florentzy
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::fluxambdiff
 
    ! declare local variables
-   INTEGER ::i, j, k, l, ntest
+   INTEGER ::i, j, k, l
 
    real(dp)::v1x,v1y,v1z,v2x,v2y,v2z
    real(dp)::rhox,rhoy,rhoz,rhofx,rhofy,rhofz
@@ -604,14 +586,13 @@ subroutine computambip(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,florentzx,florentzy
    real(dp)::bsquarexx,bsquareyy,bsquarezz
    real(dp)::betaad2,betaadbricolo
    real(dp)::rhocell,bcell,tcell,ionisrate
-   real(dp)::dtlim
    real(dp)::crossprodx,crossprody,crossprodz
 
    ! do NOT change value below Variation of betaad
    ! to avoid too small time step allowed
-   ntest=0
+   !ntest=0
 
-   dtlim=dt!*coefalfven
+   !dtlim=dt!*coefalfven
    !dt est deja dtnew, qui a été choisi comme le dt normal (avec la condition de courant) ou le dt normal seuillé si le dtAD est trop faible(bricolo)
 
    do k=min(1,ku1+1),max(1,ku2-1)
@@ -660,7 +641,7 @@ subroutine computambip(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,florentzx,florentzy
                emfambdiff(l,i,j,k,1)=crossprodx(v1x,v1y,v1z,v2x,v2y,v2z)
 
                rhox=0.25d0*(u(l,i,j,k,1)+u(l,i,j-1,k,1)+u(l,i,j,k-1,1)+u(l,i,j-1,k-1,1))
-               betaad2=betaadbricolo(rhocell,rhox,dtlim,bcell,bcell,dx,ntest,tcell,ionisrate)
+               betaad2=betaadbricolo(rhocell,rhox,dt,bcell,bcell,dx,tcell,ionisrate)
                emfambdiff(l,i,j,k,1)=emfambdiff(l,i,j,k,1)*betaad2 
 
                ! EMF y
@@ -674,7 +655,7 @@ subroutine computambip(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,florentzx,florentzy
                emfambdiff(l,i,j,k,2)=crossprody(v1x,v1y,v1z,v2x,v2y,v2z)
 
                rhoy=0.25d0*(u(l,i,j,k,1)+u(l,i-1,j,k,1)+u(l,i,j,k-1,1)+u(l,i-1,j,k-1,1))
-               betaad2=betaadbricolo(rhocell,rhoy,dtlim,bcell,bcell,dx,ntest,tcell,ionisrate)
+               betaad2=betaadbricolo(rhocell,rhoy,dt,bcell,bcell,dx,tcell,ionisrate)
                emfambdiff(l,i,j,k,2)=emfambdiff(l,i,j,k,2)*betaad2            
                     
                ! EMF z
@@ -688,21 +669,21 @@ subroutine computambip(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,florentzx,florentzy
                emfambdiff(l,i,j,k,3)=crossprodz(v1x,v1y,v1z,v2x,v2y,v2z)
 
                rhoz=0.25d0*(u(l,i,j,k,1)+u(l,i-1,j,k,1)+u(l,i,j-1,k,1)+u(l,i-1,j-1,k,1))
-               betaad2=betaadbricolo(rhocell,rhoz,dtlim,bcell,bcell,dx,ntest,tcell,ionisrate)
+               betaad2=betaadbricolo(rhocell,rhoz,dt,bcell,bcell,dx,tcell,ionisrate)
                emfambdiff(l,i,j,k,3)=emfambdiff(l,i,j,k,3)*betaad2
 
                ! energy flux on faces
 
                rhofx=0.5d0*(u(l,i,j,k,1)+u(l,i-1,j,k,1))
-               betaad2=betaadbricolo(rhocell,rhofx,dtlim,bcell,bcell,dx,ntest,tcell,ionisrate)
+               betaad2=betaadbricolo(rhocell,rhofx,dt,bcell,bcell,dx,tcell,ionisrate)
                fluxambdiff(l,i,j,k,1)=-betaad2*fluxad(l,i,j,k,1)
 
                rhofy=0.5d0*(u(l,i,j,k,1)+u(l,i,j-1,k,1))
-               betaad2=betaadbricolo(rhocell,rhofy,dtlim,bcell,bcell,dx,ntest,tcell,ionisrate) !TC:dy?
+               betaad2=betaadbricolo(rhocell,rhofy,dt,bcell,bcell,dx,tcell,ionisrate) !TC:dy?
                fluxambdiff(l,i,j,k,2)=-betaad2*fluxad(l,i,j,k,2)
 
                rhofz=0.5d0*(u(l,i,j,k,1)+u(l,i,j,k-1,1))
-               betaad2=betaadbricolo(rhocell,rhofz,dtlim,bcell,bcell,dx,ntest,tcell,ionisrate) !TC: dz?
+               betaad2=betaadbricolo(rhocell,rhofz,dt,bcell,bcell,dx,tcell,ionisrate) !TC: dz?
                fluxambdiff(l,i,j,k,3)=-betaad2*fluxad(l,i,j,k,3)
 
             end do
@@ -711,54 +692,13 @@ subroutine computambip(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,florentzx,florentzy
    end do
 
 end subroutine computambip
-!########################################################################################
-!########################################################################################
-!########################################################################################
-!########################################################################################
+!###########################################################
+!###########################################################
+!###########################################################
+!###########################################################
 
 ! VECTOR FUNCTION
 
-!###########################################################
-!###########################################################
-!###########################################################
-double precision function computdx(vec,n2,n3,l,i,j,k,dx)
-
-   use amr_parameters,only:dp,nvector
-   use hydro_parameters,only:iu1,iu2,ju1,ju2,ku1,ku2
-   implicit none 
-   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3,1:3)::vec
-   real(dp)::dx
-   integer::n2,n3,l,i,j,k
-
-   computdx = (vec(l,i+1,j,k,n2,n3) - vec(l,i,j,k,n2,n3)) / dx
-
-end function computdx
-
-double precision function computdy(vec,n2,n3,l,i,j,k,dx)
-
-   use amr_parameters,only:dp,nvector
-   use hydro_parameters,only:iu1,iu2,ju1,ju2,ku1,ku2
-   implicit none 
-   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3,1:3)::vec
-   real(dp)::dx
-   integer::n2,n3,l,i,j,k
-
-   computdy = (vec(l,i,j+1,k,n2,n3) - vec(l,i,j,k,n2,n3)) / dx
-
-end function computdy
-
-double precision function computdz(vec,n2,n3,l,i,j,k,dx)
-
-   use amr_parameters,only:dp,nvector
-   use hydro_parameters,only:iu1,iu2,ju1,ju2,ku1,ku2
-   implicit none 
-   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3,1:3)::vec
-   real(dp)::dx
-   integer::n2,n3,l,i,j,k
-
-   computdz = (vec(l,i,j,k+1,n2,n3) - vec(l,i,j,k,n2,n3)) / dx
-
-end function computdz
 !###########################################################
 double precision function computdxbis(vec,n2,l,i,j,k,dx)
 
@@ -931,35 +871,52 @@ end function gammaadbis
 !###########################################################
 !###########################################################
 !###########################################################
-! TC: for resistivity table
-subroutine sig_x2d(ll,ii,j,k,lb,ib,sigO,sigH,sigP,bsquare)
+!subroutine sig_x2d(ll,ii,j,k,lb,ib,sigO,sigH,sigP)
+subroutine sig_x2d(rho_cell,temp_cell,mag_cell,sigO,sigH,sigP)
 
    use amr_parameters,    only : dp
-   use nimhd_commons
-   use nimhd_parameters
    implicit none
+   ! input: density, temperature and magnetic field strenght in the cell
+   real(dp), intent(in)::rho_cell,temp_cell,mag_cell
+   ! output: interpolated resistivity
+   real(dp), intent(out)::sigO,sigH,sigP
 
-   integer, intent(in)             :: j,k,ib
-   real(dp), intent(in)            :: ll,ii,lb,bsquare
-   real(dp), intent(out)           :: sigO,sigH,sigP
-   real(dp)                        :: B,nH,temper,sigav
-   real(dp)                        :: j_dp,k_dp,b_dp
-   real(dp), dimension(nvarchimie) :: x
-   integer                         :: i,kk
+   real(dp)::i_n,i_t,i_b
+   integer::j,k,l
+   real(dp)::j_dp,k_dp,l_dp
+   real(dp)::BBcgs,sigav
+   real(dp)::sigO,sigH,sigP
+   real(dp), dimension(3)::x
 
+   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
+   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
+
+   ! determine indices in table (as reals) 
+   i_n=(1d0+(log10(rho_cell)-log10(nminchimie))/dnchimie)
+   i_t=(1d0+(log10(temp_cell)-log10(tminchimie))/dtchimie)
+   BBcgs=sqrt(mag_cell*(4d0*pi*scale_d*(scale_v)**2)) ! change to Gauss
+   i_b=(1d0+(log10(BBcgs)-log10(bminchimie))/dbchimie)
+   ! don't go outside of table
+   i_n = max(1d0, min(i_n,nchimie))
+   i_t = max(1d0, min(i_t,tchimie))
+   i_b = max(1d0, min(i_b,bchimie))
+
+   ! convert to integers, lower bound
+   j = min(floor(i_n),nchimie-1)
+   k = min(floor(i_t),tchimie-1)
+   l = min(floor(i_b),bchimie-1)
    j_dp = real(j,dp)
-   kk=min(k,tchimie-1)
-   k_dp = real(kk,dp)
-   b_dp = real(ib,dp)
+   k_dp = real(k,dp)
+   l_dp = real(l,dp)
 
-   x(1:3)=(1d0-(ll-j_dp))*(1d0-(ii-k_dp))*(1d0-(lb-b_dp))*(resistivite_chimie(1:3,j,kk,ib,1))+&
-            &((ll-j_dp))*(1d0-(ii-k_dp))*(1d0-(lb-b_dp))*(resistivite_chimie(1:3,j+1,kk,ib,1))+&
-            &(1d0-(ll-j_dp))*((ii-k_dp))*(1d0-(lb-b_dp))*(resistivite_chimie(1:3,j,kk+1,ib,1))+&
-                  &((ll-j_dp))*((ii-k_dp))*(1d0-(lb-b_dp))*(resistivite_chimie(1:3,j+1,kk+1,ib,1))+&
-               (1d0-(ll-j_dp))*(1d0-(ii-k_dp))*(lb-b_dp)*(resistivite_chimie(1:3,j,kk,ib+1,1))+&
-                     &((ll-j_dp))*(1d0-(ii-k_dp))*(lb-b_dp)*(resistivite_chimie(1:3,j+1,kk,ib+1,1))+&
-                     &(1d0-(ll-j_dp))*((ii-k_dp))*(lb-b_dp)*(resistivite_chimie(1:3,j,kk+1,ib+1,1))+&
-                        &((ll-j_dp))*((ii-k_dp))*(lb-b_dp)*(resistivite_chimie(1:3,j+1,kk+1,ib+1,1))
+   x(1:3)=(1d0-(i_n-j_dp))*(1d0-(i_t-k_dp))*(1d0-(i_b-l_dp)) * (resistivite_chimie(1:3,j,  k,  l,  1))+&
+             &((i_n-j_dp))*(1d0-(i_t-k_dp))*(1d0-(i_b-l_dp)) * (resistivite_chimie(1:3,j+1,k,  l,  1))+&
+         &(1d0-(i_n-j_dp))*(    (i_t-k_dp))*(1d0-(i_b-l_dp)) * (resistivite_chimie(1:3,j,  k+1,l,  1))+&
+             &((i_n-j_dp))*(    (i_t-k_dp))*(1d0-(i_b-l_dp)) * (resistivite_chimie(1:3,j+1,k+1,l,  1))+&
+         &(1d0-(i_n-j_dp))*(1d0-(i_t-k_dp))*(    (i_b-l_dp)) * (resistivite_chimie(1:3,j,  k,  l+1,1))+&
+             &((i_n-j_dp))*(1d0-(i_t-k_dp))*(    (i_b-l_dp)) * (resistivite_chimie(1:3,j+1,k,  l+1,1))+&
+         &(1d0-(i_n-j_dp))*(    (i_t-k_dp))*(    (i_b-l_dp)) * (resistivite_chimie(1:3,j,  k+1,l+1,1))+&
+             &((i_n-j_dp))*(    (i_t-k_dp))*(    (i_b-l_dp)) * (resistivite_chimie(1:3,j+1,k+1,l+1,1))
                
    sigP= 10.0d0**x(1)
    sigO= 10.0d0**x(2)
@@ -968,10 +925,10 @@ subroutine sig_x2d(ll,ii,j,k,lb,ib,sigO,sigH,sigP,bsquare)
    ! point. If there is a sign inversion, we set it to zero.
    ! If you are using Hall resisitvities, this could be improved by using a linear
    ! interpolation instead of log.
-   sigH=(10.0d0**x(3))*resistivite_chimie(0,j,kk,ib,1)
-   sigav = sum(resistivite_chimie(0,j:j+1,kk:kk+1,ib:ib+1,1)) / 8.0d0
-   if(sigav .ne. resistivite_chimie(0,j,kk,ib,1))then
-      sigH = 0.0_dp
+   sigH=(10.0d0**x(3))*resistivite_chimie(0,j,k,l,1)
+   sigav = sum(resistivite_chimie(0,j:j+1,k:k+1,l:l+1,1)) / 8d0
+   if(sigav .ne. resistivite_chimie(0,j,k,l,1))then
+      sigH = 0
    endif
 
 end subroutine sig_x2d
@@ -979,7 +936,7 @@ end subroutine sig_x2d
 !###########################################################
 !###########################################################
 ! TC: for resistivity table
-subroutine sig_x3d(ll,ii,xx,j,k,xi,lb,ib,sigO,sigH,sigP,bsquare)
+subroutine sig_x3d(ll,ii,xx,j,k,xi,lb,ib,sigO,sigH,sigP)
 
    use amr_parameters,    only : dp
    use nimhd_commons
@@ -987,7 +944,7 @@ subroutine sig_x3d(ll,ii,xx,j,k,xi,lb,ib,sigO,sigH,sigP,bsquare)
    implicit none
 
    integer, intent(in)             :: j,k,xi,ib
-   real(dp), intent(in)            :: ll,ii,xx,lb,bsquare
+   real(dp), intent(in)            :: ll,ii,xx,lb
    real(dp), intent(out)           :: sigO,sigH,sigP
    real(dp)                        :: B,nH,temper,sigav
    real(dp)                        :: j_dp,k_dp,xi_dp,b_dp
@@ -1000,22 +957,22 @@ subroutine sig_x3d(ll,ii,xx,j,k,xi,lb,ib,sigO,sigH,sigP,bsquare)
    xi_dp=real(xi,dp)
    b_dp = real(ib,dp)
 
-   x(0:3)=(1d0-(ll-j_dp))*(1d0-(ii-k_dp))*(1d0-(xx-xi_dp))*(1d0-(lb-b_dp))*(resistivite_chimie(0:3,j,kk,xi,ib))+&
-            &((ll-j_dp))*(1d0-(ii-k_dp))*(1d0-(xx-xi_dp))*(1d0-(lb-b_dp))*(resistivite_chimie(0:3,j+1,kk,xi,ib))+&
-            &(1d0-(ll-j_dp))*((ii-k_dp))*(1d0-(xx-xi_dp))*(1d0-(lb-b_dp))*(resistivite_chimie(0:3,j,kk+1,xi,ib))+&
-                  &((ll-j_dp))*((ii-k_dp))*(1d0-(xx-xi_dp))*(1d0-(lb-b_dp))*(resistivite_chimie(0:3,j+1,kk+1,xi,ib))+&
-            &(1d0-(ll-j_dp))*(1d0-(ii-k_dp))*((xx-xi_dp))*(1d0-(lb-b_dp))*(resistivite_chimie(0:3,j,kk,xi+1,ib))+&
-                  &((ll-j_dp))*(1d0-(ii-k_dp))*((xx-xi_dp))*(1d0-(lb-b_dp))*(resistivite_chimie(0:3,j+1,kk,xi+1,ib))+&
-                  &(1d0-(ll-j_dp))*((ii-k_dp))*((xx-xi_dp))*(1d0-(lb-b_dp))*(resistivite_chimie(0:3,j,kk+1,xi+1,ib))+&
-                        &((ll-j_dp))*((ii-k_dp))*((xx-xi_dp))*(1d0-(lb-b_dp))*(resistivite_chimie(0:3,j+1,kk+1,xi+1,ib))+&
-               (1d0-(ll-j_dp))*(1d0-(ii-k_dp))*(1d0-(xx-xi_dp))*((lb-b_dp))*(resistivite_chimie(0:3,j,kk,xi,ib+1))+&
-                  &((ll-j_dp))*(1d0-(ii-k_dp))*(1d0-(xx-xi_dp))*((lb-b_dp))*(resistivite_chimie(0:3,j+1,kk,xi,ib+1))+&
-                  &(1d0-(ll-j_dp))*((ii-k_dp))*(1d0-(xx-xi_dp))*((lb-b_dp))*(resistivite_chimie(0:3,j,kk+1,xi,ib+1))+&
-                        &((ll-j_dp))*((ii-k_dp))*(1d0-(xx-xi_dp))*((lb-b_dp))*(resistivite_chimie(0:3,j+1,kk+1,xi,ib+1))+&
-                  &(1d0-(ll-j_dp))*(1d0-(ii-k_dp))*((xx-xi_dp))*((lb-b_dp))*(resistivite_chimie(0:3,j,kk,xi+1,ib+1))+&
-                        &((ll-j_dp))*(1d0-(ii-k_dp))*((xx-xi_dp))*((lb-b_dp))*(resistivite_chimie(0:3,j+1,kk,xi+1,ib+1))+&
-                        &(1d0-(ll-j_dp))*((ii-k_dp))*((xx-xi_dp))*((lb-b_dp))*(resistivite_chimie(0:3,j,kk+1,xi+1,ib+1))+&
-                           &((ll-j_dp))*((ii-k_dp))*((xx-xi_dp))*((lb-b_dp))*(resistivite_chimie(0:3,j+1,kk+1,xi+1,ib+1))
+   x(0:3)=(1d0-(ll-j_dp))*(1d0-(ii-k_dp))*(1d0-(xx-xi_dp))*(1d0-(lb-b_dp))*(resistivite_chimie(0:3,j,  kk,  xi,  ib))+&
+             &((ll-j_dp))*(1d0-(ii-k_dp))*(1d0-(xx-xi_dp))*(1d0-(lb-b_dp))*(resistivite_chimie(0:3,j+1,kk,  xi,  ib))+&
+         &(1d0-(ll-j_dp))*(    (ii-k_dp))*(1d0-(xx-xi_dp))*(1d0-(lb-b_dp))*(resistivite_chimie(0:3,j,  kk+1,xi,  ib))+&
+             &((ll-j_dp))*(    (ii-k_dp))*(1d0-(xx-xi_dp))*(1d0-(lb-b_dp))*(resistivite_chimie(0:3,j+1,kk+1,xi,  ib))+&
+         &(1d0-(ll-j_dp))*(1d0-(ii-k_dp))*(    (xx-xi_dp))*(1d0-(lb-b_dp))*(resistivite_chimie(0:3,j,  kk,  xi+1,ib))+&
+             &((ll-j_dp))*(1d0-(ii-k_dp))*(    (xx-xi_dp))*(1d0-(lb-b_dp))*(resistivite_chimie(0:3,j+1,kk,  xi+1,ib))+&
+         &(1d0-(ll-j_dp))*(    (ii-k_dp))*(    (xx-xi_dp))*(1d0-(lb-b_dp))*(resistivite_chimie(0:3,j,  kk+1,xi+1,ib))+&
+             &((ll-j_dp))*(    (ii-k_dp))*(    (xx-xi_dp))*(1d0-(lb-b_dp))*(resistivite_chimie(0:3,j+1,kk+1,xi+1,ib))+&
+         &(1d0-(ll-j_dp))*(1d0-(ii-k_dp))*(1d0-(xx-xi_dp))*(    (lb-b_dp))*(resistivite_chimie(0:3,j,  kk,  xi,  ib+1))+&
+             &((ll-j_dp))*(1d0-(ii-k_dp))*(1d0-(xx-xi_dp))*(    (lb-b_dp))*(resistivite_chimie(0:3,j+1,kk,  xi,  ib+1))+&
+         &(1d0-(ll-j_dp))*(    (ii-k_dp))*(1d0-(xx-xi_dp))*(    (lb-b_dp))*(resistivite_chimie(0:3,j,  kk+1,xi,  ib+1))+&
+             &((ll-j_dp))*(    (ii-k_dp))*(1d0-(xx-xi_dp))*(    (lb-b_dp))*(resistivite_chimie(0:3,j+1,kk+1,xi,  ib+1))+&
+         &(1d0-(ll-j_dp))*(1d0-(ii-k_dp))*(    (xx-xi_dp))*(    (lb-b_dp))*(resistivite_chimie(0:3,j,  kk,  xi+1,ib+1))+&
+             &((ll-j_dp))*(1d0-(ii-k_dp))*(    (xx-xi_dp))*(    (lb-b_dp))*(resistivite_chimie(0:3,j+1,kk,  xi+1,ib+1))+&
+         &(1d0-(ll-j_dp))*(    (ii-k_dp))*(    (xx-xi_dp))*(    (lb-b_dp))*(resistivite_chimie(0:3,j,  kk+1,xi+1,ib+1))+&
+             &((ll-j_dp))*(    (ii-k_dp))*(    (xx-xi_dp))*(    (lb-b_dp))*(resistivite_chimie(0:3,j+1,kk+1,xi+1,ib+1))
 
                
    sigP= 10.0d0**x(1)
@@ -1062,16 +1019,7 @@ double precision function eta_AD_chimie(rhon,BBcell,BBcellold,temper,ionisrate)
 
    ! TC: extrapolate from table[density,temperature,magnetic field]
    else if(use_x2d==1)then
-      ll=(1d0+(log10(rhon)-log10(nminchimie))/dnchimie)
-      j=floor(ll)
-      ii=(1d0+(log10(temper)-log10(tminchimie))/dtchimie)
-      ii=max(ii,1.0d0)
-      i=floor(ii)
-      BBcgs=sqrt(BBcellold*(4d0*pi*scale_d*(scale_v)**2))
-      lb=(1d0+(log10(BBcgs)-log10(bminchimie))/dbchimie)
-      ib=floor(lb)
-
-      call sig_x2d(ll,ii,j,i,lb,ib,sigO,sigH,sigP,BBcgs) 
+      call sig_x2d(rhon,temper,BBcellold,sigO,sigH,sigP) 
       !inp=rhon/xmolaire/H2_fraction     ! inp is neutrals.cc, to fit densionbis
       inp=rhon/2d0/H2_fraction     ! inp is neutrals.cc, to fit densionbis
       eta_AD_chimie=(sigO/(sigO**2+sigH**2)-1d0/sigP)   ! resistivity in s
@@ -1091,7 +1039,7 @@ double precision function eta_AD_chimie(rhon,BBcell,BBcellold,temper,ionisrate)
       lb=(1d0+(log10(BBcgs)-log10(bminchimie))/dbchimie)
       ib=floor(lb)
 
-      call sig_x3d(ll,ii,xx,j,i,k,lb,ib,sigO,sigH,sigP,BBcgs) 
+      call sig_x3d(ll,ii,xx,j,i,k,lb,ib,sigO,sigH,sigP) 
       inp=rhon/2d0/H2_fraction     ! inp is neutrals.cc, to fit densionbis
       eta_AD_chimie=(sigO/(sigO**2+sigH**2)-1d0/sigP)   ! resistivity in s
 
@@ -1100,14 +1048,6 @@ double precision function eta_AD_chimie(rhon,BBcell,BBcellold,temper,ionisrate)
       eta_AD_chimie=BBcgs**2/(eta_AD_chimie*densionbis(inp)*inp*scale_d*scale_d*c_cgs**2)  ! need B in G, output is gammaad in cgs
 
    endif
-
-   !!print*, inp, ll, j,resistivite_chimie(1,1),resistivite_chimie(1,2),resistivite_chimie(6,1),resistivite_chimie(1,35)
-   !eta_AD_chimie=(ll-j)*log10(resistivite_chimie(6,j+1))+(1d0-(ll-j))*log10(resistivite_chimie(6,j))
-   !!print*, eta_AD_chimie
-   !eta_AD_chimie=10**eta_AD_chimie
-
-   ! Ad-hoc modification to ensure that the ambipolar resistivity falls to zero when the density exceeds 5.0e13
-   !eta_AD_chimie = eta_AD_chimie * (1.0d0-tanh(rhon/5.0d13))
 
 end function eta_AD_chimie
 !###########################################################
@@ -1141,16 +1081,7 @@ double precision function eta_ohm_chimie(rhon,BBcell,temper,ionisrate)
 
    ! TC: extrapolate from table[density,temperature,magnetic field] ?
    else if(use_x2d==1)then
-      ll=(1d0+(log10(rhon)-log10(nminchimie))/dnchimie)
-      j=floor(ll)
-      ii=(1d0+(log10(temper)-log10(tminchimie))/dtchimie)
-      ii=max(ii,1.0d0)
-      i=floor(ii)
-      BBcgs=sqrt(BBcell*(4d0*pi*scale_d*(scale_v)**2))
-      lb=(1d0+(log10(BBcgs)-log10(bminchimie))/dbchimie)
-      ib=floor(lb)
-
-      call sig_x2d(ll,ii,j,i,lb,ib,sigO,sigH,sigP,BBcgs)
+      call sig_x2d(rhon,temper,BBcell,sigO,sigH,sigP) 
       eta_ohm_chimie = (1d0 / sigP) * c_cgs * c_cgs / (4.0_dp*pi)
       eta_ohm_chimie = max(eta_ohm_chimie * (1.0d0-tanh(rhon/1.0d15)), 1d-36)
 
@@ -1165,7 +1096,7 @@ double precision function eta_ohm_chimie(rhon,BBcell,temper,ionisrate)
       lb=(1d0+(log10(BBcgs)-log10(bminchimie))/dbchimie)
       ib=floor(lb)
 
-      call sig_x3d(ll,ii,xx,j,i,k,lb,ib,sigO,sigH,sigP,BBcgs)
+      call sig_x3d(ll,ii,xx,j,i,k,lb,ib,sigO,sigH,sigP)
       eta_ohm_chimie = (1d0 / sigP) * c_cgs * c_cgs / (4.0_dp*pi)
       ! TC: why don't we do the adhoc thing here?
    endif
@@ -1297,7 +1228,7 @@ end function etaohmdiss
 !###########################################################
 !###########################################################
 !###########################################################
-double precision function etaohmdissbricolo(rhon,BBcell,temper,dtlim,dx,ionisrate)
+double precision function etaohmdissbricolo(rhon,BBcell,temper,dt,dx,ionisrate)
 
    use hydro_commons
    use amr_parameters,only:mu_gas
@@ -1308,7 +1239,7 @@ double precision function etaohmdissbricolo(rhon,BBcell,temper,dtlim,dx,ionisrat
    real(dp) ::rhon,xpressure,rhoH,rhotemp,BBcell
    real(dp)::gammaadbis,densionbis,ionisrate
    real(dp)::xionisation,temper,scale_p,xpcgs,rhocgs,xnbcgs,n_H_max
-   real(dp)::eta_ohm_chimie,dx,dtlim,xx,dtt
+   real(dp)::eta_ohm_chimie,dx,dt,xx,dtt
 
    real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
    call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
@@ -1361,16 +1292,16 @@ double precision function etaohmdissbricolo(rhon,BBcell,temper,dtlim,dx,ionisrat
 
       ! TC: this subroutine is exactly the same as etaohmdiss except for the following part...
       ! robbery to avoid too small time step
-      if(nminitimestep.eq.1) then
-         if(dtlim.ne.0d0) then
+      if(nminitimestep) then
+         if(dt.ne.0d0) then
             xx=etaohmdissbricolo
             if(xx.ne.0d0) then
             dtt=coefohm*dx*dx/xx   !dtohm pour la cellule
             else
                dtt=1d39
             endif
-            if (dtt.le.dtlim) then
-               etaohmdissbricolo=coefohm*dx*dx/(dtlim)
+            if (dtt.le.dt) then
+               etaohmdissbricolo=coefohm*dx*dx/(dt)
             endif
          endif
       endif
@@ -1439,7 +1370,7 @@ end function betaad
 !###########################################################
 !###########################################################
 !###########################################################
-double precision function betaadbricolo(rhocelln,rhon,dtlim,bsquare,bsquareold,dx,ntest,temper,ionisrate)
+double precision function betaadbricolo(rhocelln,rhon,dt,bsquare,bsquareold,dx,temper,ionisrate)
 
    use hydro_parameters
    use amr_commons
@@ -1448,8 +1379,7 @@ double precision function betaadbricolo(rhocelln,rhon,dtlim,bsquare,bsquareold,d
    use constants
 
    implicit none
-   integer :: ntest
-   real(dp) ::rhocelln,rhon,betaadbricolotemp,dtlim,bsquare,bsquareold,dx,temper
+   real(dp) ::rhocelln,rhon,betaadbricolotemp,dt,bsquare,bsquareold,dx,temper
    real(dp)::gammaadbis,densionbis,rhotemp,rhotemp_cell,ionisrate
    real(dp)::xx,dtt,bbcgs
 
@@ -1490,16 +1420,16 @@ double precision function betaadbricolo(rhocelln,rhon,dtlim,bsquare,bsquareold,d
       endif
 
       ! robbery to avoid too small time step
-      if(nminitimestep.eq.1) then
-         if(dtlim.ne.0d0) then
+      if(nminitimestep) then
+         if(dt.ne.0d0) then
             xx=bsquare*betaadbricolo
             if(xx.ne.0d0) then
                dtt=coefad*dx*dx/xx   !dtAD pour la cellule
             else
                dtt=1d39
             endif
-            if (dtt.le.dtlim) then   ! on compare bien dtAD calcule pour la cellule (rhocelln) avec le temps de la simu
-               betaadbricolo=coefad*dx*dx/(dtlim*bsquare)
+            if (dtt.le.dt) then   ! on compare bien dtAD calcule pour la cellule (rhocelln) avec le temps de la simu
+               betaadbricolo=coefad*dx*dx/(dt*bsquare)
          !      write(*,*) 'la où ça seuille rho et B valent : ', rhocelln, bsquare
                !ici dtlim est le dt le plus petit : normal, ou seuillé si besoin est.
             else

@@ -30,7 +30,7 @@ subroutine read_nimhd_params(nml_ok)
       write(*,*)'Ambipolar diffusion coefficient',gammaAD
       write(*,*)'Ambipolar diffusion time coefficient',coefad
       write(*,*)'Ionisation coefficient',coefionis
-      if(nminitimestep.eq.1) then
+      if(nminitimestep) then
         write(*,*)'Mini time step switched ON'
         write(*,*)'Mini time step coefficient',coefalfven
       else

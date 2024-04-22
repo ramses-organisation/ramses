@@ -227,7 +227,7 @@ subroutine courant_fine(ilevel)
   ! timestep reduction due to ambipolar diffusion
   if(nambipolar) then
      ! WARNING this should not be done for tests
-     if (nminitimestep.eq.1) then
+     if (nminitimestep) then
         ! alfven time alone maybe not correct
         ! comparison with global time step
         tmag1=max(dtambdiff(ilevel),dtwad(ilevel)*coefalfven)
@@ -239,7 +239,7 @@ subroutine courant_fine(ilevel)
 
   ! timestep reduction due to Ohmic diffusion
   if(nmagdiffu) then
-     if (nminitimestep.eq.1) then
+     if (nminitimestep) then
         ! alfven time alone maybe not correct
         ! comparison with global time step
         tmag2=max(dtmagdiff(ilevel),dtwad(ilevel)*coefdtohm)

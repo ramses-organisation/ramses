@@ -45,7 +45,7 @@ module nimhd_parameters
   real(dp):: coefionis=3d-16 !remove ! coefionis*sqrt(n_H)=n_i , empirical value from Shu book 2, p. 363
   real(dp):: coefad = 0.1d0 !CFL conditions
   real(dp):: coefohm = 0.05d0 !CFL conditions
-  integer :: nminitimestep = 0 ! flag to activate timestep reduction hack
+  logical :: nminitimestep = .false. ! flag to activate timestep reduction hack TODO change name
   real(dp):: coefalfven = 1d-10  ! threshold where you cap the timestep. Maximal ratio between AD timestep and ideal MHD timestep. Change name!
   ! Meme si ca n'a rien a voir avec alfven : c'est le coefficient de seuil. Par defaut, on ne seuille pas.
   real(dp):: coefdtohm = 1d-10  ! same as coefalfven but for Ohmic diff.
