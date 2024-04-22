@@ -843,6 +843,9 @@ double precision function gammaadbis(rhon,BBcell,BBcellold,temper,ionisrate)
    real(dp)::rhon,rhoH,n_H_max,BBcell,temper,BBcellold
    real(dp)::eta_AD_chimie,ionisrate
 
+   real(dp):: sigO,sigH,sigP,densionbis,BBcgs
+   real(dp)::inp
+
    real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
    call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
 
@@ -863,36 +866,11 @@ double precision function gammaadbis(rhon,BBcell,BBcellold,temper,ionisrate)
    rhoH=rhon*2.0d0*H2_fraction*scale_d/(mu_gas*mH) ! convert in H/cc
    rhoH = max(rhoH, n_H_max)
 
-   gammaadbis=eta_AD_chimie(rhoH,BBcell,BBcellold,temper,ionisrate)
-
-   gammaadbis=gammaadbis*scale_t*scale_d ! in code units
-
-end function gammaadbis
-!###########################################################
-!###########################################################
-!###########################################################
-! TC: eta_AD_chimie and eta_ohm_chimie contain a lot of duplicate code
-double precision function eta_AD_chimie(rhon,BBcell,BBcellold,temper,ionisrate)
-
-   use hydro_commons
-   use constants
-   use nimhd_commons
-   use nimhd_parameters
-   implicit none
-
-   real(dp):: sigO,sigH,sigP,densionbis,BBcgs, bbcell,BBcellold
-   real(dp)::inp,ll,rhon,ii,temper,lb,j_dp,xx
-   integer :: i,j,k,ib
-   real(dp)::ionisrate
-
-   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
-   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
-
    ! TC: extrapolate from table[density,temperature,magnetic field]
    if(use_x2d==1)then
-      call sig_x2d(rhon,temper,BBcellold,sigO,sigH,sigP) 
-      !inp=rhon/xmolaire/H2_fraction     ! inp is neutrals.cc, to fit densionbis
-      inp=rhon/2d0/H2_fraction     ! inp is neutrals.cc, to fit densionbis
+      call interpolate_table(rhoH,temper,BBcellold,0,sigO,sigH,sigP) 
+      !inp=rhoH/xmolaire/H2_fraction     ! inp is neutrals.cc, to fit densionbis
+      inp=rhoH/2d0/H2_fraction     ! inp is neutrals.cc, to fit densionbis
       eta_AD_chimie=(sigO/(sigO**2+sigH**2)-1d0/sigP)   ! resistivity in s
 
       BBcgs=sqrt(BBcell*(4d0*pi*scale_d*(scale_v)**2))
@@ -900,18 +878,8 @@ double precision function eta_AD_chimie(rhon,BBcell,BBcellold,temper,ionisrate)
 
    ! TC: extrapolate from table[density,temperature,ionisation rate,magnetic field]
    else if(use_x3d==1)then
-      ll=(1d0+(log10(rhon)-log10(nminchimie))/dnchimie)
-      j=floor(ll)
-      ii = max(0d0, (log10(temper)-log10(tminchimie))/dtchimie)
-      i=floor(1d0+ii)
-      xx=(1d0+(log10(ionisrate)-log10(ximinchimie))/dxichimie)
-      k=floor(xx)
-      BBcgs=sqrt(BBcellold*(4d0*pi*scale_d*(scale_v)**2))
-      lb=(1d0+(log10(BBcgs)-log10(bminchimie))/dbchimie)
-      ib=floor(lb)
-
-      call sig_x3d(ll,ii,xx,j,i,k,lb,ib,sigO,sigH,sigP) 
-      inp=rhon/2d0/H2_fraction     ! inp is neutrals.cc, to fit densionbis
+      call interpolate_table(rhoH,temper,BBcellold,ionisrate,sigO,sigH,sigP) 
+      inp=rhoH/2d0/H2_fraction     ! inp is neutrals.cc, to fit densionbis
       eta_AD_chimie=(sigO/(sigO**2+sigH**2)-1d0/sigP)   ! resistivity in s
 
       BBcgs=sqrt(BBcell*(4d0*pi*scale_d*(scale_v)**2))
@@ -920,7 +888,9 @@ double precision function eta_AD_chimie(rhon,BBcell,BBcellold,temper,ionisrate)
 
    endif
 
-end function eta_AD_chimie
+   gammaadbis=eta_AD_chimie*scale_t*scale_d ! in code units
+
+end function gammaadbis
 !###########################################################
 !###########################################################
 !###########################################################
@@ -942,22 +912,12 @@ double precision function eta_ohm_chimie(rhon,BBcell,temper,ionisrate)
 
    ! TC: extrapolate from table[density,temperature,magnetic field] ?
    if(use_x2d==1)then
-      call sig_x2d(rhon,temper,BBcell,sigO,sigH,sigP) 
+      call interpolate_table(rhon,temper,BBcell,0,sigO,sigH,sigP) 
       eta_ohm_chimie = (1d0 / sigP) * c_cgs * c_cgs / (4.0_dp*pi)
       eta_ohm_chimie = max(eta_ohm_chimie * (1.0d0-tanh(rhon/1.0d15)), 1d-36)
 
    else if(use_x3d==1)then
-      ll=(1d0+(log10(rhon)-log10(nminchimie))/dnchimie)
-      j=floor(ll)
-      ii=(1d0+(log10(temper)-log10(tminchimie))/dtchimie)
-      i=floor(ii)   
-      xx=(1d0+(log10(ionisrate)-log10(ximinchimie))/dxichimie)
-      k=floor(xx)
-      BBcgs=sqrt(BBcell*(4d0*pi*scale_d*(scale_v)**2))
-      lb=(1d0+(log10(BBcgs)-log10(bminchimie))/dbchimie)
-      ib=floor(lb)
-
-      call sig_x3d(ll,ii,xx,j,i,k,lb,ib,sigO,sigH,sigP)
+      call interpolate_table(rhon,temper,BBcell,ionisrate,sigO,sigH,sigP) 
       eta_ohm_chimie = (1d0 / sigP) * c_cgs * c_cgs / (4.0_dp*pi)
       ! TC: why don't we do the adhoc thing here?
    endif
@@ -1020,7 +980,7 @@ double precision function etaohmdiss(rhon,BBcell,temper,ionisrate)
 
    implicit none 
    real(dp) ::rhon,xpressure,rhoH,rhotemp,BBcell
-   real(dp)::gammaadbis,densionbis
+   real(dp)::densionbis
    real(dp)::xionisation,temper,scale_p,xpcgs,rhocgs,xnbcgs,n_H_max
    real(dp)::eta_ohm_chimie,ionisrate
 
@@ -1098,7 +1058,7 @@ double precision function etaohmdissbricolo(rhon,BBcell,temper,dt,dx,ionisrate)
 
    implicit none 
    real(dp) ::rhon,xpressure,rhoH,rhotemp,BBcell
-   real(dp)::gammaadbis,densionbis,ionisrate
+   real(dp)::densionbis,ionisrate
    real(dp)::xionisation,temper,scale_p,xpcgs,rhocgs,xnbcgs,n_H_max
    real(dp)::eta_ohm_chimie,dx,dt,xx,dtt
 

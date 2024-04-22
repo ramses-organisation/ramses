@@ -134,7 +134,7 @@ subroutine nimhd_3dtable
    bchimie=100
    dbchimie=(log10(bmaxchimie)-log10(bminchimie))/real((bchimie-1),dp)
 
-   allocate(resistivite_chimie(0:3,1:nchimie,1:tchimie,1:bchimie,1))
+   allocate(resistivite_chimie(1:3,1:nchimie,1:tchimie,1,1,1:bchimie))
 
    tau_sn      = 0.0_dp
    omega       = 0.0_dp
@@ -191,10 +191,10 @@ subroutine nimhd_3dtable
          sigO=sigO+sigma(i)/(1d0+(omega(i)*tau_sn(i))**2)
          sigH=sigH-sigma(i)*omega(i)*tau_sn(i)/(1d0+(omega(i)*tau_sn(i))**2)
       end do
-      resistivite_chimie(1,iH,iT,iB,1)=log10(sigP)
-      resistivite_chimie(2,iH,iT,iB,1)=log10(sigO)
-      resistivite_chimie(3,iH,iT,iB,1)=log10(abs(sigH))
-      resistivite_chimie(0,iH,iT,iB,1)=sign(1.0d0,sigH)
+      resistivite_chimie(1,iH,iT,1,iB)=log10(sigP)
+      resistivite_chimie(2,iH,iT,1,iB)=log10(sigO)
+      resistivite_chimie(3,iH,iT,1,iB)=log10(abs(sigH))
+      resistivite_chimie(0,iH,iT,1,iB)=sign(1.0d0,sigH)
    end do
    end do
    end do
@@ -317,7 +317,7 @@ subroutine nimhd_4dtable
    bchimie=150
    dbchimie=(log10(bmaxchimie)-log10(bminchimie))/real((bchimie-1),dp)
 
-   allocate(resistivite_chimie(0:3,1:nchimie,1:tchimie,1:xichimie,1:bchimie))
+   allocate(resistivite_chimie(1:3,1:nchimie,1:tchimie,1:xichimie,1:bchimie))
    allocate(sigma(nvarchimie))
    allocate(tau_sn(nvarchimie))
    allocate(omega(nvarchimie))
@@ -414,18 +414,18 @@ end subroutine nimhd_4dtable
 !###########################################################
 !###########################################################
 !subroutine sig_x2d(ll,ii,j,k,lb,ib,sigO,sigH,sigP)
-subroutine sig_x2d(rho_cell,temp_cell,mag_cell,sigO,sigH,sigP)
+subroutine interpolate_table(rho_cell,temp_cell,mag_cell,ionisrate_cell,sigO,sigH,sigP)
 
    use amr_parameters,    only : dp
    implicit none
-   ! input: density, temperature and magnetic field strenght in the cell
-   real(dp), intent(in)::rho_cell,temp_cell,mag_cell
+   ! input: density, temperature, magnetic field strength and ionisation rate in the cell
+   real(dp), intent(in)::rho_cell,temp_cell,mag_cell,ionisrate_cell
    ! output: interpolated resistivity
    real(dp), intent(out)::sigO,sigH,sigP
 
-   real(dp)::i_n,i_t,i_b
-   integer::j,k,l
-   real(dp)::j_dp,k_dp,l_dp
+   real(dp)::i_n,i_t,i_b,i_r
+   integer::j,k,l,r
+   real(dp)::j_dp,k_dp,l_dp,r_dp
    real(dp)::BBcgs,sigav
    real(dp)::sigO,sigH,sigP
    real(dp), dimension(3)::x
@@ -451,85 +451,58 @@ subroutine sig_x2d(rho_cell,temp_cell,mag_cell,sigO,sigH,sigP)
    k_dp = real(k,dp)
    l_dp = real(l,dp)
 
-   x(1:3)=(1d0-(i_n-j_dp))*(1d0-(i_t-k_dp))*(1d0-(i_b-l_dp)) * (resistivite_chimie(1:3,j,  k,  l,  1))+&
-             &((i_n-j_dp))*(1d0-(i_t-k_dp))*(1d0-(i_b-l_dp)) * (resistivite_chimie(1:3,j+1,k,  l,  1))+&
-         &(1d0-(i_n-j_dp))*(    (i_t-k_dp))*(1d0-(i_b-l_dp)) * (resistivite_chimie(1:3,j,  k+1,l,  1))+&
-             &((i_n-j_dp))*(    (i_t-k_dp))*(1d0-(i_b-l_dp)) * (resistivite_chimie(1:3,j+1,k+1,l,  1))+&
-         &(1d0-(i_n-j_dp))*(1d0-(i_t-k_dp))*(    (i_b-l_dp)) * (resistivite_chimie(1:3,j,  k,  l+1,1))+&
-             &((i_n-j_dp))*(1d0-(i_t-k_dp))*(    (i_b-l_dp)) * (resistivite_chimie(1:3,j+1,k,  l+1,1))+&
-         &(1d0-(i_n-j_dp))*(    (i_t-k_dp))*(    (i_b-l_dp)) * (resistivite_chimie(1:3,j,  k+1,l+1,1))+&
-             &((i_n-j_dp))*(    (i_t-k_dp))*(    (i_b-l_dp)) * (resistivite_chimie(1:3,j+1,k+1,l+1,1))
-               
-   sigP= 10.0d0**x(1)
-   sigO= 10.0d0**x(2)
+   if(resistivity_table_ndim==3)then
+      r = 1
+      x(1:3)=(1d0-(i_n-j_dp))*(1d0-(i_t-k_dp))*(1d0-(i_b-l_dp)) * (resistivite_chimie(1:3,j,  k  ,r,l))+&
+                &((i_n-j_dp))*(1d0-(i_t-k_dp))*(1d0-(i_b-l_dp)) * (resistivite_chimie(1:3,j+1,k  ,r,l))+&
+            &(1d0-(i_n-j_dp))*(    (i_t-k_dp))*(1d0-(i_b-l_dp)) * (resistivite_chimie(1:3,j,  k+1,r,l))+&
+                &((i_n-j_dp))*(    (i_t-k_dp))*(1d0-(i_b-l_dp)) * (resistivite_chimie(1:3,j+1,k+1,r,l))+&
+            &(1d0-(i_n-j_dp))*(1d0-(i_t-k_dp))*(    (i_b-l_dp)) * (resistivite_chimie(1:3,j,  k,  r,l+1))+&
+                &((i_n-j_dp))*(1d0-(i_t-k_dp))*(    (i_b-l_dp)) * (resistivite_chimie(1:3,j+1,k,  r,l+1))+&
+            &(1d0-(i_n-j_dp))*(    (i_t-k_dp))*(    (i_b-l_dp)) * (resistivite_chimie(1:3,j,  k+1,r,l+1))+&
+                &((i_n-j_dp))*(    (i_t-k_dp))*(    (i_b-l_dp)) * (resistivite_chimie(1:3,j+1,k+1,r,l+1))
+ 
+      sigav = sum(resistivite_chimie(0,j:j+1,k:k+1,r,l:l+1)) / 8d0
+
+   else if(resistivity_table_ndim==4)then
+      i_r=(1d0+(log10(ionisrate_cell)-log10(ximinchimie))/dxichimie)
+      i_r = max(1d0, min(i_r,xichimie))
+      r = min(floor(i_r),xchimie-1)
+      r_dp = real(r,dp)
+   
+      x(1:3)=(1d0-(i_n-j_dp))*(1d0-(i_t-k_dp))*(1d0-(i_r-r_dp))*(1d0-(i_b-l_dp))*(resistivite_chimie(1:3,j,  k,  r,  l))+&
+                &((i_n-j_dp))*(1d0-(i_t-k_dp))*(1d0-(i_r-r_dp))*(1d0-(i_b-l_dp))*(resistivite_chimie(1:3,j+1,k,  r,  l))+&
+            &(1d0-(i_n-j_dp))*(    (i_t-k_dp))*(1d0-(i_r-r_dp))*(1d0-(i_b-l_dp))*(resistivite_chimie(1:3,j,  k+1,r,  l))+&
+                &((i_n-j_dp))*(    (i_t-k_dp))*(1d0-(i_r-r_dp))*(1d0-(i_b-l_dp))*(resistivite_chimie(1:3,j+1,k+1,r,  l))+&
+            &(1d0-(i_n-j_dp))*(1d0-(i_t-k_dp))*(    (i_r-r_dp))*(1d0-(i_b-l_dp))*(resistivite_chimie(1:3,j,  k,  r+1,l))+&
+                &((i_n-j_dp))*(1d0-(i_t-k_dp))*(    (i_r-r_dp))*(1d0-(i_b-l_dp))*(resistivite_chimie(1:3,j+1,k,  r+1,l))+&
+            &(1d0-(i_n-j_dp))*(    (i_t-k_dp))*(    (i_r-r_dp))*(1d0-(i_b-l_dp))*(resistivite_chimie(1:3,j,  k+1,r+1,l))+&
+                &((i_n-j_dp))*(    (i_t-k_dp))*(    (i_r-r_dp))*(1d0-(i_b-l_dp))*(resistivite_chimie(1:3,j+1,k+1,r+1,l))+&
+            &(1d0-(i_n-j_dp))*(1d0-(i_t-k_dp))*(1d0-(i_r-r_dp))*(    (i_b-l_dp))*(resistivite_chimie(1:3,j,  k,  r,  l+1))+&
+                &((i_n-j_dp))*(1d0-(i_t-k_dp))*(1d0-(i_r-r_dp))*(    (i_b-l_dp))*(resistivite_chimie(1:3,j+1,k,  r,  l+1))+&
+            &(1d0-(i_n-j_dp))*(    (i_t-k_dp))*(1d0-(i_r-r_dp))*(    (i_b-l_dp))*(resistivite_chimie(1:3,j,  k+1,r,  l+1))+&
+                &((i_n-j_dp))*(    (i_t-k_dp))*(1d0-(i_r-r_dp))*(    (i_b-l_dp))*(resistivite_chimie(1:3,j+1,k+1,r,  l+1))+&
+            &(1d0-(i_n-j_dp))*(1d0-(i_t-k_dp))*(    (i_r-r_dp))*(    (i_b-l_dp))*(resistivite_chimie(1:3,j,  k,  r+1,l+1))+&
+                &((i_n-j_dp))*(1d0-(i_t-k_dp))*(    (i_r-r_dp))*(    (i_b-l_dp))*(resistivite_chimie(1:3,j+1,k,  r+1,l+1))+&
+            &(1d0-(i_n-j_dp))*(    (i_t-k_dp))*(    (i_r-r_dp))*(    (i_b-l_dp))*(resistivite_chimie(1:3,j,  k+1,r+1,l+1))+&
+                &((i_n-j_dp))*(    (i_t-k_dp))*(    (i_r-r_dp))*(    (i_b-l_dp))*(resistivite_chimie(1:3,j+1,k+1,r+1,l+1))
+
+      sigav = sum(resistivite_chimie(0,j:j+1,k:k+1,r:r+1,l:l+1)) / 16d0
+
+   endif
+
+   sigP= 10d0**x(1)
+   sigO= 10d0**x(2)
 
    ! modification since x(3) can be negative we simply use the sign of the leftmost
    ! point. If there is a sign inversion, we set it to zero.
    ! If you are using Hall resisitvities, this could be improved by using a linear
    ! interpolation instead of log.
-   sigH=(10.0d0**x(3))*resistivite_chimie(0,j,k,l,1)
-   sigav = sum(resistivite_chimie(0,j:j+1,k:k+1,l:l+1,1)) / 8d0
-   if(sigav .ne. resistivite_chimie(0,j,k,l,1))then
+   sigH=(10d0**x(3))*resistivite_chimie(0,j,k,r,l)
+   if(sigav .ne. resistivite_chimie(0,j,k,r,l))then
       sigH = 0
    endif
 
-end subroutine sig_x2d
-!###########################################################
-!###########################################################
-!###########################################################
-! TC: for resistivity table
-subroutine sig_x3d(ll,ii,xx,j,k,xi,lb,ib,sigO,sigH,sigP)
-
-   use amr_parameters,    only : dp
-   use nimhd_commons
-   use nimhd_parameters
-   implicit none
-
-   integer, intent(in)             :: j,k,xi,ib
-   real(dp), intent(in)            :: ll,ii,xx,lb
-   real(dp), intent(out)           :: sigO,sigH,sigP
-   real(dp)                        :: B,nH,temper,sigav
-   real(dp)                        :: j_dp,k_dp,xi_dp,b_dp
-   real(dp), dimension(0:3)        :: x
-   integer                         :: i,kk
-
-   j_dp = real(j,dp)
-   kk=min(k,tchimie-1)
-   k_dp = real(kk,dp)
-   xi_dp=real(xi,dp)
-   b_dp = real(ib,dp)
-
-   x(0:3)=(1d0-(ll-j_dp))*(1d0-(ii-k_dp))*(1d0-(xx-xi_dp))*(1d0-(lb-b_dp))*(resistivite_chimie(0:3,j,  kk,  xi,  ib))+&
-             &((ll-j_dp))*(1d0-(ii-k_dp))*(1d0-(xx-xi_dp))*(1d0-(lb-b_dp))*(resistivite_chimie(0:3,j+1,kk,  xi,  ib))+&
-         &(1d0-(ll-j_dp))*(    (ii-k_dp))*(1d0-(xx-xi_dp))*(1d0-(lb-b_dp))*(resistivite_chimie(0:3,j,  kk+1,xi,  ib))+&
-             &((ll-j_dp))*(    (ii-k_dp))*(1d0-(xx-xi_dp))*(1d0-(lb-b_dp))*(resistivite_chimie(0:3,j+1,kk+1,xi,  ib))+&
-         &(1d0-(ll-j_dp))*(1d0-(ii-k_dp))*(    (xx-xi_dp))*(1d0-(lb-b_dp))*(resistivite_chimie(0:3,j,  kk,  xi+1,ib))+&
-             &((ll-j_dp))*(1d0-(ii-k_dp))*(    (xx-xi_dp))*(1d0-(lb-b_dp))*(resistivite_chimie(0:3,j+1,kk,  xi+1,ib))+&
-         &(1d0-(ll-j_dp))*(    (ii-k_dp))*(    (xx-xi_dp))*(1d0-(lb-b_dp))*(resistivite_chimie(0:3,j,  kk+1,xi+1,ib))+&
-             &((ll-j_dp))*(    (ii-k_dp))*(    (xx-xi_dp))*(1d0-(lb-b_dp))*(resistivite_chimie(0:3,j+1,kk+1,xi+1,ib))+&
-         &(1d0-(ll-j_dp))*(1d0-(ii-k_dp))*(1d0-(xx-xi_dp))*(    (lb-b_dp))*(resistivite_chimie(0:3,j,  kk,  xi,  ib+1))+&
-             &((ll-j_dp))*(1d0-(ii-k_dp))*(1d0-(xx-xi_dp))*(    (lb-b_dp))*(resistivite_chimie(0:3,j+1,kk,  xi,  ib+1))+&
-         &(1d0-(ll-j_dp))*(    (ii-k_dp))*(1d0-(xx-xi_dp))*(    (lb-b_dp))*(resistivite_chimie(0:3,j,  kk+1,xi,  ib+1))+&
-             &((ll-j_dp))*(    (ii-k_dp))*(1d0-(xx-xi_dp))*(    (lb-b_dp))*(resistivite_chimie(0:3,j+1,kk+1,xi,  ib+1))+&
-         &(1d0-(ll-j_dp))*(1d0-(ii-k_dp))*(    (xx-xi_dp))*(    (lb-b_dp))*(resistivite_chimie(0:3,j,  kk,  xi+1,ib+1))+&
-             &((ll-j_dp))*(1d0-(ii-k_dp))*(    (xx-xi_dp))*(    (lb-b_dp))*(resistivite_chimie(0:3,j+1,kk,  xi+1,ib+1))+&
-         &(1d0-(ll-j_dp))*(    (ii-k_dp))*(    (xx-xi_dp))*(    (lb-b_dp))*(resistivite_chimie(0:3,j,  kk+1,xi+1,ib+1))+&
-             &((ll-j_dp))*(    (ii-k_dp))*(    (xx-xi_dp))*(    (lb-b_dp))*(resistivite_chimie(0:3,j+1,kk+1,xi+1,ib+1))
-
-               
-   sigP= 10.0d0**x(1)
-   sigO= 10.0d0**x(2)
-
-   ! modification since x(3) can be negative we simply use the sign of the leftmost
-   ! point. If there is a sign inversion, we set it to zero.
-   ! If you are using Hall resisitvities, this could be improved by using a linear
-   ! interpolation instead of log.
-   sigH=(10.0d0**x(3))*sign(1d0,x(0))
-   sigav = sum(resistivite_chimie(0,j:j+1,kk:kk+1,xi:xi+1,ib:ib+1)) / 16.0d0
-   if(sigav .ne. resistivite_chimie(0,j,kk,xi,ib))then
-      sigH = 0.0_dp
-   endif
-
-end subroutine sig_x3d
+end subroutine interpolate_table
 
 end module resistivity_table
