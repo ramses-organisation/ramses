@@ -888,16 +888,8 @@ double precision function eta_AD_chimie(rhon,BBcell,BBcellold,temper,ionisrate)
    real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
    call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
 
-   if(use_res==1)then
-      ! 1D table: density
-      ll=(1d0+(log10(rhon)-log10(nminchimie))/dnchimie)
-      j=floor(ll)
-      j_dp=real(j,dp)
-      eta_AD_chimie=(ll-j_dp)*log10(resistivite_chimie_res(6,j+1))+(1d0-(ll-j_dp))*log10(resistivite_chimie_res(6,j))
-      eta_AD_chimie=10**eta_AD_chimie
-
    ! TC: extrapolate from table[density,temperature,magnetic field]
-   else if(use_x2d==1)then
+   if(use_x2d==1)then
       call sig_x2d(rhon,temper,BBcellold,sigO,sigH,sigP) 
       !inp=rhon/xmolaire/H2_fraction     ! inp is neutrals.cc, to fit densionbis
       inp=rhon/2d0/H2_fraction     ! inp is neutrals.cc, to fit densionbis
@@ -948,18 +940,8 @@ double precision function eta_ohm_chimie(rhon,BBcell,temper,ionisrate)
    real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
    call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
 
-   if(use_res==1)then
-      ll=(1d0+(log10(rhon)-log10(nminchimie))/dnchimie)
-      j=floor(ll)
-      j_dp=real(j,dp)
-      ! TC: the only difference between this and eta_AD_chimie is index 7 versus 6...
-      eta_ohm_chimie=(ll-j_dp)*log10(resistivite_chimie_res(7,j+1))+(1d0-(ll-j_dp))*log10(resistivite_chimie_res(7,j))
-      eta_ohm_chimie=10.0d0**eta_ohm_chimie
-      ! TC: Is this another ad-hac modif to make it go to 0?
-      eta_ohm_chimie = max(eta_ohm_chimie * (1.0d0-tanh(rhon/1.0d15)), 1d-36)
-
    ! TC: extrapolate from table[density,temperature,magnetic field] ?
-   else if(use_x2d==1)then
+   if(use_x2d==1)then
       call sig_x2d(rhon,temper,BBcell,sigO,sigH,sigP) 
       eta_ohm_chimie = (1d0 / sigP) * c_cgs * c_cgs / (4.0_dp*pi)
       eta_ohm_chimie = max(eta_ohm_chimie * (1.0d0-tanh(rhon/1.0d15)), 1d-36)
