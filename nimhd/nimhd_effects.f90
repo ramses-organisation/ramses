@@ -832,6 +832,132 @@ end function crossprodz
 !###########################################################
 !###########################################################
 !###########################################################
+double precision function betaadbricolo(rhocelln,rhon,dt,bsquare,bsquareold,dx,temper,ionisrate)
+
+   use hydro_parameters
+   use amr_commons
+   use cooling_module
+   use nimhd_parameters
+   use constants
+
+   implicit none
+   real(dp) ::rhocelln,rhon,betaadbricolotemp,dt,bsquare,bsquareold,dx,temper
+   real(dp)::gammaadbis,densionbis,rhotemp,rhotemp_cell,ionisrate
+   real(dp)::xx,dtt,bbcgs
+
+   ! function which computes the coefficient beta which
+   ! appears in ambipolar diffusion dB/dt=curl(gamma(j*B)*B)+...
+   ! see Duffin & Pudritz 2008, astro-ph 08/10/08 eq (5)
+   ! WARNING no mu_0 needed here because F_Lorentz used
+
+   if(ntestDADM.eq.0) then
+
+      rhotemp = MAX(rhon,rho_threshold)
+      rhotemp_cell = MAX(rhocelln,rho_threshold)
+
+      xx=gammaadbis(rhotemp_cell,bsquare,bsquareold,temper,ionisrate)*densionbis(rhotemp_cell)*rhotemp_cell  ! dans la cellule
+      ! gammaadbis and densionbis already in user units
+
+      if(xx.ne.0d0) then
+         betaadbricolo=1d0/xx 
+      else
+         betaadbricolo=1d39
+         if(rhotemp < 1.0d+14)then
+            write(*,*)'WARNING gammaadbis(rhocelln,bsquare,bsquareold,temper,ionisrate)*densionbis(rhocelln)*rhocelln in the cell equals 0',gammaadbis(rhotemp_cell,bsquare,bsquareold,temper,ionisrate),densionbis(rhocelln),rhocelln,bsquare,bsquareold,temper
+         endif
+      endif
+
+      !xx=gammaadbis(rhotemp,bsquare,bsquareold,temper)*densionbis(rhon)*rhon   ! a l'interface : cote ou coin selon les cas. A utiliser si l'on est pas dans un cas seuille
+      xx=gammaadbis(rhotemp,bsquare,bsquareold,temper,ionisrate)*densionbis(rhotemp)*rhotemp  
+
+      ! a l'interface : cote ou coin selon les cas. A utiliser si l'on est pas dans un cas seuille
+
+      if(xx.ne.0d0) then
+         betaadbricolotemp=1d0/xx 
+      else
+         betaadbricolotemp=1d39
+         if(rhotemp < 1.0d+14)then
+            write(*,*)'WARNING gammaadbis(rhon,bsquare,bsquareold,temper,ionisrate)*densionbis(rhon)*rhon at the interface equals 0',gammaadbis(rhotemp,bsquare,bsquareold,temper,ionisrate),densionbis(rhon),rhon
+         endif
+      endif
+
+      ! robbery to avoid too small time step
+      if(nminitimestep) then
+         if(dt.ne.0d0) then
+            xx=bsquare*betaadbricolo
+            if(xx.ne.0d0) then
+               dtt=coefad*dx*dx/xx   !dtAD pour la cellule
+            else
+               dtt=1d39
+            endif
+            if (dtt.le.dt) then   ! on compare bien dtAD calcule pour la cellule (rhocelln) avec le temps de la simu
+               betaadbricolo=coefad*dx*dx/(dt*bsquare)
+         !      write(*,*) 'la où ça seuille rho et B valent : ', rhocelln, bsquare
+               !ici dtlim est le dt le plus petit : normal, ou seuillé si besoin est.
+            else
+               betaadbricolo=betaadbricolotemp  ! le betaad normal calcule avec rho a l'interface
+            endif
+         endif
+      endif
+
+   elseif(ntestDADM.eq.1) then
+      ! test Barenblatt
+      !betaadbricolo=1d0
+      ! test C shock
+      betaadbricolo=1d0/(gammaAD*rhon)
+   endif
+
+end function betaadbricolo
+!###########################################################
+!###########################################################
+!###########################################################
+double precision function betaad(rhon,bsquare,temper,ionisrate)
+
+   use hydro_parameters
+   use nimhd_parameters
+   implicit none
+
+   ! rhon in code units
+   real(dp)::rhon,rhotemp,bsquare,temper
+   real(dp)::gammaadbis,densionbis,ionisrate
+   real(dp)::xx
+
+   ! function which computes the coefficient beta which
+   ! appears in ambipolar diffusion dB/dt=curl(gamma(j*B)*B)+...
+   ! see Duffin & Pudritz 2008, astro-ph 08/10/08 eq (5)
+   ! WARNING no mu_0 needed here because F_Lorentz used
+
+   if(ntestDADM.eq.0) then
+
+      ! Warning gammaadbis and densionbis already in code units
+      rhotemp = MAX(rhon,rho_threshold)
+      ! TC: rho_threshold is a units disaster waiting to happen
+
+      xx=gammaadbis(rhotemp,bsquare,bsquare,temper,ionisrate)*densionbis(rhotemp)*rhotemp
+      if(xx.ne.0d0) then
+         betaad=1d0/xx 
+      else
+         betaad=1d39
+         if(rhotemp < 1.0d+14)then
+         !TC: hard coded value in code units (not good)
+            write(*,*)'WARNING gammaadbis(rhotemp,bsquare,temper,ionisrate)*densionbis(rhon)*rhon equal 0',gammaadbis(rhotemp,bsquare,bsquare,temper,ionisrate),densionbis(rhotemp),rhotemp
+         endif
+      endif
+
+   elseif(ntestDADM.eq.1) then
+      ! test Barenblatt
+      !betaad=1d0
+      ! test C shock
+      betaad=1d0/(gammaAD*rhon)
+   endif
+
+   !rhon, gammaadbis(rhon) and densionbis(rhon) already in user units
+   !!betaad=betaad/scale_d
+
+end function betaad
+!###########################################################
+!###########################################################
+!###########################################################
 double precision function gammaadbis(rhon,BBcell,BBcellold,temper,ionisrate)
 
    use hydro_parameters
@@ -894,43 +1020,6 @@ end function gammaadbis
 !###########################################################
 !###########################################################
 !###########################################################
-double precision function eta_ohm_chimie(rhon,BBcell,temper,ionisrate)
-
-   use hydro_commons
-   use constants
-   use nimhd_commons
-   use nimhd_parameters
-   implicit none
-
-   real(dp) :: inp,ll,ii,lb,rhon,BBcell
-   real(dp) :: temper,sigO,sigH,sigP,BBcgs
-   real(dp) :: j_dp,ionisrate,xx
-   integer  :: j,i,ib,k
-
-   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
-   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
-
-   ! TC: extrapolate from table[density,temperature,magnetic field] ?
-   if(use_x2d==1)then
-      call interpolate_table(rhon,temper,BBcell,0,sigO,sigH,sigP) 
-      eta_ohm_chimie = (1d0 / sigP) * c_cgs * c_cgs / (4.0_dp*pi)
-      eta_ohm_chimie = max(eta_ohm_chimie * (1.0d0-tanh(rhon/1.0d15)), 1d-36)
-
-   else if(use_x3d==1)then
-      call interpolate_table(rhon,temper,BBcell,ionisrate,sigO,sigH,sigP) 
-      eta_ohm_chimie = (1d0 / sigP) * c_cgs * c_cgs / (4.0_dp*pi)
-      ! TC: why don't we do the adhoc thing here?
-   endif
-
-   ! Ad-hoc modification to ensure that the ohmic resistivity falls to zero when the density exceeds 1.0e15
-   ! when alkali metals are ionized.
-   !eta_ohm_chimie = eta_ohm_chimie * (1.0d0-tanh(rhon/1.0d15))
-   ! eta_ohm_chimie = max(eta_ohm_chimie * (1.0d0-tanh(rhon/1.0d15)), 1d-36)
-
-end function eta_ohm_chimie
-!###########################################################
-!###########################################################
-!###########################################################
 double precision function densionbis(rhon)
 
    use nimhd_parameters, only : coefionis,default_ionisrate,ntestDADM,dp
@@ -971,84 +1060,6 @@ end function densionbis
 !###########################################################
 !###########################################################
 !###########################################################
-double precision function etaohmdiss(rhon,BBcell,temper,ionisrate)
-
-   use hydro_commons
-   use amr_parameters,only:mu_gas
-   use nimhd_parameters
-   use constants
-
-   implicit none 
-   real(dp) ::rhon,xpressure,rhoH,rhotemp,BBcell
-   real(dp)::densionbis
-   real(dp)::xionisation,temper,scale_p,xpcgs,rhocgs,xnbcgs,n_H_max
-   real(dp)::eta_ohm_chimie,ionisrate
-
-   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
-   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
-
-   if(ntestDADM.eq.0) then
-      ! function which computes the coefficient eta which
-      ! appears in ohmic dissipation dB/dt=-curl(eta*curl(B))+...
-      ! see Machida, Inutsuka, Matsumoto, ApJ, 670,1198-1213, 2007
-
-      n_H_max = 2.5d+17
-
-      ! convert to CGS
-
-      ! scale_p = scale_d*(scale_v**2.)
-      ! xpcgs=xpressure*scale_p
-      ! rhocgs=rhon*scale_d
-      ! ! nb per cm3
-      ! xnbcgs=rhocgs/xmneutre
-      ! ! temperature in cgs
-      ! temper=xpcgs*xmolaire/(rhocgs*rperfectgaz)
-      ! !write(*,*)'temper',temper
-      ! 
-      ! ! degree of ionisation
-      ! ! Machida et al 2007 
-      ! xionisation=5.7d-4/(xnbcgs)
-      ! ! Shu 1987 27.7 p 363 and p 361 m_n=2.33 m_i=29
-      ! !xionisation=2.33d0/29d0*densionbis(rhon)/rhon
-      ! 
-      ! ! Machida et al 2007 : etaMD=740
-      ! !etaohmdiss=etaMD*sqrt(temper/10d0)*(1d0-tanh(xnbcgs/1d15))/xionisation
-      ! ! Dapp & Basu 2010
-      ! ! etaohmdiss=etaMD*1.3d18*(xnbcgs/1d12)*sqrt(temper/10d0)*(1d0-tanh(xnbcgs/1d15))
-      ! ! back to user units
-      ! !print*, etaohmdiss
-      ! !stop
-
-      !rhoH=rhon*xmolaire*H2_fraction*scale_d/(mu_gas*mH) ! convert in H/cc
-      rhoH=rhon*2.0d0*H2_fraction*scale_d/(mu_gas*mH) ! convert in H/cc
-
-      rhotemp = MAX(rhoH,rho_threshold)
-
-      if(rhotemp < n_H_max)then
-         etaohmdiss=eta_ohm_chimie(rhotemp,BBcell,temper,ionisrate)
-      else
-         etaohmdiss=eta_ohm_chimie(n_H_max,BBcell,temper,ionisrate)
-      endif
-      
-      etaohmdiss=etaohmdiss*scale_t/(scale_l)**2
-
-   elseif(ntestDADM.eq.1) then
-      ! test Alfven Lessaffre
-      !etaohmdiss=2d-2
-
-      ! test heat diffusion
-      !etaohmdiss=1d0
-
-      ! test oblique shock
-      !etaohmdiss=0.15d0
-
-      etaohmdiss=etaMD
-   endif
- 
-end function etaohmdiss
-!###########################################################
-!###########################################################
-!###########################################################
 double precision function etaohmdissbricolo(rhon,BBcell,temper,dt,dx,ionisrate)
 
    use hydro_commons
@@ -1058,7 +1069,7 @@ double precision function etaohmdissbricolo(rhon,BBcell,temper,dt,dx,ionisrate)
 
    implicit none 
    real(dp) ::rhon,xpressure,rhoH,rhotemp,BBcell
-   real(dp)::densionbis,ionisrate
+   real(dp)::ionisrate
    real(dp)::xionisation,temper,scale_p,xpcgs,rhocgs,xnbcgs,n_H_max
    real(dp)::eta_ohm_chimie,dx,dt,xx,dtt
 
@@ -1144,129 +1155,117 @@ end function etaohmdissbricolo
 !###########################################################
 !###########################################################
 !###########################################################
-double precision function betaad(rhon,bsquare,temper,ionisrate)
+double precision function eta_ohm_chimie(rhon,BBcell,temper,ionisrate)
 
-   use hydro_parameters
+   use hydro_commons
+   use constants
+   use nimhd_commons
    use nimhd_parameters
    implicit none
 
-   ! rhon in code units
-   real(dp)::rhon,rhotemp,bsquare,temper
-   real(dp)::gammaadbis,densionbis,ionisrate
-   real(dp)::xx
+   real(dp) :: inp,ll,ii,lb,rhon,BBcell
+   real(dp) :: temper,sigO,sigH,sigP,BBcgs
+   real(dp) :: j_dp,ionisrate,xx
+   integer  :: j,i,ib,k
 
-   ! function which computes the coefficient beta which
-   ! appears in ambipolar diffusion dB/dt=curl(gamma(j*B)*B)+...
-   ! see Duffin & Pudritz 2008, astro-ph 08/10/08 eq (5)
-   ! WARNING no mu_0 needed here because F_Lorentz used
+   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
+   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
 
-   if(ntestDADM.eq.0) then
+   ! TC: extrapolate from table[density,temperature,magnetic field] ?
+   if(use_x2d==1)then
+      call interpolate_table(rhon,temper,BBcell,0,sigO,sigH,sigP) 
+      eta_ohm_chimie = (1d0 / sigP) * c_cgs * c_cgs / (4.0_dp*pi)
+      eta_ohm_chimie = max(eta_ohm_chimie * (1.0d0-tanh(rhon/1.0d15)), 1d-36)
 
-      ! Warning gammaadbis and densionbis already in code units
-      rhotemp = MAX(rhon,rho_threshold)
-      ! TC: rho_threshold is a units disaster waiting to happen
-
-      xx=gammaadbis(rhotemp,bsquare,bsquare,temper,ionisrate)*densionbis(rhotemp)*rhotemp
-      if(xx.ne.0d0) then
-         betaad=1d0/xx 
-      else
-         betaad=1d39
-         if(rhotemp < 1.0d+14)then
-         !TC: hard coded value in code units (not good)
-            write(*,*)'WARNING gammaadbis(rhotemp,bsquare,temper,ionisrate)*densionbis(rhon)*rhon equal 0',gammaadbis(rhotemp,bsquare,bsquare,temper,ionisrate),densionbis(rhotemp),rhotemp
-         endif
-      endif
-
-   elseif(ntestDADM.eq.1) then
-      ! test Barenblatt
-      !betaad=1d0
-      ! test C shock
-      betaad=1d0/(gammaAD*rhon)
+   else if(use_x3d==1)then
+      call interpolate_table(rhon,temper,BBcell,ionisrate,sigO,sigH,sigP) 
+      eta_ohm_chimie = (1d0 / sigP) * c_cgs * c_cgs / (4.0_dp*pi)
+      ! TC: why don't we do the adhoc thing here?
    endif
 
-   !rhon, gammaadbis(rhon) and densionbis(rhon) already in user units
-   !!betaad=betaad/scale_d
+   ! Ad-hoc modification to ensure that the ohmic resistivity falls to zero when the density exceeds 1.0e15
+   ! when alkali metals are ionized.
+   !eta_ohm_chimie = eta_ohm_chimie * (1.0d0-tanh(rhon/1.0d15))
+   ! eta_ohm_chimie = max(eta_ohm_chimie * (1.0d0-tanh(rhon/1.0d15)), 1d-36)
 
-end function betaad
+end function eta_ohm_chimie
 !###########################################################
 !###########################################################
 !###########################################################
-double precision function betaadbricolo(rhocelln,rhon,dt,bsquare,bsquareold,dx,temper,ionisrate)
+double precision function etaohmdiss(rhon,BBcell,temper,ionisrate)
 
-   use hydro_parameters
-   use amr_commons
-   use cooling_module
+   use hydro_commons
+   use amr_parameters,only:mu_gas
    use nimhd_parameters
    use constants
 
-   implicit none
-   real(dp) ::rhocelln,rhon,betaadbricolotemp,dt,bsquare,bsquareold,dx,temper
-   real(dp)::gammaadbis,densionbis,rhotemp,rhotemp_cell,ionisrate
-   real(dp)::xx,dtt,bbcgs
+   implicit none 
+   real(dp) ::rhon,xpressure,rhoH,rhotemp,BBcell
+   real(dp)::xionisation,temper,scale_p,xpcgs,rhocgs,xnbcgs,n_H_max
+   real(dp)::eta_ohm_chimie,ionisrate
 
-   ! function which computes the coefficient beta which
-   ! appears in ambipolar diffusion dB/dt=curl(gamma(j*B)*B)+...
-   ! see Duffin & Pudritz 2008, astro-ph 08/10/08 eq (5)
-   ! WARNING no mu_0 needed here because F_Lorentz used
+   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
+   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
 
    if(ntestDADM.eq.0) then
+      ! function which computes the coefficient eta which
+      ! appears in ohmic dissipation dB/dt=-curl(eta*curl(B))+...
+      ! see Machida, Inutsuka, Matsumoto, ApJ, 670,1198-1213, 2007
 
-      rhotemp = MAX(rhon,rho_threshold)
-      rhotemp_cell = MAX(rhocelln,rho_threshold)
+      n_H_max = 2.5d+17
 
-      xx=gammaadbis(rhotemp_cell,bsquare,bsquareold,temper,ionisrate)*densionbis(rhotemp_cell)*rhotemp_cell  ! dans la cellule
-      ! gammaadbis and densionbis already in user units
+      ! convert to CGS
 
-      if(xx.ne.0d0) then
-         betaadbricolo=1d0/xx 
+      ! scale_p = scale_d*(scale_v**2.)
+      ! xpcgs=xpressure*scale_p
+      ! rhocgs=rhon*scale_d
+      ! ! nb per cm3
+      ! xnbcgs=rhocgs/xmneutre
+      ! ! temperature in cgs
+      ! temper=xpcgs*xmolaire/(rhocgs*rperfectgaz)
+      ! !write(*,*)'temper',temper
+      ! 
+      ! ! degree of ionisation
+      ! ! Machida et al 2007 
+      ! xionisation=5.7d-4/(xnbcgs)
+      ! ! Shu 1987 27.7 p 363 and p 361 m_n=2.33 m_i=29
+      ! !xionisation=2.33d0/29d0*densionbis(rhon)/rhon
+      ! 
+      ! ! Machida et al 2007 : etaMD=740
+      ! !etaohmdiss=etaMD*sqrt(temper/10d0)*(1d0-tanh(xnbcgs/1d15))/xionisation
+      ! ! Dapp & Basu 2010
+      ! ! etaohmdiss=etaMD*1.3d18*(xnbcgs/1d12)*sqrt(temper/10d0)*(1d0-tanh(xnbcgs/1d15))
+      ! ! back to user units
+      ! !print*, etaohmdiss
+      ! !stop
+
+      !rhoH=rhon*xmolaire*H2_fraction*scale_d/(mu_gas*mH) ! convert in H/cc
+      rhoH=rhon*2.0d0*H2_fraction*scale_d/(mu_gas*mH) ! convert in H/cc
+
+      rhotemp = MAX(rhoH,rho_threshold)
+
+      if(rhotemp < n_H_max)then
+         etaohmdiss=eta_ohm_chimie(rhotemp,BBcell,temper,ionisrate)
       else
-         betaadbricolo=1d39
-         if(rhotemp < 1.0d+14)then
-            write(*,*)'WARNING gammaadbis(rhocelln,bsquare,bsquareold,temper,ionisrate)*densionbis(rhocelln)*rhocelln in the cell equals 0',gammaadbis(rhotemp_cell,bsquare,bsquareold,temper,ionisrate),densionbis(rhocelln),rhocelln,bsquare,bsquareold,temper
-         endif
+         etaohmdiss=eta_ohm_chimie(n_H_max,BBcell,temper,ionisrate)
       endif
-
-      !xx=gammaadbis(rhotemp,bsquare,bsquareold,temper)*densionbis(rhon)*rhon   ! a l'interface : cote ou coin selon les cas. A utiliser si l'on est pas dans un cas seuille
-      xx=gammaadbis(rhotemp,bsquare,bsquareold,temper,ionisrate)*densionbis(rhotemp)*rhotemp  
-
-      ! a l'interface : cote ou coin selon les cas. A utiliser si l'on est pas dans un cas seuille
-
-      if(xx.ne.0d0) then
-         betaadbricolotemp=1d0/xx 
-      else
-         betaadbricolotemp=1d39
-         if(rhotemp < 1.0d+14)then
-            write(*,*)'WARNING gammaadbis(rhon,bsquare,bsquareold,temper,ionisrate)*densionbis(rhon)*rhon at the interface equals 0',gammaadbis(rhotemp,bsquare,bsquareold,temper,ionisrate),densionbis(rhon),rhon
-         endif
-      endif
-
-      ! robbery to avoid too small time step
-      if(nminitimestep) then
-         if(dt.ne.0d0) then
-            xx=bsquare*betaadbricolo
-            if(xx.ne.0d0) then
-               dtt=coefad*dx*dx/xx   !dtAD pour la cellule
-            else
-               dtt=1d39
-            endif
-            if (dtt.le.dt) then   ! on compare bien dtAD calcule pour la cellule (rhocelln) avec le temps de la simu
-               betaadbricolo=coefad*dx*dx/(dt*bsquare)
-         !      write(*,*) 'la où ça seuille rho et B valent : ', rhocelln, bsquare
-               !ici dtlim est le dt le plus petit : normal, ou seuillé si besoin est.
-            else
-               betaadbricolo=betaadbricolotemp  ! le betaad normal calcule avec rho a l'interface
-            endif
-         endif
-      endif
+      
+      etaohmdiss=etaohmdiss*scale_t/(scale_l)**2
 
    elseif(ntestDADM.eq.1) then
-      ! test Barenblatt
-      !betaadbricolo=1d0
-      ! test C shock
-      betaadbricolo=1d0/(gammaAD*rhon)
-   endif
+      ! test Alfven Lessaffre
+      !etaohmdiss=2d-2
 
-end function betaadbricolo
+      ! test heat diffusion
+      !etaohmdiss=1d0
+
+      ! test oblique shock
+      !etaohmdiss=0.15d0
+
+      etaohmdiss=etaMD
+   endif
+ 
+end function etaohmdiss
 !###########################################################
 !###########################################################
 !###########################################################
