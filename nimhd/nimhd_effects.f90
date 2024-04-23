@@ -984,7 +984,7 @@ double precision function gammaadbis(rhon,BBcell,BBcellold,temper)
 
    ! TC: extrapolate from table[density,temperature,magnetic field]
    if(resistivity_table_ndim==3)then
-      call interpolate_table(rhoH,temper,BBcellold,0d0,sigO,sigH,sigP) 
+      call interpolate_table(rhoH,temper,BBcellold,sigO,sigH,sigP) 
       !inp=rhoH/xmolaire/H2_fraction     ! inp is neutrals.cc, to fit densionbis
       inp=rhoH/2d0/H2_fraction     ! inp is neutrals.cc, to fit densionbis
       eta_AD_chimie=(sigO/(sigO**2+sigH**2)-1d0/sigP)   ! resistivity in s
@@ -1228,7 +1228,7 @@ double precision function eta_ohm_chimie(rhon,BBcell,temper)
 
    ! TC: extrapolate from table[density,temperature,magnetic field] ?
    if(resistivity_table_ndim==3)then
-      call interpolate_table(rhon,temper,BBcell,0d0,sigO,sigH,sigP) 
+      call interpolate_table(rhon,temper,BBcell,sigO,sigH,sigP) 
       eta_ohm_chimie = (1d0 / sigP) * c_cgs * c_cgs / (4.0_dp*pi)
       eta_ohm_chimie = max(eta_ohm_chimie * (1.0d0-tanh(rhon/1.0d15)), 1d-36)
 

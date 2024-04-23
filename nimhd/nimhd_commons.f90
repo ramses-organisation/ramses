@@ -3,6 +3,6 @@ module nimhd_commons
    implicit none
 
    ! for RAMSES
-   real(dp),allocatable,dimension(:,:,:,:,:)::resistivite_chimie ! resistivites chimie
+   real(dp),allocatable,dimension(:,:,:,:)::resistivite_chimie ! resistivites chimie
 
 end module nimhd_commons

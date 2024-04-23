@@ -19,23 +19,8 @@ module resistivity_table
    real(dp) :: nminchimie   ! density  
    real(dp) :: tminchimie   ! temperature
 
-   integer   :: nion=7            ! number of ions
-   integer   :: nbins_grains      ! number of grain sizes
-   integer   :: Nvarchimie        ! number of chemical species = ions + 3*grains (neutral,+,-) 
-
-   ! grain variables for each bin
-   real(dp), allocatable, dimension(:) :: r_g    ! radius
-   real(dp), allocatable, dimension(:) :: m_g    ! mass
-
    real(dp),allocatable,dimension(:,:,:)::resistivite_chimie_x ! to read in resistivity table
 
-   !!!! Pour les collisions avec les grains
-   real(dp), allocatable, dimension(:) :: q           ! charge 
-   real(dp), allocatable, dimension(:) :: m           ! masse
-
-   real(dp), parameter :: me=9.1094d-28 ! masse de l'electron, en g
-   real(dp), parameter :: mp=1.6726d-24 ! masse du proton, en g
-   real(dp), parameter :: e=4.803204d-10 ! charge de l'electron, en cgs
 
 contains
 
@@ -47,6 +32,8 @@ subroutine read_resistivities
    ! Read non-ideal MHD resistivities from file and construct table
    !----------------------------------------------------------------
    integer::i,j,k
+   integer   :: Nvarchimie        ! number of chemical species = ions + 3*grains (neutral,+,-) 
+   real(dp)::bmaxchimie,dummy
    real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
    call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
 
@@ -73,8 +60,16 @@ subroutine read_resistivities
    tminchimie=(resistivite_chimie_x(-1,1,1))
    dtchimie=(log10(resistivite_chimie_x(-1,1,tchimie))-log10(resistivite_chimie_x(-1,1,1)))/&
             &(tchimie-1)
-   call rq
-   call construct_resistivity_table
+
+   ! values for Btable
+   bminchimie=1d-10
+   bmaxchimie=1d5               ! ok for first core in nimhd. maybe not enough for second core.
+   bchimie=100
+   dbchimie=(log10(bmaxchimie)-log10(bminchimie))/real((bchimie-1),dp)
+   allocate(resistivite_chimie(0:3,1:nchimie,1:tchimie,1:bchimie)) !memory leak
+
+   ! construct table
+   call construct_resistivity_table(nvarchimie)
 
    deallocate(resistivite_chimie_x)
 
@@ -84,33 +79,99 @@ end subroutine read_resistivities
 !###########################################################
 !###########################################################
 !###########################################################
-subroutine construct_resistivity_table
-   use nimhd_commons
+subroutine construct_resistivity_table(nvarchimie)
+
    use amr_commons, only : myid
+   use nimhd_commons
    use constants, only:pi,c_cgs, kB
    implicit none
 
+   ! ---- chemistry ---------
+   integer   :: nion=7            ! number of ions
+   integer   :: nbins_grains      ! number of grain sizes
+   real(dp)  :: nbins_real
+   integer   :: Nvarchimie        ! number of chemical species = ions + 3*grains (neutral,+,-) 
+   ! species charge and mass
+   real(dp), allocatable, dimension(:) :: q
+   real(dp), allocatable, dimension(:) :: m
+   ! grain radius and mass for each bin
+   real(dp), allocatable, dimension(:) :: r_g
+   real(dp), allocatable, dimension(:) :: m_g
+   ! grain density in g/cc
+   real(dp), parameter :: rho_s=2.3_dp
+   ! grain size distribution parameters, cf Kunz & Mouschovias 2009
+   real(dp), parameter :: a_0=0.0375d-4      ! cm
+   real(dp), parameter :: a_min=0.0181d-4    ! cm
+   real(dp), parameter :: a_max=0.9049d-4    ! cm
+   real(dp), parameter :: zeta=a_min/a_max   ! a_min/a_max
+   real(dp), parameter :: lambda_pow=-3.5d0  ! Coeff power law
+   ! other constants
+   real(dp), parameter :: me=9.1094d-28 ! masse de l'electron, en g
+   real(dp), parameter :: mp=1.6726d-24 ! masse du proton, en g
+   real(dp), parameter :: e=4.803204d-10 ! charge de l'electron, en cgs
+   !--------------------------
+
    integer  :: iB,iH,iT,i
-   real(dp) :: B,bmaxchimie,nH,T,sigH,sigO,sigP
+   real(dp) :: B,nH,T,sigH,sigO,sigP
 
    ! resistivites (cf Kunz & Mouschovias 2009)
    real(dp), allocatable, dimension(:)  :: sigma         ! sigma_s
    real(dp), allocatable, dimension(:)  :: tau_sn
    real(dp), allocatable, dimension(:)  :: omega
 
-   if(myid==1) write(*,*) 'Computing 3D resistivities table'
-   
-   ! values for Btable
-   bminchimie=1d-10
-   bmaxchimie=1d5               ! ok for first core in nimhd. maybe not enough for second core.
-   bchimie=100
-   dbchimie=(log10(bmaxchimie)-log10(bminchimie))/real((bchimie-1),dp)
+   ! table contains values for neutral, positive and negatively charged grains for each size bin
+   ! so we divide by 3 to get the actual amount of size bins
+   nbins_real=real(nvarchimie-nion,dp)/3.0_dp
+   nbins_grains=floor(nbins_real)
+   if (nbins_real.ne.real(nbins_grains,dp)) then
+      print*, 'issue in number of species'
+      stop
+   endif
 
-   allocate(resistivite_chimie(0:3,1:nchimie,1:tchimie,1:bchimie))
+   allocate(r_g(nbins_grains)) ! grain sizes
+   allocate(m_g(nbins_grains)) ! grain masses
+   allocate(m(nvarchimie))     ! particle (ions + grains) masses
+   allocate(q(nvarchimie))     ! particle (ions + grains) charges
    allocate(sigma(nvarchimie))
    allocate(tau_sn(nvarchimie))
    allocate(omega(nvarchimie))
 
+   ! determine grain sizes
+   if(nbins_grains==1) then
+     ! if we have only 1 bin, we take this average value
+     r_g(1)=a_0
+   else
+     do  i=1,nbins_grains    ! cf Kunz & Mouschovias 2009
+         r_g(i)=a_min*zeta**(-(i-1.d0)/nbins_grains)*(5.d0*(1.d0-zeta**(0.5/nbins_grains))/(1.d0-zeta**(2.5/nbins_grains)))**0.5
+     end do
+   end if
+
+   ! set particle charges
+   q(:)=1d0*e    ! cations
+   q(1)=-1d0*e   ! electron
+   do  i=nion+1,Nvarchimie
+      if (mod(i-nion,3)==0) q(i)=0d0     ! neutral grains
+      if (mod(i-nion,3)==1) q(i)=1d0*e   ! positively charged grains
+      if (mod(i-nion,3)==2) q(i)=-1d0*e  ! negatively charged grains
+   end do
+
+   ! set particle and grain masses
+   m(:) = 0d0
+   m(1) = me               ! e-
+   m(2) = 23.5d0*mp        ! ions metalliques
+   m(3) = 29d0*mp          ! ions moleculaires
+   m(4) = 3*mp             ! H3+
+   m(5) = mp               ! H+
+   m(6) = 12d0*mp          ! C+
+   m(7) = 4d0*mp           ! He+
+   do i=1,nbins_grains     ! masse des grains
+      m_g(i)=4d0/3d0*pi*r_g(i)**3*rho_s
+      m(nion+3*(i-1)+1:nion+3*i)=m_g(i) !mass for neutral, postive and negative grain is the same
+   end do
+
+
+   ! Compute table values
+   if(myid==1) write(*,*) 'Computing 3D resistivities table'
    tau_sn      = 0.0_dp
    omega       = 0.0_dp
    sigma       = 0.0_dp
@@ -161,10 +222,11 @@ subroutine construct_resistivity_table
          sigH=sigH-sigma(i)*omega(i)*tau_sn(i)/(1d0+(omega(i)*tau_sn(i))**2)
       end do
 
-      resistivite_chimie(1,iH,iT,1,iB)=log10(sigP)
-      resistivite_chimie(2,iH,iT,1,iB)=log10(sigO)
-      resistivite_chimie(3,iH,iT,1,iB)=log10(abs(sigH))
-      resistivite_chimie(0,iH,iT,1,iB)=sign(1.0d0,sigH)
+      resistivite_chimie(1,iH,iT,iB)=log10(sigP)
+      resistivite_chimie(2,iH,iT,iB)=log10(sigO)
+      resistivite_chimie(3,iH,iT,iB)=log10(abs(sigH))
+      resistivite_chimie(0,iH,iT,iB)=sign(1.0d0,sigH)
+
    end do
    end do
    end do
@@ -175,76 +237,6 @@ subroutine construct_resistivity_table
    if(myid==1) write(*,*) '3D resistivities table complete'
 
 end subroutine construct_resistivity_table
-!###########################################################
-!###########################################################
-!###########################################################
-!###########################################################
-subroutine rq    ! just use it once if you change the grains distribution to update the variables q(:) and r_g(:)
-   use nimhd_commons
-   use constants, only:pi
-   implicit none
-   integer :: i
-   real(dp):: nbins_real
-
-   ! grain density in g/cc
-   real(dp), parameter :: rho_s=2.3_dp
-
-   ! grain size distribution parameters, cf Kunz & Mouschovias 2009
-   real(dp), parameter :: a_0=0.0375d-4      ! cm
-   real(dp), parameter :: a_min=0.0181d-4    ! cm
-   real(dp), parameter :: a_max=0.9049d-4    ! cm
-   real(dp), parameter :: zeta=a_min/a_max   ! a_min/a_max
-   real(dp), parameter :: lambda_pow=-3.5d0  ! Coeff power law
-
-   allocate(r_g(nbins_grains)) ! grain sizes
-   allocate(m_g(nbins_grains)) ! grain masses
-   allocate(m(nvarchimie))     ! particle (ions + grains) masses
-   allocate(q(nvarchimie))     ! particle (ions + grains) charges
-
-   ! determine grain sizes
-
-   ! table contains values for neutral, positive and negatively charged grains for each size bin
-   ! so we divide by 3 to get the actual amount of size bins
-   nbins_real=real(nvarchimie-nion,dp)/3.0_dp
-   nbins_grains=floor(nbins_real)
-   if (nbins_real.ne.real(nbins_grains,dp)) then
-      print*, 'issue in number of species'
-      stop
-   endif
-
-   if(nbins_grains==1) then
-     ! if we have only 1 bin, we take this average value
-     r_g(1)=a_0
-   else
-     do  i=1,nbins_grains    ! cf Kunz & Mouschovias 2009
-         r_g(i)=a_min*zeta**(-(i-1.d0)/nbins_grains)*(5.d0*(1.d0-zeta**(0.5/nbins_grains))/(1.d0-zeta**(2.5/nbins_grains)))**0.5
-     end do
-   end if
-
-   ! set particle charges
-   q(:)=1d0*e    ! cations
-   q(1)=-1d0*e   ! electron
-   do  i=nion+1,Nvarchimie
-      if (mod(i-nion,3)==0) q(i)=0d0     ! neutral grains
-      if (mod(i-nion,3)==1) q(i)=1d0*e   ! positively charged grains
-      if (mod(i-nion,3)==2) q(i)=-1d0*e  ! negatively charged grains
-   end do
-
-   ! set particle and grain masses
-   m(:) = 0d0
-   m(1) = me               ! e-
-   m(2) = 23.5d0*mp        ! ions metalliques
-   m(3) = 29d0*mp          ! ions moleculaires
-   m(4) = 3*mp             ! H3+
-   m(5) = mp               ! H+
-   m(6) = 12d0*mp          ! C+
-   m(7) = 4d0*mp           ! He+
-   do i=1,nbins_grains     ! masse des grains
-      m_g(i)=4d0/3d0*pi*r_g(i)**3*rho_s
-      m(nion+3*(i-1)+1:nion+3*i)=m_g(i) !mass for neutral, postive and negative grain is the same
-   end do
-
-end subroutine rq
 !###########################################################
 !###########################################################
 !###########################################################
