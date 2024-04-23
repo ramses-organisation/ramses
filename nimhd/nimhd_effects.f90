@@ -508,7 +508,7 @@ subroutine computdifmag(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
                bsquarey=bemfy(l,i,j,k,1)**2+bemfy(l,i,j,k,2)**2+bemfy(l,i,j,k,3)**2
                bsquarez=bemfz(l,i,j,k,1)**2+bemfz(l,i,j,k,2)**2+bemfz(l,i,j,k,3)**2
 
-               if(ntestDADM.eq.1)then
+               if(resistivity_method==0)then
                      tcellx=1.0d0
                      tcelly=1.0d0
                      tcellz=1.0d0
@@ -535,7 +535,7 @@ subroutine computdifmag(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
                   bsqf=bmagij(l,i,j,k,1,h)**2+bmagij(l,i,j,k,2,h)**2+bmagij(l,i,j,k,3,h)**2
 
                   ! Compute gas temperature in cgs
-                  if(ntestDADM.eq.1)then
+                  if(resistivity_method==0)then
                         tcellf=1.0d0
                   else 
                         call ideal_gas_temperature(rhof, epsf, tcellf)
@@ -612,7 +612,7 @@ subroutine computambip(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,florentzx,florentzy
                rhocell = min(rhox,rhoy,rhoz,rhofx,rhofy,rhofz)
 
                ! Compute gas temperature in cgs
-               if(ntestDADM.eq.1) then
+               if(resistivity_method==0) then
                   tcell=1.0d0
                else
                   call ideal_gas_temperature(u(l,i,j,k,1), u(l,i,j,k,5), tcell)
@@ -850,8 +850,18 @@ double precision function betaadbricolo(rhocelln,rhon,dt,bsquare,bsquareold,dx,t
    ! see Duffin & Pudritz 2008, astro-ph 08/10/08 eq (5)
    ! WARNING no mu_0 needed here because F_Lorentz used
 
-   if(ntestDADM.eq.0) then
-
+   if(resistivity_method==0)then
+      ! fixed value
+      ! test Barenblatt
+      !betaad=1d0
+      ! test C shock
+      betaadbricolo=1d0/(gammaAD*rhon)
+   elseif(resistivity_method==1)then
+      ! *** put your analytic resistivity here ***
+      gammaAD = 1
+      betaadbricolo=1d0/(gammaAD*rhon)
+   else
+      ! table
       rhotemp = MAX(rhon,rho_threshold)
       rhotemp_cell = MAX(rhocelln,rho_threshold)
 
@@ -899,12 +909,6 @@ double precision function betaadbricolo(rhocelln,rhon,dt,bsquare,bsquareold,dx,t
             endif
          endif
       endif
-
-   elseif(ntestDADM.eq.1) then
-      ! test Barenblatt
-      !betaadbricolo=1d0
-      ! test C shock
-      betaadbricolo=1d0/(gammaAD*rhon)
    endif
 
 end function betaadbricolo
@@ -927,7 +931,18 @@ double precision function betaad(rhon,bsquare,temper,ionisrate)
    ! see Duffin & Pudritz 2008, astro-ph 08/10/08 eq (5)
    ! WARNING no mu_0 needed here because F_Lorentz used
 
-   if(ntestDADM.eq.0) then
+   if(resistivity_method==0)then
+      ! fixed value
+      ! test Barenblatt
+      !betaad=1d0
+      ! test C shock
+      betaad=1d0/(gammaAD*rhon)
+   elseif(resistivity_method==1)then
+      ! *** put your analytic resistivity here ***
+      gammaAD = 1
+      betaad=1d0/(gammaAD*rhon)
+   else
+      ! table
 
       ! Warning gammaadbis and densionbis already in code units
       rhotemp = MAX(rhon,rho_threshold)
@@ -943,16 +958,7 @@ double precision function betaad(rhon,bsquare,temper,ionisrate)
             write(*,*)'WARNING gammaadbis(rhotemp,bsquare,temper,ionisrate)*densionbis(rhon)*rhon equal 0',gammaadbis(rhotemp,bsquare,bsquare,temper,ionisrate),densionbis(rhotemp),rhotemp
          endif
       endif
-
-   elseif(ntestDADM.eq.1) then
-      ! test Barenblatt
-      !betaad=1d0
-      ! test C shock
-      betaad=1d0/(gammaAD*rhon)
    endif
-
-   !rhon, gammaadbis(rhon) and densionbis(rhon) already in user units
-   !!betaad=betaad/scale_d
 
 end function betaad
 !###########################################################
@@ -963,6 +969,7 @@ double precision function gammaadbis(rhon,BBcell,BBcellold,temper,ionisrate)
    use hydro_parameters
    use amr_parameters,only:mu_gas
    use nimhd_parameters
+   use resistivity_table
    use constants
    implicit none
 
@@ -993,8 +1000,8 @@ double precision function gammaadbis(rhon,BBcell,BBcellold,temper,ionisrate)
    rhoH = max(rhoH, n_H_max)
 
    ! TC: extrapolate from table[density,temperature,magnetic field]
-   if(use_x2d==1)then
-      call interpolate_table(rhoH,temper,BBcellold,0,sigO,sigH,sigP) 
+   if(resistivity_table_ndim==3)then
+      call interpolate_table(rhoH,temper,BBcellold,0d0,sigO,sigH,sigP) 
       !inp=rhoH/xmolaire/H2_fraction     ! inp is neutrals.cc, to fit densionbis
       inp=rhoH/2d0/H2_fraction     ! inp is neutrals.cc, to fit densionbis
       eta_AD_chimie=(sigO/(sigO**2+sigH**2)-1d0/sigP)   ! resistivity in s
@@ -1003,7 +1010,7 @@ double precision function gammaadbis(rhon,BBcell,BBcellold,temper,ionisrate)
       eta_AD_chimie=BBcgs**2/(eta_AD_chimie*densionbis(inp)*inp*scale_d*scale_d*c_cgs**2)  ! need B in G, output is gammaad in cgs
 
    ! TC: extrapolate from table[density,temperature,ionisation rate,magnetic field]
-   else if(use_x3d==1)then
+   else if(resistivity_table_ndim==4)then
       call interpolate_table(rhoH,temper,BBcellold,ionisrate,sigO,sigH,sigP) 
       inp=rhoH/2d0/H2_fraction     ! inp is neutrals.cc, to fit densionbis
       eta_AD_chimie=(sigO/(sigO**2+sigH**2)-1d0/sigP)   ! resistivity in s
@@ -1022,7 +1029,7 @@ end function gammaadbis
 !###########################################################
 double precision function densionbis(rhon)
 
-   use nimhd_parameters, only : coefionis,default_ionisrate,ntestDADM,dp
+   use nimhd_parameters, only : coefionis,default_ionisrate,dp
 
    implicit none 
    real(dp)::rhon
@@ -1041,20 +1048,8 @@ double precision function densionbis(rhon)
    ! WARNING 3d-16 si in cgs
    densionbis=coefionis*sqrt(rhoncgs*default_ionisrate/1.0d-17)
 
-   !!!!!!!!!!!!!!!!!!!!!!!!!
-   ! densionbis in USER UNITS !!!
-   !!!!!!!!!!!!!!!!!!!!!!!!!
-
-   ! transformation coefionis in user units
-   !densionbis=densionbis/sqrt(scale_d)
-
-   ! back in user units
+   ! back in code units
    densionbis=densionbis/scale_d
-
-   ! test C shock Duffin et Pudritz
-   if(ntestDADM.eq.1) then
-      densionbis=1d0
-   endif
 
 end function densionbis
 !###########################################################
@@ -1080,7 +1075,7 @@ double precision function etaohmdissbricolo(rhon,BBcell,temper,dt,dx,ionisrate)
    ! appears in ohmic dissipation dB/dt=-curl(eta*curl(B))+...
    ! see Machida, Inutsuka, Matsumoto, ApJ, 670,1198-1213, 2007
 
-   if(ntestDADM.eq.0) then
+   if(resistivity_method>0) then
 
       n_H_max = 2.5d+17
 
@@ -1138,7 +1133,7 @@ double precision function etaohmdissbricolo(rhon,BBcell,temper,dt,dx,ionisrate)
          endif
       endif
 
-   elseif(ntestDADM.eq.1) then
+   elseif(resistivity_method==0) then
       ! test Alfven Lessaffre
       !etaohmdiss=2d-2
 
@@ -1152,43 +1147,6 @@ double precision function etaohmdissbricolo(rhon,BBcell,temper,dt,dx,ionisrate)
    endif
 
 end function etaohmdissbricolo
-!###########################################################
-!###########################################################
-!###########################################################
-double precision function eta_ohm_chimie(rhon,BBcell,temper,ionisrate)
-
-   use hydro_commons
-   use constants
-   use nimhd_commons
-   use nimhd_parameters
-   implicit none
-
-   real(dp) :: inp,ll,ii,lb,rhon,BBcell
-   real(dp) :: temper,sigO,sigH,sigP,BBcgs
-   real(dp) :: j_dp,ionisrate,xx
-   integer  :: j,i,ib,k
-
-   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
-   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
-
-   ! TC: extrapolate from table[density,temperature,magnetic field] ?
-   if(use_x2d==1)then
-      call interpolate_table(rhon,temper,BBcell,0,sigO,sigH,sigP) 
-      eta_ohm_chimie = (1d0 / sigP) * c_cgs * c_cgs / (4.0_dp*pi)
-      eta_ohm_chimie = max(eta_ohm_chimie * (1.0d0-tanh(rhon/1.0d15)), 1d-36)
-
-   else if(use_x3d==1)then
-      call interpolate_table(rhon,temper,BBcell,ionisrate,sigO,sigH,sigP) 
-      eta_ohm_chimie = (1d0 / sigP) * c_cgs * c_cgs / (4.0_dp*pi)
-      ! TC: why don't we do the adhoc thing here?
-   endif
-
-   ! Ad-hoc modification to ensure that the ohmic resistivity falls to zero when the density exceeds 1.0e15
-   ! when alkali metals are ionized.
-   !eta_ohm_chimie = eta_ohm_chimie * (1.0d0-tanh(rhon/1.0d15))
-   ! eta_ohm_chimie = max(eta_ohm_chimie * (1.0d0-tanh(rhon/1.0d15)), 1d-36)
-
-end function eta_ohm_chimie
 !###########################################################
 !###########################################################
 !###########################################################
@@ -1207,7 +1165,7 @@ double precision function etaohmdiss(rhon,BBcell,temper,ionisrate)
    real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
    call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
 
-   if(ntestDADM.eq.0) then
+   if(resistivity_method>0) then
       ! function which computes the coefficient eta which
       ! appears in ohmic dissipation dB/dt=-curl(eta*curl(B))+...
       ! see Machida, Inutsuka, Matsumoto, ApJ, 670,1198-1213, 2007
@@ -1252,7 +1210,7 @@ double precision function etaohmdiss(rhon,BBcell,temper,ionisrate)
       
       etaohmdiss=etaohmdiss*scale_t/(scale_l)**2
 
-   elseif(ntestDADM.eq.1) then
+   elseif(resistivity_method==0) then
       ! test Alfven Lessaffre
       !etaohmdiss=2d-2
 
@@ -1266,6 +1224,44 @@ double precision function etaohmdiss(rhon,BBcell,temper,ionisrate)
    endif
  
 end function etaohmdiss
+!###########################################################
+!###########################################################
+!###########################################################
+double precision function eta_ohm_chimie(rhon,BBcell,temper,ionisrate)
+
+   use hydro_commons
+   use constants
+   use nimhd_commons
+   use nimhd_parameters
+   use resistivity_table
+   implicit none
+
+   real(dp) :: inp,ll,ii,lb,rhon,BBcell
+   real(dp) :: temper,sigO,sigH,sigP,BBcgs
+   real(dp) :: j_dp,ionisrate,xx
+   integer  :: j,i,ib,k
+
+   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
+   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
+
+   ! TC: extrapolate from table[density,temperature,magnetic field] ?
+   if(resistivity_table_ndim==3)then
+      call interpolate_table(rhon,temper,BBcell,0d0,sigO,sigH,sigP) 
+      eta_ohm_chimie = (1d0 / sigP) * c_cgs * c_cgs / (4.0_dp*pi)
+      eta_ohm_chimie = max(eta_ohm_chimie * (1.0d0-tanh(rhon/1.0d15)), 1d-36)
+
+   else if(resistivity_table_ndim==4)then
+      call interpolate_table(rhon,temper,BBcell,ionisrate,sigO,sigH,sigP) 
+      eta_ohm_chimie = (1d0 / sigP) * c_cgs * c_cgs / (4.0_dp*pi)
+      ! TC: why don't we do the adhoc thing here?
+   endif
+
+   ! Ad-hoc modification to ensure that the ohmic resistivity falls to zero when the density exceeds 1.0e15
+   ! when alkali metals are ionized.
+   !eta_ohm_chimie = eta_ohm_chimie * (1.0d0-tanh(rhon/1.0d15))
+   ! eta_ohm_chimie = max(eta_ohm_chimie * (1.0d0-tanh(rhon/1.0d15)), 1d-36)
+
+end function eta_ohm_chimie
 !###########################################################
 !###########################################################
 !###########################################################

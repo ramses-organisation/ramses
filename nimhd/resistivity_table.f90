@@ -1,12 +1,14 @@
 module resistivity_table
    use amr_parameters, ONLY:dp
+   use nimhd_commons
+   use nimhd_parameters
    implicit none
 
    ! values at which the resistivities where evaluated
-   real(dp),allocatable,dimension(:)::table_values_b  ! magnetic field
-   real(dp),allocatable,dimension(:)::table_values_n  ! density
-   real(dp),allocatable,dimension(:)::table_values_t  ! temperature
-   real(dp),allocatable,dimension(:)::table_values_xi ! ionisation rate
+   !real(dp),allocatable,dimension(:)::table_values_b  ! magnetic field
+   !real(dp),allocatable,dimension(:)::table_values_n  ! density
+   !real(dp),allocatable,dimension(:)::table_values_t  ! temperature
+   !real(dp),allocatable,dimension(:)::table_values_xi ! ionisation rate
 
    ! number of steps in the table for
    integer :: bchimie       ! B field (currently only used for reading table)
@@ -51,6 +53,7 @@ module resistivity_table
 
 
 contains
+
 subroutine read_resistivities
    use nimhd_parameters
    use nimhd_commons
@@ -70,16 +73,12 @@ subroutine read_resistivities
    ! make separate routine that computes the resistivity based on the chosen option
    ! move use_x3d to patch. We don't want to include a large table in ramses
 
-   if(use_x3d==1)then
+   if(resistivity_table_ndim==4)then
       open(42,file=res_table_name,status='old')
       read(42,*) nchimie, tchimie, xichimie, nvarchimie
       read(42,*)
       read(42,*)
       allocate(resistivite_chimie_x(-2:nvarchimie+4,nchimie,tchimie,xichimie))
-
-      allocate(table_values_n(nchimie))
-      allocate(table_values_t(tchimie))
-      allocate(table_values_xi(xichimie))
 
       do k=1,xichimie
          do i=1,tchimie
@@ -126,6 +125,10 @@ subroutine nimhd_3dtable
    real(dp) :: B,bmaxchimie,nH,T,sigH,sigO,sigP
    real(dp), dimension(nvarchimie) :: x
 
+   real(dp), allocatable, dimension(:)  :: sigma         ! sigma_s
+   real(dp), allocatable, dimension(:)  :: tau_sn
+   real(dp), allocatable, dimension(:)  :: omega
+
    if(myid==1) write(*,*) 'Computing 3D resistivities table'
    
    ! values for Btable
@@ -134,7 +137,10 @@ subroutine nimhd_3dtable
    bchimie=100
    dbchimie=(log10(bmaxchimie)-log10(bminchimie))/real((bchimie-1),dp)
 
-   allocate(resistivite_chimie(1:3,1:nchimie,1:tchimie,1,1,1:bchimie))
+   allocate(resistivite_chimie(0:3,1:nchimie,1:tchimie,1,1:bchimie))
+   allocate(sigma(nvarchimie))
+   allocate(tau_sn(nvarchimie))
+   allocate(omega(nvarchimie))
 
    tau_sn      = 0.0_dp
    omega       = 0.0_dp
@@ -301,7 +307,7 @@ subroutine nimhd_4dtable
 
    integer  :: iB,iH,iT,iX,i
    real(dp) :: B,bmaxchimie,nH,T,xi,sigH,sigO,sigP
-   real(dp)            :: sigv, muuu
+   real(dp) :: sigv, muuu
 
 
    ! resistivites (cf Kunz & Mouschovias 2009)
@@ -317,7 +323,7 @@ subroutine nimhd_4dtable
    bchimie=150
    dbchimie=(log10(bmaxchimie)-log10(bminchimie))/real((bchimie-1),dp)
 
-   allocate(resistivite_chimie(1:3,1:nchimie,1:tchimie,1:xichimie,1:bchimie))
+   allocate(resistivite_chimie(0:3,1:nchimie,1:tchimie,1:xichimie,1:bchimie))
    allocate(sigma(nvarchimie))
    allocate(tau_sn(nvarchimie))
    allocate(omega(nvarchimie))
@@ -417,6 +423,7 @@ end subroutine nimhd_4dtable
 subroutine interpolate_table(rho_cell,temp_cell,mag_cell,ionisrate_cell,sigO,sigH,sigP)
 
    use amr_parameters,    only : dp
+   use constants,         only : pi
    implicit none
    ! input: density, temperature, magnetic field strength and ionisation rate in the cell
    real(dp), intent(in)::rho_cell,temp_cell,mag_cell,ionisrate_cell
@@ -427,7 +434,6 @@ subroutine interpolate_table(rho_cell,temp_cell,mag_cell,ionisrate_cell,sigO,sig
    integer::j,k,l,r
    real(dp)::j_dp,k_dp,l_dp,r_dp
    real(dp)::BBcgs,sigav
-   real(dp)::sigO,sigH,sigP
    real(dp), dimension(3)::x
 
    real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
@@ -439,9 +445,9 @@ subroutine interpolate_table(rho_cell,temp_cell,mag_cell,ionisrate_cell,sigO,sig
    BBcgs=sqrt(mag_cell*(4d0*pi*scale_d*(scale_v)**2)) ! change to Gauss
    i_b=(1d0+(log10(BBcgs)-log10(bminchimie))/dbchimie)
    ! don't go outside of table
-   i_n = max(1d0, min(i_n,nchimie))
-   i_t = max(1d0, min(i_t,tchimie))
-   i_b = max(1d0, min(i_b,bchimie))
+   i_n = max(1d0, min(i_n,real(nchimie)))
+   i_t = max(1d0, min(i_t,real(tchimie)))
+   i_b = max(1d0, min(i_b,real(bchimie)))
 
    ! convert to integers, lower bound
    j = min(floor(i_n),nchimie-1)
@@ -466,8 +472,8 @@ subroutine interpolate_table(rho_cell,temp_cell,mag_cell,ionisrate_cell,sigO,sig
 
    else if(resistivity_table_ndim==4)then
       i_r=(1d0+(log10(ionisrate_cell)-log10(ximinchimie))/dxichimie)
-      i_r = max(1d0, min(i_r,xichimie))
-      r = min(floor(i_r),xchimie-1)
+      i_r = max(1d0, min(i_r,real(xichimie)))
+      r = min(floor(i_r),xichimie-1)
       r_dp = real(r,dp)
    
       x(1:3)=(1d0-(i_n-j_dp))*(1d0-(i_t-k_dp))*(1d0-(i_r-r_dp))*(1d0-(i_b-l_dp))*(resistivite_chimie(1:3,j,  k,  r,  l))+&

@@ -60,8 +60,8 @@ interpol_type=1
 
 &NONIDEALMHD_PARAMS
 nmagdiffu=.true.
+resistivity_method=0
 etaMD=1.d0
-ntestDADM=1
 /
 
 &COOLING_PARAMS

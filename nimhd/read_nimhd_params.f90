@@ -1,13 +1,14 @@
 subroutine read_nimhd_params(nml_ok)
   use amr_commons
   use nimhd_parameters
+  use resistivity_table
   implicit none
   logical, intent(inout) ::nml_ok
   !--------------------------------------------------
   ! Namelist definitions
   !--------------------------------------------------
   namelist/nonidealmhd_params/nambipolar,gammaAD &
-        & ,nmagdiffu,etaMD,use_x3d,resistivity_method, &
+        & ,nmagdiffu,etaMD,resistivity_method,resistivity_table_ndim &
         & ,coefad, nminitimestep, coefalfven,coefdtohm
 
   ! Checks on non-ideal MHD parameters

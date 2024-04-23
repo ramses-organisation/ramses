@@ -23,7 +23,6 @@ module nimhd_parameters
   ! resistivity_method=0  -> use fixed value
   ! resistivity_method=1  -> use analytical model
   ! resistivity_method=2  -> use tabulated values
-
   integer :: resistivity_method=0    ! How to determine the resistivity
   integer :: resistivity_table_ndim=0       ! number of variables to extrapolate in table: rho, T, Xi
   character(len=80)::res_table_name='marchand2016_table.dat' !filename of the table

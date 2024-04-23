@@ -91,10 +91,10 @@ C_bound(2)=0.0
 
 &NONIDEALMHD_PARAMS
 nambipolar=.true.
+resistivity_method=0
 gammaAD=75.0
 coefad=0.1d0
 nminitimestep=.false.   ! pour la diffusion ambipolaire seulement
-ntestDADM=1
 /
 
 &COOLING_PARAMS
