@@ -514,7 +514,7 @@ subroutine computdifmag(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
                etaod2x=etaohmdissbricolo(rhox,bsquarex,tcellx,dt,dx)
                etaod2y=etaohmdissbricolo(rhoy,bsquarey,tcelly,dt,dx)
                etaod2z=etaohmdissbricolo(rhoz,bsquarez,tcellz,dt,dx)
-               ! TC: shouldn't dy and dz be used here?  
+               ! TC: shouldn't dy and dz be used here in principle? (in practice they are the same)  
 
                ! WARNING dB/dt=-curl(eta*J)
                emfohmdiss(l,i,j,k,nxx)=-etaod2x*jemfx(l,i,j,k,1)
@@ -1213,7 +1213,6 @@ double precision function eta_ohm_chimie(rhon,BBcell,temper)
 
    use hydro_commons
    use constants
-   use nimhd_commons
    use nimhd_parameters
    use resistivity_table
    implicit none

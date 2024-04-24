@@ -182,7 +182,7 @@ ifeq ($(RT),1)
              rt_spectra.o rt_cooling_module.o rt_flux_module.o
 endif
 ifeq ($(NIMHD),1)
-   MODOBJ += nimhd_parameters.o nimhd_commons.o
+   MODOBJ += nimhd_parameters.o
 endif
 ifeq ($(USE_TURB),1)
    MODOBJ += turb_parameters.o turb_commons.o

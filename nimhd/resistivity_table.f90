@@ -1,6 +1,5 @@
 module resistivity_table
    use amr_parameters, ONLY:dp
-   use nimhd_commons
    use nimhd_parameters
    implicit none
 
@@ -19,14 +18,13 @@ module resistivity_table
    real(dp) :: nminchimie   ! density  
    real(dp) :: tminchimie   ! temperature
 
+   real(dp),allocatable,dimension(:,:,:,:)::resistivite_chimie ! resistivites chimie
    real(dp),allocatable,dimension(:,:,:)::resistivite_chimie_x ! to read in resistivity table
-
 
 contains
 
 subroutine read_resistivities
    use nimhd_parameters
-   use nimhd_commons
    use constants, ONLY:mH
    !----------------------------------------------------------------
    ! Read non-ideal MHD resistivities from file and construct table
@@ -82,7 +80,6 @@ end subroutine read_resistivities
 subroutine construct_resistivity_table(nvarchimie)
 
    use amr_commons, only : myid
-   use nimhd_commons
    use constants, only:pi,c_cgs, kB
    implicit none
 
