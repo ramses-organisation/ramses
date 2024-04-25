@@ -1,0 +1,30 @@
+name: Build RAMSES
+
+on:
+  push:
+    branches:
+      - dev
+      - stable
+  pull_request:
+  workflow_dispatch:
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+    build:
+        name: "Compilation for ${{ matrix.test-type }}"
+        runs-on: ubuntu-latest
+        strategy:
+            matrix:
+                test-type: [default, rt]
+        steps:
+        - name: Checkout repository
+          uses: actions/checkout@v4
+        - name: Install OpenMPI
+          run: sudo apt-get install -y openmpi-bin libopenmpi-dev
+        - name: Build
+          run: bash tests/build.${{ matrix.test-type }}.sh
+        - name: Verify it runs
+          run: ./tests/ramses3d
