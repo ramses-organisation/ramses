@@ -21,9 +21,9 @@ Download the code by cloning the git repository using
 ```
 $ git clone https://github.com/ramses-organisation/ramses
 ```
-You will get the latest stable version. To get the develop branch, do the following
+You will get the latest stable version. To get the development branch, do the following
 ```
-$ git clone --branch develop https://github.com/ramses-organisation/ramses
+$ git clone --branch dev https://github.com/ramses-organisation/ramses
 ```
 Please register also to the [mailing list](http://groups.google.com/group/ramses_users).
 
