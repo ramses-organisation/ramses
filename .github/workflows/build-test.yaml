@@ -14,7 +14,7 @@ defaults:
 
 jobs:
     build:
-        name: "Compilation for ${{ matrix.test-type }}"
+        name: "${{ matrix.test-type }} in ${{ matrix.ndim }}D"
         runs-on: ubuntu-latest
         strategy:
             matrix:
