@@ -1,4 +1,4 @@
 #!/bin/bash
 
 cd bin
-make NDIM=3 MPI=1 DEBUG=1
+make NDIM=$1 MPI=1 DEBUG=1
