@@ -18,7 +18,7 @@ jobs:
         runs-on: ubuntu-latest
         strategy:
             matrix:
-                test-type: [default, rt]
+                test-type: [default, rt, mhd]
                 ndim: [1, 2, 3]
                 exclude:
                     - test-type: rt
