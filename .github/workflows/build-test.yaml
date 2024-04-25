@@ -1,0 +1,32 @@
+name: Build RAMSES
+
+on:
+  push:
+    branches:
+      - dev
+      - stable
+  pull_request:
+  workflow_dispatch:
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+    build:
+        name: "${{ matrix.test-type }} in ${{ matrix.ndim }}D"
+        runs-on: ubuntu-latest
+        strategy:
+            matrix:
+                test-type: [default, rt, mhd]
+                ndim: [1, 2, 3]
+                exclude:
+                    - test-type: rt
+                      ndim: 1
+        steps:
+        - name: Checkout repository
+          uses: actions/checkout@v4
+        - name: Install OpenMPI
+          run: sudo apt-get install -y openmpi-bin libopenmpi-dev
+        - name: Build
+          run: bash tests/build.${{ matrix.test-type }}.sh ${{ matrix.ndim }}
