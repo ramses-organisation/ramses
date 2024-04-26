@@ -94,7 +94,6 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),save::fluxmd,fluxh,fluxad
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),save::emfambdiff,fluxambdiff
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),save::emfohmdiss,fluxohm 
-  integer:: ntest
 #endif  
 
   ! Local scalar variables

@@ -52,7 +52,6 @@ module amr_commons
 
   ! Non-ideal MHD related timesteps
 !#ifdef NIMHD
-  ! move to nimhd commons
   ! gives compilation error when in if NIMHD block
   real(dp),dimension(1:MAXLEVEL)::dtambdiff,dtambdiffold ! ambipolar diffusion timestep
   real(dp),dimension(1:MAXLEVEL)::dtmagdiff,dtmagdiffold ! magnetic diffusion timestep

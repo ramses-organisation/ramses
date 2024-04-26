@@ -211,9 +211,6 @@ subroutine update_time(ilevel)
 #ifdef SOLVERmhd
   real(dp)::sqrt_aexp_prev
 #endif
-#ifdef NIMHD
-  real(dp)::dtad,dtwithoutad,dtmd
-#endif
 #if USE_TURB==1
   real(kind=dp) :: cur_turb_rms
 #endif
@@ -221,11 +218,6 @@ subroutine update_time(ilevel)
 
   ! Local constants
   dt=dtnew(ilevel)
-#ifdef NIMHD
-  dtad=dtambdiff(ilevel)
-  dtwithoutad=dtwad(ilevel)
-  dtmd=dtmagdiff(ilevel)
-#endif
   itest=0
 
 #ifndef WITHOUTMPI
@@ -299,7 +291,7 @@ subroutine update_time(ilevel)
            endif
 #ifdef NIMHD
            if(use_nonideal_mhd)then
-              write(*,889)dtad,dtmd,dtwithoutad
+              write(*,889)dtambdiff(ilevel),dtmagdiff(ilevel),dtwad(ilevel)
            endif
 #endif
            itest=1

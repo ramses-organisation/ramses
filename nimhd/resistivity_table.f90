@@ -237,13 +237,13 @@ end subroutine construct_resistivity_table
 !###########################################################
 !###########################################################
 !###########################################################
-subroutine interpolate_table(rho_cell,temp_cell,mag_cell,sigO,sigH,sigP)
+subroutine interpolate_table(rho_cell,temp_cell,BB_cell,sigO,sigH,sigP)
 
    use amr_parameters,    only : dp
    use constants,         only : pi
    implicit none
-   ! input: density, temperature, magnetic field strength and ionisation rate in the cell
-   real(dp), intent(in)::rho_cell,temp_cell,mag_cell
+   ! input: density, temperature, magnetic field strength**2 and ionisation rate in the cell
+   real(dp), intent(in)::rho_cell,temp_cell,BB_cell
    ! output: interpolated resistivity
    real(dp), intent(out)::sigO,sigH,sigP
 
@@ -259,7 +259,7 @@ subroutine interpolate_table(rho_cell,temp_cell,mag_cell,sigO,sigH,sigP)
    ! determine indices in table (as reals) 
    i_n=(1d0+(log10(rho_cell)-log10(nminchimie))/dnchimie)
    i_t=(1d0+(log10(temp_cell)-log10(tminchimie))/dtchimie)
-   BBcgs=sqrt(mag_cell*(4d0*pi*scale_d*(scale_v)**2)) ! change to Gauss
+   BBcgs=sqrt(BB_cell*(4d0*pi*scale_d*(scale_v)**2)) ! change to Gauss
    i_b=(1d0+(log10(BBcgs)-log10(bminchimie))/dbchimie)
    ! don't go outside of table
    i_n = max(1d0, min(i_n,real(nchimie)))

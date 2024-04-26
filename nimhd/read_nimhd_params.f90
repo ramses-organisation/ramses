@@ -8,7 +8,7 @@ subroutine read_nimhd_params(nml_ok)
   ! Namelist definitions
   !--------------------------------------------------
   namelist/nonidealmhd_params/nambipolar,gammaAD &
-        & ,nmagdiffu,etaMD,resistivity_method,resistivity_table_ndim &
+        & ,nmagdiffu,etaMD,resistivity_method &
         & ,coefad, nminitimestep, coefalfven,coefdtohm
 
   ! Checks on non-ideal MHD parameters
@@ -28,9 +28,6 @@ subroutine read_nimhd_params(nml_ok)
     write(*,*)'Non ideal MHD parameters'
     if(nambipolar) then
       write(*,*)'Ambipolar diffusion switched ON'
-      write(*,*)'Ambipolar diffusion coefficient',gammaAD
-      write(*,*)'Ambipolar diffusion time coefficient',coefad
-      write(*,*)'Ionisation coefficient',coefionis
       if(nminitimestep) then
         write(*,*)'Mini time step switched ON'
         write(*,*)'Mini time step coefficient',coefalfven
@@ -42,9 +39,7 @@ subroutine read_nimhd_params(nml_ok)
     endif
   
     if(nmagdiffu)then
-      write(*,*)'Magnetic diffusion switched ON : multiple time stepping'
-      write(*,*)'Magnetic diffusion coefficient',etaMD
-      write(*,*)'Magnetic diffusion  time coefficient',coefohm
+      write(*,*)'Magnetic diffusion switched ON'
     else
       write(*,*)'Magnetic diffusion switched OFF'
     endif

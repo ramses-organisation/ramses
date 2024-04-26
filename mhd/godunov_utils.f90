@@ -16,13 +16,12 @@ subroutine cmpdt_nimhd(uu,dx,ncell,dtambdiff,dtohmdiss)
    real(dp),dimension(1:nvector,1:nvar+3)::uu
 
    real(dp)::xx,betaad,etaohmdiss
-   real(dp),dimension(1:nvector),save::B2,rho,tcell,ionisrate
+   real(dp),dimension(1:nvector),save::B2,rho,tcell
    integer::k,idim
   
    do k = 1,ncell
       rho(k)=max(uu(k,1),smallr)
       call ideal_gas_temperature(rho(k), uu(k,5), tcell(k))
-      ionisrate(k) = default_ionisrate
    end do
  
    do k = 1,ncell
@@ -38,7 +37,7 @@ subroutine cmpdt_nimhd(uu,dx,ncell,dtambdiff,dtohmdiss)
    dtohmdiss=1d35
    if (nmagdiffu) then
       do k = 1,ncell
-         xx=etaohmdiss(rho(k),B2(k),tcell(k),ionisrate(k))
+         xx=etaohmdiss(rho(k),B2(k),tcell(k),0d0,0d0,.false.)
          if(xx.gt.0d0) then
             dtohmdiss=min(dtohmdiss, coefohm*dx*dx/xx)
          endif
@@ -49,7 +48,7 @@ subroutine cmpdt_nimhd(uu,dx,ncell,dtambdiff,dtohmdiss)
    dtambdiff=1d36 !TC: can we put HUGE or something here?
    if (nambipolar) then
       do k = 1,ncell
-         xx=B2(k)*betaad(rho(k),B2(k),tcell(k),ionisrate(k)) 
+         xx=B2(k)*betaad(rho(k),B2(k),tcell(k)) 
          if (xx.gt.0d0) then
             dtambdiff=min(dtambdiff, coefad*dx*dx/xx)
          endif
