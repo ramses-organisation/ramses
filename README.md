@@ -6,6 +6,7 @@
 [6]: https://bitbucket.org/ohahn/music
 [7]: https://github.com/osyris-project/osyris
 [8]: https://github.com/pynbody/pynbody
+[9]: https://yt-project.org
 
 ![GitHub logo dark-mode-only](./doc/src/img/full_logo_white.svg#gh-dark-mode-only)
 ![GitHub logo light-mode-only](./doc/src/img/full_logo.svg#gh-light-mode-only)
@@ -29,8 +30,8 @@ $ git clone --branch dev https://github.com/ramses-organisation/ramses
 ```
 Please register also to the [mailing list](http://groups.google.com/group/ramses_users).
 
-To generate idealised initial conditions of galaxies, check out the [DICE][5] code.
+To generate idealised initial conditions of galaxies, check out [DICE][5].
 
-To generate cosmological initial conditions, check out the [MUSIC][6] code.
+To generate cosmological initial conditions, check out [MUSIC][6].
 
-To visualize RAMSES data, we encourage you to use the [OSYRIS][7] or the [PYNBODY][8] codes.
+To visualize RAMSES data, we encourage you to use [YT][9], [OSYRIS][7] or [PYNBODY][8].
