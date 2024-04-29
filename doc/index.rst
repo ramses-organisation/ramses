@@ -17,11 +17,6 @@ suite  of post-processing  routines  is delivered  within the  present
 release,  allowing  the user  to  perform  a  simple analysis  of  the
 generated output files.
 
-.. image:: ./src/img/amr.png
-    :width: 100%
-    :align: center
-
-
 Table of Contents
 *****************
 
@@ -37,3 +32,4 @@ Table of Contents
   :maxdepth: 3
 
   dev_docs/docs.md
+
