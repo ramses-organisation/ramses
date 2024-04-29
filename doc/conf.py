@@ -158,7 +158,7 @@ github_issues_url = 'https://github.com/ramses-organisation/ramses/issues'
 #
 # Some warnings are impossible to suppress, and you can list specific references
 # that should be ignored in a nitpick-exceptions file which should be inside
-# the docs/ directory. The format of the file should be:
+# the doc/ directory. The format of the file should be:
 #
 # <type> <class>
 #
