@@ -82,13 +82,10 @@ extensions = ["myst_parser"]
 html_theme = "sphinx_rtd_theme"
 html_logo = "./img/logo_white.svg"
 html_favicon = './img/logo.svg'
-# html_theme_options = {
-#     'style_nav_header_background': 'linear-gradient(90deg, #00B0F0 0%, #8D00ED 10%0)',
-# }
-html_theme_options = {
-    'style_nav_header_background': '#3061f3',
-}
 
+html_theme_options = {
+    'style_nav_header_background': 'linear-gradient(45deg, #1A43A4, #3061f3)',
+}
 html_static_path = ['_static']
 # html_css_files = ["css/custom.css"]
 html_title = '{0}'.format(project)
