@@ -150,6 +150,8 @@ man_pages = [('index', project.lower(), project + u' Documentation',
 # -- Resolving issue number to links in changelog -----------------------------
 github_issues_url = 'https://github.com/ramses-organisation/ramses/issues'
 
+# -- Other Options ------------------------------------------------------------
+highlight_language = 'bash'
 
 # -- Turn on nitpicky mode for sphinx (to warn about references not found) ----
 #

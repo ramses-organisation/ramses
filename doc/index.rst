@@ -1,11 +1,15 @@
-Ramses Documentation
-=====================
+.. meta::
+    :keywords: ramses, AMR, Adaptive Mesh  Refinement, self-gravity, magnetic field, MPI, galaxy, simulation, ISM
 
-The [ramses][1] code is intended to be a versatile platform to develop
+######################
+Ramses Documentation
+######################
+
+The `ramses` code is intended to be a versatile platform to develop
 applications using  Adaptive Mesh  Refinement (AMR)  for computational
 astrophysics.  The current implementation allows solving the classical
 and relativistic Euler equations in presence of self-gravity, magnetic
-field  and radiation  field.   The  [ramses][1] code  can  be used  on
+field  and radiation  field.   The  `ramses` code  can  be used  on
 massively  parallel  architectures,  if  properly linked  to  the  MPI
 library.  It  can also  be used on  single processor  machines without
 MPI.  Output  data are generated  using Fortran unformatted  files.  A
@@ -13,18 +17,23 @@ suite  of post-processing  routines  is delivered  within the  present
 release,  allowing  the user  to  perform  a  simple analysis  of  the
 generated output files.
 
-[1]: https://bitbucket.org/rteyssie/ramses
+.. image:: ./src/img/amr.png
+    :width: 100%
+    :align: center
 
-[2]: https://bitbucket.org/ohahn/music
 
-[3]: ./Content
-
-[4]: ./AutoTests
-
-[6]: ./User%20Tools
+Table of Contents
+*****************
 
 .. toctree::
+  :caption: User Wiki
   :maxdepth: 3
 
   wiki/Content.md
 
+
+.. toctree::
+  :caption: Developer
+  :maxdepth: 3
+
+  dev_docs/docs.md
