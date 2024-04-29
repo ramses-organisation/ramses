@@ -82,8 +82,8 @@ in more details in the following sections.
 2. [AMR grid](./Amr)
 3. [Initial conditions](./Init)
 4. [Output parameters](./Output)
-5. [Boundary conditions](./Boundary_conditions)
-6. [Hydrodynamics solver](./Hydro_Parameters)
+5. Boundary conditions
+6. Hydrodynamics solver
 7. [Physical parameters](./Physics)
 8. [Poisson solver](./Poisson)
 9. [Refinement strategy](./Refine)

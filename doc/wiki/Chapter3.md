@@ -15,6 +15,6 @@ specifying `cosmo=.true.` in the `&RUN_PARAMS` namelist block.
 2. [Memory management](./Memory)
 3. [Restarting a run](./Restart)
 4. [Parallel computing](./Parallel)
-5. [Post-processing utilities](./Postprocessing_Tools)
-6. [Zoom simulations](./Zoom_Simulations)
+5. Post-processing utilities
+6. Zoom simulations
 

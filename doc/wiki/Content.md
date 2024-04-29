@@ -13,8 +13,8 @@ orphan: true
 2. [AMR grid](./Amr)
 3. [Initial conditions](./Init)
 4. [Output parameters](./Output)
-5. [Boundary conditions](./Boundary_conditions)
-6. [Hydrodynamics solver](./Hydro_Parameters)
+5. Boundary conditions
+6. Hydrodynamics solver
 7. [Physical parameters](./Physics)
 8. [Poisson solver](./Poisson)
 9. [Refinement strategy](./Refine)
@@ -28,7 +28,7 @@ orphan: true
 # [Chapter 3. Cosmological simulations](./Chapter3)
 1. [Parameter file and initial conditions](./Initial)
 2. [Memory management](./Memory)
-3. [Restarting a cosmo run](./CosmoRestart)
+3. Restarting a cosmo run
 4. [Parallel computing](./Parallel)
 5. [Zoom simulations](<./Zoom Simulations.md>)
 # [Chapter 4. Advanced simulations](./Chapter_4)
@@ -39,12 +39,12 @@ orphan: true
 5. External gravity sources
 6. External thermal sources
 7. [Radiation Hydrodynamics](./RHD)
-8. [Particle families](./Particle_Families)
+8. Particle families
 # Chapter 5. Post-processing utilities
-1. [Maps and profiles](./Maps_and_profiles)
-2. [Making Movies](./Making_movies)
+1. Maps and profiles
+2. Making Movies
 3. HOP and PHEW halo finders
-4. [Further Tools](./User_Tools)
+4. Further Tools
 # [Chapter 6. Testing](./Chapter_6._Testing)
 1. Running the automatic test suite
 2. Creating a new test

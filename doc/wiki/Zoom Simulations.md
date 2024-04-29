@@ -11,7 +11,7 @@ To make use of this concept, two major steps are required: First, to run a simul
 
 [1. Run a zoom with RAMSES](./Ramses_zoom)
 
-[2. Zoom initial conditions with grafic files](./Grafic_zoom) 
+2. Zoom initial conditions with grafic files
   
 [3. Generate zoom initial conditions with MUSIC](./Music)
 
