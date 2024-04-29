@@ -29,11 +29,6 @@
 !  This routine was written by Sebastien Fromang and Patrick Hennebelle
 !  then modified by Jacques Masson, Benoit Commercon and Neil Vaytet for non-ideal MHD
 ! ----------------------------------------------------------------
-! Implementation of Masson: 2 options to calc nimhd
-! 1) use finite differences
-! 2) use fluxes (a lot of vars are estimated for this), never used, not tested
-! both options are still here.
-! TODO: remove flux option
 subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
   use amr_parameters
   use const
@@ -85,13 +80,11 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2)       ,save::emf
 
 #ifdef NIMHD
-  ! comment Tine: not used but saved??
   ! WARNING following quantities defined with three components even if ndim<3 !
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3,1:3),save::bmagij
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),save::bemfx,bemfy,bemfz
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),save::jemfx,jemfy,jemfz
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),save::florentzx,florentzy,florentzz
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),save::fluxmd,fluxh,fluxad
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),save::fluxmd,fluxad
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),save::emfambdiff,fluxambdiff
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),save::emfohmdiss,fluxohm 
 #endif  
@@ -99,27 +92,6 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
   ! Local scalar variables
   integer::i,j,k,l,ivar
   integer::ilo,ihi,jlo,jhi,klo,khi
-
-#ifdef NIMHD
-  bmagij=0d0
-  emfambdiff=0d0
-  fluxambdiff=0d0
-  emfohmdiss=0d0
-  fluxohm=0d0
-  fluxmd=0d0
-  fluxh=0d0
-  fluxad=0d0
-  
-  bemfx=0d0
-  bemfy=0d0
-  bemfz=0d0
-  jemfx=0d0
-  jemfy=0d0
-  jemfz=0d0
-  florentzx=0d0
-  florentzy=0d0
-  florentzz=0d0
-#endif
 
   ilo=MIN(1,iu1+2); ihi=MAX(1,iu2-2)
   jlo=MIN(1,ju1+2); jhi=MAX(1,ju2-2)
@@ -133,14 +105,13 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
 
 #ifdef NIMHD
   if(use_nonideal_mhd) then
-     ! compute bemf (?), current j,  Lorentz force (florentz)
-     call computejb2(uin,qin,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,bmagij,florentzx,florentzy,florentzz,fluxmd,fluxh,fluxad)
+     ! compute necessary quantities
+     call computejb2(uin,qin,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,bmagij,fluxmd,fluxad)
   endif
 
   ! AMBIPOLAR DIFFUSION
   if(nambipolar) then
-     ! use Lorentz force to calculate ...
-     call computambip(uin,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,florentzx,florentzy,florentzz,fluxad,bmagij,emfambdiff,fluxambdiff)
+     call computambip(uin,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,bmagij,fluxad,emfambdiff,fluxambdiff)
   endif
 
   ! OHMIC DISSIPATION
@@ -179,7 +150,6 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
         end do
      end do
 #ifdef NIMHD
-     ! TC: heating by Ohmic diffusion? Remove?
      ! Energy flux from ohmic term dB/dt=rot(-eta*J)
      if(use_nonideal_mhd) then
         ivar=5
@@ -245,7 +215,6 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
         end do
      end do
 #ifdef NIMHD
-     ! TC: Ohmic heating? remove?
      ! Energy flux from ohmic term dB/dt=rot(-eta*J)
      if(use_nonideal_mhd) then  
         ivar=5

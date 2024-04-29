@@ -1,60 +1,34 @@
-!  by Jacques Masson, Benoit Commercon and Neil Vaytet
+! by Jacques Masson, Benoit Commercon and Neil Vaytet
+! refactored by Tine Colman
 
 !###########################################################
 !###########################################################
 !###########################################################
 !###########################################################
-subroutine computejb2(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,bmagij,florentzx,florentzy,florentzz,fluxmd,fluxh,fluxad)
+subroutine compute_bemf(u,q,ngrid,bemfx,bemfy,bemfz)
 
    USE amr_parameters
    use hydro_commons
-   use nimhd_parameters
    IMPLICIT NONE
-
+   !-------------------------------------------
+   ! compute magnetic field at location of EMF
+   !-------------------------------------------
    ! inputs
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar+3)::u 
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q 
-
-   INTEGER ::ngrid
-   REAL(dp)::dx,dy,dz,dt
-
-   ! outputs
+   integer::ngrid
+   ! output
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::bemfx,bemfy,bemfz
-   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::jemfx,jemfy,jemfz
-   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::florentzx,florentzy,florentzz
-   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::fluxmd,fluxh,fluxad
-   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3,1:3)::bmagij
+   ! local variables
+   integer ::i, j, k, l
 
-   ! declare local variables
-   INTEGER ::i, j, k, l, m, n 
-
-   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::bmagijbis
-   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::flxmagxx,flxmagxy,flxmagxz,flxmagyx,flxmagyy,flxmagyz,flxmagzx,flxmagzy,flxmagzz
-   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3,1:3)::jface
-   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::bcenter
-   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3,1:3)::fluxbis,fluxter,fluxquat
-   real(dp)::b12x,b12y,b12z,emag,bsquare
-   real(dp)::computdivbisx,computdivbisy,computdivbisz
-   real(dp)::computdxbis,computdybis,computdzbis
-
-   ! magnetic field at center of cells
-   do k=ku1,ku2
-      do j=ju1,ju2
-         do i=iu1,iu2
-            do l=1,ngrid
-               bcenter(l,i,j,k,nxx)=q(l,i,j,k,6)
-               bcenter(l,i,j,k,nyy)=q(l,i,j,k,7)
-               bcenter(l,i,j,k,nzz)=q(l,i,j,k,8)
-            end do
-         end do
-      end do
-   end do
+   bemfx=0d0
+   bemfy=0d0
+   bemfz=0d0
 
    !!!!!!!!!!!!!!!!!!
    ! EMF x
    !!!!!!!!!!!!!!!!!!
-
-   ! magnetic field at location of EMF
 
    do k=min(1,ku1+1),ku2
       do j=min(1,ju1+1),ju2       
@@ -90,8 +64,6 @@ subroutine computejb2(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
    ! EMF y
    !!!!!!!!!!!!!!!!!!
 
-   ! magnetic field at location of EMF
-
    do k=min(1,ku1+1),ku2
       do j=ju1,ju2       
          do i=iu1,iu2
@@ -126,8 +98,6 @@ subroutine computejb2(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
    ! EMF z
    !!!!!!!!!!!!!!!!!!
 
-   ! magnetic field at location of EMF
-
    do k=ku1,ku2
       do j=min(1,ju1+1),ju2       
          do i=iu1,iu2
@@ -158,9 +128,30 @@ subroutine computejb2(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
       end do
    end do
 
+end subroutine compute_emf
+!###########################################################
+!###########################################################
+!###########################################################
+!###########################################################
+subroutine compute_bmagij(u,q,ngrid,bmagij)
+   USE amr_parameters
+   use hydro_commons
+   IMPLICIT NONE
+   !-----------------------------------------------------------------
    ! bmagij is the value of the magnetic field Bi where Bj 
    ! is naturally defined; Ex bmagij(l,i,j,k,1,2) is Bx at i,j-1/2,k
    ! and we can write it Bx,y
+   !-----------------------------------------------------------------
+   ! inputs
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar+3)::u 
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q 
+   integer::ngrid
+   ! output
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3,1:3)::bmagij
+   ! declare local variables
+   INTEGER ::i, j, k, l, m
+
+  bmagij=0d0
 
    do k=ku1,ku2
       do j=ju1,ju2
@@ -241,11 +232,28 @@ subroutine computejb2(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
       end do
    end do
 
-   !!!!!!!!!!!!!!!!!!
+en subroutine compute_bmagij
+!###########################################################
+!###########################################################
+!###########################################################
+!###########################################################
+subroutine compute_bmagijbis(u,ngrid,bmagijbis)
+   use amr_parameters
+   use hydro_commons
+   IMPLICIT NONE
+   !-----------------------------------------------------------------
    ! bmagijbis(l,i,j,k,n) is the value of the magnetic field component
    ! Bn at i-1/2,j-1/2,k-1/2
-   !!!!!!!!!!!!!!!!!!
+   !-----------------------------------------------------------------
+   ! inputs
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar+3)::u 
+   integer::ngrid
+   ! output
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3,1:3)::bmagij
+   ! declare local variables
+   INTEGER ::i, j, k, l
 
+   ! case Bx for Lorentz force EMF
    do k=min(1,ku1+1),ku2
       do j=min(1,ju1+1),ju2
          do i=iu1,iu2
@@ -278,6 +286,72 @@ subroutine computejb2(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
       end do
    end do
 
+end subroutine compute_bmagijbis
+!###########################################################
+!###########################################################
+!###########################################################
+!###########################################################
+subroutine computejb2(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,bmagij,fluxmd,fluxad)
+
+   USE amr_parameters
+   use hydro_commons
+   use nimhd_parameters
+   IMPLICIT NONE
+
+   ! inputs
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar+3)::u 
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q 
+   INTEGER ::ngrid
+   REAL(dp)::dx,dy,dz,dt
+
+   ! outputs
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::bemfx,bemfy,bemfz
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::jemfx,jemfy,jemfz
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3,1:3)::bmagij
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::fluxmd,fluxad
+
+   ! declare local variables
+   INTEGER ::i, j, k, l, m
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::bmagijbis
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3,1:3)::jface
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::bcenter
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3,1:3)::fluxbis,fluxter,fluxquat
+   real(dp)::bsquare
+   real(dp)::computdxbis,computdybis,computdzbis
+
+   emfambdiff=0d0
+   fluxambdiff=0d0
+   emfohmdiss=0d0
+   fluxohm=0d0
+   fluxmd=0d0
+   fluxad=0d0
+   
+   bemfx=0d0
+   bemfy=0d0
+   bemfz=0d0
+   jemfx=0d0
+   jemfy=0d0
+   jemfz=0d0
+
+   ! magnetic field at center of cells
+   do k=ku1,ku2
+      do j=ju1,ju2
+         do i=iu1,iu2
+            do l=1,ngrid
+               bcenter(l,i,j,k,nxx)=q(l,i,j,k,6)
+               bcenter(l,i,j,k,nyy)=q(l,i,j,k,7)
+               bcenter(l,i,j,k,nzz)=q(l,i,j,k,8)
+            end do
+         end do
+      end do
+   end do
+
+   call compute_bemf(u,q,ngrid,bemfx,bemfy,bemfz)
+
+   call compute_bmagij(u,q,ngrid,bmagij)
+
+   call compute_bmagijbis(u,ngrid,bmagijbis)
+
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
    ! computation of the component of j where EMFs are located
    ! jemfx(l,i,j,k,n) is the component Jn at i,j-1/2,k-1/2
@@ -307,20 +381,6 @@ subroutine computejb2(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
    ! computation of the component of j at center of cell
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-   if(nambipolar) then
-   ! EMF x
-      do k=min(1,ku1+1),max(1,ku2-1)
-         do j=min(1,ju1+1),max(1,ju2-1)
-            do i=min(1,iu1+1),max(1,iu2-1)
-               do l = 1, ngrid
-                  call crossprod(jemfx,bemfx,florentzx,l,i,j,k)
-                  call crossprod(jemfy,bemfy,florentzy,l,i,j,k)
-                  call crossprod(jemfz,bemfz,florentzz,l,i,j,k)
-               end do
-            end do
-         end do
-      end do
-   endif
 
    ! computation of current on faces
 
@@ -440,9 +500,6 @@ subroutine computejb2(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
             do i=min(1,iu1+1),max(1,iu2-1)
                do l = 1, ngrid
                   call crossprodbis(fluxbis,bmagij,fluxter,l,i,j,k)
-                  fluxh(l,i,j,k,1)=fluxter(l,i,j,k,1,1)
-                  fluxh(l,i,j,k,2)=fluxter(l,i,j,k,2,2)
-                  fluxh(l,i,j,k,3)=fluxter(l,i,j,k,3,3)
                   call crossprodbis(fluxter,bmagij,fluxquat,l,i,j,k)
                   fluxad(l,i,j,k,1)=fluxquat(l,i,j,k,1,1)
                   fluxad(l,i,j,k,2)=fluxquat(l,i,j,k,2,2)
@@ -543,7 +600,7 @@ end subroutine computdifmag
 !###########################################################
 !###########################################################
 !###########################################################
-subroutine computambip(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,florentzx,florentzy,florentzz,fluxad,bmagij,emfambdiff,fluxambdiff)
+subroutine computambip(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,bmagij,fluxad,emfambdiff,fluxambdiff)
 
    use amr_commons
    use amr_parameters
@@ -557,7 +614,7 @@ subroutine computambip(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,florentzx,florentzy
    integer ::ngrid
    real(dp)::dx,dy,dz,dt
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::bemfx,bemfy,bemfz
-   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::florentzx,florentzy,florentzz
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::jemfx,jemfy,jemfz
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::fluxad
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3,1:3)::bmagij
 
@@ -567,6 +624,7 @@ subroutine computambip(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,florentzx,florentzy
 
    ! declare local variables
    INTEGER ::i, j, k, l
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::florentzx,florentzy,florentzz
 
    real(dp)::v1x,v1y,v1z,v2x,v2y,v2z
    real(dp)::rhox,rhoy,rhoz,rhofx,rhofy,rhofz
@@ -576,9 +634,23 @@ subroutine computambip(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,florentzx,florentzy
    real(dp)::rhocell,bcell,tcell
    real(dp)::crossprodx,crossprody,crossprodz
 
-   ! do NOT change value below Variation of betaad
-   ! to avoid too small time step allowed
-   !ntest=0
+  florentzx=0d0
+  florentzy=0d0
+  florentzz=0d0
+
+   ! compute Loretz force
+   do k=min(1,ku1+1),max(1,ku2-1)
+      do j=min(1,ju1+1),max(1,ju2-1)
+         do i=min(1,iu1+1),max(1,iu2-1)
+            do l = 1, ngrid
+               call crossprod(jemfx,bemfx,florentzx,l,i,j,k)
+               call crossprod(jemfy,bemfy,florentzy,l,i,j,k)
+               call crossprod(jemfz,bemfz,florentzz,l,i,j,k)
+            end do
+         end do
+      end do
+   end do
+
 
    !dtlim=dt!*coefalfven
    !dt est deja dtnew, qui a été choisi comme le dt normal (avec la condition de courant) ou le dt normal seuillé si le dtAD est trop faible(bricolo)
