@@ -48,6 +48,9 @@ jobs:
             bash run_test_suite.sh -p 2 -v
         - name: Upload artifacts
           uses: actions/upload-artifact@v4
+          if: always()
           with:
             name: test-results
-            path: tests/test_*
+            path: |
+              tests/test_results.pdf
+              tests/testsuite.log
