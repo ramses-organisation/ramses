@@ -30,3 +30,27 @@ jobs:
           run: sudo apt-get install -y openmpi-bin libopenmpi-dev
         - name: Build
           run: bash tests/build.${{ matrix.test-type }}.sh ${{ matrix.ndim }}
+    run:
+        name: "Tests"
+        runs-on: ubuntu-latest
+        steps:
+        - name: Checkout repository
+          uses: actions/checkout@v4
+        - name: Install OpenMPI and FFTW
+          run: sudo apt-get install -y openmpi-bin libopenmpi-dev libfftw3-bin libfftw3-dev
+        - name: Setup conda
+          uses: s-weigand/setup-conda@v1
+        - name: Install dependencies
+          run: conda install -c conda-forge tectonic numpy matplotlib scipy
+        - name: Run tests
+          run: |
+            cd tests
+            bash run_test_suite.sh -p 2 -v
+        - name: Upload artifacts
+          uses: actions/upload-artifact@v4
+          if: always()
+          with:
+            name: test-results
+            path: |
+              tests/test_results.pdf
+              tests/test_suite.log
