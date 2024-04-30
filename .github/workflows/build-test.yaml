@@ -53,4 +53,4 @@ jobs:
             name: test-results
             path: |
               tests/test_results.pdf
-              tests/testsuite.log
+              tests/test_suite.log
