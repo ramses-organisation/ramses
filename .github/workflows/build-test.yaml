@@ -45,9 +45,9 @@ jobs:
         - name: Run tests
           run: |
             cd tests
-            bash run_test_suite.sh -p 2
+            bash run_test_suite.sh -p 2 -v
         - name: Upload artifacts
           uses: actions/upload-artifact@v4
           with:
             name: test-results
-            path: tests/test_results.pdf
+            path: tests/test_*
