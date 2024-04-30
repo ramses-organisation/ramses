@@ -41,5 +41,4 @@ jobs:
         - name: Run
           run: |
             cd tests
-            set -e
-            bash run_test_suite.sh -p 4
+            bash run_test_suite.sh -p 4 -v
