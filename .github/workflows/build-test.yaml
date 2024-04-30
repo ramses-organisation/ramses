@@ -39,4 +39,7 @@ jobs:
         - name: Install OpenMPI
           run: sudo apt-get install -y openmpi-bin libopenmpi-dev
         - name: Run
-          run: bash tests/run_test_suite.sh -p 4
+          run: |
+            cd tests
+            set -e
+            bash run_test_suite.sh -p 4
