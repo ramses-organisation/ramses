@@ -461,12 +461,22 @@ for ((i=0;i<$ntests;i++)); do
    echo "\clearpage" >> $latexfile;
 done
 echo "\end{document}" >> $latexfile;
-if $VERBOSE ; then
-   pdflatex $latexfile 2>&1 | tee -a $LOGFILE;
-   pdflatex $latexfile 2>&1 | tee -a $LOGFILE;
+
+# Compile latex file
+# Use pdflatex if available, otherwise use tectonic
+if command -v pdflatex &> /dev/null; then
+   echo "Using pdflatex to compile the pdf document" | tee -a $LOGFILE;
+   LATEX_COMPILER="pdflatex";
 else
-   pdflatex $latexfile >> $LOGFILE 2>&1;
-   pdflatex $latexfile >> $LOGFILE 2>&1;
+   echo "Using tectonic to compile the pdf document" | tee -a $LOGFILE;
+   LATEX_COMPILER="tectonic";
+fi
+if $VERBOSE ; then
+   $LATEX_COMPILER $latexfile 2>&1 | tee -a $LOGFILE;
+   $LATEX_COMPILER $latexfile 2>&1 | tee -a $LOGFILE;
+else
+   $LATEX_COMPILER $latexfile >> $LOGFILE 2>&1;
+   $LATEX_COMPILER $latexfile >> $LOGFILE 2>&1;
 fi
 rm ${latexfile/.tex/.log};
 rm ${latexfile/.tex/.aux};
