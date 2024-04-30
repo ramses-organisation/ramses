@@ -73,7 +73,7 @@ DELETE_RESULTS="rm -rf output_* *.tex data*.dat *.pdf *.pyc";
 RETURN_TO_BIN="cd ${BIN_DIRECTORY}";
 EXECNAME="test_exe_";
 LOGFILE="${TEST_DIRECTORY}/test_suite.log";
-GIT_URL=$(git config --get remote.origin.url | sed 's/git@bitbucket.org:/https:\/\/bitbucket.org\//g');
+GIT_URL=$(git config --get remote.origin.url | sed 's/git@github.com:/https:\/\/github.com\//g');
 GIT_URL=${GIT_URL:0:$((${#GIT_URL}-4))};
 THIS_COMMIT=$(git rev-parse HEAD);
 echo > $LOGFILE;
