@@ -1,10 +1,12 @@
 :orphan:
 
+Pages that are no in `doc/index.rst` toctree 
+
+`Home.md` is disabled in `doc/conf.py` 
+
 .. toctree::
    :hidden:
 
-   Content.md
-   Home.md
    Initial.md
    Making_movies.md
    Zoom_Simulations.md

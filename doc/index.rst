@@ -18,6 +18,7 @@ release,  allowing  the user  to  perform  a  simple analysis  of  the
 generated output files. A pdf version of this documentation can be found 
 `here <Ramses.pdf>`_.
 
+
 Table of Contents
 *****************
 
@@ -37,7 +38,11 @@ Table of Contents
   :maxdepth: 2
 
   dev_docs/docs.md
+  dev_docs/acknowledgements.md
 
 .. |github tag| image:: https://img.shields.io/badge/GitHub-black.svg?style=flat&logo=github
     :target: https://github.com/ramses-organisation/ramses
     :alt: ramses GitHub
+
+
+  
