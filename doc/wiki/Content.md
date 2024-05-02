@@ -6,7 +6,7 @@ orphan: true
 1. [Obtaining the package](./Start.md#1)
 2. [Compiling the code](./Start.md#2)
 3. [Executing the test case](./Start.md#3)
-4. [Reading the Log File](./Start.md#4)
+4. [Reading the Log File](./Start.md##4)
 5. [Restarting simulations](./Restart.md)
 # [Chapter 2. Runtime Parameters](./Runtime_Parameters)
 1. [Global parameters](./Global)
