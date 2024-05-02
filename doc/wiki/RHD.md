@@ -1,6 +1,4 @@
----
-orphan: true
----
+
 
 # Radiation Hydrodynamics in RAMSES
 

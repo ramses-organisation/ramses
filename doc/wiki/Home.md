@@ -1,6 +1,4 @@
----
-orphan: true
----
+
 
 # Welcome to the ramses wiki !
 

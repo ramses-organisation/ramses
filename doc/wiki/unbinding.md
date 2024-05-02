@@ -1,6 +1,4 @@
----
-orphan: true
----
+
 
 Particle Unbinding
 ===========================================================
@@ -126,5 +124,5 @@ Can be set in the `UNBINDING_PARAMS` block
 [1]: https://www.nccs.nasa.gov/images/FloatingPoint_consistency.pdf
 [2]: https://drive.google.com/file/d/0B7IyoMUxCr-3V3NFSVFjY1lMbk0
 [3]: https://arxiv.org/pdf/1207.6105.pdf 
-[4]: https://bitbucket.org/rteyssie/ramses/wiki/PHEW
+[4]: https://github.com/ramses-organisation/ramses/blob/stable/doc/wiki/PHEW.md
 [5]: https://drive.google.com/open?id=1q0RSMeTIF7gQ7s2DXzYZUSG6cQ1LstkF

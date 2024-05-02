@@ -1,6 +1,4 @@
----
-orphan: true
----
+
 
 # [Chapter 1. Getting started](./Start.md)
 1. [Obtaining the package](./Start.md#obtaining-the-package)
