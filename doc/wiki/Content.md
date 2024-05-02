@@ -3,7 +3,7 @@ orphan: true
 ---
 
 # [Chapter 1. Getting started](./Start.md)
-1. [Obtaining the package](./Start1.md)
+1. [Obtaining the package](./Start.md#1)
 2. [Compiling the code](./Start2.md)
 3. [Executing the test case](./Start3.md)
 4. [Reading the Log File](./Start4.md)
