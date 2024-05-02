@@ -6,7 +6,7 @@ orphan: true
 1. [Obtaining the package](./Start.md#obtaining-the-package)
 2. [Compiling the code](./Start.md#compiling-the-code)
 3. [Executing the test case](./Start.md#executing-the-log-file)
-4. [Reading the Log File](https://github.com/ramses-organisation/ramses/blob/stable/doc/wiki/Start.md#reading-the-log-file)
+4. [Reading the Log File](./Start.md#reading-the-log-file)
 5. [Restarting simulations](./Restart.md)
 # [Chapter 2. Runtime Parameters](./Runtime_Parameters)
 1. [Global parameters](./Global)
