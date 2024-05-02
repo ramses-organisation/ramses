@@ -5,8 +5,6 @@
 Ramses Documentation
 ######################
 
-|github tag| 
-
 The `ramses` code is intended to be a versatile platform to develop
 applications using  Adaptive Mesh  Refinement (AMR)  for computational
 astrophysics.  The current implementation allows solving the classical
@@ -17,7 +15,8 @@ library.  It  can also  be used on  single processor  machines without
 MPI.  Output  data are generated  using Fortran unformatted  files.  A
 suite  of post-processing  routines  is delivered  within the  present
 release,  allowing  the user  to  perform  a  simple analysis  of  the
-generated output files. A pdf version can be found `here <Ramses.pdf>`_.
+generated output files. A pdf version of this documentation can be found 
+`here <Ramses.pdf>`_.
 
 Table of Contents
 *****************
