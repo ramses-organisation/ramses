@@ -18,7 +18,7 @@ generated output files.
 
 [1]: https://github.com/ramses-organisation/ramses
 [2]: https://bitbucket.org/ohahn/music
-[3]: ./Content
+[3]: ./Content.md
 [4]: ./User\ Tools
 
 # [Click here for the user's guide][3]
