@@ -2,7 +2,7 @@
 orphan: true
 ---
 
-# 2.1 Global parameters
+# Global parameters
 
 This block, called `&RUN_PARAMS`, contains the run global control 
 parameters. These parameters are now briefly described. 

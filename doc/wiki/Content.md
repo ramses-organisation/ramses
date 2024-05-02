@@ -8,13 +8,13 @@ orphan: true
 3. [Executing the test case](./Start3)
 4. [Reading the Log File](./Start4)
 5. [Restarting simulations](./Restart)
-# [Chapter 2. Runtime Parameters](./Chapter2)
+# [Chapter 2. Runtime Parameters](./Runtime_Parameters)
 1. [Global parameters](./Global)
 2. [AMR grid](./Amr)
 3. [Initial conditions](./Init)
 4. [Output parameters](./Output)
-5. Boundary conditions
-6. Hydrodynamics solver
+5. [Boundary conditions](./Boundary_conditions.md)
+6. [Hydrodynamics solver](./Hydro_Parameters.md)
 7. [Physical parameters](./Physics)
 8. [Poisson solver](./Poisson)
 9. [Refinement strategy](./Refine)
@@ -25,13 +25,13 @@ orphan: true
 14. [Movies](./Movies)
 15. [Turbulence driving](./TurbulenceDriving)
 16. [Tracer particles](./Tracers)
-# [Chapter 3. Cosmological simulations](./Chapter3)
+# [Chapter 3. Cosmological simulations](./Cosmological_Simulations)
 1. [Parameter file and initial conditions](./Initial)
 2. [Memory management](./Memory)
 3. Restarting a cosmo run
 4. [Parallel computing](./Parallel)
-5. [Zoom simulations](<./Zoom Simulations.md>)
-# [Chapter 4. Advanced simulations](./Chapter_4)
+5. [Zoom simulations](<./Zoom_Simulations.md>)
+# [Chapter 4. Advanced simulations](./Advanced_Simulations)
 1. [Patching the code](./Patching)
 2. Physical units
 3. Initial conditions
@@ -45,7 +45,7 @@ orphan: true
 2. Making Movies
 3. HOP and PHEW halo finders
 4. Further Tools
-# [Chapter 6. Testing](./Chapter_6._Testing)
+# [Chapter 6. Testing](./Testing)
 1. Running the automatic test suite
 2. Creating a new test
 3. Creating a new group of tests

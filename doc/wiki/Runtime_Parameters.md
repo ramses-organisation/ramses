@@ -2,7 +2,7 @@
 orphan: true
 ---
 
-# Chapter 2. Runtime Parameters
+# Runtime Parameters
 
 The Ramses parameter file is based on the Fortran namelist syntax. The Sod test parameter file is shown below, as it should appear if you edit it.
 ```
@@ -78,19 +78,24 @@ the file only if they are relevant to the current run. These are
 The variables you can set or adjust in each namelist block are described
 in more details in the following sections.
 
-1. [Global parameters](./Global)
-2. [AMR grid](./Amr)
-3. [Initial conditions](./Init)
-4. [Output parameters](./Output)
-5. Boundary conditions
-6. Hydrodynamics solver
-7. [Physical parameters](./Physics)
-8. [Poisson solver](./Poisson)
-9. [Refinement strategy](./Refine)
-10. [PHEW Clump finder](./PHEW)
-11. [Particle Unbinding parameters](./unbinding)
-12. [Merger Tree parameters](./mergertree)
-13. [Sink particles](./Sinks)
-14. [Movies](./Movies)
-15. [Turbulence driving](./TurbulenceDriving)
-16. [Tracer particles](./Tracers)
+```{toctree}
+:maxdepth: 1
+:caption: Parameters:
+
+Global.md
+Amr.md
+Init.md
+Output.md
+Boundary_conditions.md
+Hydro_Parameters.md
+Physics.md
+Poisson.md
+Refine.md
+PHEW.md
+unbinding.md
+mergertree.md
+Sinks.md
+Movies.md
+TurbulenceDriving.md
+Tracers.md
+```

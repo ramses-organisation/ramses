@@ -2,6 +2,8 @@
 orphan: true
 ---
 
+# Poisson Parameters
+
 This namelist, `&POISSON_PARAMS`, is used to specify runtime parameters for the Poisson solver. It is used only if `poisson=.true.` or `pic=.true.`
 
 

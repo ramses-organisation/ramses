@@ -1,8 +1,9 @@
 ---
 orphan: true
 ---
+# Testing 
 
-# 1. Running the automatic test suite
+## 1. Running the automatic test suite
 
 To run the automatic tests, navigate to the [tests](https://bitbucket.org/rteyssie/ramses/src/master/tests/) directory, and run the `run_test_suite.sh` script:
 ```
@@ -29,7 +30,7 @@ Compiling source
 and so on.
 Once the tests have completed, a report is generated in a `.pdf` file named `test_results.pdf`, alongside a log file `test_suite.log`.
 
-## Options
+### Options
 
 - Run the suite in parallel (on 4 cpus):
 ```
@@ -56,7 +57,7 @@ Once the tests have completed, a report is generated in a `.pdf` file named `tes
 ./run_test_suite.sh -t mhd
 ```
 
-# 2. Creating a new test
+## 2. Creating a new test
 
 The following steps describe how to add a new test to the test suite. In this example, the test will be named `sedov-3d`.
 
@@ -94,7 +95,7 @@ Optional files:
 
 - `after-test.sh`: if this file is present in the test directory, it will be run after the test begins (useful for e.g. cleaning up symbolic links to libraries...)
 
-## Tuning tolerances for solution verification
+### Tuning tolerances for solution verification
 
 By default, relative differences between the sums of all the variables inside all leaf cells in the domain and the reference solution cannot exceed `3.0e-13`.
 Sometimes, some variables are more volatile than others when running simulations on different numbers of CPUs, and this limit is too low, leading to false failed tests.
@@ -109,7 +110,7 @@ The `check_solution` method in the `visu/visu_ramses.py` module can be tuned to 
 - `min_variance`: if the data differs by less than this value from the average value, it is set to the average. Default is `1.0e-14`.
 
 
-# 3. Creating a new group of tests
+## 3. Creating a new group of tests
 
 If your test does not fall under the categories already present in the `tests` directory (`hydro`, `mhd`, `rt`, `sinks`), you can create a new directory and put your tests in there. You will then have to edit the `run_test_suite.sh` file to ensure your new tests will be picked up.
 

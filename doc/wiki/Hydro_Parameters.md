@@ -2,7 +2,7 @@
 orphan: true
 ---
 
-# 2.1 Hydro parameters
+# Hydro parameters
 
 This namelist is called &HYDRO_PARAMS, and is used to specify runtime parameters for the Godunov solver. These parameters are quite standard in computational fluid dynamics. We briefly
 describe them now

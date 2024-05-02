@@ -13,3 +13,7 @@ sphinx_astropy
 sphinx_rtd_theme
 sphinx-automodapi
 myst-parser
+sphinx-copybutton
+sphinx-book-theme
+nbsphinx
+sphinx-simplepdf
