@@ -32,12 +32,11 @@ Table of Contents
   wiki/Testing.md
 
 
-.. if-builder:: html
-  .. toctree::
-    :caption: Developer Documentation
-    :maxdepth: 2
+.. toctree::
+  :caption: Developer Documentation
+  :maxdepth: 2
 
-    dev_docs/docs.md
+  dev_docs/docs.md
 
 .. |github tag| image:: https://img.shields.io/badge/GitHub-black.svg?style=flat&logo=github
     :target: https://github.com/ramses-organisation/ramses
