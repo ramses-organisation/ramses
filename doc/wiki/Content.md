@@ -2,12 +2,12 @@
 orphan: true
 ---
 
-# [Chapter 1. Getting started](./Start)
-1. [Obtaining the package](./Start1)
-2. [Compiling the code](./Start2)
-3. [Executing the test case](./Start3)
-4. [Reading the Log File](./Start4)
-5. [Restarting simulations](./Restart)
+# [Chapter 1. Getting started](./Start.md)
+1. [Obtaining the package](./Start1.md)
+2. [Compiling the code](./Start2.md)
+3. [Executing the test case](./Start3.md)
+4. [Reading the Log File](./Start4.md)
+5. [Restarting simulations](./Restart.md)
 # [Chapter 2. Runtime Parameters](./Runtime_Parameters)
 1. [Global parameters](./Global)
 2. [AMR grid](./Amr)
