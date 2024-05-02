@@ -1,0 +1,19 @@
+Cython
+numpy>=1.13
+scipy
+matplotlib>=3.1.1
+astropy>=5.2
+
+# Docs
+sphinx
+docutils
+nbsphinx
+nbconvert
+sphinx_astropy
+sphinx_rtd_theme
+sphinx-automodapi
+myst-parser
+sphinx-copybutton
+sphinx-book-theme
+nbsphinx
+sphinx-simplepdf
