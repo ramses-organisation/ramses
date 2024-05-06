@@ -122,7 +122,7 @@ module amr_commons
 #ifdef LIGHT_MPI_COMM
   ! ----------- Optimized MPI buffer communicator structures suggested by P. Wautelet on the IDRIS page ------------ !
   ! ----------- http://www.idris.fr/docs/docu/support-avance/ramses.html to reduce the memory footprint ------------ !
-  ! ----------- D. Chapon (CEA Saclay - IRFU).                                                          ------------ !  
+  ! ----------- D. Chapon (CEA Saclay - IRFU).                                                          ------------ !
   ! Actual communication structure holding the data allocatable arrays
   type point_comm
      integer          ,dimension(:),  pointer::igrid
