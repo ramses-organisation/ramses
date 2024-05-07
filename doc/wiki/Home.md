@@ -1,8 +1,6 @@
----
-orphan: true
----
+# Outdated! 
 
-# Welcome to the ramses wiki !
+## Welcome to the ramses wiki !
 
 The [ramses][1] code is intended to be a versatile platform to develop
 applications using  Adaptive Mesh  Refinement (AMR)  for computational
@@ -18,8 +16,7 @@ generated output files.
 
 [1]: https://github.com/ramses-organisation/ramses
 [2]: https://bitbucket.org/ohahn/music
-[3]: ./Content.md
-[4]: ./User\ Tools
+
 
 # [Click here for the user's guide][3]
 
@@ -27,7 +24,7 @@ generated output files.
 
 # [Click here for a list of useful tools and external links][6]
 
-# About this wiki
+## About this wiki
 
 The goal of this wiki is to provide a step-by-step tutorial in
 using the [ramses][1] code.  We will first describe a simple example
@@ -52,33 +49,3 @@ add new equations, or add new  routines in order to modify the default
 [ramses][1]  application.   This  wiki  will describe  some  of  these
 advanced features.
 
-# Acknowledgements 
-
-The development of the RAMSES  code has been initiated and coordinated
-by the main author. The main author would  like to thank all co-authors who
-took an active role in the development of this version. They are cited
-in alphabetical order. 
-
-- Dominique Aubert (radiative transfer, initial conditions)
-- Edouard Audit (radiative transfer)
-- Andreas Bleuler (sink particle, clump finder)
-- Stephane Colombi (cooling and atomic physics)
-- Benoit Commercon (radiative transfer, MHD)
-- Stephanie Courty (cooling and atomic physics)
-- Julien Devriendt (Hilbert curve)
-- Emmanuel Dormy (MHD)
-- Yohan Dubois (supernovae feedback, AGN feedback, MHD)
-- Sebastien Fromang (MHD, relativistic HD) 
-- Claudio Gheller (GPU optimisation)
-- Matthias Gonzalez (radiative transfer, initial conditions)
-- Thomas Guillet (Multigrid Poisson solver)
-- Patrick Hennebelle (MHD)
-- Troels Haugboelle (MHD, gravity solver)
-- Astrid Lamberts (relativistic HD)
-- Davide Martizzi (AGN feedback, clump finder)
-- Aake Nordlund (MHD, gravity solver)
-- Joakim Rosdahl (radiative transfer)
-- Yann Rasera (star formation)
-- Philippe Series (code optimization)
-- Neil Vaytet (automatic testing)
-- Philippe Wautelet (code optimization)

@@ -1,11 +1,9 @@
----
-orphan: true
----
+
 # Testing 
 
 ## 1. Running the automatic test suite
 
-To run the automatic tests, navigate to the [tests](https://bitbucket.org/rteyssie/ramses/src/master/tests/) directory, and run the `run_test_suite.sh` script:
+To run the automatic tests, navigate to the [tests](https://github.com/ramses-organisation/ramses/tree/stable/tests) directory, and run the `run_test_suite.sh` script:
 ```
 >$ cd tests
 >$ ./run_test_suite.sh
