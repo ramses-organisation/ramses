@@ -1,6 +1,4 @@
----
-orphan: true
----
+
 # Initial Conditions Parameters
 
 This sets of parameters, contained in the namelist block `&INIT_PARAMS`. This is used to set up the initial conditions.

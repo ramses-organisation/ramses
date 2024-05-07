@@ -1,6 +1,4 @@
----
-orphan: true
----
+
 
 In the following, we will assume that a RAMSES output named `output_00001` exists in the current workind directory
 

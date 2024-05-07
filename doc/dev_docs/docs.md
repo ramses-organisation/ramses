@@ -17,3 +17,5 @@ Some notes about the Sphinx and Read-The-Docs (RTD) documentation builders:
     - `primary_color = '#3061f3'`
     - `secondary_color = '#1A43A4'`
     - `text_color = '#ffffff'`
+- If creating a page without listing it in the toctree, add the page to `doc/wiki/orphan_pages.rst`.
+    - If you do not do this, you will get the following error: `WARNING: document isn't included in any toctree`.
