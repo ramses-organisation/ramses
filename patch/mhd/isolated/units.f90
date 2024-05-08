@@ -13,7 +13,7 @@ subroutine units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
   !scale_d = 1.0
   masse_solaire = 1.9891D33 ! g
   kparsec = 3.085677581282D21 ! cm
-  ! On prend comme unité de masse : 10**9 masses solaires
+  ! On prend comme unitÃ© de masse : 10**9 masses solaires
   scale_d = 1.0D9 * masse_solaire / kparsec**3
   if(cosmo) scale_d = omega_m * rhoc *(h0/100.)**2 / aexp**3
 
