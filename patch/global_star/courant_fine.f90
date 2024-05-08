@@ -192,7 +192,7 @@ subroutine energy_fine(ilevel)
   integer ,dimension(1:nvector),save::ind_grid,ind_cell
   real(dp),dimension(1:nvector,1:ndim),save::xx
   real(dp),dimension(1:nvector)::ee
-  real(dp),dimension(1:nvector,1:nvar+3)::uut 
+  real(dp),dimension(1:nvector,1:nvar+3)::uut
   real(dp),dimension(1:nvector)::req,peq
   real(kind=8)::uud,ekin,uuv
   real(dp),save::vol_heat=0.0d0
@@ -271,7 +271,7 @@ subroutine energy_fine(ilevel)
           end do
           uold(ind_cell(i),neul) = uold(ind_cell(i),neul)-ekin
         end do
-        
+
         ! Scatter variables
         do ivar=1,nvar+3
           do i=1,ngrid
@@ -282,17 +282,17 @@ subroutine energy_fine(ilevel)
         do i=1,ngrid
           req(i) = rho_eq(ind_cell(i))
           peq(i) = p_eq(ind_cell(i))
-        end do 
+        end do
 
         ! Spongy layers that damp the profiles towards the equilibrium ones
         !call spongelayers(xx,uut,req,peq,t,ngrid)
-        
+
         ! rescatter variables
         do ivar=1,nvar+3
           do i=1,ngrid
             uold(ind_cell(i),ivar) = uut(i,ivar)
           end do
-        end do 
+        end do
 
         ! Impose analytical energy field
         call eneana(xx,ee,dx_loc,t,ngrid,vol_heat,vol_cool,compute_volumes)
@@ -302,8 +302,8 @@ subroutine energy_fine(ilevel)
 #if NVAR>8
           ! Entropy
           uold(ind_cell(i),9)=uold(ind_cell(i),9)+(gamma-1.0d0)/(uold(ind_cell(i),1)**(gamma-1.0d0))*ee(i)*dtnew(ilevel)
-#else          
-          
+#else
+
 #endif
         end do
 
@@ -321,7 +321,7 @@ subroutine energy_fine(ilevel)
      ! End loop over cells
   end do
   ! End loop over grids
-  ! If first call, then set compute_volumes to false and 
+  ! If first call, then set compute_volumes to false and
   ! do MPI comm if necessary
   if (compute_volumes.eqv..true.) then
     compute_volumes=.false.
@@ -334,8 +334,8 @@ subroutine energy_fine(ilevel)
     vol_heat=comm_buffout(1)
     vol_cool=comm_buffout(2)
 #endif
-  end if 
-end subroutine energy_fine 
+  end if
+end subroutine energy_fine
 !#########################################################
 !#########################################################
 !#########################################################

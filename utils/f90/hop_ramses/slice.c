@@ -1,7 +1,7 @@
 /* SLICE.C, Daniel Eisenstein, 1997 */
-/* Based on a paper by Daniel Eisenstein & Piet Hut, 
+/* Based on a paper by Daniel Eisenstein & Piet Hut,
 "HOP: A New Group-Finding Algorithm for N-body Simulations."
-See the included documentation or view it at 
+See the included documentation or view it at
 http://www.sns.ias.edu/~eisenste/hop/hop_doc.html */
 
 /* Version 1.0 (12/15/97) -- Original Release */
@@ -75,14 +75,14 @@ int f77read(FILE *f, void *p, int maxbytes)
 /* Reading is done ZERO-OFFSET */
 {
     int size, size2;
-    if (fread(&size,4,1,f)!=1) 
+    if (fread(&size,4,1,f)!=1)
 	myerror("f77read(): Error reading begin delimiter.");
-    if (size>maxbytes) 
+    if (size>maxbytes)
 	myerror("f77read(): Block delimiter exceeds size of storage.");
-    if (size<maxbytes) 
+    if (size<maxbytes)
 	mywarn("f77read(): Block size is smaller than size of storage.");
     if (fread(p,1,size,f)!=size) myerror("f77read(): Error reading data.");
-    if (fread(&size2,4,1,f)!=1) 
+    if (fread(&size2,4,1,f)!=1)
 	myerror("f77read(): Error reading end delimiter.");
     if (size!=size2) myerror("f77read(): Delimiters do not match.");
     return size;
@@ -136,7 +136,7 @@ void free_ivector(int *v, long nl, long nh)
 int read_header(FILE *f, Slice *s)
 /* Read the header from file f.  Place information and calculated
 numbers into the Slice variable, unless *s is NULL, in which case just
-skip the header */  
+skip the header */
 /* Return 0 if successful, non-zero otherwise */
 {
     int sizeheader[2];
@@ -157,7 +157,7 @@ skip the header */
     s->z = header[0];
     s->boxsize = header[1]*1000.0;	/* We use kpc, not Mpc */
     s->physsize = s->boxsize/(1.0+s->z);	/* We use kpc, not Mpc */
-    s->velscale = 100.0*header[1]*sqrt(3.0/8.0/PI)/(1.0+s->z); 
+    s->velscale = 100.0*header[1]*sqrt(3.0/8.0/PI)/(1.0+s->z);
 		/* To go from data to pec vel */
     s->omega = header[4];
     if (header[6]!=0.0) myerror("HDM component listed in header.");
@@ -211,22 +211,22 @@ tag file header. */
 
     dummylist = NULL;
     if (!conp || !conv) dummylist = vector(1,s->numperblock);
-    if (s->pid!=NULL) 
+    if (s->pid!=NULL)
 	mywarn("Non-NULL s->pid[] passed to read_alldata().  Ignoring...");
 
     s->numlist=s->numpart;
     if (conp) {
-	s->px=vector(1,s->numlist); 
-	s->py=vector(1,s->numlist); 
-	s->pz=vector(1,s->numlist); 
+	s->px=vector(1,s->numlist);
+	s->py=vector(1,s->numlist);
+	s->pz=vector(1,s->numlist);
     }
     if (conv) {
-	s->vx=vector(1,s->numlist); 
-	s->vy=vector(1,s->numlist); 
-	s->vz=vector(1,s->numlist); 
+	s->vx=vector(1,s->numlist);
+	s->vy=vector(1,s->numlist);
+	s->vz=vector(1,s->numlist);
     }
     if (ftag!=NULL) s->ntag = ivector(1,s->numlist);
-    
+
     printf("Reading data...");
     for (block=0;block<s->numblocks;block++) {
 	/* Read the three position blocks */
@@ -268,11 +268,11 @@ int read_partdata(FILE *f, FILE *ftag, Slice *s)
 storage, erasing and freeing previous storage. */
 /* This cannot be done with s->pid!=NULL, so s->pid is ignored and s->numlist
 is reset to BLOCKSIZE */
-/* Unlike other routines, this stores both positions and velocities in 
+/* Unlike other routines, this stores both positions and velocities in
 all cases (since the storage requirements are already small */
 /* If ftag==NULL, don't read the tag file.  Otherwise do read it. */
 {
-    if (s->pid!=NULL) 
+    if (s->pid!=NULL)
 	mywarn("Non-trivial pid[] not supported with incremental reads");
     /* If we need to reallocate memory, do it.  Otherwise, just write over */
     if (s->px==NULL || s->vx==NULL || s->numlist!=s->numperblock) {
@@ -328,7 +328,7 @@ the number of particles.  Return the second, which is the number of groups */
 {
     int dummy[2];
     if (fread(&dummy, 4, 2, f)!=2) myerror("Error in reading tag file.");
-    if (s->numpart!=0 && dummy[0]!=s->numpart) 
+    if (s->numpart!=0 && dummy[0]!=s->numpart)
 	myerror("First number in tag file doesn't match expected number of particles.");
     s->numgroups = dummy[1];
     return dummy[1];
@@ -345,11 +345,11 @@ int readalltags(FILE *f, Slice *s)
 	s->ntag = ivector(1, s->numlist);
     }
     if (fread(&dummy, 4, 2, f)!=2) myerror("Error 1 in reading tag file.");
-    if (dummy[0]!=s->numpart) 
+    if (dummy[0]!=s->numpart)
 	myerror("First int of tag file doesn't match numpart.");
     s->numgroups = dummy[1];
 
-    if (fread(s->ntag+1, 4, s->numlist, f)!=s->numlist) 
+    if (fread(s->ntag+1, 4, s->numlist, f)!=s->numlist)
 	myerror("Couldn't read entire tag file.");
     return dummy[1];
 }

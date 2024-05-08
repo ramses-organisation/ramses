@@ -19,15 +19,15 @@ subroutine init_hydro
   real(dp),dimension(1:nvector,1:nmat),save::ff,gg
   real(dp),dimension(1:nvector,1:npri),save::qq
   real(dp),dimension(1:nvector),save::dtot,gg_mat,ee,pp_mat,cc
-  
+
   if(verbose)write(*,*)'Entering init_hydro'
 
   ncell=ncoarse+twotondim*ngridmax
-  
+
   ! Allocate conservative, cell-centered variables arrays
   allocate(uold(1:ncell,1:nvar))
   allocate(unew(1:ncell,1:nvar))
-  uold=0.0d0; unew=0.0d0 
+  uold=0.0d0; unew=0.0d0
   allocate(divu(1:ncell))
   allocate(dive(1:ncell,1:nmat))
   divu=0.0d0
@@ -109,12 +109,12 @@ subroutine init_hydro
                       uold(ind_grid(i)+iskip,ivar)=xx(i)*dtot(i)
                     end do
                  end do
-                 ! Read thermal pressures 
+                 ! Read thermal pressures
                  read(ilun)xx
                  do imat=1,nmat
                    do i=1,ncache
                       uold(ind_grid(i)+iskip,2*nmat+ndim+imat)=xx(i)              ! Saving the pressure into the energy slots
-                      qq(i,ndim+imat) = uold(ind_grid(i)+iskip,2*nmat+ndim+imat)                         
+                      qq(i,ndim+imat) = uold(ind_grid(i)+iskip,2*nmat+ndim+imat)
                    end do
                  end do
                  ! Convert pressure to total energy
@@ -138,11 +138,11 @@ subroutine init_hydro
                       do irad = 1,nener
                          erad       = erad + uold(ind_grid(i)+iskip,3*nmat+ndim+irad)
                       end do
-#endif                    
+#endif
                       uold(ind_grid(i)+iskip,2*nmat+ndim+imat) = (ee(i) + gg(i,imat)*ekin + erad)*ff(i,imat) ! f_k.E_k
                    end do
                  end do
-              
+
                  ! Read equilibrium density and pressure profiles
                  if(strict_equilibrium>0)then
                     read(ilun)xx
@@ -154,7 +154,7 @@ subroutine init_hydro
                        p_eq(ind_grid(i)+iskip)=xx(i)
                     end do
                  endif
-                 
+
               end do
               deallocate(ind_grid,xx)
            end if
@@ -170,7 +170,3 @@ subroutine init_hydro
   end if
 
 end subroutine init_hydro
-
-
-
-

@@ -9,7 +9,7 @@ nremap=0
 nsubcycle=10*2
 /
 
-&AMR_PARAMS 
+&AMR_PARAMS
 levelmin=5
 levelmax=7
 ngridtot=50000

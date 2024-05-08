@@ -113,6 +113,3 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
   ! End loop over cells
 
 end subroutine coolfine1
-
-
-

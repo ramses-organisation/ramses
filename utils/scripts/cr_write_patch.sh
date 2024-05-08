@@ -15,14 +15,14 @@ if [ $# == 0 ]
     PATCHDIRS=(${PATCHDIRS//:/ })
     for PATCHDIR in "${PATCHDIRS[@]}"; do
 	for filename in ${PATCHDIR}/*.f90; do
-            echo "$filename" 
+            echo "$filename"
             cat "$filename"
-	done 
+	done
     done > .tmp_output.txt
 fi
 
 sed 's/\$/ /g' .tmp_output.txt | sed "s/\"/'/g" | cat -e | sed 's/\$/\"/' | sed 's/^/  write(ilun,format)"/' > .test_middle.f90
-  
+
 cat << EOF > .test_after.f90
   close(ilun)
 end subroutine output_patch
@@ -45,4 +45,3 @@ EOF
 cat .test_before.f90 .test_middle.f90 .test_after.f90 > write_patch.f90
 
 rm .tmp_output.txt .test_before.f90 .test_middle.f90 .test_after.f90
-

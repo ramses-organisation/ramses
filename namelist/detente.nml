@@ -10,7 +10,7 @@ nsubcycle=3*1,2
 verbose=.false.
 /
 
-&AMR_PARAMS 
+&AMR_PARAMS
 levelmin=8
 levelmax=8
 ngridmax=10000
@@ -51,12 +51,9 @@ slope_type=2
 scheme='plmde'
 /
 
-&REFINE_PARAMS 
+&REFINE_PARAMS
 floor_u=1d-3
 err_grad_u=0.2
 interpol_var=0
 interpol_type=0
 /
-
-
-

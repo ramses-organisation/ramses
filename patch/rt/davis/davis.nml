@@ -1,4 +1,4 @@
-&RUN_PARAMS 
+&RUN_PARAMS
 hydro=.true.
 nrestart=0
 nremap=20
@@ -13,7 +13,7 @@ nstepmax=10000000
 &INIT_PARAMS
 /
 
-&AMR_PARAMS 
+&AMR_PARAMS
 levelmin=11
 levelmax=11
 ngridtot=5000000
@@ -39,8 +39,8 @@ riemann='hllc'
 &PHYSICS_PARAMS
 cooling=.false.
 metal=.false.
-units_density=7.122d-21  !=1d-5 * rho_star  !7.122d-16		
-units_time=3.67d10	      	
+units_density=7.122d-21  !=1d-5 * rho_star  !7.122d-16
+units_time=3.67d10
 units_length=1.978d15
 z_ave=1d0
 /
@@ -82,7 +82,7 @@ rt_u_region=0d0                 ! Reduced x-direction flux
 rt_v_region=0d0                 ! Reduced y-direction flux
 /
 
-&RT_GROUPS	
+&RT_GROUPS
 group_csn(1,:)= 0.
 group_cse(1,:)= 0.
 group_egy(1)= 6.2415d11         ! 1 erg

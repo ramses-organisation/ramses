@@ -23,7 +23,7 @@ extern "C" int aton_init_gpu_(const int* allow_gpu_overload) {
   }
 
   char* all_hostnames = (char*) malloc(mpi_size * HOSTNAME_BUFFER_SIZE);
-  
+
   MPI_Allgather(my_hostname, HOSTNAME_BUFFER_SIZE, MPI_CHAR,
 		all_hostnames, HOSTNAME_BUFFER_SIZE, MPI_CHAR,
 		MPI_COMM_WORLD);

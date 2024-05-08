@@ -266,7 +266,7 @@ subroutine read_hydro_params(nml_ok)
      nml_ok=.false.
   endif
 #endif
-  
+
   !--------------------------------------------------
   ! Check for non-thermal energies
   !--------------------------------------------------

@@ -77,7 +77,7 @@ subroutine init_hydro
         end if
      endif
 #endif
-     
+
      open(unit=ilun,file=fileloc,form='unformatted')
      read(ilun)ncpu2
      read(ilun)nvar2
@@ -222,7 +222,7 @@ subroutine init_hydro
                        p_eq(ind_grid(i)+iskip)=xx(i)
                     end do
                  endif
-                 
+
               end do
               deallocate(ind_grid,xx)
            end if
@@ -251,7 +251,3 @@ subroutine init_hydro
   end if
 
 end subroutine init_hydro
-
-
-
-

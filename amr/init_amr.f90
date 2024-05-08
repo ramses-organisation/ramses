@@ -552,5 +552,3 @@ subroutine init_amr
   end if
 
 end subroutine init_amr
-
-

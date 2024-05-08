@@ -977,7 +977,7 @@ subroutine virtual_tree_fine(ilevel)
      ! Loop over particles by vector sweeps
      icpu=emission_part(ilevel)%cpuid(iactive)
      ncache=emission_part(ilevel)%nparts(iactive)
-#else 
+#else
   do icpu=1,ncpu
      ! Loop over particles by vector sweeps
      ncache=emission(icpu,ilevel)%npart
@@ -1349,7 +1349,7 @@ subroutine empty_comm(ind_com,np,ilevel,icpu)
         emission_part(ilevel)%f8(1, offset_np+ind_com(i)-1) = ind_part(i)
 #else
         emission(icpu,ilevel)%fp(ind_com(i), 1) = ind_part(i)
-#endif   
+#endif
      end do
   end if
 

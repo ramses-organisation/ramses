@@ -10,7 +10,7 @@
 ;       Data analysis.
 ;
 ; CALLING SEQUENCE:
-;       CUT3D, Grid3d, Hydro3d, Grid2d, Hydro2d, 
+;       CUT3D, Grid3d, Hydro3d, Grid2d, Hydro2d,
 ;                          XCUT = xcut, YCUT = ycut, ZCUT = zcut
 ;
 ; INPUTS
@@ -20,13 +20,13 @@
 ;
 ; OPTIONAL INPUTS:
 ;       XCUT:    if set, defines the X coordinate of the cutting
-;       plane. 
+;       plane.
 ;
 ;       YCUT:    if set, defines the Y coordinate of the cutting
-;       plane. 
+;       plane.
 ;
 ;       ZCUT:    if set, defines the Z coordinate of the cutting
-;       plane. 
+;       plane.
 ;
 ; OUTPUTS:
 ;       Grid2d: structure containing the 2D AMR mesh defining the cut.
@@ -38,7 +38,7 @@
 ;
 ; EXAMPLE:
 ;       To extract a slice at coordinate z = 16 in the 3D AMR mesh,
-;       type: 
+;       type:
 ;
 ;               CUT3D, Grid3d, Hydro3d, Grid2d, Hydro2d, zcut=16.
 ;
@@ -182,7 +182,7 @@ for icpu=0,ncpu-1 do begin
             mesh2=(*grid.level[ilevel-1,icpu])
             xg=x(ind)
             yg=y(ind)
-            zg=z(ind)            
+            zg=z(ind)
             for j=0,1 do begin
                 yc=yg+(double(j)-0.5d0)*dx
                 indok=where(yc ge ycut-dx/2. and yc lt ycut+dx/2,nok)
@@ -220,7 +220,7 @@ for icpu=0,ncpu-1 do begin
             endfor
         endif
     endif
-    
+
     if keyword_set(zcut) then begin
         ind=where( z ge zcut-dx and z le zcut+dx, ngridok)
         if(ngridok gt 0) then begin
@@ -228,7 +228,7 @@ for icpu=0,ncpu-1 do begin
             mesh2=(*grid.level[ilevel-1,icpu])
             xg=x(ind)
             yg=y(ind)
-            zg=z(ind)            
+            zg=z(ind)
             for k=0,1 do begin
                 zc=zg+(double(k)-0.5d0)*dx
                 indok=where(zc ge zcut-dx/2. and zc lt zcut+dx/2.,nok)

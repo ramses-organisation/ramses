@@ -10,7 +10,7 @@ window,0,xs=xs,ys=ys
 
 ; rd_amr,a,nout=iout
 ; rd_hydro,h,nout=iout
-; tv2d,a,h,type=type,vmin=vmin,vmax=vmax,lmin=lmin,lmax=lmax,xr=xr,yr=yr,log=log,showgrid=showgrid,dummy=dummy 
+; tv2d,a,h,type=type,vmin=vmin,vmax=vmax,lmin=lmin,lmax=lmax,xr=xr,yr=yr,log=log,showgrid=showgrid,dummy=dummy
 mkall,iout
 
 scr=tvrd(true=3)
@@ -21,7 +21,7 @@ for i=iout+1,nout do begin
 
 ;     rd_amr,a,nout=i
 ;     rd_hydro,h,nout=i
-;     tv2d,a,h,type=type,vmin=vmin,vmax=vmax,lmin=lmin,lmax=lmax,xr=xr,yr=yr,log=log,showgrid=showgrid,dummy=dummy 
+;     tv2d,a,h,type=type,vmin=vmin,vmax=vmax,lmin=lmin,lmax=lmax,xr=xr,yr=yr,log=log,showgrid=showgrid,dummy=dummy
     mkall,i
 
     scr=tvrd(true=3)
@@ -32,6 +32,3 @@ endfor
  write_gif,filename,/close
 
 end
-
-
-    

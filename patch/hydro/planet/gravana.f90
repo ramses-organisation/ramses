@@ -241,5 +241,3 @@ subroutine impose_iso(ilevel)
 111 format('   Entering impose_iso for level ',I2)
 
 end subroutine impose_iso
-
-

@@ -251,9 +251,3 @@ SUBROUTINE output_rt_stats
 113 format(' SED feedback(phot/step/1d50, phot/tot/1d50, *, */Msun , dt[yr])= '  &
                                                              ,10(1pe9.2))
 END SUBROUTINE output_rt_stats
-
-
-
-
-
-

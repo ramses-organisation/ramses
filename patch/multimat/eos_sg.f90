@@ -66,7 +66,7 @@ subroutine eos(f,g,q,p,c,kappa_mat,kappa_hat,ncell)
   ! do k = 1,ncell
   !    c(k) = kappa_hat(k) / q(k,1)
   !    c(k) = sqrt(max(c(k),smallc**2))
-  ! end do   
+  ! end do
 
 end subroutine eos
 
@@ -90,7 +90,7 @@ subroutine eosinv(f,g,q,e,c,kappa_mat,kappa_hat,ncell)
   ! q are the total primitive variables (d, u, P)
   ! On exit:
   ! eint is the total internal energy
-  ! c is the sound speed of each fluid 
+  ! c is the sound speed of each fluid
   ! c_hat is the total sound speed
   integer::k,imat
   real(dp)::g0,p0,a0,b0
@@ -115,7 +115,7 @@ subroutine eosinv(f,g,q,e,c,kappa_mat,kappa_hat,ncell)
   pinf_tot (1:ncell)=beta_tot(1:ncell)/alpha_tot(1:ncell)/gamma_tot(1:ncell)
   ! Calculate the interal energy for given pressure
   do k = 1,ncell
-    e(k) = alpha_tot(k) * q(k,npri) + beta_tot(k) 
+    e(k) = alpha_tot(k) * q(k,npri) + beta_tot(k)
   end do
   ! Calculate the bulk modulus
   do imat = 1,nmat

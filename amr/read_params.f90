@@ -231,7 +231,7 @@ subroutine read_params
     write(*,*) "       - emission_part(1:nlevelmax)    : ", dble(sizeof(emission_part))/1.0e6," MB"
     write(*,*) "       - reception(1:ncpu,1:nlevelmax) : ", dble(sizeof(reception))*ncpu/1.0e8," MB"
     if (poisson) then
-        allocate(reception(1:100, 1:levelmax-1)) ! active_mg 
+        allocate(reception(1:100, 1:levelmax-1)) ! active_mg
         allocate(emission(1:levelmax-1)) ! emission_mg
         mem_used_new_buff_mg = dble(sizeof(emission)) + dble(sizeof(reception))*ncpu/100.0
         deallocate(reception)

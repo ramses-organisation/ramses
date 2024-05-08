@@ -4,7 +4,7 @@
 ;
 ; PURPOSE:
 ;	This procedure plots particles to the current device.
-;	It uses the 3D view defined by PP_AMR3D. Particle colors 
+;	It uses the 3D view defined by PP_AMR3D. Particle colors
 ;       are coded using particle level (default) or particle density.
 ;	The last option must be used after routine MAKE_DENS has been
 ;	used, and particle density array has been stored to a file.
@@ -21,7 +21,7 @@
 ; OPTIONAL INPUTS:
 ;       XR:      if set, the routine plots only particle that lie
 ;       within these boundaries, defined along the X axis. Default:
-;       the whole box ! 
+;       the whole box !
 ;
 ;       YR:      Same for the Y axis.
 ;
@@ -39,7 +39,7 @@
 ;
 ; OUTPUTS:
 ;       None.
-;       
+;
 ; COMMON BLOCKS:
 ;       None.
 ;
@@ -51,7 +51,7 @@
 ;	        PP_AMR3D, GRID, /COLOR, ax=90, az=0, /NODATA
 ;
 ;               ; Plot particles
-;               PP_PART3D, PART, DENSITY='density_file.dat' 
+;               PP_PART3D, PART, DENSITY='density_file.dat'
 ;
 ; MODIFICATION HISTORY:
 ; 	Written by:	Romain Teyssier, 01/01/2000.

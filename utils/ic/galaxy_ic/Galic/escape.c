@@ -22,10 +22,10 @@ double SofteningTable[6];
 
 
 
-struct particle_data 
+struct particle_data
 {
-  double Pos[3], 
-         Mass, 
+  double Pos[3],
+         Mass,
          Acc[3],
          Potential;
   int    Type;
@@ -61,7 +61,7 @@ compute_local_escape_speed()
 
 
   n=1;
-  
+
   if(N_HALO>0)
     {
       for(i=1;i<=N_HALO;i++)
@@ -93,7 +93,7 @@ compute_local_escape_speed()
 	}
     }
 
-      
+
   if(N_BULGE>0)
     {
       for(i=1;i<=N_BULGE;i++)
@@ -131,16 +131,16 @@ compute_local_escape_speed()
 
   force_treebuild((void **)P+1, N,  1.0 , 1);
 
-  
+
 
   for(i=1;i<=N;i++)
     {
       if((i%100)==0)
 	printf("...%d\n",i);
       P[i]->Potential=0;
-      force_treeevaluate_potential(i-1);    
+      force_treeevaluate_potential(i-1);
     }
-  
+
 
 
   for(i=1;i<=N;i++)
@@ -178,7 +178,7 @@ compute_local_escape_speed()
 	}
     }
 
-      
+
   if(N_BULGE>0)
     {
       for(i=1;i<=N_BULGE;i++)
@@ -201,7 +201,7 @@ compute_local_escape_speed()
 
 
 
-  printf("done.\n"); 
+  printf("done.\n");
 }
 
 
@@ -227,7 +227,7 @@ allocate_memory(int NumPart)
 	}
 
       P--;   /* start with offset 1 */
-      
+
       if(!(P[1]=malloc((NumPart)*sizeof(struct particle_data))))
 	{
 	  fprintf(stdout,"failed to allocate memory. (B)\n");

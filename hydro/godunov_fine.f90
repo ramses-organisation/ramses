@@ -173,7 +173,7 @@ subroutine set_uold(ilevel)
 
      ! -------------------------------------------------------------------------------------------------------------------------------------------------------------
      ! L. Romano 13.06.2023 -- Catch advection errors due to smallr
-#if NVAR > NDIM + 2 + NENER     
+#if NVAR > NDIM + 2 + NENER
      do i=1,active(ilevel)%ngrid
         if(uold(active(ilevel)%igrid(i)+iskip,1).lt.smallr.and.unew(active(ilevel)%igrid(i)+iskip,1).gt.uold(active(ilevel)%igrid(i)+iskip,1))then
            ! inflow into previously floored cell: fix concentrations
@@ -248,7 +248,7 @@ subroutine add_gravity_source_terms(ilevel)
   integer::i,ind,iskip,ind_cell
   real(dp)::d,u,v,w,e_kin,e_prim,d_old,fact
   real(dp)::req=0_dp
-  
+
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
 

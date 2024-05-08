@@ -25,7 +25,7 @@ subroutine rho_ana(x,d,dx,ncell)
 
   select case(gravity_type)
   ! Remark: no obvious equivalent for gravana's gravity_type==1
-  case(-2)        
+  case(-2)
     ! point mass
     emass=dx
     emass=gravity_params(1) ! Softening length

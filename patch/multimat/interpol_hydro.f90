@@ -26,25 +26,25 @@ subroutine upload_fine(ilevel)
      do i=1,ngrid
         ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
      end do
- 
+
      ! Loop over cells
      do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
         do i=1,ngrid
            ind_cell(i)=iskip+ind_grid(i)
         end do
-        
+
         ! Gather split cells
         do i=1,ngrid
            ok(i)=son(ind_cell(i))>0
         end do
-        
+
         ! Count split cells
         nsplit=0
         do i=1,ngrid
            if(ok(i))nsplit=nsplit+1
         end do
-        
+
         ! Upload for selected cells
         if(nsplit>0)then
            icell=0
@@ -56,7 +56,7 @@ subroutine upload_fine(ilevel)
            end do
            call upl(ind_split,nsplit)
         end if
-        
+
      end do
      ! End loop over cells
 
@@ -92,8 +92,8 @@ subroutine upl(ind_cell,ncell)
   end do
 
   ! Loop over variables
-  do ivar=1,nvar     
-     
+  do ivar=1,nvar
+
      ! Average conservative variable
      getx(1:ncell)=0.0d0
      do ind_son=1,twotondim
@@ -105,7 +105,7 @@ subroutine upl(ind_cell,ncell)
            getx(i)=getx(i)+uold(ind_cell_son(i),ivar)
         end do
      end do
-     
+
      ! Scatter result to cells
      do i=1,ncell
         uold(ind_cell(i),ivar)=getx(i)/dble(twotondim)
@@ -164,7 +164,7 @@ subroutine interpol_hydro(u1,u2,nn)
 
      ! Load father variable
      do j=0,twondim
-        do i=1,nn 
+        do i=1,nn
            a(i,j)=u1(i,j,ivar)
         end do
      end do
@@ -172,12 +172,12 @@ subroutine interpol_hydro(u1,u2,nn)
      ! If embedded body, modify variables to enforce reflexive BC
      if(static)then
         do j=0,twondim
-           do i=1,nn 
+           do i=1,nn
               body(i,j)=u1(i,j,npri+1) > 0.01
            end do
         end do
         do j=1,ndim
-           do i=1,nn 
+           do i=1,nn
               if(body(i,2*j-1))then
                  u1(i,2*j-1,1:nvar)= u1(i,0,1:nvar)
                  u1(i,2*j-1,1+j   )=-u1(i,0,1+j)
@@ -199,7 +199,7 @@ subroutine interpol_hydro(u1,u2,nn)
 
      ! If inside body, reset slopes to zero
      if(static)then
-        do i=1,nn 
+        do i=1,nn
            if(body(i,0))w(i,1:ndim)=0.0
         end do
      endif

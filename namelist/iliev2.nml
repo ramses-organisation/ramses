@@ -1,4 +1,4 @@
-&RUN_PARAMS 
+&RUN_PARAMS
 hydro=.true.
 static=.true.
 nrestart=0
@@ -20,7 +20,7 @@ p_region= 8.69869d-10		! =10^2 K
 var_region(1,1)=1d-6            ! HII fraction
 /
 
-&AMR_PARAMS 
+&AMR_PARAMS
 levelmin=7
 levelmax=7
 ngridmax=50000

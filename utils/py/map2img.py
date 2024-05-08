@@ -30,12 +30,10 @@ fig, ax = plt.subplots(figsize=(512/my_dpi, 512/my_dpi), dpi=my_dpi)
 
 if args.log:
     dat=np.log10(dat)
-    
+
 ax.imshow(dat[:, :].T, interpolation='nearest', origin='lower')
 ax.set_xlabel("nx")
 ax.set_ylabel("ny")
 if args.out:
     plt.savefig(args.out)
 plt.show()
-
-
