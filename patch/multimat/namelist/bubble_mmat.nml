@@ -11,11 +11,11 @@ nsubcycle=4*1,2
 static=.true.
 /
 
-&AMR_PARAMS 
+&AMR_PARAMS
 levelmin=4
 levelmax=10
 ngridmax=100000
-nexpand=1 
+nexpand=1
 boxlen=4.0
 /
 
@@ -68,13 +68,10 @@ courant_factor=0.8
 slope_type=3
 /
 
-&REFINE_PARAMS 
+&REFINE_PARAMS
 err_grad_f=0.1
 err_grad_p=0.1
 err_grad_d=0.1
 interpol_var=0
 interpol_type=2
 /
-
-
-

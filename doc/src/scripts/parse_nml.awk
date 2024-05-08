@@ -3,8 +3,8 @@
 #    levelmax
 
 BEGIN {
-	LEVELMIN="#ERR#" 
-	LEVELMAX="#ERR#" 
+	LEVELMIN="#ERR#"
+	LEVELMAX="#ERR#"
 }
 
 /^[ \t]*levelmin[ \t]*=/ {

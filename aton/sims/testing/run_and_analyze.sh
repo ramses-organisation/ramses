@@ -27,4 +27,3 @@ echo "The columns are r, density, xneutral, pressure, temperature, mach, xion"
 echo "e.g. to compare the temperature in gnuplot:"
 echo "set log y"
 echo "plot 'test/profile.txt' using 1:5, 'test/expected_profile.txt' using 1:5"
-

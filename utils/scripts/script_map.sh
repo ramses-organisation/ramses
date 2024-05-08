@@ -53,7 +53,3 @@ amr2map -inp output_$count -typ 0 -out level_${count}_dir${dir}.map -xmi $xmi -x
 #amr2map -inp output_$count -typ 7 -out blast_${count}_vir_dir${dir}.map  -xmi $xmi -xma $xma -ymi $ymi -yma $yma -zmi $zmi -zma $zma -nx 1024 -ny 1024 -lma ${lmax} -dir ${dir}
 #part2map -inp output_$count -out star_${count}_vir_dir${dir}.map  -xmi $xmi -xma $xma -ymi $ymi -yma $yma -zmi $zmi -zma $zma -nx 1024 -ny 1024 -dir ${dir} -str true -den hop_star/hop$count.den
 #part2map -inp output_$count -out star_${count}_vir_dir${dir}.map  -xmi $xmi -xma $xma -ymi $ymi -yma $yma -zmi $zmi -zma $zma -nx 1024 -ny 1024 -dir ${dir} -str true -age true
-
-
-
-

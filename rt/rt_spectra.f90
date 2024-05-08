@@ -63,7 +63,7 @@ FUNCTION integrateSpectrum(X, Y, N, e0, e1, species, func)
   if(la0 .ge. la1) then
      if(myid==1) print*,'The energy limits do not overlap with SED range, so stopping'
      call clean_stop
-  endif 
+  endif
   ! If we get here, the [la0, la1] inverval is completely within X
   allocate(xx(N)) ; allocate(yy(N)) ; allocate(f(N))
   xx =  la0   ;   yy =  0.   ;   f = 0.

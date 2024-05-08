@@ -113,14 +113,3 @@ BQSCALE         9
 
 # this must be ORIGINAL or DECODED
 REFERENCE_FRAME ORIGINAL
-
-
-
-
-
-
-
-
-
-
-

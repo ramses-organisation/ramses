@@ -495,7 +495,3 @@ recursive subroutine amr_step(ilevel,icount)
 999 format(' Entering amr_step',i1,' for level',i2)
 
 end subroutine amr_step
-
-
-
-

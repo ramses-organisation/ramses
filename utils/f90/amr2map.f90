@@ -139,7 +139,7 @@ program amr2map
   read(10,*)
 
   write(*,*)scale_d,scale_l,scale_t
-  
+
   read(10,'(A14,A80)')GMGM,ordering
   write(*,'(" ordering type=",A20)')TRIM(ordering)
   read(10,*)
@@ -352,7 +352,7 @@ program amr2map
         read(11)
         read(11)
      endif
-     
+
      ! Loop over levels
      do ilevel=1,lmax
 
@@ -593,7 +593,7 @@ program amr2map
         allocate(toto(imax-imin+1,jmax-jmin+1))
         if(action==0)then
            toto=grid(lmax)%map(imin:imax,jmin:jmax)/grid(lmax)%rho(imin:imax,jmin:jmax)
-        else 
+        else
            toto=grid(lmax)%map(imin:imax,jmin:jmax)
         endif
         write(20)toto
@@ -669,11 +669,11 @@ contains
     implicit none
 
     integer       :: i,n
-    
+
     character(len=4)   :: opt
     character(len=128) :: arg
     LOGICAL       :: bad, ok
-    
+
     n = command_argument_count()
     if (n < 4) then
        print *, 'usage: amr2map   -inp  input_dir'

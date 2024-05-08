@@ -18,7 +18,7 @@ need to specify the complete path of this directory in the \cflag{PATCH}
 variable, as:
 %
 \begin{Prompt}
-PATCH=/home/foo/mypatch  
+PATCH=/home/foo/mypatch
 \end{Prompt}
 %
 The \cmd{make} command will seek for sources files in this directory first,
@@ -33,7 +33,7 @@ These are: \cmd{amr/units.f90}, \cmd{hydro/boundana.f90},
 \cmd{poisson/rho\_ana.f90}, \cmd{hydro/cooling\_fine.f90}. Of course, other
 routines of RAMSES can be modified at will, although potential changes might be
 more complicated to implement. A simple example of patch can be found in the
-directory \dir{patch/} of the package. 
+directory \dir{patch/} of the package.
 
 \subsection{Physical units}
 
@@ -86,7 +86,7 @@ of different types: periodic (default mode), reflexive, outflow and imposed.
 This is performed in RAMSES using ghost regions, in which the fluid variables
 are set in order to obtain the required boundary. Ghost regions are defined in
 the namelist block \nmlblock{\&BOUNDARY\_PARAMS}. Each region is identified by
-its position, its type and eventually by the value of the fluid variables. 
+its position, its type and eventually by the value of the fluid variables.
 
 \begin{warning}
 The exact order with which boundary regions are entered in the namelist block
@@ -135,7 +135,7 @@ For the Poisson equation, however, boundary conditions are either periodic, if
 no ghost regions are defined in the corresponding direction, or ``$\phi=0$''
 Dirichlet boundary conditions within ghost regions. No other types of boundary
 conditions for the Poisson equation have been implemented (such as isolated,
-reflexive and so on). 
+reflexive and so on).
 % TODO update?
 
 If \cmd{\nmlentry{bound\_type}=3}, boundary conditions must be imposed by the
@@ -175,4 +175,3 @@ parameters can be set within the namelist block \nmlblock{\&PHYSICS\_PARAMS}.
 On the other hand, the user might want to modify routine
 \cmd{cooling\_fine.f90} in order to implement more complex thermal modeling of
 the fluid.
-

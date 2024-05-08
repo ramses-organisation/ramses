@@ -305,7 +305,7 @@ SUBROUTINE quick_sort_int_int(list, order, n)
   ! Sort array of integers (list), rearrange array of integers
   ! (order) in the same way.
   !------------------------------------------------------------
-  
+
   use amr_parameters, ONLY: i8b
   IMPLICIT NONE
   ! Quick sort routine from:

@@ -14,7 +14,7 @@ fi
 MAKEFILE=$1
 
 sed "s/\"/\"\"/g;s/^/  write(ilun,format)\"/;s/$/\"/" ${MAKEFILE} > .test_middle.f90
-  
+
 cat << EOF > .test_after.f90
 
   close(ilun)
@@ -38,4 +38,3 @@ EOF
 cat .test_before.f90 .test_middle.f90 .test_after.f90 > write_makefile.f90
 
 rm .test_before.f90 .test_middle.f90 .test_after.f90
-

@@ -24,14 +24,14 @@ function strnumber, st, val
 ;
 ;      IDL> res = strnumber('0.2d', val)
 ;           returns res=1 (a valid number), and val = 0.2000d
-;              
+;
 ; NOTES:
-;      (1) STRNUMBER was modified in February 1993 to include a special test for 
+;      (1) STRNUMBER was modified in February 1993 to include a special test for
 ;      empty or null strings, which now returns a 0 (not a number).    Without
 ;      this special test, it was found that a empty string (' ') could corrupt
 ;      the stack.
 ;
-;       (2) STRNUMBER will return a string such as '23.45uyrg' as a valid 
+;       (2) STRNUMBER will return a string such as '23.45uyrg' as a valid
 ;      number (=23.45) since this is how IDL performs the type conversion.  If
 ;      you want a stricter definition of valid number then use the VALID_NUM
 ;      function.

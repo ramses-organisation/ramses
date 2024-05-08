@@ -54,9 +54,9 @@ subroutine backup_hydro(filename, filename_desc)
   write(unit_out) ncpu
   if(strict_equilibrium>0)then
     write(unit_out) nvar+5
-  else 
-    write(unit_out) nvar+3 
-  endif 
+  else
+    write(unit_out) nvar+3
+  endif
   write(unit_out) ndim
   write(unit_out) nlevelmax
   write(unit_out) nboundary

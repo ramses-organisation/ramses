@@ -5,7 +5,7 @@ hydro=.true.
 nsubcycle=3*1,2
 /
 
-&AMR_PARAMS 
+&AMR_PARAMS
 levelmin=3
 levelmax=10
 ngridmax=2000
@@ -43,7 +43,7 @@ slope_type=2
 scheme='muscl'
 /
 
-&REFINE_PARAMS 
+&REFINE_PARAMS
 err_grad_d=0.05
 err_grad_u=0.05
 err_grad_p=0.05

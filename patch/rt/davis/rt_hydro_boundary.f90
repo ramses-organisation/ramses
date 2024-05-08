@@ -272,5 +272,3 @@ subroutine rt_make_boundary_hydro(ilevel)
 111 format('   Entering rt_make_boundary_hydro for level ',I2)
 
 end subroutine rt_make_boundary_hydro
-
-

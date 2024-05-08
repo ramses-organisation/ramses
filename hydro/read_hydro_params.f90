@@ -281,7 +281,7 @@ subroutine read_hydro_params(nml_ok)
      nml_ok=.false.
   endif
 #endif
-  
+
   !--------------------------------------------------
   ! Check for non-thermal energies
   !--------------------------------------------------
@@ -458,7 +458,7 @@ subroutine read_hydro_params(nml_ok)
      do idim=1,ndim
         ek_bound=ek_bound+0.5d0*boundary_var(i,idim+1)**2/boundary_var(i,1)
      end do
-     boundary_var(i,ndim+2)=ek_bound+P_bound(i)/(gamma-1.0d0)     
+     boundary_var(i,ndim+2)=ek_bound+P_bound(i)/(gamma-1.0d0)
 #endif
   end do
 

@@ -10,14 +10,14 @@
 
 ## This is the [ramses](https://github.com/ramses-organisation/ramses/) GitHub repository.
 
-Ramses is an open source code to model astrophysical systems, featuring self-gravitating, magnetised, compressible, radiative fluid flows. It is based  on the Adaptive Mesh Refinement (AMR)  technique on a  fully-threaded graded octree. 
+Ramses is an open source code to model astrophysical systems, featuring self-gravitating, magnetised, compressible, radiative fluid flows. It is based  on the Adaptive Mesh Refinement (AMR)  technique on a  fully-threaded graded octree.
 [ramses](https://github.com/ramses-organisation/ramses/) is written in  Fortran 90 and is making intensive use of the Message Passing Interface (MPI) library.
 
 You can go to the user's guide using the [WIKI here][1].
 
 Check regularly the [automatic test page][2].
 
-Download the code by cloning the git repository using 
+Download the code by cloning the git repository using
 ```
 $ git clone https://github.com/ramses-organisation/ramses
 ```

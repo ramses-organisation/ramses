@@ -36,7 +36,7 @@ program star2list
   integer,dimension(:),allocatable::cpu_list
   integer, allocatable, dimension(:) :: ll
 !  integer*2, allocatable, dimension(:) :: family,tag
-  integer(int8), allocatable, dimension(:) :: family,tag                                                                                                              
+  integer(int8), allocatable, dimension(:) :: family,tag
 
   !integer, allocatable, dimension(:) :: family
 
@@ -353,7 +353,7 @@ contains
       implicit none
 
       integer       :: i,n
-      
+
       character(len=4)   :: opt
       character(len=128) :: arg
       LOGICAL       :: bad, ok
@@ -407,4 +407,3 @@ contains
     end subroutine read_params
 
   end program star2list
-

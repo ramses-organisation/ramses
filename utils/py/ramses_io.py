@@ -14,7 +14,7 @@ class Cool:
     """
     def __init__(self,n1,n2):
         """
-        This function initialize the cooling table. 
+        This function initialize the cooling table.
         Args:
             n1: number of points for the gas density axis
             n2: number of points for the gas temperature axis
@@ -39,7 +39,7 @@ def clean_spec(dat,n1,n2):
     return dat
 
 def rd_cool(filename):
-    """This function reads a RAMSES cooling table file (unformatted Fortran binary) 
+    """This function reads a RAMSES cooling table file (unformatted Fortran binary)
     and store it in a cooling object.
 
     Args:
@@ -80,7 +80,7 @@ class Map:
     """
     def __init__(self,nx,ny):
         """This function initalize a map object.
-        
+
         Args:
             nx: number of pixels in the x direction
             ny: number of pixels in the y direction
@@ -103,7 +103,7 @@ def rd_map(filename):
         t, dx, dy, dz = f.read_reals('f8')
         nx, ny = f.read_ints('i')
         dat = f.read_reals('f4')
-    
+
     dat = np.array(dat)
     dat = dat.reshape(ny, nx)
     m = Map(nx,ny)
@@ -111,7 +111,7 @@ def rd_map(filename):
     m.time = t
     m.nx = nx
     m.ny = ny
-    
+
     return m
 
 class Histo:
@@ -166,8 +166,8 @@ class Part:
         self.mp = np.zeros([nnp])
 
 def rd_part(nout,**kwargs):
-    """This function reads a RAMSES particle file (unformatted Fortran binary) 
-    as produced by the RAMSES code in the snapshot directory output_00* 
+    """This function reads a RAMSES particle file (unformatted Fortran binary)
+    as produced by the RAMSES code in the snapshot directory output_00*
     and store it in a variable containing all the particle information (Part object).
 
     Args:
@@ -192,7 +192,7 @@ def rd_part(nout,**kwargs):
         p = ram.rd_part(12,center=[0.5,0.5,0.5],radius=0.1)
         print(np.max(p.xp[0]))
     """
-    
+
     car1 = str(nout).zfill(5)
     filename = "output_"+car1+"/part_"+car1+".out00001"
     with FortranFile(filename, 'r') as f:
@@ -222,12 +222,12 @@ def rd_part(nout,**kwargs):
             ndim2, = f.read_ints('i')
             npart2, = f.read_ints('i')
         npart = npart + npart2
-        
+
     txt = "Found "+str(npart)+" particles"
     tqdm.write(txt)
     tqdm.write("Reading particle data...")
     time.sleep(0.5)
-    
+
     p = Part(npart,ndim)
     p.np = npart
     p.ndim = ndim
@@ -242,7 +242,7 @@ def rd_part(nout,**kwargs):
             ncpu2, = f.read_ints('i')
             ndim2, = f.read_ints('i')
             npart2, = f.read_ints('i')
-            
+
             dummy1 = f.read_reals('f8')
             dummy2 = f.read_reals('f4')
             dummy3 = f.read_reals('f8')
@@ -311,7 +311,7 @@ def rd_amr(nout,**kwargs):
     amr=[]
     for ilevel in range(0,nlevelmax):
         amr.append(Level(ndim))
-        
+
     # Reading and computing total AMR grids count
     for icpu in cpulist:
 
@@ -356,7 +356,7 @@ def rd_amr(nout,**kwargs):
         amr[ilevel].refined = np.zeros([2**ndim,amr[ilevel].ngrid],dtype=bool)
 
     iskip = np.zeros(nlevelmax, dtype=int)
-    
+
     # Reading and storing data
     for icpu in tqdm(cpulist):
 
@@ -400,7 +400,7 @@ def rd_amr(nout,**kwargs):
                 numbb = f.read_ints('i')
                 numbb = numbb.reshape(nlevelmax,nboundary)
                 xbound = [float(nx//2),float(ny//2),float(nz//2)]
-                
+
             headf,tailf,numbf,used_mem,used_mem_tot = f.read_ints('i')
 
             ordering = f.read_ints("i")
@@ -464,7 +464,7 @@ def rd_hydro(nout,**kwargs):
         nlevelmax, = f.read_ints('i')
         nboundary, = f.read_ints('i')
         gamma, = f.read_reals('f8')
-        
+
     txt = "ncpu="+str(ncpu)+" ndim="+str(ndim)+" nvar="+str(nvar)+" nlevelmax="+str(nlevelmax)+" gamma="+str(gamma)
     tqdm.write(txt)
     tqdm.write("Reading hydro data...")
@@ -513,13 +513,13 @@ def rd_hydro(nout,**kwargs):
                         for ind in range(0,2**ndim):
                             for ivar in range(0,nvar):
                                 uu[ivar,ind,:] = f.read_reals('f8')
-                            
+
                         if(ibound == icpu-1):
                             hydro[ilevel].u = np.append(hydro[ilevel].u,uu,axis=2)
-                            hydro[ilevel].ngrid = hydro[ilevel].ngrid + ncache                        
+                            hydro[ilevel].ngrid = hydro[ilevel].ngrid + ncache
 
     return hydro
-    
+
 class Cell:
     def __init__(self,nndim,nnvar):
         self.ncell = 0
@@ -530,8 +530,8 @@ class Cell:
         self.dx = np.empty(shape=(0))
 
 def rd_cell(nout,**kwargs):
-    """This function reads RAMSES AMR and hydro files (unformatted Fortran binary) 
-    as produced by the RAMSES code in the snapshot directory output_00* 
+    """This function reads RAMSES AMR and hydro files (unformatted Fortran binary)
+    as produced by the RAMSES code in the snapshot directory output_00*
     and store it in a variable containing all the hydro leaf cells information (Cell object).
 
     Args:
@@ -557,7 +557,7 @@ def rd_cell(nout,**kwargs):
         c = ram.rd_cell(12,center=[0.5,0.5,0.5],radius=0.1)
         print(np.max(c.dx))
     """
-    
+
     a = rd_amr(nout,**kwargs)
     h = rd_hydro(nout,**kwargs)
 
@@ -568,7 +568,7 @@ def rd_cell(nout,**kwargs):
     ndim = a[0].ndim
     nvar = h[0].nvar
     boxlen = a[0].boxlen
-    
+
     offset = np.zeros([ndim,2**ndim])
     if (ndim == 2):
         offset[0,:]=[-0.5,0.5,-0.5,0.5]
@@ -589,7 +589,7 @@ def rd_cell(nout,**kwargs):
 
     c = Cell(ndim,nvar)
     c.ncell = ncell
-    
+
     for ilev in range(0,nlevelmax):
         dx = 0.5*boxlen/2**ilev
         for ind in range(0,2**ndim):
@@ -645,7 +645,7 @@ def load_cell(filename):
 class Info:
     def __init__(self,nncpu):
         self.bound_key = np.empty(shape=(nncpu+1),dtype=np.double)
-        
+
 def rd_info(nout):
     car1 = str(nout).zfill(5)
     filename = "output_"+car1+"/amr_"+car1+".out00001"
@@ -658,19 +658,19 @@ def rd_info(nout):
         txt = "ncpu="+str(ncpu)+" ndim="+str(ndim)+" nlevelmax="+str(nlevelmax)
         print(txt)
         print("Reading info data...")
-                
+
         i = Info(ncpu)
         i.nlevelmax = nlevelmax
         i.ndim = ndim
         i.ncpu = ncpu
-        
+
         ngridmax, = f.read_ints('i')
         nboundary, = f.read_ints('i')
         ngrid_current, = f.read_ints('i')
         boxlen, = f.read_reals('f8')
 
         i.boxlen = boxlen
-        
+
         noutput,iout,ifout = f.read_ints('i')
         tout = f.read_reals('f8')
         aout = f.read_reals('f8')
@@ -682,7 +682,7 @@ def rd_info(nout):
         omega_m,omega_l,omega_k,omega_b,h0,aexp_ini,boxlen_ini = f.read_reals('f8')
         aexp,hexp,aexp_old,epot_tot_int,epot_tot_old = f.read_reals('f8')
         mass_sph, = f.read_reals('f8')
-        
+
         i.omega_m = omega_m
         i.omega_l = omega_l
         i.omega_k = omega_k
@@ -690,14 +690,14 @@ def rd_info(nout):
         i.h0 = h0
         i.aexp = aexp
         i.t = t
-        
+
         headl = f.read_ints('i')
         taill = f.read_ints('i')
         numbl = f.read_ints('i')
         numbl = numbl.reshape(nlevelmax,ncpu)
-        
+
         numbtot = f.read_ints('i')
-        
+
         xbound=[0,0,0]
         if ( nboundary > 0 ):
             headb = f.read_ints('i')
@@ -705,11 +705,11 @@ def rd_info(nout):
             numbb = f.read_ints('i')
             numbb = numbb.reshape(nlevelmax,nboundary)
             xbound = [float(nx//2),float(ny//2),float(nz//2)]
-            
+
         headf,tailf,numbf,used_mem,used_mem_tot = f.read_ints('i')
-        
+
         ordering = f.read_ints("i")
-        
+
         bound_key = f.read_ints("f8")
 
         if(len(bound_key) != ncpu+1):
@@ -718,12 +718,12 @@ def rd_info(nout):
         else:
             i.quadhilbert=False
             i.bound_key[:] = bound_key
-        
+
     filename = "output_"+car1+"/info_"+car1+".txt"
     data = ascii.read(filename, header_start=0, data_start=0, data_end=18, delimiter='=', names=["field","value"])
     name = np.array(data["field"])
     val = np.array(data["value"])
-    
+
     i.ordering, = val[np.where(name=="ordering type")]
     unit_l, = val[np.where(name=="unit_l")]
     unit_d, = val[np.where(name=="unit_d")]
@@ -732,11 +732,11 @@ def rd_info(nout):
     i.unit_l = float(unit_l)
     i.unit_d = float(unit_d)
     i.unit_t = float(unit_t)
-    
+
     return i
 
 def hilbert3d(x,y,z,bit_length):
-    
+
     state_diagram = [ 1, 2, 3, 2, 4, 5, 3, 5,
                       0, 1, 3, 2, 7, 6, 4, 5,
                       2, 6, 0, 7, 8, 8, 0, 7,
@@ -771,19 +771,19 @@ def hilbert3d(x,y,z,bit_length):
     y_bit_mask = np.zeros(bit_length  ,dtype="bool")
     z_bit_mask = np.zeros(bit_length  ,dtype="bool")
     i_bit_mask = np.zeros(3*bit_length,dtype=bool)
-    
+
     for ip in  range(0,n):
-        
+
         for i in range(0,bit_length):
             x_bit_mask[i] = x[ip] & (1 << i)
             y_bit_mask[i] = y[ip] & (1 << i)
             z_bit_mask[i] = z[ip] & (1 << i)
-            
+
         for i in range(0,bit_length):
             i_bit_mask[3*i+2] = x_bit_mask[i]
             i_bit_mask[3*i+1] = y_bit_mask[i]
             i_bit_mask[3*i  ] = z_bit_mask[i]
-            
+
         cstate = 0
         for i in range(bit_length-1,-1,-1):
             b2 = 0
@@ -802,46 +802,46 @@ def hilbert3d(x,y,z,bit_length):
             i_bit_mask[3*i+1] = hdigit & (1 << 1)
             i_bit_mask[3*i  ] = hdigit & (1 << 0)
             cstate = nstate
-            
+
         order[ip]= 0
         for i in range(0,3*bit_length):
             b0 = 0
             if (i_bit_mask[i]):
                 b0 = 1
             order[ip] = order[ip] + float(b0)*2.**i
-                
+
     return order
 
 def hilbert2d(x,y,bit_length):
-    
-    state_diagram = [ 1, 0, 2, 0, 
-                      0, 1, 3, 2, 
-                      0, 3, 1, 1, 
-                      0, 3, 1, 2, 
-                      2, 2, 0, 3, 
-                      2, 1, 3, 0, 
-                      3, 1, 3, 2, 
+
+    state_diagram = [ 1, 0, 2, 0,
+                      0, 1, 3, 2,
+                      0, 3, 1, 1,
+                      0, 3, 1, 2,
+                      2, 2, 0, 3,
+                      2, 1, 3, 0,
+                      3, 1, 3, 2,
                       2, 3, 1, 0 ]
-    
-    state_diagram = np.array(state_diagram)    
+
+    state_diagram = np.array(state_diagram)
     state_diagram = state_diagram.reshape((4,2,4), order='F')
-    
+
     n = len(x)
     order = np.zeros(n,dtype="double")
     x_bit_mask = np.zeros(bit_length  ,dtype="bool")
     y_bit_mask = np.zeros(bit_length  ,dtype="bool")
     i_bit_mask = np.zeros(2*bit_length,dtype=bool)
-    
+
     for ip in  range(0,n):
-        
+
         for i in range(0,bit_length):
             x_bit_mask[i] = bool(x[ip] & (1 << i))
             y_bit_mask[i] = bool(y[ip] & (1 << i))
-            
+
         for i in range(0,bit_length):
             i_bit_mask[2*i+1] = x_bit_mask[i]
             i_bit_mask[2*i  ] = y_bit_mask[i]
-            
+
         cstate = 0
         for i in range(bit_length-1,-1,-1):
             b1 = 0
@@ -856,14 +856,14 @@ def hilbert2d(x,y,bit_length):
             i_bit_mask[2*i+1] = hdigit & (1 << 1)
             i_bit_mask[2*i  ] = hdigit & (1 << 0)
             cstate = nstate
-            
+
         order[ip]= 0
         for i in range(0,2*bit_length):
             b0 = 0
             if (i_bit_mask[i]):
                 b0 = 1
             order[ip] = order[ip] + float(b0)*2.**i
-                
+
     return order
 
 def get_cpu_list(info,**kwargs):
@@ -872,7 +872,7 @@ def get_cpu_list(info,**kwargs):
     radius = kwargs.get("radius")
     center = np.array(center)
     radius = float(radius)
-    
+
     for ilevel in range(0,info.nlevelmax):
         dx = 1/2**ilevel
         if (dx < 2*radius/info.boxlen):
@@ -899,7 +899,7 @@ def get_cpu_list(info,**kwargs):
     else:
         ndom = 1
         order_min = np.array([0.])
-        
+
     bounding_min = order_min*dkey
     bounding_max = (order_min+1)*dkey
 
@@ -926,35 +926,35 @@ def get_cpu_list(info,**kwargs):
     return cpu_list
 
 def visu(x,y,dx,v,**kwargs):
-    '''The simple visualization function visu() make a 2D scatter plot from RAMSES AMR data. 
-    
+    '''The simple visualization function visu() make a 2D scatter plot from RAMSES AMR data.
+
     Args:
-    
+
         x: the x-coordinate of the cells to show on the scatter plot.
 
         y: the y-coordinate of the cells to show on the scatter plot.
-    
+
         dx: the size of the cells to show on the scatter plot.
 
         v: the value to show as a color square contained in the cell.
-        
+
     Optional args:
 
         vmin: minimum value for the input array v to use in the color range
 
-        vmax: maximum value for the input array v to use in the color range 
+        vmax: maximum value for the input array v to use in the color range
 
         log: when set, use the log of the input array v in the color range
 
         sort: useful only for 3D data. Plot the square symbola in the scatter plot in increasing order of array sort.
 
     Returns:
-    
+
         Output a scatter plot figure of size 1000 pixels aside.
-    
+
     Exemple:
-    
-        Example for a 3D RAMSES dataset uaing variable c from the object Cell. 
+
+        Example for a 3D RAMSES dataset uaing variable c from the object Cell.
 
         ram.visu(c.x[0],c.x[2],c.dx,c.u[0],sort=c.u[0],log=1,vmin=-3,vmax=1)
 
@@ -975,67 +975,67 @@ def visu(x,y,dx,v,**kwargs):
         ind = np.argsort(sort)
     else:
         ind = np.arange(0,v.size)
-        
-    px = 1/plt.rcParams['figure.dpi'] 
+
+    px = 1/plt.rcParams['figure.dpi']
     fig, ax = plt.subplots(figsize=(1000*px,1000*px))
     plt.subplots_adjust(left=0.1, right=0.9, top=0.9, bottom=0.1)
     plt.scatter(x,y,s=0.0001)
     ymin, ymax = ax.get_ylim()
-        
+
     ax.set_aspect("equal")
     plt.scatter(x[ind],y[ind],c=v[ind],s=(dx[ind]*800/(ymax-ymin))**2,cmap="viridis",marker="s",vmin=vmin,vmax=vmax)
     plt.colorbar(shrink=0.8)
 
 def mk_movie(**kwargs):
-    '''The function mk_movie() takes 2D data files containing maps and converts them into a sequence of images, 
-    before combining them into a movie. 
+    '''The function mk_movie() takes 2D data files containing maps and converts them into a sequence of images,
+    before combining them into a movie.
     It requires a standard set of python packages and the Linux packages ffmpeg and convert (ImageMagick).
-    
+
     Args:
-    
+
         start: starting index of the sequence of numpy array you wish to turn into image frames.
-    
-        stop: number of arrays you wish to be turned into plots. 
-            This will be the variable "snum" for the end product. 
-            For now, if you wish to test out the function, 
+
+        stop: number of arrays you wish to be turned into plots.
+            This will be the variable "snum" for the end product.
+            For now, if you wish to test out the function,
             you can try out other smaller values to adjust the image for your preferences.
-            
+
         path: path leading to the directory where your files are stored, Default: "."
-    
+
         prefix: starting name of a typical file. Ex: if you have 50 files, called "fig01.npy", "fig02.npy" … "fig50.npy", write in "fig".
-    
+
         fill: This is for the zfill parameter. If your files are standardized into "fig001.npy", "fig002.npy"… "fig100.npy", write in 3, for example. If this is not how your files are formatted, write in the number 1.
-    
+
         suffix: suffix at the end of a file: Ex: ".npy", ".map", etc…
-    
+
         cmap: write in what color you wish your array to be displayed in (value for cmap). Options include "Reds", "Blues", and more.
-    
+
         cbar: write "YES" for this parameter if you want your figure to have a colorbar. Write anything else if not.
-    
+
         cbunit: units of the colormapping to be displayed next to the colorbar: Ex: "Concentration [code units]" If you do not plan on using a colorbar, write in any script.
-    
+
         tunit: units of time displayed by rd_img. Ex: "seconds", "minutes", "hours", "[code units]"
-    
+
         bunit: units of the box size displayed by rd_img. Ex: "cm", "kpc", "Mpc", "[code units]" …
-    
+
         fname: starting name of each of your images.
-    
+
         mvname: what you want your movie to be called.
-        
+
     Returns:
-    
+
         info: a string stating that the movie was done.
-    
+
     Exemple:
-    
-        info = mk_movie(start=100,stop=2000,path="../movie1",prefix="dens_",fill=5,suffix=".map",cmap="Reds", 
+
+        info = mk_movie(start=100,stop=2000,path="../movie1",prefix="dens_",fill=5,suffix=".map",cmap="Reds",
                 cbar="YES", cbunit="log Density [H/cc]", tunit="Gyr",
                 fname="img", mvname="movie", vmin=-1, vmax=6)
-    
-    
+
+
     By default, the movie's framerate is 30 frames per second, at a resolution of 420p
     You can edit this function and its parameters according to what fits your model best.
-    
+
     As it runs, the function will print the files it is currently converting.
     Authors: Thomas Decugis and Romain Teyssier (Princeton University, October 2022)
     '''
@@ -1055,20 +1055,20 @@ def mk_movie(**kwargs):
     bunit = kwargs.get("bunit","[code units]")
     fname = kwargs.get("fname","frame")
     mvname = kwargs.get("mvname","movie")
-    
+
     cmd="curl https://communications.princeton.edu/sites/g/files/toruqf1876/files/styles/freeform_750w/public/media/pusig2-size-web-range_1.jpg > logo_essai.jpg"
     os.system(cmd)
     concom = "convert logo_essai.jpg -resize 280x200 logo_essai.png"
     os.system(concom)
 
-    for snapshot in range(start, stop + 1): 
+    for snapshot in range(start, stop + 1):
         ar = path + "/" + str(prefix) + str(snapshot).zfill(fill) + str(suffix)
         print(ar) #prints file that function is working on.
 
         map =rd_map(ar)
         time = map.time
         array = map.data
-        
+
         if (not (cbar is None)):
             px = 1/plt.rcParams['figure.dpi']
             fig, ax = plt.subplots(figsize=(1001*px,1001*px))
@@ -1076,8 +1076,8 @@ def mk_movie(**kwargs):
             print(np.min(array),np.max(array))
             shw = ax.imshow(array, cmap = cmap, vmin=vmin, vmax=vmax, origin="lower", extent=[0,bsize,0,bsize])
             bar = plt.colorbar(shw,shrink=0.8)
-            bar.set_label(cbunit, fontsize=18) 
-            bar.ax.tick_params(labelsize=18) 
+            bar.set_label(cbunit, fontsize=18)
+            bar.ax.tick_params(labelsize=18)
             plt.ylabel(bunit,fontsize=18)
 
         else:
@@ -1088,7 +1088,7 @@ def mk_movie(**kwargs):
         label = ax.set_xlabel(txt, fontsize = 18, color = "black")
         ax.xaxis.set_label_coords(0.1, 0.95)
         ax.tick_params(axis='both', labelsize=18)
-        newname = str(fname)+ str(snapshot) + ".png" 
+        newname = str(fname)+ str(snapshot) + ".png"
         print(newname)
         plt.savefig(newname) #saves created images as pngs under the name that was given
         if snapshot == start:
@@ -1097,11 +1097,11 @@ def mk_movie(**kwargs):
         com = "convert logo_essai.png -bordercolor white -border 0.1 " + newname + " +swap -geometry +100+850 -composite " + newname
         os.system(com)
     print("Input files converted into frames: done")
-    moviecom = "ffmpeg -y -r 30 -f image2 -s 1000x1000 -start_number " +str(start)+" -i " + str(fname) + "%d.png" + " -vcodec libx264 -crf 25  -pix_fmt yuv420p " + str(mvname) + ".mp4" 
+    moviecom = "ffmpeg -y -r 30 -f image2 -s 1000x1000 -start_number " +str(start)+" -i " + str(fname) + "%d.png" + " -vcodec libx264 -crf 25  -pix_fmt yuv420p " + str(mvname) + ".mp4"
     os.system(moviecom)
     ok = "Movie: done"
     print(ok)
-    return ok 
+    return ok
 
 class HaloCat:
    """
@@ -1109,7 +1109,7 @@ class HaloCat:
    """
    def __init__(self):
        """
-       This function initialize the halo catalogue. 
+       This function initialize the halo catalogue.
        """
        self.x = np.empty(shape=(0))
        self.y = np.empty(shape=(0))
@@ -1122,9 +1122,9 @@ class HaloCat:
 def rd_halo(nout,**kwargs):
    """
    This function reads and compiles data for position, mass,
-   density, and index from the halo catalogue. 
-   Args: 
-       nout:output file number 
+   density, and index from the halo catalogue.
+   Args:
+       nout:output file number
    author: Josiah Taylor
    """
    car1 = str(nout).zfill(5)
@@ -1159,4 +1159,3 @@ def rd_halo(nout,**kwargs):
 
 
    return cat
-

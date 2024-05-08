@@ -70,4 +70,3 @@ p=(gamma-1.0)*p*d/boxlen^2
 
 
 end
-

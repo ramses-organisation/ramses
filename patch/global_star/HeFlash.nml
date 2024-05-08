@@ -1,6 +1,6 @@
 This namelist contains various input parameters for RAMSES runs
 
-&RUN_PARAMS  
+&RUN_PARAMS
 hydro=.true.
 poisson=.true.
 nrestart=0
@@ -9,7 +9,7 @@ nremap=10
 nsubcycle=30*1
 /
 
-&AMR_PARAMS 
+&AMR_PARAMS
 levelmin=7
 levelmax=7
 ngridmax=200000
@@ -46,7 +46,7 @@ delta_tout=100
 tend=3000
 /
 
-&POISSON_PARAMS 
+&POISSON_PARAMS
 gravity_type=2
 gravity_params=0.5011872336272725,0.0,11.0, 11.0, 11.0
 /
@@ -61,7 +61,7 @@ strict_equilibrium=1
 scheme='muscl'
 /
 
-&REFINE_PARAMS 
+&REFINE_PARAMS
 err_grad_d=0.01
 interpol_type=2
 /

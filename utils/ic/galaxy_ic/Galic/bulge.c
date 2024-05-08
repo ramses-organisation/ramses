@@ -21,12 +21,12 @@ compute_velocity_dispersions_bulge()
   if(N_BULGE==0) return;
 
 
-  printf("bulge velocity dispersion field...\n"); fflush(stdout);  
+  printf("bulge velocity dispersion field...\n"); fflush(stdout);
 
   for(i=0;i<=RSIZE;i++)
     {
       printf("bulge A, %d\n",i);
-      
+
       for(j=0;j<=ZSIZE;j++)
 	{
 	  xl[j+1]=list_z[j];
@@ -42,7 +42,7 @@ compute_velocity_dispersions_bulge()
 	    VelDispRz_bulge[i][j]+=
 	      qromb(splint_xl_yl_D2yl,list_z[j],list_z[j+1]);
 	}
-      
+
     }
 
 
@@ -58,7 +58,7 @@ compute_velocity_dispersions_bulge()
 	}
 
       spline(xl,yl,ZSIZE+1,1e40,1e40,D2yl);
-      
+
       for(j=ZSIZE - 1, VelDispRz_dR_bulge[i][ZSIZE]=0  ;j>=0;j--)
 	{
 	  VelDispRz_dR_bulge[i][j] =  VelDispRz_dR_bulge[i][j+1];
@@ -66,10 +66,10 @@ compute_velocity_dispersions_bulge()
 	    VelDispRz_dR_bulge[i][j]+=
 	      qromb(splint_xl_yl_D2yl,list_z[j],list_z[j+1]);
 	}
-      
+
     }
 
-  
+
   for(i=0;i<=RSIZE;i++)
     {
       for(j=0;j<=ZSIZE;j++)
@@ -77,7 +77,7 @@ compute_velocity_dispersions_bulge()
 
 	  R=list_R[i];
 	  z=list_z[j];
-	  
+
 	  rho = comp_rho_bulge(R,z);
 
 	  if(rho>0)
@@ -92,26 +92,26 @@ compute_velocity_dispersions_bulge()
 	  else
 	    VelDispRz_bulge[i][j]=VelDispPhi_bulge[i][j]=0;
 
-	  
+
 	  VelVc2_bulge[i][j]=R*Dphi_R[i][j];
-	  
+
 	  VelDispPhi_bulge[i][j]+=VelVc2_bulge[i][j]+VelDispRz_bulge[i][j];
 
 	  VelStreamPhi_bulge[i][j]= 0 ;
-  
+
 	  VelDispPhi_bulge[i][j]-=VelStreamPhi_bulge[i][j]*VelStreamPhi_bulge[i][j];
 
 
 	  if(VelDispRz_bulge[i][j]<0)
 	    VelDispRz_bulge[i][j]=0;
-	  
+
 	  if(VelDispPhi_bulge[i][j]<0)
 	    VelDispPhi_bulge[i][j]=0;
 	}
     }
 
-  
-  printf("done.\n"); fflush(stdout);  
+
+  printf("done.\n"); fflush(stdout);
 
 }
 
@@ -175,5 +175,3 @@ double mass_cumulative_bulge(double R)
 {
   return M_BULGE*pow ( R/(A+R) , 2 );
 }
-
-

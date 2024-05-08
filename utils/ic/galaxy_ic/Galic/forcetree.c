@@ -12,11 +12,11 @@
 #define KERN_LEN   10000
 
 
-static struct NODE 
+static struct NODE
 { double center[3],len;                /* center and sidelength of treecubes */
   double mass,oc;                      /* mass and variable for opening criter*/
   double s[3];                         /* center of mass */
-  double Q11,Q22,Q33,Q12,Q13,Q23,P;      /* quadrupol tensor */  
+  double Q11,Q22,Q33,Q12,Q13,Q23,P;      /* quadrupol tensor */
   struct NODE *next,*sibling,*father,*suns[8];
   int    partind;
   int    cost;
@@ -59,10 +59,10 @@ static int    N;
 
 
 
-struct xyz_data 
-{ 
-  double xyz[3]; 
-}; 
+struct xyz_data
+{
+  double xyz[3];
+};
 
 
 
@@ -116,7 +116,7 @@ void add_particle_props_to_node(struct NODE *no,struct COORDINATES *pa)
 
 
 int force_treebuild(void **pospointer, int npart, double thetamax,int costresetflag)
-/* packs the particles 0...Npart-1 into BH-trees, for each particle type 
+/* packs the particles 0...Npart-1 into BH-trees, for each particle type
    (different softening lengths) a different tree */
 {
   int i,j,tr,n;
@@ -136,7 +136,7 @@ int force_treebuild(void **pospointer, int npart, double thetamax,int costresetf
       ntype[ Part[i]->type ]++;
 
     }
-  
+
 
   for(tr=0,nfree=nodes,numnodestotal=0; tr<5; tr++)
     {
@@ -154,14 +154,14 @@ int force_treebuild(void **pospointer, int npart, double thetamax,int costresetf
 	}
     }
 
-  for(tr=0;tr<5;tr++) 
-    { 
-      if(numnodestree[tr]) 
- 	{ 
- 	  for(i=0,th=trees[tr]; i<numnodestree[tr]; i++,th++) 
-	    th->cost=0; 
- 	} 
-    } 
+  for(tr=0;tr<5;tr++)
+    {
+      if(numnodestree[tr])
+ 	{
+ 	  for(i=0,th=trees[tr]; i<numnodestree[tr]; i++,th++)
+	    th->cost=0;
+ 	}
+    }
 
   return numnodestotal;
 }
@@ -181,7 +181,7 @@ struct NODE *force_treebuild_single(struct NODE *startnode, int type, double the
   void force_setupnonrecursive(struct NODE *no);
 
 
- 
+
 
   for(fp=0;fp<N;fp++)          /* find first particle of this type */
     if(Part[fp]->type == type)
@@ -197,9 +197,9 @@ struct NODE *force_treebuild_single(struct NODE *startnode, int type, double the
 	{
 	  for(j=0;j<3;j++)
 	    {
-	      if(Part[i]->xyz[j]>xmax[j]) 
+	      if(Part[i]->xyz[j]>xmax[j])
 		xmax[j]=Part[i]->xyz[j];
-	      if(Part[i]->xyz[j]<xmin[j]) 
+	      if(Part[i]->xyz[j]<xmin[j])
 		xmin[j]=Part[i]->xyz[j];
 	    }
 	}
@@ -209,7 +209,7 @@ struct NODE *force_treebuild_single(struct NODE *startnode, int type, double the
   for(j=1,len=xmax[0]-xmin[0];j<3;j++)  /* determine maxmimum externsion */
     if((xmax[j]-xmin[j])>len)
       len=xmax[j]-xmin[j];
-  
+
   len*=1.0001;
 
 
@@ -217,9 +217,9 @@ struct NODE *force_treebuild_single(struct NODE *startnode, int type, double the
 
 
   /* insert first particle of correct type in root node */
- 
+
   nfree=startnode;
- 
+
   for(j=0;j<3;j++)
     nfree->center[j]=(xmax[j]+xmin[j])/2;
   nfree->len=len;
@@ -233,7 +233,7 @@ struct NODE *force_treebuild_single(struct NODE *startnode, int type, double the
 
   for(i=0;i<3;i++)
     nfree->s[i]= Part[fp]->mass*Part[fp]->xyz[i];
-  
+
   nfree->Q11=Part[fp]->mass*Part[fp]->xyz[0]*Part[fp]->xyz[0];
   nfree->Q22=Part[fp]->mass*Part[fp]->xyz[1]*Part[fp]->xyz[1];
   nfree->Q33=Part[fp]->mass*Part[fp]->xyz[2]*Part[fp]->xyz[2];
@@ -247,7 +247,7 @@ struct NODE *force_treebuild_single(struct NODE *startnode, int type, double the
   nfree->count=1;
 
   numnodes=1;  numnodestotal++; nfree++;
-  
+
   if(numnodestotal>=MaxNodes)
     {
       printf("maximum number %d of tree-nodes reached.\n",numnodestotal);
@@ -260,13 +260,13 @@ struct NODE *force_treebuild_single(struct NODE *startnode, int type, double the
 
   /* insert all other particles */
 
-  for(i=fp+1;i<N;i++)  
+  for(i=fp+1;i<N;i++)
     {
       if(Part[i]->type != type)
 	continue;
 
       th=startnode;
-      
+
       while(1)
 	{
 	  th->count++;
@@ -275,18 +275,18 @@ struct NODE *force_treebuild_single(struct NODE *startnode, int type, double the
 
 	  if(th->partind>=0)
 	    break;
-	  
+
 	  for(j=0,subnode=0,fak=1;j<3;j++,fak<<=1)
 	    if(Part[i]->xyz[j]>th->center[j])
 	      subnode+=fak;
-	  
+
 	  if(nn=th->suns[subnode])
 	    th=nn;
 	  else
 	    break;
 	}
 
-      
+
       if(th->partind>=0)  /* cell is occcupied with one particle */
 	{
 	  while(1)
@@ -297,15 +297,15 @@ struct NODE *force_treebuild_single(struct NODE *startnode, int type, double the
 		if(Part[p]->xyz[j]>th->center[j])
 		  subp+=fak;
 
-	      
+
 	      nfree->father=th;
-	      
+
 	      for(j=0;j<8;j++)
 		nfree->suns[j]=0;
 	      nfree->sibling=0;
-	      
+
 	      nfree->len=th->len/2;
-    
+
 	      for(j=0;j<3;j++)
 		nfree->center[j]=th->center[j];
 
@@ -321,7 +321,7 @@ struct NODE *force_treebuild_single(struct NODE *startnode, int type, double the
 	      nfree->mass=Part[p]->mass;
 	      for(j=0;j<3;j++)
 		nfree->s[j]=Part[p]->mass*Part[p]->xyz[j];
-	      
+
 	      nfree->Q11=Part[p]->mass*Part[p]->xyz[0]*Part[p]->xyz[0];
 	      nfree->Q22=Part[p]->mass*Part[p]->xyz[1]*Part[p]->xyz[1];
 	      nfree->Q33=Part[p]->mass*Part[p]->xyz[2]*Part[p]->xyz[2];
@@ -331,10 +331,10 @@ struct NODE *force_treebuild_single(struct NODE *startnode, int type, double the
 	      nfree->P  =Part[p]->mass*(Part[p]->xyz[0]*Part[p]->xyz[0]+
 				       Part[p]->xyz[1]*Part[p]->xyz[1]+
 				       Part[p]->xyz[2]*Part[p]->xyz[2]);
-	  
+
 	      th->partind=-1;
 	      th->suns[subp]=nfree;
-      
+
 	      numnodes++; numnodestotal++; nfree++;
 
 	      if(numnodestotal>=MaxNodes)
@@ -346,24 +346,24 @@ struct NODE *force_treebuild_single(struct NODE *startnode, int type, double the
 	      for(j=0,subi=0,fak=1;j<3;j++,fak<<=1)
 		if(Part[i]->xyz[j]>th->center[j])
 		  subi+=fak;
-	      
+
 	      if(subi==subp)   /* the new particle lies in the same sub-cube */
 		{
 		  th=nfree-1;
-		  add_particle_props_to_node(th,Part[i]);		  
+		  add_particle_props_to_node(th,Part[i]);
 		  th->count++;
 		}
 	      else
 		break;
 	    }
 	}
-      
 
-      
+
+
       for(j=0,subi=0,fak=1;j<3;j++,fak<<=1)
 	if(Part[i]->xyz[j]>th->center[j])
 	  subi+=fak;
-      
+
       nfree->father=th;
 
       for(j=0;j<8;j++)
@@ -396,7 +396,7 @@ struct NODE *force_treebuild_single(struct NODE *startnode, int type, double the
 
       nfree->partind=i;
       th->suns[subi]=nfree;
-      
+
       nfree->count=1;
 
       numnodes++; numnodestotal++; nfree++;
@@ -410,15 +410,15 @@ struct NODE *force_treebuild_single(struct NODE *startnode, int type, double the
 
 
 
- 
-  
+
+
   /* now finish-up center-of-mass and quadrupol computation */
-  
+
   for(i=0,th=startnode; i<numnodes; i++,th++)
     {
       for(j=0;j<3;j++)
 	th->s[j] /= th->mass;
-      
+
       if(th->partind<0)   /* cell contains more than one particle */
 	{
 	  th->Q11 -= th->mass*th->s[0]*th->s[0];
@@ -430,16 +430,16 @@ struct NODE *force_treebuild_single(struct NODE *startnode, int type, double the
 
 	  th->P   -= th->mass*(th->s[0]*th->s[0]+
 			       th->s[1]*th->s[1]+
-			       th->s[2]*th->s[2]); 
+			       th->s[2]*th->s[2]);
 	  dx=th->s[0] - th->center[0];
 	  dy=th->s[1] - th->center[1];
 	  dz=th->s[2] - th->center[2];
-	  
+
 	  th->oc=sqrt(dx*dx+dy*dy+dz*dz);
-	  th->oc += th->len/thetamax; 
+	  th->oc += th->len/thetamax;
 	  th->oc *= th->oc;     /* used in cell-opening criterion */
 	}
-      
+
       for(j=7,nn=0;j>=0;j--)  	/* preparations for non-recursive walk */
 	{
 	  if(th->suns[j])
@@ -450,13 +450,13 @@ struct NODE *force_treebuild_single(struct NODE *startnode, int type, double the
 	}
     }
 
-  
+
   last=0;
   force_setupnonrecursive(startnode);  	/* set up non-recursive walk */
   last->next=0;
 
-  
-  
+
+
   for(i=0,th=startnode; i<numnodes; i++,th++)
     if(!(th->sibling))
       {
@@ -470,14 +470,14 @@ struct NODE *force_treebuild_single(struct NODE *startnode, int type, double the
 	      break;
 	    nn=ff->sibling;
 	  }
-	
+
 	th->sibling=nn;
       }
 
-	
+
 
 /*   printf("Tree contruction finished. Number of nodes: %d\n",numnodes); */
-  
+
   numnodestree[type]=numnodes;
 
   return nfree;
@@ -489,17 +489,16 @@ void force_setupnonrecursive(struct NODE *no)
 {
   int i;
   struct NODE *nn;
-  
+
   if(last)
     last->next=no;
 
   last=no;
-  
+
   for(i=0;i<8;i++)
     if(nn=no->suns[i])
       force_setupnonrecursive(nn);
 }
- 
 
 
 
@@ -507,7 +506,8 @@ void force_setupnonrecursive(struct NODE *no)
 
 
 
-void force_treeevaluate(int target) 
+
+void force_treeevaluate(int target)
 {
   int    i,tr;
   double epsilon;
@@ -519,7 +519,7 @@ void force_treeevaluate(int target)
 
   for(i=0;i<3;i++)
     Part[target]->accel[i]=0;
-  
+
   for(tr=0;tr<5;tr++)
     {
       if(ntype[tr]>0)
@@ -574,19 +574,19 @@ void force_treeevaluate_single(int tree, int targetpart, double epsilon)  /* non
 
       if((p=no->partind)>=0)   /* single particle */
 	{
-	  r=sqrt(r2);  
-	   
+	  r=sqrt(r2);
+
 	  u=r*h_inv;
 
 
-	  treecost[tree]+=1;	  	  
+	  treecost[tree]+=1;
 
 	  if(u>=1)
 	    {
 	      r_inv=1/r;
 
 	      fac=no->mass*r_inv*r_inv*r_inv;
-	  
+
 	      tpaccel->xyz[0]+=dx*fac;
 	      tpaccel->xyz[1]+=dy*fac;
 	      tpaccel->xyz[2]+=dz*fac;
@@ -599,11 +599,11 @@ void force_treeevaluate_single(int tree, int targetpart, double epsilon)  /* non
 	      ii = (int)(u*KERN_LEN); ff=(u-knlrad[ii])*KERN_LEN;
 	      wf=knlforce[ii]+(knlforce[ii+1]-knlforce[ii])*ff;
 	      wp=knlpot[ii]+(knlpot[ii+1]-knlpot[ii])*ff;
-	      
+
 	      if(r>1.0e-20)
 		{
 		  fac=no->mass*h_inv*h_inv/r*wf;
-		  
+
 		  tpaccel->xyz[0]+=dx*fac;
 		  tpaccel->xyz[1]+=dy*fac;
 		  tpaccel->xyz[2]+=dz*fac;
@@ -623,14 +623,14 @@ void force_treeevaluate_single(int tree, int targetpart, double epsilon)  /* non
 	  else
 	    {
 	      /*	      treecost[tree]+=1; */
-  treecost_quadru[tree]+=1;	  	  
-	      
+  treecost_quadru[tree]+=1;
+
 	      no->cost += 1;
 
-	      r=sqrt(r2);  
-	  
+	      r=sqrt(r2);
+
 	      u=r*h_inv;
-	  
+
 	      if(u>=1)  /* ordinary quadrupol moment */
 		{
 		  r_inv=1/r;
@@ -654,11 +654,11 @@ void force_treeevaluate_single(int tree, int targetpart, double epsilon)  /* non
 		       q12dx*dy+
 		       q13dx*dz+
 		       q23dy*dz;
-#ifdef POTENTIAL_SIMULTO_FORCE 
+#ifdef POTENTIAL_SIMULTO_FORCE
 		  *tppot += -no->mass*r_inv  /* monopole */
                            +r3_inv*( -3*potq*r2_inv + 0.5*no->P);  /* quadrupole */
 #endif
-		  
+
 		  fac=no->mass*r3_inv  /* monopole force*/
 		      +(15*potq*r2_inv -1.5*no->P)*r5_inv;  /* radial quadrupole part */
 
@@ -702,18 +702,18 @@ void force_treeevaluate_single(int tree, int targetpart, double epsilon)  /* non
 		       q13dx*dz+
 		       q23dy*dz;
 #ifdef POTENTIAL_SIMULTO_FORCE
-		  *tppot += no->mass*h_inv*wp +  /* monopole */   
+		  *tppot += no->mass*h_inv*wp +  /* monopole */
 		            potq*w2*h5_inv + 0.5*no->P*wf*h2_inv*r_inv ; /* quadru contribution */
 #endif
 		  /* note: observe definition (sign!) of dx,dy,dz */
 
-		  fac=no->mass*h2_inv*r_inv*wf +  /* monopole force */ 
+		  fac=no->mass*h2_inv*r_inv*wf +  /* monopole force */
                      +potq*h6_inv * w3*r_inv   + 0.5*no->P * w4 *h4_inv*r_inv; /* radial contribution
 									     of quadrupole */
 		  tpaccel->xyz[0]+=dx*fac;
 		  tpaccel->xyz[1]+=dy*fac;
 		  tpaccel->xyz[2]+=dz*fac;
-		  
+
 		  /* add tensor contribution */
 		  ff=w2*h5_inv;
 		  tpaccel->xyz[0] += ff*(q11dx + q12dy + q13dz);
@@ -754,7 +754,7 @@ void force_treeevaluate_single(int tree, int targetpart, double epsilon)  /* non
 
 
 
-void force_treeevaluate_potential(int target) 
+void force_treeevaluate_potential(int target)
 {
   int    i,tr;
   double epsilon;
@@ -817,8 +817,8 @@ void force_treeevaluate_potential_single(int tree, int targetpart, double epsilo
 
       if((p=no->partind)>=0)   /* single particle */
 	{
-	  r=sqrt(r2);  
-	   
+	  r=sqrt(r2);
+
 	  u=r*h_inv;
 
 	  if(u>=1)
@@ -829,7 +829,7 @@ void force_treeevaluate_potential_single(int tree, int targetpart, double epsilo
 	    {
 	      ii = (int)(u*KERN_LEN); ff=(u-knlrad[ii])*KERN_LEN;
 	      wp=knlpot[ii]+(knlpot[ii+1]-knlpot[ii])*ff;
-	      
+
 	      *tppot+=no->mass*h_inv*wp;
 	    }
 	  no=no->sibling;
@@ -842,10 +842,10 @@ void force_treeevaluate_potential_single(int tree, int targetpart, double epsilo
 	    }
 	  else
 	    {
-	      r=sqrt(r2);  
-	  
+	      r=sqrt(r2);
+
 	      u=r*h_inv;
-	  
+
 	      if(u>=1)  /* ordinary quadrupol moment */
 		{
 		  r_inv=1/r;
@@ -869,7 +869,7 @@ void force_treeevaluate_potential_single(int tree, int targetpart, double epsilo
 		       q12dx*dy+
 		       q13dx*dz+
 		       q23dy*dz;
- 
+
 		  *tppot += -no->mass*r_inv  /* monopole */
                            +r3_inv*( -3*potq*r2_inv + 0.5*no->P);  /* quadrupole */
 
@@ -901,7 +901,7 @@ void force_treeevaluate_potential_single(int tree, int targetpart, double epsilo
 		       q13dx*dz+
 		       q23dy*dz;
 
-		  *tppot += no->mass*h_inv*wp +  /* monopole */   
+		  *tppot += no->mass*h_inv*wp +  /* monopole */
 		            potq*w2*h5_inv + 0.5*no->P*wf*h2_inv*r_inv ; /* quadru contribution */
 
 		}
@@ -933,7 +933,7 @@ void force_treeevaluate_potential_single(int tree, int targetpart, double epsilo
 
 
 
-void force_setkernel(void) 
+void force_setkernel(void)
 {
   int i;
   double u;
@@ -981,7 +981,7 @@ void force_treeallocate(int maxnodes)  /* usually maxnodes=2*npart is sufficient
     }
 
   printf("\nAllocated %g MByte for BH-tree.\n\n",bytes/(1024.0*1024.0));
-    
+
    force_setkernel();
 }
 
@@ -1005,9 +1005,9 @@ int force_getcost(void)
 {
   int tr,cost;
 
-  for(tr=cost=0;tr<5;tr++) 
+  for(tr=cost=0;tr<5;tr++)
     cost += treecost[tr];
-  
+
   return cost;
 }
 
@@ -1015,8 +1015,8 @@ int force_getcost_quadru(void)
 {
   int tr,cost;
 
-  for(tr=cost=0;tr<5;tr++) 
+  for(tr=cost=0;tr<5;tr++)
     cost += treecost_quadru[tr];
-  
+
   return cost;
 }

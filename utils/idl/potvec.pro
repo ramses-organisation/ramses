@@ -52,24 +52,24 @@ for icpu=0,ncpu-1 do begin
                     ind_cell=i+2*j
                     active=mesh2.son(*,ind_cell)
                     ind2=where(active eq 0)
-                    
+
                     mesh=(*hydro.levelh[ilevel-1,icpu])
 
                     cxl=mesh.u(*,ind_cell,5)
                     cyl=mesh.u(*,ind_cell,6)
                     cxr=mesh.u(*,ind_cell,8)
                     cyr=mesh.u(*,ind_cell,9)
-                    
+
                     if (ind2(0) ne -1) then begin
 
                         nxc=2L^(nlevelmax-ilevel)
                         for ii2=0L,n_elements(ind2)-1L do begin
-                            
+
                             xl=x(ind2(ii2))+(double(i)-1.0d0)*dx
                             xr=x(ind2(ii2))+(double(i))*dx
                             yl=y(ind2(ii2))+(double(j)-1.0d0)*dx
                             yr=y(ind2(ii2))+(double(j))*dx
-                            
+
                             il=fix(xl/dxmin)
                             jl=fix(yl/dxmin)
 
@@ -84,16 +84,16 @@ for icpu=0,ncpu-1 do begin
                                     bxr(il+ii,jl+jj)=cxr(ind2(ii2))*xxr+cxl(ind2(ii2))*(1.0-xxr)
                                     byl(il+ii,jl+jj)=cyr(ind2(ii2))*yyl+cyl(ind2(ii2))*(1.0-yyl)
                                     byr(il+ii,jl+jj)=cyr(ind2(ii2))*yyr+cyl(ind2(ii2))*(1.0-yyr)
-                                    
+
                                 endfor
                             endfor
                         endfor
-                        
+
                     endif
-                    
+
                 endfor
             endfor
-            
+
         endif
     endfor
 endfor

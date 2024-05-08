@@ -40,7 +40,7 @@ def main():
         sys.exit()
 
     print(infile)
-        
+
     # Read image data
     fileobj = fortranfile.FortranFile(args.infile)
     [time, delta_x, delta_y, delta_z] = fileobj.readReals('d')
@@ -50,7 +50,7 @@ def main():
     fileobj.close()
 
     print(nx,ny)
-    
+
     rawmin = numpy.amin(dat)
     rawmax = numpy.amax(dat)
 

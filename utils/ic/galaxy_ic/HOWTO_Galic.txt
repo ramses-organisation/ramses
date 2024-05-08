@@ -8,12 +8,12 @@
 - Les fichiers crees  'info.txt', 'ic_part', 'params.txt', 'Vcirc.dat'
   sont crees a partir de 'save.c'
 
-Vcirc.dat: 
+Vcirc.dat:
 colonne 1 rayon en pc
 colonne 2 Vcirc en km/s
 
-ic_part: 
-colonne 1, 2 et 3: coordonnees en  kpc 
+ic_part:
+colonne 1, 2 et 3: coordonnees en  kpc
 colonne 4, 5 et 6: vitesses en km/s
 colonne 7: masses en 10^9 Msol.
 
@@ -58,4 +58,3 @@ Notes
   eviter cela,  on peut choisir  de retravailler le  fichier 'ic_part'
   avant  de le  mettre  dans RAMSES  afin  de tronquer  la galaxie  de
   maniere spherique...
-

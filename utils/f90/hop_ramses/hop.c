@@ -1,7 +1,7 @@
 /* HOP.C -- Daniel Eisenstein, 1997
-Based on a paper by Daniel Eisenstein & Piet Hut, 
+Based on a paper by Daniel Eisenstein & Piet Hut,
 "HOP: A New Group-Finding Algorithm for N-body Simulations."
-See the included documentation or view it at 
+See the included documentation or view it at
 http://www.sns.ias.edu/~eisenste/hop/hop_doc.html */
 
 /* main() was customized from that of SMOOTH v2.0.1, by Joachim Stadel
@@ -82,7 +82,7 @@ void main(int argc,char **argv)
 	float fPeriod[3];
 	int bDensity,bGroup,bSym,bMerge,nDens,nHop,nMerge,bTopHat;
 	float fDensThresh;
-	
+
    	nBucket = 16;
 	nSmooth = 64;
 	nDens = 64;
@@ -155,7 +155,7 @@ void main(int argc,char **argv)
 			/* Setting all directions to have the same periodicity.
 			You could change this if you want; for example, see
 			the SMOOTH program from the HPCC. */
-			fPeriod[0] = atof(argv[i]); 
+			fPeriod[0] = atof(argv[i]);
 			fPeriod[1] = atof(argv[i]);
 			fPeriod[2] = atof(argv[i]);
 			++i;
@@ -193,12 +193,12 @@ void main(int argc,char **argv)
 	    optimization to be had.  I haven't the coded the other case */
 	assert(!bMerge || bGroup);
 	    /* Can't run Merging without Grouping */
-	if (!bMerge) nMerge = 9999999;	
-		/* If we're not Merging, we don't want smHop() to set 
+	if (!bMerge) nMerge = 9999999;
+		/* If we're not Merging, we don't want smHop() to set
 		up for Merging.  This kludge avoids that */
 
 	kdInit(&kd,nBucket);
-	
+
 	// START HACKING BY DOM
 
 /* 	if (inputfile==NULL) fp = stdin; */
@@ -215,7 +215,7 @@ void main(int argc,char **argv)
 
 
 	PrepareKD(kd);
-	
+
 
 
 
@@ -275,7 +275,7 @@ void main(int argc,char **argv)
 	    strcpy(ach,achFile); strcat(ach,".gbound");
 	    fp = fopen(ach,"w"); assert(fp != NULL);
 	    smx->nSmooth=nSmooth; /* Restore this for output */
-	    outGroupMerge(smx,fp);  
+	    outGroupMerge(smx,fp);
 	    fclose(fp);
 	}
 	if (bMerge) free(smx->hash);
@@ -364,7 +364,7 @@ sorting below */
     recording the new Ball radius. */
     /* Place the new radius in between the two boundary because occasionally
     the floating point math comes out strange when comparing two floats */
-    if (didsort && smx->nMerge+2<nSmooth) 
+    if (didsort && smx->nMerge+2<nSmooth)
 	smx->pfBall2[pi] = 0.5*(fList[smx->nMerge+1]+fList[smx->nMerge]);
     return;
 }
@@ -378,8 +378,8 @@ now we will store group number as positive numbers (1..n) in the same spot */
 /* Zero is left as an error condition */
 /* The particles MUST be left in the BuildTree order, for that is how the
 iHop tracing is done */
-/* Allocate space for densestingroup, from 0 to nGroups 
-(inclusive) and store the particle number of the maxima, which is the 
+/* Allocate space for densestingroup, from 0 to nGroups
+(inclusive) and store the particle number of the maxima, which is the
 densest particle in the group.  Ditto for nmembers[], the number of
 particles in the group */
 {
@@ -388,7 +388,7 @@ particles in the group */
 
     smx->nGroups = 0;
     /* First look for maxima, where particle ID = iHop.  Number the groups */
-    for (j=0, p=smx->kd->p;j<smx->kd->nActive;j++,p++) 
+    for (j=0, p=smx->kd->p;j<smx->kd->nActive;j++,p++)
 	if (p->iHop == -1-j) {  /* Was p->iOrder */
 	    /* Yes, it's a maximum */
 	    smx->nGroups++;
@@ -403,13 +403,13 @@ particles in the group */
 
     ng = 0;
     for (j=0,p=smx->kd->p;j<smx->kd->nActive;j++,p++)
-	if (p->iHop== -1-j) {  
+	if (p->iHop== -1-j) {
 	    /* It's a maximum */
 	    ng++;
 	    smx->densestingroup[ng] = p->iOrder;
 	    p->iHop = ng;
 	}
-    
+
     /* Now take the remaining particles and trace up to a maximum */
     for (j=0,p=smx->kd->p;j<smx->kd->nActive;j++,p++) {
 	if (p->iHop>=0) continue;	/* It's a maximum or an error */
@@ -460,8 +460,8 @@ void SortGroups(SMX smx)
     large to small */
 
     /* Relabel all the particles */
-    for (j=0,p=smx->kd->p;j<smx->kd->nActive;j++,p++) 
-	p->iHop = irank[p->iHop];	
+    for (j=0,p=smx->kd->p;j<smx->kd->nActive;j++,p++)
+	p->iHop = irank[p->iHop];
 
     /* Sort the nmembers and densestingroup lists to reflect the new ordering */
     /* Use indx as a temp space */
@@ -492,13 +492,13 @@ the most dense boundary point (average of the two points) */
 /* The matrix of boundaries is stored in a hash table */
 /* SortGroups() should be called previous to this, so that all the
 particles are in the assumed group numbering, i.e. 0 to ngroup-1, with
--1 being unattached. The tags are not altered */ 
+-1 being unattached. The tags are not altered */
 /* In smHop, if nMerge+2 was smaller than nSmooth, we set the new radius
 for searching.  If not, we left the old radius alone.  Either way, we're
 ready to go. */
 {
     int j, k, g, next, newgroup;
-    
+
     ReSizeSMX(smx, smx->nMerge+2);	/* Alter the smoothing scale on smx */
     smx->nHashLength = smx->nGroups*10+1;
     smx->hash = (Boundary *)malloc(smx->nHashLength*sizeof(Boundary));
@@ -544,7 +544,7 @@ void smMergeHash(SMX smx,int pi,int nSmooth,int *pList,float *fList)
 	/* It's in a different group; we need to connect the two */
 	if (group<g2) g1=group;
 	    else {g1=g2; g2=group;}
-	averdensity = 0.5*(smx->kd->p[pi].fDensity + 
+	averdensity = 0.5*(smx->kd->p[pi].fDensity +
 			smx->kd->p[pList[j]].fDensity);
 	hashpoint = (g1+1)*g2;  /* Avoid multiplying by 0 */
 	hashpoint = hashpoint % smx->nHashLength;
@@ -555,9 +555,9 @@ void smMergeHash(SMX smx,int pi,int nSmooth,int *pList,float *fList)
 		hp->nGroup1 = g1;
 		hp->nGroup2 = g2;
 		hp->fDensity = averdensity;
-		break;	
+		break;
 	    }
-	    if (hp->nGroup1==g1 && hp->nGroup2==g2) {	
+	    if (hp->nGroup1==g1 && hp->nGroup2==g2) {
 		/* We've seen this pair of groups before */
 		if (hp->fDensity > averdensity) break;
 		else {
@@ -566,7 +566,7 @@ void smMergeHash(SMX smx,int pi,int nSmooth,int *pList,float *fList)
 		}
 	    }
 	    /* Else, this slot was full, go to the next one */
-	    hp++; 
+	    hp++;
 	    if (hp>=smx->hash+smx->nHashLength) hp = smx->hash;
 	    if (++count>1000) {
 		fprintf(stderr,"Hash Table is too full.\n");
@@ -584,7 +584,7 @@ void smMergeHash(SMX smx,int pi,int nSmooth,int *pList,float *fList)
 void ReSizeSMX(SMX smx, int nSmooth)
 /* Set a new smoothing length, resizing the arrays which depend on this,
 but leaving the particle information intact. */
-/* However, because we won't always have resized pfBall2 (the search 
+/* However, because we won't always have resized pfBall2 (the search
 radius) correctly, we won't reduce the size of the fList and pList
 arrays */
 {
@@ -678,7 +678,7 @@ void binInDensity(SMX smx, FILE *fp)
 	fprintf(stderr,"Format of density file seems wrong.\n"); exit(1);
     }
     assert(dummy==smx->kd->nActive);
-    for (j=0;j<smx->kd->nActive;j++) 
+    for (j=0;j<smx->kd->nActive;j++)
 	if (fread(&(smx->kd->p[j].fDensity),4,1,fp)!=1) {
 	    fprintf(stderr,"Error reading density file.\n");
 	    exit(1);
@@ -711,12 +711,12 @@ void outGroupMerge(SMX smx, FILE *fp)
     for (j=0;j<smx->nGroups;j++) {
 	den = smx->densestingroup[j];
 	fprintf(fp,"%4d %5d %7d %6.4f %6.4f %6.4f %e\n",
-	    j, smx->nmembers[j], den, smx->kd->p[den].r[0], 
-	    smx->kd->p[den].r[1], smx->kd->p[den].r[2], 
+	    j, smx->nmembers[j], den, smx->kd->p[den].r[0],
+	    smx->kd->p[den].r[1], smx->kd->p[den].r[2],
 	    smx->kd->p[den].fDensity);
     }
     fprintf(fp,"### Begin list of boundaries. Group, Group, Average Density.\n");
-    for (j=0, hp=smx->hash;j<smx->nHashLength; j++,hp++) 
+    for (j=0, hp=smx->hash;j<smx->nHashLength; j++,hp++)
 	if (hp->nGroup1>=0)
 	  //	    fprintf(fp,"%5d %5d %6.2f\n",
 	  //hp->nGroup1, hp->nGroup2, hp->fDensity);
@@ -735,7 +735,7 @@ typedef struct index_struct {
     int index;
 } *ptrindex;
 
-int cmp_index(const void *a, const void *b) 
+int cmp_index(const void *a, const void *b)
 {
     if ( ((ptrindex)a)->value<((ptrindex)b)->value) return -1;
     else if ( ((ptrindex)a)->value>((ptrindex)b)->value) return 1;
@@ -745,9 +745,9 @@ int cmp_index(const void *a, const void *b)
 void make_rank_table(int n, int *ivect, int *rank)
 /* Given a vector of integers ivect[1..n], construct a rank table rank[1..n]
 so that rank[j] contains the ordering of element j, with rank[j]=n indicating
-that the jth element was the highest, and rank[j]=1 indicating that it 
+that the jth element was the highest, and rank[j]=1 indicating that it
 was the lowest.  Storage for rank[] should be declared externally */
-/* I don't think this routine is particularly fast, but it's a 
+/* I don't think this routine is particularly fast, but it's a
 miniscule fraction of the runtime */
 {
     int j;
@@ -850,10 +850,10 @@ alter the type above */
 
      /* Alter array X to get decreasing order if needed */
 
-      if (KFLAG <= -1) 
+      if (KFLAG <= -1)
 	 for (I=1; I<=NN; I++)
             X[I] = -X[I];
-      
+
 
       if (KK == 2) goto line100;
 
@@ -865,10 +865,10 @@ alter the type above */
       R = 0.375E0;
 
 line20: if (I == J) goto line60;
-      if (R <= 0.5898437E0) 
+      if (R <= 0.5898437E0)
          R = R+3.90625E-2;
       else R = R-0.21875E0;
-      
+
 
 line30: K = I;
 
@@ -969,7 +969,7 @@ line100: M = 1;
       R = 0.375E0;
 
 line110: if (I == J) goto line150;
-      if (R <= 0.5898437E0) 
+      if (R <= 0.5898437E0)
          R = R+3.90625E-2;
       else R = R-0.21875E0;
 
@@ -1082,9 +1082,9 @@ line180: X[K+1] = X[K];
 
      /* Clean up */
 
-line190: if (KFLAG <= -1) 
+line190: if (KFLAG <= -1)
 	 for (I=1; I<=NN; I++)
             X[I] = -X[I];
-      
+
      return;
 }

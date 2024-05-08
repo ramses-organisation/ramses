@@ -1,4 +1,4 @@
-&RUN_PARAMS 
+&RUN_PARAMS
 hydro=.true.
 nrestart=0
 nremap=10
@@ -19,12 +19,12 @@ length_y=10.0, 1.6
 length_z=10.0, 1.6
 exp_region=10.0, 2.
 d_region=2.d-4, 4.d-2			! (1=1e-3 cm-3)
-u_region=0.0, 0.0							
-v_region=0.0, 0.0     
+u_region=0.0, 0.0
+v_region=0.0, 0.0
 p_region= 1.391794d-08, 1.391795d-08	! 8000 K and 40 K
 /
 
-&AMR_PARAMS 
+&AMR_PARAMS
 levelmin=6
 levelmax=7
 ngridtot=1000000

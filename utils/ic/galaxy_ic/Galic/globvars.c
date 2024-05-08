@@ -9,18 +9,18 @@
  double  MD;        /* disk mass fraction */
  double  JD;        /* disk spin fraction */
  double  MB;        /* bulge mass fraction */
- double  GasFraction;  
- double  DiskHeight; 
+ double  GasFraction;
+ double  DiskHeight;
  double  BulgeSize;
  double  HI_GasMassFraction;    /* in terms of the total gas mass */
- double  HI_GasDiskScaleLength;  /* in terms of scale length of the disk */ 
+ double  HI_GasDiskScaleLength;  /* in terms of scale length of the disk */
 
  double  Qstabilizefactor;
 
  int     N_HALO;    /* desired number of particles in halo */
  int     N_DISK;    /* desired number of collsionless particles in disk */
- int     N_GAS;     /* number of gas particles in stellar disk */ 
- int     N_BULGE;   /* number of gas particles in stellar disk */ 
+ int     N_GAS;     /* number of gas particles in stellar disk */
+ int     N_BULGE;   /* number of gas particles in stellar disk */
 
 /*********************************************/
 
@@ -95,7 +95,7 @@ double  dR;    /* delta R */
 
 
  double **Dphi_z,**Dphi_R,**Dphi_z_dR;  /* derivatives of total potential */
- double *epi_gamma2,*epi_kappa2;   /* epicycle gamma^2  */ 
+ double *epi_gamma2,*epi_kappa2;   /* epicycle gamma^2  */
 
 
 
@@ -132,9 +132,3 @@ double  dR;    /* delta R */
 
  double *xl,*yl,*D2yl;
  double *list_z,*list_R,*list_RplusdR;
-
-
-
-
-
-

@@ -70,7 +70,7 @@ subroutine init_hydro
 #endif
      open(unit=ilun,file=fileloc,form='unformatted')
      read(ilun)ncpu2
-     read(ilun)nvar2     
+     read(ilun)nvar2
      if(strict_equilibrium>0)nvar2=nvar2-2
      read(ilun)ndim2
      read(ilun)nlevelmax2
@@ -208,7 +208,3 @@ subroutine init_hydro
   end if
 
 end subroutine init_hydro
-
-
-
-

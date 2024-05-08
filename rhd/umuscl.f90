@@ -1606,6 +1606,3 @@ function f_prim_Mignone(R,D,M,Eprim,gamma)
   f_prim_Mignone=1d0-dpdR
   return
 end function f_prim_Mignone
-
-
-

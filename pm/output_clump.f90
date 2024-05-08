@@ -22,7 +22,7 @@ subroutine write_clump_field
   if(verbose)write(*,*)'Entering write_clump_field'
 
   ilun=ncpu+myid+10
- 
+
   ! Wait for the token
 #ifndef WITHOUTMPI
   if(IOGROUPSIZE>0) then
@@ -41,14 +41,14 @@ subroutine write_clump_field
      filename = 'output_'//TRIM(nchar)//'/clump_field_file_descriptor.txt'
      call file_descriptor_clump(filename)
   end if
-  
+
   if(IOGROUPSIZEREP>0)then
      call title(((myid-1)/IOGROUPSIZEREP)+1,ncharcpu)
      open(unit=ilun, file=TRIM('output_'//TRIM(nchar)//'/group_'//TRIM(ncharcpu)//'/clump_field_'//TRIM(nchar)//'.out'//TRIM(myidstring)),form='unformatted')
   else
      open(unit=ilun, file=TRIM('output_'//TRIM(nchar)//'/clump_field_'//TRIM(nchar)//'.out'//TRIM(myidstring)),form='unformatted')
   endif
-  
+
   do ilevel=1,nlevelmax
      do ibound=1,nboundary+ncpu
         if(ibound<=ncpu)then
@@ -105,7 +105,7 @@ subroutine file_descriptor_clump(filename)
 
   ! Pretty much a dummy file at the moment since the clump file contains
   ! only one AMR field. However, this might change at some point...
-  
+
   character(LEN=80)::filename
   character(LEN=80)::fileloc
   integer::ivar,ilun

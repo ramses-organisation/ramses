@@ -858,7 +858,3 @@ function dadt(axp_t,O_mat_0,O_vac_0,O_k_0)
   dadt = sqrt(dadt)
   return
 end function dadt
-
-
-
-

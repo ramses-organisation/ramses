@@ -33,7 +33,7 @@ struct io_header_1
   double   BoxSize;
   double   Omega0;
   double   OmegaLambda;
-  double   HubbleParam; 
+  double   HubbleParam;
   char     fill[256- 6*4- 6*8- 2*8- 2*4- 6*4- 2*4 - 4*8];  /* fills to 256 Bytes */
 } header1;
 
@@ -62,7 +62,7 @@ void save_particles(char *fdir)
 
   strcpy(fname,fdir);
   strcat(fname,"ic_part");
-  
+
   if(!(fd_ic_part=fopen(fname,"w")))
     {
       printf("error opening file '%s'\n",fname);
@@ -72,7 +72,7 @@ void save_particles(char *fdir)
 
   strcpy(fname,fdir);
   strcat(fname,"info.txt");
-  
+
   if(!(fd_info=fopen(fname,"w")))
     {
       printf("error opening file '%s'\n",fname);
@@ -102,7 +102,7 @@ void save_particles(char *fdir)
 	}
   fprintf(fd_info," -Mass_dm        = %f\n",mtot);
   mtot_sum += mtot;
- 
+
   /* Bulge star particles */
   printf("Number of particles in the bulge %d\n",N_BULGE);
   fprintf(fd_info," -Nstars_bulge   = %d\n",N_BULGE);
@@ -120,8 +120,8 @@ void save_particles(char *fdir)
     }
   fprintf(fd_info," -Mass_starsbulge= %f\n",mtot);
   mtot_sum += mtot;
-  
-  
+
+
   /* Disk star particles */
   printf("Number of particles in the disk %d\n",N_DISK);
   fprintf(fd_info," -Nstars_disk    = %d\n",N_DISK);
@@ -136,11 +136,11 @@ void save_particles(char *fdir)
       fprintf(fd_ic_part," %g",vzp_disk[i] * UnitVelocity_in_cm_per_s / 1.0E5);
       fprintf(fd_ic_part," %g\n",mp_disk[i]);
 	  mtot +=mp_disk[i];
-    }      
+    }
   fprintf(fd_info," -Mass_starsdisk = %f\n",mtot);
   mtot_sum += mtot;
-   
-  
+
+
   /* Gas particles */
   printf("Number of particles in the gas %d\n",N_GAS);
   fprintf(fd_info," -Ngaz           = %d\n", N_GAS);
@@ -160,24 +160,22 @@ void save_particles(char *fdir)
   printf("Total mass of gaseous disk :  %f\n",mtot);
   mtot_sum += mtot;
 
- 
+
   /* New formed stars */
   fprintf(fd_info," -Nstar_form     = 0\n");
   fprintf(fd_info," -Mass_sf        = 0.0\n");
-  
+
   /* Black holes */
   fprintf(fd_info," -Nblack_holes   = 0\n");
   fprintf(fd_info," -Mass_bh        = 0.0\n");
 
-  
+
   ntot = N_BULGE + N_DISK + N_HALO + N_GAS;
   /* Total number of written particles */
   fprintf(fd_info," -Ntot           = %d\n",ntot);
   fprintf(fd_info," -Mass_tot       = %f\n",mtot_sum);
-  
-  
+
+
   fclose(fd_ic_part);
   fclose(fd_info);
 }
-
-

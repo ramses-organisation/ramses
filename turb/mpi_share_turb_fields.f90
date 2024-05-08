@@ -32,7 +32,7 @@ subroutine mpi_share_turb_fields(include_last)
       call MPI_BCAST(turb_last_time, 1, MPI_REAL_DP, 0, &
                      & MPI_COMM_WORLD, ierr)
    end if
-   
+
    call MPI_BCAST(afield_next, message_length, MPI_REAL_DP, 0, &
                   & MPI_COMM_WORLD, ierr)
    call MPI_BCAST(turb_next_time, 1, MPI_REAL_DP, 0, &

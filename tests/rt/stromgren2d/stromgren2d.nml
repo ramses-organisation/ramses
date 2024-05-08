@@ -1,4 +1,4 @@
-&RUN_PARAMS 
+&RUN_PARAMS
 nrestart=0                      ! Restart from some snapshot
 hydro=.true.                    ! Baryons included? (Must be for RT)
 rt=.true.                       ! Activate radiative transfer
@@ -6,7 +6,7 @@ static=.false.                   ! Deactivate hydrodynamics (RHD if false)
 ncontrol=10
 /
 
-&AMR_PARAMS 
+&AMR_PARAMS
 levelmin=7                      ! Min resolution level - here 128^3 cells
 levelmax=7                      ! Max resolution level
 ngridtot=300000                 ! Total number of octs reserved
@@ -21,8 +21,8 @@ err_grad_d=0.5	 	        ! Refine on density gradient
 nregion=1                       ! Number of geometrical regions
 region_type(1)='square'         ! Region gemoetry
 x_center=0.5                    ! Region center, should be [0,boxlen]
-y_center=0.5                    ! 
-length_x=100.0                  ! Region width, in units of boxlen 
+y_center=0.5                    !
+length_x=100.0                  ! Region width, in units of boxlen
 length_y=100.0                  ! (this region covers the whole box)
 d_region=1d-1                   ! Initial density of the gas in H/cc
 p_region= 8.69869d-6		! Initial pressure (corresponds to 10^4 K)

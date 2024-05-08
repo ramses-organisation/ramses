@@ -1,20 +1,20 @@
         FUNCTION TRIM, NUMBER, FORMAT, FLAG
 ;+
-; NAME: 
+; NAME:
 ;       TRIM()
-; PURPOSE: 
+; PURPOSE:
 ;        Converts numbers to strings, without trailing zeros.
-; EXPLANATION: 
+; EXPLANATION:
 ;       Converts numbers into a string representation, and trims off leading
 ;       and/or trailing blanks.  Differs from STRTRIM in that trailing zeros
 ;       after the period are also trimmed off, unless NUMBER is already a
 ;       string, or an explicit format is passed.
-; CALLING SEQUENCE: 
+; CALLING SEQUENCE:
 ;       Result = TRIM( NUMBER  [, FORMAT ]  [, FLAG ] )
-; INPUTS: 
+; INPUTS:
 ;       NUMBER  = Scalar variable or constant.  May be of any ordinary type,
 ;                 including string.  However, structures are not allowed.
-; OPTIONAL INPUTS : 
+; OPTIONAL INPUTS :
 ;       FORMAT  - Format specification for STRING function.  Must be a string
 ;                 variable, start with the "(" character, end with the ")"
 ;                 character, and be a valid FORTRAN format specification.  If
@@ -30,17 +30,17 @@
 ;                 The default value is 2.  If NUMBER is complex, then FORMAT
 ;                 will be applied separately to the real and imaginary parts.
 ;
-; OUTPUTS: 
+; OUTPUTS:
 ;       Function returns as a string variable representing the value NUMBER.
-; RESTRICTIONS: 
+; RESTRICTIONS:
 ;       NUMBER must not be an array.  NUMBER must not be a structure.
 ;       FORMAT must be a valid format specification, and must not be passed
 ;               if NUMBER is of type string.
 ;       FLAG must not be of string type, or an array.
 ; PROCEDURES USED:
 ;       None
-; REVISION HISTORY: 
-;       Version 1, William Thompson, GSFC, 9 April 1993, 
+; REVISION HISTORY:
+;       Version 1, William Thompson, GSFC, 9 April 1993,
 ;       Transferred from Solar Library, W. Landsman     September 1997
 ;       Updated parentheses to V5.0,    W. Landsman     September 1997
 ;       Added check for undefined input D. Zarro        December 1998
@@ -54,7 +54,7 @@
          message,'Undefined input argument',/cont
          return,''
         ENDIF
-        
+
 ;
 ;  Check the type of the variable NUMBER.
 ;
@@ -106,7 +106,7 @@
         TYPE_FORMAT = S[S[0] + 1]
 ;
 ;  If only two parameters were passed, then decide whether FORMAT or FLAG was
-;  passed, and return the desired result. 
+;  passed, and return the desired result.
 ;
         IF N_PARAMS(0) EQ 2 THEN BEGIN
                 IF TYPE_FORMAT EQ 7 THEN BEGIN
@@ -134,7 +134,7 @@
         TRM = STRTRIM( STRING(NUMBER,FORMAT), FLAG )
         GOTO,RETURN
 ;
-;  Remove any trailing zeros.  First, check to make sure that the string 
+;  Remove any trailing zeros.  First, check to make sure that the string
 ;  contains a period.
 ;
 REMOVE:

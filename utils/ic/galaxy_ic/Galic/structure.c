@@ -17,9 +17,9 @@
 /* a number of tables */
 
 static double *rt,*mt,*m2r,*r2m;
-static double *rfinal;  
+static double *rfinal;
 static double *mfinal;
-static double *rhofinal,*rho2r;  
+static double *rhofinal,*rho2r;
 
 static int III;   /* a dummy variable */
 
@@ -41,7 +41,7 @@ structure()
   int i;
   double jhalo,jdisk,jd;
   double hnew,dh;
- 
+
 
 
 
@@ -54,12 +54,12 @@ structure()
   M_GAS=M_DISK*GasFraction;
 
 
-  M_TOTAL=M200 + additional_mass_in_halo_cutoff();   
+  M_TOTAL=M200 + additional_mass_in_halo_cutoff();
 
-  rho0_halo=M200/( 4*PI*(log(1+CC)-CC/(1+CC)) * RS*RS*RS);  
+  rho0_halo=M200/( 4*PI*(log(1+CC)-CC/(1+CC)) * RS*RS*RS);
 
   M_HALO=M_TOTAL-M_DISK-M_BULGE;
-  
+
   jhalo=LAMBDA*sqrt(G)*pow(M200,1.5)*sqrt(2*R200/fc(CC));
   jdisk=JD*jhalo;
 
@@ -90,9 +90,9 @@ structure()
   do
     {
       solve_mass_shells();  /* computes new bin-radii for mass shells */
-      
+
       jd=disk_angmomentum(); /* computes disk momentum */
-      
+
       hnew=jdisk/jd*H;
 
       dh=hnew-H;
@@ -130,7 +130,7 @@ prepare_cumlative_profile()
   double mass_cumulative_bulge(double);
   int i;
 
-  
+
 
   for(i=2,mfinal[1]=0;i<=N;i++)
     {
@@ -160,7 +160,7 @@ prepare_cumlative_profile()
 double halo_mass(double r)
 {
   double x;
-  
+
   if(r>rfinal[N])
     x=mfinal[N];
   else
@@ -185,7 +185,7 @@ double halo_q_to_r(double q)
 double halo_rho(double r)
 {
   double x;
-  
+
   if(r>rfinal[N])
     x=0;
   else
@@ -244,9 +244,9 @@ double jdisk_int(double x)
   Sigma0=(M_DISK)/(2*PI*H*H);
   y=x/(2*H);
 
-  if(y>1e-4) 
+  if(y>1e-4)
     vc2+= x * 2*PI*G*Sigma0*y*(bessi0(y)*bessk0(y)-bessi1(y)*bessk1(y));
-    	
+
   vc=sqrt(vc2);
 
   return pow(x/H,2)*vc*exp(-x/H);
@@ -287,7 +287,7 @@ double masszero(double rf)
   double mi,ri;
   double mass_cumulative_disk(double r);
   double mass_cumulative_bulge(double r);
-  
+
   mi=mt[III];
   ri=rt[III];
 
@@ -333,7 +333,7 @@ setup_massprofile()
   m2r=dvector(1,N);
   rfinal=dvector(1,N);
   rhofinal=dvector(1,N);
-  rho2r=dvector(1,N);  
+  rho2r=dvector(1,N);
 
 
 
@@ -370,7 +370,7 @@ setup_massprofile()
 	    }
 	  while(fabs(ds/s)>1e-8);
 	}
-	
+
       r=s*RS;
       rt[i]=r;
     }
@@ -396,7 +396,7 @@ double additional_mass_in_halo_cutoff(void)
   rhot_halo=rho0_halo/(CC*(1+CC)*(1+CC));
   gam1_halo=4*PI*rhot_halo*R200*R200*R200*exp(CC+gammln(3+a_halo)-(3+a_halo)*log(CC));
   p1_halo=gam1_halo*gammp(3+a_halo,CC);
-  
+
   return gam1_halo-p1_halo;
 }
 
@@ -449,11 +449,8 @@ write_cumulative_mass()
 
   for(i=1;i<=N;i++)
     {
-      fprintf(fd,"%g %g %g %g %g \n", rt[i]/R200, rfinal[i]/R200, mt[i]/M200, 
+      fprintf(fd,"%g %g %g %g %g \n", rt[i]/R200, rfinal[i]/R200, mt[i]/M200,
 	      mass_cumulative_disk(rfinal[i])/M200 , mt[i]/M200  );
     }
   fclose(fd);
 }
-
-
-

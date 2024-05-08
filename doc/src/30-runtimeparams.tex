@@ -67,7 +67,7 @@ into the Log File).
    \cmd{\nmlentry{nremap}=0} & Integer &
    Frequency of calls, in units of coarse time steps, for the load
 balancing routine, for MPI runs only, the default value, zero, meaning
-``never''. 
+``never''.
 \\\midrule
    \cmd{\nmlentry{ordering}='hilbert'} & Character LEN=128 &
    Cell ordering method used in the domain decomposition of the grid
@@ -226,7 +226,7 @@ up the frequency and properties of data output to disk.
 \begin{nmltable}
    \cmd{\nmlentry{noutput}=1} & Integer &
    Number of specified output time. At least one output time should be
-given, corresponding to the end of the simulation. 
+given, corresponding to the end of the simulation.
 \\\midrule
    \cmd{\nmlentry{tout}=0.0,0.0,0.0,} & Real array &
    Value of specified output time.
@@ -281,7 +281,7 @@ Besides the regular RAMSES outputs it is possible to produce snapshot projection
 \\\midrule
    \cmd{\nmlentry{proj\_axis}='z'} & Character LEN=5 & Defines projection axis ($x$,$y$ or $z$) for the snapshot; up to 5 projections (and thus movies) are allowed. The same projection can be specified multiple times.
 \\\midrule
-   \cmd{\nmlentry{movie\_vars}=0} & Integer array & 
+   \cmd{\nmlentry{movie\_vars}=0} & Integer array &
    \nmlparbox{
 Specifies which variables are going to be projected (with density weighting). The array must have length of \texttt{NVAR}+1. The encoding is as follows (names of saved variables in \textsc{small caps}):\\
    \cmd{\nmlentry{0}}: \textsc{temp}erature,\\
@@ -317,7 +317,7 @@ setting up such boundary conditions. Specific examples can be found in the
 
 \begin{nmltable}
    \cmd{\nmlentry{nboundary}=1} & Integer &
-   Number of ghost regions used to specify the boundary conditions. 
+   Number of ghost regions used to specify the boundary conditions.
 \\\midrule
    \cmd{\nmlentry{bound\_type}=0,0,0,} & Integer array &
    \nmlparbox{
@@ -340,7 +340,7 @@ setting up such boundary conditions. Specific examples can be found in the
    Real arrays
    &
    Flow variables in each ghost region (density, velocities and
-pressure).  They are used only for inflow boundary conditions. 
+pressure).  They are used only for inflow boundary conditions.
 \\\midrule
    \nmlparbox{
       \cmd{\nmlentry{ibound\_min}=0} \\
@@ -363,7 +363,7 @@ figure \vref{fig:bc}).
    Integer arrays
    &
    Likewise, for the upper, right and upper corner of each boundary
-region. 
+region.
 \end{nmltable}
 
 
@@ -377,16 +377,16 @@ now.
 
 \begin{nmltable}
    \cmd{\nmlentry{gamma}=1.4} & Real &
-   Adiabatic exponent for the perfect gas EOS. 
+   Adiabatic exponent for the perfect gas EOS.
 \\\midrule
    \cmd{\nmlentry{courant\_factor}=0.5} & Real &
    CFL number for time step control (less than 1).
 \\\midrule
    \cmd{\nmlentry{smallr}=1d-10} & Real &
-   Minimum density to prevent floating exceptions. 
+   Minimum density to prevent floating exceptions.
 \\\midrule
    \cmd{\nmlentry{smallc}=1d-10} & Real &
-   Minimum sound speed to prevent floating exceptions. 
+   Minimum sound speed to prevent floating exceptions.
 \\\midrule
    \cmd{\nmlentry{riemann}='llf'} & Character LEN=20 &
    Name of the desired Riemann solver. Possible choices are
@@ -415,11 +415,11 @@ now.
    In 1D runs only, it is also possible to choose: \\
       \cmd{slope\_type=4}: Superbee limiter \\
       \cmd{slope\_type=5}: Ultrabee limiter
-   } 
+   }
 \\\midrule
    \cmd{\nmlentry{pressure\_fix}=.false.} & Logical &
    Activate hybrid scheme (conservative or primitive) for high-Mach
-   flows. Useful to prevent negative temperatures. 
+   flows. Useful to prevent negative temperatures.
 \end{nmltable}
 
 
@@ -428,7 +428,7 @@ now.
 
 This namelist, called \nmlblock{\&PHYSICS\_PARAMS}, is used to specify
 physical quantities used in cosmological applications (cooling, star
-formation and supernovae feedback). We briefly describe them now. 
+formation and supernovae feedback). We briefly describe them now.
 
 \begin{nmltable}
    \cmd{\nmlentry{cooling}=.false.} & Logical &
@@ -438,16 +438,16 @@ equation.
    \cmd{\nmlentry{metal}=.false.} & Logical &
    Activate metal enrichment, advection and cooling. \ In this case,
 the preprocessor directive \mbox{\cmd{-D\cflag{NVAR}=6}} should be added in the
-Makefile before the compilation. 
+Makefile before the compilation.
 \\\midrule
    \cmd{\nmlentry{haardt\_madau}=.false.} & Logical &
    Use the UV background model of Haardt and Madau. Default value
 \cmd{.false.} corresponds to a simple analytical model with parameters
-\cmd{J21} and \cmd{a\_spec}. 
+\cmd{J21} and \cmd{a\_spec}.
 \\\midrule
    \cmd{\nmlentry{J21}=0.0} & Real &
    Normalization for the UV flux of the simple background model. Default
-means ``no UV''. 
+means ``no UV''.
 \\\midrule
    \cmd{\nmlentry{a\_spec}=1.0} & Real &
    Slope for the spectrum of the simple background model. Default value
@@ -455,11 +455,11 @@ corresponds to a standard ``quasars + OB stars'' spectrum.
 \\\midrule
    \cmd{\nmlentry{z\_ave}=0.0} & Real &
    Average metallicity used in the cooling function, in case
-\cmd{metal=.false.} 
+\cmd{metal=.false.}
 \\\midrule
    \cmd{\nmlentry{t\_star}=0.0 } & Real &
    Star formation time scale in Gyr. Default value of zero means no star
-formation. 
+formation.
 \\\midrule
    \cmd{\nmlentry{n\_star}=0.1, \nmlentry{del\_star}=200.0 }
    &
@@ -467,7 +467,7 @@ formation.
    &
    Typical interstellar medium physical density or comoving
 overdensity, used as star formation density threshold and as EOS density
-scale. 
+scale.
 \\\midrule
    \cmd{\nmlentry{T2\_star}=0.0, \nmlentry{g\_star}=1.6 }
    &
@@ -516,7 +516,7 @@ In addition, MG can be used on refined levels in conjuction with CG. The paramet
 \\\midrule
    \cmd{\nmlentry{epsilon}=1d-4} & Real &
    Stopping criterion for the iterative Poisson solver: residual 2-norm
-should be lower than \cmd{epsilon} times the right hand side 2-norm. 
+should be lower than \cmd{epsilon} times the right hand side 2-norm.
    % TODO : update?
 \\\midrule
    \cmd{\nmlentry{gravity\_params}=0.0, 0.0, 0.0, 0.0,}
@@ -587,7 +587,7 @@ variations above which a cell is refined.
    Real arrays
    &
    Geometry-based strategy: center of the refined region at each level
-of the AMR grid. 
+of the AMR grid.
 \\\midrule
    \nmlparbox{
       \cmd{\nmlentry{r\_refine}=1d10,1d10,} \\
@@ -603,7 +603,7 @@ level.
 \\\midrule
    \cmd{\nmlentry{interpol\_var}=0}
    &
-   Integer 
+   Integer
    &
    \nmlparbox{
       Variables used to perform interpolation (prolongation) and averaging
@@ -614,7 +614,7 @@ level.
 \\\midrule
    \cmd{\nmlentry{interpol\_type}=1}
    &
-   Integer 
+   Integer
    &
    \nmlparbox{
       Type of slope limiter used in the interpolation scheme for newly refined
@@ -624,5 +624,3 @@ level.
       \cmd{interpol\_type=2}: MonCen limiter.
    }
 \end{nmltable}
-
-
