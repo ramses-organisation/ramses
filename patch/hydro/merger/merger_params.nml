@@ -1,4 +1,4 @@
-&RUN_PARAMS 
+&RUN_PARAMS
 cosmo=.false.
 pic=.true.
 poisson=.true.
@@ -28,7 +28,7 @@ npartmax=500000
 boxlen=400.0
 /
 
-&POISSON_PARAMS 
+&POISSON_PARAMS
 epsilon=1e-4
 /
 

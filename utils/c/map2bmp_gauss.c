@@ -74,9 +74,9 @@ void gaussian_blur( mapdata_t *mapdata, float sigma ) {
   int i;
   float factor;
 
-  imagesize = mapdata->nx * mapdata->ny; 
+  imagesize = mapdata->nx * mapdata->ny;
   factor = 0.5 / (sigma * sigma);
- 
+
   for (i=0; i<imagesize;i++ ) {
 
     mapdata->data[i] = 0;
@@ -137,11 +137,11 @@ int save_bmp( mapdata_t *mapdata, const char *output_filename )
 	// each line has 4 byte padding
 	bmp_linewidth = mapdata->nx*24/8;
 	bmp_linewidth = bmp_linewidth + (4-bmp_linewidth%4)%4;
-	
+
 	bmp_size = bmp_linewidth * mapdata->ny;
-	
+
 	bmpdata = malloc( bmp_size );
-	
+
 	// produce image data
 	// logarithmic scale
 	if (logarithmic_scale == 1) {
@@ -167,7 +167,7 @@ int save_bmp( mapdata_t *mapdata, const char *output_filename )
 	}
 	range = mapmax-mapmin;
 	printf( "Min: %f Max: %f\n", mapmin, mapmax );
-	
+
 	// colors
 	for (i=0;i<mapdata->ny;i++) {
 		for (k=0;k<mapdata->nx;k++) {
@@ -253,7 +253,7 @@ int main (int argc, char *argv[])
 
 	if ( ret == EXIT_FAILURE ) {
 		return EXIT_FAILURE;
-	}	
+	}
 
 	return EXIT_SUCCESS;
 }
@@ -350,4 +350,3 @@ uint8_t heatmap_blue( float heat ) {
 	else
 		return 0;
 }
-

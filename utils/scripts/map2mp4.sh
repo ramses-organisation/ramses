@@ -1,5 +1,5 @@
 #!/bin/bash
-# This script takes all snapshots made with movie scheme of RAMSES, 
+# This script takes all snapshots made with movie scheme of RAMSES,
 # produces png files with python/pyplot and converts them to
 # a movie with ffmpeg
 #
@@ -14,7 +14,7 @@ proj=$4
 max=$5
 # path to where your directories with simulations are
 path=$ZUSER/
- 
+
 if [ "${dir:(-1)}" != "/" ]; then # check if dir was given with /
   dir=$dir/
 fi

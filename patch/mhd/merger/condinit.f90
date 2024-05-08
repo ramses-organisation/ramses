@@ -36,7 +36,7 @@ module merger_parameters
   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!
   character(len=256)::Vcirc_dat_file1='Vcirc1.dat'
   character(len=256)::Vcirc_dat_file2='Vcirc2.dat'
-  ! Galactic global velocities, given in km/s in namelist, 
+  ! Galactic global velocities, given in km/s in namelist,
   ! then converted in user unit.
   real(dp), dimension(3)::Vgal1 = 0.0D0
   real(dp), dimension(3)::Vgal2 = 0.0D0
@@ -61,13 +61,13 @@ module merger_parameters
   ! Magnetic Field Setup
   real(dp)::typ_mag_radius = 3.0D0           ! radial scale length
   real(dp)::typ_mag_height = 1.5D-1          ! vertical scale length
-  character(len=16)::mag_topology='constant' ! magnetic topology: 
+  character(len=16)::mag_topology='constant' ! magnetic topology:
                                              ! 'constant' (along x-axis)
                                              ! 'toroidal'
                                              ! 'dipole'
                                              ! 'quadrupole'
 #endif
-  
+
   !~~~~~~~~~~~~~~~~~~~~~~~~ NOTE ~~~~~~~~~~~~~~~~~~~~~~~~!
   ! For isolated galaxy runs :                           !
   ! --------------------------                           !
@@ -245,7 +245,7 @@ subroutine read_merger_params
           nml_ok=.false.
   end select
 #endif
-  
+
   if(.not. nml_ok)then
      if(myid==1)write(*,*)'Too many errors in the namelist'
      if(myid==1)write(*,*)'Aborting...'
@@ -296,7 +296,7 @@ subroutine condinit(x,u,dx,nn)
 #if NCR>0
   integer::ind_cr=8,icr
 #endif
-  
+
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
 
   ! Read user-defined merger parameters from the namelist
@@ -438,7 +438,7 @@ subroutine condinit(x,u,dx,nn)
         q(i,1) = max(weight * q(i,1), 1d-7/scale_nH)
         ! P=rho*cs^2
         q(i,ndim+2)=a2*q(i,1)
-        ! V = Vrot * (u_rot^xx_rad)/r + Vx_gal        
+        ! V = Vrot * (u_rot^xx_rad)/r + Vx_gal
         !  -> Vrot = sqrt(Vcirc**2 - 3*Cs^2 + r/rho * grad(rho) * Cs)
         select case (rad_profile)
             case ('exponential')
@@ -521,7 +521,7 @@ contains
     real(dp)          :: find_Vcirc
     real(dp)          :: vitesse, rayon_bin, vitesse_old, rayon_bin_old
     integer          :: k, indmax
-    
+
     k=2
     if (indice .EQ. 1) then
        indmax = size(Vcirc_dat1,1)
@@ -554,11 +554,11 @@ contains
           rayon_bin = Vcirc_dat2(k,1)
        end if
     end do
-    
+
     find_Vcirc = vitesse_old + (rayon - rayon_bin_old) * (vitesse - vitesse_old) / (rayon_bin - rayon_bin_old)
-    
+
     return
-    
+
   end function find_Vcirc
 
 
@@ -566,11 +566,11 @@ function vect_prod(a,b)
   implicit none
   real(dp), dimension(3), intent(in)::a,b
   real(dp), dimension(3)::vect_prod
-  
+
   vect_prod(1) = a(2) * b(3) - a(3) * b(2)
   vect_prod(2) = a(3) * b(1) - a(1) * b(3)
   vect_prod(3) = a(1) * b(2) - a(2) * b(1)
-  
+
 end function vect_prod
 
 
@@ -579,9 +579,9 @@ function normtwo(x)
   implicit none
   real(dp), dimension(3), intent(in)::x
   real(dp) :: normtwo
-  
+
   normtwo = sqrt(dot_product(x,x))
-  
+
 end function normtwo
 !}}}
 
@@ -983,7 +983,7 @@ end subroutine mag_quadrupole
 
 subroutine velana(x,v,dx,t,ncell)
   use amr_parameters
-  use hydro_parameters  
+  use hydro_parameters
   implicit none
   integer ::ncell                         ! Size of input arrays
   real(dp)::dx                            ! Cell size
@@ -1011,7 +1011,7 @@ subroutine velana(x,v,dx,t,ncell)
      vx=aa*(cos(twopi*yy)+sin(twopi*zz))
      vy=aa*(sin(twopi*xx)+cos(twopi*zz))
      vz=aa*(cos(twopi*xx)+sin(twopi*yy))
-     
+
      v(i,1)=vx
      v(i,2)=vy
      v(i,3)=vz
@@ -1024,7 +1024,7 @@ end subroutine velana
 #endif
 
 
-!------------------------------------------------------------------------------------- 
+!-------------------------------------------------------------------------------------
 ! Circular velocity files reading
 ! {{{
 subroutine read_vcirc_files

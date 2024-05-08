@@ -9,7 +9,7 @@ verbose=.false.
 debug=.false.
 /
 
-&AMR_PARAMS 
+&AMR_PARAMS
 levelmin=10
 levelmax=12
 ngridmax=10000
@@ -26,10 +26,10 @@ bound_type= 2, 2
 
 &MATERIAL_PARAMS
 ! Experimental reproduction values
-eos_params(1,1:3)=2.356093,-1.167056,1.501054e7 
+eos_params(1,1:3)=2.356093,-1.167056,1.501054e7
 eos_params(2,1:3)=1.377570,2.030253,-4.523879
 ! Values given in the paper
-! eos_params(1,1:3)=2.35,-1.167,1.498284e7 
+! eos_params(1,1:3)=2.35,-1.167,1.498284e7
 ! eos_params(2,1:3)=1.43,2.030,0.0
 /
 
@@ -60,7 +60,7 @@ scheme='muscl'
 eos_name='stiffened gas'
 /
 
-&REFINE_PARAMS 
+&REFINE_PARAMS
 err_grad_f=0.05
 err_grad_u=0.05
 err_grad_p=0.1
@@ -68,6 +68,3 @@ floor_f=0.001
 interpol_var=0
 interpol_type=2
 /
-
-
-

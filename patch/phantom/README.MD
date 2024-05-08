@@ -6,7 +6,7 @@ This is the Phantom of RAMSES (POR) QUMOND patch.
 
 For details, see Lueghausen et al. (2014), [arxiv:1405.5963](http://arxiv.org/abs/1405.5963)
 
-Contact:  
+Contact:
 Fabian Lueghausen <lueghausen@gmail.com>
 
 
@@ -48,8 +48,8 @@ In particular, see the subroutine `get_nu(x, nu)` in which the nu-function is de
 	   implicit none
 	   real(dp),intent(in) :: x
 	   real(dp),intent(out) :: nu
-	   
-	   nu = -0.5 + 0.5*sqrt(x*x + 4.0*x)/x      ! Simple nu function  
+
+	   nu = -0.5 + 0.5*sqrt(x*x + 4.0*x)/x      ! Simple nu function
     end subroutine get_nu
 
 It is **IMPORTANT** to ensure that nu(x) -> `0` if x >> 0.
@@ -69,7 +69,7 @@ in the `RUN_PARAMS` section. Otherwise, Newtonian forces are computed.
 Set
 
 	a0=...
-	
+
 in user units, **_or_**
 
 	a0_ms2=...
@@ -86,10 +86,10 @@ RAMSES uses the following definitions of boundary conditions:
     bound_type=2   Gas outflow
     bound_type=3   Gas inflow
 
-The POR patch uses periodic boundary conditions in the case of `bound_type=0`,  
+The POR patch uses periodic boundary conditions in the case of `bound_type=0`,
 and Dirichlet boundary conditions (as defined in the referenced paper) if `bound_type>0`
 
-**By default, if no boundary conditions are defined, periodic boundary conditions are applied.  
+**By default, if no boundary conditions are defined, periodic boundary conditions are applied.
 If isolated objects are modelled, use** `bound_type>0`**.**
 
 E.g., set
@@ -104,5 +104,5 @@ E.g., set
 	kbound_max= 0, 0, 0, 0,-1, 1,
 	bound_type= 1, 1, 1, 1, 1, 1,
 	/
-	
-in the `BOUNDARY_PARAMS` section in order to apply reflexive boundary conditions.	
+
+in the `BOUNDARY_PARAMS` section in order to apply reflexive boundary conditions.

@@ -139,4 +139,3 @@ module amr_commons
   real(dp)::units_length=1.0   ! [cm]
 
 end module amr_commons
-

@@ -135,7 +135,7 @@ static void StepRadN(
   um1 = rad_N[CellIndex(i, j, k-1)];
   u0  = rad_N[CellIndex(i, j, k  )];
   up1 = rad_N[CellIndex(i, j, k+1)];
-  
+
   fm1 = rad_F[CellIndex4(i, j, k-1, 2)];
   fp1 = rad_F[CellIndex4(i, j, k+1, 2)];
 
@@ -146,12 +146,12 @@ static void StepRadN(
   um1 = rad_N[CellIndex(i, j-1, k)];
   u0  = rad_N[CellIndex(i, j,   k)];
   up1 = rad_N[CellIndex(i, j+1, k)];
-  
+
   fm1 = rad_F[CellIndex4(i, j-1, k, 1)];
   fp1 = rad_F[CellIndex4(i, j+1, k, 1)];
 
   res = res - 0.5*((fp1-fm1)+LAMBDA_YZ*c*(2*u0-um1-up1))/dx*dt;
-  
+
   // Divergence along X
 
   um1 = rad_N[CellIndex(i-1, j, k)];
@@ -192,7 +192,7 @@ static double Eddington(double fx, double fy, double fz, double ee, double c, in
     }
     ff = ff/(c*ee);
   }
-  
+
   double arg = fmaxf(4.0 - 3.0*ff*ff, 0.0);
   double chi = (3.0 + 4.0*ff*ff) / (5.0 + 2.0*sqrtf(arg));
 
@@ -233,7 +233,7 @@ static void StepRadF(
   double u[3], fp[3], fm[3], ep, em;
 
   //================================================ Z DIRECTION =============================================
-  
+
   u[0] = rad_F[CellIndex4(i, j, k, 0)];
   u[1] = rad_F[CellIndex4(i, j, k, 1)];
   u[2] = rad_F[CellIndex4(i, j, k, 2)];
@@ -253,20 +253,20 @@ static void StepRadF(
   fp1 = Eddington(fp[0], fp[1], fp[2], ep, c, 0, 2);
   fm1 = Eddington(fm[0], fm[1], fm[2], em, c, 0, 2);
   resfx = u[0] - 0.5*((fp1-fm1) + LAMBDA_YZ*c*(2*u[0]-fm[0]-fp[0]))/dx*dt;
-  
+
   // FY Divergence along Z
   fp1 = Eddington(fp[0], fp[1], fp[2], ep, c, 1, 2);
   fm1 = Eddington(fm[0], fm[1], fm[2], em, c, 1, 2);
-  resfy = u[1] - 0.5*((fp1-fm1) + LAMBDA_YZ*c*(2*u[1] - fm[1] - fp[1]))/dx*dt; 
-  
+  resfy = u[1] - 0.5*((fp1-fm1) + LAMBDA_YZ*c*(2*u[1] - fm[1] - fp[1]))/dx*dt;
+
   // FZ Divergence along Z
   fp1 = Eddington(fp[0], fp[1], fp[2], ep, c, 2, 2);
   fm1 = Eddington(fm[0], fm[1], fm[2], em, c, 2, 2);
-  resfz=u[2] - 0.5*((fp1-fm1) + LAMBDA_YZ*c*(2*u[2] - fm[2] - fp[2]))/dx*dt; 
-  
+  resfz=u[2] - 0.5*((fp1-fm1) + LAMBDA_YZ*c*(2*u[2] - fm[2] - fp[2]))/dx*dt;
+
 
   //================================================ Y DIRECTION =============================================
-  
+
   u[0] = rad_F[CellIndex4(i, j, k, 0)];
   u[1] = rad_F[CellIndex4(i, j, k, 1)];
   u[2] = rad_F[CellIndex4(i, j, k, 2)];
@@ -285,17 +285,17 @@ static void StepRadF(
   // FX Divergence along Y
   fp1 = Eddington(fp[0], fp[1], fp[2], ep, c, 0, 1);
   fm1 = Eddington(fm[0], fm[1], fm[2], em, c, 0, 1);
-  resfx = resfx - 0.5*((fp1-fm1) + LAMBDA_YZ*c*(2*u[0] - fm[0] - fp[0]))/dx*dt; 
+  resfx = resfx - 0.5*((fp1-fm1) + LAMBDA_YZ*c*(2*u[0] - fm[0] - fp[0]))/dx*dt;
 
   // FY Divergence along Y
   fp1 = Eddington(fp[0], fp[1], fp[2], ep, c, 1, 1);
   fm1 = Eddington(fm[0], fm[1], fm[2], em, c, 1, 1);
-  resfy = resfy - 0.5*((fp1-fm1) + LAMBDA_YZ*c*(2*u[1] - fm[1] - fp[1]))/dx*dt; 
-  
+  resfy = resfy - 0.5*((fp1-fm1) + LAMBDA_YZ*c*(2*u[1] - fm[1] - fp[1]))/dx*dt;
+
   // FZ Divergence along Y
   fp1 = Eddington(fp[0], fp[1], fp[2], ep, c, 2, 1);
   fm1 = Eddington(fm[0], fm[1], fm[2], em, c, 2, 1);
-  resfz = resfz - 0.5*((fp1-fm1) + LAMBDA_YZ*c*(2*u[2] - fm[2] - fp[2]))/dx*dt; 
+  resfz = resfz - 0.5*((fp1-fm1) + LAMBDA_YZ*c*(2*u[2] - fm[2] - fp[2]))/dx*dt;
 
 
   //================================================ X DIRECTION =============================================
@@ -378,28 +378,28 @@ static double CalcBeta(double T) {
 static void CalcCoolingRate(
 	double T, double x, double nH,
 	double aexp,
-	double *lambda, double *tcool) {  
-  T = max(T, MIN_TEMP);  // Protect against divide-by-zero errors. 
+	double *lambda, double *tcool) {
+  T = max(T, MIN_TEMP);  // Protect against divide-by-zero errors.
   double nh2 = nH*1e-6;  // [cm^-3]
 
 
   // 1. Collisional Ionization cooling [erg/cm^3/s]
   double c1 = expf(-157809.1e0/T)*1.27e-21*sqrtf(T)/(1e0+sqrtf(T/1e5))*x*(1-x)*nh2*nh2;
-  
+
   // 2. Case A Recombination cooling [erg/cm^3/s]
   double c2 = 1.778e-29*T*powf(2e0*157807e0/T,1.965e0)/powf(1e0+powf(2e0*157807e0/T/0.541e0,0.502e0),2.697e0)*x*x*nh2*nh2;
-    
+
   // 3. Disabled: Case B Recombination cooling [erg/cm^3/s]
   // TODO: Should we enable or disable this depending on OTSA?
   // c3 = 3.435e-30*T*powf(2e0*157807e0/T,1.970e0)/powf(1e0+(powf(2e0*157807e0/T/2.250e0,0.376e0)),3.720e0)*x*x*nh2*nh2;
   double c3 = 0.0;
 
   // 4. Collisional excitation cooling [erg/cm^3/s]
-  double c4 = expf(-118348e0/T)*7.5e-19/(1+sqrtf(T/1e5))*x*(1-x)*nh2*nh2;  
-  
+  double c4 = expf(-118348e0/T)*7.5e-19/(1+sqrtf(T/1e5))*x*(1-x)*nh2*nh2;
+
   // 5. Bremmsstrahlung [erg/cm^3/s]
   double c5 = 1.42e-27*1.5e0*sqrtf(T)*x*x*nh2*nh2;
-  
+
   // 6. Compton Cooling and Heating [erg/cm^3/s]
   double c6 = 1.017e-37*powf(2.727/aexp,4)*(T-2.727/aexp)*nh2*x;
 
@@ -450,7 +450,7 @@ static void StepCooling(
   double x0;
   double nH;
   double tloc;
-  
+
   x0 = *cuxion;
   nH = cudensity;
   egyloc = *rad_N;
@@ -542,7 +542,7 @@ static void StepCooling(
 }
 
 namespace aton {
-  
+
 // Run the transport part of the ATON step. The photon density and flux is updated.
 // The function operates on the ATON global arrays.
 //

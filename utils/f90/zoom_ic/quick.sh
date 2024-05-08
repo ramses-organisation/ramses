@@ -71,7 +71,7 @@ mkdir ic_b100_256
 mkdir ic_b100_128
 
 cd ic_orig_512
-ln -s ../../../ic_files/ref_box_512/ic_deltab 
+ln -s ../../../ic_files/ref_box_512/ic_deltab
 ln -s ../../../ic_files/ref_box_512/ic_velcx
 ln -s ../../../ic_files/ref_box_512/ic_velcy
 ln -s ../../../ic_files/ref_box_512/ic_velcz
@@ -125,9 +125,9 @@ sh tarb.sh
 
 cd ../../run_halos/
 
-mkdir halo_$halocount 
+mkdir halo_$halocount
 
-cd halo_$halocount 
+cd halo_$halocount
 
 cat > tara.sh <<EOF
 ls -d output_* > list_o
@@ -144,7 +144,7 @@ poisson=.true.
 hydro=.false.
 nrestart=0
 nremap=1
-nsubcycle=1,1,1,2,2,2,2 
+nsubcycle=1,1,1,2,2,2,2
 ncontrol=1
 /
 

@@ -45,7 +45,7 @@ part2birth: $(MODOBJ) utils.o part2birth.f90
 	$(F90) $(LFLAGS) $^ -o $(BINDIR)/$@
 part2sfr: $(MODOBJ) part2sfr.f90
 	$(F90) $(LFLAGS) $^ -o $(BINDIR)/$@
-getstarlist:  $(MODOBJ) getstarlist.f90 
+getstarlist:  $(MODOBJ) getstarlist.f90
 	 $(F90) $(LFLAGS) $^ -o $(BINDIR)/$@
 
 # Make a specific object file

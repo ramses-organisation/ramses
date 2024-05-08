@@ -10,7 +10,7 @@ nsubcycle=3*1,2
 verbose=.false.
 /
 
-&AMR_PARAMS 
+&AMR_PARAMS
 levelmin=6
 levelmax=6
 ngridmax=10000
@@ -62,7 +62,7 @@ slope_type=1
 scheme='muscl'
 /
 
-&REFINE_PARAMS 
+&REFINE_PARAMS
 floor_f=1d-1
 floor_u=1d-2
 err_grad_u=0.2
@@ -72,6 +72,3 @@ err_grad_f=0.1
 /
 err_grad_f=0.1
 err_grad_p=0.1
-
-
-

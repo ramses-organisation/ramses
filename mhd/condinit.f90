@@ -95,7 +95,7 @@ subroutine velana(x,v,dx,t,ncell)
   integer::i
   real(dp)::xx,yy=0.,zz=0.,vx,vy,vz,aa,twopi
 !!$  real(dp)::rr,tt,omega
-  
+
   ! Add here, if you wish, some user-defined initial conditions
   aa=1.0+0.*t
   twopi=2d0*ACOS(-1d0)

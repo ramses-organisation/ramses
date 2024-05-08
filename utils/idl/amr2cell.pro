@@ -11,7 +11,7 @@
 ;
 ; CALLING SEQUENCE:
 ;       AMR2CELL, Grid, Hydro, Cell,
-;                          XR = xr, YR = yr, ZR = zr, 
+;                          XR = xr, YR = yr, ZR = zr,
 ;                          LMIN=lmin, LMAX = lmax, VERBOSE = verbose
 ;
 ; INPUTS
@@ -37,7 +37,7 @@
 ;
 ; OUTPUTS:
 ;       Cell: structure containing the cell variables. The
-;             variables are the followings: 
+;             variables are the followings:
 ;             Point.n    = (Integer scalar) number of cells.
 ;             Point.dx   = (1D Float array) size of each cell.
 ;             Point.x    = (1D Float array) x position of each cell.
@@ -234,7 +234,7 @@ for ilevel=leveldown,levelup do begin
                 tmp=0
             endif
             nstart=nstart+nok1
-        endfor          
+        endfor
         endfor
         endfor
     endif

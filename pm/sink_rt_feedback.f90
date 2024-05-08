@@ -23,7 +23,7 @@ END SUBROUTINE update_sink_RT_feedback
 !*************************************************************************
 SUBROUTINE sink_RT_feedback(ilevel, dt)
 
-! This routine adds photons from radiating sinks to appropriate cells in 
+! This routine adds photons from radiating sinks to appropriate cells in
 ! the  hydro grid. Emission is determined from massive stellar particles
 ! attached to the sinks.
 ! ilevel =>  grid level in which to perform the feedback
@@ -62,20 +62,20 @@ SUBROUTINE sink_RT_feedback(ilevel, dt)
         npart1=numbp(igrid)
         npart2=0
         if(npart1 > 0)then
-          ipart = headp(igrid) 
+          ipart = headp(igrid)
            ! Loop over particles
            do jpart = 1, npart1
               next_part = nextp(ipart)
               ! only sink cloud particles
-              if(idp(ipart) .lt. 0) then 
-                 npart2 = npart2+1     
+              if(idp(ipart) .lt. 0) then
+                 npart2 = npart2+1
               endif
               ipart = next_part
            end do
         endif
 
         ! Gather sink and cloud particles within the grid
-        if(npart2 > 0)then        
+        if(npart2 > 0)then
            ig = ig+1
            ind_grid(ig) = igrid
            ipart = headp(igrid)
@@ -84,7 +84,7 @@ SUBROUTINE sink_RT_feedback(ilevel, dt)
               next_part = nextp(ipart)
               if(idp(ipart) .lt. 0) then
                  if(ig==0)then
-                    ig=1      
+                    ig=1
                     ind_grid(ig)=igrid
                  end if
                  ip = ip+1
@@ -108,7 +108,7 @@ SUBROUTINE sink_RT_feedback(ilevel, dt)
          call sink_RT_vsweep_stellar( &
                      ind_grid,ind_part,ind_grid_part,ig,ip,dt,ilevel,sink_ioni_flux)
      endif
-  end do 
+  end do
   ! End loop over cpus
 
 111 format('   Entering sink_rt_feedback for level ',I2)
@@ -122,7 +122,7 @@ SUBROUTINE gather_ioni_flux(dt,sink_ioni_flux)
 ! This routine is called by sink_RT_feedback is stellar objects are used
 ! It gathers the ionising flux on each sinks which is used to perform ionising radiation feedback
 
-! sink_ioni_flux =>  the ionising flux of each sink 
+! sink_ioni_flux =>  the ionising flux of each sink
   use amr_commons
   use pm_commons
   use rt_parameters
@@ -179,7 +179,7 @@ SUBROUTINE sink_RT_vsweep_stellar(ind_grid,ind_part,ind_grid_part,ng,np,dt,ileve
 ! using array rtunew.
 ! Radiation is injected into cells at level ilevel, but it is important
 ! to know that ilevel-1 cells may also get some radiation. This is due
-! to sink and cloud particles that have just crossed to a coarser level. 
+! to sink and cloud particles that have just crossed to a coarser level.
 !
 
 ! The ionising flux of each sink must be provided in sink_ioni_flux
@@ -191,7 +191,7 @@ SUBROUTINE sink_RT_vsweep_stellar(ind_grid,ind_part,ind_grid_part,ng,np,dt,ileve
 ! np             =>  number of sink and cloud particles
 ! dt             =>  timestep length in code units
 ! ilevel         =>  amr level at which we're adding radiation
-! sink_ioni_flux =>  the ionising flux of each sink 
+! sink_ioni_flux =>  the ionising flux of each sink
 !-------------------------------------------------------------------------
   use amr_commons
   use pm_commons
@@ -234,7 +234,7 @@ SUBROUTINE sink_RT_vsweep_stellar(ind_grid,ind_part,ind_grid_part,ng,np,dt,ileve
   if(ndim>0)skip_loc(1) = dble(icoarse_min)
   if(ndim>1)skip_loc(2) = dble(jcoarse_min)
   if(ndim>2)skip_loc(3) = dble(kcoarse_min)
-  scale = boxlen/dble(nx_loc) 
+  scale = boxlen/dble(nx_loc)
   dx_loc = dx*scale
 
   vol_cgs = (dx_loc*scale_l)**ndim
@@ -258,7 +258,7 @@ SUBROUTINE sink_RT_vsweep_stellar(ind_grid,ind_part,ind_grid_part,ng,np,dt,ileve
      do j = 1, np
         x(j,idim) = xp(ind_part(j),idim)/scale + skip_loc(idim)
         x(j,idim) = x(j,idim) - x0(ind_grid_part(j),idim)
-        x(j,idim) = x(j,idim)/dx 
+        x(j,idim) = x(j,idim)/dx
      end do
   end do
 
@@ -279,7 +279,7 @@ SUBROUTINE sink_RT_vsweep_stellar(ind_grid,ind_part,ind_grid_part,ng,np,dt,ileve
      kg(j) = 1 + igd(j,1) + 3*igd(j,2) + 9*igd(j,3) ! 1 to 27
   end do
   do j = 1, np
-     igrid(j) = son(nbors_father_cells(ind_grid_part(j),kg(j))) 
+     igrid(j) = son(nbors_father_cells(ind_grid_part(j),kg(j)))
   end do
 
   ! Check if particles are entirely in level ilevel.
@@ -310,7 +310,7 @@ SUBROUTINE sink_RT_vsweep_stellar(ind_grid,ind_part,ind_grid_part,ng,np,dt,ileve
         indp(j) = nbors_father_cells(ind_grid_part(j),kg(j))
      end if
   end do
-  
+
 
   ! Increase photon density in cell due to accretion luminosity
   do j=1,np

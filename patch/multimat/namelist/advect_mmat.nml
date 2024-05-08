@@ -10,7 +10,7 @@ nsubcycle=3*1,2
 verbose=.false.
 /
 
-&AMR_PARAMS 
+&AMR_PARAMS
 levelmin=3
 levelmax=10
 ngridmax=10000
@@ -22,7 +22,7 @@ boxlen=1.0
 nboundary=2
 ibound_min=-1,+1,
 ibound_max=-1,+1,
-bound_type= 3, 2, 
+bound_type= 3, 2,
 f1_bound=1.0,
 f2_bound=1e-8,
 f3_bound=1e-8,
@@ -70,12 +70,9 @@ slope_type=2
 scheme='muscl'
 /
 
-&REFINE_PARAMS 
+&REFINE_PARAMS
 floor_f=1d-3
 err_grad_f=0.1
 interpol_var=0
 interpol_type=2
 /
-
-
-

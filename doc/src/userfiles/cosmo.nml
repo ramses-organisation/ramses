@@ -1,4 +1,4 @@
-&RUN_PARAMS 
+&RUN_PARAMS
 cosmo=.true.
 pic=.true.
 poisson=.true.
@@ -27,6 +27,6 @@ nparttot=3000000
 nexpand=1
 /
 
-&REFINE_PARAMS 
+&REFINE_PARAMS
 m_refine=7*8.
 /

@@ -736,7 +736,7 @@ contains
        deallocate(emission_part(1)%f)
        deallocate(emission_part(1)%f8)
     end if
- 
+
     ! Count particles
     offset=0
     sendbuf_cum=0
@@ -750,7 +750,7 @@ contains
           offset=offset+ncache
        end if
     end do
- 
+
     ! Allocate communicator structures (emission)
     if(emission_part(1)%nactive>0)then
        allocate(emission_part(1)%cpuid(emission_part(1)%nactive))
@@ -766,7 +766,7 @@ contains
             idx=idx+1
          end if
        end do
- 
+
        ! Fill communicator structures with particle data
        jpart=0
        sendbuf=0
@@ -1122,7 +1122,7 @@ contains
        Irot(1,1)=1.0D0
        Irot(2,2)=1.0D0
        Irot(3,3)=1.0D0
-  
+
        if ((gal_axis1(1)==0.0D0) .AND. (gal_axis1(2)==0.0D0) .AND. (gal_axis1(3)==1.0D0)) then
            Rot_gal = Irot
        else
@@ -1238,7 +1238,7 @@ contains
           open(10,file=filename,form='formatted')
        end if
        eof=.false.
-  
+
        if ((gal_axis2(1)==0.0D0) .AND. (gal_axis2(2)==0.0D0) .AND. (gal_axis2(3)==1.0D0)) then
            Rot_gal = Irot
        else

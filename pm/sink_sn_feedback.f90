@@ -87,7 +87,7 @@ subroutine make_sn_stellar
     endif
 
     ! the mass of the massive star
-    sn_m = mstellar(istellar) 
+    sn_m = mstellar(istellar)
 
     !remove the mass that is dumped in the grid from the sink
     msink(isink) = msink(isink) - sn_m
@@ -156,7 +156,7 @@ subroutine make_sn_stellar
     egas_check=0
 
     !now loop over cells again and dump energies, mass and momentum
-    !loop over levels 
+    !loop over levels
     do ilevel = levelmin, nlevelmax
       ! Computing local volume (important for averaging hydro quantities)
       dx = 0.5d0**ilevel

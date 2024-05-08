@@ -4,12 +4,12 @@
 ; ix=ix/(alog10(max(cool.n)/min(cool.n)))
 ; ix=ix*n_elements(cool.n)
 
-; T2eq=INTERPOLATE(cool.teq,ix)   
+; T2eq=INTERPOLATE(cool.teq,ix)
 ; T2=1.+0.*T2eq
-; iy=alog10(T2/min(cool.t))   
-; iy=iy/(alog10(max(cool.t)/min(cool.t)))      
-; iy=iy*n_elements(cool.t)   
-; mu=10.^INTERPOLATE(alog10(cool.mu),ix,iy)   
+; iy=alog10(T2/min(cool.t))
+; iy=iy/(alog10(max(cool.t)/min(cool.t)))
+; iy=iy*n_elements(cool.t)
+; mu=10.^INTERPOLATE(alog10(cool.mu),ix,iy)
 
 ; return,t2eq*mu
 ; end
@@ -155,11 +155,10 @@ for j=0,n1-1 do begin
     cool=cmp_cool(cin,nn,T2)
     heat=cmp_heat(cin,nn,T2)
     metal=cmp_metal(cin,nn,T2)
-    
+
     net(j,*)=ABS(heat-cool-z*metal)
 endfor
-hhh=alog10(net)       
+hhh=alog10(net)
 mycontour,hhh,alog10(nH),alog10(t2),ncont=50,max=-20,min=-28.,xtitle='!17log n!dH!n (cm!u-3!n)',ytitle='!17log T (K)',title='!17Net cooling rate (erg cm!u3!n)'
 
 end
-

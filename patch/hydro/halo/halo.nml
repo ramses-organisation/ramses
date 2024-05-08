@@ -1,6 +1,6 @@
 This namelist contains various input parameters for RAMSES runs
 
-&RUN_PARAMS 
+&RUN_PARAMS
 hydro=.true.
 poisson=.true.
 simple_boundary=.false.
@@ -13,7 +13,7 @@ nrestart=0
 verbose=.false.
 /
 
-&AMR_PARAMS 
+&AMR_PARAMS
 levelmin=5
 levelmax=8
 ngridmax=100000
@@ -62,12 +62,9 @@ eta_sn=0.1
 t_delay=2.
 /
 
-&REFINE_PARAMS 
+&REFINE_PARAMS
 interpol_var=1
 interpol_type=0
 mass_sph=5d-5
 m_refine=15*20.0
 /
-
-
-

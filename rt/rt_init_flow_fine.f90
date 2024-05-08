@@ -413,7 +413,3 @@ SUBROUTINE rt_region_condinit(x,uu,dx,nn)
 
   return
 END SUBROUTINE rt_region_condinit
-
-
-
-

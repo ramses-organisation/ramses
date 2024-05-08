@@ -1,6 +1,6 @@
 This namelist contains various input parameters for RAMSES runs
 
-&RUN_PARAMS 
+&RUN_PARAMS
 hydro=.true.
 simple_boundary=.true.
 ncontrol=10
@@ -9,7 +9,7 @@ nsubcycle=1,1,1,1,1,2
 nremap=10
 /
 
-&AMR_PARAMS 
+&AMR_PARAMS
 levelmin=3
 levelmax=9
 ngridmax=200000
@@ -62,11 +62,8 @@ slope_type=1
 scheme='muscl'
 /
 
-&REFINE_PARAMS 
+&REFINE_PARAMS
 interpol_var=0
 interpol_type=2
 err_grad_p=0.1
 /
-
-
-

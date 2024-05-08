@@ -1041,7 +1041,7 @@ subroutine riemann_hllc(qleft,qright,snleft,snright,fgdnv,ngrid)
 #if NDIM>2
      ecinl=ecinl+half*rl*qleft(i,5)**2
 #endif
-     etotl = el+ecinl     
+     etotl = el+ecinl
 #if NENER>0
      do irad=1,nener
         eradl(irad)=qleft(i,2+ndim+irad)/(gamma_rad(irad)-one)

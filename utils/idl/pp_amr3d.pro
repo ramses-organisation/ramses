@@ -11,11 +11,11 @@
 ;	Plotting routines.
 ;
 ; CALLING SEQUENCE:
-;       PP_AMR3D, Grid, SCALE=scale, AX=ax, AY=ay, AZ=az, 
-;                       NOERASE=noerase, NODATA=nodata, 
+;       PP_AMR3D, Grid, SCALE=scale, AX=ax, AY=ay, AZ=az,
+;                       NOERASE=noerase, NODATA=nodata,
 ;                       XR=xr, YR=yr, ZR=zr,
-;                       X0=x0, Y0=y0, Z0=z0, 
-;                       LEVEL=level, COLOR=color 
+;                       X0=x0, Y0=y0, Z0=z0,
+;                       LEVEL=level, COLOR=color
 ;
 ; INPUTS:
 ;       Grid = Structure defining the AMR grid.
@@ -23,17 +23,17 @@
 ; OPTIONAL INPUTS:
 ;       SCALE:   if set, defines the scale of the
 ;       plot. SCALE = 1. corresponds to the full box size, while
-;       SCALE = 0.5 corresponds to half the box size and so on. 
+;       SCALE = 0.5 corresponds to half the box size and so on.
 ;       Default: 1.
 ;
 ;       AX: Angle of rotation about the X axis in degrees. Default is
-;       0. 
+;       0.
 ;
 ;       AY: Angle of rotation about the Y axis in degrees. Default is
-;       0. 
+;       0.
 ;
 ;       AZ: Angle of rotation about the Z axis in degrees. Default is
-;       0. 
+;       0.
 ;
 ;       PERSP: Position of the eye along the Z-axis for perspective
 ;       view. Default: no perspective.
@@ -47,7 +47,7 @@
 ;
 ;       XR:      if set, the routine plots only octs that lie within
 ;       these boundaries, defined along the X axis. Default: the
-;       whole box ! 
+;       whole box !
 ;
 ;       YR:      Same for the Y axis.
 ;
@@ -55,22 +55,22 @@
 ;
 ;       X0:      Move the center to this new coordinate. Default: the
 ;       center of the chosen X range.
-;       
+;
 ;       Y0:      Move the center to this new coordinate. Default: the
 ;       center of the chosen Y range.
-;      
+;
 ;       Z0:      Move the center to this new coordinate. Default: the
 ;       center of the chosen Z range.
-;      
+;
 ;       LEVEL:     If set, the routine plots only octs belonging to
 ;       level LEVEL. Otherwise, all levels are shown (default).
-;       
+;
 ;       COLOR:   If set, each level is shown with a different
 ;       color. Otherwise, all levels are shown in white (default).
 ;
 ; OUTPUTS:
 ;       None.
-;       
+;
 ; COMMON BLOCKS:
 ;       None.
 ;
@@ -194,14 +194,14 @@ for ilevel=leveldown,levelup do begin
 
     for icpu=cmin-1,cmax-1 do begin
     if(grid.ngrid(ilevel-1,icpu) gt 0)then begin
-        
+
         mesh2=(*grid.level[ilevel-1,icpu])
         x=mesh2.xg(*,0)
         y=mesh2.xg(*,1)
         z=mesh2.xg(*,2)
         ind=where(x-0.5*dx ge xr[0] and x+0.5*dx le xr[1] and $
                   y-0.5*dy ge yr[0] and y+0.5*dy le yr[1] and $
-                  z-0.5*dz ge zr[0] and z+0.5*dz le zr[1], nplot)        
+                  z-0.5*dz ge zr[0] and z+0.5*dz le zr[1], nplot)
 
         if nplot gt 0 then begin
             xf=dblarr(8,grid.ngrid(ilevel-1,icpu))
@@ -281,4 +281,3 @@ end
 ;###################################################
 ;###################################################
 ;###################################################
-

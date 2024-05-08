@@ -22,7 +22,7 @@
 ;
 ; OPTIONAL INPUTS:
 ;       XR:      if set, defines the map boundaries for the X
-;       axis. Default: the whole box. 
+;       axis. Default: the whole box.
 ;
 ;       YR:      same for the Y axis.
 ;
@@ -46,7 +46,7 @@
 ;
 ; EXAMPLE:
 ;       To extract an array in the center of the box and for the
-;       density, type: 
+;       density, type:
 ;
 ;               Cube = MESHIJK(Grid3d, Hydro3d, xr=[0.4,0.6],
 ;               yr=[0.4,0.6], zr=[0.4,0.6], type=1, lmin=2, lmax=6)
@@ -104,12 +104,12 @@ dxmin=0.5^levelup
 
 scale2=dxmax/dxmin
 
-imin=floor(xmin/dxmax) & imax=ceil(xmax/dxmax) 
-jmin=floor(ymin/dxmax) & jmax=ceil(ymax/dxmax) 
-kmin=floor(zmin/dxmax) & kmax=ceil(zmax/dxmax) 
+imin=floor(xmin/dxmax) & imax=ceil(xmax/dxmax)
+jmin=floor(ymin/dxmax) & jmax=ceil(ymax/dxmax)
+kmin=floor(zmin/dxmax) & kmax=ceil(zmax/dxmax)
 nimx=(imax-imin)*scale2
 nimy=(jmax-jmin)*scale2
-nimz=(kmax-kmin)*scale2 
+nimz=(kmax-kmin)*scale2
 xmin=imin*dxmax & xmax=imax*dxmax
 ymin=jmin*dxmax & ymax=jmax*dxmax
 zmin=kmin*dxmax & zmax=kmax*dxmax
@@ -145,13 +145,13 @@ for icpu=0,ncpu-1 do begin
             ind=where( x+dx gt xmin and x-dx lt xmax and $
                        y+dx gt ymin and y-dx lt ymax and $
                        z+dx gt zmin and z-dx lt zmax, nok)
-            
+
             if(nok gt 0) then begin
-                    
+
                 x=x(ind)
                 y=y(ind)
                 z=z(ind)
-                                
+
                 for k=0,1 do begin
                     for j=0,1 do begin
                         for i=0,1 do begin
@@ -163,7 +163,7 @@ for icpu=0,ncpu-1 do begin
                             endif else begin
                                 ind2=where(active gt -1, nok2)
                             endelse
-                            
+
                             mesh=(*hydro.levelh[ilevel-1,icpu])
                             cxl=mesh.u(ind,ind_cell,4)
                             cyl=mesh.u(ind,ind_cell,5)
@@ -171,10 +171,10 @@ for icpu=0,ncpu-1 do begin
                             cxr=mesh.u(ind,ind_cell,7)
                             cyr=mesh.u(ind,ind_cell,8)
                             czr=mesh.u(ind,ind_cell,9)
-                            
+
                             if (nok2 gt 0) then begin
-                            
-                                nxc=2L^(levelup-ilevel)                                
+
+                                nxc=2L^(levelup-ilevel)
                                 for ii2=0L,n_elements(ind2)-1L do begin
 
                                     xl=x(ind2(ii2))+(double(i)-1.0)*dx
@@ -198,14 +198,14 @@ for icpu=0,ncpu-1 do begin
                                                     yyr=(double(jj)+1.0d0)/double(nxc)
                                                     zzl=double(kk)/double(nxc)
                                                     zzr=(double(kk)+1.0d0)/double(nxc)
-                                                    
+
                                                     bxl(il+ii,jl+jj,kl+kk)=cxr(ind2(ii2))*xxl+cxl(ind2(ii2))*(1.0-xxl)
                                                     bxr(il+ii,jl+jj,kl+kk)=cxr(ind2(ii2))*xxr+cxl(ind2(ii2))*(1.0-xxr)
                                                     byl(il+ii,jl+jj,kl+kk)=cyr(ind2(ii2))*yyl+cyl(ind2(ii2))*(1.0-yyl)
                                                     byr(il+ii,jl+jj,kl+kk)=cyr(ind2(ii2))*yyr+cyl(ind2(ii2))*(1.0-yyr)
                                                     bzl(il+ii,jl+jj,kl+kk)=czr(ind2(ii2))*zzl+czl(ind2(ii2))*(1.0-zzl)
                                                     bzr(il+ii,jl+jj,kl+kk)=czr(ind2(ii2))*zzr+czl(ind2(ii2))*(1.0-zzr)
-                                                    
+
                                                 endfor
                                             endfor
                                         endfor
@@ -213,7 +213,7 @@ for icpu=0,ncpu-1 do begin
                                     endif
 
                                 endfor
-                                
+
                             endif
                         endfor
                     endfor

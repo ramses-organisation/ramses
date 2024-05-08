@@ -111,7 +111,7 @@ SUBROUTINE rt_init_xion_vsweep(ind_grid, ngrid)
 
         ! UPDATE IONIZATION STATES
         if(isH2) then
-           if(nrestart==0 .and. cosmo) then !Prevent primordial H2 in cosmo sims 
+           if(nrestart==0 .and. cosmo) then !Prevent primordial H2 in cosmo sims
               x = (2.*nSpec(2)+nSpec(3))/(2.*nSpec(2)+nSpec(3)+nspec(4)) ! HI
            else
               x = nSpec(3)/(2.*nSpec(2)+nSpec(3)+nspec(4)) ! HI

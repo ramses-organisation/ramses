@@ -1,5 +1,5 @@
 
-&RUN_PARAMS 
+&RUN_PARAMS
 hydro=.true.
 ncontrol=1
 nrestart=0
@@ -8,7 +8,7 @@ nsubcycle=10*1
 nstepmax=10
 /
 
-&AMR_PARAMS 
+&AMR_PARAMS
 levelmin=8
 levelmax=8
 ngridtot=3000000
@@ -44,6 +44,3 @@ courant_factor=0.8
 scheme='muscl'
 slope_type=1
 /
-
-
-

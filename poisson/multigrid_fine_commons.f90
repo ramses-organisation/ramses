@@ -537,7 +537,7 @@ subroutine build_parent_comms_mg(active_loc, ifinelevel)
       if(ngrids>0) then
          countsend=countsend+1
          call MPI_ISEND(comm_send(icpu)%igrid, ngrids, MPI_INTEGER, &
-            & icpu-1, tag, MPI_COMM_WORLD, reqsend(countsend), info) 
+            & icpu-1, tag, MPI_COMM_WORLD, reqsend(countsend), info)
       end if
    end do
 
@@ -1249,7 +1249,7 @@ subroutine make_virtual_mg_dp(ivar,ilevel)
       ncache=emission_mg(icpu,ilevel)%ngrid
       if(ncache>0) then
         countsend=countsend+1
- 
+
        call MPI_ISEND(emission_mg(icpu,ilevel)%u,ncache*twotondim, &
             & MPI_DOUBLE_PRECISION,icpu-1,tag,MPI_COMM_WORLD,reqsend(countsend),info)
      end if

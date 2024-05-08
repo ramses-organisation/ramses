@@ -16,7 +16,7 @@ if keyword_set(single) then REAL=4.d0 else REAL=8.0d0
 
 memory=   $
 ;particles (x,v,m,a, level,prevp,nextp)
-  (2.0d0*ndim+2.0d0)*npart*REAL+3.0d0*npart*INTEGER + $ 
+  (2.0d0*ndim+2.0d0)*npart*REAL+3.0d0*npart*INTEGER + $
 ;particles linked list (headp, tailp, numbp)
   3.0d0*ngridmax*INTEGER*npart/(npart+1.0d0) + $
 ;amr (xg,son,father,nbor,next,prev
@@ -28,7 +28,7 @@ memory=   $
 ;hydro (uold, unew)
   2.0d0*nvar*2.0d0^ndim*ngridmax*REAL + $
 ;poisson (rho, phi, f)
-  (2.0d0+ndim)*2.0d0^ndim*ngridmax*REAL*npart/(npart+1.0d0) 
+  (2.0d0+ndim)*2.0d0^ndim*ngridmax*REAL*npart/(npart+1.0d0)
 
 print,'Total memory=',double(memory)/(1024.^3.),' Gb'
 

@@ -6,7 +6,7 @@ ncontrol=10000
 nremap=20
 /
 
-&AMR_PARAMS 
+&AMR_PARAMS
 levelmin=4
 levelmax=10
 ngridmax=1000
@@ -38,10 +38,7 @@ slope_type=2
 riemann='hllc'
 /
 
-&REFINE_PARAMS 
+&REFINE_PARAMS
 err_grad_d=0.05
 interpol_type=1
 /
-
-
-

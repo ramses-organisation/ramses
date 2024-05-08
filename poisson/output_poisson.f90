@@ -101,8 +101,3 @@ subroutine backup_poisson(filename)
 #endif
 
 end subroutine backup_poisson
-
-
-
-
-

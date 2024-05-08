@@ -10,7 +10,7 @@ KB = 1.3806490e-16 #cm^2 g s^-2 K^-1      # Boltzman constant
 PC = 3.0856776e+18
 MYR = 3.15576000e+13
 
-unit_d=2.3247434e-24 
+unit_d=2.3247434e-24
 unit_t=2.5395079e15
 unit_l=3.0857e18
 

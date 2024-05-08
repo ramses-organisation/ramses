@@ -1,4 +1,4 @@
-&RUN_PARAMS 
+&RUN_PARAMS
 hydro=.true.
 static=.true.
 nrestart=0
@@ -19,7 +19,7 @@ p_region= 8.69869d-8		! =10^4 K
 var_region(1,1)=1.2d-3          ! HII fraction
 /
 
-&AMR_PARAMS 
+&AMR_PARAMS
 levelmin=6
 levelmax=6 ! Currently it is impossible to refine with static=.true.
 ngridmax=50000

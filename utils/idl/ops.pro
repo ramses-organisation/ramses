@@ -1,15 +1,15 @@
 ;+
-; NAME: 
+; NAME:
 ;				OPS
 ;
-; PURPOSE: 
+; PURPOSE:
 ;				open a postscript file for plot output. (see cps.pro
 ; 			to close to .ps file and to print it)
 ;
 ; CALLING:
-;				
 ;
-; INPUTS: 
+;
+; INPUTS:
 ;				file: file name (default=idl.ps)
 ;     	form: page format:
 ;				0: top half
@@ -22,10 +22,10 @@
 ;       thick: line thickness (default=2.8)
 ;       csize: character size (default=1.4)
 ;       bits_per_pixel: number of bits for color table (default=4)v --- array
-;	
-; OUTPUT: 
+;
+; OUTPUT:
 ;				any subsequent plot graphic output will be stored
-; 			into the postscript file. 
+; 			into the postscript file.
 ;
 ; HISTORY:
 ; Feb 94 - Written by A. Refregier
@@ -54,7 +54,7 @@ case form of
   3: device,filename=file,yoffset=5.3,ysize=14.,encapsul=encap,$
 	color=color,bits_per_pixel=bits_per_pixel
   else:	device,filename=file,encapsul=encap,color=color,bits_per_pixel=bits_per_pixel   ; (same as 0)
-endcase 
+endcase
 
 if keyword_set(landscape) then device,/landscape,encapsul=encap,$
 	color=color,bits_per_pixel=bits_per_pixel

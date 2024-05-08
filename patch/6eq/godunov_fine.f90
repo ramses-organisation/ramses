@@ -32,7 +32,7 @@ subroutine godunov_fine(ilevel)
   do imat=1,nmat
      call make_virtual_reverse_dp(dive(1,imat),ilevel)
   end do
-  
+
 111 format('   Entering godunov_fine for level ',i2)
 
 end subroutine godunov_fine
@@ -137,7 +137,7 @@ subroutine set_uold(ilevel)
      call pressure_relaxation2(ilevel)
      call phase_transition(ilevel)
   end if
-  
+
 111 format('   Entering set_uold for level ',i2)
 
 end subroutine set_uold
@@ -205,7 +205,7 @@ subroutine add_pdv_source_terms(ilevel)
               unew(ind_cell(i),ivar) = unew(ind_cell(i),ivar) - uold(ind_cell(i),ivar)*divu(ind_cell(i))
            end do
         end do
-      
+
         ! Source terms for partial energies
 
         ! Compute divergence of total pressure
@@ -242,7 +242,7 @@ subroutine add_pdv_source_terms(ilevel)
               vv(i,idim) = uold(ind_cell(i),2*nmat+idim)/dtot(i)
            end do
         end do
-        
+
         ! Compute specific kinetic energy
         ekin(1:ngrid)=0.0
         do idim = 1,ndim
@@ -250,7 +250,7 @@ subroutine add_pdv_source_terms(ilevel)
               ekin(i) = ekin(i) + half*vv(i,idim)**2 ! This is 0.5*u^2
            end do
         end do
-        
+
         ! Compute individual internal energies
         do imat=1,nmat
            do i=1,ngrid
@@ -285,12 +285,12 @@ subroutine add_pdv_source_terms(ilevel)
                    & - yy(i,imat)*ptot(i)*divu(ind_cell(i))
            end do
         end do
-      
+
      end do
      ! End loop over cells
   end do
   ! End loop over grids
-     
+
 end subroutine add_pdv_source_terms
 !###########################################################
 !###########################################################
@@ -318,13 +318,13 @@ subroutine add_gravity_source_terms(ilevel)
 #endif
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
-  
+
   ! Add gravity source term at time t with half time step
   do ind=1,twotondim
      iskip=ncoarse+(ind-1)*ngridmax
      do i=1,active(ilevel)%ngrid
         ind_cell = active(ilevel)%igrid(i) + iskip
-        
+
         d = 0
         do imat = 1,nmat
           d = d + unew(ind_cell,nmat+imat)
@@ -337,11 +337,11 @@ subroutine add_gravity_source_terms(ilevel)
         e_kin = e_kin + half*v**2
         if(ndim>2) w = unew(ind_cell,2*nmat+3)/d
         e_kin = e_kin + half*w**2
-        
+
 #if NVAR > NDIM + 3*NMAT
         do imat=1,nmat
 
-           ! Check that entropy is correct on entry 
+           ! Check that entropy is correct on entry
            s_entry = unew(ind_cell,3*nmat+ndim+imat)/unew(ind_cell,nmat+imat)
            if(s_entry<0)then
               write(*,*)'gravity: negative entropy on entry',imat,s_entry
@@ -354,7 +354,7 @@ subroutine add_gravity_source_terms(ilevel)
            e_mat(1) = e_prim(imat)*g_mat(1)
            call eos_s(g_mat,e_mat,s_mat,imat,.false.,1)
            e_th = s_mat(1)*g_mat(1)**eos_params(imat,1)
-           e_cold=eos_params(imat,3)*(g_mat(1)/eos_params(imat,4))**eos_params(imat,2)           
+           e_cold=eos_params(imat,3)*(g_mat(1)/eos_params(imat,4))**eos_params(imat,2)
            if(e_th < 0.001*e_kin .or. e_th < 0.001*e_cold)then
 !           if(.true.)then
               ! If thermal energy is too small then use entropy instead
@@ -362,7 +362,7 @@ subroutine add_gravity_source_terms(ilevel)
               call eos_s(g_mat,e_mat,s_mat,imat,.true.,1)
               e_prim(imat) = e_mat(1)/g_mat(1)
            else
-              ! Otherwise keep thermal energy but update entropy accordingly              
+              ! Otherwise keep thermal energy but update entropy accordingly
               unew(ind_cell,3*nmat+ndim+imat) = unew(ind_cell,nmat+imat)*s_mat(1)
            endif
         end do
@@ -373,7 +373,7 @@ subroutine add_gravity_source_terms(ilevel)
           d_old = d_old + uold(ind_cell,nmat+imat)
         end do
         fact = d_old/d*0.5d0*dtnew(ilevel)
-        
+
         e_kin=0d0
         if(ndim>0)then
            u = u + f(ind_cell,1)*fact
@@ -390,14 +390,14 @@ subroutine add_gravity_source_terms(ilevel)
            unew(ind_cell,2*nmat+3) = d*w
            e_kin = e_kin + half*w**2
         endif
-        
+
         do imat=1,nmat
            e_tot = e_prim(imat) + e_kin
            unew(ind_cell,2*nmat+ndim+imat) = unew(ind_cell,nmat+imat)*e_tot
         end do
      end do
   end do
-  
+
 111 format('   Entering add_gravity_source_terms for level ',i2)
 
 end subroutine add_gravity_source_terms
@@ -479,7 +479,7 @@ subroutine pressure_relaxation(ilevel)
               vv(i,idim) = uold(ind_cell(i),2*nmat+idim)/dtot(i)
            end do
         end do
-        
+
         ! Compute specific kinetic energy
         ekin(1:ngrid)=0.0
         do idim = 1,ndim
@@ -487,7 +487,7 @@ subroutine pressure_relaxation(ilevel)
               ekin(i) = ekin(i) + half*vv(i,idim)**2 ! This is 0.5*u^2
            end do
         end do
-        
+
         ! Compute total internal energy
         etot(1:ngrid)=0.0
         do imat=1,nmat
@@ -496,7 +496,7 @@ subroutine pressure_relaxation(ilevel)
            end do
         end do
         etot(1:ngrid)=etot(1:ngrid)-dtot(1:ngrid)*ekin(1:ngrid)
-        
+
         ! Mie-Gruneisen
         alpha_hat(1:ngrid)=zero
         pc_hat (1:ngrid)=zero
@@ -518,12 +518,12 @@ subroutine pressure_relaxation(ilevel)
            end do
         end do
         pc_hat(1:ngrid) = pc_hat(1:ngrid)/alpha_hat(1:ngrid)
-        
+
         ! Calculate pressure for given internal energy
         do i = 1,ngrid
            ptot(i) = (etot(i) - ec_hat(i)) / alpha_hat(i) + pc_hat(i)
         end do
-        
+
         ! Call inverse eos routine
         inv=.true.
         do imat=1,nmat
@@ -547,12 +547,12 @@ subroutine pressure_relaxation(ilevel)
               endif
            end do
         end do
-      
+
      end do
      ! End loop over cells
   end do
   ! End loop over grids
-     
+
 end subroutine pressure_relaxation
 !###########################################################
 !###########################################################
@@ -590,7 +590,7 @@ subroutine pressure_relaxation2(ilevel)
   real(dp),dimension(1:nvector),save::s_mat
   real(dp)::s_entry,e_th,e_cold
 #endif
-  
+
   dx=0.5d0**ilevel
   skip_loc=dble(icoarse_min)
   nx_loc=(icoarse_max-icoarse_min+1)
@@ -626,7 +626,7 @@ subroutine pressure_relaxation2(ilevel)
 
         do i=1,ngrid
            if(son(ind_cell(i))==0)then
-              
+
               ! Compute old volume fraction
               do imat = 1,nmat
                  ff_old(imat) = uold(ind_cell(i),imat)
@@ -642,7 +642,7 @@ subroutine pressure_relaxation2(ilevel)
               do idim = 1,ndim
                  vv(idim) = uold(ind_cell(i),2*nmat+idim)/dtot
               end do
-        
+
               ! Compute specific kinetic energy
               e_kin=0.0
               do idim = 1,ndim
@@ -652,13 +652,13 @@ subroutine pressure_relaxation2(ilevel)
               iter = 0
               error = 1
               do while(error.GT.1d-6.AND.iter<iter_max)
-              
+
                  ! Compute volume fraction and true density
                  do imat = 1,nmat
                     ff(imat) = uold(ind_cell(i),imat)
                     gg(imat) = uold(ind_cell(i),nmat+imat)/ff(imat)
                  end do
-                 
+
                  ! Compute specific internal energy
                  do imat = 1,nmat
                     e_tot = uold(ind_cell(i),2*nmat+ndim+imat)/uold(ind_cell(i),nmat+imat)
@@ -667,7 +667,7 @@ subroutine pressure_relaxation2(ilevel)
                        ! write(*,*)'relaxation: negative energy',iter,ff(1),ff(2),gg(1),gg(2),ee(imat),e_tot,e_kin
                     endif
                  end do
-                                  
+
                  ptot = 0.0
                  do imat = 1,nmat
                     if(eos_name =='stiffened gas')then
@@ -676,25 +676,25 @@ subroutine pressure_relaxation2(ilevel)
                       pp(imat)  = (smallgamma-1)*gg(imat)*(ee(imat)-q) - smallgamma*p_0
                       rc2(imat) = smallgamma * (pp(imat)+p_0)
                       ptot = ptot + ff(imat)*pp(imat)
-                    else 
+                    else
                       ! Mie-Gruneisen
                       if(eos_name == 'mie-grueneisen')then
                          smallgamma=eos_params(imat,1);biggamma=eos_params(imat,2);p_0=eos_params(imat,3);rho_0=eos_params(imat,4)
                          eta = gg(imat)/rho_0
                          p_c = p_0 * eta**biggamma
                          e_c = p_c / (biggamma-one)
-                         delpc = biggamma * p_c 
-                         
+                         delpc = biggamma * p_c
+
                       ! Cochran-Chan
                       else if(eos_name == 'cochran-chan')then
                          smallgamma=eos_params(imat,1);rho_0=eos_params(imat,2)
                          E_1=eos_params(imat,3);E_2=eos_params(imat,4)
                          A_1=eos_params(imat,5);A_2=eos_params(imat,6)
                          C_v=eos_params(imat,7);T_0=eos_params(imat,8)
-                         
+
                          ! Define the Cochran-Chan constant term
                          E_0 = A_1 / (E_1-one) - A_2 / (E_2-one) + rho_0 * C_v * T_0
-                         
+
                          ! Update Mie-Gruneisen terms for each material
                          eta   = gg(imat)/rho_0
                          p_c_1 = A_1 * eta**E_1
@@ -711,7 +711,7 @@ subroutine pressure_relaxation2(ilevel)
                       end if
                     end if
                  end do
-                 
+
                  if(eos_name .ne. 'stiffened gas')then
                    do imat = 1,nmat
                       smallgamma = eos_params(imat,1)
@@ -721,16 +721,16 @@ subroutine pressure_relaxation2(ilevel)
                       end if
                    end do
                  end if
-                 
+
                  ! Compute weights
                  do imat = 1,nmat
                     w(imat) = rc2(imat)/ff(imat)
                  end do
-                 
+
                  ! Compute new volume fraction
 #if NMAT==2
                  dd=w(1)+w(2)
-                 
+
                  ff_new(1) = ff(1) + (pp(1)-pp(2))/dd
                  ff_new(2) = ff(2) + (pp(2)-pp(1))/dd
 
@@ -748,7 +748,7 @@ subroutine pressure_relaxation2(ilevel)
 #endif
 #if NMAT==3
                  dd=3*w(1)*w(2)+3*w(1)*w(3)+3*w(2)*w(3)
-                 
+
                  ff_new(1) = ff(1) + ((w(2)+2*w(3))*(pp(1)-pp(2))+(2*w(2)+w(3))*(pp(1)-pp(3))+(w(2)-w(3))*(pp(2)-pp(3)))/dd
                  ff_new(2) = ff(2) + ((w(3)+2*w(1))*(pp(2)-pp(3))+(2*w(3)+w(1))*(pp(2)-pp(1))+(w(3)-w(1))*(pp(3)-pp(1)))/dd
                  ff_new(3) = ff(3) + ((w(1)+2*w(2))*(pp(3)-pp(1))+(2*w(1)+w(2))*(pp(3)-pp(2))+(w(1)-w(2))*(pp(1)-pp(2)))/dd
@@ -761,7 +761,7 @@ subroutine pressure_relaxation2(ilevel)
                  t24=w(2)*w(4)
                  t34=w(3)*w(4)
                  dd=4*w(1)*w(2)*w(3)+4*w(1)*w(2)*w(4)+4*w(1)*w(3)*w(4)+4*w(2)*w(3)*w(4)
-                 
+
                  ff_new(1) = ff(1) + ((t23+t24+2*t34)*(pp(1)-pp(2))+(t23+2*t24+t34)*(pp(1)-pp(3))+(2*t23+t24+t34)*(pp(1)-pp(4))+ &
                       &                     (t24-t34)*(pp(2)-pp(3))+      (t23-t34)*(pp(2)-pp(4))+      (t23-t24)*(pp(3)-pp(4)))/dd
                  ff_new(2) = ff(2) + ((t34+t13+2*t14)*(pp(2)-pp(3))+(t34+2*t13+t14)*(pp(2)-pp(4))+(2*t34+t13+t14)*(pp(2)-pp(1))+ &
@@ -783,7 +783,7 @@ subroutine pressure_relaxation2(ilevel)
                  t245=w(2)*w(4)*w(5)
                  t345=w(3)*w(4)*w(5)
                  dd=5*w(1)*w(2)*w(3)*w(4)+5*w(1)*w(2)*w(3)*w(5)+5*w(1)*w(2)*w(4)*w(5)+5*w(1)*w(3)*w(4)*w(5)+5*w(2)*w(3)*w(4)*w(5)
-                 
+
                  ff_new(1) = ff(1) + ((t234+t235+t245+2*t345)*(pp(1)-pp(2))+(t234+t235+2*t245+t345)*(pp(1)-pp(3))+(t234+2*t235+t245+t345)*(pp(1)-pp(4))+(2*t234+t235+t245+t345)*(pp(1)-pp(5))+ &
                       &                           (t245-t345)*(pp(2)-pp(3))+            (t235-t345)*(pp(2)-pp(4))+            (t234-t345)*(pp(2)-pp(5))+ &
                       &                           (t235-t245)*(pp(3)-pp(4))+            (t234-t245)*(pp(3)-pp(5))+            (t234-t235)*(pp(4)-pp(5)))/dd
@@ -809,7 +809,7 @@ subroutine pressure_relaxation2(ilevel)
                  do imat = 1,nmat
                     uold(ind_cell(i),imat) = ff_new(imat)
                  end do
-                 
+
 !!$                 ! Compute new entropy
 !!$                 do imat = 1,nmat
 !!$                    s_entry = uold(ind_cell(i),3*nmat+ndim+imat)/uold(ind_cell(i),nmat+imat)
@@ -836,19 +836,19 @@ subroutine pressure_relaxation2(ilevel)
 
                  iter=iter+1
                  error=abs(pp(1)-pp(2))/abs(pp(1)+pp(2))
-                 
+
               end do
 
 #if NVAR > NDIM + 3*NMAT
               ! Compute new entropy
               do imat = 1,nmat
-                 
-                 ! Check that entropy is correct on entry 
+
+                 ! Check that entropy is correct on entry
                  s_entry = unew(ind_cell(i),3*nmat+ndim+imat)/unew(ind_cell(i),nmat+imat)
                  if(s_entry<0)then
                     write(*,*)'end relaxation: negative entropy on entry',imat,s_entry
                  endif
-              
+
                  s_entry = uold(ind_cell(i),3*nmat+ndim+imat)/uold(ind_cell(i),nmat+imat)
                  g_mat(1) = uold(ind_cell(i),nmat+imat)/uold(ind_cell(i),imat)
                  e_tot = uold(ind_cell(i),2*nmat+ndim+imat)/uold(ind_cell(i),nmat+imat)
@@ -866,9 +866,9 @@ subroutine pressure_relaxation2(ilevel)
                  else
                     uold(ind_cell(i),3*nmat+ndim+imat) = uold(ind_cell(i),nmat+imat)*s_mat(1)
                  endif
-                 
+
               end do
-              
+
               ! Check new entropy
               do imat = 1,nmat
                  g_mat(1) = uold(ind_cell(i),nmat+imat)/uold(ind_cell(i),imat)
@@ -883,15 +883,15 @@ subroutine pressure_relaxation2(ilevel)
               if(iter.EQ.iter_max)then
                  write(*,*)'pressure relaxation iter=',iter,ff(1),ff(2),gg(1),gg(2),pp(1),pp(2),error
               endif
-              
+
            endif
         end do
-      
+
      end do
      ! End loop over cells
   end do
   ! End loop over grids
-     
+
 end subroutine pressure_relaxation2
 !###########################################################
 !###########################################################
@@ -925,25 +925,25 @@ subroutine phase_transition(ilevel)
   logical,save::read_flag=.false.
   logical::mod_flag=.false.
   integer,parameter::nrows=10000,ncols=5          ! CSV file parameters
-  real(dp),dimension(1:nrows, 1:ncols),save::xx   ! Saturation dome values (P, d_v, d_l) 
+  real(dp),dimension(1:nrows, 1:ncols),save::xx   ! Saturation dome values (P, d_v, d_l)
   integer,save::nmax
-  real(dp),save::p_crit, d_crit   
+  real(dp),save::p_crit, d_crit
   real(dp),save::step
   real(dp)::smallgamma,p_0,q,deriv
 
-  ! Ideas for generalising the phase transition routine for an arbitrary combination of 
+  ! Ideas for generalising the phase transition routine for an arbitrary combination of
   ! fluids with an arbitrary number of them transitioning:
   ! Here we would need an index list of which phases we are transitioning
   ! The subroutine should be reading in a file with (P_sat12, ... , P_sat1m, P_satl(l+1), ..., P_satln,
   ! d_1, ..., d_m, d_l, ..., d_n, e_1, e_2, ... , e_n) values
-  ! Here P_sat12 would be the saturation pressure for the mixture of fluid 1 and fluid 2 
+  ! Here P_sat12 would be the saturation pressure for the mixture of fluid 1 and fluid 2
   ! d_1 and d_2 the densities at P_sat12 (Analogous for e_1,2)
   ! If phase_params, for example, equals 0 no phase transition considerations
   ! Example phase_params = (/1,2,0/) for NMAT=3, liquid-vapor mixture and another fluid
-  ! => Fluid 1,2 are a pair with pre-computed phase transition data available. No phase transition considerations for fluid 3 
+  ! => Fluid 1,2 are a pair with pre-computed phase transition data available. No phase transition considerations for fluid 3
   ! If P<P_crit for any pair of fluids store their indices in the idx variable and trigger the phase transition routine
   ! After all fluid pairs are relaxed, we perform another pressure relaxation to equalize the pressure before continuing
-  
+
   ! Read saturation dome values into an array (For now for a single fluid-vapour mixture)
   if (.not. read_flag) then
      xx=0d0
@@ -955,16 +955,16 @@ subroutine phase_transition(ilevel)
         if(io.ne.0)exit
      end do
      read_flag = .true.
-     
+
      ! Critical pressure & density point below which phase transition can happen
      ! File structure (P_sat, d_liquid, d_vapour, e_liquid, e_vapour)
-     p_crit = maxval(xx(:,1)) 
+     p_crit = maxval(xx(:,1))
      d_crit = xx(nmax-1,2)
      step   = xx(2,1) - xx(1,1)
      write(*,*)'Saturation dome file read'
      write(*,*)'nmax=',nmax,' P_crit=',p_crit,' d_crit=',d_crit, " step=", step
   end if
-  
+
   ! Loop over active grids by vector sweeps
   ncache=active(ilevel)%ngrid
   do igrid=1,ncache,nvector
@@ -994,32 +994,32 @@ subroutine phase_transition(ilevel)
               do imat = 1,nmat
                  dtot = dtot + uold(ind_cell(i),nmat+imat)
               end do
-              
+
               ! Compute velocity
               do idim = 1,ndim
                  vv(idim) = uold(ind_cell(i),2*nmat+idim)/dtot
               end do
-              
+
               ! Compute specific kinetic energy
               e_kin=0.0
               do idim = 1,ndim
                  e_kin = e_kin + half*vv(idim)**2
               end do
-              
+
               ! Calculate the the total pressure
               ptot = 0.0
               do imat=1,nmat
                  ff(imat)   = uold(ind_cell(i),imat)
-                 gg_mat(1)  = uold(ind_cell(i),nmat+imat)/ff(imat) 
+                 gg_mat(1)  = uold(ind_cell(i),nmat+imat)/ff(imat)
                  e_tot      = uold(ind_cell(i),2*nmat+ndim+imat)/ff(imat)
                  ee_mat(1)  = e_tot - gg_mat(1)*e_kin
                  call eos(gg_mat,ee_mat,pp_mat,cc_mat,imat,.false.,1)
                  ptot = ptot + pp_mat(1)*ff(imat)
               end do
-              
+
               ! Only check for phase transition below the critical pressure
               if(ptot < p_crit)then
-                 
+
                  mod_flag = .false.
 
                  ! Compute f0, g0 and e0 for the given mixture
@@ -1030,7 +1030,7 @@ subroutine phase_transition(ilevel)
                  do iphase=1,nphase
                     ivar = idx + iphase
                     ff(iphase) = uold(ind_cell(i),ivar)
-                    gg(iphase) = uold(ind_cell(i),nmat+ivar)/ff(iphase) 
+                    gg(iphase) = uold(ind_cell(i),nmat+ivar)/ff(iphase)
                     e_tot      = uold(ind_cell(i),2*nmat+ndim+ivar)/ff(iphase)
                     ee(iphase) = e_tot - gg(iphase)*e_kin
                     if(ee(iphase)<0)then
@@ -1042,14 +1042,14 @@ subroutine phase_transition(ilevel)
                  end do
                  g0 = g0/f0
                  e0 = e0/f0
-                 
+
                  ! Set the interpolation kernel
                  k = (ptot/p_crit)*(nmax-1)
                  k = MIN(MAX(k,2),nmax-2)
                  pleft = xx(k-1, 1)
                  pcen  = xx(k  , 1)
                  pright= xx(k+1, 1)
-                 
+
                  do iphase=1,nphase
                     gleft(iphase) = xx(k-1, 1+iphase)
                     gcen(iphase)  = xx(k  , 1+iphase)
@@ -1058,7 +1058,7 @@ subroutine phase_transition(ilevel)
                     ecen(iphase)  = xx(k  , 3+iphase)
                     eright(iphase)= xx(k+1, 3+iphase)
                  end do
-                 
+
                  ! Interpolate to the saturation dome values
                  do iphase=1,nphase
                     g_sat(iphase)  = ((ptot - pright)*(ptot - pleft)) /((pcen   - pright)*(pcen   - pleft)) *gcen(iphase)   &
@@ -1068,7 +1068,7 @@ subroutine phase_transition(ilevel)
                          &         + ((ptot - pcen)  *(ptot - pleft)) /((pright - pcen)  *(pright - pleft)) *eright(iphase) &
                          &         + ((ptot - pcen)  *(ptot - pright))/((pleft  - pcen)  *(pleft  - pright))*eleft(iphase)
                  end do
-                 
+
                  ! If we are inside the saturation dome, we trigger the mass transfer routine
                  if((gg(1) < g_sat(1) .or. gg(2) > g_sat(2)) .and. g0 < g_sat(1) .and. g0 > g_sat(2))then
 
@@ -1080,18 +1080,18 @@ subroutine phase_transition(ilevel)
                     trial = 0
                     do while(abs(error).GT.1d-12.AND.iter<iter_max)
                        ! Initial guess
-                       if(iter==0)then 
-                          pp_new = ptot !xx(k,1) 
-                       ! Normal iteration case   
+                       if(iter==0)then
+                          pp_new = ptot !xx(k,1)
+                       ! Normal iteration case
                        else
                           deriv  = ff_new(1)*dedp(1)+ff_new(2)*dedp(2) &
                                & + f0*(dgdp(1)*ee_new(2)-dgdp(2)*ee_new(1))/(g_sat(1)-g_sat(2)) &
                                & - (ff_new(1)*ee_new(1)+ff_new(2)*ee_new(2))*(dgdp(1)-dgdp(2))/(g_sat(1)-g_sat(2))
                           pp_new = pp_new - (ff_new(1)*ee_new(1)+ff_new(2)*ee_new(2)-f0*e0)/deriv
                        end if
-                       
+
                        ! Attempt at continuing the iteration when it gets stuck in a loop
-                       if(iter == iter_max-1 .and. trial<trial_max)then 
+                       if(iter == iter_max-1 .and. trial<trial_max)then
                           pp_new = pp_best + pp_best*1e-5
                           iter   = 1
                           trial = trial + 1
@@ -1104,7 +1104,7 @@ subroutine phase_transition(ilevel)
                        pleft = xx(k-1, 1)
                        pcen  = xx(k  , 1)
                        pright= xx(k+1, 1)
-                    
+
                        do iphase=1,nphase
                           gleft(iphase) = xx(k-1, 1+iphase)
                           gcen(iphase)  = xx(k  , 1+iphase)
@@ -1113,7 +1113,7 @@ subroutine phase_transition(ilevel)
                           ecen(iphase)  = xx(k  , 3+iphase)
                           eright(iphase)= xx(k+1, 3+iphase)
                        end do
-                       
+
                        ! Interpolate to the saturation dome values
                        do iphase=1,nphase
                           g_sat(iphase)  = ((pp_new - pright)*(pp_new - pleft)) /((pcen   - pright)*(pcen   - pleft)) *gcen(iphase)   &
@@ -1129,20 +1129,20 @@ subroutine phase_transition(ilevel)
                                &         + (2*pp_new - (pcen  +pleft ))/((pright - pcen)  *(pright - pleft)) *eright(iphase) &
                                &         + (2*pp_new - (pcen  +pright))/((pleft  - pcen)  *(pleft  - pright))*eleft(iphase)
                        end do
-                       
-                       ! Update volume fractions 
+
+                       ! Update volume fractions
                        ff_new(1) = f0 * (g0 - g_sat(2))/(g_sat(1) - g_sat(2))
                        ff_new(2) = f0 * (g_sat(1) - g0)/(g_sat(1) - g_sat(2))
-                       
+
                        ! Update iteration variable
                        iter = iter+1
-                       
-                       ! Calculate the error 
+
+                       ! Calculate the error
                        error_old = error
                        error  = (ff_new(1)*ee_new(1)+ff_new(2)*ee_new(2)-f0*e0)/(f0*e0)
-                       
+
                        ! Store best guess for possibly restarting the iteration
-                       if(abs(error)<abs(error_old) .and. iter>1)then 
+                       if(abs(error)<abs(error_old) .and. iter>1)then
                           pp_best = pp_new
                        end if
                     end do
@@ -1151,9 +1151,9 @@ subroutine phase_transition(ilevel)
                     do iphase=1,nphase
                        gg_new(iphase) = g_sat(iphase)
                     end do
-                    
+
                     ! Check for unphysical states landing in the saturation dome when no phase transition is happening (<- Does not do anything so far)
-                 else if(gg(1) < g_sat(1) .and. (g0 > g_sat(1) .or. g0 < g_sat(2)))then 
+                 else if(gg(1) < g_sat(1) .and. (g0 > g_sat(1) .or. g0 < g_sat(2)))then
 
                     mod_flag  = .true.
 
@@ -1163,7 +1163,7 @@ subroutine phase_transition(ilevel)
                     gg_new(2) = g_sat(2)
                     ee_new(1) = ee(1)
 
-                 else if(gg(2) > g_sat(2) .and. (g0 > g_sat(1) .or. g0 < g_sat(2)))then 
+                 else if(gg(2) > g_sat(2) .and. (g0 > g_sat(1) .or. g0 < g_sat(2)))then
 
                     mod_flag  = .true.
 
@@ -1174,9 +1174,9 @@ subroutine phase_transition(ilevel)
                     ee_new(2) = ee(2)
 
                  end if
-                 
+
                  ! If values were modified update existing solutions
-                 if(mod_flag)then 
+                 if(mod_flag)then
 
                     do iphase = 1,nphase
                        ivar = idx + iphase
@@ -1191,11 +1191,11 @@ subroutine phase_transition(ilevel)
                  end if
 
               end if
-              
+
            endif
-           
+
         end do
-        ! End loop over octs      
+        ! End loop over octs
      end do
      ! End loop over cells
   end do
@@ -1216,10 +1216,10 @@ subroutine godfine1(ind_grid,ncache,ilevel)
   ! This routine gathers first hydro variables from neighboring grids
   ! to set initial conditions in a 6x6x6 grid. It interpolates from
   ! coarser level missing grid variables. It then calls the
-  ! Godunov solver that computes fluxes. These fluxes are zeroed at 
+  ! Godunov solver that computes fluxes. These fluxes are zeroed at
   ! coarse-fine boundaries, since contribution from finer levels has
-  ! already been taken into account. Conservative variables are updated 
-  ! and stored in array unew(:), both at the current level and at the 
+  ! already been taken into account. Conservative variables are updated
+  ! and stored in array unew(:), both at the current level and at the
   ! coarser level if necessary.
   !-------------------------------------------------------------------
   integer ,dimension(1:nvector,1:threetondim     ),save::nbors_father_cells
@@ -1276,7 +1276,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
      ind_cell(i)=father(ind_grid(i))
   end do
   call get3cubefather(ind_cell,nbors_father_cells,nbors_father_grids,ncache,ilevel)
-  
+
   !---------------------------
   ! Gather 6x6x6 cells stencil
   !---------------------------
@@ -1285,14 +1285,14 @@ subroutine godfine1(ind_grid,ncache,ilevel)
   do k1=k1min,k1max
   do j1=j1min,j1max
   do i1=i1min,i1max
-     
+
      ! Check if neighboring grid exists
      ind_father=1+i1+3*j1+9*k1
      do i=1,ncache
         igrid_nbor(i)=son(nbors_father_cells(i,ind_father))
         exist_nbor(i)=igrid_nbor(i)>0
      end do
-     
+
      ! If not, interpolate variables from parent cells
      nbuffer=0
      do i=1,ncache
@@ -1310,7 +1310,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
         end do
      end do
      call interpol_hydro(u1,u2,nbuffer)
-  
+
      ! Loop over 2x2x2 cells
      do k2=k2min,k2max
      do j2=j2min,j2max
@@ -1321,12 +1321,12 @@ subroutine godfine1(ind_grid,ncache,ilevel)
         do i=1,ncache
            ind_cell(i)=iskip+igrid_nbor(i)
         end do
-        
+
         i3=1; j3=1; k3=1
         if(ndim>0)i3=1+2*(i1-1)+i2
         if(ndim>1)j3=1+2*(j1-1)+j2
         if(ndim>2)k3=1+2*(k1-1)+k2
-        
+
         ! Gather hydro variables
         do ivar=1,nvar
            ibuffer=0
@@ -1339,7 +1339,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
               end if
            end do
         end do
-        
+
         ! Gather gravitational acceleration
         if(poisson)then
            do idim=1,ndim
@@ -1354,7 +1354,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
               end do
            end do
         end if
-        
+
         ! Gather refinement flag
         do i=1,ncache
            if(exist_nbor(i))then
@@ -1363,7 +1363,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
               ok(i,i3,j3,k3)=.false.
            end if
         end do
-        
+
      end do
      end do
      end do
@@ -1381,7 +1381,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
   call unsplit(uloc,gloc,flux,tmp,dx_loc,dx_loc,dx_loc,dtnew(ilevel),ncache)
 
   !------------------------------------------------
-  ! Reset flux along direction at refined interface    
+  ! Reset flux along direction at refined interface
   !------------------------------------------------
   do idim=1,ndim
      i0=0; j0=0; k0=0
@@ -1464,10 +1464,10 @@ subroutine godfine1(ind_grid,ncache,ilevel)
      if(idim==1)i0=1
      if(idim==2)j0=1
      if(idim==3)k0=1
-     
+
      !----------------------
      ! Left flux at boundary
-     !----------------------     
+     !----------------------
      ! Check if grids sits near left boundary
      do i=1,ncache
         exist_nbor(i)=son(nbor(ind_grid(i),2*idim-1))>0
@@ -1520,10 +1520,10 @@ subroutine godfine1(ind_grid,ncache,ilevel)
      end do
      end do
      end do
-     
+
      !-----------------------
      ! Right flux at boundary
-     !-----------------------     
+     !-----------------------
      ! Check if grids sits near right boundary
      do i=1,ncache
         exist_nbor(i)=son(nbor(ind_grid(i),2*idim))>0

@@ -3,10 +3,10 @@
 ;	MK_HTML_HELP_RAMSES
 ;
 ; PURPOSE:
-;	Given a list of IDL procedure files (.PRO), FORTRAN 90 
-;       files (.F90), or directories that contain such files, this procedure 
-;       generates a file in the HTML format that contains the documentation 
-;       for those routines that contain a DOC_LIBRARY style documentation 
+;	Given a list of IDL procedure files (.PRO), FORTRAN 90
+;       files (.F90), or directories that contain such files, this procedure
+;       generates a file in the HTML format that contains the documentation
+;       for those routines that contain a DOC_LIBRARY style documentation
 ;       template.  The output file is compatible with World Wide Web browsers.
 ;
 ; CATEGORY:
@@ -17,9 +17,9 @@
 ;
 ; INPUTS:
 ;     Sources:  A string or string array containing the name(s) of the
-;		.pro or .f90 files (or the names of directories containing 
-;               such files) for which help is desired.  If a source file is 
-;               FORTRAN 90, it must include the .F90 file extension.  
+;		.pro or .f90 files (or the names of directories containing
+;               such files) for which help is desired.  If a source file is
+;               FORTRAN 90, it must include the .F90 file extension.
 ;               If a source file is an IDL procedure, it must include the .PRO
 ;               file extension.  All other source files are assumed to be
 ;               directories.
@@ -33,11 +33,11 @@
 ;		to issue informational messages that indicate what it
 ;		is currently doing. !QUIET must be 0 for these messages
 ;               to appear.
-;     STRICT:   If this keyword is set to a non-zero value, 
-;               MK_HTML_HELP_RAMSES will 
-;               adhere strictly to the HTML format by scanning the 
-;               the document headers for characters that are reserved in 
-;               HTML (<,>,&,").  These are then converted to the appropriate 
+;     STRICT:   If this keyword is set to a non-zero value,
+;               MK_HTML_HELP_RAMSES will
+;               adhere strictly to the HTML format by scanning the
+;               the document headers for characters that are reserved in
+;               HTML (<,>,&,").  These are then converted to the appropriate
 ;               HTML syntax in the output file. By default, this keyword
 ;               is set to zero (to allow for faster processing).
 ;
@@ -99,14 +99,14 @@ PRO mhh_strict, txtlines
 ; entry:
 ;       txtlines - String array containing the text line(s) to be altered.
 ; exit:
-;	txtlines - Same as input except that reserved characters have been 
+;	txtlines - Same as input except that reserved characters have been
 ;                  replaced with the appropriate HTML syntax.
 ;
  COMPILE_OPT hidden
 
  count = N_ELEMENTS(txtlines)
  FOR i=0,count-1 DO BEGIN
-  txt = txtlines[i] 
+  txt = txtlines[i]
 
   ; Ampersands get replaced with &amp.  Must do ampersands first because
   ; they are used to replace other reserved characters in HTML.
@@ -159,23 +159,23 @@ PRO  mhh_grab_hdr,name,dict,infile_indx,libfile_indx,txt_file,verbose,$
 ; entry:
 ;	name - Name of file containing documentation header(s).
 ;       dict[] - Dictionary entries for each documentation block in the .PRO
-;               file.  Each dictionary entry is a structure with an index to 
-;               the source filename, an index to the extracted library 
+;               file.  Each dictionary entry is a structure with an index to
+;               the source filename, an index to the extracted library
 ;               filename (useful only for VMS text libraries), a subject name,
-;               scratch file offset, unique id (for duplicate names), and 
-;               number of lines of documentation text.  
+;               scratch file offset, unique id (for duplicate names), and
+;               number of lines of documentation text.
 ;               This parameter may be originally undefined at entry.
 ;       infile_indx - Index of the source .pro or .f90 filename.
 ;       libfile_indx - Index of extracted library filename.  If the source
 ;               filename was not a VMS text library, this value should be
-;               set to -1L. 
+;               set to -1L.
 ;	txt_file - Scratch file to which the documentation header will
 ;               be written.
 ;	verbose - TRUE if the routine should output a descriptive message
 ;		when it finds the documentation header.
 ;       strict - If nonzero, the routine will adhere strictly to HTML format.
 ;                The document headers will be scanned for characters that are
-;                reserved in HTML (<,>,&,"), which are then converted to the 
+;                reserved in HTML (<,>,&,"), which are then converted to the
 ;                appropriate HTML syntax in the output file.
 ;
 ; exit:
@@ -252,7 +252,7 @@ PRO  mhh_grab_hdr,name,dict,infile_indx,libfile_indx,txt_file,verbose,$
     sub = STRUPCASE(STRTRIM(header[index[0]+1], 2))
     IF (verbose NE 0) THEN MESSAGE,/INFO, 'Routine = '+sub
 
-   ; If the NAME field was not present, set the subject to the name of the 
+   ; If the NAME field was not present, set the subject to the name of the
    ; source text file.
    ENDIF ELSE BEGIN
     MESSAGE,/INFO,'Properly formatted NAME entry not found...'
@@ -297,7 +297,7 @@ PRO  mhh_grab_hdr,name,dict,infile_indx,libfile_indx,txt_file,verbose,$
   ENDIF
  ENDWHILE
 
-DONE: 
+DONE:
  ON_IOERROR, NULL
  FREE_LUN, in_file
 END
@@ -311,10 +311,10 @@ PRO mhh_gen_file,dict,txt_file,infiles,libfiles,outfile,verbose,title,strict
 ;       dict - Array of dictionary entries. Each entry is a structure
 ;              with a subject name, scratch file offset, number of lines
 ;              of documentation text, etc.
-;       infiles - String array containing the name(s) of .pro or .f90 files 
+;       infiles - String array containing the name(s) of .pro or .f90 files
 ;              for which help is being generated.
 ;       libfiles - String array containing the name(s) of .pro files extracted
-;              from any .f90 files in the infiles array. 
+;              from any .f90 files in the infiles array.
 ;	txt_file - Scratch file containing the documentation text.
 ;	outfile - NAME of final HELP file to be generated.
 ;	verbose - TRUE if the routine should output a descriptive message
@@ -323,7 +323,7 @@ PRO mhh_gen_file,dict,txt_file,infiles,libfiles,outfile,verbose,title,strict
 ;               HTML help page.
 ;       strict - If nonzero, the routine will adhere strictly to HTML format.
 ;                The document headers will be scanned for characters that are
-;                reserved in HTML (<,>,&,"), which are then converted to the 
+;                reserved in HTML (<,>,&,"), which are then converted to the
 ;                appropriate HTML syntax in the output file.
 ;
 ; exit:
@@ -334,7 +334,7 @@ PRO mhh_gen_file,dict,txt_file,infiles,libfiles,outfile,verbose,title,strict
  COMPILE_OPT hidden
 
  ; Append unique numbers to any duplicate subject names.
- dpos = WHERE(dict.id GT 0,ndup) 
+ dpos = WHERE(dict.id GT 0,ndup)
  FOR i=0,ndup-1 DO BEGIN
   entry = dict[dpos[i]]
   dict[dpos[i]].subject = entry.subject+'['+STRTRIM(STRING(entry.id),2)+']'
@@ -403,7 +403,7 @@ PRO mhh_gen_file,dict,txt_file,infiles,libfiles,outfile,verbose,title,strict
 
    prev_i = i - 1
    IF (prev_i LT 0) THEN $
-    dostep = 0 $ 
+    dostep = 0 $
    ELSE BEGIN
     prev_ent = dict[indices[prev_i]]
     dostep = prev_ent.nline EQ 0
@@ -485,7 +485,7 @@ IF (LMGR(/DEMO)) THEN BEGIN
     RETURN
 ENDIF
 IF (NOT KEYWORD_SET(verbose)) THEN verbose=0
-IF (NOT KEYWORD_SET(title)) THEN title="Extended IDL Help" 
+IF (NOT KEYWORD_SET(title)) THEN title="Extended IDL Help"
 IF (NOT KEYWORD_SET(strict)) THEN strict=0
 
 infiles = ''
@@ -500,10 +500,10 @@ ENDIF
 ; Open a temporary file for the documentation text.
 OPENW, txt_file, FILEPATH('userhtml.txt', /TMP), /STREAM, /GET_LUN, /DELETE
 
-; Loop on sources. 
+; Loop on sources.
 FOR i=0, count-1 DO BEGIN
     src = sources[i]
-    
+
 ; Strip any version numbers from the source so we can check for the
 ; .f90 or .pro extension.
     vpos = STRPOS(src,';')
@@ -511,15 +511,15 @@ FOR i=0, count-1 DO BEGIN
 
 ; Test if the source is a VMS text library.
     IF (STRLEN(vsource) GT 4) AND $
-      (STRUPCASE(STRMID(vsource, STRLEN(vsource)-4,4)) EQ '.F90') THEN BEGIN 
+      (STRUPCASE(STRMID(vsource, STRLEN(vsource)-4,4)) EQ '.F90') THEN BEGIN
         infiles = [infiles,src]
         istlb = [istlb, 1b]
     ENDIF ELSE BEGIN
 ; Test if the file is a .PRO file.
-        IF (STRUPCASE(STRMID(vsource, STRLEN(vsource)-4,4)) EQ '.PRO') THEN BEGIN 
+        IF (STRUPCASE(STRMID(vsource, STRLEN(vsource)-4,4)) EQ '.PRO') THEN BEGIN
             infiles = [infiles,src]
             istlb = [istlb, 0b]
-            
+
 ; If not a VMS text library or .PRO file, it must be a directory name.
         ENDIF ELSE BEGIN
             CASE !VERSION.OS_FAMILY OF
@@ -535,7 +535,7 @@ FOR i=0, count-1 DO BEGIN
                 infiles = [infiles,flist]
                 istlb = [istlb, REPLICATE(0b,npro)]
             ENDIF
-            
+
 ; Get a list of all .f90 files in the directory.
             flist = FINDFILE(src+tok+'*.f90',COUNT=ntlb)
             IF (ntlb GT 0) THEN BEGIN
@@ -550,7 +550,7 @@ count = N_ELEMENTS(infiles)
 IF (count EQ 1) THEN BEGIN
     MESSAGE,/INFO,'No IDL files found.'
     RETURN
-ENDIF 
+ENDIF
 infiles = infiles[1:*]
 istlb = istlb[1:*]
 count = count-1
@@ -558,10 +558,10 @@ count = count-1
 ; Loop on all files.
 FOR i=0,count-1 DO BEGIN
     src = infiles[i]
-    
+
     IF (istlb[i]) THEN BEGIN
 ; If it is a text library, get a list of routines by spawning
-; a LIB/LIST command. 
+; a LIB/LIST command.
         name = infiles[i]
         mhh_grab_hdr,name,dict,i,-1L,txt_file,verbose,strict,/f90
     ENDIF ELSE BEGIN

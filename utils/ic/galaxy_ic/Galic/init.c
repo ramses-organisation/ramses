@@ -70,7 +70,7 @@ init()
       vxp_disk=vector(1,N_DISK);
       vyp_disk=vector(1,N_DISK);
       vzp_disk=vector(1,N_DISK);
-      vmax2_disk=vector(1,N_DISK);      
+      vmax2_disk=vector(1,N_DISK);
     }
 
   if(N_BULGE>0)
@@ -82,7 +82,7 @@ init()
       vxp_bulge=vector(1,N_BULGE);
       vyp_bulge=vector(1,N_BULGE);
       vzp_bulge=vector(1,N_BULGE);
-      vmax2_bulge=vector(1,N_BULGE);      
+      vmax2_bulge=vector(1,N_BULGE);
     }
 
   if(N_GAS>0)
@@ -95,7 +95,7 @@ init()
       vyp_gas=vector(1,N_GAS);
       vzp_gas=vector(1,N_GAS);
       u_gas=vector(1,N_GAS);
-      vmax2_gas=vector(1,N_GAS);    
+      vmax2_gas=vector(1,N_GAS);
     }
 
 
@@ -162,8 +162,8 @@ init()
 
 
 
-  epi_gamma2=dvector(0,RSIZE);   /* epicycle gamma^2  */ 
-  epi_kappa2=dvector(0,RSIZE); 
+  epi_gamma2=dvector(0,RSIZE);   /* epicycle gamma^2  */
+  epi_kappa2=dvector(0,RSIZE);
 
 
   xl=vector(1,ZSIZE+1);

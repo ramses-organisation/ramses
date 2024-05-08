@@ -256,4 +256,3 @@ subroutine jeans_length_refine(ind_cell,ok,ncell,ilevel)
   end do
 
 end subroutine jeans_length_refine
-

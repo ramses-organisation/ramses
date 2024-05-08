@@ -1,4 +1,4 @@
-This namelist contains various input parameters for RAMSES runs. 
+This namelist contains various input parameters for RAMSES runs.
 This is the MHD bondi accretion test.
 
 &RUN_PARAMS

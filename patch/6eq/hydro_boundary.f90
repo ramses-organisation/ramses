@@ -178,7 +178,7 @@ subroutine make_boundary_hydro(ilevel)
               end do
 
               ! Remove kinetic energy
-              do imat = 1,nmat 
+              do imat = 1,nmat
                 do i=1,ngrid
                   ekin = 0.0
                   do idim=1,ndim
@@ -221,7 +221,7 @@ subroutine make_boundary_hydro(ilevel)
               end do
 
               ! Add back kinetic energy
-              do imat = 1,nmat 
+              do imat = 1,nmat
                 do i=1,ngrid
                   ekin = 0.0
                   do idim=1,ndim
