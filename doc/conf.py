@@ -56,9 +56,9 @@ master_doc = "index"
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-primary_color = '#3061f3'
-primary_color_rgb_string = 'rgba(48, 97, 243, 1)' # For pdf, same color as `primary_color`
-secondary_color = '#1A43A4'
+primary_color = '#000000'
+primary_color_rgb_string = 'rgba(0, 0, 0, 1)' # For pdf, same color as `primary_color`
+secondary_color = '#FFD587'
 
 html_theme = "sphinx_book_theme"
 html_theme_options = {
