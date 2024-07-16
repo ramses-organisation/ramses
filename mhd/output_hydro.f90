@@ -141,7 +141,7 @@ subroutine backup_hydro(filename, filename_desc)
                  do i = 1, ncache
                     xdp(i) = uold(ind_grid(i)+iskip, ivar)/max(uold(ind_grid(i)+iskip, 1), smallr)
                  end do
-                 if (imetal == ivar) then
+                 if (metal .and. imetal == ivar) then
                     field_name = 'metallicity'
                  else
                     write(field_name, '("scalar_", i0.2)') ivar - 9-nener
