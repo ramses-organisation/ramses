@@ -38,7 +38,7 @@ program part2cylprof
   logical::ok,ok_part,periodic=.false.
   integer::impi,ndom,bit_length,maxdom,ncirc,icirc
   integer,dimension(1:8)::idom,jdom,kdom,cpu_min,cpu_max
-  real(KIND=8),dimension(1:8)::bounding_min,bounding_max
+  real(KIND=8),dimension(1:8)::orderdom,bounding_min,bounding_max
   real(KIND=8)::dkey,order_min,dmax
   real(kind=8),dimension(:),allocatable::bound_key
   real(kind=8),dimension(:,:),allocatable::dataprof
@@ -220,7 +220,8 @@ program part2cylprof
 
      do i=1,ndom
         if(bit_length>0)then
-           call hilbert3d(idom(i),jdom(i),kdom(i),order_min,bit_length,1)
+           call hilbert3d(idom(i),jdom(i),kdom(i),orderdom(i),bit_length,1)
+           order_min=orderdom(i)
         else
            order_min=0.0d0
         endif
