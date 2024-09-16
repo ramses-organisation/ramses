@@ -25,7 +25,7 @@
 ;
 ;	Note that the routine name is ALL CAPS and arguments have Initial
 ;	Caps.  For functions, use the form:
-; 
+;
 ;	Result = FUNCTION_NAME(Parameter1, Parameter2, Foobar)
 ;
 ;	Always use the "Result = " part to begin. This makes it super-obvious
@@ -38,7 +38,7 @@
 ; OPTIONAL INPUTS:
 ;	Parm2:	Describe optional inputs here. If you don't have any, just
 ;		delete this section.
-;	
+;
 ; KEYWORD PARAMETERS:
 ;	KEY1:	Document keyword parameters like this. Note that the keyword
 ;		is shown in ALL CAPS!
@@ -55,7 +55,7 @@
 ;	should also document the return value for functions.
 ;
 ; OPTIONAL OUTPUTS:
-;	Describe optional outputs here.  If the routine doesn't have any, 
+;	Describe optional outputs here.  If the routine doesn't have any,
 ;	just delete this section.
 ;
 ; COMMON BLOCKS:
@@ -81,8 +81,8 @@
 ;       the example code. Your example should execute properly if typed
 ;       in at the IDL command line with no other preparation.
 ;
-;	Create a PICKFILE widget that lets users select only files with 
-;	the extensions 'pro' and 'dat'.  Use the 'Select File to Read' title 
+;	Create a PICKFILE widget that lets users select only files with
+;	the extensions 'pro' and 'dat'.  Use the 'Select File to Read' title
 ;	and store the name of the selected file in the variable F.  Enter:
 ;
 ;		F = PICKFILE(/READ, FILTER = ['pro', 'dat'])

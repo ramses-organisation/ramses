@@ -582,5 +582,3 @@ subroutine getnborgrids_check(igrid,igridn,ngrid)
   end do
 
 end subroutine getnborgrids_check
-
-

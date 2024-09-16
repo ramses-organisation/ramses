@@ -643,4 +643,3 @@ contains
 
    end subroutine build_bisection_histogram
 end module bisection
-

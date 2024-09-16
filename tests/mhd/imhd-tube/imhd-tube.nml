@@ -7,7 +7,7 @@ ncontrol=100
 nsubcycle=4*1,
 /
 
-&AMR_PARAMS 
+&AMR_PARAMS
 levelmin=5
 levelmax=15
 ngridmax=10000
@@ -51,13 +51,10 @@ slope_type=0
 riemann='hlld'
 /
 
-&REFINE_PARAMS 
+&REFINE_PARAMS
 err_grad_d=0.01
 err_grad_u=0.05
 err_grad_p=0.05
 interpol_var=0
 interpol_type=2
 /
-
-
-

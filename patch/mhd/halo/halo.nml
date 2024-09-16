@@ -1,5 +1,5 @@
 
-&RUN_PARAMS 
+&RUN_PARAMS
 hydro=.true.
 poisson=.true.
 ncontrol=1
@@ -58,12 +58,9 @@ T2_star=1d4
 n_star=0.1
 /
 
-&REFINE_PARAMS 
+&REFINE_PARAMS
 mass_sph=4d-6
 interpol_var=1
 interpol_type=0
 m_refine=15*10.0
 /
-
-
-

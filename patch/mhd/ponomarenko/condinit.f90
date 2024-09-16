@@ -27,7 +27,7 @@ subroutine condinit(x,u,dx,nn)
   integer::ivar,i
   real(dp),dimension(1:nvector,1:nvar+3),save::q   ! Primitive variables
   real(dp)::xc,xr,xl,yl,yr,yc,al,ar,r0,a0,twopi,rr,ss,tt
-  
+
   ! density
   q(1:nn,1)=1.0
 
@@ -43,7 +43,7 @@ subroutine condinit(x,u,dx,nn)
 
   ! pressure
   q(1:nn,5)=1.0
-  
+
   ! magnetic field
   call mag_screw(x,q,dx,nn)
 
@@ -251,9 +251,9 @@ function A_screw(xx,yy,zz,dir)
   real(kind=8)::xx,yy,zz,A_screw
   real(kind=8)::A,rr,tt,twopi
   integer::dir
-  
+
   twopi=2d0*acos(-1d0)
-  
+
   rr=sqrt(xx**2+yy**2)
   if(yy>0)then
      tt=acos(xx/rr)
@@ -266,6 +266,6 @@ function A_screw(xx,yy,zz,dir)
      if(dir==1)A_screw=A_screw*cos(tt)
      if(dir==2)A_screw=A_screw*sin(tt)
   endif
-  
+
   return
 end function A_screw

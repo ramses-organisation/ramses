@@ -1,5 +1,5 @@
 
-&RUN_PARAMS 
+&RUN_PARAMS
 pic=.true.
 poisson=.true.
 nrestart=0
@@ -30,7 +30,6 @@ nexpand=2
 boxlen=1.
 /
 
-&REFINE_PARAMS 
+&REFINE_PARAMS
 m_refine=7*1.
 /
-

@@ -29,7 +29,7 @@ subroutine godunov_fine(ilevel)
      call godfine1(ind_grid,ngrid,ilevel)
   end do
   call make_virtual_reverse_dp(divu(1),ilevel)
-  
+
 111 format('   Entering godunov_fine for level ',i2)
 
 end subroutine godunov_fine
@@ -130,7 +130,7 @@ subroutine set_uold(ilevel)
      end do
      endif
   end do
-  
+
 111 format('   Entering set_uold for level ',i2)
 
 end subroutine set_uold
@@ -199,7 +199,7 @@ subroutine add_pdv_source_terms(ilevel)
               unew(ind_cell(i),ivar)=unew(ind_cell(i),ivar)-uold(ind_cell(i),ivar)*divu(ind_cell(i))
            end do
         end do
-        
+
         ! Volume fraction and fluid density
         do imat=1,nmat
            do i=1,ngrid
@@ -223,59 +223,59 @@ subroutine add_pdv_source_terms(ilevel)
         do i=1,ngrid
            qq(i,npri)=uold(ind_cell(i),npri)-qq(i,1)*ekin(i)
         end do
-        
+
         ! Pressure from eos
         call eos(ff,gg,qq,pp,cc,kappa_mat,kappa_hat,ngrid)
-        
+
         ! Source terms for fluid density (Godunov-like advection)
         do imat=1,nmat
            ivar=npri+nmat+imat
            do i=1,ngrid
               ! Material compressibility
               df_over_f =  one !kappa_hat(i)/kappa_mat(i,imat)
-              
+
 !!$           ! Explicit time integration
 !!$           unew(ind_cell(i),ivar)=unew(ind_cell(i),ivar)* &
 !!$                & (one+divu(ind_cell(i))*(df_over_f-one))
-              
+
               ! Implicit time integration
               unew(ind_cell(i),ivar)=unew(ind_cell(i),ivar)/ &
                    & (one-divu(ind_cell(i))*(df_over_f-one))
-              
+
 !!$           ! Exponential time integration
 !!$           unew(ind_cell(i),ivar)=unew(ind_cell(i),ivar)* &
 !!$                & exp(+divu(ind_cell(i))*(df_over_f-one))
-              
+
            end do
         end do
-        
+
         ! Source terms for volume fraction (Godunov-like advection)
         do imat=1,nmat
            ivar=npri+imat
            do i=1,ngrid
               ! No compressibility in volume fraction
               df_over_f  = one !kappa_hat(i)/kappa_mat(i,imat)
-              
+
               ! Explicit time integration
               unew(ind_cell(i),ivar)=unew(ind_cell(i),ivar)* &
                    & (one-divu(ind_cell(i))*(df_over_f-one))
-              
+
 !!$           ! Implicit time integration
 !!$           unew(ind_cell(i),ivar)=unew(ind_cell(i),ivar)/ &
 !!$                & (one+divu(ind_cell(i))*(df_over_f-one))
-              
+
 !!$           ! Exponential time integration
 !!$           unew(ind_cell(i),ivar)=unew(ind_cell(i),ivar)* &
 !!$                & exp(-divu(ind_cell(i))*(df_over_f-one))
-              
+
            end do
         end do
-        
+
      end do
      ! End loop over cells
   end do
   ! End loop over grids
-     
+
 end subroutine add_pdv_source_terms
 !###########################################################
 !###########################################################
@@ -294,10 +294,10 @@ subroutine add_gravity_source_terms(ilevel)
   !--------------------------------------------------------------------------
   integer::i,ind,iskip,ind_cell
   real(dp)::d,u,v,w,e_kin,e_prim,d_old,fact
-  
+
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
-  
+
   ! Add gravity source term at time t with half time step
   do ind=1,twotondim
      iskip=ncoarse+(ind-1)*ngridmax
@@ -328,7 +328,7 @@ subroutine add_gravity_source_terms(ilevel)
         unew(ind_cell,ndim+2)=e_prim+e_kin
      end do
   end do
-  
+
 111 format('   Entering add_gravity_source_terms for level ',i2)
 
 end subroutine add_gravity_source_terms
@@ -347,10 +347,10 @@ subroutine godfine1(ind_grid,ncache,ilevel)
   ! This routine gathers first hydro variables from neighboring grids
   ! to set initial conditions in a 6x6x6 grid. It interpolate from
   ! coarser level missing grid variables. It then calls the
-  ! Godunov solver that computes fluxes. These fluxes are zeroed at 
+  ! Godunov solver that computes fluxes. These fluxes are zeroed at
   ! coarse-fine boundaries, since contribution from finer levels has
-  ! already been taken into account. Conservative variables are updated 
-  ! and stored in array unew(:), both at the current level and at the 
+  ! already been taken into account. Conservative variables are updated
+  ! and stored in array unew(:), both at the current level and at the
   ! coarser level if necessary.
   !-------------------------------------------------------------------
   integer ,dimension(1:nvector,1:threetondim     ),save::nbors_father_cells
@@ -408,7 +408,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
      ind_cell(i)=father(ind_grid(i))
   end do
   call get3cubefather(ind_cell,nbors_father_cells,nbors_father_grids,ncache,ilevel)
-  
+
   !---------------------------
   ! Gather 6x6x6 cells stencil
   !---------------------------
@@ -417,14 +417,14 @@ subroutine godfine1(ind_grid,ncache,ilevel)
   do k1=k1min,k1max
   do j1=j1min,j1max
   do i1=i1min,i1max
-     
+
      ! Check if neighboring grid exists
      ind_father=1+i1+3*j1+9*k1
      do i=1,ncache
         igrid_nbor(i)=son(nbors_father_cells(i,ind_father))
         exist_nbor(i)=igrid_nbor(i)>0
      end do
-     
+
      ! If not, interpolate variables from parent cells
      nbuffer=0
      do i=1,ncache
@@ -442,7 +442,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
         end do
      end do
      call interpol_hydro(u1,u2,nbuffer)
-  
+
      ! Loop over 2x2x2 cells
      do k2=k2min,k2max
      do j2=j2min,j2max
@@ -453,12 +453,12 @@ subroutine godfine1(ind_grid,ncache,ilevel)
         do i=1,ncache
            ind_cell(i)=iskip+igrid_nbor(i)
         end do
-        
+
         i3=1; j3=1; k3=1
         if(ndim>0)i3=1+2*(i1-1)+i2
         if(ndim>1)j3=1+2*(j1-1)+j2
         if(ndim>2)k3=1+2*(k1-1)+k2
-        
+
         ! Gather hydro variables
         do ivar=1,nvar
            ibuffer=0
@@ -471,7 +471,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
               end if
            end do
         end do
-        
+
         ! Gather gravitational acceleration
         if(poisson)then
            do idim=1,ndim
@@ -486,7 +486,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
               end do
            end do
         end if
-        
+
         ! Gather refinement flag
         do i=1,ncache
            if(exist_nbor(i))then
@@ -495,7 +495,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
               ok(i,i3,j3,k3)=.false.
            end if
         end do
-        
+
      end do
      end do
      end do
@@ -514,7 +514,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
         rloc(i,i3)=(xg(ind_grid(i),1)-skip_loc+(dble(i3+1)-2.5d0)*dx)*scale
      end do
   end do
-  
+
   !---------------------------------------------------------
   ! Compute left and right interface geometrical weighting
   !---------------------------------------------------------
@@ -546,7 +546,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
   call unsplit(uloc,gloc,rloc,flux,tmp,dx_loc,dx_loc,dx_loc,dtnew(ilevel),ncache)
 
   !------------------------------------------------
-  ! Reset flux along direction at refined interface    
+  ! Reset flux along direction at refined interface
   !------------------------------------------------
   do idim=1,ndim
      i0=0; j0=0; k0=0
@@ -643,10 +643,10 @@ subroutine godfine1(ind_grid,ncache,ilevel)
      if(idim==1)i0=1
      if(idim==2)j0=1
      if(idim==3)k0=1
-     
+
      !----------------------
      ! Left flux at boundary
-     !----------------------     
+     !----------------------
      ! Check if grids sits near left boundary
      do i=1,ncache
         exist_nbor(i)=son(nbor(ind_grid(i),2*idim-1))>0
@@ -684,10 +684,10 @@ subroutine godfine1(ind_grid,ncache,ilevel)
      end do
      end do
      end do
-     
+
      !-----------------------
      ! Right flux at boundary
-     !-----------------------     
+     !-----------------------
      ! Check if grids sits near right boundary
      do i=1,ncache
         exist_nbor(i)=son(nbor(ind_grid(i),2*idim))>0

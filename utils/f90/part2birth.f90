@@ -2,7 +2,7 @@ program part2birth
   use utils
   !--------------------------------------------------------------------------
   ! This program converts birth times of star particles to Gyr and saves
-  ! as `birth` files for an output of RAMSES simulation 
+  ! as `birth` files for an output of RAMSES simulation
   ! Version F90 par R. Teyssier le 01/04/01.
   !--------------------------------------------------------------------------
   implicit none
@@ -226,7 +226,7 @@ contains
       implicit none
 
       integer       :: i,n
-      
+
       character(len=4)   :: opt
       character(len=128) :: arg
 

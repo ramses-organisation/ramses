@@ -22,7 +22,7 @@
 ;
 ; OPTIONAL INPUTS:
 ;       XR:      if set, defines the map boundaries for the X
-;       axis. Default: the whole box. 
+;       axis. Default: the whole box.
 ;
 ;       YR:      same for the Y axis.
 ;
@@ -46,7 +46,7 @@
 ;
 ; EXAMPLE:
 ;       To extract an array in the center of the box and for the
-;       density, type: 
+;       density, type:
 ;
 ;               Cube = MESHIJK(Grid3d, Hydro3d, xr=[0.4,0.6],
 ;               yr=[0.4,0.6], zr=[0.4,0.6], type=1, lmin=2, lmax=6)
@@ -109,12 +109,12 @@ scale2=dxmax/dxmin
 xmin=xmin/dxmax & xmax=xmax/dxmax
 ymin=ymin/dxmax & ymax=ymax/dxmax
 zmin=zmin/dxmax & zmax=zmax/dxmax
-imin=floor(xmin) & imax=ceil(xmax) 
-jmin=floor(ymin) & jmax=ceil(ymax) 
-kmin=floor(zmin) & kmax=ceil(zmax) 
+imin=floor(xmin) & imax=ceil(xmax)
+jmin=floor(ymin) & jmax=ceil(ymax)
+kmin=floor(zmin) & kmax=ceil(zmax)
 nimx=(imax-imin)*scale2
 nimy=(jmax-jmin)*scale2
-nimz=(kmax-kmin)*scale2 
+nimz=(kmax-kmin)*scale2
 xmin=imin & xmax=imax
 ymin=jmin & ymax=jmax
 zmin=kmin & zmax=kmax
@@ -146,15 +146,15 @@ for icpu=0,ncpu-1 do begin
             ind=where( x+dx gt xmin and x-dx lt xmax and $
                        y+dx gt ymin and y-dx lt ymax and $
                        z+dx gt zmin and z-dx lt zmax, nok)
-            
+
             if(nok gt 0) then begin
-                    
+
                 x=(x(ind)-dx-imin)/dx
                 y=(y(ind)-dx-jmin)/dx
                 z=(z(ind)-dx-kmin)/dx
-                
+
                 subcube=dblarr(nimx_loc,nimy_loc,nimz_loc)
-                
+
                 ind_x=fix(x)
                 ind_y=fix(y)
                 ind_z=fix(z)
@@ -176,13 +176,13 @@ for icpu=0,ncpu-1 do begin
                     endif else begin
                         q=ilevel+0.*mesh.u(ind,ind_cell,1)
                     endelse
-                
+
                     if(ilevel lt levelup) then begin
                         ind2=where(active eq 0, nok2)
                     endif else begin
                         ind2=where(active gt -1, nok2)
                     endelse
-                    
+
                     if (nok2 gt 0) then begin
 
                     ind_xx=ind_x(ind2)+i

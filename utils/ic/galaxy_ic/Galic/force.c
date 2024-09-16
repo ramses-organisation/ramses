@@ -9,7 +9,7 @@
 #include "prototypes.h"
 #include "globvars.h"
 
- 
+
 
 
 
@@ -47,7 +47,7 @@ compute_force_field()
     }
 
 
-  
+
   for(j=0;j<=ZSIZE;j++)
     {
       Dphi_z[0][j]    = Dphi_z[1][j];
@@ -58,9 +58,9 @@ compute_force_field()
   for(i=1,epi_gamma2[0]=1;i<=RSIZE;i++)
     {
       dphi_R_dr = comp_Dphi_R( list_RplusdR[i], 0);
-      
+
       k2=3/list_R[i] *  Dphi_R[i][0] + (dphi_R_dr - Dphi_R[i][0]) /(list_RplusdR[i]- list_R[i]);
-      
+
       epi_gamma2[i]=4/list_R[i]*Dphi_R[i][0]/k2;
       epi_kappa2[i]=k2;
     }
@@ -78,15 +78,13 @@ compute_force_field()
 double comp_Dphi_z(double R,double z)
 {
   return comp_Dphi_z_halo(R,z)
-        +comp_Dphi_z_bulge(R,z) 
-        +comp_Dphi_z_disk(R,z) ; 
+        +comp_Dphi_z_bulge(R,z)
+        +comp_Dphi_z_disk(R,z) ;
 }
 
 double comp_Dphi_R(double R,double z)
 {
   return comp_Dphi_R_halo(R,z)
-        +comp_Dphi_R_bulge(R,z) 
+        +comp_Dphi_R_bulge(R,z)
         +comp_Dphi_R_disk(R,z);
 }
-
-

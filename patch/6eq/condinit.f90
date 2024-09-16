@@ -15,13 +15,13 @@ subroutine condinit(x,u,dx,nn)
   ! Positions are in user units:
   ! x(i,1:3) are in [0,boxlen]**ndim.
   ! U is the conservative variable vector. Conventions are here:
-  ! U(i,1:nmat): f_k, U(i,nmat:2*nmat): f_k.d_k, 
+  ! U(i,1:nmat): f_k, U(i,nmat:2*nmat): f_k.d_k,
   ! U(i,2*nmat:2*nmat+ndim): d.u,d.v,d.w, U(i,2*nmat+ndim:3*+ndim):f_k.E_k
   ! Q is the primitive variable vector. Conventions are here:
   ! Q(i,1:ndim): u,v,w, Q(i,ndim:nmat+ndim): P_k,
-  ! Q(i,nmat+ndim:2*nmat+ndim): e_k, 
+  ! Q(i,nmat+ndim:2*nmat+ndim): e_k,
   ! If nvar >= ndim+3, remaining variables are treated as passive
-  ! scalars in the hydro solver. 
+  ! scalars in the hydro solver.
   ! U(:,:) and Q(:,:) are in user units.
   !================================================================
   integer::ivar,imat,idim,i,k,id,iu,iv,iw,ip1,ip2,io
@@ -32,16 +32,16 @@ subroutine condinit(x,u,dx,nn)
   logical,save::read_flag=.false.
   logical::inv
   integer,parameter::nrows=10000,ncols=3          ! CSV file parameters
-  real(dp),dimension(1:nrows, 1:ncols),save::xx   ! Lane-Emden solutions (r, d, P) 
+  real(dp),dimension(1:nrows, 1:ncols),save::xx   ! Lane-Emden solutions (r, d, P)
   integer,save::nmax
-  real(dp),save::rmax,dmax,pmax              
+  real(dp),save::rmax,dmax,pmax
   real(dp)::v0,rr,etot_mat
 #if NVAR > NDIM + 3*NMAT
   integer::ipscal,npscal
   real(dp),dimension(1:nvector),save::s_mat
-#endif  
+#endif
 
-#if NDIM==1 
+#if NDIM==1
   ! Call built-in initial condition generator
   call region_condinit(x,q,f,g,dx,nn)
 #endif
@@ -67,8 +67,8 @@ subroutine condinit(x,u,dx,nn)
      write(*,*)'Lane Emden file read'
      write(*,*)'nmax=',nmax,' rmax=',rmax,' dmin=',dmax
   end if
-  
-  ! Loop over all the cells 
+
+  ! Loop over all the cells
   do k=1,nn
      q(k,iu) = 0.0d0
      q(k,iv) = 0.0d0
@@ -79,7 +79,7 @@ subroutine condinit(x,u,dx,nn)
      end do
      f(k,1)  = 1e-8
      f(k,2)  = 1.0
-     
+
      rr=((x(k,1)-boxlen/2.0)**2+(x(k,2)-boxlen/2.0)**2)**(1.0/2)
      if(rr<rmax)then
         i=(rr/rmax)*(nmax-1)
@@ -92,7 +92,7 @@ subroutine condinit(x,u,dx,nn)
         f(k,1)  = 1.0
         f(k,2)  = 1e-8
      endif
-   
+
      ! rr=((x(k,1)-2.3*boxlen/4.0)**2+(x(k,2)-boxlen/2.0)**2)**(1.0/2)
      ! if(rr<rmax)then
      !    i=(rr/rmax)*(nmax-1)
@@ -107,7 +107,7 @@ subroutine condinit(x,u,dx,nn)
      ! endif
   end do
 #endif
-  
+
   ! normalize volume fraction
   ftot(1:nn)=0.0
   do imat=1,nmat
@@ -138,10 +138,10 @@ subroutine condinit(x,u,dx,nn)
       p_mat(k) = q(k,ndim+imat)
     end do
     ! call inverse eos routine (g,p) -> (e,c)
-    call eos(g_mat,eint_mat,p_mat,cs_mat,imat,inv,nn) 
+    call eos(g_mat,eint_mat,p_mat,cs_mat,imat,inv,nn)
     do k=1,nn
       etot_mat = eint_mat(k) + g(k,imat)* ekin(k) ! E_k
-      u(k,2*nmat+ndim+imat) = etot_mat * f(k,imat) ! E_k * f_k 
+      u(k,2*nmat+ndim+imat) = etot_mat * f(k,imat) ! E_k * f_k
       dtot(k) = dtot(k) + f(k,imat) * g(k,imat)    ! total density
     end do
 #if NVAR > NDIM + 3*NMAT
@@ -150,9 +150,9 @@ subroutine condinit(x,u,dx,nn)
        q(k,2*nmat+ndim+imat) = s_mat(k)
     end do
 #endif
-  end do 
+  end do
 
-  ! volume fractions --> volume fractions 
+  ! volume fractions --> volume fractions
   u(1:nn,1:nmat)      = f(1:nn,1:nmat)
   ! physical densities -> partial masses (m_k = rho_k * f_k)
   do imat=1,nmat

@@ -103,15 +103,15 @@ subroutine output_frame()
 
  ! Loop over projections
  do proj_ind=1,LEN(trim(proj_axis))
-    
+
     opened=.false.
-    
+
     if(imov<1)imov=1
     if(imov>imovout)return
-    
+
     ! No cubic shader for 2D simulations
     if((ndim.eq.2).and.(shader_frame(proj_ind).eq.'cube')) shader_frame(proj_ind) = 'square'
-    
+
     ! Some booleans for speedup
     is_cube=.false.
     if(shader_frame(proj_ind).eq.'cube')      is_cube=.true.
@@ -133,7 +133,7 @@ subroutine output_frame()
     if(method_frame(proj_ind).eq.'min')       is_min=.true.
     is_max=.false.
     if(method_frame(proj_ind).eq.'max')       is_max=.true.
-    
+
     if(proj_axis(proj_ind:proj_ind).eq.'x') then
        proj_ax=1
     else if(proj_axis(proj_ind:proj_ind).eq.'y') then
@@ -141,10 +141,10 @@ subroutine output_frame()
     else
        proj_ax=3
     endif
-    
+
     ! Determine the filename, dir, etc
     if(myid==1)write(*,*)'Computing and dumping movie frame'
-    
+
     call title(imov, istep_str)
     write(temp_string,'(I1)') proj_ind
     moviedir = 'movie'//trim(temp_string)//'/'
@@ -169,19 +169,19 @@ subroutine output_frame()
 #endif
 #endif
     endif
-    
+
     infofile = trim(moviedir)//'info_'//trim(istep_str)//'.txt'
     if(myid==1)call output_info(infofile)
 #ifndef WITHOUTMPI
     call MPI_BARRIER(MPI_COMM_WORLD,info)
 #endif
-    
+
     ! sink filename
     if(sink)then
        sinkfile = trim(moviedir)//'sink_'//trim(istep_str)//'.txt'
        if(myid==1.and.proj_ind==1) call output_sink_csv(sinkfile)
     endif
-    
+
     if(levelmax_frame==0)then
        nlevelmax_frame=nlevelmax
     else if (levelmax_frame.gt.nlevelmax)then
@@ -189,21 +189,21 @@ subroutine output_frame()
     else
        nlevelmax_frame=levelmax_frame
     endif
-    
+
 #ifdef RT
     if(rt)then
        rt_infofile = trim(moviedir)//'rt_info_'//trim(istep_str)//'.txt'
        if(myid==1.and.proj_ind==1) call output_rtinfo(rt_infofile)
     endif
 #endif
-    
+
     ! Conversion factor from user units to cgs units
     call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
     msol   = M_sun/(scale_d*scale_l**3)
     lumsol = L_sun*(scale_t/(c_cgs*scale_v)**2)
     year   = yr2sec/scale_t
     if(cosmo) year = year*aexp**2
-    
+
     ! Local constants
     nx_loc=(icoarse_max-icoarse_min+1)
     skip_loc=(/0.0d0,0.0d0,0.0d0/)
@@ -211,7 +211,7 @@ subroutine output_frame()
     if(ndim>1)skip_loc(2)=dble(jcoarse_min)
     if(ndim>2)skip_loc(3)=dble(kcoarse_min)
     scale=boxlen/dble(nx_loc)
-    
+
     if(xcentre_frame(proj_ind*4-3).eq.0d0) xcentre_frame(proj_ind*4-3) = boxlen/2d0
     if(ycentre_frame(proj_ind*4-3).eq.0d0) ycentre_frame(proj_ind*4-3) = boxlen/2d0
     if(zcentre_frame(proj_ind*4-3).eq.0d0) zcentre_frame(proj_ind*4-3) = boxlen/2d0
@@ -220,7 +220,7 @@ subroutine output_frame()
     else
        timer = t
     endif
-    
+
     ! Compute frame boundaries
     xcen=xcentre_frame(proj_ind*4-3)+xcentre_frame(proj_ind*4-2)*timer+xcentre_frame(proj_ind*4-1)*timer**2+xcentre_frame(proj_ind*4)*timer**3
     ycen=ycentre_frame(proj_ind*4-3)+ycentre_frame(proj_ind*4-2)*timer+ycentre_frame(proj_ind*4-1)*timer**2+ycentre_frame(proj_ind*4)*timer**3
@@ -235,7 +235,7 @@ subroutine output_frame()
     dely=deltay_frame(proj_ind*2-1)+deltay_frame(proj_ind*2)/aexp
     delz=deltaz_frame(proj_ind*2-1)+deltaz_frame(proj_ind*2)/aexp
     if(dist_camera(proj_ind).le.0D0) dist_camera(proj_ind) = boxlen
-    
+
     ! Camera properties
     if(cosmo) then
        if(tend_theta_camera(proj_ind).le.0d0) tend_theta_camera(proj_ind) = aendmov
@@ -254,7 +254,7 @@ subroutine output_frame()
             +min(max(t-tstart_phi_camera(proj_ind),0d0),tend_phi_camera(proj_ind))*dphi_camera(proj_ind)*pi/180./(tendmov-tstartmov)
        dist_cam   = dist_camera(proj_ind)+min(max(t-tstart_theta_camera(proj_ind),0d0),tend_theta_camera(proj_ind))*ddist_camera(proj_ind)/(tendmov-tstartmov)
     endif
-    
+
     if((focal_camera(proj_ind).le.0D0).or.(focal_camera(proj_ind).gt.dist_camera(proj_ind))) focal_camera(proj_ind) = dist_cam
     fov_camera = atan((delx/2d0)/focal_camera(proj_ind))
 #if NDIM>2
@@ -270,7 +270,7 @@ subroutine output_frame()
 #else
     if(myid==1) write(*,'(3A,F6.1)') " Writing frame ", istep_str,' theta=',theta_cam*180./pi
 #endif
-    
+
     ! Frame boundaries
     if(proj_ax.eq.1) then ! x-projection
        xleft_frame  = ycen-dely/2.
@@ -279,7 +279,7 @@ subroutine output_frame()
        yright_frame = zcen+delz/2.
        zleft_frame  = xcen-delx/2.
        zright_frame = xcen+delx/2.
-       
+
        dx_frame = dely/dble(nw_frame)
        dy_frame = delz/dble(nh_frame)
     elseif(proj_ax.eq.2) then ! y-projection
@@ -289,7 +289,7 @@ subroutine output_frame()
        yright_frame = zcen+delz/2.
        zleft_frame  = ycen-dely/2.
        zright_frame = ycen+dely/2.
-       
+
        dx_frame = delx/dble(nw_frame)
        dy_frame = delz/dble(nh_frame)
     else                      ! z-projection
@@ -299,11 +299,11 @@ subroutine output_frame()
        yright_frame = ycen+dely/2.
        zleft_frame  = zcen-delz/2.
        zright_frame = zcen+delz/2.
-       
+
        dx_frame = delx/dble(nw_frame)
        dy_frame = dely/dble(nh_frame)
     endif
-    
+
     ! Allocate image
     allocate(data_frame(1:nw_frame,1:nh_frame,1:n_movie_vars),stat=ierr)
     if(ierr .ne. 0)then
@@ -314,7 +314,7 @@ subroutine output_frame()
        stop
 #endif
     endif
-    
+
     allocate(weights(1:nw_frame,1:nh_frame),stat=ierr)
     if(ierr .ne. 0)then
        write(*,*) 'Error - Movie frame allocation failed'
@@ -324,7 +324,7 @@ subroutine output_frame()
        stop
 #endif
     endif
-    
+
     if(is_min)then
        data_frame(:,:,:) = 1e-3*huge(0.0)
     elseif(is_max)then
@@ -333,15 +333,15 @@ subroutine output_frame()
        data_frame(:,:,:) = 0.0
     endif
     weights(:,:) = 0d0
-    
+
     ! Deal with hydro variables
     if(hydro) then
        ! Loop over levels
        do ilevel=levelmin,nlevelmax_frame
-          
+
           ! Mesh size at level ilevel in coarse cell units
           dx=0.5D0**ilevel
-          
+
           ! Set position of cell centres relative to grid centre
           do ind=1,twotondim
              iz=(ind-1)/4
@@ -351,11 +351,11 @@ subroutine output_frame()
              if(ndim>1)xc(ind,2)=(dble(iy)-0.5D0)*dx
              if(ndim>2)xc(ind,3)=(dble(iz)-0.5D0)*dx
           end do
-          
+
           dx_loc=dx*scale
           dx_min=0.5D0**nlevelmax*scale
           ncache=active(ilevel)%ngrid
-          
+
           dx_proj = (dx_loc/2.0)*smooth_frame(proj_ind)
 #if NDIM>2
           if(is_cube .and. (.not.perspective_camera(proj_ind)))then
@@ -405,7 +405,7 @@ subroutine output_frame()
                       xx(i,idim)=(xx(i,idim)-skip_loc(idim))*scale
                    end do
                 end do
-                
+
                 ! Check if cell is to be considered
                 do i=1,ngrid
                    ok(i)=son(ind_cell(i))==0.or.ilevel==nlevelmax_frame
@@ -457,7 +457,7 @@ subroutine output_frame()
                       ok(i) = ok(i).and.(uvar.le.varmax_frame(proj_ind))
                    endif
                 end do
-                      
+
                 do i=1,ngrid
                    if(ok(i))then
 #if NDIM>2
@@ -603,7 +603,7 @@ subroutine output_frame()
                          jmin=1
                       endif
                       jmax=min(int((yright-yleft_frame)/dy_frame)+1,nh_frame) ! change
-                      
+
                       ! Fill up map with projected mass
                       do ii=imin,imax
                          ! Pixel x-axis position
@@ -671,7 +671,7 @@ subroutine output_frame()
                                endif
                                ! Update weights map
                                if(is_mean) weights(ii,jj) = weights(ii,jj)+weight
-                               
+
                                do kk=1,n_movie_vars
                                   ok_frame=.false.
                                   ! Temperature map case
@@ -699,17 +699,17 @@ subroutine output_frame()
                                      uvar = (gamma-1.0)*(uold(ind_cell(i),ndim+2)-e)
 #endif
                                      uvar = uvar/uold(ind_cell(i),1)*scale_T2
-                                     
+
                                      ! Density map
                                   else if(movie_vars(kk).eq.i_mv_dens)then
                                      ok_frame=.true.
                                      uvar = uold(ind_cell(i),1)
-                                     
+
                                      ! Pressure map
                                   else if(movie_vars(kk).eq.i_mv_p)then
                                      ok_frame=.true.
                                      uvar = uold(ind_cell(i),ndim+2)
-                                     
+
                                      ! Speed map
                                   else if(movie_vars(kk).eq.i_mv_speed)then
                                      ok_frame=.true.
@@ -718,7 +718,7 @@ subroutine output_frame()
                                         uvar = uvar + uold(ind_cell(i),idim+1)**2 / max(uold(ind_cell(i),1),smallr)
                                      end do
                                      uvar = sqrt(uvar)
-                                     
+
                                      ! Velocity map
                                   else if(movie_vars(kk).eq.i_mv_vx)then
                                      ok_frame=.true.
@@ -731,12 +731,12 @@ subroutine output_frame()
                                      ok_frame=.true.
                                      uvar = uold(ind_cell(i),4) / max(uold(ind_cell(i),1),smallr)
 #endif
-                                     
+
                                      ! Metallicity map
                                   else if(movie_vars(kk).eq.i_mv_metallicity)then
                                      ok_frame=.true.
                                      uvar = uold(ind_cell(i),imetal)/max(uold(ind_cell(i),1),smallr)
-                                     
+
                                      ! Any scalars map
                                   else if(movie_vars(kk).eq.i_mv_var)then
                                      ok_frame=.true.
@@ -773,7 +773,7 @@ subroutine output_frame()
                                      ok_frame=.true.
                                      uvar = 1.-(uold(ind_cell(i),ichem-1+ixhi)+uold(ind_cell(i),ichem-1+ixhii))/max(uold(ind_cell(i),1),smallr)
                                   endif
-                                  
+
                                   ! Photon map
                                   if(rt) then
                                      if(movie_vars(kk).eq.i_mv_fp)then
@@ -793,27 +793,27 @@ subroutine output_frame()
                                         data_frame(ii,jj,kk) = data_frame(ii,jj,kk)+weight*uvar
                                      endif
                                   endif
-                                  
+
                                end do ! loop over kk
                             endif ! if(shader is cube)
                          end do ! jj=jmin,jmax
                       end do ! ii=imin,imax
                    end if ! if(ok)
                 end do ! i=1,ngrid
-                
+
              end do
              ! End loop over cells
-             
+
           end do
           ! End loop over grids
        end do
        ! End loop over levels
     end if
     ! End block if hydro
-    
+
     ! Loop over particles
     do j=1,npartmax
-       
+
 #if NDIM>2
        xpf  = xp(j,1)-xcen
        ypf  = xp(j,2)-ycen
@@ -825,7 +825,7 @@ subroutine output_frame()
        ypf  = ytmp
        ytmp = cos(phi_cam)*ypf+sin(phi_cam)*zpf
        ztmp = cos(phi_cam)*zpf-sin(phi_cam)*ypf
-       
+
        if(proj_ax.eq.1) then ! x-projection
           xpf = ytmp
           ypf = ztmp
@@ -856,10 +856,10 @@ subroutine output_frame()
           ypf  = ypf+ycen
           zpf  = zpf+zcen
        endif
-       
+
        ! Check if particle is in front of camera
        if(dist_cam-zpf.lt.0) cycle
-       
+
        ! Check if particle is in the movie box
        if(    xpf.lt.xleft_frame.or.xpf.ge.xright_frame.or.&
             & ypf.lt.yleft_frame.or.ypf.ge.yright_frame.or.&
@@ -879,7 +879,7 @@ subroutine output_frame()
        ! Compute map indices for the particle
        ii = min(int((xpf-xleft_frame)/dx_frame)+1,nw_frame)
        jj = min(int((ypf-yleft_frame)/dy_frame)+1,nh_frame)
-       
+
        do kk=1,n_movie_vars
           if(movie_vars(kk) .eq. i_mv_dm .and. is_DM(typep(j)))then
              ! DM particles
@@ -1008,7 +1008,7 @@ subroutine output_frame()
        endif
     endif
     if(is_mean) deallocate(weights)
-    
+
     if(myid==1)then
        ilun = 10
        if(ierr .ne. 0)then
@@ -1038,12 +1038,12 @@ subroutine output_frame()
              write(ilun)aexp,delx,dely,delz
           endif
           write(ilun)nw_frame,nh_frame
-          !print*,'Frame is ',movie_vars_txt(kk),minval(data_frame(:,:,kk)),maxval(data_frame(:,:,kk)) 
+          !print*,'Frame is ',movie_vars_txt(kk),minval(data_frame(:,:,kk)),maxval(data_frame(:,:,kk))
           write(ilun) real(data_frame(:,:,kk),4)
           close(ilun)
           ilun = ilun+1
        end do
-       
+
     endif
 
     deallocate(data_frame)
@@ -1056,12 +1056,12 @@ subroutine output_frame()
           imov=imov+1
        end do
     endif
-    
+
     nw_frame = nw_temp
     nh_frame = nh_temp
  enddo
  ! End loop over projections
- 
+
 #endif
 end subroutine output_frame
 
@@ -1076,7 +1076,7 @@ subroutine set_movie_vars()
   n_movie_vars=0
   do
      if(TRIM(movie_vars_txt(n_movie_vars+1)).eq.'') exit
-     n_movie_vars = n_movie_vars + 1      
+     n_movie_vars = n_movie_vars + 1
   end do
 
   do kk=1,n_movie_vars
@@ -1161,7 +1161,7 @@ subroutine set_movie_vars()
         ! Find which photon group to show
         read( movie_vars_txt(kk)(3:4), '(i1)' ) ivar
         movie_var_number(kk) = ivar
-    
+
      endif
 
   end do

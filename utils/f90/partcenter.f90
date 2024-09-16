@@ -49,7 +49,7 @@ program part2prof
   integer::idstar=15,iustar=16,ivstar=17,iwstar=18,ilxstar=19,ilystar=20,ilzstar=21
   integer::imcumstar=22,iucumstar=23,ivcumstar=24,iwcumstar=25,ilxcumstar=26,ilycumstar=27,ilzcumstar=28
   integer(kind=1),dimension(:),allocatable::family,tag
-  
+
   call read_params
 
   !-----------------------------------------------
@@ -504,7 +504,7 @@ contains
       implicit none
 
       integer       :: i,n
-      
+
       character(len=4)   :: opt
       character(len=128) :: arg
       LOGICAL       :: bad, ok

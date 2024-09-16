@@ -54,7 +54,7 @@ program amr2cylprof
   integer::id=1,iu=2,iv=3,iw=4,iu2=5,iv2=6,iw2=7,ip=8
   integer::ia=9,ib=10,ic=11,ia2=12,ib2=13,ic2=14,ipm=15
   integer::nvarin=5,ivartemp=5
-  
+
   call read_params
   if(mhd)then
      write(*,*)'MHD mode active'
@@ -233,7 +233,7 @@ program amr2cylprof
         b_z=aa*jx+bb*jy+cc*jz
         b_r=aa*rx+bb*ry+cc*rz
         b_t=aa*tx+bb*ty+cc*tz
-        
+
 !!$        prof(irad,ia)=prof(irad,ia)+b_r
 !!$        prof(irad,ib)=prof(irad,ib)+b_t
 !!$        prof(irad,ic)=prof(irad,ic)+b_z
@@ -279,7 +279,7 @@ endif
 !!$        prof(irad,ic)=prof(irad,ic)*dv/(surf*height)*unit_b/1d-6
 !!$        prof(irad,ia2)=sqrt(prof(irad,ia2)*dv/(surf*height)*(unit_b/1d-6)**2-prof(irad,ia)**2)
 !!$        prof(irad,ib2)=sqrt(prof(irad,ib2)*dv/(surf*height)*(unit_b/1d-6)**2-prof(irad,ib)**2)
-!!$        prof(irad,ic2)=sqrt(prof(irad,ic2)*dv/(surf*height)*(unit_b/1d-6)**2-prof(irad,ic)**2)        
+!!$        prof(irad,ic2)=sqrt(prof(irad,ic2)*dv/(surf*height)*(unit_b/1d-6)**2-prof(irad,ic)**2)
 
 !        prof(irad,ipm)=sqrt(2.0*prof(irad,ipm)/prof(irad,id))*unit_b/1d-6
         prof(irad,ipm)=sqrt(2.0*prof(irad,ipm)/prof(irad,id))*unit_v/1d5
@@ -288,7 +288,7 @@ endif
         prof(irad,ic)=prof(irad,ic)/prof(irad,id)*unit_b/1d-6
         prof(irad,ia2)=sqrt(prof(irad,ia2)/prof(irad,id)*(unit_b/1d-6)**2-prof(irad,ia)**2)
         prof(irad,ib2)=sqrt(prof(irad,ib2)/prof(irad,id)*(unit_b/1d-6)**2-prof(irad,ib)**2)
-        prof(irad,ic2)=sqrt(prof(irad,ic2)/prof(irad,id)*(unit_b/1d-6)**2-prof(irad,ic)**2)        
+        prof(irad,ic2)=sqrt(prof(irad,ic2)/prof(irad,id)*(unit_b/1d-6)**2-prof(irad,ic)**2)
      endif
      prof(irad,id)=prof(irad,id)*dv*unit_m/(surf*unit_l**2)/(2d33/3.08d18**2)
      rprev=r(irad)
@@ -321,7 +321,7 @@ contains
     implicit none
 
     integer       :: i,n
-    
+
     character(len=4)   :: opt
     character(len=128) :: arg
     LOGICAL       :: bad, ok

@@ -8,6 +8,3 @@
 
 #include "prototypes.h"
 #include "globvars.h"
-
-
-

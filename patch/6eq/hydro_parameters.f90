@@ -42,7 +42,7 @@ module hydro_parameters
   real(dp),dimension(1:MAXBOUND)::u_bound=0,v_bound=0,w_bound=0
 
   ! Refinement parameters for hydro
-  real(dp)::err_grad_f=-1.0d0    ! Volume fraction 
+  real(dp)::err_grad_f=-1.0d0    ! Volume fraction
   real(dp)::err_grad_d=-1.0d0    ! Density gradient
   real(dp)::err_grad_u=-1.0d0    ! Velocity gradient
   real(dp)::err_grad_p=-1.0d0    ! Pressure gradient

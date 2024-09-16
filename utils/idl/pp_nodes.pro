@@ -50,4 +50,3 @@ for i=0,tree.n-1 do begin
 endfor
 print,'Number of active nodes=',jj
 end
-

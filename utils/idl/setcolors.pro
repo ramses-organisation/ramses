@@ -527,4 +527,3 @@ pro setcolors, NAMES=names, VALUES=ctindx, $
   endif
 
 end                             ; setcolors
-

@@ -414,7 +414,7 @@ subroutine condinit(x,u,dx,nn)
         q(i,ndim+2)=1d7/scale_T2*q(i,1)
         ! V = Vgal
         q(i,ndim-1:ndim+1)= vgal
-        
+
 #if NVAR > NDIM + 2
         do ivar=ndim+3,nvar
            q(1:nn,ivar)=0.0d0

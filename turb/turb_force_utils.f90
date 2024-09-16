@@ -134,7 +134,7 @@ subroutine gaussian_cmplx(G)
    ! This creates a Gaussian with a spread of 1
    ! and centred on 0 (hopefully)
    ! You get two independent variates each time
-   
+
    ! Method 1: Gaussian magnitude and uniformly-random argument
    do d=1,ndim
       do
@@ -145,7 +145,7 @@ subroutine gaussian_cmplx(G)
          if (w<1.0) exit
       end do
       w = sqrt( (-2.0 * log( w ) ) / w )
-      
+
       mag(d) = Rnd(1) * w
       ! Throwing away second random variate (something of a waste)
    end do
@@ -194,7 +194,7 @@ subroutine add_turbulence(turb_field, dt)
    logical              :: hermitian_pair  ! Do we need to take conjugate?
    logical              :: own_conjg       ! Are we are own conjugate pair?
 #endif
-   
+
    complex(kind=cdp)    :: complex_vec(1:NDIM) ! Complex Fourier vector
 #if NDIM>1
    real(kind=dp)        :: unitk(1:NDIM)       ! Unit vector parallel to k
@@ -268,7 +268,7 @@ subroutine add_turbulence(turb_field, dt)
             comp_cmplx = unitk_cmplx *  dot_product(unitk_cmplx,complex_vec)
             sol_cmplx = complex_vec - comp_cmplx
             complex_vec = comp_cmplx*comp_frac + sol_cmplx*sol_frac
-            ! note that there are two degrees of freedom for 
+            ! note that there are two degrees of freedom for
             ! solenoidal/transverse modes, and only one for
             ! longitudinal/compressive modes,
             ! and so for comp_frac == sol_frac == 0.5, you get

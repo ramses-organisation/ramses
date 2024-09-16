@@ -19,7 +19,7 @@ module file_module
       logical, optional :: parent
       integer :: rc,i
       character(kind=c_char), dimension(len(name)+1) :: c_name
-    
+
       if (present(errno)) errno = 0
       do i = 1, len(name)
         if (present(parent)) then

@@ -35,18 +35,18 @@ for ii=0L,partition-1L do begin
             if keyword_set(cool) then begin
                 nH=c.var(*,0)*0.3*1.88d-29*0.7^2/1.66d-24/aexp^3*0.76
                 T2=c.var(*,4)/c.var(*,0)*(1.d5/aexp)^2*1.66d-24/1.38d-16
-                
+
                 ix=alog10(nH/min(cool.n))
                 ix=ix/(alog10(max(cool.n)/min(cool.n)))
                 ix=ix*n_elements(cool.n)
-                
+
                 T2eq=INTERPOLATE(cool.teq,ix)
-                
+
                 T2=T2/T2eq
                 iy=alog10(T2/min(cool.t))
                 iy=iy/(alog10(max(cool.t)/min(cool.t)))
                 iy=iy*n_elements(cool.t)
-                
+
                 mu=10.^INTERPOLATE(alog10(cool.mu),ix,iy)
                 p=p*mu
 

@@ -3,7 +3,7 @@
 #===============================================================================
 shorthelp="""
 Create a plot for the merger tree of a given clump/halo as the root of the tree
-of the ramses merger tree data output. 
+of the ramses merger tree data output.
 
 Usage: mergertreeplot.py [-options] <halo-ID>
 
@@ -11,16 +11,16 @@ Usage: mergertreeplot.py [-options] <halo-ID>
 
 To use a different snapshot as the root of the tree, use
 
-    mergertreeplot.py [-options] -s <output_nr> <halo-ID> 
+    mergertreeplot.py [-options] -s <output_nr> <halo-ID>
 or
-    mergertreeplot.py [-options] --start_at <output_nr> <halo-ID> 
+    mergertreeplot.py [-options] --start_at <output_nr> <halo-ID>
 
-    <output_nr> does not need to be formatted, e.g.  5 is good enough, no need to 
-    type 00005 to use the directory output_00005 as the root directory. Naturally, 
+    <output_nr> does not need to be formatted, e.g.  5 is good enough, no need to
+    type 00005 to use the directory output_00005 as the root directory. Naturally,
     the <halo-ID> must be a halo/clump in this output directory.
 
-For a detailed documentation of further options (e.g. plotting particles and 
-galaxies, not drawing clump numbers, not drawing jumpers, creating TeX output, 
+For a detailed documentation of further options (e.g. plotting particles and
+galaxies, not drawing clump numbers, not drawing jumpers, creating TeX output,
 creating backups...) call the script with the --help flag.
 """
 
@@ -1025,10 +1025,10 @@ def _draw_clump_points(node, ax):
     # add scatter points
     ax.scatter(node.x.x, node.y,
             color = myfacecolor,
-            edgecolor = myedgecolor, 
-            s = 100, 
-            lw = 2, 
-            zorder = 2, 
+            edgecolor = myedgecolor,
+            s = 100,
+            lw = 2,
+            zorder = 2,
             )
 
 
@@ -2001,7 +2001,7 @@ def _plot_galaxies(fig,galaxydata,clumps_in_tree,colors,borders):
 
     if params.movie:
 
-        
+
         x, y, z = xg[to_plot], yg[to_plot], zg[to_plot]
         for i,Z in enumerate(z):
             ax.scatter(x[i],y[i],
@@ -3252,4 +3252,3 @@ if __name__ == "__main__":
 #===============================
 
     main()
-

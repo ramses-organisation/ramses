@@ -9,7 +9,7 @@ nrestart=0
 nstepmax = 1000000
 /
 
-&AMR_PARAMS 
+&AMR_PARAMS
 levelmin=6
 levelmax=16
 ngridmax=9000
@@ -53,13 +53,10 @@ riemann='hllc'
 scheme='muscl'
 /
 
-&REFINE_PARAMS 
+&REFINE_PARAMS
 err_grad_d=0.1
 err_grad_u=0.1
 err_grad_p=0.1
 interpol_var=0
 interpol_type=2
 /
-
-
-

@@ -36,11 +36,11 @@ subroutine condinit(x,u,dx,pert,nn)
   integer::iAL,iBL,iCL,iAR,iBR,iCR                 ! Indices Magnetic field
   real(dp)::p1,p2,p3,rho1,rho2,rho3,r1,r2,g,T0,drho! Variables
   real(dp)::rx,ry,rz,rr,x_mid,y_mid,z_mid          ! Radial coordinates
-  real(dp)::A1,A2,A3,B1,B2,B3,C1,C2,C3             ! Magnetic fields                   
+  real(dp)::A1,A2,A3,B1,B2,B3,C1,C2,C3             ! Magnetic fields
   real(dp)::gammainit1,gammainit2,gammainit3       ! Polytropic indices
   real(dp),dimension(1:nvector,1:nvar+3),save::q   ! Primitive variables
 
-  ! Initialize 
+  ! Initialize
   id=1; iu=2; iv=3; iw=4; ip=5; is=9
   iAL=6; iBL=7; iCL=8
   iAR=nvar+1; iBR=nvar+2; iCR=nvar+3
@@ -80,7 +80,7 @@ subroutine condinit(x,u,dx,pert,nn)
       q(i,iAR)=A1
       q(i,iBR)=B1
       q(i,iCR)=C1
-    
+
     ! Convective zone
     else if ((rr .gt. r1) .and. (rr .lt. r2)) then
       T0 = 1 - ((gammainit2-1.0d0)/gammainit2)*g*(rho2/p2)*(rr-r1)
@@ -90,7 +90,7 @@ subroutine condinit(x,u,dx,pert,nn)
           !! produce density perturbation in small layer of convection zone!
           call random_number(drho)
           drho = pert_r*pert*2.0*(drho-0.5)*10.0**(-2.0)
-        end if 
+        end if
       end if
       q(i,id)=rho2*((T0)**(1.0/(gammainit2-1.0d0)))*(1.0-drho)
       q(i,ip)=p2*((T0)**(gammainit2/(gammainit2-1.0d0)))
@@ -103,7 +103,7 @@ subroutine condinit(x,u,dx,pert,nn)
       q(i,iCR)=C2
 
     ! Top stable zone
-    else 
+    else
       T0 = 1 - ((gammainit3-1.0d0)/gammainit3)*g*(rho3/p3)*(rr-r2)
       q(i,id)=rho3*((T0)**(1.0/(gammainit3-1.0d0)))
       q(i,ip)=p3*((T0)**(gammainit3/(gammainit3-1.0d0)))
@@ -115,12 +115,12 @@ subroutine condinit(x,u,dx,pert,nn)
       q(i,iBR)=B3
       q(i,iCR)=C3
     endif
-    
+
     !! u,v,w
     q(i,iu)=0.0d0
     q(i,iv)=0.0d0
     q(i,iw)=0.0d0
-    
+
 #if NVAR>8
     ! Set entropy as a passive scalar
     q(i,is)=q(i,ip)/q(i,id)**gamma
@@ -171,23 +171,23 @@ subroutine eneana(x,e,dx,t,ncell,vol_heat,vol_cool,compute_volumes)
   use amr_parameters
   use hydro_parameters
   use poisson_parameters
-  
+
   implicit none
   integer ::ncell                         ! Size of input arrays
   real(dp)::dx                            ! Cell size
   real(dp)::t                             ! Current time
-  real(dp),dimension(1:nvector)::e        ! Energy 
+  real(dp),dimension(1:nvector)::e        ! Energy
   real(dp),dimension(1:nvector,1:ndim)::x ! Cell center position.
   real(dp)::vol_heat ! Heating volume
   real(dp)::vol_cool ! Cooling volume
-  logical::compute_volumes 
+  logical::compute_volumes
   !================================================================
-  ! Heat bottom of convection zone with 
+  ! Heat bottom of convection zone with
   ! e = 2*10**10 erg/g/s * rho0       for HeFlash
   ! e = 2.489*10.0**12 erg/g/s * rho0 for Model S
   ! where rho0 is the density at the bottom of convection zone
   !
-  ! We heat the first layer of 
+  ! We heat the first layer of
   !   2000 km for Model S
   !   500 km  for HeFlash
   ! of the convection zone
@@ -221,11 +221,11 @@ subroutine eneana(x,e,dx,t,ncell,vol_heat,vol_cool,compute_volumes)
   ! Model S
   !e0 = 2.489e-4 ! erg/g/s (Normalized 10**16)
   ! dr = 2.0d0
-  
+
   ! Initialize
   do i=1,ncell
     e(i) = 0.0d0
-  end do 
+  end do
   ! If first invocation, compute volumes
   if (compute_volumes.eqv..true.) then
     ! Loop over cells and check if in heating or cooling volumes
@@ -248,7 +248,7 @@ subroutine eneana(x,e,dx,t,ncell,vol_heat,vol_cool,compute_volumes)
           call compute_vol_energy(rr,r2,-dr,e_norm)
           vol_cool = vol_cool + e_norm
       end if
-    end do 
+    end do
   else
     ! Heating loop
     do i=1,ncell
@@ -265,15 +265,15 @@ subroutine eneana(x,e,dx,t,ncell,vol_heat,vol_cool,compute_volumes)
           ! heating
           call compute_vol_energy(rr,r1,dr,e_norm)
           e(i) = f1*e_norm*min(1.0, (t-t_heat_delay)/t_heat_delay) ! erg/s/cm^3
-        end if 
+        end if
       else if ((rr .gt. r2-dr) .and. (rr .lt. r2)) then
-        if (t .gt. t_heat_delay) then 
+        if (t .gt. t_heat_delay) then
           ! cooling (Normalize by the volume!!)
           call compute_vol_energy(rr,r2,-dr,e_norm)
           e(i) = f2*e_norm*min(1.0, (t-t_heat_delay)/t_heat_delay)*abs(vol_heat/vol_cool) ! erg/s/cm^3
         end if
       end if
-    end do 
+    end do
   end if
 end subroutine eneana
 !================================================================
@@ -289,13 +289,13 @@ subroutine spongelayers(x,u,req,peq,t,ncell)
   integer ::ncell                             ! Size of input arrays
   real(dp)::t                                 ! Current time
   real(dp),dimension(1:nvector,1:ndim)::x     ! Cell center position.
-  real(dp),dimension(1:nvector,1:nvar+3)::u   ! Conservative variables 
+  real(dp),dimension(1:nvector,1:nvar+3)::u   ! Conservative variables
   real(dp),dimension(1:nvector)::req,peq      ! Equilibrium profiles
   !================================================================
   integer :: i
   real(dp):: r2, x_mid, y_mid, z_mid, r_damp, w_damp, f_damp
   real(dp):: rx, ry, rz, rr
-  
+
   r2 = x_center(2)
   x_mid=gravity_params(3)
   y_mid=gravity_params(4)
@@ -303,8 +303,8 @@ subroutine spongelayers(x,u,req,peq,t,ncell)
   ! c: factor of "damping"
   r_damp = r2+2.0d0/3.0d0*(x_mid-r2)
   w_damp = 0.1d0*(x_mid-r2)
-  
-  ! Sponge loop 
+
+  ! Sponge loop
   do i=1,ncell
     rx=x(i,1)-x_mid
 #if NDIM>1
@@ -318,7 +318,7 @@ subroutine spongelayers(x,u,req,peq,t,ncell)
       f_damp = min(abs((rr-r2)/(x_mid-r2)),1.0d0)
     else
       f_damp = 0.0
-    endif 
+    endif
     !f_damp = 0.5d0*(1.0d0 + tanh((rr-r_damp)/w_damp))
     ! Damp internal energy
     u(i,5) = u(i,5)*(1.0d0-f_damp) + peq(i)/(gamma-1.0d0)*(f_damp)
@@ -352,7 +352,7 @@ subroutine velana(x,v,dx,t,ncell)
   !================================================================
   integer::i
   real(dp)::xx,yy=0.,zz=0.,vx,vy,vz,aa,twopi
-  
+
   ! Add here, if you wish, some user-defined initial conditions
   aa=1.0+0.*t
   twopi=2d0*ACOS(-1d0)
@@ -395,7 +395,7 @@ subroutine compute_vol_energy(r,ri,dr,e_norm)
   real(dp)::e_norm                         ! Normalized energy output
   !================================================================
   ! This routine computes the normalized volumetric energy output
-  ! for heating/cooling according to a cosine profile which total 
+  ! for heating/cooling according to a cosine profile which total
   ! area is ~1.0 (depending on resolution, possible errors)
   !================================================================
   real(dp)::pi

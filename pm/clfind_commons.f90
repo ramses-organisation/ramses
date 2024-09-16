@@ -92,7 +92,7 @@ module clfind_commons
   real(dp),allocatable,dimension(:,:) :: clmp_com_pb            ! particle based center of mass
 #endif
   logical                             :: periodical             ! if simulation is periodical
-  
+
 
 
   !-----------
@@ -102,7 +102,7 @@ module clfind_commons
   integer :: nmassbins=50
   logical :: logbins=.true.
 
-  real(dp),allocatable,dimension(:,:) :: cmp !cumulative mass profile 
+  real(dp),allocatable,dimension(:,:) :: cmp !cumulative mass profile
   real(dp),allocatable,dimension(:,:) :: cmp_distances !CMP distances
 
 
@@ -123,14 +123,14 @@ module clfind_commons
   real(dp),allocatable,dimension(:)   :: closest_border ! closest border of clump to the center of mass
                                                         ! stores relative distance squared in each direction
                                                         ! (x^2+y^2+z^2)
-  
+
   !---------------------------
   ! Iterative unbinding stuff
   !---------------------------
 
   logical   :: iter_properties=.true.  ! whether to repeat the unbinding with updated clump properties
   real(dp)  :: conv_limit = 0.01       ! convergence factor. If the v_clump_old/v_clump_new < conv_limit,
-                                       ! stop iterating for this clump. 
+                                       ! stop iterating for this clump.
   integer   :: repeat_max = 100        ! maximal number of loops per level
   logical   :: loop_again              ! if the loop needs to be redone (for a level)
 
@@ -173,9 +173,9 @@ module clfind_commons
   integer,  allocatable, dimension(:)   :: tracer_loc_progids_all ! list of progenitor IDs for tracers (local prog ID) of all progs
   integer,  allocatable, dimension(:)   :: tracer_loc_progids     ! list of progenitor IDs for tracers (local prog ID)
                                                                   ! only on this CPU
-  integer(i8b),allocatable, dimension(:):: galaxy_tracers         ! list of active galaxy tracers 
-                                                                  ! (the absolutely most bound  particle of progenitor) 
-  integer,  allocatable, dimension(:)   :: main_prog              ! main progenitor of each descendant 
+  integer(i8b),allocatable, dimension(:):: galaxy_tracers         ! list of active galaxy tracers
+                                                                  ! (the absolutely most bound  particle of progenitor)
+  integer,  allocatable, dimension(:)   :: main_prog              ! main progenitor of each descendant
   integer,  allocatable, dimension(:)   :: main_desc              ! main descendant of each progenitor
 
   integer :: progenitorcount = 0          ! count the number of clumps that will be progenitors
@@ -269,7 +269,7 @@ module clfind_commons
 ! ADDITIONAL VARIABLES FOR MERGERTREE/UNBINDING DEBUGGING
 !====================================================================
 
-  
+
 #ifdef MTREEDEBUG
 
   logical :: mtreedebug_no_matrix_dump_prog         = .false. ! don't dump matrices for progenitors
@@ -305,7 +305,7 @@ contains
     logical, save :: seed_set = .false.   ! whether seed for random scatter is set
     real(dp)      :: junk1, junk2, junk3, junk4
 
-    real(dp) :: M_10    =   11.514 
+    real(dp) :: M_10    =   11.514
     real(dp) :: M_1a    = -  1.793
     real(dp) :: M_1z    = -  0.251
     real(dp) :: e_0     = -  1.777
@@ -314,11 +314,11 @@ contains
     real(dp) :: e_a2    = -  0.119
     real(dp) :: alpha_0 = -  1.412
     real(dp) :: alpha_a =    0.731
-    real(dp) :: delta_0 =    3.508 
+    real(dp) :: delta_0 =    3.508
     real(dp) :: delta_a =    2.608
     real(dp) :: delta_z = -  0.043
-    real(dp) :: gamma_0 =    0.316 
-    real(dp) :: gamma_a =    1.319 
+    real(dp) :: gamma_0 =    0.316
+    real(dp) :: gamma_a =    1.319
     real(dp) :: gamma_z =    0.279
     real(dp) :: xi_0    =    0.218
     real(dp) :: xi_a    = -  0.023
@@ -365,12 +365,12 @@ contains
   !=============================================================================
     !-----------------------------------------------------------
     ! Computes stellar mass given peak mass and expansion
-    ! factor a at time when clump had peak mass using a 
+    ! factor a at time when clump had peak mass using a
     ! parametric SHAM relation taken from
     ! Behroozi, Wechsler & Conroy 2013
     ! DOI:	                10.1088/0004-637X/770/1/57
     ! Bibliographic Code:	  2013ApJ...770...57B
-    ! http://adsabs.harvard.edu/abs/2013ApJ...770...57B 
+    ! http://adsabs.harvard.edu/abs/2013ApJ...770...57B
     !-----------------------------------------------------------
     use amr_commons, ONLY: dp
     implicit none

@@ -54,12 +54,12 @@ endif
 #FFLAGS = -cpp $(DEFINES) -DWITHOUTMPI
 
 # --- MPI, gfortran syntax ------------------------------
-#F90 = ftn -frecord-marker=4 -O3 -ffree-line-length-none -g -fbacktrace 
+#F90 = ftn -frecord-marker=4 -O3 -ffree-line-length-none -g -fbacktrace
 #FFLAGS = -x f95-cpp-input $(DEFINES)
 
-# --- MPI, gfortran DEBUG syntax ------------------------------ 
+# --- MPI, gfortran DEBUG syntax ------------------------------
 #F90 = mpif90 -frecord-marker=4 -ffree-line-length-none -fbacktrace -g -O -fbounds-check -Wuninitialized -Wall
-#FFLAGS = -x f95-cpp-input -ffpe-trap=zero,underflow,overflow,invalid -finit-real=nan  $(DEFINES)    
+#FFLAGS = -x f95-cpp-input -ffpe-trap=zero,underflow,overflow,invalid -finit-real=nan  $(DEFINES)
 
 # --- MPI, pgf90 syntax ------------------------------
 #F90 = mpif90 -O3
@@ -84,7 +84,7 @@ FFLAGS = -warn all -O3 -g -traceback -assume byterecl -ftrapuv -fpp -fpe1 -cpp $
 
 # --- MPI, ifort syntax ------------------------------
 #F90 = ftn
-#FFLAGS = -xAVX -g -traceback -fpp -fast $(DEFINES) -DNOSYSTEM #-DRT 
+#FFLAGS = -xAVX -g -traceback -fpp -fast $(DEFINES) -DNOSYSTEM #-DRT
 
 # --- MPI, ifort syntax, additional checks -----------
 #F90 = ftn
@@ -94,7 +94,7 @@ FFLAGS = -warn all -O3 -g -traceback -assume byterecl -ftrapuv -fpp -fpe1 -cpp $
 MOD = mod
 #############################################################################
 # MPI librairies
-LIBMPI = 
+LIBMPI =
 #LIBMPI = -lfmpi -lmpi -lelan
 
 # --- CUDA libraries, for Titane ---
@@ -153,7 +153,7 @@ ramses_aton: $(MODOBJ) $(ATON_MODOBJ) $(AMRLIB) $(ATON_OBJ) ramses.o
 #############################################################################
 write_gitinfo.o: FORCE
 	$(F90) $(FFLAGS) -DPATCH=\'$(PATCH)\' -DGITBRANCH=\'$(GITBRANCH)\' -DGITHASH=\'"$(GITHASH)"\' \
- -DGITREPO=\'$(GITREPO)\' -DBUILDDATE=\'"$(BUILDDATE)"\' -c ../amr/write_gitinfo.f90 -o $@		
+ -DGITREPO=\'$(GITREPO)\' -DBUILDDATE=\'"$(BUILDDATE)"\' -c ../amr/write_gitinfo.f90 -o $@
 write_makefile.o: FORCE
 	../utils/scripts/cr_write_makefile.sh $(MAKEFILE_LIST)
 	$(F90) $(FFLAGS) -c write_makefile.f90 -o $@
