@@ -147,6 +147,7 @@ recursive subroutine amr_step(ilevel,icount)
      call MPI_BARRIER(MPI_COMM_WORLD,mpi_err)
      call MPI_ALLREDUCE(output_now,output_now_all,1,MPI_LOGICAL,MPI_LOR,MPI_COMM_WORLD,mpi_err)
 #endif
+     if(foutput>0)then
      if(mod(nstep_coarse,foutput)==0.or.aexp>=aout(iout).or.t>=tout(iout) &
         &.or.aexp>=aout_next.or.t>=tout_next.or.output_now_all.EQV..true.)then
                                call timer('io','start')
@@ -171,7 +172,7 @@ recursive subroutine amr_step(ilevel,icount)
             aout(iout)=aexp
           endif
         endif
-
+     endif
      endif
   
      ! Dump lightcone
