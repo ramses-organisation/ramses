@@ -7,8 +7,8 @@
 [7]: https://github.com/osyris-project/osyris
 [8]: https://github.com/pynbody/pynbody
 
-![GitHub logo dark-mode-only](./doc/src/img/full_logo_white.svg#gh-dark-mode-only)
-![GitHub logo light-mode-only](./doc/src/img/full_logo.svg#gh-light-mode-only)
+![GitHub logo dark-mode-only](./doc/img/full_logo_white.svg#gh-dark-mode-only)
+![GitHub logo light-mode-only](./doc/img/full_logo.svg#gh-light-mode-only)
 
 ## This is the [ramses](https://github.com/ramses-organisation/ramses/) GitHub repository.
 
