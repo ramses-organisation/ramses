@@ -1,6 +1,4 @@
----
-orphan: true
----
+
 
 # Getting started
 

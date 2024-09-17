@@ -1,6 +1,4 @@
----
-orphan: true
----
+
 
 # Restart from previous output #
 A simulation which has been terminated during run time can be restarted from the last (or any) snapshot output, by setting

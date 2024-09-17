@@ -1,6 +1,4 @@
----
-orphan: true
----
+
 
 This sets of parameters, contained in the namelist block `&RT_PARAMS`, sets radiative properties for RAMSES RHD runs. Note that the number of photon groups (`NGROUPS`) is a compilation parameter, to be set in the Makefile.
 

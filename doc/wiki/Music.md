@@ -1,6 +1,4 @@
----
-orphan: true
----
+
 
 # Generate Zoom Initial Conditions with MUSIC
 

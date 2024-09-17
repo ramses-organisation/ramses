@@ -1,6 +1,4 @@
----
-orphan: true
----
+
 # AMR Parameters
 
 This sets of parameters, contained in the namelist block `&AMR_PARAMS`, controls the AMR grid global properties. Parameters specifying the refinement strategy are described [elsewhere](Refine), and the corresponding namelist block `&REFINE_PARAMS` is used only if `levelmax>levelmin`.
