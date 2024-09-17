@@ -52,7 +52,7 @@ The block named `&SF_PARAMS` contains the parameters related to star formation
 
 ## Feedback parameters ##
 
-The block named `&FEEDBACK_PARAMS` contains the parameters related to cooling / basic chemistry
+The block named `&FEEDBACK_PARAMS` contains the parameters related to stellar feedback
 
 | Variable name | Fortran type | Default value  | Description               |
 |:------------------- |:-------|:----- |:------------------------- |
