@@ -11,7 +11,7 @@ FC = gfortran -ffree-line-length-none -cpp
 # SGI:
 #CFLAGS	=   -O3
 # Solaris:
-#CFLAGS	=   -fast -64 -fsimple=2 -fsingle 
+#CFLAGS	=   -fast -64 -fsimple=2 -fsingle
 CFLAGS	=   -O -mcmodel=medium
 # 3) Libraries: (if you have some replacement for math.h)
 LIBS	=   -lm
@@ -49,10 +49,10 @@ poshalo.o: poshalo.f90
 hop: hop.o kd.o smooth.o hop_input.o
 	$(CC) $(CFLAGS) -o hop hop.o kd.o smooth.o hop_input.o $(LIBS)
 
-hop.o: hop.c kd.h smooth.h 
+hop.o: hop.c kd.h smooth.h
 	$(CC) $(CFLAGS) $(DEFS) -c hop.c
 
-kd.o: kd.c kd.h 
+kd.o: kd.c kd.h
 	$(CC) $(CFLAGS) $(DEFS) -c kd.c
 
 smooth.o: smooth.c kd.h smooth.h

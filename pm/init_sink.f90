@@ -46,7 +46,7 @@ subroutine init_sink
   allocate(fsink(1:nsinkmax,1:ndim))
   vsink=0d0; lsink=0d0; tsink=0d0; vsold=0d0; vsnew=0d0
   delta_mass=0d0; fsink_partial=0d0; fsink=0d0
-  
+
   allocate(msum_overlap(1:nsinkmax))
   allocate(rho_sink_tff(levelmin:nlevelmax))
   msum_overlap=0; rho_sink_tff=0d0

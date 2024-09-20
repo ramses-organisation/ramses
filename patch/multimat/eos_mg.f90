@@ -40,7 +40,7 @@ subroutine eos(f,g,q,p,c,kappa_mat,kappa_hat,ncell)
     ! smallgamma=eos_params(imat,1); biggamma=0 ; p0=eos_params(imat,2)
     ! e_0 =  p0
     ! P - P_c = (gamma - one) * (e - e_c) ; e = P/(gamma-1) + (e_c-P_c/(gamma-1))
-    a0 = one / (smallgamma-one) 
+    a0 = one / (smallgamma-one)
     do k = 1,ncell
       ! Update Mie-Gruneisen terms for each material
       ! print *, g(k,imat)
@@ -50,8 +50,8 @@ subroutine eos(f,g,q,p,c,kappa_mat,kappa_hat,ncell)
       ! Update total values
       alpha_hat(k) = alpha_hat(k) + f(k,imat) * a0
       ec_hat(k) = ec_hat(k) + f(k,imat) * e_c
-      pc_hat(k) = pc_hat(k) + (f(k,imat)*a0*P_c) 
-      delpc_hat(k) = delpc_hat(k) + (f(k,imat)*a0*delpc) 
+      pc_hat(k) = pc_hat(k) + (f(k,imat)*a0*P_c)
+      delpc_hat(k) = delpc_hat(k) + (f(k,imat)*a0*delpc)
     end do
   end do
   pc_hat(1:ncell) = pc_hat(1:ncell)/alpha_hat(1:ncell)
@@ -60,14 +60,14 @@ subroutine eos(f,g,q,p,c,kappa_mat,kappa_hat,ncell)
   do k = 1,ncell
     ! Calculate the pressure for given internal energy
     p(k) = (q(k,npri) - ec_hat(k)) / alpha_hat(k) + pc_hat(k)
-  end do 
+  end do
 
   do imat = 1,nmat
     smallgamma=eos_params(imat,1);biggamma=eos_params(imat,2);e_0=eos_params(imat,3);rho_0=eos_params(imat,4)
     ! smallgamma=eos_params(imat,1); biggamma=0 ; p0=eos_params(imat,2)
     ! e_0 =  p0
     ! P - P_c = (gamma - one) * (e - e_c) ; e = P/(gamma-1) + (e_c-P_c/(gamma-1))
-    a0 = one / (smallgamma-one) 
+    a0 = one / (smallgamma-one)
     do k = 1,ncell
       ! Calculate the bulk moduli
       ! c_mat**2 = P_c' + smallgamma/rho * (P-P_c)
@@ -83,7 +83,7 @@ subroutine eos(f,g,q,p,c,kappa_mat,kappa_hat,ncell)
     c(k) = sqrt(max(c(k),smallc**2))
   end do
   ! Calculate the total speed of sound(new method)
-  ! do k = 1,ncell 
+  ! do k = 1,ncell
   !    c(k) = kappa_hat(k) / q(k,1)
   !    c(k) = sqrt(max(c(k),smallc**2))
   ! end do
@@ -110,7 +110,7 @@ subroutine eosinv(f,g,q,e,c,kappa_mat,kappa_hat,ncell)
   ! q are the total primitive variables (d, u, P)
   ! On exit:
   ! eint is the total internal energy
-  ! c is the sound speed of each fluid 
+  ! c is the sound speed of each fluid
   ! c_hat is the total sound speed
   integer::k,imat
   real(dp)::p0,a0
@@ -133,7 +133,7 @@ subroutine eosinv(f,g,q,e,c,kappa_mat,kappa_hat,ncell)
     ! smallgamma=eos_params(imat,1); biggamma=0 ; p0=eos_params(imat,2)
     ! e_0 =  p0
     ! P - P_c = (gamma - one) * (e - e_c) ; e = P/(gamma-1) + (e_c-P_c/(gamma-1))
-    a0 = one / (smallgamma-one) 
+    a0 = one / (smallgamma-one)
     do k = 1,ncell
       ! Update Mie-Gruneisen terms for each material
       e_c = e_0 * (g(k,imat)/rho_0)**biggamma
@@ -142,8 +142,8 @@ subroutine eosinv(f,g,q,e,c,kappa_mat,kappa_hat,ncell)
       ! Update total values
       alpha_hat(k) = alpha_hat(k) + f(k,imat) * a0
       ec_hat(k) = ec_hat(k) + f(k,imat) * e_c
-      pc_hat(k) = pc_hat(k) + (f(k,imat)*a0*P_c) 
-      delpc_hat(k) = delpc_hat(k) + (f(k,imat)*a0*delpc) 
+      pc_hat(k) = pc_hat(k) + (f(k,imat)*a0*P_c)
+      delpc_hat(k) = delpc_hat(k) + (f(k,imat)*a0*delpc)
       end do
   end do
   pc_hat(1:ncell) = pc_hat(1:ncell)/alpha_hat(1:ncell)
@@ -153,13 +153,13 @@ subroutine eosinv(f,g,q,e,c,kappa_mat,kappa_hat,ncell)
   do k=1,ncell
     e(k) = alpha_hat(k) * (q(k,npri)-pc_hat(k)) + ec_hat(k)
   end do
-      
+
   do imat = 1,nmat
     smallgamma=eos_params(imat,1);biggamma=eos_params(imat,2);e_0=eos_params(imat,3);rho_0=eos_params(imat,4)
     ! smallgamma=eos_params(imat,1); biggamma=0 ; p0=eos_params(imat,2)
     ! e_0 =  p0
     ! P - P_c = (gamma - one) * (e - e_c) ; e = P/(gamma-1) + (e_c-P_c/(gamma-1))
-    a0 = one / (smallgamma-one) 
+    a0 = one / (smallgamma-one)
     do k = 1,ncell
       ! Calculate the bulk moduli
       ! c_mat**2 = P_c' + smallgamma/rho * (P-P_c)
@@ -175,7 +175,7 @@ subroutine eosinv(f,g,q,e,c,kappa_mat,kappa_hat,ncell)
     c(k) = sqrt(max(c(k),smallc**2))
   end do
   ! Calculate the total speed of sound (new method)
-  ! do k = 1,ncell 
+  ! do k = 1,ncell
   !    c(k) = kappa_hat(k) / q(k,1)
   !    c(k) = sqrt(max(c(k),smallc**2))
   ! end do

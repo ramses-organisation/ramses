@@ -15,8 +15,8 @@ subroutine read_params
   character(LEN=5)::nchar
   integer(kind=8)::ngridtot=0
   integer(kind=8)::nparttot=0
-  real(kind=8)::delta_tout=0,tend=0
-  real(kind=8)::delta_aout=0,aend=0
+  real(kind=8)::tend=0
+  real(kind=8)::aend=0
   logical::nml_ok, info_ok
   integer,parameter::tag=1134
 #ifndef WITHOUTMPI
@@ -231,7 +231,7 @@ subroutine read_params
     write(*,*) "       - emission_part(1:nlevelmax)    : ", dble(sizeof(emission_part))/1.0e6," MB"
     write(*,*) "       - reception(1:ncpu,1:nlevelmax) : ", dble(sizeof(reception))*ncpu/1.0e8," MB"
     if (poisson) then
-        allocate(reception(1:100, 1:levelmax-1)) ! active_mg 
+        allocate(reception(1:100, 1:levelmax-1)) ! active_mg
         allocate(emission(1:levelmax-1)) ! emission_mg
         mem_used_new_buff_mg = dble(sizeof(emission)) + dble(sizeof(reception))*ncpu/100.0
         deallocate(reception)
@@ -285,24 +285,30 @@ subroutine read_params
   !-------------------------------------------------
   ! Compute time step for outputs
   !-------------------------------------------------
-  if(tend>0)then
-     if(delta_tout==0)delta_tout=tend
-     noutput=MIN(int(tend/delta_tout),MAXOUT)
-     do i=1,noutput
-        tout(i)=dble(i)*delta_tout
-     end do
-     if(tout(noutput).LT.tend)then
-        noutput=noutput+1
-        tout(noutput)=tend
-     endif
-  else if(aend>0)then
-     if(delta_aout==0)delta_aout=aend
-     noutput=MIN(int(aend/delta_aout),MAXOUT)
-     do i=1,noutput
-        aout(i)=dble(i)*delta_aout
-     end do
+  ! check how many predetermined output times are listed (either give tout or aout)
+  if(noutput==0.and..not.all(tout==HUGE(1.0D0)))then
+     do while(tout(noutput+1)<HUGE(1.0D0))
+        noutput = noutput+1
+     enddo
   endif
-  noutput=MIN(noutput,MAXOUT)
+  if(noutput==0.and..not.all(aout==HUGE(1.0D0)))then
+     do while(aout(noutput+1)<HUGE(1.0D0))
+        noutput = noutput+1
+     enddo
+  endif
+  ! add final time and expansion factor at the back of the predetermined output list
+  if(tend>0)then
+     noutput=noutput+1
+     tout(noutput)=tend
+  endif
+  if(aend>0)then
+     noutput=noutput+1
+     aout(noutput)=aend
+  endif
+  ! set periodic output params
+  tout_next=delta_tout
+  aout_next=delta_aout
+
   if(imovout>0) then
      allocate(tmovout(0:imovout))
      allocate(amovout(0:imovout))

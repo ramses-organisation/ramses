@@ -1,18 +1,18 @@
 ;+
-; NAME: 
+; NAME:
 ;				CPUB
 ;
-; PURPOSE: 
+; PURPOSE:
 ;				to save in format .ps
 ;
 ; CALLING:
 ;				cpub
 ;
-; INPUTS: 
+; INPUTS:
 ;			  none
-;	
-; OUTPUT: 
-;	
+;
+; OUTPUT:
+;
 ;
 ; HISTORY:
 ;	Written: by A. Refregier

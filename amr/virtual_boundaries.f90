@@ -461,7 +461,7 @@ subroutine make_virtual_fine_dp(xx,ilevel)
          end do
        end do
      end if
-  end do  
+  end do
 #endif
 
   ! Send all messages
@@ -506,7 +506,7 @@ subroutine make_virtual_fine_dp(xx,ilevel)
   end do
 
   ! Wait for full completion of sends
-#ifdef LIGHT_MPI_COMM  
+#ifdef LIGHT_MPI_COMM
   call MPI_WAITALL(emission(ilevel)%nactive,reqsend,statuses,info)
 
   ! Deallocate temporary communication buffers
@@ -518,7 +518,7 @@ subroutine make_virtual_fine_dp(xx,ilevel)
 
   deallocate(reqsend)
 #else
-  call MPI_WAITALL(countsend,reqsend,statuses,info) 
+  call MPI_WAITALL(countsend,reqsend,statuses,info)
 #endif
 
 #endif
@@ -735,7 +735,7 @@ subroutine make_virtual_reverse_dp(xx,ilevel)
   end do
   allocate(emission(ilevel)%u(1:emission(ilevel)%ngrids_tot*twotondim, 1:1))
 #endif
-  
+
   if(ilevel.LE.switchlevel)then
 
  ! Gather emission array
@@ -810,7 +810,7 @@ subroutine make_virtual_reverse_dp(xx,ilevel)
   countrecv=0
   offset=1
   do idx=1,emission(ilevel)%nactive
-     ncache=emission(ilevel)%ngrids(idx)*twotondim 
+     ncache=emission(ilevel)%ngrids(idx)*twotondim
      if (emission(ilevel)%cpuid(idx) > myid) then
          countrecv=countrecv+1
          ! request to send
@@ -1261,7 +1261,7 @@ subroutine make_virtual_reverse_int(xx,ilevel)
 #ifdef LIGHT_MPI_COMM
   deallocate(reqrecv)
 #endif
-  
+
   endif
 
 #ifdef LIGHT_MPI_COMM

@@ -187,12 +187,14 @@ subroutine flag_formation_sites
 !!$        ok=ok.and.contracting(jj)
 !!$        ! Clump has to be virialized
 !!$        ok=ok.and.Icl_dd(jj)<0.
-        ! Avoid formation of sinks from gas which is only compressed by thermal pressure rather than gravity.
-        ok=ok.and.(kinetic_support(jj)<-grav_term(jj))
 !!$        ! Avoid formation of crazy spins
 !!$        ok=ok.and.(kinetic_support(jj)<factG*mass_sink_seed*M_sun/(scale_d*scale_l**3)/(ir_cloud*dx_min/aexp))
-        ! Clumps should not be thermally supported against gravity
-        ok=ok.and.(thermal_support(jj)<-grav_term(jj))
+        if(check_energies)then
+           ! Avoid formation of sinks from gas which is only compressed by thermal pressure rather than gravity.
+           ok=ok.and.(kinetic_support(jj)<-grav_term(jj))
+           ! Clumps should not be thermally supported against gravity
+           ok=ok.and.(thermal_support(jj)<-grav_term(jj))
+        endif
         ! Then create a sink at the peak position
         if (ok)then
            form(jj)=1
@@ -1208,7 +1210,7 @@ subroutine compute_rho_star
   use clfind_commons
   use mpi_mod
   implicit none
-  
+
   integer::ilevel,ivar_clump_old
 
   if(verbose)write(*,*)'Entering compute rho_star'
@@ -1216,7 +1218,7 @@ subroutine compute_rho_star
   ! Set ivar_clump to -1 to compute stellar density field
   ivar_clump_old=ivar_clump
   ivar_clump=-1
-  
+
   do ilevel=1,nlevelmax
      if(pic)call make_tree_fine(ilevel)
      if(poisson)call rho_star_only(ilevel)
@@ -1230,7 +1232,7 @@ subroutine compute_rho_star
   end do
 
   ivar_clump=ivar_clump_old
-  
+
 end subroutine compute_rho_star
 #endif
 !################################################################

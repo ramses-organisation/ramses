@@ -6,7 +6,7 @@ URL: http://www-hpcc.astro.washington.edu/tools/SMOOTH */
 
 /* DJE--I have removed unneeded subroutines, notably those having
 to do with velocity field reconstructions (because they refer to
-particle data that I chose not to store) and output routines 
+particle data that I chose not to store) and output routines
 (because I wanted binary output).  Also, the density subroutine
 was slightly customized to reduce memory consumption in
 the case of equal mass particles. */
@@ -58,7 +58,7 @@ int smInit(SMX *psmx,KD kd,int nSmooth,float *fPeriod)
 		smx->kd->p[pi].fDensity = 0.0;
 		smx->kd->p[pi].iHop = 0;
 		}
-	*psmx = smx;	
+	*psmx = smx;
 	return(1);
 	}
 
@@ -391,7 +391,7 @@ void smDensity(SMX smx,int pi,int nSmooth,int *pList,float *fList)
 		fDensity += rs*smx->kd->fMass;
 #endif
 		}
-	smx->kd->p[pi].fDensity = M_1_PI*sqrt(ih2)*ih2*fDensity; 
+	smx->kd->p[pi].fDensity = M_1_PI*sqrt(ih2)*ih2*fDensity;
 	}
 
 

@@ -43,7 +43,7 @@ void output_slice(aton::State state) {
 
 double find_half_point(const std::vector<double> xHI) {
   const double threshold = 0.5;
-  
+
   for (int i = 0; i < (int)xHI.size(); i++) {
     if (xHI[i] >= threshold) {
       if (i > 0) {
@@ -86,7 +86,7 @@ void average_spherical(aton::State state,
           continue;
         }
         int bin = int(N*r);
-        
+
         one[bin] += 1.0;
         (*xHI)[bin] += 1.0 - state.xHII[index];
         (*xHII)[bin] += state.xHII[index];
@@ -94,7 +94,7 @@ void average_spherical(aton::State state,
       }
     }
   }
-  
+
   for (int i = 0; i < N; i++) {
     if (one[i] <= 0.0) {
       continue;
@@ -108,7 +108,7 @@ void average_spherical(aton::State state,
 
 void output_spherical(aton::State state) {
   std::vector<double> xHI, xHII, T;
-  average_spherical(state, &xHI, &xHII, &T);  
+  average_spherical(state, &xHI, &xHII, &T);
   int N = (int)xHI.size();
   for (int i = 0; i < N; i++) {
     double r = 2 * i / double(N);
@@ -118,7 +118,7 @@ void output_spherical(aton::State state) {
 
 double ionized_radius(aton::State state) {
   std::vector<double> xHI, xHII, T;
-  average_spherical(state, &xHI, &xHII, &T);  
+  average_spherical(state, &xHI, &xHII, &T);
   int N = (int)xHI.size();
   return find_half_point(xHI) * 2 / N;
 }
@@ -131,10 +131,10 @@ int main(int argc, char *argv[]) {
 
   aton::State state;
   aton::cpu_allocate(&state);
-  
+
   const double Myr = 3.156e13; // 1 Myr [s]
-  const double kpc = 3.086e19; // 1 kpc [m] 
-  
+  const double kpc = 3.086e19; // 1 kpc [m]
+
   double c_light = 2.99792458e8;
   double fudgecool = 0.1;
   double nH = 1e3;  // [m^-3]
@@ -142,24 +142,24 @@ int main(int argc, char *argv[]) {
   double xHII = 1.2e-3;
   double E = 1e-10;
   double source = 5e48;  // [photons / s]
-  
+
   std::cerr << "Enter nH, c: ";
   double c_light_factor;
   std::cin >> nH >> c_light_factor;
   c_light *= c_light_factor;
   std::cout << "# nH = " << nH << " [m^-3]" << std::endl;
   std::cout << "# c = " << c_light_factor << std::endl;
- 
+
   const double alphaB = 2.59e-19; // [m^3 s^-1]
   double t_rec = 1.0 / (alphaB * nH); // [s]
   std::cout << "# t_rec = " << t_rec/Myr << " [Myr]" << std::endl;
   const double G = 6.67e-11; // [m^3 kg^-1 s^-2]
   const double mH = 1.67e-27; // [kg]
   double t_hubble = sqrt(3.0 / (8*M_PI*G*mH*nH)); // [s]
-  std::cout << "# t_hubble = " << t_hubble/Myr << " [Myr]" << std::endl;  
+  std::cout << "# t_hubble = " << t_hubble/Myr << " [Myr]" << std::endl;
   double r_s = pow(3*source / (4*M_PI*alphaB*nH*nH), 1.0/3.0); // [m]
   std::cout << "# r_s = " << r_s/kpc << " [kpc]" << std::endl;
-  
+
   double L = 1.2 * 2 * r_s; // [m]
   std::cout << "# L = " << L/kpc << " [kpc]" << std::endl;
   double dx = calc_dx(L);
@@ -167,11 +167,11 @@ int main(int argc, char *argv[]) {
   std::cout << "# final_t = " << final_t/Myr << " [Myr]" << std::endl;
 
   double dt = time_step(dx, c_light);
-  
+
   state.Init(E, nH, T, xHII, 0.0);
   int index = cell_index(0.5, 0.5, 0.5);
   state.photon_source[index] = source / dx / dx / dx;
-  
+
   aton::validate(state, c_light);
 
   aton::cpu_to_gpu(state);
@@ -194,7 +194,7 @@ int main(int argc, char *argv[]) {
     aton::gpu_transport(c_light, dx, dt);
     aton::gpu_add_sources(dx, dt);
     aton::gpu_cooling(c_light, dx, dt, 1.0, 0.0, fudgecool);
-   
+
     // Zero-gradient boundary conditions.
     aton::gpu_to_cpu_boundary_values(boundary_values);
     aton::cpu_to_gpu_boundary_values(boundary_values);
@@ -210,4 +210,3 @@ int main(int argc, char *argv[]) {
 
   return 0;
 }
-

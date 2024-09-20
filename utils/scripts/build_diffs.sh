@@ -1,5 +1,5 @@
 # This is a little script to build the diffs for all files in a given patch directory. The
-# diffs should be put under version control rather than the actual source code files. This 
+# diffs should be put under version control rather than the actual source code files. This
 # makes the maintainance of RAMSES patches easier when the corresponding source code files
 # change. However, it keeps alive the RAMSES patching strategy where various patches can be
 # combined, etc.
@@ -24,7 +24,7 @@ cp amr/*.f90 $tmp_dir
 cp rt/*.f90 $tmp_dir
 
 for file in `find $PATCHDIR -name "*.f90" -printf "%f\n"`
-do 
+do
     echo $file
     diff -u  $tmp_dir/$file $PATCHDIR$file > $PATCHDIR/$file"_diff"
 done

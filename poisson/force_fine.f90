@@ -322,8 +322,3 @@ subroutine gradient_phi(ind_grid,ngrid,ilevel,icount)
   end do
 
 end subroutine gradient_phi
-
-
-
-
-

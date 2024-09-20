@@ -32,7 +32,7 @@ int main( int argc, char *argv[] )
 	FILE *logfile;
 
 	// check the arguments
-	parse_args( argc, argv );	
+	parse_args( argc, argv );
 
 	if ( !input_filename )
 		return EXIT_FAILURE;
@@ -164,4 +164,3 @@ void parse_args( int argc, char *argv[] )
 		else input_filename = argv[i];
 	}
 }
-

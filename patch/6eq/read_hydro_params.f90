@@ -5,7 +5,7 @@ subroutine read_hydro_params(nml_ok)
   implicit none
   logical::nml_ok,inv
   !--------------------------------------------------
-  ! Local variables  
+  ! Local variables
   !--------------------------------------------------
   integer::i,idim,imat
   integer ,dimension(1:MAXBOUND)::bound_type
@@ -19,12 +19,12 @@ subroutine read_hydro_params(nml_ok)
   ! Namelist definitions
   !--------------------------------------------------
   namelist/init_params/initfile,nregion,region_type &
-       & ,x_center,y_center,z_center & 
+       & ,x_center,y_center,z_center &
        & ,length_x,length_y,length_z,exp_region   &
        & ,d1_region,d2_region,d3_region,d4_region &
        & ,f1_region,f2_region,f3_region,f4_region &
        & ,u_region,v_region,w_region              &
-       & ,p1_region,p2_region,p3_region,p4_region 
+       & ,p1_region,p2_region,p3_region,p4_region
   namelist/hydro_params/courant_factor,smallr,smallc,smallf,slope_type,scheme,eos_name
   namelist/refine_params/x_refine,y_refine,z_refine,r_refine,a_refine,b_refine,exp_refine &
        & ,m_refine,mass_sph,err_grad_f,err_grad_d,err_grad_p,err_grad_u &
@@ -220,13 +220,13 @@ subroutine read_hydro_params(nml_ok)
   end do
 
   if(nboundary>0)then
-    
+
     dtot(1:nboundary) = 0.0
     do imat=1,nmat
       do i=1,nboundary
         ! Total density
         dtot(i)                          = dtot(i) + f(i,imat)*g(i,imat)
-        
+
         ! Volume fractions and conserved density fractions
         boundary_var(i,imat)             = f(i,imat)
         boundary_var(i,nmat+imat)        = f(i,imat)*g(i,imat)
@@ -255,8 +255,7 @@ subroutine read_hydro_params(nml_ok)
       end do
     end do
   end if
-  
-  
+
+
 
 end subroutine read_hydro_params
-

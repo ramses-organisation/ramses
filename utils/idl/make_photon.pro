@@ -28,13 +28,13 @@
 ;                  specified, a PICKFILE widget is launched.
 ;
 ;       XCENTER:   set the x coordinate of the center. Default: true
-;                  center of AMR grid. 
+;                  center of AMR grid.
 ;
 ;       YCENTER:   set the y coordinate of the center. Default: true
-;                  center of AMR grid. 
+;                  center of AMR grid.
 ;
 ;       ZCENTER:   set the z coordinate of the center. Default: true
-;                  center of AMR grid. 
+;                  center of AMR grid.
 ;
 ;       LEVELMAX:  if set, specifies the maximum level to be shown.
 ;                  Default: the levelmax of amr file.
@@ -123,7 +123,7 @@ mue=4./(4.-2.*alpha); mean molecular weight for ne
 muh=1./(1.-alpha)   ; mean molecular weight for nh
 ; Physical constants
 mh=1.67d-24         ; proton mass in g
-me=9.11d-28         ; electron mass in g 
+me=9.11d-28         ; electron mass in g
 kb=1.38d-16         ; Boltzmann constant in erg K-1
 sigmat=0.66d-24     ; Thomson cross section en cm2
 c=3d10              ; Light speed in cm s-1
@@ -139,9 +139,9 @@ fileamr=amrfile
 filehydro=hydrofile
 print,''
 rd_amr,a,file=fileamr
-print,''       
+print,''
 rd_hydro,a,h,file=filehydro
-print,''       
+print,''
 
 ;Rescaling
 if keyword_set(scale_factor)  then begin
@@ -191,7 +191,7 @@ rho = double(cell.var(*,0))
 print,' '
 del_amr,a
 del_hydro,h
-cell=0   
+cell=0
 
 t = mu*mh/kb*p/rho*1.d14    ; Temperature en K
 t = t/11604.5d0/1000.d0     ; Temperature en keV
@@ -240,7 +240,7 @@ for i=first_bin,last_bin do begin
     print,''
     print,'Energy bin number',bin_number*bin_path
     print,'Computing emissivity'
-  
+
     ; Emissivity in this bin
     emtot = rho^2*double(spec(indkev,bin_number)) ;    photons
     emtot = scale_emissivity*emtot
@@ -252,7 +252,7 @@ for i=first_bin,last_bin do begin
 
     print,'Minmax photons s-1 in the image =',minmax(emtot)/t_obs
     print,'Total  photons s-1 in the image =',double(total(emtot))/t_obs
-    
+
     for icell=0L,nok-1L do begin
 
         nphotons=LONG(randomu(random_seed,POISSON=emtot(ind(icell)),/double))
@@ -274,7 +274,7 @@ for i=first_bin,last_bin do begin
 
     endfor
     print,'Number of photons in the CCD so far    =',nphoton_tot
-    
+
 endfor
 print,'Final number of photons =',nphoton_tot
 dx_photon=dx_photon(0:nphoton_tot-1)

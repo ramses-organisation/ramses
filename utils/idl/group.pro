@@ -34,7 +34,7 @@ endif
 all_group=lonarr(np)
 readu,1,all_group
 close,1
-  
+
 print,minmax(all_group)
 
 print,'Reading DENSITY file'
@@ -205,7 +205,7 @@ endif
 all_group=fltarr(np)
 readf,1,all_group
 close,1
-  
+
 print,'Reading DENSITY file'
 openr,1,prefix+'.den'
 readf,1,ntot
@@ -258,7 +258,3 @@ usersym,a,b
 for i=0,g.n-1 do if g.m(i) ge mc then plots,g.x(i),g.y(i),g.z(i),psym=8,symsize=2.*(g.m(i))^(1./3.),color=4,/t3d
 
 end
-
-
-
-

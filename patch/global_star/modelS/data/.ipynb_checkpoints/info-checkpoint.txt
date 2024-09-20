@@ -1,0 +1,4 @@
+Reference: https://phys.au.dk/~jcd/solar_models/
+
+cptrho.l5bi.d.15c contains a limited set of variables for Model S, providing sound speed, density, pressure, adiabatic exponent and temperature.
+fgong.l5bi.d.15c is an extensive set of variables, in GONG format, for Model S

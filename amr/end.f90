@@ -1,7 +1,7 @@
 
 subroutine clean_end
   !---------------------------
-  ! Properly end the run. 
+  ! Properly end the run.
   !---------------------------
   use mpi_mod
   implicit none
@@ -134,11 +134,11 @@ subroutine deallocate_poisson
   if(allocated(safe_mode)) deallocate(safe_mode)
   if(allocated(active_mg)) deallocate(active_mg)
   if(allocated(emission_mg)) deallocate(emission_mg)
-  
+
   ! cell-centred variables
   if(allocated(rho)) deallocate(rho)
   if(allocated(phi)) deallocate(phi)
   if(allocated(phi_old)) deallocate(phi_old)
   if(allocated(f)) deallocate(f)
 
-end subroutine deallocate_poisson 
+end subroutine deallocate_poisson

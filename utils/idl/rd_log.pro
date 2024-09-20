@@ -13,17 +13,17 @@
 ;
 ; OPTIONAL INPUTS:
 ;	FILE:   if set, input the scalar string containing the name of
-;	the file to be read. Otherwise, a PICKFILE widget is launched. 
+;	the file to be read. Otherwise, a PICKFILE widget is launched.
 ;
 ;	NMAX:  if set, the maximum number of COARSE time steps to be
 ;	read from the file. Default: 1000.
 ;
 ;       LMAX:   if set, the maximum number of levels to be read from
 ;       the file. Default: 10.
-;	
+;
 ; OUTPUTS:
 ;	Log: structure containing the control variables of the RAMSES
-;	run. 
+;	run.
 ;
 ; EXAMPLE:
 ;       To read a RAMSES LOG ASCII file, type:
@@ -141,7 +141,7 @@ while not eof(1) and j lt nmax do begin
         n    [j]=nnn
         is   [j]=nstep
         for il=0,lmax-1 do begin
-            nl   [j,il]=nnnl[il] 
+            nl   [j,il]=nnnl[il]
         endfor
         dt   [j]=ttt
         t    [j]=uuu

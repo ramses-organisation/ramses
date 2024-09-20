@@ -18,7 +18,7 @@
 ; OPTIONAL INPUTS:
 ;	FILE:    if set, input the scalar string containing the name of
 ;         	 the file to be read. Otherwise, a PICKFILE widget is
-;         	 launched.  
+;         	 launched.
 ;
 ; COMMON BLOCKS:
 ;       None.
@@ -56,5 +56,3 @@ for i=0L,npart-1L do printf,2,dummy
 close,2
 
 end
-
-

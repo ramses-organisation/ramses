@@ -1,7 +1,7 @@
 /* REGROUP.C, Daniel Eisenstein, 1997 */
-/* Based on a paper by Daniel Eisenstein & Piet Hut, 
+/* Based on a paper by Daniel Eisenstein & Piet Hut,
 "HOP: A New Group-Finding Algorithm for N-body Simulations."
-See the included documentation or view it at 
+See the included documentation or view it at
 http://www.sns.ias.edu/~eisenste/hop/hop_doc.html */
 
 /* Version 1.0 (12/15/97) -- Original Release */
@@ -76,7 +76,7 @@ typedef struct controlstruct {
     int qdenscut;	/* =1 if we're making a density cut, =0 otherwise */
     float densthresh;	/* The outer density threshold (delta_outer)*/
 
-    int qgbound;	/* =1 if we are to read the boundaries file and 
+    int qgbound;	/* =1 if we are to read the boundaries file and
 				determine the merging.*/
     float peak_thresh;	/* Density threshold for peak (delta_peak) */
     float saddle_thresh;  /* Density threshold for merging (delta_saddle) */
@@ -127,25 +127,25 @@ void parsecommandline(int argc, char *argv[], Controls *c)
     int narg, qmerge;
     char *outname, *rootname;
     narg = 1;
-    rootname = c->dataname = c->densname = c->gmergename = c->tagname = 
+    rootname = c->dataname = c->densname = c->gmergename = c->tagname =
 	outname = c->outsizename = c->outtagname = c->outgmergename = NULL;
     c->qdenscut = -1;
     qmerge = 1;
     c->qgmerge_given = 0;
 
-    c->qunbind = 0; 
+    c->qunbind = 0;
     c->qoutput = 1;
     c->qsort = 1;
     c->qpipe = 0;
-    c->qf77 = 0; 
+    c->qf77 = 0;
 
     c->mingroupsize = -1;
-    if (2.0*MINDENS>=MINDENS || MINDENS>=0) 
-	myerror("MINDENS seems to be illegal.");  
+    if (2.0*MINDENS>=MINDENS || MINDENS>=0)
+	myerror("MINDENS seems to be illegal.");
 	/* Need MINDENS<0 and 2*MINDENS to be machine-representable */
     c->densthresh = 2.0*MINDENS;
-    c->saddle_thresh = 2.0*MINDENS; 	
-    c->peak_thresh = 2.0*MINDENS; 
+    c->saddle_thresh = 2.0*MINDENS;
+    c->peak_thresh = 2.0*MINDENS;
 
     if (argc==1) usage();	/* No arguments is a request for help */
     while (narg<argc) {
@@ -169,17 +169,17 @@ void parsecommandline(int argc, char *argv[], Controls *c)
 	}
 	else if (!strcmp(argv[narg],"-gbound")) {
 	    narg++; if (narg>=argc) usage();
-	    if (c->gmergename!=NULL) 
+	    if (c->gmergename!=NULL)
 		myerror("You shouldn't use both -gbound and -gmerge.");
 	    c->gmergename = argv[narg]; narg++;
-	    c->qgmerge_given = 0; 
+	    c->qgmerge_given = 0;
 	}
 	else if (!strcmp(argv[narg],"-gmerge")) {
 	    narg++; if (narg>=argc) usage();
-	    if (c->gmergename!=NULL) 
+	    if (c->gmergename!=NULL)
 		myerror("You shouldn't use both -gbound and -gmerge.");
 	    c->gmergename = argv[narg]; narg++;
-	    c->qgmerge_given = 1; 
+	    c->qgmerge_given = 1;
 	}
 	else if (!strcmp(argv[narg],"-o") || !strcmp(argv[narg],"-out")) {
 	    narg++; if (narg>=argc) usage();
@@ -210,7 +210,7 @@ void parsecommandline(int argc, char *argv[], Controls *c)
 	    c->qdenscut= 0; narg++;
 	}
 	else if (!strcmp(argv[narg],"-nomerge")) {
-	    c->qgmerge_given = qmerge = 0; narg++; 
+	    c->qgmerge_given = qmerge = 0; narg++;
 	}
 	else if (!strcmp(argv[narg],"-nosort")) {
 	    c->qsort= 0; narg++;
@@ -261,7 +261,7 @@ void parsecommandline(int argc, char *argv[], Controls *c)
     }
 
     if (qmerge==1) {
-	if (c->qgmerge_given==0) {  
+	if (c->qgmerge_given==0) {
 	    /* We need to have a .gbound file */
 	    c->qgbound = 1;
 	    if (c->saddle_thresh<MINDENS || c->peak_thresh<MINDENS)
@@ -270,7 +270,7 @@ void parsecommandline(int argc, char *argv[], Controls *c)
 		if (rootname==NULL)
 		    myerror("No .gbound file name or root has been specified.");
 		c->gmergename = (char *)malloc(80);
-		strcpy(c->gmergename,rootname); 
+		strcpy(c->gmergename,rootname);
 		strcat(c->gmergename, ".gbound");
 	    }
 	} else c->qgbound = 0;    /* We know c->mergename is ready to go */
@@ -361,7 +361,7 @@ void main(int argc, char *argv[])
  	translatetags(s, &gl);
     } /* Else we'll use the tags as given by the original .hop file */
 
-    /* If one wants to manipulate the groups any more, this is a good 
+    /* If one wants to manipulate the groups any more, this is a good
     place to do it.  For example, you might want to remove unbound particles:
 	if (c.qunbind) {
 	    get_particle_data(s, &gl, c.dataname);
@@ -374,7 +374,7 @@ void main(int argc, char *argv[])
 	if (c.qf77) writetagsf77(s, &gl, c.outtagname);
 	else writetags(s, &gl, c.outtagname);
     }
-    
+
     free_slice(s);
     return;
 }
@@ -428,7 +428,7 @@ less than densthresh to -1, thus removing them from groups */
     if ((f=fopen(fname,"r"))==NULL)
 	myerror("Density file not found.");
     npart = 0; fread(&npart,4,1,f);
-    if (npart!=s->numpart) 
+    if (npart!=s->numpart)
 	mywarn("Density file doesn't match slice description.");
 
     numread = 0;
@@ -437,7 +437,7 @@ less than densthresh to -1, thus removing them from groups */
 	if (npart-numread<block) block = npart-numread;
 	if (fread(density,4,block,f)!=block)
 	    myerror("Read error in density file.");
-	for (j=1;j<=block;j++) 
+	for (j=1;j<=block;j++)
 	    if (density[j-1]<densthresh)	/* density is zero-offset */
 		s->ntag[numread+j]=(-1);	/* s->ntag is unit-offset */
 	numread+=block;
@@ -447,7 +447,7 @@ less than densthresh to -1, thus removing them from groups */
 }
 
 /* ====================== Read/Write .gmerge files ======================= */
-/* The gmerge file is just a map from the old (pre-regroup) group numbers 
+/* The gmerge file is just a map from the old (pre-regroup) group numbers
 to the new (post-regroup) group numbers.  Of course, there are more "old"
 groups than "new" groups, since the point of regroup() is to merge groups. */
 
@@ -463,7 +463,7 @@ void writegmerge(Slice *s, Grouplist *gl, char *fname, float pt, float mt)
     if ((f=fopen(fname,"w"))==NULL) myerror("Can't open gmerge file for write.");
     fprintf(f,"%d\n%d\n%d\n", gl->npart, gl->ngroups, gl->nnewgroups);
     fprintf(f,"%f\n%f\n", pt, mt);
-    for (j=0,gr=gl->list;j<gl->ngroups;j++,gr++) 
+    for (j=0,gr=gl->list;j<gl->ngroups;j++,gr++)
 	 fprintf(f,"%d %d\n", j, gr->idmerge);
     fclose(f);
     return;
@@ -479,7 +479,7 @@ void readgmerge(Slice *s, Grouplist *gl, char *fname)
     float pt, mt;
 
     if ((f=fopen(fname,"r"))==NULL) myerror("Can't open gmerge read file.");
-    if (fscanf(f,"%d\n%d\n%d\n", &(gl->npart), &(gl->ngroups), 
+    if (fscanf(f,"%d\n%d\n%d\n", &(gl->npart), &(gl->ngroups),
 	&(gl->nnewgroups))!=3) myerror("Error in header of gmerge file.");
     if (gl->npart!=s->numpart) myerror("Number of particles in gmerge file doesn't match that of tags file.");
     fscanf(f,"%f %f\n", &pt, &mt);
@@ -500,7 +500,7 @@ void readgmerge(Slice *s, Grouplist *gl, char *fname)
 /* ====================== GROUP MERGING BY BOUNDARIES ================ */
 
 void merge_groups_boundaries(Slice *s, Grouplist *gl, char *mergename,
-	float peakdensthresh, float saddledensthresh, float densthresh) 
+	float peakdensthresh, float saddledensthresh, float densthresh)
 /* Read in the gmerge file and decide which groups are to be merged.
 Groups are numbered 0 to ngroups-1.  Groups with boundaries greater
 than saddledensthresh are merged.  Groups with maximum densities
@@ -517,14 +517,14 @@ the idmerge field. */
     Group *gr;
     float *gdensity, *densestbound, fdum[3], dens;
     int *densestboundgroup, changes;
-    char line[80], *tempfilename; 
+    char line[80], *tempfilename;
     FILE *fp;
     FILE *boundfp;
-    
+
     printf("denstresh= %e\n",densthresh);
 
     tempfilename = tmpnam(NULL);
-    if (densthresh<MINDENS) densthresh=MINDENS;	
+    if (densthresh<MINDENS) densthresh=MINDENS;
 	/* Have a 2*MINDENS condition below... */
     if ((fp=fopen(mergename,"r"))==NULL) myerror("Error opening gmerge file.");
     if (fgets(line,80,fp)==NULL) myerror("Unexpected EOF in gmerge.");
@@ -562,11 +562,11 @@ the idmerge field. */
     }
 
     /* Now step through the list of boundaries */
-    /* If a boundary is between two groups with max densities above 
+    /* If a boundary is between two groups with max densities above
     peakdensthresh and if the boundary is above saddledensthresh, then
     merge the groups (keeping the lower number of the two). */
     /* If one of the groups is above peakdensthresh and the other is
-    below, and if the boundary density is higher than any seen previously 
+    below, and if the boundary density is higher than any seen previously
     for the lower density group, then record this information */
     /* If neither group is above peakdensthresh, skip the boundary */
 
@@ -574,12 +574,12 @@ the idmerge field. */
 	myerror("Error opening scratch file");
 
     while (fgets(line,80,fp)!=NULL) {
-	if (sscanf(line,"%d %d %f", &g1, &g2, &dens)!=3 || g1<0 || g2<0 || 
-		dens<0.0 || g1>=ngroups || g2>=ngroups) 
+	if (sscanf(line,"%d %d %f", &g1, &g2, &dens)!=3 || g1<0 || g2<0 ||
+		dens<0.0 || g1>=ngroups || g2>=ngroups)
 		myerror("Error reading boundary.");
 	if (gdensity[g1]<peakdensthresh && gdensity[g2]<peakdensthresh) {
 	    if (gdensity[g1]>densthresh && gdensity[g2]>densthresh &&
-		    dens>densthresh) 
+		    dens>densthresh)
 		fprintf(boundfp,"%d %d %f\n", g1, g2, dens);
 	    continue;  	/* group isn't dense enough */
 	}
@@ -610,7 +610,7 @@ the idmerge field. */
     fclose(fp);
     fclose(boundfp);
 
-    /* Now the fringe groups are connected to the proper group 
+    /* Now the fringe groups are connected to the proper group
     (>peakdensthresh) with the largest boundary.  But we want to look
     through the boundaries between fringe groups to propagate this
     along.  Connections are only as good as their smallest boundary */
@@ -642,14 +642,14 @@ the idmerge field. */
 
     /* Now connect the low-density groups to their densest boundaries */
     /* But only if the boundary exceeds densthresh! */
-    for (j=0;j<gl->ngroups;j++) 
+    for (j=0;j<gl->ngroups;j++)
 	if (densestbound[j]>=densthresh)
 	    gl->list[j].idmerge = densestboundgroup[j];
-    
+
     /* Now we want to number the newly merged groups */
     /* The center groups are given negative numbers <-1 */
     for (j=0,gl->nnewgroups=0; j<gl->ngroups; j++)
-	if (gl->list[j].idmerge==j) 
+	if (gl->list[j].idmerge==j)
 	    gl->list[j].idmerge = -2-(gl->nnewgroups++);
 
     /* Now trace each group through until a negative number is reached */
@@ -665,7 +665,7 @@ the idmerge field. */
     /* Finally, renumber the groups 0..N-1 */
     for (j=0,gr=gl->list;j<gl->ngroups;j++,gr++)
 	gr->idmerge = -2-gr->idmerge;	/* Keep -1 -> -1 */
-    
+
     /* And delete the tempfile */
     remove(tempfilename);
     free_vector(gdensity,0,ngroups-1);
@@ -684,7 +684,7 @@ new number of groups. */
 {
     int j;
 
-    for (j=1;j<=s->numlist;j++) 
+    for (j=1;j<=s->numlist;j++)
 	if (s->ntag[j]>=0)
 	    s->ntag[j] = gl->list[s->ntag[j]].idmerge;
 	/* Otherwise, translate the unbound particles */
@@ -738,7 +738,7 @@ void writetagsf77(Slice *s, Grouplist *gl, char *fname)
 /* ====================================================================== */
 
 void sort_groups(Slice *s, Grouplist *gl, int mingroupsize, char *fname)
-/* Sort the groups, as labeled by the idmerge field not their original 
+/* Sort the groups, as labeled by the idmerge field not their original
 number, from largest to smallest.  Alter the idmerge field to this new
 numbering, setting any below mingroupsize to -1. */
 /* If fname!=NULL, write a little output file listing the group sizes */
@@ -755,7 +755,7 @@ numbering, setting any below mingroupsize to -1. */
     newnum = ivector(0,nmergedgroups-1);
 
     /* First we need to find the number of particles in each group */
-    for (j=0,c=gl->list;j<gl->ngroups;j++,c++) c->npart=0; 
+    for (j=0,c=gl->list;j<gl->ngroups;j++,c++) c->npart=0;
 
     for (j=1;j<=s->numlist;j++) {	/* Look through all the particles */
 	igr = s->ntag[j];
@@ -765,27 +765,27 @@ numbering, setting any below mingroupsize to -1. */
     }
     /* Now combine these to find the number in the new groups */
     for (j=0;j<nmergedgroups;j++) gsize[j]=0;
-    for (j=0,c=gl->list;j<gl->ngroups;j++,c++) 
+    for (j=0,c=gl->list;j<gl->ngroups;j++,c++)
 	if (c->idmerge>=0 && c->idmerge<nmergedgroups)
 	    gsize[c->idmerge]+=c->npart;
 	else if (c->idmerge>=nmergedgroups)
 	    myerror("Group idmerge is out of bounds.");
-	    
+
     make_index_table(nmergedgroups, gsize-1, order);
     /* But remember that order[] thinks that gsize is unit-offset */
-    for (j=nmergedgroups,k=0;j>0; j--,k++) 
+    for (j=nmergedgroups,k=0;j>0; j--,k++)
 	if (gsize[order[j]-1]>mingroupsize-0.5) newnum[order[j]-1]=k;
 	else break; 	/* All of the rest are too small */
-	
+
     gl->nnewgroups = k;
     for (;j>0;j--) newnum[order[j]-1]=(-1);
     /* Newnum[] holds the new sorted number for merged group j */
 
     /* Now assign sorted group numbers to idmerge */
     partingroup = 0;
-    for (j=0,c=gl->list;j<gl->ngroups;j++,c++) 
+    for (j=0,c=gl->list;j<gl->ngroups;j++,c++)
 	if (c->idmerge>=0)
-	    if ((c->idmerge = newnum[c->idmerge])>=0) 
+	    if ((c->idmerge = newnum[c->idmerge])>=0)
 		partingroup+=c->npart;
 
     /* Output the .size file, if inputed name isn't NULL */
@@ -809,7 +809,7 @@ typedef struct index_struct {
     int index;
 } *ptrindex;
 
-int cmp_index(const void *a, const void *b) 
+int cmp_index(const void *a, const void *b)
 {
     if ( ((ptrindex)a)->value<((ptrindex)b)->value) return -1;
     else if ( ((ptrindex)a)->value>((ptrindex)b)->value) return 1;

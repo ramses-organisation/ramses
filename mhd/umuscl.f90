@@ -1403,7 +1403,7 @@ subroutine cmpflxm(qm,im1,im2,jm1,jm2,km1,km2, &
                  endif
               CASE (3)
                  if(check_switch_solver)  then
-                    CALL lax_friedrich (qleft,qright,fgdnv,zero_flux) 
+                    CALL lax_friedrich (qleft,qright,fgdnv,zero_flux)
                  else
                     CALL hlld          (qleft,qright,fgdnv)
                  endif

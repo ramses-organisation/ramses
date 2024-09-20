@@ -1,13 +1,13 @@
-&RUN_PARAMS 
+&RUN_PARAMS
 hydro=.true.
 poisson=.true.
-ncontrol=1 
+ncontrol=1
 nrestart=33
 nremap=1000000
 nsubcycle=10*1
-/ 
- 
-&AMR_PARAMS 
+/
+
+&AMR_PARAMS
 levelmin=7
 levelmax=12
 ngridmax=500000
@@ -31,14 +31,14 @@ nregion=2
 region_type(1)='square'
 region_type(2)='point'
 x_center=0.5,0.0
-y_center=0.5,0.0 
+y_center=0.5,0.0
 z_center=0.5,0.0
-length_x=10.0,1.0 
+length_x=10.0,1.0
 length_y=10.0,1.0
 length_z=10.0,1.0
 exp_region=10.0,10.0
 d_region=1.0,0.0
-u_region=0.0,0.0 
+u_region=0.0,0.0
 v_region=0.0,0.0
 p_region=1e-5,0.4
 /
@@ -61,11 +61,11 @@ pressure_fix=.true.
 /
 
 &PHYSICS_PARAMS
-cooling=.true. 
+cooling=.true.
 z_ave=0.333
 /
 
-&REFINE_PARAMS 
+&REFINE_PARAMS
 interpol_type=0
 interpol_var=1
 err_grad_p=0.
@@ -77,7 +77,7 @@ r_refine=3d24,1.5d24,0.75d24,0.325d24,0.325d24,0.12d24,0.12d24,0.12d24,0.12d24,0
 
 &HALO_PARAMETERS
 Mvir=1.5e14
-overdensity=101. 
+overdensity=101.
 /
 
 &JET_PARAMETERS

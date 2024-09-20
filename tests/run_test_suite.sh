@@ -73,7 +73,7 @@ DELETE_RESULTS="rm -rf output_* *.tex data*.dat *.pdf *.pyc";
 RETURN_TO_BIN="cd ${BIN_DIRECTORY}";
 EXECNAME="test_exe_";
 LOGFILE="${TEST_DIRECTORY}/test_suite.log";
-GIT_URL=$(git config --get remote.origin.url | sed 's/git@bitbucket.org:/https:\/\/bitbucket.org\//g');
+GIT_URL=$(git config --get remote.origin.url | sed 's/git@github.com:/https:\/\/github.com\//g');
 GIT_URL=${GIT_URL:0:$((${#GIT_URL}-4))};
 THIS_COMMIT=$(git rev-parse HEAD);
 echo > $LOGFILE;
@@ -461,12 +461,22 @@ for ((i=0;i<$ntests;i++)); do
    echo "\clearpage" >> $latexfile;
 done
 echo "\end{document}" >> $latexfile;
-if $VERBOSE ; then
-   pdflatex $latexfile 2>&1 | tee -a $LOGFILE;
-   pdflatex $latexfile 2>&1 | tee -a $LOGFILE;
+
+# Compile latex file
+# Use pdflatex if available, otherwise use tectonic
+if command -v pdflatex &> /dev/null; then
+   echo "Using pdflatex to compile the pdf document" | tee -a $LOGFILE;
+   LATEX_COMPILER="pdflatex";
 else
-   pdflatex $latexfile >> $LOGFILE 2>&1;
-   pdflatex $latexfile >> $LOGFILE 2>&1;
+   echo "Using tectonic to compile the pdf document" | tee -a $LOGFILE;
+   LATEX_COMPILER="tectonic";
+fi
+if $VERBOSE ; then
+   $LATEX_COMPILER $latexfile 2>&1 | tee -a $LOGFILE;
+   $LATEX_COMPILER $latexfile 2>&1 | tee -a $LOGFILE;
+else
+   $LATEX_COMPILER $latexfile >> $LOGFILE 2>&1;
+   $LATEX_COMPILER $latexfile >> $LOGFILE 2>&1;
 fi
 rm ${latexfile/.tex/.log};
 rm ${latexfile/.tex/.aux};
@@ -502,4 +512,8 @@ if ${DELDATA} ; then
    rm -f ${EXECNAME}*d;
 fi
 
-exit;
+if $all_tests_ok ; then
+   exit;
+else
+   exit 1;
+fi

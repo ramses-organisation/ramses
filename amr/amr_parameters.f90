@@ -106,13 +106,19 @@ module amr_parameters
   ! Output parameters
   integer::iout=1                ! Increment for output times
   integer::ifout=1               ! Increment for output files
-  integer::iback=1               ! Increment for backup files
-  integer::noutput=1             ! Total number of outputs
+  integer::noutput=0             ! Total number of predefined outputs
   integer::foutput=1000000       ! Frequency of outputs
   logical::gadget_output=.false. ! Output in gadget format
   logical::output_now=.false.    ! write output next step
   real(dp)::walltime_hrs=-1      ! Wallclock time for submitted job
   real(dp)::minutes_dump=1       ! Dump an output minutes before walltime ends
+  logical(dp)::finish_run=.false.! trigger cleanup after walltime end dump
+  real(dp)::delta_tout=HUGE(1.0D0)         ! time difference between outputs
+  real(dp)::delta_aout=HUGE(1.0D0)         ! expansion factor difference between outputs
+  real(dp),dimension(1:MAXOUT)::aout=HUGE(1.0D0)      ! Output expansion factors
+  real(dp),dimension(1:MAXOUT)::tout=HUGE(1.0D0)      ! Output times
+  real(dp)::tout_next=HUGE(1.0D0)     ! next output time using delta_tout
+  real(dp)::aout_next=HUGE(1.0D0)     ! next output expansion factor using delta_aout
 
   ! Lightcone parameters
   real(dp)::thetay_cone=12.5d0
@@ -207,7 +213,7 @@ module amr_parameters
   logical ::sf_imf=.false.              ! Activate IMF sampling for SN feedback when resolution allows it
   logical ::sf_compressive=.false.      ! Advect compressive and solenoidal turbulence terms separately
   logical ::cooling_ism = .false.      ! Use cooling module from Audit & Hennebelle 2005 (non-RT)
-                                        ! instead of ramses classical cooling 
+                                        ! instead of ramses classical cooling
 
   ! EOS parameters
   character(len=20)::barotropic_eos_form='legacy'  !Type of barotropic EOS: choose from:
@@ -222,10 +228,6 @@ module amr_parameters
   real(dp)::T_eos=10                    ! sets T0 in EOS: isothermal temperature or temperature normalisation, in K
   real(dp)::mu_gas=1d0                  ! molecular weight
   real(dp)::T2_eos=10                   ! = T/mu, used in the computations
-
-  ! Output times
-  real(dp),dimension(1:MAXOUT)::aout=1.1d0      ! Output expansion factors
-  real(dp),dimension(1:MAXOUT)::tout=HUGE(1.0D0)! Output times
 
   ! Movie
   integer,parameter::NMOV=5

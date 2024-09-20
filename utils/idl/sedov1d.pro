@@ -19,7 +19,7 @@
 ;       d0:     the initial mass density. Default: 1.
 ;
 ;       file:   if set, input the scalar string containing the name of
-;       the file to be read. Otherwise, a PICKFILE widget is launched. 
+;       the file to be read. Otherwise, a PICKFILE widget is launched.
 ;
 ;       xr:     the X axis range. Default: [0,1]
 ;
@@ -31,7 +31,7 @@
 ;;
 ; EXAMPLE:
 ;       To plot the Sedov planar blast wave profiles from a RAMSES LOG
-;       ASCII file, type: 
+;       ASCII file, type:
 ;
 ;               SEDOV1D,file='sedov1d.log'
 ;

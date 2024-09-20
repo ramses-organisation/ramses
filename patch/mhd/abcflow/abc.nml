@@ -1,0 +1,42 @@
+This namelist contains various input parameters for RAMSES runs.
+This is the Ponomarenko test performed in Teyssier, Fromang and Dormy (2006).
+make NDIM=3 MPI=1 SOLVER=mhd NVAR=8 PATCH=../patch/mhd/ponomarenko
+
+&RUN_PARAMS
+hydro=.true.
+nremap=1
+ncontrol=1
+nsubcycle=4*1,2
+/
+
+&AMR_PARAMS
+levelmin=7
+levelmax=7
+ngridmax=2000000
+nexpand=1
+boxlen=1
+/
+
+&INIT_PARAMS
+/
+
+&OUTPUT_PARAMS
+delta_tout=0.1
+tend=10.0
+/
+
+&HYDRO_PARAMS
+gamma=1.6666667
+courant_factor=0.8
+slope_type=2
+riemann='upwind'
+riemann2d='upwind'
+scheme='induction'
+eta_mag=0.001
+/
+
+&REFINE_PARAMS
+err_grad_b2=0.1
+interpol_var=0
+interpol_type=2
+/

@@ -9,7 +9,7 @@ verbose=.false.
 debug=.false.
 /
 
-&AMR_PARAMS 
+&AMR_PARAMS
 levelmin=3
 levelmax=12
 ngridmax=10000
@@ -56,7 +56,7 @@ scheme='muscl'
 eos_name='cochran-chan'
 /
 
-&REFINE_PARAMS 
+&REFINE_PARAMS
 err_grad_f=0.05
 err_grad_u=0.05
 err_grad_p=0.1
@@ -64,6 +64,3 @@ floor_f=0.001
 interpol_var=0
 interpol_type=2
 /
-
-
-

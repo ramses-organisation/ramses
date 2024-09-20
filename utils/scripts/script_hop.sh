@@ -13,5 +13,3 @@ do
   regroup -root hop00$a -douter 80. -dsaddle 200. -dpeak 240. -f77 -o grp00$a
   poshalo -inp output_00$a -pre grp00$a -xmi 0.375 -xma 0.625 -ymi 0.375 -yma 0.625 -zmi 0.375 -zma 0.625
 done
-
-

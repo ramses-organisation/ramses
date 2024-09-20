@@ -122,25 +122,25 @@ subroutine scale_cosmomag(ind_cell,exp_scale)
   !--------------------------------------------------------------------------
   real(dp)::A,B,C,exp_scale,e_mag
 
-  ! Compute old e_mag 
+  ! Compute old e_mag
   A=0.5*(unew(ind_cell,6)+unew(ind_cell,nvar+1))
   B=0.5*(unew(ind_cell,7)+unew(ind_cell,nvar+2))
   C=0.5*(unew(ind_cell,8)+unew(ind_cell,nvar+3))
   e_mag=0.5*(A**2+B**2+C**2)
-  
+
   ! Remove from internal energy
   unew(ind_cell,5) = unew(ind_cell,5) - e_mag
-  
+
   ! Rescale B
   unew(ind_cell,6:8) = unew(ind_cell,6:8) * exp_scale
   unew(ind_cell,nvar+1:nvar+3) = unew(ind_cell,nvar+1:nvar+3) * exp_scale
-  
+
   ! Compute new e_mag
   A=0.5*(unew(ind_cell,6)+unew(ind_cell,nvar+1))
   B=0.5*(unew(ind_cell,7)+unew(ind_cell,nvar+2))
   C=0.5*(unew(ind_cell,8)+unew(ind_cell,nvar+3))
   e_mag=0.5*(A**2+B**2+C**2)
-      
+
   ! Add back to internal energy
   unew(ind_cell,5) = unew(ind_cell,5) + e_mag
 end subroutine scale_cosmomag
@@ -162,13 +162,13 @@ subroutine update_cosmomag(ilevel,exp_scale)
 
   do ind=1,twotondim
     iskip=ncoarse+(ind-1)*ngridmax
-    
+
     ! Update the active cells
     do i=1,active(ilevel)%ngrid
       ind_cell = active(ilevel)%igrid(i)+iskip
       call scale_cosmomag(ind_cell,exp_scale)
     end do
-    
+
     ! Do the same for reception cells
     do icpu=1,ncpu
       do i=1,reception(icpu,ilevel)%ngrid
@@ -223,7 +223,7 @@ subroutine set_uold(ilevel)
 
      ! -------------------------------------------------------------------------------------------------------------------------------------------------------------
      ! L. Romano 14.06.2023 -- Catch advection errors due to smallr
-#if NVAR > 8+NENER  
+#if NVAR > 8+NENER
      do i=1,active(ilevel)%ngrid
         if(uold(active(ilevel)%igrid(i)+iskip,1).lt.smallr.and.unew(active(ilevel)%igrid(i)+iskip,1).gt.uold(active(ilevel)%igrid(i)+iskip,1))then
            ! inflow into previously floored cell: fix concentrations

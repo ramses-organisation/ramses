@@ -123,7 +123,7 @@ subroutine init_refine_2
      end do
 
   endif ! if .not. 'grafic'
-  
+
 
 #ifdef RT
   if(neq_chem .and. rt_is_init_xion) then

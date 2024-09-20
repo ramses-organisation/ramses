@@ -171,5 +171,3 @@ SUBROUTINE rt_interpol_hydro(u1,u2,nn)
   ! End loop over variables
 
 END SUBROUTINE rt_interpol_hydro
-
-

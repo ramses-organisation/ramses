@@ -31,6 +31,8 @@ subroutine dump_all
   call title(ifout,nchar)
   ifout=ifout+1
   if(t>=tout(iout).or.aexp>=aout(iout))iout=iout+1
+  if(t>=tout_next)tout_next=tout_next+delta_tout
+  if(aexp>=aout_next)aout_next=aout_next+delta_aout
   output_done=.true.
 
   if(IOGROUPSIZEREP>0) then
@@ -94,11 +96,12 @@ subroutine dump_all
      ! Copy compilation details to output directory
      filename=TRIM(filedir)//'compilation.txt'
      OPEN(UNIT=11, FILE=filename, FORM='formatted')
-     write(11,'(" compile date = ",A)')TRIM(builddate)
-     write(11,'(" patch dir    = ",A)')TRIM(patchdir)
-     write(11,'(" remote repo  = ",A)')TRIM(gitrepo)
-     write(11,'(" local branch = ",A)')TRIM(gitbranch)
-     write(11,'(" last commit  = ",A)')TRIM(githash)
+     write(11,'(" compile date    = ",A)')TRIM(builddate)
+     write(11,'(" compile command = ",A)')TRIM(buildcommand)
+     write(11,'(" patch dir       = ",A)')TRIM(patchdir)
+     write(11,'(" remote repo     = ",A)')TRIM(gitrepo)
+     write(11,'(" local branch    = ",A)')TRIM(gitbranch)
+     write(11,'(" last commit     = ",A)')TRIM(githash)
      CLOSE(11)
   endif
 #ifndef WITHOUTMPI
@@ -683,7 +686,7 @@ subroutine create_output_dirs(filedir)
   integer :: info
 #endif
   integer, parameter :: mode = int(O'755')
-  
+
   if (.not.withoutmkdir) then
     if (myid==1) then
 #ifdef NOSYSTEM
@@ -695,7 +698,7 @@ subroutine create_output_dirs(filedir)
       ierr=1
 !      call system(filecmd,ierr)
 !      call EXECUTE_COMMAND_LINE(filecmd,exitstat=ierr,wait=.true.)
-      call mkdir(TRIM(filedir),mode,ierr) 
+      call mkdir(TRIM(filedir),mode,ierr)
       if(ierr.ne.0 .and. ierr.ne.127)then
         write(*,*) 'Error - Could not create ',TRIM(filedir),' error code=',ierr
 #ifndef WITHOUTMPI

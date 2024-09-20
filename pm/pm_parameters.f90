@@ -20,6 +20,7 @@ module pm_parameters
   integer::nlevelmax_sink=0                  ! HACK to put sinks at coarser level (for sims which are not fully refined)
 
   logical::create_sinks=.false.              ! turn formation of new sinks on
+  logical::check_energies=.true.             ! when flagging clumps for sink formation, check whether their gravitational energy is dominant
 
   real(dp)::merging_timescale=-1             ! time during which sinks are considered for merging (only when 'timescale' is used),
                                              ! used also as contraction timescale in creation

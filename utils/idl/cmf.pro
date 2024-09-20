@@ -4,9 +4,9 @@
 ; Andreas Bleuler 2011
 ;
 ; calling sequence:
-; 
+;
 ; cmf,nbins
-; 
+;
 ; with nbins the desired number of bins
 ;
 ; clump textfiles (clump_masses.txt from clumpfinder output) can be selected from a window
@@ -28,12 +28,12 @@ while ((round LE 5) and (answer EQ 1)) do begin
     file = Dialog_Pickfile(/Read, Title='select clump_mass files', /MULTIPLE_FILES,FILTER = '*.txt')
     print,file
     print,size(file)
-    
 
-;get total number of clumps   
+
+;get total number of clumps
     n_tot=0
     n=0
-    for i=0,(size(file))(1)-1 do begin 
+    for i=0,(size(file))(1)-1 do begin
         openr,10,file(i)
         readf,10,n
         nn=file_lines(file(i))-1
@@ -44,8 +44,8 @@ while ((round LE 5) and (answer EQ 1)) do begin
         readf,10,m
         if (i eq 0) then m_tot=m else m_tot=[m_tot,m]
         close,10
-    end 
-    
+    end
+
 ;construct and plot histogram
     m_log=alog10(m_tot)
     ma=max(m_log)+0.001
@@ -61,8 +61,8 @@ while ((round LE 5) and (answer EQ 1)) do begin
         loadct,4
     endif
     oplot,x,h,psym=10,color=250-round*25,linestyle=round-1,thick=2
-    
-    ;define Kroupa IMF 
+
+    ;define Kroupa IMF
     if (round EQ 1)then begin
         y_max=max(h)
         x_max=alog10(0.08)
@@ -76,13 +76,13 @@ while ((round LE 5) and (answer EQ 1)) do begin
         y2=[y_0,y_max,y_1,y_2]
         oplot,x2,y2,color=160,linestyle=0,thick=1
     endif
-    
+
 ;another cmf if desired
     answer=0
     read,'do you want to add another cmf? (type 1 if yes) ',answer
     round=round+1
 endwhile
-   
+
 if (round GT 5)then print,'you should not overload your plot anyway '
 
 ;save picture if wanted

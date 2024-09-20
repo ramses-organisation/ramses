@@ -2,13 +2,13 @@
 # -*- coding: utf-8 -*-
 
 """
-Utilities for converting spectral energy distribution (SED) tables to 
+Utilities for converting spectral energy distribution (SED) tables to
 RAMSES-RT readable format, from the formats of Bruzual & Charlot (2003)
 and Starburst99. Routines are also included to plot the RAMSES-readable
 SEDs and the derived radiation group properties.
 
 The RAMSES format is a directory containing thee files:
-    == metallicity_bins.dat == 
+    == metallicity_bins.dat ==
 ascii file with the number of metallicity bins in the 1st line and then
 the bin values (mass fraction), one per line
     == age_bins.dat ==
@@ -16,7 +16,7 @@ ascii, # of age bins in 1st line, then stellar pop ages (yr), one per line
     == all_seds.dat ==
 f77 unformatted file, with the number of wavelength bins, then wavelengths
 (Angstrom), then nZ*nAge arrays of length nLambda with luminosities per
-bin, in units of L_sun/Angstrom/Msun, where L_sun=2d33 ergs/s, nZ=# of 
+bin, in units of L_sun/Angstrom/Msun, where L_sun=2d33 ergs/s, nZ=# of
 metallicity bins, nAge=# of age bins, and nLambda=# of wavelength bins.
 
 "Public" routines:
@@ -31,7 +31,7 @@ metallicity bins, nAge=# of age bins, and nLambda=# of wavelength bins.
 
 To convert and plot, either edit the main routine at the bottom or
 import this module and call the individual routines. Note that in order
-to plot the radiation group properties, RAMSES must first be run on the 
+to plot the radiation group properties, RAMSES must first be run on the
 (converted) SEDs.
 """
 
@@ -94,20 +94,20 @@ def convertS99toRamses(files=None, ZBins=None, Mtot=None, outDir=None):
                   ,'Solar masses and in the format <x>e<y>.\n'
                   ,'The default in S99 is 1e6 Msun.')
         Mtot=float(input('>'))
-                
+
     ### Check for consistency and initialise -----------------------------
-    nFiles = len(files)                    #           Number of SED files 
+    nFiles = len(files)                    #           Number of SED files
     nZ = len(ZBins)                        #    Number of metallicity bins
     if nZ != nFiles:
         print('The number of Z-bins must equal number of files')
         return
-    ageBins = None              
+    ageBins = None
     lambdaBins = None
 
     ### Create output directory and files --------------------------------
     #os.makedirs(outDir, exist_ok=True)
     try: os.stat(outDir)
-    except: os.mkdir(outDir)  
+    except: os.mkdir(outDir)
 
     sedFile = FortranFile(outDir+'/all_seds.dat','w')
     ZFile = open(outDir+'/metallicity_bins.dat', 'w')
@@ -124,14 +124,14 @@ def convertS99toRamses(files=None, ZBins=None, Mtot=None, outDir=None):
             nAge = len(ageBins)                  # Read number of age bins
             lambdaBins = sorted(set(data[:,1]))
             nLambda = len(lambdaBins)          # Number of wavelength bins
-            sedFile.write_record(nLambda)      # Write 
+            sedFile.write_record(nLambda)      # Write
             sedFile.write_record(lambdaBins)
 
         # Read luminosities and write to 'all_seds.dat'
         for iAge in range(0,nAge):
             ind_l = iAge*nLambda                 # upper and lower indexes
             ind_u = (iAge+1)*nLambda             # for one spectrum
-            ages    = data[ind_l:ind_u,0]      
+            ages    = data[ind_l:ind_u,0]
             lambdas = data[ind_l:ind_u,1]        # read data
             lums    = data[ind_l:ind_u,2]
             # Check age bin consistency
@@ -150,7 +150,7 @@ def convertS99toRamses(files=None, ZBins=None, Mtot=None, outDir=None):
             progress=(iAge+1)/nAge
             sys.stdout.write("\rProgress: [{0:50s}] {1:.1f}%".format(
                                 '#' * int(progress * 50), progress * 100))
-            
+
     sedFile.close()
 
     ###  Write metallicities to 'metallicity_bins.dat' (units = mass frac)
@@ -171,7 +171,7 @@ def convertBC03toRamses(files=None, outDir=None):
 
     Parameters (user will be prompted for those if not present):
     ----------------------------------------------------------------------
-    files: list of each BC03 SED ascii file, typically named 
+    files: list of each BC03 SED ascii file, typically named
            bc2003_xr_mxx_xxxx_ssp.ised_ASCII
     outDir: Directory to put in the new ramses-rt files.
     """
@@ -197,14 +197,14 @@ def convertBC03toRamses(files=None, outDir=None):
             return
 
     # Initialise ---------------------------------------------------------
-    ageBins = None              
+    ageBins = None
     lambdaBins = None
     ZBins=[]
 
     # Create output directory and files ----------------------------------
     #os.makedirs(outDir, exist_ok=True)
     try: os.stat(outDir)
-    except: os.mkdir(outDir)       
+    except: os.mkdir(outDir)
 
     sedFile = FortranFile(outDir+'/all_seds.dat','w')
     ZFile = open(outDir+'/metallicity_bins.dat', 'w')
@@ -235,8 +235,8 @@ def convertBC03toRamses(files=None, outDir=None):
         lambdas,lastLine=readBC03Array(file,lastLineFloat=lastLine)
         if lambdaBins is None: # Write wavelengths to sed file
             lambdaBins=lambdas
-            sedFile.write_record(len(lambdaBins))          
-            sedFile.write_record(lambdaBins)            
+            sedFile.write_record(len(lambdaBins))
+            sedFile.write_record(lambdaBins)
         if not np.array_equal(lambdas,lambdaBins):  # check for consistency
             print('Wavelength bins are not identical everywhere!!!')
             print('CANCELLING CONVERSION!!!')
@@ -269,12 +269,12 @@ def convertBC03toRamses(files=None, outDir=None):
     ageFile.write("%8d\n" % len(ageBins))
     for age in ageBins: ageFile.write("%14.6e\n" % age)
     ageFile.close()
-        
-            
+
+
 ##########################################################################
 ##########################################################################
 def plotRamsesSEDs(sedDir,iZ=0,iAge=None, pdf=None):
-    """Plot SED (luminosity per solar mass and unit wavelength versus 
+    """Plot SED (luminosity per solar mass and unit wavelength versus
        wavelength), read from ramses format.
 
     Parameters:
@@ -340,18 +340,18 @@ def plotRamsesSEDs(sedDir,iZ=0,iAge=None, pdf=None):
 ##########################################################################
 def plotRamsesGroups(groupFiles=['SEDtable1.list'],isEgy=False, pdf=None):
     """Plot photon group properties and stellar luminosities, as generated
-       by ramses-rt from SED tables, and found in SEDtableX.list files 
+       by ramses-rt from SED tables, and found in SEDtableX.list files
        in the ramses run directory.
-       The format of each (ascii) file is 
+       The format of each (ascii) file is
        age (Gyr), Z, luminosity, time-integrated luminosity, group energy
-       (eV), cross sections (cm2). The luminosity is in units of 
+       (eV), cross sections (cm2). The luminosity is in units of
        photons/s/Msun by default, but erg/s/Msun if the ramses-run was
        made with SED_isEgy=.true.
-       
+
     Parameters:
     ----------------------------------------------------------------------
     groupFiles: Files containing group properties (one per group)
-    isEgy: If stellar luminosity was run in energy mode (as opposed to the 
+    isEgy: If stellar luminosity was run in energy mode (as opposed to the
            default photon number conserving mode -- see ramses namelist
            parameter of the same name).
     """
@@ -424,7 +424,7 @@ def plotRamsesGroups(groupFiles=['SEDtable1.list'],isEgy=False, pdf=None):
         # Plot cross sections
         ax=p.subplot2grid((4,nGroups),(3,i), sharex=ax1)
         if i>0: p.setp(ax.get_yticklabels(), visible=False)
-        ax.set_xlabel(r'Time [Myr]')    
+        ax.set_xlabel(r'Time [Myr]')
         if i==0: ax.set_ylabel(r'$\sigma$ [cm$^2$]')
         ax.set_ylim([sigrg[0],sigrg[1]])
         ax.set_yscale('log')
@@ -483,12 +483,12 @@ def readRamsesSEDs(sedDir):
 
     return {'ZBins':ZBins, 'ageBins':ageBins, 'lambdaBins':lambdaBins
                 ,'spectra':spectra}
-    
-    
+
+
 ##########################################################################
 ##########################################################################
 def readBC03Array(file, lastLineFloat=None):
-    """Read a record from bc03 ascii file. The record starts with the 
+    """Read a record from bc03 ascii file. The record starts with the
        number of elements N and is followed by N numbers. The record may
        or may not start within a line, i.e. a line need not necessarily
        start with a record.
@@ -500,7 +500,7 @@ def readBC03Array(file, lastLineFloat=None):
     Returns array, lastLine, where:
     ----------------------------------------------------------------------
     array = The array values read from the file
-    lastLine = The remainder of the last line read (in floating format), 
+    lastLine = The remainder of the last line read (in floating format),
                for continued reading of the file
     """
     if lastLineFloat==None or len(lastLineFloat)==0:
@@ -512,14 +512,14 @@ def readBC03Array(file, lastLineFloat=None):
     arrayCount = int(lastLineFloat[0])          # Length of returned array
     array=np.empty(arrayCount)                  #     Initialise the array
     lastLineFloat=lastLineFloat[1:len(lastLineFloat)]
-    iA=0 # Running array index                                 
+    iA=0 # Running array index
     while True: # Read numbers until array is full
         for iL in range(0,len(lastLineFloat)):  #     Loop numbers in line
             array[iA]=lastLineFloat[iL]
             iA=iA+1
             if iA >= arrayCount:                #  Array is full so return
                 return array,lastLineFloat[iL+1:]
-        line=file.readline()   # Went through the line so get the next one 
+        line=file.readline()   # Went through the line so get the next one
         lineStr = line.split()
         lastLineFloat = [float(x) for x in lineStr]
 
@@ -530,7 +530,7 @@ if __name__ == '__main__':
     ### Starburst99 conversion and plotting ##############################
     outDir='S99_ramses'
     conv_S99=False
-    if(conv_S99): # Convert Starburst99 to ramses format 
+    if(conv_S99): # Convert Starburst99 to ramses format
         files=['output/test.spectrum1']
         ZBins=[0.001]
         convertS99toRamses(files=None,ZBins=ZBins,outDir=outDir,Mtot=1e6)
@@ -548,7 +548,7 @@ if __name__ == '__main__':
     ### Bruzual & Charlot 03 conversion and plotting #####################
     outDir='BC03_ramses_tmp'
     conv_BC03=True
-    if(conv_BC03): # Convert BX03 to ramses format 
+    if(conv_BC03): # Convert BX03 to ramses format
         files=['Padova1994/chabrier/bc2003_lr_m22_chab_ssp.ised_ASCII'
               ,'Padova1994/chabrier/bc2003_lr_m32_chab_ssp.ised_ASCII'
               ,'Padova1994/chabrier/bc2003_lr_m42_chab_ssp.ised_ASCII'
@@ -556,14 +556,13 @@ if __name__ == '__main__':
               ,'Padova1994/chabrier/bc2003_lr_m62_chab_ssp.ised_ASCII'
               ,'Padova1994/chabrier/bc2003_lr_m72_chab_ssp.ised_ASCII']
         convertBC03toRamses(files=files,outDir=outDir)
-        
+
     plot_BC03_ramses=True
     if(plot_BC03_ramses):
         plotRamsesSEDs(outDir,iZ=1)
-        
+
     plot_BC03_groups=False
     if(plot_BC03_groups):
         files=['SEDtable1.list','SEDtable2.list','SEDtable3.list'
                    ,'SEDtable4.list','SEDtable5.list']
         plotRamsesGroups(groupFiles=files,isEgy=True)
-

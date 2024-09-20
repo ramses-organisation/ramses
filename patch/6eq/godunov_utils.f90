@@ -14,13 +14,13 @@ subroutine eos(d,e,p,c,imat,inv,ncell)
   ! Compute total internal energy and sound speed from total pressure
   ! On entry:
   !   d is the true density of each fluid
-  !   imat is the identifier of the fluid species 
+  !   imat is the identifier of the fluid species
   !   inv is a logical defining the case:
   !     inv=0:(d,e)-->(p,c) (e is given)
   !     inv=1:(d,p)-->(e,c) (p is given)
   ! On exit:
-  !   c is the sound speed of each fluid 
-  !   e is the internal energy of each fluid   
+  !   c is the sound speed of each fluid
+  !   e is the internal energy of each fluid
   !   p is the pressure of each fluid
   integer::k
   real(dp)::smallgamma,biggamma,p_0,rho_0,e_c,p_c,delpc,eta,q
@@ -32,14 +32,14 @@ subroutine eos(d,e,p,c,imat,inv,ncell)
         ! Get Stiffened Gas EOS parameters
         smallgamma=eos_params(imat,1);q=eos_params(imat,2);p_0=eos_params(imat,3)
         ! Use the EOS to calculate the current pressure/internal energy in a given cell
-        ! P  = (gamma - one) * (e - d*q) + gamma*P_inf 
+        ! P  = (gamma - one) * (e - d*q) + gamma*P_inf
         if(inv .eqv. .false.)then
            p(k) = (smallgamma-1)*(e(k)-d(k)*q) - smallgamma*p_0
         else if(inv .eqv. .true.)then
            e(k) = (1/(smallgamma-1))*(p(k)+smallgamma*p_0) + d(k)*q
         end if
 
-        ! Calculate the speed of sound 
+        ! Calculate the speed of sound
         c(k) = smallgamma*(p(k)+p_0)/d(k)
         c(k) = sqrt(max(c(k),smallc**2))
 
@@ -64,18 +64,18 @@ subroutine eos(d,e,p,c,imat,inv,ncell)
         ! c**2 = P_c' + gamma * (P - P_c) / rho
         c(k) = (delpc + smallgamma * (p(k)-p_c)) / d(k)
         c(k) = sqrt(max(c(k),smallc**2))
-                   
+
      else if(eos_name == 'cochran-chan')then
-        
+
         ! Get Mie-Grueneisen EOS paramete
         smallgamma=eos_params(imat,1);rho_0=eos_params(imat,2)
         E_1=eos_params(imat,3);E_2=eos_params(imat,4)
         A_1=eos_params(imat,5);A_2=eos_params(imat,6)
         C_v=eos_params(imat,7);T_0=eos_params(imat,8)
-        
+
         ! Define the Cochran-Chan constant term
         E_0 = A_1 / (E_1-one) - A_2 / (E_2-one) + rho_0 * C_v * T_0
-        
+
         ! Update Mie-Gruneisen terms for each material
         eta   = d(k)/rho_0
         p_c_1 = A_1 * eta**E_1
@@ -83,7 +83,7 @@ subroutine eos(d,e,p,c,imat,inv,ncell)
         p_c   = p_c_1 - p_c_2
         e_c   = p_c_1 / (E_1-one) - p_c_2 / (E_2-one) - eta * E_0
         delpc = p_c_1 * E_1 - p_c_2 * E_2
-        
+
         ! Use the EOS to calculate the current pressure/internal energy in a given cell
         ! P - P_c = (gamma - one) * (e - e_c) ; e = e_c + (P - P_c) / (gamma - one)
         if(inv .eqv. .false.)then
@@ -96,7 +96,7 @@ subroutine eos(d,e,p,c,imat,inv,ncell)
         ! c**2 = P_c' + gamma * (P - P_c) / rho
         c(k) = (delpc + smallgamma * (p(k)-p_c) ) / d(k)
         c(k) = sqrt(max(c(k),smallc**2))
-        
+
      end if
   end do
 end subroutine eos
@@ -116,12 +116,12 @@ subroutine eos_s(d,e,s,imat,inv,ncell)
   ! Compute entropy from internal energy
   ! On entry:
   !   d is the true density of each fluid
-  !   imat is the identifier of the fluid species 
+  !   imat is the identifier of the fluid species
   !   inv is a logical defining the case:
   !     inv=0:(d,e)-->(s) (e is given)
   !     inv=1:(d,s)-->(e) (s is given)
   ! On exit:
-  !   e is the internal energy of each fluid   
+  !   e is the internal energy of each fluid
   !   s is the entropy of each fluid
   integer::k
   real(dp)::smallgamma,biggamma,p_0,rho_0,e_c,p_c,delpc,eta
@@ -146,24 +146,24 @@ subroutine eos_s(d,e,s,imat,inv,ncell)
         end if
 
      else if(eos_name == 'cochran-chan')then
-        
-        ! Cochran-Chan EOS written in terms of the Mie-Grueneisen EOS 
+
+        ! Cochran-Chan EOS written in terms of the Mie-Grueneisen EOS
         ! Get Mie-Grueneisen EOS parameters
         smallgamma=eos_params(imat,1);rho_0=eos_params(imat,2)
         E_1=eos_params(imat,3);E_2=eos_params(imat,4)
         A_1=eos_params(imat,5);A_2=eos_params(imat,6)
         C_v=eos_params(imat,7);T_0=eos_params(imat,8)
-        
+
         ! Define the Cochran-Chan constant term
         E_0 = A_1 / (E_1-one) - A_2 / (E_2-one) + rho_0 * C_v * T_0
-        
+
         ! Update Mie-Gruneisen terms for each material
         eta   = d(k)/rho_0
         p_c_1 = A_1 * eta**E_1
         p_c_2 = A_2 * eta**E_2
         p_c   = p_c_1 - p_c_2
         e_c   = p_c_1 / (E_1-one) - p_c_2 / (E_2-one) - eta * E_0
-        
+
         ! Use the EOS to calculate the current entropy/internal energy in a given cell
         ! s = (e - e_c) / rho**gamma; e = e_c + s * rho**gamma
         if(inv .eqv. .false.)then
@@ -175,7 +175,7 @@ subroutine eos_s(d,e,s,imat,inv,ncell)
      end if
 
   end do
-  
+
 end subroutine eos_s
 !###########################################################
 !###########################################################
@@ -192,7 +192,7 @@ subroutine cmpdt(uu,grav,rr,dx,dt,ncell)
   real(dp),dimension(1:nvector,1:nvar)::uu
   real(dp),dimension(1:nvector,1:ndim)::grav
   real(dp),dimension(1:nvector)::rr,dtot
-  
+
   real(dp),dimension(1:nvector,1:npri),save::qq
   real(dp),dimension(1:nvector,1:nmat),save::ff,gg
   real(dp),dimension(1:nvector),save::gg_mat,ee_mat,pp_mat,cc_mat
@@ -201,7 +201,7 @@ subroutine cmpdt(uu,grav,rr,dx,dt,ncell)
   integer::k,idim,imat
 
   ! Convert to primitive variable
-     
+
   ! Volume fraction and fluid density
   do imat = 1,nmat
      do k = 1,ncell
@@ -209,7 +209,7 @@ subroutine cmpdt(uu,grav,rr,dx,dt,ncell)
         gg(k,imat) = uu(k,nmat+imat)/ff(k,imat)
      end do
   end do
-     
+
   ! Compute total density
   dtot(1:ncell) = 0.0
   do imat=1,nmat
@@ -217,7 +217,7 @@ subroutine cmpdt(uu,grav,rr,dx,dt,ncell)
        dtot(k)  = dtot(k) + uu(k,nmat+imat)
     end do
   end do
-  
+
   ! Compute velocity and specific kinetic energy
   ekin(1:ncell)    = 0.0
   do idim = 1,ndim
@@ -226,14 +226,14 @@ subroutine cmpdt(uu,grav,rr,dx,dt,ncell)
         ekin(k)    = ekin(k) + half*qq(k,idim)**2
      end do
   end do
-  
+
   ! Compute partial internal energies
   do imat=1,nmat
     do k = 1,ncell
        qq(k,ndim+nmat+imat) = uu(k,2*nmat+ndim+imat)/ff(k,imat) - gg(k,imat)*ekin(k)
     end do
   end do
-  
+
   ! Calculate the total speed of sound
   cc(1:ncell)=0
   inv=.false.
@@ -245,10 +245,10 @@ subroutine cmpdt(uu,grav,rr,dx,dt,ncell)
     ! Call eos routine
     call eos(gg_mat,ee_mat,pp_mat,cc_mat,imat,inv,ncell)
     do k=1,ncell
-      cc(k) = cc(k) + ff(k,imat)*gg(k,imat) * cc_mat(k)**2 
-    end do 
+      cc(k) = cc(k) + ff(k,imat)*gg(k,imat) * cc_mat(k)**2
+    end do
   end do
-  ! Convert rho c^2 to c 
+  ! Convert rho c^2 to c
   cc(1:ncell)=sqrt(cc(1:ncell)/dtot(1:ncell))
 
   ! Compute wave speed
@@ -256,7 +256,7 @@ subroutine cmpdt(uu,grav,rr,dx,dt,ncell)
      cc(k) = abs(qq(k,1))+cc(k)
   end do
   do idim = 2,ndim
-     do k = 1,ncell 
+     do k = 1,ncell
         cc(k) = cc(k) + abs(qq(k,idim))+cc(k)
      end do
   end do
@@ -266,7 +266,7 @@ subroutine cmpdt(uu,grav,rr,dx,dt,ncell)
      st(k) = zero
   end do
   do idim = 1,ndim
-     do k = 1,ncell 
+     do k = 1,ncell
         st(k) = st(k) + abs(grav(k,idim))
      end do
   end do
@@ -297,7 +297,7 @@ subroutine hydro_refine(ug,um,ud,ok,current_dim,ncell)
   logical::inv
   real(dp),dimension(1:nvector,1:nvar)::ug,um,ud
   logical ,dimension(1:nvector)       ::ok
-  
+
   integer::k,idim,imat
   real(dp),dimension(1:nvector,1:npri),save::qg,qm,qd
   real(dp),dimension(1:nvector,1:nmat),save::fg,fm,fd
@@ -314,9 +314,9 @@ subroutine hydro_refine(ug,um,ud,ok,current_dim,ncell)
   real(dp)::ffg,ffm,ffd,ddg,ddm,ddd
   real(dp)::ppg,ppm,ppd,vvg,vvm,vvd
   real(dp)::ccg,ccm,ccd,error
-  
+
   ! Convert to primitive variables
-     
+
   ! Volume fraction and fluid density
   do imat = 1,nmat
      do k = 1,ncell
@@ -328,7 +328,7 @@ subroutine hydro_refine(ug,um,ud,ok,current_dim,ncell)
         gd(k,imat) = ud(k,imat+nmat)/fd(k,imat)
      end do
   end do
-     
+
   ! Compute total density
   dtotg(1:ncell)=0.0
   dtotm(1:ncell)=0.0
@@ -340,7 +340,7 @@ subroutine hydro_refine(ug,um,ud,ok,current_dim,ncell)
         dtotd(k) = dtotd(k) + ud(k,nmat+imat)
      end do
   end do
-  
+
   ! Compute velocity and specific kinetic energy
   eking(1:ncell)=0.0
   ekinm(1:ncell)=0.0
@@ -355,7 +355,7 @@ subroutine hydro_refine(ug,um,ud,ok,current_dim,ncell)
         ekind(k) = ekind(k) + half*qd(k,idim)**2
      end do
   end do
-  
+
   ! Compute total internal energy
   do imat=1,nmat
      do k = 1,ncell
@@ -364,7 +364,7 @@ subroutine hydro_refine(ug,um,ud,ok,current_dim,ncell)
         qd(k,ndim+nmat+imat) = ud(k,2*nmat+ndim+imat)/ud(k,imat) - gd(k,imat)*ekind(k)
      end do
   end do
-  
+
   ! Call eos routine to calculate the total pressure and the total speed of sound
   inv=.false.
   pg(1:ncell)=0
@@ -394,7 +394,7 @@ subroutine hydro_refine(ug,um,ud,ok,current_dim,ncell)
         cd(k) = cd(k) + fd(k,imat) * gd(k,imat) * cd_mat(k)**2
      end do
   end do
-  ! Convert c^2 to c 
+  ! Convert c^2 to c
   cg(1:ncell)=sqrt(cg(1:ncell)/dtotg(1:ncell))
   cm(1:ncell)=sqrt(cm(1:ncell)/dtotm(1:ncell))
   cd(1:ncell)=sqrt(cd(1:ncell)/dtotd(1:ncell))
@@ -409,7 +409,7 @@ subroutine hydro_refine(ug,um,ud,ok,current_dim,ncell)
         ok(k) = ok(k) .or. error > err_grad_d
      end do
   end if
-  
+
   if(err_grad_f >= 0.)then
      do imat=1,nmat
         do k=1,ncell
@@ -421,7 +421,7 @@ subroutine hydro_refine(ug,um,ud,ok,current_dim,ncell)
         end do
      end do
   end if
-  
+
   if(err_grad_p > -1.0)then
      do k=1,ncell
         ppg=pg(k); ppm=pm(k); ppd=pd(k)
@@ -431,7 +431,7 @@ subroutine hydro_refine(ug,um,ud,ok,current_dim,ncell)
         ok(k) = ok(k) .or. error > err_grad_p
      end do
   end if
-  
+
   if(err_grad_u >= 0.)then
      do idim = 1,ndim
         do k=1,ncell
@@ -491,9 +491,9 @@ end subroutine hydro_refine
 !     do k=1,ngrid
 !       cl(k) = cl(k) + (fl(k,imat)*gl(k,imat)/ql(k,1)) * cl_mat(k)
 !       cr(k) = cr(k) + (fr(k,imat)*gr(k,imat)/qr(k,1)) * cr_mat(k)
-!     end do 
+!     end do
 !   end do
-!   ! Convert c^2 to c 
+!   ! Convert c^2 to c
 !   cl(1:ngrid)=sqrt(cl(1:ngrid))
 !   cr(1:ngrid)=sqrt(cr(1:ngrid))
 
@@ -509,7 +509,7 @@ end subroutine hydro_refine
 !   end do
 
 !   ! Left going or right going contact wave
-!   do i=1,ngrid   
+!   do i=1,ngrid
 !      sgnm(i) = sign(one,ustar(i))
 !   end do
 
@@ -544,7 +544,7 @@ end subroutine hydro_refine
 !      qstar(i,4) = qo(i,4)
 ! #endif
 !   end do
-  
+
 !   ! Sound speed
 !   inv=.true.
 !   cl(1:ngrid)=0
@@ -552,9 +552,9 @@ end subroutine hydro_refine
 !     do imat=1,nmat
 !       call eos(gstar,qstar,estar,pstar_mat,cstar_mat,imat,inv,ngrid)
 !       cstar(k) = cstar(k) + (fstar(k,imat)*gstar(k,imat)/qstar(k,1)) * cstar_mat(k)
-!     end do 
+!     end do
 !   end do
-!   ! Convert c^2 to c 
+!   ! Convert c^2 to c
 !   cstar(1:ngrid)=sqrt(cstar(1:ngrid))
 
 
@@ -647,7 +647,7 @@ subroutine riemann_hllc(fl,fr,gl,gr,ql,qr,cl,cr,fgdnv,ugdnv,egdnv,ngrid)
         ecinl(imat) = ecinl(imat)+half*gl(i,imat)*ql(i,3)**2
 #endif
      end do
-     ! We want to calculate the mixture speed of sound here 
+     ! We want to calculate the mixture speed of sound here
      cfastl = zero
      Ptotl  = zero
      do imat=1,nmat
@@ -655,7 +655,7 @@ subroutine riemann_hllc(fl,fr,gl,gr,ql,qr,cl,cr,fgdnv,ugdnv,egdnv,ngrid)
         Ptotl     = Ptotl  + fl(i,imat)*Pl(imat)
         ekl(imat) = eintl(imat) + ecinl(imat)
      end do
-     ! Mixture speed of sound 
+     ! Mixture speed of sound
      cfastl=sqrt(cfastl/rl)
      ! Right variables
      ur    = qr(i,1)
@@ -672,7 +672,7 @@ subroutine riemann_hllc(fl,fr,gl,gr,ql,qr,cl,cr,fgdnv,ugdnv,egdnv,ngrid)
         ecinr(imat) = ecinr(imat)+half*gr(i,imat)*qr(i,3)**2
 #endif
      end do
-     ! We want to calculate the mixture speed of sound here 
+     ! We want to calculate the mixture speed of sound here
      cfastr = zero
      Ptotr  = zero
      do imat=1,nmat
@@ -680,12 +680,12 @@ subroutine riemann_hllc(fl,fr,gl,gr,ql,qr,cl,cr,fgdnv,ugdnv,egdnv,ngrid)
         Ptotr     = Ptotr  + fr(i,imat)*Pr(imat)
         ekr(imat) = eintr(imat) + ecinr(imat)
      end do
-     ! Mixture speed of sound 
+     ! Mixture speed of sound
      cfastr=sqrt(cfastr/rr)
      ! Compute HLL wave speed
      SL=min(ul,ur)-max(cfastl,cfastr)
      SR=max(ul,ur)+max(cfastl,cfastr)
-     ! Compute lagrangian sound speed 
+     ! Compute lagrangian sound speed
      rcl=rl*(ul-SL)
      rcr=rr*(SR-ur)
      ! Compute acoustic star state
@@ -760,7 +760,7 @@ subroutine riemann_hllc(fl,fr,gl,gr,ql,qr,cl,cr,fgdnv,ugdnv,egdnv,ngrid)
      end do
      ! Momentum flux
      ugdnv(i) = uo
-     fgdnv(i,2*nmat+1)     = ro*uo*uo + Ptoto 
+     fgdnv(i,2*nmat+1)     = ro*uo*uo + Ptoto
      ! Transverse velocities
 #if NDIM > 1
      if(ustar>0)then
@@ -772,11 +772,11 @@ subroutine riemann_hllc(fl,fr,gl,gr,ql,qr,cl,cr,fgdnv,ugdnv,egdnv,ngrid)
 #if NDIM > 2
      if(ustar>0)then
         fgdnv(i,2*nmat+3)  = ro*uo*ql(i,3)
-     else 
+     else
         fgdnv(i,2*nmat+3)  = ro*uo*qr(i,3)
      endif
 #endif
-     ! Energy fluxes 
+     ! Energy fluxes
      do imat=1,nmat
         egdnv(i,imat) = fko(imat)*pko(imat)*uo
         fgdnv(i,2*nmat+ndim+imat) = fko(imat)*(eko(imat)+pko(imat))*uo
@@ -801,7 +801,3 @@ end subroutine riemann_hllc
 !###########################################################
 !###########################################################
 !###########################################################
-
-
-
-

@@ -10,12 +10,12 @@
 ;
 ; CALLING SEQUENCE:
 ;	RD_AMR, Grid, FILE=file, SWAP=swap, NCPU=ncpu, ICPU=icpu,
-;	VERBOSE=verbose 
+;	VERBOSE=verbose
 ;
 ; OPTIONAL INPUTS:
 ;	FILE:   if set, input the scalar string containing the name of
 ;	        the file to be read. Otherwise, a PICKFILE widget is
-;	        launched.  
+;	        launched.
 ;
 ;       SWAP:   if set, reverse the bit ordering (Little Endian versus
 ;               Big Endian)
@@ -23,7 +23,7 @@
 ;       ICPU:   first cpu file to be read. Default: 1.
 ;
 ;       NCPU:   number of cpu files to read, starting from
-;               icpu. Default: all files from icpu to ncpu_max.  
+;               icpu. Default: all files from icpu to ncpu_max.
 ;
 ; OUTPUTS:
 ;	Grid:   store the AMR tree in structure Grid.
@@ -73,7 +73,7 @@ file_base=strmid(file,0,base_offset)
 del_amr,grid
 
 ncpu_run=0L & ndim=0L & nx=0L & ny=0L & nz=0L
-nlevelmax=0L & ngridmax=0L & nstep=0L 
+nlevelmax=0L & ngridmax=0L & nstep=0L
 
 print,'Reading file ',trim(file_base)
 file=trim(file_base+suffix(icpu-1))
@@ -154,7 +154,7 @@ for jcpu=0,ncpu-1 do begin
             pc=ptr_new(mesh2)
             level(i,jcpu)=pc
         endif
-    endfor    
+    endfor
     for i=0L,nlevelmax-1L do begin
         if(ngrid(i,jcpu) gt 0)then begin
             iig=lonarr(ngrid(i,jcpu))

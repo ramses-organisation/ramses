@@ -10,8 +10,8 @@
 ;       Data analysis.
 ;
 ; CALLING SEQUENCE:
-;       SUB3D, Grid, Hydro, Part, Grid_new, Hydro_new, Part_new, 
-;                          XR = xr, YR = yr, ZR = zr, 
+;       SUB3D, Grid, Hydro, Part, Grid_new, Hydro_new, Part_new,
+;                          XR = xr, YR = yr, ZR = zr,
 ;                          VERBOSE = verbose
 ;
 ; INPUTS
@@ -44,7 +44,7 @@
 ; EXAMPLE:
 ;       To extract a sub-cube, type:
 ;
-;               SUB3D, grid, hydro, part, grid1, hydro1, part1, 
+;               SUB3D, grid, hydro, part, grid1, hydro1, part1,
 ;               xr=[0,0.2],yr=[0,0.2], zr=[0,0.3]
 ;
 ; MODIFICATION HISTORY:
@@ -107,21 +107,21 @@ zmin=MAX([0.,zr(0)]) & zmax=MIN([1.,zr(1)])
 for ilevel=1,nlevelmax do begin
     bool=0
     for icpu=0,ncpu-1 do begin
-        
+
         dx=0.5d0^ilevel
         if keyword_set(verbose) then $
           print,ilevel,ngrid(ilevel-1,icpu),format='("Level=",i2," ngrid=",i6)'
-        
+
         if ngrid(ilevel-1,icpu) gt 0 then begin
-            
+
             xg=(*grid.level[ilevel-1,icpu]).xg(*,0)
             yg=(*grid.level[ilevel-1,icpu]).xg(*,1)
             zg=(*grid.level[ilevel-1,icpu]).xg(*,2)
-            
+
             ind=where( xg gt xmin-dx and xg lt xmax+dx and $
                        yg gt ymin-dx and yg lt ymax+dx and $
                        zg gt zmin-dx and zg lt zmax+dx, nok)
-            
+
             if(nok gt 0) then begin
 ; Define structure at fine level
                 nngridtot=nngridtot+nok
@@ -160,7 +160,7 @@ for ilevel=1,nlevelmax do begin
         endif
     endfor
 endfor
-                        
+
 grid1={ncpu:nncpu,ndim:nndim,aexp:grid.aexp,nlevelmax:nnlevelmax $
        ,boxlen:grid.boxlen,ngridtot:nngridtot $
        ,ngrid:nngrid(0:nnlevelmax-1,0:ncpu-1) $

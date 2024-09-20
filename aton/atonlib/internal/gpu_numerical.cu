@@ -137,7 +137,7 @@ __global__ void cuStepRadN(
   um1 = rad_N[baseidu+(by-1)*(NCELLX+NBOUND2)*(NCELLY+NBOUND2)];
   u0 = rad_N[baseidu+(by  )*(NCELLX+NBOUND2)*(NCELLY+NBOUND2)];
   up1 = rad_N[baseidu+(by+1)*(NCELLX+NBOUND2)*(NCELLY+NBOUND2)];
-  
+
   int baseidf = 2*NCELL4+(tx)+bx*(NCELLX+NBOUND2);
   fm1 = rad_F[baseidf+(by-1)*(NCELLX+NBOUND2)*(NCELLY+NBOUND2)];
   fp1 = rad_F[baseidf+(by+1)*(NCELLX+NBOUND2)*(NCELLY+NBOUND2)];
@@ -150,13 +150,13 @@ __global__ void cuStepRadN(
   um1 = rad_N[baseidu+(bx-1)*(NCELLX+NBOUND2)];
   u0 = rad_N[baseidu+(bx  )*(NCELLX+NBOUND2)];
   up1 = rad_N[baseidu+(bx+1)*(NCELLX+NBOUND2)];
-  
+
   baseidf = 1*NCELL4+(tx)+by*(NCELLX+NBOUND2)*(NCELLY+NBOUND2);
   fm1 = rad_F[baseidf+(bx-1)*(NCELLX+NBOUND2)];
   fp1 = rad_F[baseidf+(bx+1)*(NCELLX+NBOUND2)];
 
   res = res - 0.5*((fp1-fm1)+LAMBDA_YZ*c*(2*u0-um1-up1))/dx*dt;
-  
+
   // Divergence along X
 
   baseidu=bx*(NCELLX+NBOUND2)+by*(NCELLX+NBOUND2)*(NCELLY+NBOUND2);
@@ -206,7 +206,7 @@ __device__ double Eddington(double fx, double fy, double fz, double ee, double c
     }
     ff = ff/(c*ee);
   }
-  
+
   double arg = fmaxf(4.0 - 3.0*ff*ff, 0.0);
   double chi = (3.0 + 4.0*ff*ff) / (5.0 + 2.0*sqrtf(arg));
 
@@ -250,7 +250,7 @@ __global__ void cuStepRadF(
   __shared__ double u[(NCELLX+NBOUND2)*3],fp[(NCELLX+NBOUND2)*3],fm[(NCELLX+NBOUND2)*3],ep[(NCELLX+NBOUND2)],em[(NCELLX+NBOUND2)];
 
   //================================================ Z DIRECTION =============================================
-  
+
   int baseidu=0*NCELL4+(tx)+bx*(NCELLX+NBOUND2);
 
   u[0*(NCELLX+NBOUND2)+tx]=rad_F[baseidu+(by)*(NCELLX+NBOUND2)*(NCELLY+NBOUND2)]; // FX local cell
@@ -273,32 +273,32 @@ __global__ void cuStepRadF(
   __syncthreads();
 
   // FX Divergence along Z
-  
+
   fp1=Eddington(fp[0*(NCELLX+NBOUND2)+tx],fp[1*(NCELLX+NBOUND2)+tx],fp[2*(NCELLX+NBOUND2)+tx],ep[tx],c,0,2);
   fm1=Eddington(fm[0*(NCELLX+NBOUND2)+tx],fm[1*(NCELLX+NBOUND2)+tx],fm[2*(NCELLX+NBOUND2)+tx],em[tx],c,0,2);
 
-  resfx=u[tx+0*(NCELLX+NBOUND2)]-0.5*((fp1-fm1)+LAMBDA_YZ*c*(2*u[tx+0*(NCELLX+NBOUND2)]-fm[tx+0*(NCELLX+NBOUND2)]-fp[tx+0*(NCELLX+NBOUND2)]))/dx*dt; 
-  
+  resfx=u[tx+0*(NCELLX+NBOUND2)]-0.5*((fp1-fm1)+LAMBDA_YZ*c*(2*u[tx+0*(NCELLX+NBOUND2)]-fm[tx+0*(NCELLX+NBOUND2)]-fp[tx+0*(NCELLX+NBOUND2)]))/dx*dt;
+
 
  // FY Divergence along Z
 
 
   fp1=Eddington(fp[0*(NCELLX+NBOUND2)+tx],fp[1*(NCELLX+NBOUND2)+tx],fp[2*(NCELLX+NBOUND2)+tx],ep[tx],c,1,2);
   fm1=Eddington(fm[0*(NCELLX+NBOUND2)+tx],fm[1*(NCELLX+NBOUND2)+tx],fm[2*(NCELLX+NBOUND2)+tx],em[tx],c,1,2);
-  resfy=u[tx+1*(NCELLX+NBOUND2)]-0.5*((fp1-fm1)+LAMBDA_YZ*c*(2*u[tx+1*(NCELLX+NBOUND2)]-fm[tx+1*(NCELLX+NBOUND2)]-fp[tx+1*(NCELLX+NBOUND2)]))/dx*dt; 
-  
+  resfy=u[tx+1*(NCELLX+NBOUND2)]-0.5*((fp1-fm1)+LAMBDA_YZ*c*(2*u[tx+1*(NCELLX+NBOUND2)]-fm[tx+1*(NCELLX+NBOUND2)]-fp[tx+1*(NCELLX+NBOUND2)]))/dx*dt;
+
 
   // FZ Divergence along Z
 
   fp1=Eddington(fp[0*(NCELLX+NBOUND2)+tx],fp[1*(NCELLX+NBOUND2)+tx],fp[2*(NCELLX+NBOUND2)+tx],ep[tx],c,2,2);
   fm1=Eddington(fm[0*(NCELLX+NBOUND2)+tx],fm[1*(NCELLX+NBOUND2)+tx],fm[2*(NCELLX+NBOUND2)+tx],em[tx],c,2,2);
-  resfz=u[tx+2*(NCELLX+NBOUND2)]-0.5*((fp1-fm1)+LAMBDA_YZ*c*(2*u[tx+2*(NCELLX+NBOUND2)]-fm[tx+2*(NCELLX+NBOUND2)]-fp[tx+2*(NCELLX+NBOUND2)]))/dx*dt; 
-  
+  resfz=u[tx+2*(NCELLX+NBOUND2)]-0.5*((fp1-fm1)+LAMBDA_YZ*c*(2*u[tx+2*(NCELLX+NBOUND2)]-fm[tx+2*(NCELLX+NBOUND2)]-fp[tx+2*(NCELLX+NBOUND2)]))/dx*dt;
+
   __syncthreads();
 
 
   //================================================ Y DIRECTION =============================================
-  
+
   baseidu=0*NCELL4+(tx)+by*(NCELLX+NBOUND2)*(NCELLY+NBOUND2);
 
   u[0*(NCELLX+NBOUND2)+tx]=rad_F[baseidu+(bx)*(NCELLX+NBOUND2)]; // FX local cell
@@ -319,23 +319,23 @@ __global__ void cuStepRadF(
   __syncthreads();
 
   // FX Divergence along Y
-  
+
   fp1=Eddington(fp[0*(NCELLX+NBOUND2)+tx],fp[1*(NCELLX+NBOUND2)+tx],fp[2*(NCELLX+NBOUND2)+tx],ep[tx],c,0,1);
   fm1=Eddington(fm[0*(NCELLX+NBOUND2)+tx],fm[1*(NCELLX+NBOUND2)+tx],fm[2*(NCELLX+NBOUND2)+tx],em[tx],c,0,1);
-  resfx=resfx-0.5*((fp1-fm1)+LAMBDA_YZ*c*(2*u[tx+0*(NCELLX+NBOUND2)]-fm[tx+0*(NCELLX+NBOUND2)]-fp[tx+0*(NCELLX+NBOUND2)]))/dx*dt; 
+  resfx=resfx-0.5*((fp1-fm1)+LAMBDA_YZ*c*(2*u[tx+0*(NCELLX+NBOUND2)]-fm[tx+0*(NCELLX+NBOUND2)]-fp[tx+0*(NCELLX+NBOUND2)]))/dx*dt;
 
  // FY Divergence along Y
 
   fp1=Eddington(fp[0*(NCELLX+NBOUND2)+tx],fp[1*(NCELLX+NBOUND2)+tx],fp[2*(NCELLX+NBOUND2)+tx],ep[tx],c,1,1);
   fm1=Eddington(fm[0*(NCELLX+NBOUND2)+tx],fm[1*(NCELLX+NBOUND2)+tx],fm[2*(NCELLX+NBOUND2)+tx],em[tx],c,1,1);
-  resfy=resfy-0.5*((fp1-fm1)+LAMBDA_YZ*c*(2*u[tx+1*(NCELLX+NBOUND2)]-fm[tx+1*(NCELLX+NBOUND2)]-fp[tx+1*(NCELLX+NBOUND2)]))/dx*dt; 
-  
+  resfy=resfy-0.5*((fp1-fm1)+LAMBDA_YZ*c*(2*u[tx+1*(NCELLX+NBOUND2)]-fm[tx+1*(NCELLX+NBOUND2)]-fp[tx+1*(NCELLX+NBOUND2)]))/dx*dt;
+
   // FZ Divergence along Y
 
   fp1=Eddington(fp[0*(NCELLX+NBOUND2)+tx],fp[1*(NCELLX+NBOUND2)+tx],fp[2*(NCELLX+NBOUND2)+tx],ep[tx],c,2,1);
   fm1=Eddington(fm[0*(NCELLX+NBOUND2)+tx],fm[1*(NCELLX+NBOUND2)+tx],fm[2*(NCELLX+NBOUND2)+tx],em[tx],c,2,1);
-  resfz=resfz-0.5*((fp1-fm1)+LAMBDA_YZ*c*(2*u[tx+2*(NCELLX+NBOUND2)]-fm[tx+2*(NCELLX+NBOUND2)]-fp[tx+2*(NCELLX+NBOUND2)]))/dx*dt; 
-  
+  resfz=resfz-0.5*((fp1-fm1)+LAMBDA_YZ*c*(2*u[tx+2*(NCELLX+NBOUND2)]-fm[tx+2*(NCELLX+NBOUND2)]-fp[tx+2*(NCELLX+NBOUND2)]))/dx*dt;
+
 
 
   __syncthreads();
@@ -344,26 +344,26 @@ __global__ void cuStepRadF(
   //================================================ X DIRECTION =============================================
 
   baseidu=0*NCELL4+bx*(NCELLX+NBOUND2)+by*(NCELLX+NBOUND2)*(NCELLY+NBOUND2);
-  
+
   u[0*(NCELLX+NBOUND2)+tx]=rad_F[tx+baseidu]; // FX local cell
   u[1*(NCELLX+NBOUND2)+tx]=rad_F[tx+baseidu+NCELL4]; // FX local cell
   u[2*(NCELLX+NBOUND2)+tx]=rad_F[tx+baseidu+2*NCELL4]; // FX local cell
   ep[tx]=rad_N[tx+baseidu]; // E Cell+1
 
-  if(tx-NBOUND==0) 
+  if(tx-NBOUND==0)
     {
       u[NBOUND-1+0*(NCELLX+NBOUND2)]=rad_F[baseidu+tx-1];
       u[NBOUND-1+1*(NCELLX+NBOUND2)]=rad_F[baseidu+tx-1+NCELL4];
       u[NBOUND-1+2*(NCELLX+NBOUND2)]=rad_F[baseidu+tx-1+2*NCELL4];
-      ep[NBOUND-1]=rad_N[tx-1+baseidu]; 
+      ep[NBOUND-1]=rad_N[tx-1+baseidu];
     }
 
-  if(tx-NBOUND==blockDim.x-1) 
+  if(tx-NBOUND==blockDim.x-1)
     {
       u[NCELLX+NBOUND+0*(NCELLX+NBOUND2)]=rad_F[baseidu+tx+1];
       u[NCELLX+NBOUND+1*(NCELLX+NBOUND2)]=rad_F[baseidu+tx+1+NCELL4];
       u[NCELLX+NBOUND+2*(NCELLX+NBOUND2)]=rad_F[baseidu+tx+1+2*NCELL4];
-      ep[NCELLX+NBOUND]=rad_N[tx+1+baseidu]; 
+      ep[NCELLX+NBOUND]=rad_N[tx+1+baseidu];
     }
 
   __syncthreads();
@@ -374,21 +374,21 @@ __global__ void cuStepRadF(
   fp1=Eddington(u[0*(NCELLX+NBOUND2)+tx+1],u[1*(NCELLX+NBOUND2)+tx+1],u[2*(NCELLX+NBOUND2)+tx+1],ep[tx+1],c,0,0);
   fm1=Eddington(u[0*(NCELLX+NBOUND2)+tx-1],u[1*(NCELLX+NBOUND2)+tx-1],u[2*(NCELLX+NBOUND2)+tx-1],ep[tx-1],c,0,0);
   resfx=resfx-0.5*((fp1-fm1)+c*(2*u[tx+0*(NCELLX+NBOUND2)]-u[tx+1+0*(NCELLX+NBOUND2)]-u[tx-1+0*(NCELLX+NBOUND2)]))/dx*dt;
-  
+
 
   // FY Divergence along X
 
   fp1=Eddington(u[0*(NCELLX+NBOUND2)+tx+1],u[1*(NCELLX+NBOUND2)+tx+1],u[2*(NCELLX+NBOUND2)+tx+1],ep[tx+1],c,1,0);
   fm1=Eddington(u[0*(NCELLX+NBOUND2)+tx-1],u[1*(NCELLX+NBOUND2)+tx-1],u[2*(NCELLX+NBOUND2)+tx-1],ep[tx-1],c,1,0);
   resfy=resfy-0.5*((fp1-fm1)+c*(2*u[tx+1*(NCELLX+NBOUND2)]-u[tx+1+1*(NCELLX+NBOUND2)]-u[tx-1+1*(NCELLX+NBOUND2)]))/dx*dt;
-  
+
 
   // FZ Divergence along X
 
   fp1=Eddington(u[0*(NCELLX+NBOUND2)+tx+1],u[1*(NCELLX+NBOUND2)+tx+1],u[2*(NCELLX+NBOUND2)+tx+1],ep[tx+1],c,2,0);
   fm1=Eddington(u[0*(NCELLX+NBOUND2)+tx-1],u[1*(NCELLX+NBOUND2)+tx-1],u[2*(NCELLX+NBOUND2)+tx-1],ep[tx-1],c,2,0);
   resfz=resfz-0.5*((fp1-fm1)+c*(2*u[tx+2*(NCELLX+NBOUND2)]-u[tx+1+2*(NCELLX+NBOUND2)]-u[tx-1+2*(NCELLX+NBOUND2)]))/dx*dt;
-  
+
 
   rad_F_new[baseidu+tx]=resfx;
   rad_F_new[baseidu+tx+NCELL4]=resfy;
@@ -437,28 +437,28 @@ __device__ double cuCalcBeta(double T) {
 __device__ void cuCalcCoolingRate(
 	double T, double x, double nH,
 	double aexp,
-	double *lambda, double *tcool) {  
-  T = max(T, MIN_TEMP);  // Protect against divide-by-zero errors. 
+	double *lambda, double *tcool) {
+  T = max(T, MIN_TEMP);  // Protect against divide-by-zero errors.
   double nh2 = nH*1e-6;  // [cm^-3]
 
 
   // 1. Collisional Ionization cooling [erg/cm^3/s]
   double c1 = expf(-157809.1e0/T)*1.27e-21*sqrtf(T)/(1e0+sqrtf(T/1e5))*x*(1-x)*nh2*nh2;
-  
+
   // 2. Case A Recombination cooling [erg/cm^3/s]
   double c2 = 1.778e-29*T*powf(2e0*157807e0/T,1.965e0)/powf(1e0+powf(2e0*157807e0/T/0.541e0,0.502e0),2.697e0)*x*x*nh2*nh2;
-    
+
   // 3. Disabled: Case B Recombination cooling [erg/cm^3/s]
   // TODO: Should we enable or disable this depending on OTSA?
   // c3 = 3.435e-30*T*powf(2e0*157807e0/T,1.970e0)/powf(1e0+(powf(2e0*157807e0/T/2.250e0,0.376e0)),3.720e0)*x*x*nh2*nh2;
   double c3 = 0.0;
 
   // 4. Collisional excitation cooling [erg/cm^3/s]
-  double c4 = expf(-118348e0/T)*7.5e-19/(1+sqrtf(T/1e5))*x*(1-x)*nh2*nh2;  
-  
+  double c4 = expf(-118348e0/T)*7.5e-19/(1+sqrtf(T/1e5))*x*(1-x)*nh2*nh2;
+
   // 5. Bremmsstrahlung [erg/cm^3/s]
   double c5 = 1.42e-27*1.5e0*sqrtf(T)*x*x*nh2*nh2;
-  
+
   // 6. Compton Cooling and Heating [erg/cm^3/s]
   double c6 = 1.017e-37*powf(2.727/aexp,4)*(T-2.727/aexp)*nh2*x;
 
@@ -510,7 +510,7 @@ __global__ void cuStepCooling(
   int j = (idx1-k*(NCELLX*NCELLY))/NCELLX;
   int i = idx1-k*(NCELLX*NCELLY)-j*(NCELLX);
   int idx = (i+NBOUND)+(j+NBOUND)*(NCELLX+NBOUND2)+(k+NBOUND)*(NCELLX+NBOUND2)*(NCELLY+NBOUND2); // following a convention a[k,j,i] where i varies the first
-    
+
   int idloc = tx;
   int idloc3 = 3*idloc;
 
@@ -521,11 +521,11 @@ __global__ void cuStepCooling(
   __shared__ double x0[BLOCKCOOL];
   __shared__ double nH[BLOCKCOOL];
   __shared__ double tloc[BLOCKCOOL];
-  
+
   x0[idloc] = cuxion[idx];
   nH[idloc] = cudensity[idx];
   egyloc[idloc] = rad_N[idx];
-  tloc[idloc] = cutemperature[idx]; 
+  tloc[idloc] = cutemperature[idx];
   floc[0+idloc3] = rad_F[0*NCELL4+idx];
   floc[1+idloc3] = rad_F[1*NCELL4+idx];
   floc[2+idloc3] = rad_F[2*NCELL4+idx];
@@ -631,7 +631,7 @@ void gpu_rad_transport(double c_light, double dx, double dt) {
   cuStepRadF<<<gridsimple,blocksimple>>>(
 	cuegy, cuflx, c_light, dx, dt, cuflx_new);
   cudaThreadSynchronize();
-  
+
   cudaMemcpy(cuegy, cuegy_new, NCELL4*sizeof(double),
 	     cudaMemcpyDeviceToDevice);
   cudaMemcpy(cuflx, cuflx_new, NCELL4*sizeof(double)*3,
