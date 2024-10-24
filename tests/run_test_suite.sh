@@ -11,8 +11,12 @@
 #   ./run_test_suite.sh
 #
 # Options:
-#   - Run the suite in parallel (on 4 cpus):
+#   - Run the suite in parallel with MPI (on 4 cpus):
 #       ./run_test_suite.sh -p 4
+#   - Run the suite in parallel with OPENMP (on 4 cpus):
+#       ./run_test_suite.sh -m 4
+#   - Run the suite in parallel with MPI+OPENMP (on 4 cpus):
+#       ./run_test_suite.sh -p 2 -m 2
 #   - Do not delete results data:
 #       ./run_test_suite.sh -d
 #   - Run in verbose mode:
@@ -33,14 +37,16 @@ testlist="hydro,mhd,poisson,rt,sink,turb,tracer";
 # Determine the parameters for running the test suite
 #######################################################################
 MPI=0;
-NCPU=1;
 GCOV=0;
+OPENMP=0;
+NPROC=1;
+NTHREADS=1;
 VERBOSE=false;
 DELDATA=true;
 COVERAGE=false;
 CLEAN_ALL=false;
 SELECTTEST=false;
-while getopts "cdsp:qt:v" OPTION; do
+while getopts "cdsp:qm:t:v" OPTION; do
    case $OPTION in
       c)
          CLEAN_ALL=true;
@@ -54,7 +60,11 @@ while getopts "cdsp:qt:v" OPTION; do
       ;;
       p)
          MPI=1;
-         NCPU=$OPTARG;
+         NPROC=$OPTARG;
+      ;;
+      m)
+         OPENMP=1;
+         NTHREADS=$OPTARG;
       ;;
       t)
          SELECTTEST=true;
@@ -70,7 +80,7 @@ done
 # Setup paths and commands
 #######################################################################
 TEST_DIRECTORY=$(pwd);                    # The test suite directory
-BASE_DIRECTORY="${TEST_DIRECTORY}/.."; # The main RAMSES directory
+BASE_DIRECTORY="${TEST_DIRECTORY}/..";    # The main RAMSES directory
 BIN_DIRECTORY="${BASE_DIRECTORY}/bin";    # The bin directory
 VISU_DIR="${TEST_DIRECTORY}/visu";        # The visualization directory
 
@@ -83,8 +93,13 @@ GIT_URL=$(git config --get remote.origin.url | sed 's/git@github.com:/https:\/\/
 GIT_URL=${GIT_URL:0:$((${#GIT_URL}-4))};
 THIS_COMMIT=$(git rev-parse HEAD);
 echo > $LOGFILE;
+if [ ${OPENMP} -eq 1 ]; then
+   export OMP_NUM_THREADS=${NTHREADS}
+   export OMP_PLACES=cores
+   export OMP_PROC_BIND=true
+fi
 if [ ${MPI} -eq 1 ]; then
-   RUN_TEST_BASE="mpirun -np ${NCPU} ${BIN_DIRECTORY}/${EXECNAME}";
+   RUN_TEST_BASE="mpirun --map-by slot:pe=${NTHREADS} --np ${NPROC} ${BIN_DIRECTORY}/${EXECNAME}";
 else
    RUN_TEST_BASE="${BIN_DIRECTORY}/${EXECNAME}";
 fi
@@ -292,9 +307,9 @@ for ((i=0;i<$ntests;i++)); do
 
    # Compile source
    echo "Compiling source" | tee -a $LOGFILE;
-   MAKESTRING="make EXEC=${EXECNAME} MPI=${MPI} GCOV=${GCOV} ${FLAGS}";
+   MAKESTRING="make EXEC=${EXECNAME} MPI=${MPI} GCOV=${GCOV} ${FLAGS} OPENMP=${OPENMP}";
    # if [ ${MPI} -eq 1 ]; then
-   #    MAKESTRING="${MAKESTRING} -j ${NCPU}";
+   #    MAKESTRING="${MAKESTRING} -j ${NPROC}";
    # fi
    if $VERBOSE ; then
       $MAKESTRING 2>&1 | tee -a $LOGFILE;
@@ -412,7 +427,7 @@ echo "Commit hash: \href{${GIT_URL}/commits/${THIS_COMMIT}}{${THIS_COMMIT:0:6}}"
 echo "\end{center}" >> $latexfile;
 echo "\begin{table}[ht]" >> $latexfile;
 echo "\centering" >> $latexfile;
-echo "\caption*{Test run summary using ${NCPU} processor(s)}" >> $latexfile;
+echo "\caption*{Test run summary using ${NPROC} processes with ${NTHREADS} threads}" >> $latexfile;
 echo "\begin{tabular}{|r|l|l|l|l|}" >> $latexfile;
 echo "\hline" >> $latexfile;
 echo "~ & Test name & Run time & Total time & Status\\\\" >> $latexfile;
