@@ -98,7 +98,7 @@ subroutine read_hydro_params(nml_ok)
   namelist/sf_params/m_star,n_star,T2_star,g_star,del_star &
        & ,eps_star,jeans_ncells,sf_virial,sf_trelax,sf_tdiss,sf_model&
        & ,sf_log_properties,sf_imf,sf_compressive &
-       & ,T_iso,b_turb,use_dx_loc,use_b_turb_loc
+       & ,T_iso,b_turb,use_dx_loc,use_b_turb_loc, turb_frac
 
   ! Units parameters
   namelist/units_params/units_density,units_time,units_length

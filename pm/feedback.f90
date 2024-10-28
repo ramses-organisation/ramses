@@ -279,8 +279,8 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   endif
   
   ! Photoionization momentum injection from cgs to code units
-  !cs_H2_2=f_esn*(22.0*1d5/scale_v)**2 ! 22 km/s
-  cs_H2_2=0.
+  cs_H2_2=f_esn*(22.0*1d5/scale_v)**2 ! 22 km/s
+  !cs_H2_2=0.
 
   ! Fraction of the SN energy into non-thermal component
   FRAC_NT=0.0

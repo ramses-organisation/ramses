@@ -148,6 +148,7 @@ module amr_parameters
   real(dp)::del_star=200             ! Minimum overdensity to define ISM
   real(dp)::T_iso=100                ! Minimum isothermal temperature at resolution
   real(dp)::b_turb=1.0               ! Turbulence forcing parameter
+  real(dp)::turb_frac=1.0            ! Prefactor on TKE source term
   real(dp)::eta_sn =0                ! Supernova mass fraction
   real(dp)::eta_ssn=0.95d0           ! Single supernova ejected mass fraction (sf_imf=.true. only)
   real(dp)::yield  =0                ! Supernova yield
