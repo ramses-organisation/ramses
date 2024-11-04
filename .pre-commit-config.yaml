@@ -11,3 +11,7 @@ repos:
     hooks:
     - id: fortran-linter
       args: [--inplace]
+
+ci:
+    autofix_prs: false
+    autoupdate_schedule: monthly
