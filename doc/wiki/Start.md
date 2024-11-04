@@ -37,7 +37,7 @@ the code will be compiled.
 
 You need to go first to the `bin/`directory:
 ```
-$ cd trunk/ramses/bin
+$ cd ramses/bin
 $ ls -F
 Makefile	Makefile.rt
 ```
