@@ -9,7 +9,7 @@ subroutine rt_init_flow
 
   integer::ilevel,ivar
 
-  if(verbose)write(*,*)'Entering init_flow'
+  if(verbose)write(*,*)'Entering rt_init_flow'
   do ilevel=nlevelmax,1,-1
      if(ilevel>=levelmin)call rt_init_flow_fine(ilevel)
      call rt_upload_fine(ilevel)
@@ -18,7 +18,7 @@ subroutine rt_init_flow
      end do
      if(simple_boundary)call rt_make_boundary_hydro(ilevel)
   end do
-  if(verbose)write(*,*)'Complete init_flow'
+  if(verbose)write(*,*)'Complete rt_init_flow'
 
 end subroutine rt_init_flow
 !################################################################
@@ -173,10 +173,12 @@ subroutine rt_init_flow_fine(ilevel)
               read(ilun) ! skip first line
               do i3=1,n3(ilevel)
                  read(ilun) ((init_plane(i1,i2),i1=1,n1(ilevel)),i2=1,n2(ilevel))
-                 if(i3.ge.i3_min.and.i3.le.i3_max)then
-                    init_array(i1_min:i1_max,i2_min:i2_max,i3) = &
-                         & init_plane(i1_min:i1_max,i2_min:i2_max)
-                 end if
+                 if(ncache>0)then
+                     if(i3.ge.i3_min.and.i3.le.i3_max)then
+                        init_array(i1_min:i1_max,i2_min:i2_max,i3) = &
+                             & init_plane(i1_min:i1_max,i2_min:i2_max)
+                     end if
+                 endif
               end do
               close(ilun)
               ! Send the token
@@ -220,7 +222,9 @@ subroutine rt_init_flow_fine(ilevel)
            ! In most cases, this is zero (you can change that if necessary)
            if(myid==1)write(*,*)'File '//TRIM(filename)//' not found'
            if(myid==1)write(*,*)'Initialize corresponding variable to default value'
-           init_array=0d0
+           if(ncache>0)then
+               init_array=0d0
+           endif
         endif
 
         if(ncache>0)then
