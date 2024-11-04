@@ -3,7 +3,7 @@
 
 This sets of parameters, contained in the namelist block `&AMR_PARAMS`, controls the AMR grid global properties. Parameters specifying the refinement strategy are described [elsewhere](Refine), and the corresponding namelist block `&REFINE_PARAMS` is used only if `levelmax>levelmin`.
 
- 
+
 | Variable name, syntax, default value | Fortran type  | Description       |
 |:---------------------------- |:------------- |:------------------------- |
 | `levelmin=1`                 |  `integer`    | Minimum level of refinement. This parameter sets the size of the coarse (or base) grid to `nx=2**levelmin`.|

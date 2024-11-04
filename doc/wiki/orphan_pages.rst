@@ -1,8 +1,8 @@
 :orphan:
 
-Pages that are no in `doc/index.rst` toctree 
+Pages that are no in `doc/index.rst` toctree
 
-`Home.md` is disabled in `doc/conf.py` 
+`Home.md` is disabled in `doc/conf.py`
 
 .. toctree::
    :hidden:

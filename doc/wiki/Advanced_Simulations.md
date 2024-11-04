@@ -2,7 +2,7 @@
 
 # Advanced simulations
 
-In this section, we describe in more detail how to configure RAMSES to perform more advanced simulations. 
+In this section, we describe in more detail how to configure RAMSES to perform more advanced simulations.
 
 
 ```{toctree}
