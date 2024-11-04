@@ -2,7 +2,7 @@
 
 In the version of RAMSES after RUM 2017 ([PR #284](https://bitbucket.org/rteyssie/ramses/pull-requests/284) and after), new blocks were introduced instead of one large `&PHYSICS_PARAMS`:
 
-# Parameters
+# Physics Parameters
 
 ## Cooling parameters ##
 
