@@ -54,7 +54,7 @@ jobs:
             path: |
               tests/test_results.pdf
               tests/test_suite.log
-    
+
     docs:
       runs-on: ${{ matrix.os }}
       strategy:

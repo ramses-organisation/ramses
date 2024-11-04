@@ -1,0 +1,42 @@
+name: Code quality
+
+on:
+  pull_request:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        persist-credentials: false
+
+    - name: Set up authentication
+      env:
+        GITHUB_TOKEN: ${{ secrets.PAT_FROM_TARGET_REPO }}
+      run: |
+        git config --global user.name "github-actions[bot]"
+        git config --global user.email "github-actions[bot]@users.noreply.github.com"
+        echo "machine github.com login github-actions[bot] password $GITHUB_TOKEN" > ~/.netrc
+
+    - uses: actions/setup-python@v4
+      with:
+        python-version: 3.x
+    - id: file_changes
+      uses: trilom/file-changes-action@v1.2.4
+      with:
+        output: ' '
+    - uses: pre-commit/action@v3.0.1
+      with:
+        extra_args: --files ${{ steps.file_changes.outputs.files}}
+    - name: Commit & push changes
+      # Only run if pre-commit failed
+      if: failure()
+      uses: actions-js/push@master
+      with:
+        github_token: ${{ secrets.PAT_FROM_TARGET_REPO }}
