@@ -9,7 +9,7 @@ The block named `&REFINE_PARAMS` contains the parameters related to grid refinem
 | `x_refine`          | `real array` | 0.0   | Geometry-based strategy: center of the refined region at each level of the AMR grid.
 | `y_refine`          | `real array` | 0.0   | Geometry-based strategy: center of the refined region at each level of the AMR grid.
 | `z_refine`          | `real array` | 0.0   | Geometry-based strategy: center of the refined region at each level of the AMR grid.
-| `r_refine`          | `real array` | 1e10   | Geometry-based strategy: radius of the refined region at each level.
+| `r_refine`          | `real array` | 1e10   | Geometry-based strategy: **diameter** (yes, not a radius) of the refined region at each level.
 | `a_refine`          | `real array` | 1.0   | Geometry-based strategy: ratio Y/X of the refined region at each level.
 | `b_refine`          | `real array` | 1.0   | Geometry-based strategy: ratio Z/X of the refined region at each level.
 | `exp_refine`        | `real array` | 2.0   | Geometry-based strategy: exponent of the norm.
