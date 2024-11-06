@@ -82,16 +82,18 @@ in more details in the following sections.
 
 Global.md
 Amr.md
-Init.md
+Refine.md
 Output.md
+Init.md
 Boundary_conditions.md
 Hydro_Parameters.md
 Physics.md
 Poisson.md
-Refine.md
 PHEW.md
 Sinks.md
 Movies.md
 TurbulenceDriving.md
 Tracers.md
+RHD_params.md
+RHD_groups.md
 ```

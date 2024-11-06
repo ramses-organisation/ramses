@@ -1,4 +1,5 @@
 
+# RHD Params
 
 This sets of parameters, contained in the namelist block `&RT_PARAMS`, sets radiative properties for RAMSES RHD runs. Note that the number of photon groups (`NGROUPS`) is a compilation parameter, to be set in the Makefile.
 
@@ -9,6 +10,7 @@ For detailed descriptions of the concepts described here, see the following pape
 * [[3] Galaxies that Shine](http://arxiv.org/abs/1501.04632)
 * [[4] A simple model for molecular hydrogen chemistry coupled to radiation hydrodynamics](http://arxiv.org/abs/1802.00445)
 
+and the [documentation page about RHD simulations](./RHD).
 
 | Variable name, syntax, default value | Fortran type  | Description       |
 |:---------------------------- |:------------- |:------------------------- |

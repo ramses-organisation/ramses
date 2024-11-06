@@ -1,4 +1,5 @@
 
+# RHD Groups
 
 This set of parameters, contained in the namelist block `&RT_GROUPS`, sets radiation group properties for RAMSES RHD runs. Note that the number of photon groups (`NGROUPS`) is a compilation parameter, to be set in the Makefile. The default settings are HI, HeI and HeII ionizing photon groups with ionisation cross sections and energies derived from a blackbody spectrum with an effective temperature of 10^5 Kelvin.
 
@@ -6,6 +7,9 @@ For detailed descriptions of the concepts described here, see the following pape
 
 * [[1] RAMSES-RT: radiation hydrodynamics in the cosmological context](http://arxiv.org/abs/1304.7126)
 * [[2] A scheme for radiation pressure and photon diffusion with the M1 closure in RAMSES-RT](http://arxiv.org/abs/1411.6440)
+
+and the [documentation page about RHD simulations](./RHD).
+
 
 
 | Variable name, syntax, default value | Fortran type  | Description       |

@@ -11,8 +11,6 @@ Pages that are no in `doc/index.rst` toctree
    Making_movies.md
    User_Tools.md
    Sink_particles.md
-   RHD_params.md
-   RHD_groups.md
    RAMSES_utils.md
    Postprocessing_Tools.md
    Particle_Families.md
