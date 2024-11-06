@@ -5,9 +5,9 @@ This page is designed to promote tools, datasets or other useful things that may
 
 Feel free to edit this page and add your own tools with details on how to obtain them.
 
-## Initial Conditions 
+## Initial Conditions
 
-### DICE 
+### DICE
 
 DICE is designed to set up one or more galaxies in isolation. It is included in RAMSES.
 
@@ -21,7 +21,7 @@ Code: https://bitbucket.org/ohahn/music
 
 [Doc page](./Music)
 
-### MPgrafic 
+### MPgrafic
 
 MPgrafic generates (large) cosmological initial conditions and can be used to set up RAMSES cosmo simulations.
 
@@ -29,7 +29,7 @@ Code : https://bitbucket.org/broukema/mpgrafic
 
 Reference: http://adsabs.harvard.edu/abs/2013ascl.soft04014P
 
-## Analysis and Post-Processing 
+## Analysis and Post-Processing
 
 ### RAMSES tools
 RAMSES comes with a decent number of Fortran routines and programs to extract information from RAMSES outputs.
@@ -37,7 +37,7 @@ RAMSES comes with a decent number of Fortran routines and programs to extract in
 You can find some documentation on the relevant [doc page](./RAMSES_utils).
 
 
-### OSYRIS 
+### OSYRIS
 OSIRIS is a simple python interface developed by Neil Vaytet to visualise RAMSES outputs: https://osyris.readthedocs.io/en/stable/
 
 ### YT
@@ -53,10 +53,10 @@ It also works for RAMSES outputs by turning cells into particles: https://github
 ### Pymses
 Pymses is an analysis library written in Python for RAMSES outputs: http://irfu.cea.fr/Projets/PYMSES/
 
-### MERA 
+### MERA
 Mera is a Julia package developed by Manuel Behrendt to efficiently read/store/analyse RAMSES outputs: https://github.com/ManuelBehrendt/Mera.jl
 
-## Visualisation 
+## Visualisation
 
 ### GLnemo2
 
