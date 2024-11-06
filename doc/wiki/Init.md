@@ -28,19 +28,19 @@ This sets of parameters, contained in the namelist block `&INIT_PARAMS`. This is
 ## Advanced initial conditions
 
 The `condinit` routine in `hydro/condinit.f90` can be modified to set custom initial conditions.
-The calling sequence is `call condinit(x,u,dx,ncell)`, where 
+The calling sequence is `call condinit(x,u,dx,ncell)`, where
 
-- `x` is an input array of cell center positions, 
+- `x` is an input array of cell center positions,
 - `u` is an output array containing the volume average of the fluid conservative
-variables, namely ($\rho$, $\rho u$, $\rho v$, $\rho w$ and $E$), in this exact order. 
-If more variables are defined, then the user should exploit this routine to define them too. 
+variables, namely ($\rho$, $\rho u$, $\rho v$, $\rho w$ and $E$), in this exact order.
+If more variables are defined, then the user should exploit this routine to define them too.
 - `dx` is a single
-real value containing the cell size for all the cells and ncell is the number of cells. 
+real value containing the cell size for all the cells and ncell is the number of cells.
 
 This routine
-can be used to set the initial conditions directly with Fortran instructions. 
+can be used to set the initial conditions directly with Fortran instructions.
 
 
 ## Input files
 
-Another way to define initial conditions in RAMSES is by using input files (`initfile` parameter) in the grafic format. 
+Another way to define initial conditions in RAMSES is by using input files (`initfile` parameter) in the grafic format.
