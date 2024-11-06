@@ -14,6 +14,7 @@ The block named `&SINK_PARAMS` contains the parameters related to the sink parti
 | `smbh`                | `boolean`    | `.false.`     | Controls if sink behaves as a star or SMBH
 | `agn`                 | `boolean`    | `.false.`     | Controls if SMBH sink produces feedback
 | `create_sinks`        | `boolean`    | `.false.`     | Specifies if sinks are formed with clump finder
+| `check_energies`      | `boolean`    | `.true.`      | when flagging clumps for sink formation, check whether their gravitational energy is dominant
 | `nsinkmax`            | `integer`    | `2000`        | Maximum number of sinks allowed to form
 | `mass_sink_direct_force` | `float`   | `-1`          | Mass in Msun above which sinks are treated with direct N-body solver
 | `ir_cloud`            | `integer`    | `4`           | Radius of cloud region in unit of grid spacing
@@ -27,7 +28,7 @@ The block named `&SINK_PARAMS` contains the parameters related to the sink parti
 | `mass_smbh_seed`      | `float`      | `0.0`         | Accretion mass of sink seed in Msun, if 0, then dynamical and accretion masses are equivalent
 | `mass_halo_AGN`       | `float`      | `1e10`        | Mass of a halo in which AGN sinks are seeded
 | `mass_clump_AGN`      | `float`      | `1e10`        | Mass of a clump in which AGN sinks are seeded
-| `accretion_scheme`    | `string`     | `none`        | Accretion scheme: none, bondi
+| `accretion_scheme`    | `string`     | `none`        | Accretion scheme: none, bondi, threshold
 | `eddington_limit`     | `boolean`    | `.false.`     | Controls if accretion rate should be limited by Eddington rate
 | `acc_sink_boost`      | `float`      | `1`           | Value of boost factor in Bondi velocity (-1 to depend on density)
 | `boost_threshold_density` | `float`  | `0.1`         | Threshold density for boosting, typically the same as n_star; in H/cc
