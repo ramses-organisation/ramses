@@ -12,7 +12,7 @@ This set of parameters, contained in the namelist block `&BOUNDARY_PARAMS`, is u
 | `ibound_min=0` `jbound_min=0` `kbound_min=0` | `integer arrays` | Coordinates of the lower, left, bottom corner of each boundary region. Each coordinate lies between -1 and +1 in each direction. |
 | `ibound_max=0` `jbound_max=0` `kbound_max=0` | `integer arrays` | Likewise, for the upper, right and upper corner of each boundary region. |
 
-
+## Example
 
 ![boundary condition illustration](../img/bc.svg)
 
