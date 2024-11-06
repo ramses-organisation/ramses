@@ -1,6 +1,6 @@
 
 
-:::{versionchanged} 2017 
+:::{versionchanged} 2017
 In the version of RAMSES after RUM 2017 ([PR #284](https://bitbucket.org/rteyssie/ramses/pull-requests/284) and after), new blocks were introduced instead of one large `&PHYSICS_PARAMS`:
 :::
 
@@ -140,7 +140,7 @@ Please visit [https://grackle.readthedocs.io/en/grackle-3.0/Parameters.html](htt
 
 ## Physics parameters (LEGACY ONLY) ##
 
-:::{deprecated} 2017 
+:::{deprecated} 2017
 In the version of RAMSES after RUM 2017 ([PR #284](https://bitbucket.org/rteyssie/ramses/pull-requests/284) and after), new blocks were introduced instead of one large `&PHYSICS_PARAMS`:
 :::
 
