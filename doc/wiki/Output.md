@@ -19,7 +19,7 @@ This namelist block, called `&OUTPUT_PARAMS`, is used to set up the frequency an
 
 
 
-## Restart from previous output 
+## Restart from previous output
 A simulation which has been terminated during run time can be restarted from the last (or any) snapshot output, by setting
 ```
 nrestart=64
@@ -29,7 +29,7 @@ in the namelist file to the output number. If you don't want to change the namel
 ./ramses3d parameters.nml 64
 ```
 
-## Saving progress before job limit termination 
+## Saving progress before job limit termination
 SLURM jobs on computer clusters often have a time limit, after which the process will be terminated. If you don't want to lose the computation progress since your last regular output, you can instruct the SLURM scheduler to send a "warning" signal to the process <n> seconds before killing it with **--signal=10@<n>**. An example sbatch script with <n> set to 120 seconds would look like this:
 
 ```
@@ -51,7 +51,7 @@ RAMSES will catch this signal and dump the current simulation state to a new out
 The signalling does not work on all machines. Sometimes the signal 10 is accompanied by a kill signal and the job is dead before it can perform an output. In this case, there are a couple of useful parameters in the output_params namelist: `walltime_hrs` can be used to specify the walltime given to a job in hours, and `minutes_dump` can then be used to tell RAMSES to dump an output a few minutes before the walltime runs out.
 :::
 
-## Dump immediate output 
+## Dump immediate output
 The above mechanism can be used to force an output be written to the disk immediately at any time during the simulation by sending signal 10 to the process:
 ```
 scancel --signal=10 <jobid>
