@@ -35,7 +35,7 @@ extensions = [
     'sphinx_simplepdf',
 ]
 
-# Enable myst admonitions syntax
+# Enable myst extensions
 myst_enable_extensions = ["colon_fence","dollarmath"]
 
 # Add any paths that contain templates here, relative to this directory.
