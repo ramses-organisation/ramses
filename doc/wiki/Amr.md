@@ -32,8 +32,10 @@ Recall that, in RAMSES, we call “AMR grid” or “oct” a group of $2^{\math
 If for some reason, during the course of the execution, the maximum allowed
 number of grids or particles has been reached, the simulation stops with the
 message:
+```
     No more free memory
     Increase ngridmax
+```
 In this case, don’t panic: just increase ngridmax in the Parameter File and
 resume the execution, starting from the last backup file.
 :::
