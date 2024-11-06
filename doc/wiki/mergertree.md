@@ -49,10 +49,10 @@ What output files are created and how to read them is described further below.
 Important notes
 ------------------------
 
- * To make merger trees, you need to use the clump finder and the particle unbinding routines first. More on clump finding parameters can be found [here][4]. More on particle unbinding can be found [here][6]
+ * To make merger trees, you need to use the clump finder and the particle unbinding routines first. More on clump finding parameters can be found [here](./PHEW.md). More on particle unbinding can be found [here](./unbinding.md).
 
  * Some parts of the code (e.g. binning particles in mass profiles of halos) rely on consistent floating-point  operations.
- [The (intel) fortran compiler however doesn't necessarily use value-safe optimisations][1], which may lead to **errors resulting in warnings**,
+ [The (intel) fortran compiler however doesn't necessarily use value-safe optimisations](https://www.nccs.nasa.gov/images/FloatingPoint_consistency.pdf), which may lead to **errors resulting in warnings**,
  but the code doesn't crash.  The error should be small  (~1e-16), and you may choose to ignore it.
  Otherwise, you might want to compile the code with the  `-fp-model precise` flag for intel, or the
  appropriate flag for the compiler you'd like to use.
@@ -153,11 +153,12 @@ past merged progenitors are traced via 1 particle ("galaxy particle"), the past 
 descendant under consideration.
 
 Mock galaxy catalogues are created using a parametrised SHAM relation between (sub)halo mass and stellar mass adapted
-from [Behroozi, Wechsler and Conroy 2013][3]. Once a subhalo merges into another clump, its (orphan) galaxy is still
+from [Behroozi, Wechsler and Conroy 2013](https://arxiv.org/pdf/1207.6105.pdf). Once a subhalo merges into another clump, its (orphan) galaxy is still
 being tracked for a user-specified number of snapshots (`max_past_snapshots` paarameter below) by tracking what was the
 last identifiable most bound particle of that subhalo.
 
-For more details on how it works, some tests and results, you can have a look [here][5]
+For more details on how it works, some tests and results, you can have a look [here](https://drive.google.com/open?id=1q0RSMeTIF7gQ7s2DXzYZUSG6cQ1LstkF
+).
 
 
 
@@ -202,19 +203,3 @@ Fortran file, and then read it back in at the later snapshot and communicate the
 However, be advised: Using this flag creates a lot of small files (`4* #MPI tasks` number of extra files in
 addition to `2-3 * #MPI tasks` to result files for particle unbinding, merger trees, and, if chosen, galaxy
 files per snapshot). This might become an issue if the machine you're working on applies file number quotas.
-
-
-
-
-
-
-
-
-
-
-[1]: https://www.nccs.nasa.gov/images/FloatingPoint_consistency.pdf
-[2]: https://drive.google.com/file/d/0B7IyoMUxCr-3V3NFSVFjY1lMbk0
-[3]: https://arxiv.org/pdf/1207.6105.pdf
-[4]: PHEW Section
-[5]: https://drive.google.com/open?id=1q0RSMeTIF7gQ7s2DXzYZUSG6cQ1LstkF
-[6]: Unbinding Section
