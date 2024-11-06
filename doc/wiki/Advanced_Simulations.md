@@ -7,7 +7,7 @@ In this section, we describe in more detail how to configure RAMSES to perform m
 
 ```{toctree}
 :maxdepth: 1
-:caption: Parameters:
+:caption: Contents:
 
 Patching.md
 RHD.md
