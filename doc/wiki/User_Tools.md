@@ -64,5 +64,5 @@ Mera is a Julia package developed by Manuel Behrendt to efficiently read/store/a
 
 GLnemo2 is an interactive visualisation 3D program using OpenGL. This software, developed by Jean-Charles Lambert, can help you visualise particles from many different codes, including RAMSES.
 
-It works on your laptop or on larger servers. 
+It works on your laptop or on larger servers.
 - [Code repository](https://projets.lam.fr/projects/glnemo2)
