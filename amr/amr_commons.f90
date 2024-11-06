@@ -26,7 +26,7 @@ module amr_commons
   ! executable identification
   CHARACTER(LEN=300)::builddate,buildcommand,patchdir
   CHARACTER(LEN=300)::gitrepo,gitbranch,githash
-  
+
   ! Save namelist filename
   CHARACTER(LEN=300)::namelist_file
 

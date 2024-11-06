@@ -8,7 +8,7 @@ Feel free to edit this page and add your own tools with details on how to obtain
 
 ## DICE ##
 
-DICE is designed to set up one or more galaxies in isolation. It is included in RAMSES. 
+DICE is designed to set up one or more galaxies in isolation. It is included in RAMSES.
 
 For more information, see: https://bitbucket.org/vperret/dice/wiki/RAMSES\ simulation
 
@@ -31,7 +31,7 @@ Reference: http://adsabs.harvard.edu/abs/2013ascl.soft04014P
 # Analysis and Post-Processing #
 
 ## RAMSES tools ##
-RAMSES comes with a decent number of Fortran routines and programs to extract information from RAMSES outputs. 
+RAMSES comes with a decent number of Fortran routines and programs to extract information from RAMSES outputs.
 
 You can find some documentation on the [wiki page](./RAMSES\ utils)
 
@@ -42,7 +42,7 @@ Mera is a Julia package developed by Manuel Behrendt to efficiently read/store/a
 OSIRIS is a simple python interface developed by Neil Vaytet to visualise RAMSES outputs: https://bitbucket.org/nvaytet/osiris
 
 ## PYNBODY ##
-Pynbody is a python interface developed by Andrew Pontzen to visualise particle data. 
+Pynbody is a python interface developed by Andrew Pontzen to visualise particle data.
 
 It also works for RAMSES outputs by turning cells into particles: https://github.com/pynbody/pynbody
 
@@ -54,7 +54,7 @@ Pymses is an analysis library written in Python for RAMSES outputs: http://irfu.
 YT fills a similar role to Pymses. It is a large community code supporting a number of simulation codes, including RAMSES: http://yt-project.org/
 
 ## Hamu ##
-Hamu lets you organise your simulation results and save Python analysis routine outputs automatically. 
+Hamu lets you organise your simulation results and save Python analysis routine outputs automatically.
 
 It wraps around Pymses, although options such as YT are also possible: https://github.com/samgeen/Hamu
 
@@ -62,7 +62,7 @@ It wraps around Pymses, although options such as YT are also possible: https://g
 
 ## GLnemo2 ##
 
-GLnemo2 is an interactive visualisation 3D program using OpenGL. This software, developed by Jean-Charles Lambert, can help you visualise particles from many different codes, including RAMSES. 
+GLnemo2 is an interactive visualisation 3D program using OpenGL. This software, developed by Jean-Charles Lambert, can help you visualise particles from many different codes, including RAMSES.
 
 It works on your laptop or on larger servers. Download the code here: https://projets.lam.fr/projects/glnemo2
 

@@ -34,7 +34,7 @@ The block named `&SINK_PARAMS` contains the parameters related to the sink parti
 | `boost_threshold_density` | `float`  | `0.1`         | Threshold density for boosting, typically the same as n_star; in H/cc
 | `bondi_use_vrel`      | `boolean`    | `.false.`     | Excludes relative velocity between gas and sink from the accretion calculations
 | `mass_merger_vel_check_AGN` | `float` | `-1`         | Mass above which the check for two sinks' binding energy is applied, in Msun
-| `merging_timescale `  | `float`      | `-1`          | Time during which sinks are considered for merging (non-SMBH only) 
+| `merging_timescale `  | `float`      | `-1`          | Time during which sinks are considered for merging (non-SMBH only)
 | `verbose_AGN`         | `boolean`    | `.false.`     | Controls verbosity of AGN in the log file
 | `AGN_fbk_mode_switch_threshold` | `float` | `0.1`    | Controls the AGN feedback switching
 | `AGN_fbk_frac_ener`   | `float`      | `1.0`         | Controls what fraction of energy goes into thermal feedback
@@ -71,7 +71,7 @@ accretion_scheme='bondi'    ! selects Bondi accretion as accretion mode
 eddington_limit=.true.      ! enables Eddington limit on accretion
 acc_sink_boost=-1           ! boosts accretion according to Booth&Schaye 2009
 boost_threshold_density=0.1 ! threshold density for boosting, typically the same as n_star; in H/cc
-bondi_use_vrel=.false.      ! excludes relative velocity between gas and sink from the accretion calculations 
+bondi_use_vrel=.false.      ! excludes relative velocity between gas and sink from the accretion calculations
 
 ! Merging
 mass_merger_vel_check=1e8   ! sum of sinks' masses for which velocities are checked upon merging to determine if the system is bound

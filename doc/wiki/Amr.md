@@ -3,7 +3,7 @@
 
 This sets of parameters, contained in the namelist block `&AMR_PARAMS`, controls the AMR grid global properties. Parameters specifying the refinement strategy are described [elsewhere](Refine), and the corresponding namelist block `&REFINE_PARAMS` is used only if `levelmax>levelmin`.
 
- 
+
 | Variable name, syntax, default value | Fortran type  | Description       |
 |:---------------------------- |:------------- |:------------------------- |
 | `levelmin=1`                 |  `integer`    | Minimum level of refinement. This parameter sets the size of the coarse (or base) grid to `nx=2**levelmin`.|
@@ -32,7 +32,7 @@ Recall that, in RAMSES, we call “AMR grid” or “oct” a group of $2^{\math
 If for some reason, during the course of the execution, the maximum allowed
 number of grids or particles has been reached, the simulation stops with the
 message:
-    No more free memory        
+    No more free memory
     Increase ngridmax
 In this case, don’t panic: just increase ngridmax in the Parameter File and
 resume the execution, starting from the last backup file.
@@ -47,7 +47,7 @@ can be approximated by:
 - $0.7(\mathtt{ngridmax}/10^6 ) + 0.7(\mathtt{npartmax}/10^7)$ Gbytes per cpu for pure N -body runs,
 - $1.4(\mathtt{ngridmax}/10^6 ) + 0.7(\mathtt{npartmax}/10^7)$ Gb per cpu for N -body and hydro runs,
 - $1.0(\mathtt{ngridmax}/10^6 )$ Gb per cpu for pure hydro runs.
-  
+
 Because of MPI communications overheads, the actual memory used can be slightly higher.
 Note that these numbers are valid for double precision arithmetic. For single precision runs,
 using the preprocessor directive `-DNPRE=4`, you can decrease these figures by 40%.

@@ -3,7 +3,7 @@
 # Boundary Parameters
 
 This set of parameters, contained in the namelist block `&BOUNDARY_PARAMS`, is used to set up boundary conditions on the current simulation. If this namelist block is absent, periodic boundary conditions are assumed. Setting up other types of boundary conditions in RAMSES is quite complex. The default setting, corresponding to a periodic box, should be sufficient in most cases. The strategy to set up boundary conditions is based on using "ghost regions" outside the computational domain, where flow variables are carefully specified in order to mimic the effect of the chosen type of boundary. Note that the order in which boundary regions are specified in the namelist is very important, especially for reflexive or zero gradient boundaries. Specific examples can be found in the namelist/ directory of the package.
- 
+
 | Variable name, syntax, default value | Fortran type | Description |
 |:---------------------------- |:------------- |:------------------------- |
 | `nboundary=1`  | `integer` | Number of ghost regions used to specify the boundary conditions.|
@@ -34,7 +34,7 @@ is defined by coordinates (-1≤i≤+1, j=+1). The boundary type for all 4 regio
 equal to the values of their symmetric cells, with respect to the boundary. This is why the order
 of the ghost regions is so important: regions 1 and 2 are updated first, using only the fluid
 variables within the computational domain. Regions 3 and 4 are updated afterwards, using the
-fluid variables within the computational domain, but also within regions 1 and 2. 
+fluid variables within the computational domain, but also within regions 1 and 2.
 
 In this way, all
 cells within boundary regions are properly defined, especially in the 4 corners of the

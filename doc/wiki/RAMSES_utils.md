@@ -2,7 +2,7 @@
 
 # RAMSES utils
 
-RAMSES is shipped with a few Fortran programs to extract basic information from RAMSES outputs. 
+RAMSES is shipped with a few Fortran programs to extract basic information from RAMSES outputs.
 
 ## Compiling
 

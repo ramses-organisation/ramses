@@ -2,7 +2,7 @@
 # Initial Conditions Parameters
 
 This sets of parameters, contained in the namelist block `&INIT_PARAMS`. This is used to set up the initial conditions.
- 
+
 | Variable name, syntax, default value | Fortran type | Description |
 |:---------------------------- |:------------- |:------------------------- |
 | `nregion=1`  | `integer` | Number of independent regions in the computational box used to set up initial flow variables. |

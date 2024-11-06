@@ -3,7 +3,7 @@
 # Output Parameters
 
 This namelist block, called `&OUTPUT_PARAMS`, is used to set up the frequency and properties of data output to disk.
- 
+
 | Variable name, syntax, default value | Fortran type | Description |
 |:---------------------------- |:------------- |:------------------------- |
 | `noutput=1`  | `integer` | Number of specified output times.  At least one output time should be given, corresponding to the end of the simulation. |
