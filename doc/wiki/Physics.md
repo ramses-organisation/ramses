@@ -1,8 +1,10 @@
 
 
+:::{versionchanged} 2017 
 In the version of RAMSES after RUM 2017 ([PR #284](https://bitbucket.org/rteyssie/ramses/pull-requests/284) and after), new blocks were introduced instead of one large `&PHYSICS_PARAMS`:
+:::
 
-# Physics Parameters
+# Physics and Units Parameters
 
 ## Cooling parameters ##
 
@@ -138,7 +140,12 @@ Please visit [https://grackle.readthedocs.io/en/grackle-3.0/Parameters.html](htt
 
 ## Physics parameters (LEGACY ONLY) ##
 
-The block named `&PHYSICS_PARAMS` contains the parameters related to physical models.
+:::{deprecated} 2017 
+In the version of RAMSES after RUM 2017 ([PR #284](https://bitbucket.org/rteyssie/ramses/pull-requests/284) and after), new blocks were introduced instead of one large `&PHYSICS_PARAMS`:
+:::
+
+
+The block named `&PHYSICS_PARAMS` used to contain the parameters related to physical models.
 
 | Variable name | Fortran type | Default value  | Description               |
 |:------------------- |:-------|:----- |:------------------------- |
