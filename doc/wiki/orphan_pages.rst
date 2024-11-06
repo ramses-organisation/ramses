@@ -9,7 +9,6 @@ Pages that are no in `doc/index.rst` toctree
 
    Initial.md
    Making_movies.md
-   User_Tools.md
    Sink_particles.md
    RAMSES_utils.md
    Postprocessing_Tools.md

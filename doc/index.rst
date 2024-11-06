@@ -30,7 +30,7 @@ Table of Contents
   wiki/Runtime_Parameters.md
   wiki/Advanced_Simulations.md
   wiki/Testing.md
-
+  wiki/User_Tools.md
 
 .. toctree::
   :caption: Developer Documentation

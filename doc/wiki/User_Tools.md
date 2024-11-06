@@ -10,7 +10,7 @@ Feel free to edit this page and add your own tools with details on how to obtain
 
 DICE is designed to set up one or more galaxies in isolation. It is included in RAMSES.
 
-For more information, see: https://bitbucket.org/vperret/dice/wiki/RAMSES\ simulation
+For more information, see: https://bitbucket.org/vperret/dice/wiki/RAMSES_simulation
 
 ## MUSIC ##
 
@@ -18,7 +18,7 @@ MUSIC generates cosmological initial conditions and can be used to set up RAMSES
 
 Code: https://bitbucket.org/ohahn/music
 
-Wiki page: ./Music
+[Doc page](./Music)
 
 ## MPgrafic ##
 
@@ -33,13 +33,13 @@ Reference: http://adsabs.harvard.edu/abs/2013ascl.soft04014P
 ## RAMSES tools ##
 RAMSES comes with a decent number of Fortran routines and programs to extract information from RAMSES outputs.
 
-You can find some documentation on the [wiki page](./RAMSES\ utils)
+You can find some documentation on the relevant [doc page](./RAMSES_utils).
 
 ## MERA ##
 Mera is a Julia package developed by Manuel Behrendt to efficiently read/store/analyse RAMSES outputs: https://github.com/ManuelBehrendt/Mera.jl
 
-## OSIRIS ##
-OSIRIS is a simple python interface developed by Neil Vaytet to visualise RAMSES outputs: https://bitbucket.org/nvaytet/osiris
+## OSYRIS ##
+OSIRIS is a simple python interface developed by Neil Vaytet to visualise RAMSES outputs: https://osyris.readthedocs.io/en/stable/
 
 ## PYNBODY ##
 Pynbody is a python interface developed by Andrew Pontzen to visualise particle data.
