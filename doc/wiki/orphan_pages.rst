@@ -19,3 +19,4 @@ Pages that are no in `doc/index.rst` toctree
    Parallel.md
    Memory.md
    Maps_and_profiles.md
+   Cosmological_Simulations.md

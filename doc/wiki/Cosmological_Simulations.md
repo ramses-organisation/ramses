@@ -12,7 +12,5 @@ specifying `cosmo=.true.` in the `&RUN_PARAMS` namelist block.
 
 ```{toctree}
 :maxdepth: 1
-:caption: Parameters:
-
-./Restart.md
+:caption: Contents:
 ```

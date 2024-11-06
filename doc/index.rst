@@ -28,7 +28,6 @@ Table of Contents
 
   wiki/Start.md
   wiki/Runtime_Parameters.md
-  wiki/Cosmological_Simulations.md
   wiki/Advanced_Simulations.md
   wiki/Testing.md
 

@@ -11,8 +11,9 @@ In this section, we describe in more detail how to configure RAMSES to perform m
 
 Patching.md
 RHD.md
+unbinding.md
+mergertree.md
 Zoom_Simulations.md
-
 ```
 
 <!-- 1. [Patching the code](./Patching)
