@@ -1,5 +1,5 @@
 
-# Testing 
+# Testing
 
 ## 1. Running the automatic test suite
 

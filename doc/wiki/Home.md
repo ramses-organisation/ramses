@@ -1,4 +1,4 @@
-# Outdated! 
+# Outdated!
 
 ## Welcome to the ramses wiki !
 
@@ -28,7 +28,7 @@ generated output files.
 
 The goal of this wiki is to provide a step-by-step tutorial in
 using the [ramses][1] code.  We will first describe a simple example
-of its use.  More complex set-up will  be addressed in a second step. 
+of its use.  More complex set-up will  be addressed in a second step.
 Typical [ramses][1] users can be grouped into 3 categories:
 
 * Beginners: It is possible to execute [ramses][1] using only run time
@@ -48,4 +48,3 @@ are modified.
 add new equations, or add new  routines in order to modify the default
 [ramses][1]  application.   This  wiki  will describe  some  of  these
 advanced features.
-
