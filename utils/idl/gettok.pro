@@ -1,11 +1,11 @@
 function gettok,st,char
 ;+
 ; NAME:
-;	GETTOK                                    
+;	GETTOK
 ; PURPOSE:
 ;	Retrieve the first part of the string up to a specified character
 ; EXPLANATION:
-;	GET TOKen - Retrieve first part of string until the character char 
+;	GET TOKen - Retrieve first part of string until the character char
 ;	is encountered.
 ;
 ; CALLING SEQUENCE:
@@ -18,11 +18,11 @@ function gettok,st,char
 ;	st - (scalar) string to get token from (on output token is removed)
 ;
 ; OUTPUT:
-;	token - scalar string value is returned 
+;	token - scalar string value is returned
 ;
 ; EXAMPLE:
 ;	If ST is 'abc=999' then gettok(ST,'=') would return
-;	'abc' and ST would be left as '999' 
+;	'abc' and ST would be left as '999'
 ;
 ; HISTORY
 ;	version 1  by D. Lindler APR,86

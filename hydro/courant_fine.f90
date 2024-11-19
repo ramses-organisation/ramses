@@ -98,12 +98,12 @@ subroutine courant_fine(ilevel)
 
         ! Compute total energy
         do i=1,nleaf
-           ekin_loc=ekin_loc+uu(i,ndim+2)*vol
+           ekin_loc=ekin_loc+uu(i,neul)*vol
         end do
 
         ! Compute total internal energy
         do i=1,nleaf
-           eint_loc=eint_loc+uu(i,ndim+2)*vol
+           eint_loc=eint_loc+uu(i,neul)*vol
         end do
         do ivar=1,ndim
            do i=1,nleaf
@@ -113,7 +113,7 @@ subroutine courant_fine(ilevel)
 #if NENER>0
         do ivar=1,nener
            do i=1,nleaf
-              eint_loc=eint_loc-uu(i,ndim+2+ivar)*vol
+              eint_loc=eint_loc-uu(i,nhydro+ivar)*vol
            end do
         end do
 #endif
@@ -230,12 +230,12 @@ subroutine check_cons(ilevel)
 
         ! Compute total energy
         do i=1,nleaf
-           ekin_loc=ekin_loc+uu(i,ndim+2)*vol
+           ekin_loc=ekin_loc+uu(i,neul)*vol
         end do
 
         ! Compute total internal energy
         do i=1,nleaf
-           eint_loc=eint_loc+uu(i,ndim+2)*vol
+           eint_loc=eint_loc+uu(i,neul)*vol
         end do
         do ivar=1,ndim
            do i=1,nleaf
@@ -245,7 +245,7 @@ subroutine check_cons(ilevel)
 #if NENER>0
         do ivar=1,nener
            do i=1,nleaf
-              eint_loc=eint_loc-uu(i,ndim+2+ivar)*vol
+              eint_loc=eint_loc-uu(i,nhydro+ivar)*vol
            end do
         end do
 #endif

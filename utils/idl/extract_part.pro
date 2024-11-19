@@ -8,7 +8,7 @@ npart=0L
 openr,1,file,/f77_unformatted,swap_endian=swap
 readu,1,ndimp
 readu,1,npart
-print,ndimp,npart,format='("ndim=",I1," npart=",I8)'    
+print,ndimp,npart,format='("ndim=",I1," npart=",I8)'
 
 xp=dblarr(npart,ndimp)
 readu,1,xp

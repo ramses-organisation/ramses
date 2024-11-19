@@ -2,7 +2,7 @@
 
 void main
 {
-  
+
   return;
 }
 
@@ -24,7 +24,7 @@ int ReadRamses(KD kd,FILE *fp)
 
   kd->nActive = npart;
   kd->p = (PARTICLE *)malloc(kd->nActive*sizeof(PARTICLE));
-  
+
   printf("N part = %d \n",kd->nActive);
   printf("N cpus = %d \n",ncpu);
   printf("N dimensions = %d \n",ndim);
@@ -41,14 +41,14 @@ int ReadRamses(KD kd,FILE *fp)
       fread(&dummy, sizeof(dummy), 1, fp);
       fread(&temp,sizeof(float),npart,fp);
       fread(&dummy, sizeof(dummy), 1, fp);
-      
+
       for(j=0;j<=npart-1;j++)
 	{
 	  kd->p[j].r[i] = temp[j];
 	}
     }
   printf("Positions Done\n");
-  
+
   // Skipping velocities
   for(i=0;i<=ndim-1;i++)
     {
@@ -66,10 +66,10 @@ int ReadRamses(KD kd,FILE *fp)
     }
 
 
-  kd->fMass = temp[1];	
+  kd->fMass = temp[1];
   printf("Mass Part. =%f\n", kd->fMass);
   printf("Mass Part. =%f\n", temp[100]);
 
-  return kd->nActive;	
+  return kd->nActive;
 
 }

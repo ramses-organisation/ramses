@@ -39,7 +39,7 @@ module rt_parameters
   logical::isHe=.true.                              !     He ionization fractions tracked?
   logical::isH2=.false.                             !                          H2 tracked?
   integer::ixHI=0, ixHII=0, ixHeII=0, ixHeIII=0     !      Indexes of ionization fractions
-  logical::is_SED_single_Z=.false.                  !                   Tracks if single Z 
+  logical::is_SED_single_Z=.false.                  !                   Tracks if single Z
                                                     !                 in SED interpolation
 
   ! RT_PARAMS namelist--------------------------------------------------------------------

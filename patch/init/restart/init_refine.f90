@@ -304,6 +304,3 @@ subroutine kill_gas_part(ilevel)
 111 format('   Entering kill_gas_part for level ',I2)
 !---------------------------------------------
 end subroutine
-
-
-

@@ -34,11 +34,11 @@ subroutine boundana(x,u,dx,ibound,nn)
   integer::i,ivar,id,iu,iv,iw,ip,is                     ! Indices Euler
   integer::iAL,iBL,iCL,iAR,iBR,iCR                 ! Indices Magnetic field
   real(dp)::p1,p2,p3,rho1,rho2,rho3,x1,x2,g,T0,drho! Variables
-  real(dp)::A1,A2,A3,B1,B2,B3,C1,C2,C3             ! Magnetic fields                   
+  real(dp)::A1,A2,A3,B1,B2,B3,C1,C2,C3             ! Magnetic fields
   real(dp)::gammainit1,gammainit2,gammainit3       ! Polytropic indices
   real(dp),dimension(1:nvector,1:nvar+3),save::q   ! Primitive variables
 
-  ! Initialize 
+  ! Initialize
   id=1; iu=2; iv=3; iw=4; ip=5; is=9
   iAL=6; iBL=7; iCL=8
   iAR=nvar+1; iBR=nvar+2; iCR=nvar+3
@@ -63,8 +63,8 @@ subroutine boundana(x,u,dx,ibound,nn)
      end do
   end do
 
-  ! User defined boundary conditions 
-  
+  ! User defined boundary conditions
+
   do i=1,nn
     !! rho, P
     ! Bottom stable zone
@@ -79,7 +79,7 @@ subroutine boundana(x,u,dx,ibound,nn)
       q(i,iAR)=A1
       q(i,iBR)=B1
       q(i,iCR)=C1
-    
+
     ! Convective zone
     else if ((x(i,1) .gt. x1) .and. (x(i,1) .lt. x2)) then
       T0 = 1 - ((gammainit2-1.0d0)/gammainit2)*g*(rho2/p2)*((x(i,1)-x1))
@@ -93,7 +93,7 @@ subroutine boundana(x,u,dx,ibound,nn)
       q(i,iBR)=B2
       q(i,iCR)=C2
     ! Top stable zone
-    else 
+    else
       T0 = 1 - ((gammainit3-1.0d0)/gammainit3)*g*(rho3/p3)*((x(i,1)-x2))
       q(i,id)=rho3*((T0)**(1.0/(gammainit3-1.0d0)))
       q(i,ip)=p3*((T0)**(gammainit3/(gammainit3-1.0d0)))
@@ -105,7 +105,7 @@ subroutine boundana(x,u,dx,ibound,nn)
       q(i,iBR)=B3
       q(i,iCR)=C3
     endif
-    
+
     !! u,v,w
     q(i,iu)=0.0d0
     q(i,iv)=0.0d0
@@ -151,5 +151,5 @@ subroutine boundana(x,u,dx,ibound,nn)
      u(1:nn,ivar)=q(1:nn,1)*q(1:nn,ivar)
   end do
 #endif
-  
+
 end subroutine boundana

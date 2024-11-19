@@ -7,12 +7,12 @@
 
 cd /scratch/scratchdir/teyssier/yohan
 
-set nrestart = `ls | grep backup_| wc -l`  
+set nrestart = `ls | grep backup_| wc -l`
 #set nrestart = 0
 
 cat > start$nrestart.nml <<EOF
 
-&RUN_PARAMS 
+&RUN_PARAMS
 hydro=.true.
 poisson=.true.
 pic=.true.
@@ -78,7 +78,7 @@ eta_sn=0.1
 yield=0.1
 /
 
-&REFINE_PARAMS 
+&REFINE_PARAMS
 interpol_var=1
 interpol_type=0
 mass_sph=5d-5
@@ -91,5 +91,3 @@ EOF
 prun -n8 $HOME/ramses/bin/yohan3d start$nrestart.nml > run$nrestart.log
 
 ls -als
-
-

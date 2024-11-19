@@ -338,4 +338,3 @@ module tracer_utils
     end subroutine reset_tracer_move_flag
 
 end module tracer_utils
-

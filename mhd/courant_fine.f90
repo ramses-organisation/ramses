@@ -107,7 +107,7 @@ subroutine courant_fine(ilevel)
 
         ! Compute total energy
         do i=1,nleaf
-           ekin_loc=ekin_loc+uu(i,5)*vol
+           ekin_loc=ekin_loc+uu(i,neul)*vol
         end do
 
         ! Compute total magnetic energy
@@ -119,18 +119,18 @@ subroutine courant_fine(ilevel)
 
         ! Compute total internal energy
         do i=1,nleaf
-           eint_loc=eint_loc+uu(i,5)*vol
+           eint_loc=eint_loc+uu(i,neul)*vol
         end do
         do ivar=1,3
            do i=1,nleaf
               eint_loc=eint_loc-0.5d0*uu(i,1+ivar)**2/uu(i,1)*vol &
-                   & -0.125d0*(uu(i,5+ivar)+uu(i,nvar+ivar))**2*vol
+                   & -0.125d0*(uu(i,neul+ivar)+uu(i,nvar+ivar))**2*vol
            end do
         end do
 #if NENER>0
         do ivar=1,nener
            do i=1,nleaf
-              eint_loc=eint_loc-uu(i,8+ivar)*vol
+              eint_loc=eint_loc-uu(i,nhydro+ivar)*vol
            end do
         end do
 #endif
@@ -193,7 +193,7 @@ subroutine velocity_fine(ilevel)
   ! the maximum density rho_max, and the potential energy
   !----------------------------------------------------------
   integer::igrid,ngrid,ncache,i,ind,iskip,ix,iy,iz
-  integer::nx_loc,idim,neul=5
+  integer::nx_loc,idim
   real(dp)::dx,dx_loc,scale,d,u,v,w,A,B,C
   real(dp),dimension(1:twotondim,1:3)::xc
   real(dp),dimension(1:3)::skip_loc

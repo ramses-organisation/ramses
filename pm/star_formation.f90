@@ -753,9 +753,9 @@ subroutine star_formation(ilevel)
               enddo
               write(ilun,'(E24.12)',advance='no') uold(ind_cell_new(i),1)
               do ivar=2,nvar
-                 if(ivar.eq.ndim+2)then
+                 if(ivar.eq.neul)then
                     ! Temperature
-                    uvar=(gamma-1.0d0)*(uold(ind_cell_new(i),ndim+2))*scale_T2
+                    uvar=(gamma-1.0d0)*(uold(ind_cell_new(i),neul))*scale_T2
                  else
                     uvar=uold(ind_cell_new(i),ivar)
                  endif

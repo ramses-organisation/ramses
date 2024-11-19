@@ -72,7 +72,7 @@ subroutine newdt_fine(ilevel)
      vsink_max=0d0
      do isink=1,nsink
         if(.not. new_born(isink))then
-           vsink2=0d0     
+           vsink2=0d0
            do idim=1,ndim
               vsink2=vsink2+vsink(isink,idim)**2
            end do
@@ -87,7 +87,7 @@ subroutine newdt_fine(ilevel)
         dtnew(ilevel)=MIN(dtnew(ilevel),courant_factor*dx_loc/vsink_max)
      endif
   endif
-  
+
 #ifdef ATON
   ! Maximum time step for ATON
   if(aton)then
@@ -231,7 +231,3 @@ subroutine newdt2(ind_part,dt_loc,ekin_loc,nn,ilevel)
   end do
 
 end subroutine newdt2
-
-
-
-

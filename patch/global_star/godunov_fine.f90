@@ -122,25 +122,25 @@ subroutine scale_cosmomag(ind_cell,exp_scale)
   !--------------------------------------------------------------------------
   real(dp)::A,B,C,exp_scale,e_mag
 
-  ! Compute old e_mag 
+  ! Compute old e_mag
   A=0.5*(unew(ind_cell,6)+unew(ind_cell,nvar+1))
   B=0.5*(unew(ind_cell,7)+unew(ind_cell,nvar+2))
   C=0.5*(unew(ind_cell,8)+unew(ind_cell,nvar+3))
   e_mag=0.5*(A**2+B**2+C**2)
-  
+
   ! Remove from internal energy
   unew(ind_cell,5) = unew(ind_cell,5) - e_mag
-  
+
   ! Rescale B
   unew(ind_cell,6:8) = unew(ind_cell,6:8) * exp_scale
   unew(ind_cell,nvar+1:nvar+3) = unew(ind_cell,nvar+1:nvar+3) * exp_scale
-  
+
   ! Compute new e_mag
   A=0.5*(unew(ind_cell,6)+unew(ind_cell,nvar+1))
   B=0.5*(unew(ind_cell,7)+unew(ind_cell,nvar+2))
   C=0.5*(unew(ind_cell,8)+unew(ind_cell,nvar+3))
   e_mag=0.5*(A**2+B**2+C**2)
-      
+
   ! Add back to internal energy
   unew(ind_cell,5) = unew(ind_cell,5) + e_mag
 end subroutine scale_cosmomag
@@ -162,13 +162,13 @@ subroutine update_cosmomag(ilevel,exp_scale)
 
   do ind=1,twotondim
     iskip=ncoarse+(ind-1)*ngridmax
-    
+
     ! Update the active cells
     do i=1,active(ilevel)%ngrid
       ind_cell = active(ilevel)%igrid(i)+iskip
       call scale_cosmomag(ind_cell,exp_scale)
     end do
-    
+
     ! Do the same for reception cells
     do icpu=1,ncpu
       do i=1,reception(icpu,ilevel)%ngrid
@@ -254,7 +254,7 @@ subroutine set_uold(ilevel)
            end if
         end do
      end if
-#if NVAR>8 
+#if NVAR>8
      ! Correct total energy using the entropy
      do i=1,active(ilevel)%ngrid
         ind_cell=active(ilevel)%igrid(i)+iskip
@@ -276,7 +276,7 @@ subroutine set_uold(ilevel)
         e_prim=uold(ind_cell,9)/(gamma-1.0)*d**(gamma-1.0)
         uold(ind_cell,5)=e_prim+e_kin+e_mag
      end do
-#endif     
+#endif
   end do
 
 111 format('   Entering set_uold for level ',i2)
@@ -687,7 +687,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
               uloc(ind_nexist(i),i3,j3,k3,ivar)=u2(i,ind_son,ivar)
            end do
         end do
-        
+
         ! Gather equilibrium model
         if(strict_equilibrium>0)then
           do idim=1,ndim

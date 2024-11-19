@@ -28,7 +28,7 @@ subroutine tracex(q,dq,c,qm,qp,dx,dt,ngrid)
   real(dp)::spminus, spplus, spzero
   real(dp)::apright, amright, azrright
   real(dp)::apleft,  amleft,  azrleft
-#if NVAR > NDIM + 2
+#if NVAR > NHYDRO
   integer ::n
   real(dp)::a
   real(dp)::dax
@@ -107,8 +107,8 @@ subroutine tracex(q,dq,c,qm,qp,dx,dt,ngrid)
      end do
   end do
 
-#if NVAR > NDIM + 2
-  do n = ndim+3, nvar
+#if NVAR > NHYDRO
+  do n = nhydro+1, nvar
      do k = klo, khi
         do j = jlo, jhi
            do i = ilo, ihi
@@ -170,7 +170,7 @@ subroutine tracexy(q,dq,c,qm,qp,dx,dy,dt,ngrid)
   real(dp)::apleft,  amleft,  azrleft,  azuleft,  azvleft
   real(dp)::srx,sux,svx,spx
   real(dp)::sry,suy,svy,spy
-#if NVAR > NDIM + 2
+#if NVAR > NHYDRO
   integer::n
   real(dp)::a, dax, day, sax, say
   real(dp)::azaright, azaleft
@@ -319,9 +319,9 @@ subroutine tracexy(q,dq,c,qm,qp,dx,dy,dt,ngrid)
      end do
   end do
 
-#if NVAR > NDIM + 2
+#if NVAR > NHYDRO
   ! Passive scalars
-  do n = ndim+3, nvar
+  do n = nhydro+1, nvar
      do k = klo, khi
         do j = jlo, jhi
            do i = ilo, ihi
@@ -403,7 +403,7 @@ subroutine tracexyz(q,dq,c,qm,qp,dx,dy,dz,dt,ngrid)
   real(dp)::srx,sux,svx,swx,spx
   real(dp)::sry,suy,svy,swy,spy
   real(dp)::srz,suz,svz,swz,spz
-#if NVAR > NDIM + 2
+#if NVAR > NHYDRO
   integer::n
   real(dp)::a, dax, day, daz, sax, say, saz
   real(dp)::azaright, azaleft
@@ -632,9 +632,9 @@ subroutine tracexyz(q,dq,c,qm,qp,dx,dy,dz,dt,ngrid)
      end do
   end do
 
-#if NVAR > NDIM + 2
+#if NVAR > NHYDRO
   ! Passive scalars
-  do n = ndim+3, nvar
+  do n = nhydro+1, nvar
      do k = klo, khi
         do j = jlo, jhi
            do i = ilo, ihi

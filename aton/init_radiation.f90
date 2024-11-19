@@ -131,7 +131,3 @@ subroutine init_radiation
   end if
 
 end subroutine init_radiation
-
-
-
-

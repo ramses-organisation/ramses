@@ -187,8 +187,8 @@ subroutine init_flow_fine(ilevel)
            if(ivar==5)filename=TRIM(initfile(ilevel))//'/ic_p'
         endif
         call title(ivar,ncharvar)
-        if(ivar>5)then
-           call title(ivar-5,ncharvar)
+        if(ivar>nhydro)then
+           call title(ivar-nhydro,ncharvar)
            filename=TRIM(initfile(ilevel))//'/ic_pvar_'//TRIM(ncharvar)
         endif
 
@@ -273,41 +273,40 @@ subroutine init_flow_fine(ilevel)
         endif
 
         if(ncache>0)then
+           ! For cosmo runs, rescale initial conditions to code units
+           if(cosmo)then
+              ! Compute approximate average temperature in K
+              if(.not. cooling)T2_start=1.356d-2/aexp**2
+              if(ivar==1)init_array=(1.0d0+dfact(ilevel)*init_array)*omega_b/omega_m
+              if(ivar==2)init_array=dfact(ilevel)*vfact(1)*dx_loc/dxini(ilevel)*init_array/vfact(ilevel)
+              if(ivar==3)init_array=dfact(ilevel)*vfact(1)*dx_loc/dxini(ilevel)*init_array/vfact(ilevel)
+              if(ivar==4)init_array=dfact(ilevel)*vfact(1)*dx_loc/dxini(ilevel)*init_array/vfact(ilevel)
+              if(ivar==neul)init_array=(1.0d0+init_array)*T2_start/scale_T2
+           endif
 
-        ! For cosmo runs, rescale initial conditions to code units
-        if(cosmo)then
-           ! Compute approximate average temperature in K
-           if(.not. cooling)T2_start=1.356d-2/aexp**2
-           if(ivar==1)init_array=(1.0d0+dfact(ilevel)*init_array)*omega_b/omega_m
-           if(ivar==2)init_array=dfact(ilevel)*vfact(1)*dx_loc/dxini(ilevel)*init_array/vfact(ilevel)
-           if(ivar==3)init_array=dfact(ilevel)*vfact(1)*dx_loc/dxini(ilevel)*init_array/vfact(ilevel)
-           if(ivar==4)init_array=dfact(ilevel)*vfact(1)*dx_loc/dxini(ilevel)*init_array/vfact(ilevel)
-           if(ivar==ndim+2)init_array=(1.0d0+init_array)*T2_start/scale_T2
-        endif
-
-        ! Loop over cells
-        do ind=1,twotondim
-           iskip=ncoarse+(ind-1)*ngridmax
-           do i=1,ncache
-              igrid=active(ilevel)%igrid(i)
-              icell=igrid+iskip
-              xx1=xg(igrid,1)+xc(ind,1)-skip_loc(1)
-              xx1=(xx1*(dxini(ilevel)/dx)-xoff1(ilevel))/dxini(ilevel)
-              xx2=xg(igrid,2)+xc(ind,2)-skip_loc(2)
-              xx2=(xx2*(dxini(ilevel)/dx)-xoff2(ilevel))/dxini(ilevel)
-              xx3=xg(igrid,3)+xc(ind,3)-skip_loc(3)
-              xx3=(xx3*(dxini(ilevel)/dx)-xoff3(ilevel))/dxini(ilevel)
-              i1=int(xx1)+1
-              i1=int(xx1)+1
-              i2=int(xx2)+1
-              i2=int(xx2)+1
-              i3=int(xx3)+1
-              i3=int(xx3)+1
-              ! Scatter to corresponding primitive variable
-              uold(icell,ivar)=init_array(i1,i2,i3)
+           ! Loop over cells
+           do ind=1,twotondim
+              iskip=ncoarse+(ind-1)*ngridmax
+              do i=1,ncache
+                 igrid=active(ilevel)%igrid(i)
+                 icell=igrid+iskip
+                 xx1=xg(igrid,1)+xc(ind,1)-skip_loc(1)
+                 xx1=(xx1*(dxini(ilevel)/dx)-xoff1(ilevel))/dxini(ilevel)
+                 xx2=xg(igrid,2)+xc(ind,2)-skip_loc(2)
+                 xx2=(xx2*(dxini(ilevel)/dx)-xoff2(ilevel))/dxini(ilevel)
+                 xx3=xg(igrid,3)+xc(ind,3)-skip_loc(3)
+                 xx3=(xx3*(dxini(ilevel)/dx)-xoff3(ilevel))/dxini(ilevel)
+                 i1=int(xx1)+1
+                 i1=int(xx1)+1
+                 i2=int(xx2)+1
+                 i2=int(xx2)+1
+                 i3=int(xx3)+1
+                 i3=int(xx3)+1
+                 ! Scatter to corresponding primitive variable
+                 uold(icell,ivar)=init_array(i1,i2,i3)
+              end do
            end do
-        end do
-        ! End loop over cells
+           ! End loop over cells
         endif
      end do
      ! End loop over input variables
@@ -340,7 +339,7 @@ subroutine init_flow_fine(ilevel)
               end do
               ! Compute pressure from temperature and density
               do i=1,ngrid
-                 uold(ind_cell(i),ndim+2)=uold(ind_cell(i),1)*uold(ind_cell(i),ndim+2)
+                 uold(ind_cell(i),neul)=uold(ind_cell(i),1)*uold(ind_cell(i),neul)
               end do
            end do
            ! End loop over cells
@@ -376,14 +375,14 @@ subroutine init_flow_fine(ilevel)
 #if NDIM>2
               vz=uold(ind_cell(i),4)
 #endif
-              pp=uold(ind_cell(i),ndim+2)
+              pp=uold(ind_cell(i),neul)
               ek=0.5d0*(vx**2+vy**2+vz**2)
               ei=pp/(gamma-1.0d0)
               vv(i)=ei+rr*ek
            end do
            ! Scatter to corresponding conservative variable
            do i=1,ngrid
-              uold(ind_cell(i),ndim+2)=vv(i)
+              uold(ind_cell(i),neul)=vv(i)
            end do
            ! Compute momentum density
            do ivar=1,ndim
@@ -397,14 +396,14 @@ subroutine init_flow_fine(ilevel)
                  uold(ind_cell(i),ivar+1)=vv(i)
               end do
            end do
-#if NVAR > NDIM + 2
+#if NVAR > NHYDRO
            ! Compute passive variable density
-           do ivar=ndim+3,nvar
+           do ivar=nhydro+1,nvar
               do i=1,ngrid
                  rr=uold(ind_cell(i),1)
                  uold(ind_cell(i),ivar)=rr*uold(ind_cell(i),ivar)
               end do
-           enddo
+           end do
 #endif
         end do
         ! End loop over cells
@@ -483,7 +482,7 @@ subroutine region_condinit(x,q,dx,nn)
 
   integer::i,k
   real(dp)::vol,r,xn,yn,zn,en
-#if NVAR > NDIM + 2 || NENER > 0
+#if NVAR > NHYDRO || NENER > 0
   integer::ivar
 #endif
 
@@ -496,9 +495,9 @@ subroutine region_condinit(x,q,dx,nn)
 #if NDIM>2
   q(1:nn,4)=0.0d0
 #endif
-  q(1:nn,ndim+2)=smallr*smallc**2/gamma
-#if NVAR > NDIM + 2
-  do ivar=ndim+3,nvar
+  q(1:nn,neul)=smallr*smallc**2/gamma
+#if NVAR > NHYDRO
+  do ivar=nhydro+1,nvar
      q(1:nn,ivar)=0.0d0
   end do
 #endif
@@ -537,15 +536,15 @@ subroutine region_condinit(x,q,dx,nn)
 #if NDIM>2
               q(i,4)=w_region(k)
 #endif
-              q(i,ndim+2)=p_region(k)
+              q(i,neul)=p_region(k)
 #if NENER>0
               do ivar=1,nener
-                 q(i,ndim+2+ivar)=prad_region(k,ivar)
+                 q(i,nhydro+ivar)=prad_region(k,ivar)
               enddo
 #endif
-#if NVAR>NDIM+2+NENER
-              do ivar=ndim+3+nener,nvar
-                 q(i,ivar)=var_region(k,ivar-ndim-2-nener)
+#if NVAR>NHYDRO+NENER
+              do ivar=nhydro+1+nener,nvar
+                 q(i,ivar)=var_region(k,ivar-nhydro-nener)
               end do
 #endif
            end if
@@ -564,7 +563,7 @@ subroutine region_condinit(x,q,dx,nn)
            yn=max(1d0-abs(x(i,2)-y_center(k))/dx, 0.0_dp)
 #endif
 #if NDIM>2
-           zn=max(1d0-abs(x(i,3)-z_center(k))/dx, 0.0_dp)
+           zn=max(1d0-abs(x(i,3)-z_center(k))/dx,0.0_dp)
 #endif
            r=xn*yn*zn
            ! If cell lies within CIC cloud,
@@ -577,15 +576,15 @@ subroutine region_condinit(x,q,dx,nn)
 #if NDIM>2
            q(i,4)=q(i,4)+w_region(k)*r
 #endif
-           q(i,ndim+2)=q(i,ndim+2)+p_region(k)*r/vol
+           q(i,neul)=q(i,neul)+p_region(k)*r/vol
 #if NENER>0
            do ivar=1,nener
-              q(i,ndim+2+ivar)=q(i,ndim+2+ivar)+prad_region(k,ivar)*r/vol
+              q(i,nhydro+ivar)=q(i,nhydro+ivar)+prad_region(k,ivar)*r/vol
            enddo
 #endif
-#if NVAR>NDIM+2+NENER
-           do ivar=ndim+3+nener,nvar
-              q(i,ivar)=var_region(k,ivar-ndim-2-nener)
+#if NVAR>NHYDRO+NENER
+           do ivar=nhydro+1+nener,nvar
+              q(i,ivar)=var_region(k,ivar-nhydro-nener)
            end do
 #endif
         end do

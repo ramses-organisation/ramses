@@ -489,7 +489,7 @@ program histo_main
                           vol_diff=vol_diff+dx**3
                        endif
                     endif
-                    
+
                  end if
               end do
 
@@ -510,7 +510,7 @@ program histo_main
 
   write(*,*)'Total mass=',total_mass
   write(*,*)'Total volume=',total_volume
-  
+
   if(type==34)then
      emag_dens=emag_dens/vol_dens
      emag_diff=emag_diff/vol_diff
@@ -519,9 +519,9 @@ program histo_main
 !     emag_diff=emag_diff/(xxmax-xxmin)/(yymax-yymin)/(zzmax-zzmin)
 !!$     write(*,*)'Total field strength=',sqrt(2*(emag_dens+emag_diff))
 !!$     write(*,*)'Dense gas B strength=',sqrt(2*(emag_dens))
-!!$     write(*,*)'Diffuse gas strength=',sqrt(2*(emag_diff))     
+!!$     write(*,*)'Diffuse gas strength=',sqrt(2*(emag_diff))
   endif
-  
+
   ! Output file
   if (filetype=='bin')then
      nomfich=TRIM(outfich)
@@ -565,7 +565,7 @@ contains
     implicit none
 
     integer       :: i,n
-    
+
     character(len=4)   :: opt
     character(len=128) :: arg
 

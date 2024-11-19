@@ -1,7 +1,7 @@
 /* SLICE.H, Daniel Eisenstein, 1997 */
-/* Based on a paper by Daniel Eisenstein & Piet Hut, 
+/* Based on a paper by Daniel Eisenstein & Piet Hut,
 "HOP: A New Group-Finding Algorithm for N-body Simulations."
-See the included documentation or view it at 
+See the included documentation or view it at
 http://www.sns.ias.edu/~eisenste/hop/hop_doc.html */
 
 /* Version 1.0 (12/15/97) -- Original Release */
@@ -40,10 +40,10 @@ typedef struct slicestruct {
 	float sigma8;	/* At z=0 */
 
 	/* Next, some information about this slice in particular */
-	float z, a, t, growth; 
+	float z, a, t, growth;
 		/* a=1 at z=0, g=a at early times */
 	float hubb;	/* This is a*H(z), but without h0.  So it's 0.1 km/s/kpc
-		   redshifted appropriately.  This is used to relate 
+		   redshifted appropriately.  This is used to relate
 		   comoving positions and peculiar velocities */
 
 	/* Now some information about the data */

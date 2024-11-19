@@ -1,6 +1,6 @@
 This namelist contains various input parameters for RAMSES runs
 
-&RUN_PARAMS 
+&RUN_PARAMS
 hydro=.true.
 nrestart=0
 ncontrol=1
@@ -14,7 +14,7 @@ gravity_type=0
 epsilon=1e-2
 /
 
-&AMR_PARAMS 
+&AMR_PARAMS
 levelmin=5
 levelmax=5
 ngridmax=20000

@@ -4,7 +4,7 @@
   include 'eos_mg.f90'
 #elif (EOS == 2)
   include 'eos_cc.f90'
-#endif 
+#endif
 
 !###########################################################
 !###########################################################
@@ -20,7 +20,7 @@ subroutine cmpdt(uu,grav,rr,dx,dt,ncell)
   real(dp),dimension(1:nvector,1:nvar)::uu
   real(dp),dimension(1:nvector,1:ndim)::grav
   real(dp),dimension(1:nvector)::rr
-  
+
   real(dp),dimension(1:nvector,1:npri),save::qq
   real(dp),dimension(1:nvector,1:nmat),save::ff,gg,kappa_matt
   real(dp),dimension(1:nvector),save::ekin,dtot,cc,st,pp,kappa_hatt
@@ -28,7 +28,7 @@ subroutine cmpdt(uu,grav,rr,dx,dt,ncell)
   integer::k,idim,imat
 
   ! Convert to primitive variable
-     
+
   ! Volume fraction and fluid density
   do imat = 1,nmat
      do k = 1,ncell
@@ -36,12 +36,12 @@ subroutine cmpdt(uu,grav,rr,dx,dt,ncell)
         gg(k,imat) = uu(k,imat+npri+nmat)
      end do
   end do
-     
+
   ! Compute density
   do k = 1,ncell
      qq(k,1) = uu(k,1)
   end do
-  
+
   ! Compute velocity and specific kinetic energy
   ekin(1:ncell)=0.0
   do idim = 1,ndim
@@ -50,15 +50,15 @@ subroutine cmpdt(uu,grav,rr,dx,dt,ncell)
         ekin(k) = ekin(k) + half*qq(k,idim+1)**2
      end do
   end do
-  
+
   ! Compute total internal energy
   do k = 1,ncell
      qq(k,npri) = uu(k,npri) - uu(k,1)*ekin(k)
   end do
-  
+
   ! Call eos routine
   call eos(ff,gg,qq,pp,cc,kappa_matt,kappa_hatt,ncell)
-  
+
   ! Compute wave speed
   if(geom==3)then
      do k = 1,ncell
@@ -76,7 +76,7 @@ subroutine cmpdt(uu,grav,rr,dx,dt,ncell)
      end do
   endif
   do idim = 2,ndim
-     do k = 1,ncell 
+     do k = 1,ncell
         cc(k) = cc(k) + abs(qq(k,idim+1))+cc(k)
      end do
   end do
@@ -86,7 +86,7 @@ subroutine cmpdt(uu,grav,rr,dx,dt,ncell)
      st(k) = zero
   end do
   do idim = 1,ndim
-     do k = 1,ncell 
+     do k = 1,ncell
         st(k) = st(k) + abs(grav(k,idim))
      end do
   end do
@@ -116,7 +116,7 @@ subroutine hydro_refine(ug,um,ud,ok,current_dim,ncell)
   integer::ncell,current_dim
   real(dp),dimension(1:nvector,1:nvar)::ug,um,ud
   logical ,dimension(1:nvector)       ::ok
-  
+
   integer::k,idim,imat
   real(dp),dimension(1:nvector,1:npri),save::qg,qm,qd
   real(dp),dimension(1:nvector,1:nmat),save::fg,fm,fd
@@ -130,9 +130,9 @@ subroutine hydro_refine(ug,um,ud,ok,current_dim,ncell)
   real(dp)::ffg,ffm,ffd,ddg,ddm,ddd
   real(dp)::ppg,ppm,ppd,vvg,vvm,vvd
   real(dp)::ccg,ccm,ccd,error
-  
+
   ! Convert to primitive variables
-     
+
   ! Volume fraction and fluid density
   do imat = 1,nmat
      do k = 1,ncell
@@ -144,7 +144,7 @@ subroutine hydro_refine(ug,um,ud,ok,current_dim,ncell)
         gd(k,imat) = ud(k,imat+npri+nmat)
      end do
   end do
-     
+
   ! Detect embedded body
   if(static)then
      do k=1,ncell
@@ -183,7 +183,7 @@ subroutine hydro_refine(ug,um,ud,ok,current_dim,ncell)
      qm(k,1) = um(k,1)
      qd(k,1) = ud(k,1)
   end do
-  
+
   ! Compute velocity and specific kinetic energy
   eking(1:ncell)=0.0
   ekinm(1:ncell)=0.0
@@ -198,19 +198,19 @@ subroutine hydro_refine(ug,um,ud,ok,current_dim,ncell)
         ekind(k) = ekind(k) + half*qd(k,idim+1)**2
      end do
   end do
-  
+
   ! Compute total internal energy
   do k = 1,ncell
      qg(k,npri) = ug(k,npri) - qg(k,1)*eking(k)
      qm(k,npri) = um(k,npri) - qm(k,1)*ekinm(k)
      qd(k,npri) = ud(k,npri) - qd(k,1)*ekind(k)
   end do
-  
+
   ! Call eos routine
   call eos(fg,gg,qg,pg,cg,kappa_matg,kappa_hatg,ncell)
   call eos(fm,gm,qm,pm,cm,kappa_matm,kappa_hatm,ncell)
   call eos(fd,gd,qd,pd,cd,kappa_matd,kappa_hatd,ncell)
-  
+
   ! Compute errors
   if(err_grad_d >= 0.)then
      do k=1,ncell
@@ -265,7 +265,7 @@ subroutine hydro_refine(ug,um,ud,ok,current_dim,ncell)
 !!$                & ABS((ddd-ddm)/(ddd+ddm+floor_d)) , &
 !!$                & ABS((ddm-ddg)/(ddm+ddg+floor_d)) )
 !!$           write(*,*)wg(k),wd(k)
-!!$           write(*,*)bg(k),bd(k)           
+!!$           write(*,*)bg(k),bd(k)
 !!$           write(*,*)ddg,ddm,ddd
 !!$           write(*,*)error,ok(k)
 !!$        endif
@@ -324,7 +324,7 @@ subroutine riemann_acoustic(fl,fr,gl,gr,ql,qr,cl,cr,fgdnv,ggdnv,qgdnv,ngrid)
   end do
 
   ! Left going or right going contact wave
-  do i=1,ngrid   
+  do i=1,ngrid
      sgnm(i) = sign(one,ustar(i))
   end do
 
@@ -402,4 +402,3 @@ end subroutine riemann_acoustic
 !###########################################################
 !###########################################################
 !###########################################################
-

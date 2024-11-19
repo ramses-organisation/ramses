@@ -154,7 +154,7 @@ recursive subroutine amr_step(ilevel,icount)
 #if NDIM==3
         if(clumpfind .and. ndim==3) call clump_finder(.true.,.false.)
 #endif
-        
+
         call dump_all
 
         if (output_now_all.EQV..true.) then

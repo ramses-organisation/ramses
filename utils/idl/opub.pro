@@ -1,10 +1,10 @@
 ;+
-; NAME: 
+; NAME:
 ;				OPUB
 ;
-; PURPOSE: 
+; PURPOSE:
 ;				set (open) system variables to produce a plot with
-; 			publication standards. Characters are magnified and lines 
+; 			publication standards. Characters are magnified and lines
 ; 			are thickened so that a plot (with form=2 with ops.pro) can
 ; 			be reduced by about 50% and still be legible (as for eg. a
 ; 			one colum pplot in an APJ article)
@@ -13,12 +13,12 @@
 ; CALLING:
 ;				opub,CSIZE=csize,THICK=thick
 ;
-; OPTIONAL INPUTS: 
+; OPTIONAL INPUTS:
 ;				csize: character size (default=1.4)
 ;       thick: line thickness (default=2.8)none
-;	
-; OUTPUT: 
-;	
+;
+; OUTPUT:
+;
 ;
 ; HISTORY:
 ;	Written: A. Refregier 1996.

@@ -7,7 +7,7 @@ subroutine read_hydro_params(nml_ok)
   !--------------------------------------------------
   ! Local variables
   !--------------------------------------------------
-  integer::i,idim,ifixed,nboundary_true=0
+  integer::i,idim,nboundary_true=0
   integer ,dimension(1:MAXBOUND)::bound_type
   real(dp)::ek_bound
   logical :: dummy
@@ -26,13 +26,9 @@ subroutine read_hydro_params(nml_ok)
        & ,d_region,u_region,v_region,w_region,p_region &
 #ifdef SOLVERmhd
        & ,A_region,B_region,C_region,B_ave &
-#if NVAR>8+NENER
-       & ,var_region &
 #endif
-#else
-#if NVAR>NDIM+2+NENER
+#if NVAR>NHYDRO+NENER
        & ,var_region &
-#endif
 #endif
 #if NENER>0
        & ,prad_region &
@@ -72,14 +68,10 @@ subroutine read_hydro_params(nml_ok)
        & ,prad_bound &
 #endif
 #ifdef SOLVERmhd
-#if NVAR>8+NENER
-       & ,var_bound &
-#endif
        & ,A_bound,B_bound,C_bound &
-#else
-#if NVAR>NDIM+2+NENER
-       & ,var_bound &
 #endif
+#if NVAR>NHYDRO+NENER
+       & ,var_bound &
 #endif
        & ,d_bound,u_bound,v_bound,w_bound,p_bound,no_inflow
 
@@ -249,12 +241,8 @@ subroutine read_hydro_params(nml_ok)
   !--------------------------------------------------
   ! Check for metal
   !--------------------------------------------------
-#ifdef SOLVERmhd
-  if(metal.and.nvar<(ndim+6))then
-#else
-  if(metal.and.nvar<(ndim+3))then
-#endif
-     if(myid==1)write(*,*)'Error: metals need nvar >= ndim+3'
+  if(metal.and.nvar<(nhydro+1))then
+     if(myid==1)write(*,*)'Error: metals need nvar >= nhydro+1'
      if(myid==1)write(*,*)'Modify hydro_parameters.f90 and recompile'
      nml_ok=.false.
   endif
@@ -281,17 +269,13 @@ subroutine read_hydro_params(nml_ok)
      nml_ok=.false.
   endif
 #endif
-  
+
   !--------------------------------------------------
   ! Check for non-thermal energies
   !--------------------------------------------------
 #if NENER>0
-#ifdef SOLVERmhd
-  if(nvar<(8+nener))then
-#else
-  if(nvar<(ndim+2+nener))then
-#endif
-     if(myid==1)write(*,*)'Error: non-thermal energy need nvar >= ndim+2+nener'
+  if(nvar<(nhydro+nener))then
+     if(myid==1)write(*,*)'Error: non-thermal energy need nvar >= nhydro+nener'
      if(myid==1)write(*,*)'Modify NENER and recompile'
      nml_ok=.false.
   endif
@@ -458,7 +442,7 @@ subroutine read_hydro_params(nml_ok)
      do idim=1,ndim
         ek_bound=ek_bound+0.5d0*boundary_var(i,idim+1)**2/boundary_var(i,1)
      end do
-     boundary_var(i,ndim+2)=ek_bound+P_bound(i)/(gamma-1.0d0)     
+     boundary_var(i,neul)=ek_bound+P_bound(i)/(gamma-1.0d0)
 #endif
   end do
 
@@ -475,15 +459,7 @@ subroutine read_hydro_params(nml_ok)
   !-----------------------------------
   ! Sort out passive variable indices
   !-----------------------------------
-#ifdef SOLVERmhd
-  ! Hard-coded variables are rho,v*ndim,P,B*ndim
-  ! MHD only works in 3D, so ndim=3
-  ifixed=8
-#else
-  ! Hard-coded variables are rho,v*ndim,P
-  ifixed=ndim+2
-#endif
-  inener=ifixed+1
+  inener=nhydro+1
   imetal=inener+nener
   idelay=imetal
   if(metal)idelay=imetal+1
@@ -500,7 +476,7 @@ subroutine read_hydro_params(nml_ok)
   if(sf_virial)ixion=ivirial2+1
   ichem=ixion
   if(aton)ichem=ixion+1
-  if(myid==1.and.hydro.and.(nvar>ndim+2)) then
+  if(myid==1.and.hydro.and.(nvar>nhydro)) then
      write(*,'(A50)')"__________________________________________________"
      write(*,*) 'Hydro var indices:'
 #if NENER>0

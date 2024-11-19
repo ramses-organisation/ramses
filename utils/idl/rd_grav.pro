@@ -18,7 +18,7 @@
 ; OPTIONAL INPUTS:
 ;	FILE:   if set, input the scalar string containing the name of
 ;	        the file to be read. Otherwise, a PICKFILE widget is
-;	        launched.  
+;	        launched.
 ;
 ;       SWAP:   if set, reverse the bit ordering (Little Endian versus
 ;               Big Endian)
@@ -26,8 +26,8 @@
 ;       IVAR:   first grav variable to be read. Default: 1.
 ;
 ;       NVAR:   if set, load in memory only NVAR variables. Default:
-;               all variables from ivar to nvar_max. 
-;	
+;               all variables from ivar to nvar_max.
+;
 ;       ICPU:   first cpu file to be read. Default: 1.
 ;
 ;       NCPU:   number of cpu files to read, starting from

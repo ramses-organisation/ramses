@@ -32,7 +32,7 @@ subroutine make_sn_stellar
   real(dp), dimension(1:3):: avg_center
   real(dp):: avg_radius
   real(dp), dimension(1:navg):: avg_rpow
-  real(dp), dimension(1:navg, 1:nvar+3):: avg_upow
+  real(dp), dimension(1:navg, 1:nvar_all):: avg_upow
   real(dp), dimension(1:navg):: avg
   real(dp):: norm, distance_sn, ekin_before, ekin_after
   logical::r_cooling_resolved=.false.
@@ -87,7 +87,7 @@ subroutine make_sn_stellar
     endif
 
     ! the mass of the massive star
-    sn_m = mstellar(istellar) 
+    sn_m = mstellar(istellar)
 
     !remove the mass that is dumped in the grid from the sink
     msink(isink) = msink(isink) - sn_m
@@ -156,7 +156,7 @@ subroutine make_sn_stellar
     egas_check=0
 
     !now loop over cells again and dump energies, mass and momentum
-    !loop over levels 
+    !loop over levels
     do ilevel = levelmin, nlevelmax
       ! Computing local volume (important for averaging hydro quantities)
       dx = 0.5d0**ilevel
@@ -303,7 +303,7 @@ subroutine sphere_average(navg, center, radius, rpow, upow, avg)
         & , jcoarse_min, kcoarse_min, levelmin, ndim, ngridmax, nlevelmax &
         & , nvector, twotondim, verbose
     use amr_commons, only: active, ncoarse, son, xg, myid
-    use hydro_parameters, only: nvar
+    use hydro_parameters, only: nvar,nvar_all
     use hydro_commons, only: uold
     use mpi_mod
     implicit none
@@ -315,11 +315,7 @@ subroutine sphere_average(navg, center, radius, rpow, upow, avg)
     real(dp), dimension(1:ndim), intent(in):: center         ! Sphere center
     real(dp), intent(in):: radius                            ! Sphere radius
     real(dp), dimension(1:navg), intent(in):: rpow           ! Power of radius in the integral
-#ifdef SOLVERmhd
-    real(dp), dimension(1:navg, 1:nvar+3), intent(in):: upow ! Power of hydro variables in the integral
-#else
-    real(dp), dimension(1:navg, 1:nvar), intent(in):: upow   ! Power of hydro variables in the integral
-#endif
+    real(dp), dimension(1:navg, 1:nvar_all), intent(in):: upow ! Power of hydro variables in the integral
     real(dp), dimension(1:navg), intent(out):: avg           ! Averages
 
     integer:: i, ivar, ilevel, igrid, ind, ix, iy, iz, iskip, idim
@@ -409,11 +405,7 @@ subroutine sphere_average(navg, center, radius, rpow, upow, avg)
                             where(abs(rpow) < 1.0d-10) ! Avoid NaNs of the form 0**0
                                 integrand = 1.0d0
                             end where
-#ifdef SOLVERmhd
-                            do ivar = 1, nvar + 3
-#else
-                            do ivar = 1, nvar
-#endif
+                            do ivar = 1, nvar_all
                                 utemp(:) = uold(ind_cell(i), ivar)
                                 where(abs(upow(:, ivar)) < 1.0d-10) ! Avoid NaNs of the form 0**0
                                     utemp = 1.0d0

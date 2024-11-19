@@ -336,7 +336,7 @@ program part2cube
            endif
 
            if(ok_part)then
-              ddx=(x(i,idim)-xxmin)/dx-0.5d0+1d0 ! +1 is for the int operation on ddx than can take negative values                                                                                                                             
+              ddx=(x(i,idim)-xxmin)/dx-0.5d0+1d0 ! +1 is for the int operation on ddx than can take negative values
               ddy=(x(i,jdim)-yymin)/dy-0.5d0+1d0
               ddz=(x(i,kdim)-zzmin)/dz-0.5d0+1d0
               ix=ddx
@@ -474,7 +474,7 @@ contains
     implicit none
 
     integer       :: i,n
-    
+
     character(len=4)   :: opt
     character(len=128) :: arg
 

@@ -112,7 +112,7 @@ subroutine move_fine_static(ilevel)
            next_part=nextp(ipart)
            if(star) then
               if ( (.not. static_DM .and. is_DM(typep(ipart))) .or. &
-                   & (.not. static_stars .and. is_not_DM(typep(ipart)) )  ) then                 
+                   & (.not. static_stars .and. is_not_DM(typep(ipart)) )  ) then
                  ! FIXME: there should be a static_sink as well
                  ! FIXME: what about debris?
                  npart2=npart2+1

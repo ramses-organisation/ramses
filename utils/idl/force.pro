@@ -41,7 +41,7 @@ case 1 of
         fr=ABS(fx)
         fe=2.d0*!DPI*(1.0d0-ABS(r/lbox*2.0d0))
         ft=ABS(fe-fr)
-    end 
+    end
     ndimp eq 2: begin
         r=sqrt(x^2+y^2)
         fr=(fx*x+fy*y)/r
@@ -73,7 +73,7 @@ case 1 of
         return
     end
 endcase
- 
+
 if not keyword_set(title) then title=' '
 
 ;if not keyword_set(noerase) then begin
@@ -82,7 +82,7 @@ if not keyword_set(title) then title=' '
 ;      ,/xs,/ys,psym=3 $
 ;      ,xtitle='!17r',ytitle='!7D!17F/F' $
 ;      ,charsize=1. $
-;      ,title=title  
+;      ,title=title
 ;endif else begin
 ;    oplot,r,abs(fr)/fe-1.,psym=3
 ;endelse

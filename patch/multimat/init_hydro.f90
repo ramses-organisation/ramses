@@ -18,17 +18,17 @@ subroutine init_hydro
   real(dp),dimension(1:nvector,1:nmat),save::ff,gg,kk_mat
   real(dp),dimension(1:nvector,1:npri),save::qq
   real(dp),dimension(1:nvector),save::ee,cc,kk_hat
-  
+
   if(verbose)write(*,*)'Entering init_hydro'
 
   ncell=ncoarse+twotondim*ngridmax
-  
+
   ! Allocate conservative, cell-centered variables arrays
   allocate(uold(1:ncell,1:nvar))
   allocate(unew(1:ncell,1:nvar))
-  uold=0.0d0; unew=0.0d0 
+  uold=0.0d0; unew=0.0d0
   allocate(divu(1:ncell))
-  divu=0.0d0  
+  divu=0.0d0
 
   if(nrestart>0) then
 
@@ -131,9 +131,9 @@ subroutine init_hydro
 #endif
                     qq(1,npri)=uold(ind_grid(i)+iskip,npri) ! Pressure
                     call eosinv(ff,gg,qq,ee,cc,kk_mat,kk_hat,1)
-                    uold(ind_grid(i)+iskip,npri)=ee(1)+dtot*ekin+erad ! Total energy 
+                    uold(ind_grid(i)+iskip,npri)=ee(1)+dtot*ekin+erad ! Total energy
                  end do
-              
+
                  ! Read equilibrium density and pressure profiles
                  if(strict_equilibrium>0)then
                     read(ilun)xx
@@ -145,7 +145,7 @@ subroutine init_hydro
                        p_eq(ind_grid(i)+iskip)=xx(i)
                     end do
                  endif
-                 
+
               end do
               deallocate(ind_grid,xx)
            end if
@@ -161,7 +161,3 @@ subroutine init_hydro
   end if
 
 end subroutine init_hydro
-
-
-
-

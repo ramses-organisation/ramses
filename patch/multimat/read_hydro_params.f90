@@ -5,7 +5,7 @@ subroutine read_hydro_params(nml_ok)
   implicit none
   logical::nml_ok
   !--------------------------------------------------
-  ! Local variables  
+  ! Local variables
   !--------------------------------------------------
   integer::i,idim,imat
   integer ,dimension(1:MAXBOUND)::bound_type
@@ -18,7 +18,7 @@ subroutine read_hydro_params(nml_ok)
   ! Namelist definitions
   !--------------------------------------------------
   namelist/init_params/initfile,nregion,region_type &
-       & ,x_center,y_center,z_center & 
+       & ,x_center,y_center,z_center &
        & ,length_x,length_y,length_z,exp_region &
        & ,d1_region,d2_region,d3_region,d4_region &
        & ,f1_region,f2_region,f3_region,f4_region &
@@ -248,4 +248,3 @@ subroutine read_hydro_params(nml_ok)
   end do
 
 end subroutine read_hydro_params
-

@@ -14,8 +14,8 @@ pro map2mov,imin,imax,colt=colt,type=type,min=min,max=max
         'dens': min=0.01
         'temp': min=3.
         'stars': min=1e-13
-        else: print, 'unkown type' 
-     endcase     
+        else: print, 'unkown type'
+     endcase
   endif
 
   if not keyword_set(max)then begin
@@ -24,7 +24,7 @@ pro map2mov,imin,imax,colt=colt,type=type,min=min,max=max
         'dens': max=1e5
         'temp': max=1e7
         'stars': max=1e-7
-        else: print, 'unkown type' 
+        else: print, 'unkown type'
      endcase
   endif
 

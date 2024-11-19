@@ -1,18 +1,18 @@
 ;+
-; NAME: 
+; NAME:
 ;				CPS
 ;
-; PURPOSE: 
+; PURPOSE:
 ;				to save in format .ps
 ;
 ; CALLING:
 ;				cps,PRINTIT=print,PRINTER=printer,COLOR=color
 ;
-; INPUTS: 
-;				
-;	
-; OUTPUT: 
-;	
+; INPUTS:
+;
+;
+; OUTPUT:
+;
 ;
 ; HISTORY:
 ;	Written: Sandrine Pires 2005.

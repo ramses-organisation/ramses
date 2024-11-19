@@ -164,5 +164,3 @@ subroutine init_poisson
   end if
 
 end subroutine init_poisson
-
-

@@ -380,7 +380,7 @@ subroutine tracexy(q,dq,c,qm,qp,dx,dy,dt,ngrid)
   end do
 
   ! Passive scalars
-  do n = ndim+3, nvar
+  do n = nhydro+1, nvar
      do k = klo, khi
         do j = jlo, jhi
            do i = ilo, ihi
@@ -590,7 +590,7 @@ subroutine tracexyz(q,dq,c,qm,qp,dx,dy,dz,dt,ngrid)
   end do
 
   ! Passive scalars
-  do n = ndim+3, nvar
+  do n = nhydro+1, nvar
      do k = klo, khi
         do j = jlo, jhi
            do i = ilo, ihi

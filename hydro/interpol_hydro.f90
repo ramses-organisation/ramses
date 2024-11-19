@@ -225,13 +225,13 @@ subroutine upl(ind_cell,ncell)
 #if NENER>0
         do irad=1,nener
            do i=1,ncell
-              erad(i)=erad(i)+uold(ind_cell_son(i),ndim+2+irad)
+              erad(i)=erad(i)+uold(ind_cell_son(i),nhydro+irad)
            end do
         end do
 #endif
         ! Update average
         do i=1,ncell
-           getx(i)=getx(i)+uold(ind_cell_son(i),ndim+2)-ekin(i)-erad(i)
+           getx(i)=getx(i)+uold(ind_cell_son(i),neul)-ekin(i)-erad(i)
         end do
      end do
 
@@ -248,17 +248,17 @@ subroutine upl(ind_cell,ncell)
 #if NENER>0
      do irad=1,nener
         do i=1,ncell
-           erad(i)=erad(i)+uold(ind_cell(i),ndim+2+irad)
+           erad(i)=erad(i)+uold(ind_cell(i),nhydro+irad)
         end do
      end do
 #endif
 
      ! Scatter result to cells
      do i=1,ncell
-        uold(ind_cell(i),ndim+2)=getx(i)/dble(twotondim)+ekin(i)+erad(i)
+        uold(ind_cell(i),neul)=getx(i)/dble(twotondim)+ekin(i)+erad(i)
      end do
 
-  end if
+  endif
 
 end subroutine upl
 !###########################################################
@@ -326,12 +326,12 @@ subroutine interpol_hydro(u1,u2,nn)
 #if NENER>0
         do irad=1,nener
            do i=1,nn
-              erad(i)=erad(i)+u1(i,j,ndim+2+irad)
+              erad(i)=erad(i)+u1(i,j,nhydro+irad)
            end do
         end do
 #endif
         do i=1,nn
-           u1(i,j,ndim+2)=u1(i,j,ndim+2)-ekin(i)-erad(i)
+           u1(i,j,neul)=u1(i,j,neul)-ekin(i)-erad(i)
         end do
 
         ! and momenta to velocities
@@ -431,12 +431,12 @@ subroutine interpol_hydro(u1,u2,nn)
 #if NENER>0
         do irad=1,nener
            do i=1,nn
-              erad(i)=erad(i)+u2(i,ind,ndim+2+irad)
+              erad(i)=erad(i)+u2(i,ind,nhydro+irad)
            end do
         end do
 #endif
         do i=1,nn
-           u2(i,ind,ndim+2)=u2(i,ind,ndim+2)+ekin(i)+erad(i)
+           u2(i,ind,neul)=u2(i,ind,neul)+ekin(i)+erad(i)
         end do
      end do
   end if

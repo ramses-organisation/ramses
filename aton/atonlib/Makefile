@@ -40,7 +40,7 @@ F90 = mpif90
 # F90 = ftn
 
 
-EXECUTABLE = 
+EXECUTABLE =
 
 libaton.a: $(OBJECTS)
 	ar rcs libaton.a $(OBJECTS)

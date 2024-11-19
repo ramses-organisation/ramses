@@ -26,4 +26,3 @@ module const
   real(dp)::forth = 1/4d0
   real(dp)::sixth = 1/6d0
 end module const
-

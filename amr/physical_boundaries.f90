@@ -356,5 +356,3 @@ subroutine make_boundary_flag(ilevel)
 111 format('   Entering make_boundary_flag for level ',I2)
 
 end subroutine make_boundary_flag
-
-

@@ -52,7 +52,7 @@ subroutine courant_fine(ilevel)
      ix=(ind-1-2*iy-4*iz)
      xc(ind)=(dble(ix)-0.5D0)*dx
   end do
-  
+
   ! Loop over active grids by vector sweeps
   ncache=active(ilevel)%ngrid
   do igrid=1,ncache,nvector
@@ -60,14 +60,14 @@ subroutine courant_fine(ilevel)
      do i=1,ngrid
         ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
      end do
-     
+
      ! Loop over cells
-     do ind=1,twotondim        
+     do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
         do i=1,ngrid
            ind_cell(i)=ind_grid(i)+iskip
         end do
-        
+
         ! Gather leaf cells
         nleaf=0
         do i=1,ngrid
@@ -92,7 +92,7 @@ subroutine courant_fine(ilevel)
               dtot(i) = dtot(i) + uu(i,nmat+imat)
            end do
         end do
-        
+
         ! Gather gravitational acceleration
         gg=0.0d0
         if(poisson)then
@@ -102,7 +102,7 @@ subroutine courant_fine(ilevel)
               end do
            end do
         end if
-        
+
         ! Compute total mass
         do i=1,nleaf
            mass_loc = mass_loc + dtot(i)*vol
@@ -120,10 +120,10 @@ subroutine courant_fine(ilevel)
            call cmpdt(uu,gg,rloc,dx_loc,dt_lev,nleaf)
            dt_loc=min(dt_loc,dt_lev)
         end if
-        
+
      end do
      ! End loop over cells
-     
+
   end do
   ! End loop over grids
 

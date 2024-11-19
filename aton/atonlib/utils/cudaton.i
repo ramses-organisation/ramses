@@ -25,7 +25,7 @@ func plott(s,n=)
 func readsnap(name,nbnd=)
 {
   if(is_void(nbnd)) nbnd=1;
-  
+
   ff=open(name,"rb");
   adress=0;
   ncells=array(int);_read,ff,adress,ncells;adress+=sizeof(ncells);
@@ -85,7 +85,7 @@ func readsnappave(name,nbnd=,npave=,keep=,getflux=)
   if(is_void(npave)) npave=2;
   if(is_void(getflux)) getflux=0;
   if(is_void(keep)) keep=0;
-  
+
   ff=open(name,"rb");
   adress=0;
   ncells=array(int);_read,ff,adress,ncells;adress+=sizeof(ncells);
@@ -112,7 +112,7 @@ func readsnappave(name,nbnd=,npave=,keep=,getflux=)
   dens=array(float,ncells*ncells*(npave*(ncells-2*nbnd)+2*nbnd));_read,ff,adress,dens;adress+=sizeof(dens);
   aexp=array(float);_read,ff,adress,aexp;adress+=sizeof(aexp);
   close,ff;
-  
+
   egy=reform(egy,[3,ncells,ncells,(npave*(ncells-2*nbnd)+2*nbnd)]);
   egy=egy(nbnd+1-keep:ncells-nbnd+keep,nbnd+1-keep:ncells-nbnd+keep,nbnd+1-keep:(npave*(ncells-2*nbnd)+2*nbnd)-nbnd+keep);
   if(getflux)
@@ -121,7 +121,7 @@ func readsnappave(name,nbnd=,npave=,keep=,getflux=)
       //      if(is_void(keep))flx=flx(nbnd+1:ncells-nbnd,nbnd+1:ncells-nbnd,nbnd+1:(npave*(ncells-2*nbnd)+2*nbnd)-nbnd,);
       flx=flx(nbnd+1-keep:ncells-nbnd+keep,nbnd+1-keep:ncells-nbnd+keep,nbnd+1-keep:(npave*(ncells-2*nbnd)+2*nbnd)-nbnd+keep,);
     }
-  
+
   xion=reform(xion,[3,ncells,ncells,(npave*(ncells-2*nbnd)+2*nbnd)]);
   xion=xion(nbnd+1-keep:ncells-nbnd+keep,nbnd+1-keep:ncells-nbnd+keep,nbnd+1-keep:(npave*(ncells-2*nbnd)+2*nbnd)-nbnd+keep);
   //  if(is_void(keep))xion=xion(nbnd+1:ncells-nbnd,nbnd+1:ncells-nbnd,nbnd+1:(npave*(ncells-2*nbnd)+2*nbnd)-nbnd);
@@ -192,4 +192,3 @@ for(i=1;i<=numberof(ll)-1;i++)
   temp=temp(3:ncells-2,3:ncells-2,3:ncells-2);
   axion(,,i)=xion(,,1);
 }
-

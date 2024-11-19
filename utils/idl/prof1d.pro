@@ -14,7 +14,7 @@
 ;
 ; OPTIONAL INPUTS:
 ;       file:   if set, input the scalar string containing the name of
-;       the file to be read. Otherwise, a PICKFILE widget is launched. 
+;       the file to be read. Otherwise, a PICKFILE widget is launched.
 ;
 ;       xr:     the X axis range. Default: [0,1]
 ;

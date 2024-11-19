@@ -7,7 +7,7 @@
 //
 // example: ./gen_out_string 1 2 5
 // gives this:
-// output_00001 output_00003 output_00005 
+// output_00001 output_00003 output_00005
 //=============================================================================
 
 #include <stdlib.h>
@@ -44,7 +44,7 @@ int calc_size(int startval, int increment, int endval) {
 
   return result;
 }
- 
+
 int main (int argc, char *argv[])
 {
   int startval, increment, endval;
@@ -100,4 +100,3 @@ int main (int argc, char *argv[])
 	free( str_buffer );
 	return 0;
 }
-

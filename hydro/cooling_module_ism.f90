@@ -54,7 +54,7 @@ subroutine calc_temp(NN,TT,dt_tot)
 
   if (NN .le. smallr) then
      if( NN .le. 0)  write(*,*) 'WARNING: problem density in calc_temp',NN
-     NN = smallr  
+     NN = smallr
   endif
 
   vardt = 10d0**(0.1d0)
@@ -173,16 +173,16 @@ subroutine cooling_low(T,n,ref)
   real(dp) :: cold,hot,cold_cII,cold_o,cold_h,cold_cII_m,cold_o_m,cold_rec
   real(dp) :: param,G0,epsilon,bet,x,ne   ! x is the ionisation rate
 
-  ! Cooling and heating function computed from the cooling of 
+  ! Cooling and heating function computed from the cooling of
   ! chemical elements
 
   ! Carbon abundance 3.5d-4, depletion 0.4
 
   !!! We compute the ionisation
   !!! We assume that if x is over 1.d-4 then it is dominated by oxygen
-  !!! and that the minimal value is given by the carbon and is 
+  !!! and that the minimal value is given by the carbon and is
   !!! 3.5d-4 * depletion * density
-  
+
   !!! For the electrons due to hydrogen we take the formula
   !!! from  Wolfire et al. 2003 appendix C2.
   !!! The ionization rate is set to 1d-16 G0'=GO/1.7
@@ -195,7 +195,7 @@ subroutine cooling_low(T,n,ref)
   x = min(x,0.1d0)
   x = max(x,3.5d-4*0.4d0)
 
- ! NOTE - HERE WE USE THE NON-PHOTOIONISED RATES AS THIS MIGHT 
+ ! NOTE - HERE WE USE THE NON-PHOTOIONISED RATES AS THIS MIGHT
  !        BE TOO HIGH AT x=1
   cold_cII = 92 * 1.38d-16 * 2 * (2.8d-7* ((T/100)**(-0.5d0))*x + 8d-10*((T/100)**(0.07d0))) &
        * 3.5d-4 * 0.4d0 * exp(-92/T)
@@ -228,18 +228,18 @@ subroutine cooling_low(T,n,ref)
   if (T .le. 1d4) then
      cold_o_m = 2.3d4 * 1.38d-16 / 3d0 * &
              ( 5.1d-9 * (T/10000)**(0.57) * x + 1d-12) *exp(-2.3d4/T)
-  
+
      cold_o_m = cold_o_m + &
                 4.9d4 * 1.38d-16 / 3d0  * &
              ( 2.5d-9 * (T/10000)**(0.57) * x + 1d-12) *exp(-4.9d4/T)
-  
+
      cold_o_m = cold_o_m + &
                 2.6d4 * 1.38d-16 * 1d0  * &
              ( 5.2d-9 * (T/10000)**(0.57) * x + 1d-12) *exp(-2.6d4/T)
   else
      cold_o_m = 2.3d4 * 1.38d-16 / 3d0 * &
              ( 5.1d-9 * (T/10000)**(0.17) * x + 1d-12) *exp(-2.3d4/T)
-  
+
      cold_o_m = cold_o_m + &
                 4.9d4 * 1.38d-16 / 3d0  * &
              ( 2.5d-9 * (T/10000)**(0.13) * x + 1d-12) *exp(-4.9d4/T)
@@ -249,7 +249,7 @@ subroutine cooling_low(T,n,ref)
              ( 5.2d-9 * (T/10000)**(0.15) * x + 1d-12) *exp(-2.6d4/T)
   endif
 
-  ! Oxygen abundance 
+  ! Oxygen abundance
   cold_o_m = cold_o_m * 4.5d-4
 
   ! Sum of the cooling terms

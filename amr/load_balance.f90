@@ -5,7 +5,7 @@
 subroutine load_balance
   use amr_commons
   use pm_commons
-  use hydro_commons, ONLY: nvar
+  use hydro_commons, ONLY: nvar_all
 #ifndef WITHOUTMPI
   use hydro_commons, ONLY: uold, pstarold, rho_eq, p_eq
   use poisson_commons, ONLY: phi, f
@@ -74,17 +74,9 @@ subroutine load_balance
   !--------------------------------------
   do ilevel=nlevelmax,1,-1
      if(hydro)then
-#ifdef SOLVERmhd
-        do ivar=1,nvar+3
-#else
-        do ivar=1,nvar
-#endif
+        do ivar=1,nvar_all
            call make_virtual_fine_dp(uold(1,ivar),ilevel)
-#ifdef SOLVERmhd
         end do
-#else
-        end do
-#endif
         if(momentum_feedback>0)then
            call make_virtual_fine_dp(pstarold(1),ilevel)
         endif
@@ -1319,11 +1311,7 @@ subroutine defrag
 
   if(hydro)then
 
-#ifdef SOLVERmhd
-  do ivar=1,nvar+3
-#else
-  do ivar=1,nvar
-#endif
+  do ivar=1,nvar_all
   do ind=1,twotondim
   iskip2=ncoarse+(ind-1)*ngridmax
   ngrid2=0

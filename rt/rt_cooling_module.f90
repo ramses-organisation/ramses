@@ -1372,7 +1372,7 @@ SUBROUTINE heat_unresolved_HII_regions_vsweep(ind_grid,ngrid,ilevel)
 
      ! Compute thermal pressure
      do i=1,nleaf
-        T2(i)=uold(ind_leaf(i),ndim+2)
+        T2(i)=uold(ind_leaf(i),neul)
      end do
      do i=1,nleaf
         ekk(i)=0.0d0 ! Kinetic energy
@@ -1400,7 +1400,7 @@ SUBROUTINE heat_unresolved_HII_regions_vsweep(ind_grid,ngrid,ilevel)
      do idim=1,ndim
         do i=1,nleaf
            emag(i)=emag(i)+0.125d0* &
-                (uold(ind_leaf(i),idim+ndim+2)+uold(ind_leaf(i),idim+nvar))**2
+                (uold(ind_leaf(i),idim+neul)+uold(ind_leaf(i),idim+nvar))**2
         end do
      end do
 #endif
@@ -1470,7 +1470,7 @@ SUBROUTINE heat_unresolved_HII_regions_vsweep(ind_grid,ngrid,ilevel)
 
               !print*,'HIT! ' &
               !      ,r_stag(i),dx_half_cgs,T2(i),nh(i),lum(i)
-              uold(ind_leaf(i),ndim+2) =                  &
+              uold(ind_leaf(i),neul) =                  &
                    (Tmu_ionised + T2min(i))               &
                    * nH(i)/scale_nH/scale_T2/(gamma-1.0)  &
                    + ekk(i) + err(i) + emag(i)
@@ -1491,8 +1491,8 @@ SUBROUTINE heat_unresolved_HII_regions_vsweep(ind_grid,ngrid,ilevel)
      if(heat_unresolved_HII.eq.2 .and. nener.gt.0) then
         do irad=0,nener-1
            do i=1,nleaf
-              uold(ind_leaf(i),ndim+2) = &
-                   uold(ind_leaf(i),ndim+2)-uold(ind_leaf(i),inener+irad)
+              uold(ind_leaf(i),neul) = &
+                   uold(ind_leaf(i),neul)-uold(ind_leaf(i),inener+irad)
            end do
         end do
 
@@ -1514,8 +1514,8 @@ SUBROUTINE heat_unresolved_HII_regions_vsweep(ind_grid,ngrid,ilevel)
 
         do irad=0,nener-1
            do i=1,nleaf
-              uold(ind_leaf(i),ndim+2) = &
-                   uold(ind_leaf(i),ndim+2)+uold(ind_leaf(i),inener+irad)
+              uold(ind_leaf(i),neul) = &
+                   uold(ind_leaf(i),neul)+uold(ind_leaf(i),inener+irad)
            end do
         end do
      endif

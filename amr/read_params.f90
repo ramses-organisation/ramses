@@ -101,15 +101,15 @@ subroutine read_params
   ! Check nvar is not too small
 #ifdef SOLVERhydro
   write(*,'(" Using solver = hydro with nvar = ",I2)')nvar
-  if(nvar<ndim+2)then
+  if(nvar<nhydro)then
      write(*,*)'You should have: nvar>=ndim+2'
-     write(*,'(" Please recompile with -DNVAR=",I2)')ndim+2
+     write(*,'(" Please recompile with -DNVAR=",I2)')nhydro
      call clean_stop
   endif
 #endif
 #ifdef SOLVERmhd
   write(*,'(" Using solver = mhd with nvar = ",I2)')nvar
-  if(nvar<8)then
+  if(nvar<nhydro)then
      write(*,*)'You should have: nvar>=8'
      write(*,'(" Please recompile with -DNVAR=8")')
      call clean_stop
@@ -167,10 +167,10 @@ subroutine read_params
   !-------------------------------------------------
   ! Default passive scalar map
   !-------------------------------------------------
-#if NVAR>NDIM+2
-  allocate(remap_pscalar(1:nvar-(ndim+2)))
-  do i=1,nvar-(ndim+2)
-     remap_pscalar(i) = i+ndim+2
+#if NVAR>NHYDRO
+  allocate(remap_pscalar(1:nvar-nhydro))
+  do i=1,nvar-nhydro
+     remap_pscalar(i) = i+nhydro
   enddo
 #endif
 
@@ -231,7 +231,7 @@ subroutine read_params
     write(*,*) "       - emission_part(1:nlevelmax)    : ", dble(sizeof(emission_part))/1.0e6," MB"
     write(*,*) "       - reception(1:ncpu,1:nlevelmax) : ", dble(sizeof(reception))*ncpu/1.0e8," MB"
     if (poisson) then
-        allocate(reception(1:100, 1:levelmax-1)) ! active_mg 
+        allocate(reception(1:100, 1:levelmax-1)) ! active_mg
         allocate(emission(1:levelmax-1)) ! emission_mg
         mem_used_new_buff_mg = dble(sizeof(emission)) + dble(sizeof(reception))*ncpu/100.0
         deallocate(reception)

@@ -14,10 +14,10 @@
 <p>
 <h1> What is HOP and what does it do? </h1>
 
-HOP is an algorithm for finding groups of particles based on their 
+HOP is an algorithm for finding groups of particles based on their
 instantaneous densities.  Roughly speaking, it works by connecting
 particles to nearby particles in the direction of increasing density.
-We have described the method in our paper 
+We have described the method in our paper
 <a href="http://cmb.as.arizona.edu/~eisenste/hop/hop_paper.ps">
 "HOP: A new group finding algorithm for N-body simulations"</a>
 to be published in ApJ.
@@ -71,7 +71,7 @@ unclear to you, you might look at our paper and especially Figure 1.
 <code>delta_outer</code> are excluded from groups.  </ol>
 
 
-In our implementation of HOP, steps (1), (2-4), and (5-6) are 
+In our implementation of HOP, steps (1), (2-4), and (5-6) are
 run separately and the needed output is saved to disk.  Hence, one
 can vary certain parameters without repeating all 6 steps.
 
@@ -101,7 +101,7 @@ parameters fairly inexpensively.
 <kbd>hop.c</kbd> so that it can read your simulation format.  All the
 instructions are in the file hop_input.c along with an example.
 
-<p> You will also need to decide at this point if you are assigning 
+<p> You will also need to decide at this point if you are assigning
 equal mass to each particle or not.  This will affect how you store
 the mass and will affect how you compile.
 
@@ -140,19 +140,19 @@ others mattered significantly less.  We found that <code>N_dens</code> =
 The HOP algorithm is based solely on the instantaneous positions of
 the particles.  An extension to this and similar approaches is to
 remove from these groups those particles whose velocities are large
-enough to escape the group.  For example, see 
+enough to escape the group.  For example, see
 <a href="http://www-hpcc.astro.washington.edu/tools/SKID">SKID</a>
 (from the <a href="http://www-hpcc.astro.washington.edu">HPCC</a>),
-or DENMAX 
+or DENMAX
 [<a href="http://adsbit.harvard.edu/cgi-bin/nph-iarticle_query?1994ApJ%2E%2E%2E436%2E%2E467G">
-Gelb & Bertschinger, Astroph. J., <strong>436</strong>, 467 (1994)</a>].  
+Gelb & Bertschinger, Astroph. J., <strong>436</strong>, 467 (1994)</a>].
 Typically, one removes the calculates the energies of all particles,
 removes the most unbound, updates the energies, and iterates.  I
 haven't included such a scheme here, but I have included hooks for it
 in <kbd>regroup.c</kbd>.  Or you can pipe the output of regroup to your
 own program.
 
-<p> Another direction for customization is that one need not maximize 
+<p> Another direction for customization is that one need not maximize
 the density field.  Any scalar field attached to the set of particles
 could be inputed through the .den file.
 
@@ -173,16 +173,16 @@ applications of such ideas, for example to genus statistics.
 
 The <kbd>hop.c</kbd> program performs all the hard work of finding and
 using the nearest neighbor lists.  The main engine is the kd-tree
-search algorithm written by 
+search algorithm written by
 <a href="http://www.astro.washington.edu/stadel/">
-<strong>Joachim Stadel</strong></a>  and the 
+<strong>Joachim Stadel</strong></a>  and the
 <a href="http://www-hpcc.astro.washington.edu">
-<strong>University of Washington NASA HPCC ESS</strong></a>.  
-This engine was publically distributed as part of the 
+<strong>University of Washington NASA HPCC ESS</strong></a>.
+This engine was publically distributed as part of the
 <a href="http://www-hpcc.astro.washington.edu/tools/SMOOTH">SMOOTH</a> program
 (which calculates adaptive densities and velocity fields from N-body
-simulations, available 
-<a href="http://www-hpcc.astro.washington.edu/tools/SMOOTH"> here</a>).  
+simulations, available
+<a href="http://www-hpcc.astro.washington.edu/tools/SMOOTH"> here</a>).
 They have given us permission to redistribute this engine as part of
 the HOP program.  Any compliments regarding the speed of
 <kbd>hop.c</kbd> should be directed to them.
@@ -190,40 +190,40 @@ the HOP program.  Any compliments regarding the speed of
 <p> The source files involved in <kbd>hop.c</kbd> are:
 
 <dl> <dt>
-<strong> hop.c </strong></dt><dd> 
-	The guts of HOP, plus all the input/output, written by DJE 
-	(although <code>main()</code> was customized from that of 
+<strong> hop.c </strong></dt><dd>
+	The guts of HOP, plus all the input/output, written by DJE
+	(although <code>main()</code> was customized from that of
 	<a href="http://www-hpcc.astro.washington.edu/tools/SMOOTH">SMOOTH</a>).
 </dd><dt>
 
-<strong> hop_input.c </strong></dt><dd> 
+<strong> hop_input.c </strong></dt><dd>
 	Since each user will have a different format for their
-	simulation data, I've pulled the input routine into a 
+	simulation data, I've pulled the input routine into a
 	separate file for the user to customize.
 </dd><dt>
 
-<strong> smooth.c </strong></dt><dd> 
-	The kd-tree search engine, from 
+<strong> smooth.c </strong></dt><dd>
+	The kd-tree search engine, from
 	<a href="http://www-hpcc.astro.washington.edu/tools/SMOOTH">SMOOTH</a>
-	v2.01, written by 
+	v2.01, written by
 	<a href="http://www.astro.washington.edu/stadel/">Joachim Stadel</a>
-	and the 
+	and the
 	<a href="http://www-hpcc.astro.washington.edu">HPCC</a>.  Note, however,
 	that I have made some minor customizations (regarding the
 	treatment of the particle masses) and removed code not needed
-	in HOP.  Fetch the latest version of 
+	in HOP.  Fetch the latest version of
 	<a href="http://www-hpcc.astro.washington.edu/tools/SMOOTH">SMOOTH</a>
 	from their web site if you want the whole feature list.
 </dd><dt>
 
-<strong> kd.c </strong></dt><dd> 
-	Some utility routines for smooth.c.  Again, part of 
+<strong> kd.c </strong></dt><dd>
+	Some utility routines for smooth.c.  Again, part of
 	<a href="http://www-hpcc.astro.washington.edu/tools/SMOOTH">SMOOTH</a>
 	v2.01.  I have removed unneeded code (e.g. the input/output
 	routines).  </dd><dt>
 
-<strong> smooth.h, kd.h </strong></dt><dd> 
-	The header files for the 
+<strong> smooth.h, kd.h </strong></dt><dd>
+	The header files for the
 	<a href="http://www-hpcc.astro.washington.edu/tools/SMOOTH">SMOOTH</a>
 	package.  I've added and removed some fields from their
 	structures.  </dd> </dl>
@@ -278,7 +278,7 @@ remerging the groups....); particles not assigned to a group because
 their density is uninterestingly low are assigned ID-1.  The format is:
 <ol>
     <li> Bytes 1-4 -- The number of particles, as a 4-byte integer.
-    <li> Bytes 5-8 -- The number of groups, as a 4-byte integer.  
+    <li> Bytes 5-8 -- The number of groups, as a 4-byte integer.
     <li> Rest of file -- The group ID numbers of each of the particles, in
 	order, stored as 4-byte integers.
 </ol>
@@ -291,12 +291,12 @@ their densities.  The file actually contains two lists of information
 separated by a line beginning with "###".  The format is:
 <ol>
     <li> Line 1 -- The number of groups
-    <li> Next approximately <code>n_groups</code> lines -- These contain 
-	information on the groups themselves, in space-separated columns.  
+    <li> Next approximately <code>n_groups</code> lines -- These contain
+	information on the groups themselves, in space-separated columns.
 	<ul>
 	    <li> Column 1 -- The group ID number
 	    <li> Column 2 -- The number of particles in the group
-	    <li> Column 3 -- The particle ID number of densest particle 
+	    <li> Column 3 -- The particle ID number of densest particle
 		in the group.
 	    <li> Column 4-6 -- The position of that particle
 	    <li> Column 7 -- The density of that particle.
@@ -332,7 +332,7 @@ list of these by typing "hop" (or by giving illegal arguments....).
 <dt> <strong> -den </strong> <em>file</em> </dt><dd>
 		Specifies a file from which to read the density (.den) file.
 		If present, then the densities will not be recalculated.
-		If not present, densities will be calculated according to 
+		If not present, densities will be calculated according to
 		the following parameters:
 </dd>
 
@@ -410,7 +410,7 @@ Flags related to the input simulation file:
 <p> <dt> <strong> -p </strong> <em>float</em> </dt><dd>
 		The periodicity of the positions in the input file.
 		I've hardwired these to be the same in each direction,
-		but if you look in <code>main()</code>, you'll see where 
+		but if you look in <code>main()</code>, you'll see where
 		to change
 		this assumption.  Default: none (so for cosmological
 		simulations, you need to set this!).
@@ -421,7 +421,7 @@ Flags related to the output:
 
 <dl>
 <dt> <strong> -o/-out </strong> <em>file</em> </dt><dd>
-		The (root) name of the output files.  Suffixes (".den", 
+		The (root) name of the output files.  Suffixes (".den",
 		".hop", and ".gbound") will be attached.
 </dd>
 
@@ -453,9 +453,9 @@ Flags related to performance:
 
 <dl>
 <dt> <strong> -b </strong> <em>int</em> </dt><dd>
-		This is left over from the 
+		This is left over from the
 		<a href="http://www-hpcc.astro.washington.edu/tools/SMOOTH">SMOOTH</a> program.  It controls
-		the number of particles to be stored in each of the 
+		the number of particles to be stored in each of the
 		leaves of the kd-tree.  Smaller numbers would marginally
 		improve the search time but would require substantially
 		more nodes in the tree and hence more memory.  I kept this
@@ -467,7 +467,7 @@ Flags related to performance:
 
 Hence, an example invocation of HOP would be:
 
-<p> <kbd> hop -in my_simulation_file -p 1 -nd 48 -nh 20 -nm 5 -dt 1 
+<p> <kbd> hop -in my_simulation_file -p 1 -nd 48 -nh 20 -nm 5 -dt 1
 -out my_hop_out
 </kbd>
 
@@ -482,7 +482,7 @@ be written.
 <p> If one then wanted to change <code>N_hop</code> to 16, it would be
 computationally faster to use:
 
-<p> <kbd> hop -in my_simulation_file -p 1 -den my_hop_out.den -nh 16 -nm 5 
+<p> <kbd> hop -in my_simulation_file -p 1 -den my_hop_out.den -nh 16 -nm 5
 -dt 1 -out my_hop_out2
 </kbd>
 
@@ -509,7 +509,7 @@ takes the most time.
 
 <p> I found that with the default settings, the code took about 2 hours on
 an UltraSparc 170 for a 256^3 particle data set and 15 minutes on a
-128^3 data set.  Setting <kbd>-b</kbd> to 4 rather than 16 did not alter the 
+128^3 data set.  Setting <kbd>-b</kbd> to 4 rather than 16 did not alter the
 performance.
 
 <h2> Warnings </h2>
@@ -555,7 +555,7 @@ merge together.
 <h2> Output </h2>
 
 <kbd>Regroup.c</kbd> generates three output files.  These are suffixed ".tag",
-".sort", and ".gmerge".  The first of these is a binary file of 
+".sort", and ".gmerge".  The first of these is a binary file of
 (approximate) size 4*N bytes.  The last two are ASCII files and are
 considerably smaller.
 
@@ -567,7 +567,7 @@ considerations.  The format is identical to that of the ".hop" file
 described above, namely a sequence of N+2 4-byte integers consisting of
 the number of particles, the number of groups, and then the group ID's
 of the N particles.  Groups are numbered 0 to <code>n_group</code>-1;
-particles not assigned to any group are given the number -1.  
+particles not assigned to any group are given the number -1.
 
 <p> If the <code>-f77</code> flag has been set, the format of the ".tag"
 file is altered so as to be compatible with FORTRAN unformatted I/O.
@@ -593,14 +593,14 @@ In detail, the file format is:
 </dd>
 
 <p> <dt> Group multiplicity file (".size") </dt><dd>
- This ASCII file contains the 
+ This ASCII file contains the
 number of particles in each group.  The format is:
 <ol>
     <li> Line 1 -- The number of particles
     <li> Line 2 -- The total number of particles in groups
     <li> Line 3 -- The number of groups
     <li> Remaining lines -- Two space-separated columns
-	<ul> 
+	<ul>
 	<li> Column 1 -- The ID number of the group
 	<li> Column 2 -- The number of particles in that group
 	</ul>
@@ -646,7 +646,7 @@ arguments....).
 </dd>
 
 <p> <dt> <strong> -root </strong> <em>file</em> </dt><dd>
-		Sets all three of the above to a common root plus the 
+		Sets all three of the above to a common root plus the
 		default suffixs (".hop", ".den", and ".gbound").
 		However, you can also override one or more of these
 		choices with an explicit setting of <kbd>-hop</kbd>,
@@ -682,7 +682,7 @@ Flags related to the input parameters:
 </dd>
 
 <p> <dt> <strong> -dsaddle </strong> <em>float</em> </dt><dd>
-		Sets <code>delta_saddle</code>, the boundary density needed two 
+		Sets <code>delta_saddle</code>, the boundary density needed two
 		viable groups to be merged.
 </dd>
 
@@ -748,13 +748,13 @@ manipulated catalog on demand.
 -mingroup 8 -out my_final_catalog
 </kbd>
 
-<p> This would read the input of my_hop_out.hop, my_hop_out.den, and 
+<p> This would read the input of my_hop_out.hop, my_hop_out.den, and
 my_hop_out.gbound, impose the density thresholds, sort the final
 catalog by group size, exclude any groups smaller than 8 particles,
 and write output as my_final_catalog.sort, my_final_catalog.gmerge,
 and my_final_catalog.tag.  Adding a <kbd>-pipe</kbd> flag would dump the last
 of these to stdout rather than disk, so it could taken as input for
-an analysis program.  Using <kbd>-f77</kbd> would allow a simpler 
+an analysis program.  Using <kbd>-f77</kbd> would allow a simpler
 interface to a FORTRAN program.
 
 <h2> Performance </h2>
@@ -764,13 +764,13 @@ I/O-limited.  reading the large ".den" and ".hop" files and writing the
 ".tag" file takes most of the time.  Each of these files is 4*N bytes
 of memory.
 
-<p> It takes 4*N bytes of memory, where N is the number of particles, plus 
-some storage that scales with the number of groups.  
+<p> It takes 4*N bytes of memory, where N is the number of particles, plus
+some storage that scales with the number of groups.
 
 <h2> Warnings </h2>
 
 <p> Remember that HOP is biased against finding groups smaller than
-<code>N_dens</code> or <code>N_hop</code>; hence, setting 
+<code>N_dens</code> or <code>N_hop</code>; hence, setting
 <kbd>-mingroup</kbd> to be tiny is usually pointless.
 
 <p> The code assumes that all densities are greater than the internal
@@ -779,8 +779,8 @@ number close to the most negative representable number.  But if you
 want to input some astronomically negative number, beware (i.e. choose
 more sensible units).
 
-<p> If you specify <code>-nodens</code>, you most likely want to avoid 
-setting <code>delta_outer</code> &gt 0.  Doing the latter will cause 
+<p> If you specify <code>-nodens</code>, you most likely want to avoid
+setting <code>delta_outer</code> &gt 0.  Doing the latter will cause
 the merging section of the code to throw out low-density groups on the
 basis of the boundary densities, which is likely to produce strangely
 inconsistent group edges.
@@ -788,12 +788,12 @@ inconsistent group edges.
 
 <p><hr>
 <h1>How to contact us</h1>
-The HOP algorithm was presented in a 
-<a href="http://cmb.as.arizona.edu/~eisenste/hop/hop_paper.ps">paper</a> by 
+The HOP algorithm was presented in a
+<a href="http://cmb.as.arizona.edu/~eisenste/hop/hop_paper.ps">paper</a> by
 <a href="http://cmb.as.arizona.edu/~eisenste">Daniel J. Eisenstein</a>
 (<a href="mailto:deisenstein@as.arizona.edu">deisenstein@as.arizona.edu</a>)
 and <a href="http://www.sns.ias.edu/~piet">Piet Hut</a>
-(<a href="mailto:piet@sns.ias.edu">piet@sns.ias.edu</a>).  We're at the 
+(<a href="mailto:piet@sns.ias.edu">piet@sns.ias.edu</a>).  We're at the
 <a href="http://www.ias.edu">Institute for Advanced Study</a>.
 
 <p>This is the documentation for version 1.1 of HOP.  Version 1.1 fixes

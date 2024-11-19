@@ -165,7 +165,3 @@ subroutine rt_init_hydro
   if(verbose)write(*,*)'RT backup files read completed'
 
 end subroutine rt_init_hydro
-
-
-
-

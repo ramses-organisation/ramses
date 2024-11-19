@@ -318,14 +318,14 @@ SUBROUTINE  trace1d(q,dq,qm,qp,req,peq,qpeq,dx,dt,ngrid)
                  dex(irad) = half*dq(l,i,j,k,iC+irad,1)
               end do
 #endif
-      
+
               ! Slopes for equilibrium profiles
               ! Warning: include half of dt multiplication
               if(strict_equilibrium>0) then
                 dreqx = half*(half*(req(l,i+1,j,k) - req(l,i-1,j,k)))
-                dpeqx = half*(half*(peq(l,i+1,j,k) - peq(l,i-1,j,k))) 
+                dpeqx = half*(half*(peq(l,i+1,j,k) - peq(l,i-1,j,k)))
               end if
-      
+
               ! Source terms (including transverse derivatives and equilibrium profiles)
               sr0 = -u*(drx+dreqx)-r*dux
               if(ischeme.ne.1)then
@@ -410,7 +410,7 @@ SUBROUTINE  trace1d(q,dq,qm,qp,req,peq,qpeq,dx,dt,ngrid)
                  seq = peq(l,i,j,k)/(req(l,i,j,k)**gamma) ! entropy equilibrium profile
                  a   = q(l,i,j,k,n ) + seq     ! Cell centered values
                  u   = q(l,i,j,k,iu)
-                 ! slope for equilibrium profile 
+                 ! slope for equilibrium profile
                  ! 1/2*(seq(i+1)-seq(i-1))
                  ! the extra 1/2 comes from the dt, and is the same as in dax calculation
                  seq_l = peq(l,i-1,j,k)/(req(l,i-1,j,k)**gamma)
@@ -419,7 +419,7 @@ SUBROUTINE  trace1d(q,dq,qm,qp,req,peq,qpeq,dx,dt,ngrid)
                  dax = half * dq(l,i,j,k,n,1)  ! TVD slope
                  sa0 = -u*(dax+dseqx)          ! Source terms (with equilibrium)
                  a   = a + sa0*dtdx            ! Predicted state
-                 ! To compute the right and left states, remove seq in the cell center and add extrapolated 
+                 ! To compute the right and left states, remove seq in the cell center and add extrapolated
                  ! seq to the interface to have same eq. value on the left and right of interface
                  qseq = half*(seq+seq_l)
                  qp(l,i,j,k,n,1) = a - dax - seq + qseq    ! Right state
@@ -597,7 +597,7 @@ SUBROUTINE trace2d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,req,peq,qpeq,dx,dy,dt,ngrid
 
                 dreqy = half*(half*(req(l,i,j+1,k) - req(l,i,j-1,k)))
                 dpeqy = half*(half*(peq(l,i,j+1,k) - peq(l,i,j-1,k)))
-              end if 
+              end if
 
               ! Source terms (including transverse derivatives)
               sr0 = (-u*(drx+dreqx)-dux*r)*dtdx + (-v*(dry+dreqy)-dvy*r)*dtdy
@@ -635,7 +635,7 @@ SUBROUTINE trace2d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,req,peq,qpeq,dx,dy,dt,ngrid
               ! Face averaged right state at left interface
               qreq              = half*(req(l,i,j,k)+req(l,i-1,j,k))
               qpeq(l,i-1,j,k,1) = half*(peq(l,i,j,k)+peq(l,i-1,j,k))
-              
+
               qp(l,i,j,k,ir,1) = r - drx - req(l,i,j,k) + qreq
               qp(l,i,j,k,iu,1) = u - dux
               qp(l,i,j,k,iv,1) = v - dvx
@@ -694,7 +694,7 @@ SUBROUTINE trace2d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,req,peq,qpeq,dx,dy,dt,ngrid
 
               ! Face averaged bottom state at top interface
               qreq              = half*(req(l,i,j+1,k)+req(l,i,j,k))
-              qpeq(l,i,j,k,2)   = half*(peq(l,i,j+1,k)+peq(l,i,j,k)) 
+              qpeq(l,i,j,k,2)   = half*(peq(l,i,j+1,k)+peq(l,i,j,k))
 
               qm(l,i,j,k,ir,2) = r + dry - req(l,i,j,k) + qreq
               qm(l,i,j,k,iu,2) = u + duy
@@ -735,7 +735,7 @@ SUBROUTINE trace2d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,req,peq,qpeq,dx,dy,dt,ngrid
               ! Edge averaged right-bottom corner state (RB->LR)
               qreq4 = 0.25*(req(l,i,j,k) + req(l,i+1,j,k) + req(l,i,j-1,k) + req(l,i+1,j-1,k))
               qpeq4 = 0.25*(peq(l,i,j,k) + peq(l,i+1,j,k) + peq(l,i,j-1,k) + peq(l,i+1,j-1,k))
-              
+
               qRB(l,i,j,k,ir,3) = r + (+drx-dry) - req(l,i,j,k) + qreq4
               qRB(l,i,j,k,iu,3) = u + (+dux-duy)
               qRB(l,i,j,k,iv,3) = v + (+dvx-dvy)
@@ -808,7 +808,7 @@ SUBROUTINE trace2d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,req,peq,qpeq,dx,dy,dt,ngrid
                  r   = q(l,i,j,k,n ) + seq        ! Cell centered values
                  u   = q(l,i,j,k,iu)
                  v   = q(l,i,j,k,iv)
-                 ! slope for equilibrium profile 
+                 ! slope for equilibrium profile
                  ! 1/2*(seq(i+1)-seq(i-1))
                  ! the extra 1/2 comes from the dt, and is the same as in dax calculation
                  seq_l = peq(l,i-1,j,k)/(req(l,i-1,j,k)**gamma)
@@ -817,12 +817,12 @@ SUBROUTINE trace2d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,req,peq,qpeq,dx,dy,dt,ngrid
                  seq_b = peq(l,i,j-1,k)/(req(l,i,j-1,k)**gamma)
                  seq_t = peq(l,i,j+1,k)/(req(l,i,j+1,k)**gamma)
                  dseqy = half*(half*(seq_t - seq_b))
-                 
+
                  drx = half * dq(l,i,j,k,n,1)     ! TVD slopes
                  dry = half * dq(l,i,j,k,n,2)
                  sr0 = -u*(drx+dseqx)*dtdx -v*(dry+dseqx)*dtdy    ! Source terms
                  r   = r + sr0                    ! Predicted state
-                 ! To compute the right,left,top,bottom states, remove seq in the cell center and add extrapolated 
+                 ! To compute the right,left,top,bottom states, remove seq in the cell center and add extrapolated
                  ! seq to the interface to have same eq. value on the left and right of interface
                  qseq = half*(seq+seq_l)
                  qp(l,i,j,k,n,1) = r - drx - seq + qseq       ! Right state
@@ -1066,7 +1066,7 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,req,peq,qpeq,dx,dy,dz,dt,ng
 
                 dreqz = half*(half*(req(l,i,j,k+1) - req(l,i,j,k-1)))
                 dpeqz = half*(half*(peq(l,i,j,k+1) - peq(l,i,j,k-1)))
-              end if 
+              end if
 
               ! Source terms (including transverse derivatives)
               sr0 = (-u*(drx+dreqx)-dux*r)*dtdx + (-v*(dry+dreqy)-dvy*r)*dtdy + (-w*(drz+dreqz)-dwz*r)*dtdz
@@ -1478,7 +1478,7 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,req,peq,qpeq,dx,dy,dz,dt,ng
                  u   = q(l,i,j,k,iu)
                  v   = q(l,i,j,k,iv)
                  w   = q(l,i,j,k,iw)
-                 ! slope for equilibrium profile 
+                 ! slope for equilibrium profile
                  ! 1/2*(seq(i+1)-seq(i-1))
                  ! the extra 1/2 comes from the half timestep, and is the same as in drx,dry,drz calculation
                  ! Left and right
@@ -1493,13 +1493,13 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,req,peq,qpeq,dx,dy,dz,dt,ng
                  seq_p = peq(l,i,j,k-1)/(req(l,i,j,k-1)**gamma)
                  seq_f = peq(l,i,j,k+1)/(req(l,i,j,k+1)**gamma)
                  dseqz = half*(half*(seq_f - seq_p))
-                 
+
                  drx = half * dq(l,i,j,k,n,1)   ! TVD slopes
                  dry = half * dq(l,i,j,k,n,2)
                  drz = half * dq(l,i,j,k,n,3)
                  sr0 = -u*(drx+dseqx)*dtdx -v*(dry+dseqy)*dtdy -w*(drz+dseqz)*dtdz   ! Source terms
                  r   = r + sr0                  ! Predicted state
-                 ! To compute the r,l,t,b,f,p states, remove seq in the cell center and add extrapolated 
+                 ! To compute the r,l,t,b,f,p states, remove seq in the cell center and add extrapolated
                  ! seq to the interface to have same eq. value on the left and right of interface
                  qseq = half*(seq+seq_l)
                  qp(l,i,j,k,n,1) = r - drx - seq + qseq       ! Right state
@@ -1545,7 +1545,7 @@ subroutine cmpflxm(qm,im1,im2,jm1,jm2,km1,km2, &
   real(dp),dimension(1:nvector,ip1:ip2,jp1:jp2,kp1:kp2,1:nvar)::flx
   real(dp),dimension(1:nvector,ip1:ip2,jp1:jp2,kp1:kp2,1:2)::tmp
   real(dp),dimension(1:nvector,im1:im2,jm1:jm2,km1:km2,1:ndim)::qpeq ! Same indices as left state
- 
+
 
   ! local variables
   integer ::i, j, k, l, xdim
@@ -2343,8 +2343,8 @@ subroutine ctoprim(uin,q,bf,req,peq,gravin,dt,ngrid)
               eint = etot/q(l,i,j,k,1)-eken(l)
               q(l,i,j,k,5)=MAX((gamma-one)*q(l,i,j,k,1)*eint,smallp)
            end do
-           
-           ! Store pressure perturbations 
+
+           ! Store pressure perturbations
            do l = 1, ngrid
               q(l,i,j,k,5)=q(l,i,j,k,5) - peq(l,i,j,k)
            end do
@@ -2376,13 +2376,13 @@ subroutine ctoprim(uin,q,bf,req,peq,gravin,dt,ngrid)
      end do
   end do
 #endif
-  
-  ! Store density perturbations 
+
+  ! Store density perturbations
   do k = ku1, ku2
      do j = ju1, ju2
         do i = iu1, iu2
            do l = 1, ngrid
-              q(l,i,j,k,1) = q(l,i,j,k,1) - req(l,i,j,k) 
+              q(l,i,j,k,1) = q(l,i,j,k,1) - req(l,i,j,k)
            end do
         end do
      end do

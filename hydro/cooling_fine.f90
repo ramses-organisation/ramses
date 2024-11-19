@@ -100,11 +100,6 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
 #ifdef grackle
   real(kind=8),dimension(1:nvector),save:: T2_new
 #endif
-#ifdef SOLVERmhd
-  integer::neul=5
-#else
-  integer::neul=ndim+2
-#endif
 #if NENER>0
   integer::irad
 #endif
@@ -289,7 +284,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
 #ifdef SOLVERmhd
      do idim=1,3
         do i=1,nleaf
-           emag(i)=emag(i)+0.125d0*(uold(ind_leaf(i),idim+5)+uold(ind_leaf(i),idim+nvar))**2
+           emag(i)=emag(i)+0.125d0*(uold(ind_leaf(i),idim+neul)+uold(ind_leaf(i),idim+nvar))**2
         end do
      end do
 #endif

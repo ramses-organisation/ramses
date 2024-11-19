@@ -8,7 +8,7 @@ for ((n=1; n<=$2; n+=1)); do
     asel=`echo $asel_old $step | awk '{print $1+$2}'`
     mindiff=1000.
     mindir='xxx'
-    while read line; do 
+    while read line; do
        tmp=`echo $line | cut -d = -f 1`
        len=`echo ${#tmp}`
 # remove 21 chars at end because that is exactly the string '/info_NNNNN.txt:aexp '
@@ -21,9 +21,9 @@ for ((n=1; n<=$2; n+=1)); do
        mindiff=$s
        mindir=$sdir
     done < dummy_sorted
- 
+
     asel_old=$asel
-    
+
     echo $mindir
 done
 rm dummy_sorted

@@ -27,7 +27,7 @@ double epicyclic_kappa2(double R)
       dphi_=comp_Dphi_R_halo(R+dR,0)+comp_Dphi_R_disk(R+dR,0);
 
       return 3*dphi/R + (dphi_-dphi)/dR;
-      
+
     }
   else return 0;
 }
@@ -46,7 +46,7 @@ int plot_toomre_stability(FILE *fd)
   for(i=0,count=0;i<=RSIZE;i++)
     if(list_R[i]<=6*H)
       count++;
-  
+
 
 
   Sigma0=(M_DISK)/(2*PI*H*H);
@@ -90,7 +90,7 @@ int plot_circular_speeds(FILE *fd)
 
 
 
-  RMAX=R200; 
+  RMAX=R200;
 
   Sigma0=(M_DISK)/(2*PI*H*H);
   /*
@@ -107,7 +107,7 @@ int plot_circular_speeds(FILE *fd)
       ir=(int)(log(R/LL*(pow(FR,RSIZE)-1)+1)/log(FR));
       ur=( log(R/LL*(pow(FR,RSIZE)-1)+1)/log(FR)) - ir;
       vdisp=sqrt(VelDispRz_disk[ir][0]*(1-ur)+VelDispRz_disk[ir+1][0]*(ur));
-      vrot=VelStreamPhi_disk[ir][0]*(1-ur)+VelStreamPhi_disk[ir+1][0]*(ur);      
+      vrot=VelStreamPhi_disk[ir][0]*(1-ur)+VelStreamPhi_disk[ir+1][0]*(ur);
       vcd=sqrt(R*comp_Dphi_R_disk_razorthin(R,0));
       vch=sqrt(R*comp_Dphi_R_halo(R,0));
       vcb=sqrt(R*comp_Dphi_R_bulge(R,0));
@@ -115,7 +115,7 @@ int plot_circular_speeds(FILE *fd)
 
       R = R * UnitLength_in_cm * 1.0E3 / CM_PER_MPC;
       vc2 = vc2 * UnitVelocity_in_cm_per_s / 1.0E5;
-	  
+
       fprintf(fd,"%f ",R);
       fprintf(fd,"%f\n",vc2);
       //fprintf(fd,"%f ",vch);
@@ -126,5 +126,5 @@ int plot_circular_speeds(FILE *fd)
 
     }
 
-#undef POINTS 
+#undef POINTS
 }

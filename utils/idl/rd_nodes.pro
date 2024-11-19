@@ -115,7 +115,7 @@ endif else if keyword_set(fof) then begin
     tree={n:j, idchild:new_idchild(0L:j-1L), radius:new_radius(0L:j-1L), mass:new_mass(0L:j-1L), truemass:new_truemass(0L:j-1L),x:new_x(0L:j-1L), y:new_y(0L:j-1L), z:new_z(0L:j-1L)}
 endif else begin
     tree={n:nnodes, level:level, idmother:idmother, idchild:idchild, nsister:nsister, idsister:idsister, rhosad:rhosad, rhoave:rhoave, rhomax:rhomax, radius:radius, mass:mass, truemass:truemass,x:x, y:y, z:z}
-    
+
 endelse
 
 ;.r
@@ -146,4 +146,3 @@ for i=1L,tree.n-1L do begin
 endfor
 
 end
-

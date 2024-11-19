@@ -1,4 +1,4 @@
-!TC: Why is this patched? In this version a useless header is read. 
+!TC: Why is this patched? In this version a useless header is read.
 !    Does this need to be kept for dice compatibility?
 MODULE gadgetreadfilemod
 !

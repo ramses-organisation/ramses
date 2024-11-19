@@ -150,7 +150,7 @@ subroutine make_boundary_hydro(ilevel)
               ! Scatter to boundary region
               do ivar=1,nvar
                  switch=1
-                 if(ivar>1.and.ivar<ndim+2)switch=gs(ivar-1)
+                 if(ivar>1.and.ivar<neul)switch=gs(ivar-1)
                  do i=1,ngrid
                     uold(ind_cell(i),ivar)=uu(i,ivar)*switch
                  end do
@@ -174,7 +174,7 @@ subroutine make_boundary_hydro(ilevel)
                     v = uu(i,idim+1)/d
                     ekin = ekin+0.5d0*d*v**2
                  end do
-                 uu(i,ndim+2) = uu(i,ndim+2)-ekin
+                 uu(i,neul) = uu(i,neul)-ekin
               end do
 
               ! Scatter to boundary region
@@ -207,7 +207,7 @@ subroutine make_boundary_hydro(ilevel)
                     v = uold(ind_cell(i),idim+1)/d
                     ekin = ekin+0.5d0*d*v**2
                  end do
-                 uold(ind_cell(i),ndim+2) = uold(ind_cell(i),ndim+2)+ekin
+                 uold(ind_cell(i),neul) = uold(ind_cell(i),neul)+ekin
               end do
 
               ! This option has been disactivated

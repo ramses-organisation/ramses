@@ -47,6 +47,7 @@ module pm_parameters
   real(dp)::T2_min=1d7                      ! Minimum temperature of the gas to trigger AGN blast; in K
   real(dp)::T2_max=1d9                      ! Maximum allowed temperature of the AGN blast; in K
   real(dp)::T2_AGN=1d12                     ! AGN blast temperature; in K
+  real(dp)::v_max=2000                      ! Maximum allowed velocity of the AGN jet; in km/s
 
   real(dp)::cone_opening=180d0              ! Outflow cone opening angle; in deg
   real(dp)::epsilon_kin=1                    ! Efficiency of kinetic feedback

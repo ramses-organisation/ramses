@@ -6,16 +6,16 @@
 ;       This procedure performs an orthogonal ray-tracing across the
 ;       AMR mesh for a given emissivity (specified by the user) or for
 ;       one of the hydro variable, and output a color map to the
-;       current graphic device. Valid for 3D RAMSES simulations only. 
+;       current graphic device. Valid for 3D RAMSES simulations only.
 ;
 ; CATEGORY:
 ;       Plotting routines.
 ;
 ; CALLING SEQUENCE:
-;       RAY3D, Grid, Hydro, 
+;       RAY3D, Grid, Hydro,
 ;          TYPE = type, CLT = clt, LOG = log,
 ;          XR = xr, YR = yr, ZR = zr, AVERAGE = average,
-;          XPROJ = xproj, YPROJ = YPROJ, ZPROJ = zproj, 
+;          XPROJ = xproj, YPROJ = YPROJ, ZPROJ = zproj,
 ;          LMIN = lmin, LMAX = lmax, SAVE = save,
 ;          VMIN = vmin, VMAX = vmax
 ;
@@ -23,7 +23,7 @@
 ;       Grid: structure containing the AMR mesh.
 ;
 ;       Hydro: structure containing the hydro variables.
-;       
+;
 ; OPTIONAL INPUTS:
 ;       TYPE:   character string. If set, defines the type of hydro
 ;       variable to map, with TYPE = '1', '2', '3', etc. If not set,
@@ -54,21 +54,21 @@
 ;
 ;       LMIN:    if set, specifies the minimum level to be shown.
 ;       Default: 1.
-;       
+;
 ;       LMAX:    if set, specifies the maximum level to be shown.
 ;       Default: 1.
-;       
+;
 ;       SAVE:     if set, the image is outputted to the
 ;       two-dimensional array save. If not, the image is outputted to
 ;       the current plotting device.
-;      
+;
 ;       VMIN:     if set, the minimum value to be plotted.
 ;
 ;       VMAX:     if set, the maximum value to be plotted.
 ;
 ; OUTPUTS:
 ;       None.
-;       
+;
 ; COMMON BLOCKS:
 ;       None.
 ;
@@ -78,7 +78,7 @@
 ;       logarithmic scaling:
 ;
 ;               RAY3D, Grid, Hydro, xr=[0,1], yr=[0,1],
-;               zr=[0,1], /zproj, 
+;               zr=[0,1], /zproj,
 ;               type=1, lmax=3, /log
 ;
 ;       To project the mass density along the Z axis for a thin slice
@@ -87,7 +87,7 @@
 ;
 ;               d = fltarr(512,512)
 ;               RAY3D, Grid, Hydro, xr=[0,1], yr=[0,1],
-;               zr=[0.4,0.6], /zproj, 
+;               zr=[0.4,0.6], /zproj,
 ;               type=1, lmax=3, save=d
 ;
 ;       To define an external emissivity, load first a procedure
@@ -105,7 +105,7 @@
 ;
 ;
 ;               RAY3D, Grid, Hydro, xr=[0,1], yr=[0,1],
-;               zr=[0,1], /zproj, 
+;               zr=[0,1], /zproj,
 ;               type='userdef', lmax=3, /log
 ;
 ; MODIFICATION HISTORY:
@@ -279,7 +279,7 @@ for ilevel=leveldown,levelup do begin
                 endif else begin
                     ind2=where(active gt -1, nleaf)
                 endelse
-                
+
                 if not keyword_set(type)then begin
                     q=ilevel+0.d0*active
                 endif else if type eq 'userdef' then begin
@@ -293,7 +293,7 @@ for ilevel=leveldown,levelup do begin
                     mesh=(*hydro.levelh[ilevel-1,icpu])
                     q=mesh.u(ind,ind_cell,type-1)
                 endelse
-                
+
                 if (nleaf gt 0) then begin
                     ind_xx=ind_x(ind2)+i
                     ind_yy=ind_y(ind2)+j
@@ -329,7 +329,7 @@ for ilevel=leveldown,levelup do begin
                         endfor
                     endelse
                 endif
-                
+
             endfor
             endfor
             endfor

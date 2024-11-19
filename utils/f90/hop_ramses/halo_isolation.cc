@@ -6,7 +6,7 @@
 
 using namespace std;
 
-//const int N=73743;  
+//const int N=73743;
 
 
 int main(int argc, char *argv[]){
@@ -52,7 +52,7 @@ cout << endl;
 cout<< "The file " << dateiname << " contains " << lines-2 <<" halos" << endl;
 
 
-// Definition of entities 
+// Definition of entities
 
 int N=lines-2;
 
@@ -103,14 +103,14 @@ for(int i=0;i<N;i++){
 	eingabe >> I[i] >> Npart[i] >> M[i] >> CONT[i] >>  X[i] >> Y[i] >> Z[i] >> U[i] >> V[i] >> W[i];
 }
 
-eingabe.close(); 
+eingabe.close();
 
 
 //Calculate R200 from the halo mass
 
 for(int i=0;i<N;i++){
 
-	R200cubed[i]=0.75*(1/3.14159265359)*0.005*M[i]; 
+	R200cubed[i]=0.75*(1/3.14159265359)*0.005*M[i];
 	R200[i]=pow(R200cubed[i],(1.0/3.0));
 
 }
@@ -137,16 +137,16 @@ for(int i=0;i<N;i++){
 			suit[i]=true;
 			if(sumsuit==1){
 				start=i;
-			}									
+			}
 		}
 	}
 }
 
 //cout << start << endl;
 
-ein4 << distcond; 
+ein4 << distcond;
 ein4 >> a;
-ein5 << masscond; 
+ein5 << masscond;
 ein5 >> b;
 
 //a=13; //Distance criterion parameter
@@ -164,14 +164,14 @@ ein5 >> b;
 //Loop to find the Halos, among the ones selected above, which are fulfilling the distance and mass isolation criteria
 
 	for(int j=start;j<(start+sumsuit);j++){
-	
+
 		//cout << R200[j] << endl;
 		for(int i=0;i<N;i++){
-		
+
 			Xnew=X[i];
 			Ynew=Y[i];
 			Znew=Z[i];
-	
+
 			if((X[j]-X[i])>0.5){
 				Xnew=X[i]+1;
 			}
@@ -195,13 +195,13 @@ ein5 >> b;
 
 			if(D<(a_sq*((R200[j]+R200[i])*(R200[j]+R200[i])))&&M[j]<(b*M[i])){
 				if(j!=i){
-					suit[j]=false;				
-				}		
-			}		
-	
+					suit[j]=false;
+				}
+			}
+
 			//Check
 			/*
-			if(j==925&&i==42015){		
+			if(j==925&&i==42015){
 			cout << setw(4) << j << "     " << setw(6) << i << "        " << setw(10) << setprecision(7) << D << "        " << setw(10) << setprecision(7) << 4*((R200[j]+R200[i])*(R200[j]+R200[i])) << "        " << setw(10) << setprecision(7) << D-4*((R200[j]+R200[i])*(R200[j]+R200[i])) << "        " << suit[j] << endl;
 			}
 			*/
@@ -219,18 +219,18 @@ ein5 >> b;
 	ausgabe.open("halo_suit.dat");
 
 	for(int i=start;i<(start+sumsuit);i++){
-	
-		
+
+
 		if(suit[i]==true){
 		ausgabe << 1 << endl;
 		}
 		else{
 			ausgabe << 0 << endl;
 		}
-		
+
 		ausgabe << setw(4) << i << setw(4) << suit[i] << endl;
 	}
-	
+
 	ausgabe.close();
 	*/
 	cout << endl;
@@ -245,7 +245,7 @@ ein5 >> b;
 		else{
 			ausgabe << 0 << endl;
 		}*/
-		if(suit[i]==true){	
+		if(suit[i]==true){
 		cout << setw(7) << i+1 << setw(8) << Npart[i]  << setw(13) << setprecision(7) << M[i] << setw(13) << setprecision(7) << CONT[i] << setw(13) << setprecision(7) << R200[i] << setw(11) << setprecision(7) << X[i] << setw(11) << setprecision(7) << Y[i] << setw(11) << setprecision(7) << Z[i] << setw(12) << setprecision(7) << U[i] << setw(12) << setprecision(7) << V[i] << setw(12) << setprecision(7) << W[i] << endl;
 		}
 	}
@@ -255,9 +255,9 @@ ein5 >> b;
 
 	//cout << a << endl;
 	cout << endl;
-	cout << "Total number of halos with masses in the specified mass range: " << sumsuit << endl;  
+	cout << "Total number of halos with masses in the specified mass range: " << sumsuit << endl;
 	cout << "Number of those halos which are fulfilling the distance ("<< a << ") and mass (" << b << ") condition: " << sumsuitall << endl;
-	cout << endl; 
+	cout << endl;
 
 	//}
 

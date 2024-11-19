@@ -28,8 +28,8 @@ subroutine read_stellar_params()
 
   ! Initialise mstellarini (should be zero if not set in the namelist)
   mstellarini = 0d0
-  
-  ! Read namelist file 
+
+  ! Read namelist file
   rewind(1)
   read(1, nml=stellar_params, end=111)
   rewind(1)
@@ -71,10 +71,10 @@ subroutine read_stellar_params()
   lt_m0 = lt_m0 * msun
   stellar_msink_th = stellar_msink_th * msun
   mstellarini = mstellarini * msun
-  
+
   !Careful : convert the parameter for ionising flux in code units
   stf_K = stf_K * scale_t ! K is in s**(-1)
-  stf_m0 = stf_m0 * msun 
+  stf_m0 = stf_m0 * msun
 
   !Careful: normalised age of the time during which the star is emitting HII ionising flux
   hii_t = hii_t * Myr

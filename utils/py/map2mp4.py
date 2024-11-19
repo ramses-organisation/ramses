@@ -1,5 +1,5 @@
 #!/usr/bin/env python
- 
+
 import sys
 import numpy
 import os
@@ -8,7 +8,7 @@ import fortranfile
 from argparse import ArgumentParser
 import subprocess
 import matplotlib
-# try to use agg backend as it allows to render movies without X11 connection                  
+# try to use agg backend as it allows to render movies without X11 connection
 try:
 	matplotlib.use('agg')
 except:
@@ -37,7 +37,7 @@ def load_map(args,k,i,mapkind=None):
 		map_file = "%s/movie%d/%s_%05d.map" % (args.dir, int(args.proj), kind[k], i)
 	else:
 		map_file = "%s/movie%d/%s_%05d.map" % (args.dir, int(args.proj), mapkind, i)
-		
+
 	# read image data
 	f = fortranfile.FortranFile(map_file)
 	[t, dx, dy, dz] = f.readReals('d')
@@ -62,13 +62,13 @@ def load_sink(dir,i):
 	except IOError: # sink file missing
 		print "No sink file"
 		plot_sinks = False
-	
+
 	return plot_sinks, sink_id, sink_m, [sink_x, sink_y, sink_z]
 
 def load_namelist_info(args):
 	proj_list = [int(item) for item in args.proj.split(' ')]
 	proj_ind = int(proj_list[0])-1
-	
+
 	if args.namelist == '':
 		namelist = args.dir + '/output_00002/namelist.txt'
 	else: # non-default namelist
@@ -79,7 +79,7 @@ def load_namelist_info(args):
 	except IOError:
 		print "No namelist found! Aborting!"
 		sys.exit()
-	
+
 	sink_flag = False
 	cosmo = False
 	# Loading parameters from the namelist
@@ -154,7 +154,7 @@ def make_image(i, args, proj_list, proj_axis, nx, ny, sink_flag, boxlen, xcentre
 			if plot_sinks:
 				sink_m = numpy.log10(sink_m*unit_m)
 				sink_pos = [x/boxlen for x in sink_pos]
-	
+
 		infof = open("%s/movie%d/info_%05d.txt" % (args.dir, int(args.proj), i))
 		for j, line in enumerate(infof):
 			if cosmo:
@@ -165,7 +165,7 @@ def make_image(i, args, proj_list, proj_axis, nx, ny, sink_flag, boxlen, xcentre
 					t = float(line.split()[2])
 			if j > 9:
 				break
-	
+
 		if kind[p] == 'dens':
 			dat *= unit_d	# in g/cc
 		if kind[p] in ["vx","vy","vz"]:
@@ -177,7 +177,7 @@ def make_image(i, args, proj_list, proj_axis, nx, ny, sink_flag, boxlen, xcentre
 				outfile="%s/pngs/multi_%05d.png" % (args.dir, i/int(args.step)-int(args.fmin))
 		else:
 			outfile=args.outfile
-		
+
 		if(args.logscale):
 			dat = numpy.array(dat)
 			if(kind[p] == 'stars' or kind[p] == 'dm'):
@@ -210,7 +210,7 @@ def make_image(i, args, proj_list, proj_axis, nx, ny, sink_flag, boxlen, xcentre
 			rawmax = numpy.log10(rawmax)
 			plotmin = numpy.log10(plotmin)
 			plotmax = numpy.log10(plotmax)
-		
+
 		# Auto-adjust dynamic range?
 		if(args.autorange):
 			# Overrides any provided bounds
@@ -229,16 +229,16 @@ def make_image(i, args, proj_list, proj_axis, nx, ny, sink_flag, boxlen, xcentre
 			for d in xrange(args.poly+1):
 				p_min += cmin[p][d]*i**d
 				p_max += cmax[p][d]*i**d
-			
+
 			plotmin = p_min
 			plotmax = p_max
-		
+
 		if kind[p] in ["vx","vy","vz"]:
 			plotmax=max(abs(rawmin),rawmax)
 			plotmin=-plotmax
-	
+
 		# Plotting
-		
+
 		ax = fig.add_subplot(geo[0],geo[1],p+1)
 		ax.axis([0,nx,0,ny])
 		fig.add_axes(ax)
@@ -272,7 +272,7 @@ def make_image(i, args, proj_list, proj_axis, nx, ny, sink_flag, boxlen, xcentre
 			if kind[p] == 'temp':
 				scolor = 'k'
 			cbar.ax.tick_params(width=0,labeltop='on',labelcolor=bar_font_color,labelsize=8,pad=-25)
-		
+
 		# magnetic field lines
 		if kind[p] == 'pmag' and args.streamlines is True:
 			if axis == 'x':
@@ -287,7 +287,7 @@ def make_image(i, args, proj_list, proj_axis, nx, ny, sink_flag, boxlen, xcentre
 			pX = numpy.linspace( 0,nx,num=nx,endpoint=False )
 			pY = numpy.linspace( 0,ny,num=ny,endpoint=False )
 			ax.streamplot(pX,pY,dat_U,dat_V,density=0.25,color='w',linewidth=1.0)
-		
+
 		frame_centre_w = 0.0
 		frame_centre_h = 0.0
 		frame_delta_w = 0.0
@@ -295,7 +295,7 @@ def make_image(i, args, proj_list, proj_axis, nx, ny, sink_flag, boxlen, xcentre
 
 		if not cosmo:
 			a = 1.
-		
+
 		# Plotting sink
 		if axis == 'x':
 			w=1
@@ -326,7 +326,7 @@ def make_image(i, args, proj_list, proj_axis, nx, ny, sink_flag, boxlen, xcentre
 				if k < 2:
 					frame_delta_w += deltax_frame[2*(proj_list[p]-1)+k]/a**k
 					frame_delta_h += deltay_frame[2*(proj_list[p]-1)+k]/a**k
-		
+
 		if (sink_flag and plot_sinks):
 			area_sink = 10
 			if (args.true_sink):
@@ -349,7 +349,7 @@ def make_image(i, args, proj_list, proj_axis, nx, ny, sink_flag, boxlen, xcentre
 								transform=ax.transAxes,
 								color=labels_color, fontsize=18)
 			patches.append(rect)
-			
+
 			if cosmo:
 				ax.text(0.05, 0.95, 'a={a:.3f}'.format(a=a), # aexp instead of time
 								verticalalignment='bottom', horizontalalignment='left',
@@ -377,7 +377,7 @@ def make_image(i, args, proj_list, proj_axis, nx, ny, sink_flag, boxlen, xcentre
 
 			collection = PatchCollection(patches, facecolor=labels_color)
 			ax.add_collection(collection)
-	
+
 	# corrects window extent
 	plt.subplots_adjust(left=0., bottom=0., right=1., top=1., wspace=0., hspace=0.)
 	plt.savefig(outfile,dpi=100)
@@ -388,9 +388,9 @@ def make_image(i, args, proj_list, proj_axis, nx, ny, sink_flag, boxlen, xcentre
 def fit_min_max(args,p,max_iter,proj_list,proj_axis):
 	mins = numpy.array([])
 	maxs = numpy.array([])
-	
+
 	kind = [item for item in args.kind.split(' ')]
-	
+
 	for i in xrange(int(args.fmin)+int(args.step),max_iter+1,int(args.step)):
 		args.proj = proj_list[p]
 		axis = proj_axis[args.proj]
@@ -403,16 +403,16 @@ def fit_min_max(args,p,max_iter,proj_list,proj_axis):
 			dat *= (unit_l/unit_t)/1e5 # in km/s
 		if kind[p] in ['stars','dm']:
 			dat += 1e-12
-		
+
 		if args.logscale:
 			mins = numpy.append(mins,numpy.log10(numpy.amin(dat)))
 			maxs = numpy.append(maxs,numpy.log10(numpy.amax(dat)))
 		else:
 			mins = numpy.append(mins,numpy.amin(dat))
 			maxs = numpy.append(maxs,numpy.amax(dat))
-		
+
 	ii = range(int(args.fmin)+int(args.step),max_iter+1,int(args.step))
-	cmin = polyfit(ii,mins,args.poly)	
+	cmin = polyfit(ii,mins,args.poly)
 	cmax = polyfit(ii,maxs,args.poly)
 
 	return p, cmin, cmax
@@ -438,7 +438,7 @@ def main():
 	parser.add_argument("-s","--step", dest="step", \
 			help="framing step [%(default)d]", default=1, type=int)
 	parser.add_argument('-k','--kind', dest="kind", \
-			help="kind of plot [%(default)s]", default='dens')	
+			help="kind of plot [%(default)s]", default='dens')
 	parser.add_argument('-a','--autorange',dest='autorange', action='store_true', \
 	    help='use automatic dynamic range (overrides min & max) [%(default)s]', default=False)
 	parser.add_argument('--clean_plot',dest='clean_plot', action='store_true', \
@@ -486,7 +486,7 @@ def main():
 
 	proj_ind = int(proj_list[0])-1
 	sink_flag = False
-	
+
 	# load basic info once, instead of at each loop
 	xcentre_frame, ycentre_frame, zcentre_frame, deltax_frame, deltay_frame, deltaz_frame,\
 			boxlen, proj_axis, nx, ny, max_iter, sink_flag, cosmo, levelmax = load_namelist_info(args)
@@ -511,23 +511,23 @@ def main():
 	# for each projection fit mins and maxs with polynomial
 	cmins = numpy.zeros(len(proj_list)*(args.poly+1)).reshape(len(proj_list),args.poly+1)
 	cmaxs = numpy.zeros(len(proj_list)*(args.poly+1)).reshape(len(proj_list),args.poly+1)
-	
+
 	if args.poly > 0:
 		if args.ncpu > 1:
 			results = []
 			pool = mp.Pool(processes=min(args.ncpu,len(proj_list)))
-			
+
 			results = [pool.apply_async(fit_min_max, args=(args,p,max_iter,proj_list, proj_axis,)) for p in xrange(len(proj_list))]
 			pool.close()
 			pool.join()
 			output = [p.get() for p in results]
-			
+
 			for p in xrange(len(output)): # just for safety if executed not in order
 				for d in xrange(len(proj_list)):
 					if output[p][0] == d:
 						cmins[d]=output[p][1]
 						cmaxs[d]=output[p][2]
-			
+
 		elif args.ncpu == 1:
 			if progressbar_avail:
 				widgets = ['Working...', Percentage(), Bar(marker='='),ETA()]
@@ -539,7 +539,7 @@ def main():
 				cmins[d], cmaxs[d] = fit_min_max(args,p,max_iter,proj_list, proj_axis)
 				if progressbar_avail:
 					pbar.update(d+1)
-			
+
 			if progressbar_avail:
 				pbar.finish()
 
@@ -556,7 +556,7 @@ def main():
 	  pbar = ProgressBar(widgets=widgets, maxval = max_iter+1).start()
 	else:
 		print 'Working!'
-	
+
 	if not os.path.exists("%s/pngs/" % (args.dir)):
 		os.makedirs("%s/pngs/" % (args.dir))
 
@@ -598,7 +598,7 @@ def main():
 	else:
 		frame = "{dir}/pngs/{kind}_%05d.png".format(dir=args.dir,kind=args.kind)
 		mov = "{dir}/{kind}{proj}.mp4".format(dir=args.dir, kind=args.kind, proj=args.proj)
-	
+
 	print 'Calling ffmpeg!'
 	subprocess.call("ffmpeg -loglevel quiet -i {input} -y -vcodec h264 -pix_fmt yuv420p  -r 25 -qp 15 {output}".format(input=frame, output=mov), shell=True)
 	print 'Movie created! Cleaning up!'
@@ -607,4 +607,3 @@ def main():
 
 if __name__ == '__main__':
 	main()
-

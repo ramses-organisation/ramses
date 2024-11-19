@@ -175,7 +175,7 @@ int kdBuildTree(KD kd)
 		if (i < kd->nSplit) {
 			d = 0;
 			for (j=1;j<3;++j) {
-				if (c[i].bnd.fMax[j]-c[i].bnd.fMin[j] > 
+				if (c[i].bnd.fMax[j]-c[i].bnd.fMin[j] >
 					c[i].bnd.fMax[d]-c[i].bnd.fMin[d]) d = j;
 				}
 			c[i].iDim = d;
@@ -205,7 +205,7 @@ int kdBuildTree(KD kd)
 int cmpParticles(const void *v1,const void *v2)
 {
 	PARTICLE *p1=(PARTICLE *)v1,*p2=(PARTICLE *)v2;
-	
+
 	return(p1->iOrder - p2->iOrder);
 	}
 
@@ -221,4 +221,3 @@ void kdFinish(KD kd)
 	free(kd->kdNodes);
 	free(kd);
 	}
-

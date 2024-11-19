@@ -1,7 +1,7 @@
 /* HOP_INPUT.C, Daniel Eisenstein, 1997 */
-/* Based on a paper by Daniel Eisenstein & Piet Hut, 
+/* Based on a paper by Daniel Eisenstein & Piet Hut,
 "HOP: A New Group-Finding Algorithm for N-body Simulations."
-See the included documentation or view it at 
+See the included documentation or view it at
 http://www.sns.ias.edu/~eisenste/hop/hop_doc.html */
 
 /* Version 1.0 (12/15/97) -- Original Release */
@@ -39,17 +39,17 @@ flag.  If yes, then kd->p[j].fMass holds the mass of particle j.  If no,
 then all the particles are assumed to have the same mass, equal to kd->fMass
 
 The mass and length scales you chose are up to you, but remember that
-all your density thresholds will be in those units. 
+all your density thresholds will be in those units.
 
 That's it! */
 
 /* I've included two routines f77read() and f77write() at the bottom
-of this file, in case you want to read or write FORTRAN's "unformatted" 
+of this file, in case you want to read or write FORTRAN's "unformatted"
 output. */
 
-/* If you only want to run on a subset of the particles, you need to 
+/* If you only want to run on a subset of the particles, you need to
 adjudicate that within this subroutine and make sure that kd->nActive
-and kd->p contain only the particles that you want to include in the 
+and kd->p contain only the particles that you want to include in the
 grouping. */
 
 /* The following variables in the structure KD aren't used by the HOP
@@ -59,7 +59,7 @@ own custom purposes (e.g. changing the output to the TIPSY format):
 
 /* Sorry, but I haven't tested ReadASCII or ReadSimple since my files
 aren't in that format.  They look ok by eye, but that's been known
-to fail :-).  In any case, the point is to give an example of what 
+to fail :-).  In any case, the point is to give an example of what
 has to be done. */
 
 /* ================================================================ */
@@ -96,7 +96,7 @@ int ReadSimulationFile(KD kd, char *inputfile)
 /* =================== An Example: ReadSimple() =================== */
 /* ================================================================ */
 
-/* Read the following simple format -- unformatted FORTRAN output 
+/* Read the following simple format -- unformatted FORTRAN output
 written by the following statements:
 
 	int*4 n_particles
@@ -112,12 +112,12 @@ int ReadSimple(KD kd,FILE *fp)
 {
     int f77read(FILE *f, void *p, int maxbytes);
     int j;
-    int header[100]; 	/* Assuming that the first FORTRAN block 
+    int header[100]; 	/* Assuming that the first FORTRAN block
 			is smaller than this */
     float *readlist;
 
     /* First, find out how many particles are involved */
-    f77read(fp,header,400);  
+    f77read(fp,header,400);
     kd->nActive = header[0];  /* The number of particles */
 
     /* Allocate space to hold their positions */
@@ -128,23 +128,23 @@ int ReadSimple(KD kd,FILE *fp)
     readlist = (float *)malloc(4*kd->nActive);
 
     /* Now read the X positions and transcribe them */
-    f77read(fp,readlist,kd->nActive*4);  
+    f77read(fp,readlist,kd->nActive*4);
     for (j=0; j<kd->nActive; j++)
 	kd->p[j].r[0] = readlist[j];	/* Note zero-offset! */
 
     /* Repeat for Y and Z */
-    f77read(fp,readlist,kd->nActive*4);  
+    f77read(fp,readlist,kd->nActive*4);
     for (j=0; j<kd->nActive; j++)
-	kd->p[j].r[1] = readlist[j];	
-    f77read(fp,readlist,kd->nActive*4);  
+	kd->p[j].r[1] = readlist[j];
+    f77read(fp,readlist,kd->nActive*4);
     for (j=0; j<kd->nActive; j++)
-	kd->p[j].r[2] = readlist[j];	
+	kd->p[j].r[2] = readlist[j];
 
     /* Assume the particle mass is 1/kd->nActive */
 #ifdef DIFFERENT_MASSES
     for (j=0;j<kd->nActive;j++) kd->p[j].fMass= 1.0/kd->nActive;
 #else
-    kd->fMass = 1.0/kd->nActive;	
+    kd->fMass = 1.0/kd->nActive;
 #endif
 
     /* Give up the temp space */
@@ -160,7 +160,7 @@ int ReadSimple(KD kd,FILE *fp)
 information listed line by line:
 
 	Line 1:		N_particles
-	Line 2 to N+1:	n X Y Z Mass	
+	Line 2 to N+1:	n X Y Z Mass
 
 where n is the number of the particle, (X, Y, Z) is the position vector,
 and Mass is the mass. */
@@ -173,7 +173,7 @@ int ReadASCII(KD kd,FILE *fp)
     void f77error(char *s);  /* Report and die */
 
 #ifndef DIFFERENT_MASSES
-    /* Our format calls for individual masses, yet we have nowhere to put 
+    /* Our format calls for individual masses, yet we have nowhere to put
 	them and no logical fallback. See the Makefile to compile with
 	-DDIFFERENT_MASSES */
     fprintf(stderr,"Don't know what to do with masses.");
@@ -199,7 +199,7 @@ int ReadASCII(KD kd,FILE *fp)
 	kd->p[j].r[0] = pos[0];
 	kd->p[j].r[1] = pos[1];
 	kd->p[j].r[2] = pos[2];
-#ifdef DIFFERENT_MASSES 	
+#ifdef DIFFERENT_MASSES
 	kd->p[j].fMass = mass;
 #endif
     }
@@ -233,16 +233,16 @@ int ReadTPM(KD kd,FILE *fp)
     kd->p = (PARTICLE *)malloc(kd->nActive*sizeof(PARTICLE));
     assert(kd->p != NULL);
 
-    /* This file format has divided the particle information into 
+    /* This file format has divided the particle information into
     header[1] sets.  Each set contains px[], py[], pz[], vx[], vy[],
     and vz[] vectors for the given fraction of the particles. */
 
     blocksize = header[0]/header[1];
-    readlist = (float *)malloc((size_t)(4*blocksize)); 
+    readlist = (float *)malloc((size_t)(4*blocksize));
     assert(readlist!=NULL);
     /* readlist is zero offset for particles */
-    
-    printf("nActive = %d, blocksize = %d\n", 
+
+    printf("nActive = %d, blocksize = %d\n",
 	kd->nActive, blocksize);
     INFORM("Reading particles..");
     for (bl=0;bl<header[1];bl++) {
@@ -260,7 +260,7 @@ int ReadTPM(KD kd,FILE *fp)
 	f77read(fp,readlist,blocksize*4);  /* velocity_z */
 	INFORM(".");
     }
-    free(readlist); 
+    free(readlist);
 
     masspart = 1.0/kd->nActive;	/* All particles have the same mass,
 			    chosen so that the average density is 1. */
@@ -268,7 +268,7 @@ int ReadTPM(KD kd,FILE *fp)
 #ifdef DIFFERENT_MASSES
     for (i=0;i<kd->nActive;i++) kd->p[i].fMass=masspart;
 #else
-    kd->fMass = masspart;	
+    kd->fMass = masspart;
 #endif
 
     INFORM("Done!\n");
@@ -292,16 +292,16 @@ int f77read(FILE *f, void *p, int maxbytes)
 /* Reading is done ZERO-OFFSET */
 {
     int size, size2;
-    if (fread(&size,4,1,f)!=1) 
+    if (fread(&size,4,1,f)!=1)
         f77error("f77read(): Error reading begin delimiter.");
-    if (size>maxbytes) 
+    if (size>maxbytes)
         f77error("f77read(): Block delimiter exceeds size of storage.");
-    if (size<maxbytes) 
+    if (size<maxbytes)
         fprintf(stderr,"f77read(): Block size is smaller than size of storage.");
     if (fread(p,1,size,f)!=size) f77error("f77read(): Error reading data.");
-    if (fread(&size2,4,1,f)!=1) 
+    if (fread(&size2,4,1,f)!=1)
         f77error("f77read(): Error reading end delimiter.");
-    if (size!=size2) 
+    if (size!=size2)
 	f77error("f77read(): Delimiters do not match.");
     return size;
 }
@@ -334,12 +334,12 @@ struct io_header_1
   double   BoxSize;
   double   Omega0;
   double   OmegaLambda;
-  double   HubbleParam; 
+  double   HubbleParam;
   char     fill[256- 6*4- 6*8- 2*8- 2*4- 6*4- 2*4 - 4*8];  /* fills to 256 Bytes */
 } header1;
 
 
-struct particle_data 
+struct particle_data
 {
   float  Pos[3];
   float  Vel[3];
@@ -377,7 +377,7 @@ int ReadRamses(KD kd,char *inputfile)
 
   fp=fopen(currfile,"r");
   printf("opening %s\n",currfile);
-  
+
   fread(&dummy, sizeof(dummy), 1, fp);
   fread(&ncpu, sizeof(ncpu), 1, fp);
   fread(&dummy, sizeof(dummy), 1, fp);
@@ -389,7 +389,7 @@ int ReadRamses(KD kd,char *inputfile)
   fread(&dummy, sizeof(dummy), 1, fp);
   fread(&dummy, sizeof(dummy), 1, fp);
   fread(&localseed[0], sizeof(int), 4, fp);
-  fread(&dummy, sizeof(dummy), 1, fp);      
+  fread(&dummy, sizeof(dummy), 1, fp);
   fread(&dummy, sizeof(dummy), 1, fp);
   fread(&nstar, sizeof(nstar), 1, fp);
   fread(&dummy, sizeof(dummy), 1, fp);
@@ -411,11 +411,11 @@ int ReadRamses(KD kd,char *inputfile)
   //**********************************************
 
   npart=0;
-  
+
   for(icpu=1;icpu<=ncpu;icpu++)
     {
       sprintf(currfile,tempi,icpu);
-      
+
       fp=fopen(currfile,"r");
       fread(&dummy, sizeof(dummy), 1, fp);
       fread(&ncpu, sizeof(ncpu), 1, fp);
@@ -442,10 +442,10 @@ int ReadRamses(KD kd,char *inputfile)
     for(icpu=1;icpu<=ncpu;icpu++)
       {
 	sprintf(currfile,tempi,icpu);
-	
+
 	fp=fopen(currfile,"r");
 	//	printf("opening %s\n",currfile);
-	
+
 	fread(&dummy, sizeof(dummy), 1, fp);
 	fread(&ncpu, sizeof(ncpu), 1, fp);
 	fread(&dummy, sizeof(dummy), 1, fp);
@@ -455,27 +455,27 @@ int ReadRamses(KD kd,char *inputfile)
 	fread(&dummy, sizeof(dummy), 1, fp);
 	fread(&npart2, sizeof(npart2), 1, fp);
 	fread(&dummy, sizeof(dummy), 1, fp);
-	
+
 	fread(&dummy, sizeof(dummy), 1, fp);
 	fread(&localseed[0], sizeof(int), 4, fp);
 	fread(&dummy, sizeof(dummy), 1, fp);
-	
+
 	fread(&dummy, sizeof(dummy), 1, fp);
 	fread(&nstar_tot, sizeof(nstar_tot), 1, fp);
 	fread(&dummy, sizeof(dummy), 1, fp);
-	
+
 	fread(&dummy, sizeof(dummy), 1, fp);
 	fread(&mstar_tot, sizeof(mstar_tot), 1, fp);
 	fread(&dummy, sizeof(dummy), 1, fp);
-	
+
 	fread(&dummy, sizeof(dummy), 1, fp);
 	fread(&mstar_lost, sizeof(mstar_lost), 1, fp);
 	fread(&dummy, sizeof(dummy), 1, fp);
-	
+
 	fread(&dummy, sizeof(dummy), 1, fp);
 	fread(&nsink, sizeof(nsink), 1, fp);
 	fread(&dummy, sizeof(dummy), 1, fp);
-	
+
 	temp_int=(int *) malloc(npart2*sizeof(int));
 	temp_id=(int *) malloc(npart2*sizeof(int));
 	temp_dbl=(double *)malloc(npart2*sizeof(double));
@@ -487,7 +487,7 @@ int ReadRamses(KD kd,char *inputfile)
 	    fread(&temp_dbl[0],sizeof(double),npart2,fp);
 	    fread(&dummy, sizeof(dummy), 1, fp);
 	  }
-	
+
 	// Skipping velocities
 	for(i=0;i<=ndim-1;i++)
 	  {
@@ -495,39 +495,39 @@ int ReadRamses(KD kd,char *inputfile)
 	    fread(&temp_dbl[0],sizeof(double),npart2,fp);
 	    fread(&dummy, sizeof(dummy), 1, fp);
 	  }
-	
+
 	//Skipping masses
 	fread(&dummy, sizeof(dummy), 1, fp);
 	fread(&temp_dbl[0],sizeof(double),npart2,fp);
 	fread(&dummy, sizeof(dummy), 1, fp);
-	
+
 	//Skipping identity
 	fread(&dummy, sizeof(dummy), 1, fp);
 	fread(&temp_id[0],sizeof(int),npart2,fp);
 	fread(&dummy, sizeof(dummy), 1, fp);
-	
+
 	//Skipping level
 	fread(&dummy, sizeof(dummy), 1, fp);
 	fread(&temp_int[0],sizeof(int),npart2,fp);
 	fread(&dummy, sizeof(dummy), 1, fp);
-	
+
 	//Reading age
 	fread(&dummy, sizeof(dummy), 1, fp);
 	fread(&temp_dbl[0],sizeof(double),npart2,fp);
 	fread(&dummy, sizeof(dummy), 1, fp);
-	
+
 	for(j=0;j<=npart2-1;j++)
 	  {
 	    if(temp_dbl[j]==0. && temp_id[j]>0)ncurr=ncurr+1;
 	  }
-	
+
 	free(temp_dbl);
 	free(temp_int);
 	free(temp_id);
 
 	fclose(fp);
       }
-    
+
     npart=ncurr;
 
   }
@@ -537,17 +537,17 @@ int ReadRamses(KD kd,char *inputfile)
   kd->nActive = npart;
   kd->p = (PARTICLE *)malloc(kd->nActive*sizeof(PARTICLE));
   printf("Memory Allocated\n");
-  
+
   printf("Reading Positions\n");
 
   ncurr=0;
   for(icpu=1;icpu<=ncpu;icpu++)
     {
       sprintf(currfile,tempi,icpu);
-      
+
       fp=fopen(currfile,"r");
       //      printf("opening %s\n",currfile);
-      
+
       fread(&dummy, sizeof(dummy), 1, fp);
       fread(&ncpu, sizeof(ncpu), 1, fp);
       fread(&dummy, sizeof(dummy), 1, fp);
@@ -557,27 +557,27 @@ int ReadRamses(KD kd,char *inputfile)
       fread(&dummy, sizeof(dummy), 1, fp);
       fread(&npart2, sizeof(npart2), 1, fp);
       fread(&dummy, sizeof(dummy), 1, fp);
-      
+
       fread(&dummy, sizeof(dummy), 1, fp);
       fread(&localseed[0], sizeof(int), 4, fp);
       fread(&dummy, sizeof(dummy), 1, fp);
-      
+
       fread(&dummy, sizeof(dummy), 1, fp);
       fread(&nstar_tot, sizeof(nstar_tot), 1, fp);
       fread(&dummy, sizeof(dummy), 1, fp);
-      
+
       fread(&dummy, sizeof(dummy), 1, fp);
       fread(&mstar_tot, sizeof(mstar_tot), 1, fp);
       fread(&dummy, sizeof(dummy), 1, fp);
-      
+
       fread(&dummy, sizeof(dummy), 1, fp);
       fread(&mstar_lost, sizeof(mstar_lost), 1, fp);
       fread(&dummy, sizeof(dummy), 1, fp);
-      
+
       fread(&dummy, sizeof(dummy), 1, fp);
       fread(&nsink, sizeof(nsink), 1, fp);
       fread(&dummy, sizeof(dummy), 1, fp);
-      
+
       temp_dbl=(double *)malloc(npart2*sizeof(double));
       x_dbl=(double *)malloc(npart2*sizeof(double));
       y_dbl=(double *)malloc(npart2*sizeof(double));
@@ -612,29 +612,29 @@ int ReadRamses(KD kd,char *inputfile)
 	  fread(&temp_dbl[0],sizeof(double),npart2,fp);
 	  fread(&dummy, sizeof(dummy), 1, fp);
 	}
-      
+
       //Reading Mass
       fread(&dummy, sizeof(dummy), 1, fp);
       fread(&m_dbl[0],sizeof(double),npart2,fp);
       fread(&dummy, sizeof(dummy), 1, fp);
-      
+
       //If stars are present, remove them
       if(nstar>0){
 	//Skipping identity
 	fread(&dummy, sizeof(dummy), 1, fp);
 	fread(&temp_id[0],sizeof(int),npart2,fp);
 	fread(&dummy, sizeof(dummy), 1, fp);
-	
+
 	//Skipping level
 	fread(&dummy, sizeof(dummy), 1, fp);
 	fread(&temp_int[0],sizeof(int),npart2,fp);
 	fread(&dummy, sizeof(dummy), 1, fp);
-	
+
 	//Reading age
 	fread(&dummy, sizeof(dummy), 1, fp);
 	fread(&a_dbl[0],sizeof(double),npart2,fp);
 	fread(&dummy, sizeof(dummy), 1, fp);
-	
+
 	for(j=0;j<=npart2-1;j++)
 	  {
 	    if(a_dbl[j]==0.&&temp_id[j]>0){
@@ -650,7 +650,7 @@ int ReadRamses(KD kd,char *inputfile)
 	    }
 	  }
       }
-      
+
       //If no star are present, just copy particles
       if(nstar==0){
 	for(j=0;j<=npart2-1;j++)
@@ -680,30 +680,30 @@ int ReadRamses(KD kd,char *inputfile)
       }
 
       fclose(fp);
-      
+
     }
 
 #ifdef DIFFERENT_MASSES
   m_tot=0.;
-  
+
   for(j=0;j<=npart-1;j++){
     m_tot=m_tot+kd->p[j].fMass;
-    
+
   }
   printf("Total Mass  =%f\n", m_tot);
   printf("Renormalizing particle masses to get Mtot=1\n");
-  
+
   for(j=0;j<=npart-1;j++){
-    kd->p[j].fMass=kd->p[j].fMass/m_tot;   
+    kd->p[j].fMass=kd->p[j].fMass/m_tot;
   }
-  
+
 #else
   printf("Total Mass =%f\n", kd->fMass*(npart));
   printf("Renormalizing particle masses to get Mtot=1\n");
   kd->fMass=1./float(npart);
-#endif  
+#endif
 
-  return kd->nActive;	
+  return kd->nActive;
 
 }
 /************************************************** */
@@ -714,7 +714,7 @@ int ReadASCII2(KD kd,FILE *fp)
   int j,npart,dummy;
   float pos[3], mass;
 
-  fscanf(fp,"%d\n",&npart);  
+  fscanf(fp,"%d\n",&npart);
   fscanf(fp,"%f\n",&mass);
 
   kd->nActive = npart;
@@ -732,4 +732,3 @@ int ReadASCII2(KD kd,FILE *fp)
   printf("%f\n",kd->fMass);
   return kd->nActive;
 }
-

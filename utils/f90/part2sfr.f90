@@ -2,7 +2,7 @@ program part2sfr
   use utils
   !--------------------------------------------------------------------------
   ! This program calculates SFR rate of star particls in a given number of
-  ! bins from an output of RAMSES simulation 
+  ! bins from an output of RAMSES simulation
   ! Version F90 par R. Teyssier le 01/04/01.
   !--------------------------------------------------------------------------
   implicit none
@@ -85,7 +85,7 @@ program part2sfr
   read(10,*)
 
   if(aexp.eq.1.and.h0.eq.1)cosmo=.false.
-  
+
   read(10,'(A14,A80)')GMGM,ordering
   write(*,'(" ordering type=",A20)')TRIM(ordering)
   read(10,*)
@@ -337,7 +337,7 @@ contains
       implicit none
 
       integer       :: i,n
-      
+
       character(len=4)   :: opt
       character(len=128) :: arg
       LOGICAL       :: bad, ok

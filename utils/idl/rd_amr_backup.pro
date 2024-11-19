@@ -10,12 +10,12 @@
 ;
 ; CALLING SEQUENCE:
 ;	RD_AMR, Grid, FILE=file, SWAP=swap, NCPU=ncpu, ICPU=icpu,
-;	VERBOSE=verbose 
+;	VERBOSE=verbose
 ;
 ; OPTIONAL INPUTS:
 ;	FILE:   if set, input the scalar string containing the name of
 ;	        the file to be read. Otherwise, a PICKFILE widget is
-;	        launched.  
+;	        launched.
 ;
 ;       SWAP:   if set, reverse the bit ordering (Little Endian versus
 ;               Big Endian)
@@ -23,7 +23,7 @@
 ;       ICPU:   first cpu file to be read. Default: 1.
 ;
 ;       NCPU:   number of cpu files to read, starting from
-;               icpu. Default: all files from icpu to ncpu_max.  
+;               icpu. Default: all files from icpu to ncpu_max.
 ;
 ; OUTPUTS:
 ;	Grid:   store the AMR tree in structure Grid.
@@ -62,7 +62,7 @@ if not keyword_set(file) and not keyword_set(nout) then begin
     key='*amr*.out'+suffix(jcpu-1)
     file=DIALOG_PICKFILE(/READ,filter=key)
 endif
-if keyword_set(nout) then begin 
+if keyword_set(nout) then begin
     suffnout=getcarnum(nout)
     file='output_'+suffnout(nout-1)+'/amr_'+suffnout(nout-1)+'.out'
 endif
@@ -75,7 +75,7 @@ del_amr,grid
 
 ; Initialize header variables
 ncpu_run=0L & ndim=0L & nx=0L & ny=0L & nz=0L
-nlevelmax=0L & ngridmax=0L & nboundary=0L & ngridactual=0L & nstep=0L 
+nlevelmax=0L & ngridmax=0L & nboundary=0L & ngridactual=0L & nstep=0L
 noutput=0L & boxlen=0.0d0 & t=0.0d0
 iout=0L & ifout=0L
 aexp=0.0d0 & hexp=0.0d0 & aexp_old=0.0d0 & epot_tot_int=0.0d0
@@ -168,7 +168,7 @@ for jcpu=icpumin,icpumax do begin
     file=trim(file_base+suffix(jcpu-1))
     if keyword_set(verbose) then print,'Reading file ',trim(file)
     openr,1,file,/f77_unformatted,swap_endian=swap
-    
+
 ; Read header
     readu,1,ncpu_run
     readu,1,ndim
@@ -204,7 +204,7 @@ for jcpu=icpumin,icpumax do begin
     readu,1,son
     readu,1,flag1
     readu,1,cpu_map
-    
+
 ; Read fine levels
     nlevel=0L & ilevel=0L & ng=0L
     kcpumin=1L & kcpumax=nboundary+ncpu
@@ -264,9 +264,9 @@ for jcpu=icpumin,icpumax do begin
                 list=list+1L
             endif
         endfor
-    endfor    
+    endfor
     close,1
-endfor 
+endfor
 ngrid=ngrid[0:nlevelmax-1,0L:listmax-1L]
 level=level[0:nlevelmax-1,0L:listmax-1L]
 
