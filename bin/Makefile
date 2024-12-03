@@ -5,6 +5,8 @@
 
 # Do we want a debug build? 1=Yes, 0=No
 DEBUG = 0
+# Do we want to test coverage?
+GCOV = 0
 # Compiler flavor: GNU or INTEL
 COMPILER = GNU
 # Size of vector cache
@@ -99,11 +101,15 @@ ifeq ($(COMPILER),GNU)
    endif
    F90 += -ffree-line-length-none -fimplicit-none
    FC += -ffree-line-length-none -fimplicit-none
-   ifeq ($(DEBUG),1)
-      F90 += -g -O0 -fbacktrace -fbounds-check -Wuninitialized -Wall
-      FFLAGS += -ffpe-trap=zero,underflow,overflow,invalid -finit-real=nan
+   ifeq ($(GCOV),1)
+         F90 += -O0 -fprofile-arcs -ftest-coverage
    else
-      F90 += -O3
+      ifeq ($(DEBUG),1)
+         F90 += -g -O0 -fbacktrace -fbounds-check -Wuninitialized -Wall
+         FFLAGS += -ffpe-trap=zero,underflow,overflow,invalid -finit-real=nan
+      else
+         F90 += -O3
+      endif
    endif
 endif
 

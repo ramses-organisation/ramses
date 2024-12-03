@@ -34,17 +34,23 @@ testlist="hydro,mhd,poisson,rt,sink,turb,tracer";
 #######################################################################
 MPI=0;
 NCPU=1;
+GCOV=0;
 VERBOSE=false;
 DELDATA=true;
+COVERAGE=false;
 CLEAN_ALL=false;
 SELECTTEST=false;
-while getopts "cdp:qt:v" OPTION; do
+while getopts "cdsp:qt:v" OPTION; do
    case $OPTION in
       c)
          CLEAN_ALL=true;
       ;;
       d)
          DELDATA=false;
+      ;;
+      s)
+         GCOV=1;
+         COVERAGE=true;
       ;;
       p)
          MPI=1;
@@ -286,7 +292,7 @@ for ((i=0;i<$ntests;i++)); do
 
    # Compile source
    echo "Compiling source" | tee -a $LOGFILE;
-   MAKESTRING="make EXEC=${EXECNAME} MPI=${MPI} ${FLAGS}";
+   MAKESTRING="make EXEC=${EXECNAME} MPI=${MPI} GCOV=${GCOV} ${FLAGS}";
    # if [ ${MPI} -eq 1 ]; then
    #    MAKESTRING="${MAKESTRING} -j ${NCPU}";
    # fi
@@ -299,6 +305,7 @@ for ((i=0;i<$ntests;i++)); do
    # Run test
    cd ${TEST_DIRECTORY}/${testname[n]};
    $DELETE_RESULTS;
+   rm -r coverage
    RUN_TEST="${RUN_TEST_BASE}${ndim}d ${rawname[i]}.nml";
    echo -n "Running test:" | tee -a $LOGFILE;
    STARTTIME_TEST=$(python3 -c 'import time; print(int(time.time()*1000))');
@@ -361,6 +368,14 @@ for ((i=0;i<$ntests;i++)); do
    minutes_glob[${i}]=$minutes;
    seconds_glob[${i}]=$seconds;
 
+   # move coverage files to test dir
+   if ${COVERAGE} ; then
+      mkdir coverage
+      $RETURN_TO_BIN;
+      gcov *.gcno
+      cd -
+      mv ${BIN_DIRECTORY}/*.gc* coverage
+   fi
 done
 
 # Total time ##########################################################
