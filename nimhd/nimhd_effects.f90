@@ -128,7 +128,7 @@ subroutine compute_bemf(u,q,ngrid,bemfx,bemfy,bemfz)
       end do
    end do
 
-end subroutine compute_emf
+end subroutine compute_bemf
 !###########################################################
 !###########################################################
 !###########################################################
@@ -232,7 +232,7 @@ subroutine compute_bmagij(u,q,ngrid,bmagij)
       end do
    end do
 
-en subroutine compute_bmagij
+end subroutine compute_bmagij
 !###########################################################
 !###########################################################
 !###########################################################
@@ -249,9 +249,11 @@ subroutine compute_bmagijbis(u,ngrid,bmagijbis)
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar+3)::u 
    integer::ngrid
    ! output
-   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3,1:3)::bmagij
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::bmagijbis
    ! declare local variables
    INTEGER ::i, j, k, l
+
+   bmagijbis=0d0   
 
    ! case Bx for Lorentz force EMF
    do k=min(1,ku1+1),ku2
@@ -319,12 +321,9 @@ subroutine computejb2(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
    real(dp)::bsquare
    real(dp)::computdxbis,computdybis,computdzbis
 
-   emfambdiff=0d0
-   fluxambdiff=0d0
-   emfohmdiss=0d0
-   fluxohm=0d0
    fluxmd=0d0
    fluxad=0d0
+   bmagij=0d0
    
    bemfx=0d0
    bemfy=0d0
@@ -542,6 +541,9 @@ subroutine computdifmag(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
    real(dp)::etaod2,etaohmdiss
    integer , dimension(1:3) :: index_i,index_j,index_k
 
+   emfohmdiss = 0d0
+   fluxohm = 0d0
+
    index_i = (/1,0,0/)
    index_j = (/0,1,0/)
    index_k = (/0,0,1/)
@@ -633,6 +635,9 @@ subroutine computambip(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,b
    real(dp)::betaad2,betaadbricolo
    real(dp)::rhocell,bcell,tcell
    real(dp)::crossprodx,crossprody,crossprodz
+
+   emfambdiff=0d0
+   fluxambdiff=0d0
 
   florentzx=0d0
   florentzy=0d0
@@ -1025,7 +1030,7 @@ double precision function gammaadbis(rhon,BBcell,BBcellold,temper)
    use constants
    implicit none
 
-   real(dp)::rhon,rhoH,n_H_max,BBcell,temper,BBcellold
+   real(dp)::rhon,rhoH,BBcell,temper,BBcellold
    real(dp)::eta_AD_chimie
    real(dp) :: n_H_max=2.5d+17     ! cm**-3
 
@@ -1103,7 +1108,7 @@ double precision function etaohmdiss(rhon,BBcell,temper,dt,dx,limit)
    real(dp) :: rhon,BBcell,temper  ! input cell variables
    real(dp) :: dx,dt               ! input cell size and simulation time step
    logical  :: limit               ! take into account limitation of timestep or not
-   real(dp) :: rhoH,n_H_max,BBcgs
+   real(dp) :: rhoH,BBcgs
    real(dp) :: n_H_max=2.5d+17     ! cm**-3
    real(dp) :: sigO,sigH,sigP,eta_ohm_chimie
    real(dp) :: dtt
