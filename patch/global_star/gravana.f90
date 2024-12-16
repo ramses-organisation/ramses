@@ -5,6 +5,8 @@
 subroutine gravana(x,f,dx,ncell)
   use amr_parameters
   use poisson_parameters
+  use constants
+
   implicit none
   integer ::ncell                         ! Size of input arrays
   real(dp)::dx                            ! Cell size
@@ -51,6 +53,32 @@ subroutine gravana(x,f,dx,ncell)
 #if NDIM>2
         f(i,3)=-gmass*rz/rr
 #endif
+     end do
+  end if
+
+  if(gravity_type==3)then
+     ! vertical galactic gravitational field
+     ! Kuijken & Gilmore 1989 taken from Joung & MacLow (2006)
+     ! g = -a1 z / sqrt(z^2+z0^2) - a2 z
+     a1 = gravity_params(1) ! Star potential coefficient in kpc Myr-2
+     a2 = gravity_params(2) ! DM potential coefficient in Myr-2
+     z0 = gravity_params(3) ! Scale height in pc
+    ! standard values are: a1 = 1.42d-3, a2 = 5.49d-4, z0 = 0.18d3 pc
+
+    ! The gravitational field is given by
+    ! g = -a1 z / sqrt(z^2+z0^2) - a2 z
+    ! rho = [(a1 / z0) ( (z/z0)^2 + 1)^(-3/2) + a2] / (4piG)
+
+    ! convert to code units
+     call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
+     a1 = a1 * kpc2cm / Myr2sec**2 / scale_l * scale_t**2
+     a2 = a2 / Myr2sec**2 * scale_t**2
+     z0 = z0 * pc2cm / scale_l
+
+     do i=1,ncell
+        ! the last dimension is vertical (1D -> x, 2D -> y, 3D -> z)
+        rz=x(i,ndim)-0.5d0*boxlen
+        f(i,ndim)=-a1*rz/(rz**2+z0**2)**0.5 - a2*rz
      end do
   end if
 
