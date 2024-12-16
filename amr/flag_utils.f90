@@ -926,10 +926,7 @@ subroutine init_refmap_fine(ilevel)
            xx3=xg(igrid,3)+xc(ind,3)-skip_loc(3)
            xx3=(xx3*(dxini(ilevel)/dx)-xoff3(ilevel))/dxini(ilevel)
            i1=int(xx1)+1
-           i1=int(xx1)+1
            i2=int(xx2)+1
-           i2=int(xx2)+1
-           i3=int(xx3)+1
            i3=int(xx3)+1
            ! Scatter to corresponding primitive variable
            cpu_map2(icell)=int(init_array(i1,i2,i3))
