@@ -75,7 +75,7 @@ BIN_DIRECTORY="${BASE_DIRECTORY}/bin";    # The bin directory
 VISU_DIR="${TEST_DIRECTORY}/visu";        # The visualization directory
 
 export PYTHONPATH=${VISU_DIR}:$PYTHONPATH;
-DELETE_RESULTS="rm -rf output_* *.tex data*.dat *.pdf *.pyc";
+DELETE_RESULTS="rm -rf output_* *.tex data*.dat *.pdf *.pyc *.gc* coverage_stats.txt";
 RETURN_TO_BIN="cd ${BIN_DIRECTORY}";
 EXECNAME="test_exe_";
 LOGFILE="${TEST_DIRECTORY}/test_suite.log";
@@ -305,7 +305,6 @@ for ((i=0;i<$ntests;i++)); do
    # Run test
    cd ${TEST_DIRECTORY}/${testname[n]};
    $DELETE_RESULTS;
-   rm -r coverage
    RUN_TEST="${RUN_TEST_BASE}${ndim}d ${rawname[i]}.nml";
    echo -n "Running test:" | tee -a $LOGFILE;
    STARTTIME_TEST=$(python3 -c 'import time; print(int(time.time()*1000))');
@@ -370,11 +369,10 @@ for ((i=0;i<$ntests;i++)); do
 
    # move coverage files to test dir
    if ${COVERAGE} ; then
-      mkdir coverage
       $RETURN_TO_BIN;
-      gcov *.gcno
+      gcov *.gcno > coverage_stats.txt
       cd -
-      mv ${BIN_DIRECTORY}/*.gc* coverage
+      mv ${BIN_DIRECTORY}/*.gc* .
    fi
 done
 
@@ -497,6 +495,21 @@ rm ${latexfile/.tex/.log};
 rm ${latexfile/.tex/.aux};
 rm ${latexfile/.tex/.out};
 rm $latexfile;
+
+#######################################################################
+# Generate total coverage data
+#######################################################################
+if ${COVERAGE} ; then
+   rm -r coverage
+   ALL_TEST_DIRS=""
+   for ((i=0;i<$ntests;i++)); do
+      n=${testnum[i]};
+      test_dir_name=${TEST_DIRECTORY}/${testname[n]};
+      ALL_TEST_DIRS="${ALL_TEST_DIRS} ${test_dir_name}"
+   done
+   mkdir coverage
+   python3 multi_gcov_aggregator.py ${ALL_TEST_DIRS} coverage
+fi
 
 #######################################################################
 # Clean up
