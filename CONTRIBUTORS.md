@@ -12,6 +12,7 @@
 >  </details>
 
 - Romain Teyssier
+- Corentin Cadiou
 
 ### Maintainers
 
@@ -20,7 +21,8 @@
 >  Have write access to the repositories and can merge pull requests (`maintain` role on GitHub). They are responsible for the day-to-day management of the repositories. This includes notably merging pull requests and closing solved issues.
 >  </details>
 
-- Maintainer 1
+- Tine Colman
+- Noé Brucy
 
 ### Contributors
 
@@ -29,7 +31,7 @@
 >  Can manage issues and pull requests (`triage` role on GitHub). They are in charge of reviewing pull requests, suggest changes and approve pull requests, as well as answering issues.
 >  </details>
 
-- Contributor 1
+- Robel Geda
 
 ## Changes to member list
 
