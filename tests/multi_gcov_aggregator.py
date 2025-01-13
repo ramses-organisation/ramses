@@ -37,7 +37,15 @@ class GCovParser:
 
                     if count == "-":  # Line not executable
                         stripped_line = line_content.strip()
-                        keywords = ("use", "!", "#", "implicit", "end", "integer", "logical", "character", "real", "module",
+                        keywords = ("integer", "logical", "character", "real","complex", "type",
+                                    "INTEGER", "LOGICAL", "CHARACTER", "REAL","COMPLEX", "TYPE",
+                                    "module",  "private", "public", "contains", "interface",
+                                    "MODULE",  "PRIVATE", "PUBLIC", "CONTAINS", "INTERFACE",
+                                    "use", "implicit", "namelist",
+                                    "USE", "IMPLICIT", "NAMELIST",
+                                    "else", "end", "case", "continue",
+                                    "ELSE", "END", "CASE", "CONTINUE",
+                                    "!", "#", "&",
                                     "1","2","3","4","5","6","7","8","9") #format strings
                         if len(stripped_line) == 0 or stripped_line.startswith(keywords):
                             # Line is never executable
@@ -95,7 +103,9 @@ class GCovParser:
                 for line_number, (count, line_content, directories) in sorted(coverage.items()):
                     if count==0 or count=='#':
                         count="#####"
-                    file.write(f"{count:>6}: {line_number:>6}: {line_content:<120}: {', '.join(directories)}\n")
+                    #file.write(f"{count:>6}: {line_number:>6}: {line_content:<120}: {', '.join(directories)}\n")
+                    file.write(f"{count:>6}: {line_number:>6}: {line_content:<120}\n")
+
 
 if __name__ == "__main__":
     import argparse
