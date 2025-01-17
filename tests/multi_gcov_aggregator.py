@@ -93,11 +93,21 @@ class GCovParser:
         """
         Save the aggregated coverage data for each source file.
         """
+        full_code_tot = 0
+        full_code_coverage = 0
         os.makedirs(output_directory, exist_ok=True)
-        for source_file, coverage in self.coverage_data.items():
+
+        # sort files alphabetically
+        sorted_files = sorted(list(self.coverage_data.keys()))
+
+        for source_file in sorted_files: 
+            coverage = self.coverage_data[source_file]
+            num_lines_tot = 0
+            num_lines_exec = 0
             # Use the source file name to create an output file
-            source_filename = os.path.basename(source_file)
-            output_file = os.path.join(output_directory, f"{source_filename}_aggregated.gcov")
+            parent_dir, source_filename = os.path.split(source_file)
+            output_name = (parent_dir[3:]).upper() + '_' + source_filename
+            output_file = os.path.join(output_directory, f"{output_name}_aggregated.gcov")
             with open(output_file, 'w') as file:
                 file.write(f"Source: {source_file}\n")
                 for line_number, (count, line_content, directories) in sorted(coverage.items()):
@@ -105,6 +115,17 @@ class GCovParser:
                         count="#####"
                     #file.write(f"{count:>6}: {line_number:>6}: {line_content:<120}: {', '.join(directories)}\n")
                     file.write(f"{count:>6}: {line_number:>6}: {line_content:<120}\n")
+
+                    if isinstance(count, int) or (count=="#") or (count == "#####"):
+                        num_lines_tot = num_lines_tot+1
+                        if isinstance(count, int) and count>0:
+                            num_lines_exec = num_lines_exec+1
+            if num_lines_tot>0:
+                print("{} {:6.2f}%   ({}/{})".format(source_file.ljust(50), 100*float(num_lines_exec)/num_lines_tot, num_lines_exec,num_lines_tot))
+                full_code_tot = full_code_tot + num_lines_tot
+                full_code_coverage = full_code_coverage + num_lines_exec
+
+        print("Total code coverage {:.2f}% ({}/{})".format(100*float(full_code_coverage)/full_code_tot,full_code_coverage,full_code_tot))
 
 
 if __name__ == "__main__":
