@@ -35,7 +35,7 @@ class GCovParser:
                     i_second_colon = line[i_first_colon+1:].find(':')
                     line_content = line[i_first_colon+i_second_colon+2:-1]
 
-                    if count == "-":  # Line not executable
+                    if (count == "-") or (count == "#####"):  # Line not executable or not executed
                         stripped_line = line_content.strip()
                         keywords = ("integer", "logical", "character", "real","complex", "type",
                                     "INTEGER", "LOGICAL", "CHARACTER", "REAL","COMPLEX", "TYPE",
@@ -48,12 +48,9 @@ class GCovParser:
                                     "!", "#", "&",
                                     "1","2","3","4","5","6","7","8","9") #format strings
                         if len(stripped_line) == 0 or stripped_line.startswith(keywords):
-                            # Line is never executable
-                            count = "-"
+                            count = "-"  # Line is never executable
                         else:
-                            count = "#"  # Line is executable but not executed because of preprocessor directives
-                    elif count == "#####":  # Line not covered
-                        count = 0
+                            count = 0    # Line is executable but not covered, possibly due to preprocessor directives
                     elif count.endswith("*"):  # Branch execution
                         count = int(count[:-1])
                     else:
@@ -66,12 +63,11 @@ class GCovParser:
                     if isinstance(count, int) and count > 0 and directory is not None:
                         directories.append(directory)
                     
-                    if isinstance(count, int) and isinstance(current_count, int):
-                        count += current_count
-                    elif count == "#" and current_count == "-":
-                        count = "#"
-                    elif not isinstance(count, int):
-                        count = current_count
+                    if isinstance(count, int):
+                        if isinstance(current_count, int):
+                           current_count += count
+                        else:
+                           current_count = count
                         
                     if line_content != current_line_content and current_line_content != "":
                         print(f"Warning: Line content mismatch in {source_file} at line {line_number}")
@@ -79,7 +75,7 @@ class GCovParser:
                         print(f"  Current line content: {line_content}")
                         print(f"  Using previous line content and count for aggregation.")
                     else:
-                        self.coverage_data[source_file][line_number] = (count, line_content, directories)
+                        self.coverage_data[source_file][line_number] = (current_count, line_content, directories)
 
     def parse_directories(self, directories):
         """
@@ -114,7 +110,7 @@ class GCovParser:
                     if count==0 or count=='#':
                         count="#####"
                     #file.write(f"{count:>6}: {line_number:>6}: {line_content:<120}: {', '.join(directories)}\n")
-                    file.write(f"{count:>6}: {line_number:>6}: {line_content:<120}\n")
+                    file.write(f"{count:>12}: {line_number:>6}: {line_content}\n")
 
                     if isinstance(count, int) or (count=="#") or (count == "#####"):
                         num_lines_tot = num_lines_tot+1
