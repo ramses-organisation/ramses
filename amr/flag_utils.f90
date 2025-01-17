@@ -238,8 +238,7 @@ subroutine ensure_ref_rules(ilevel)
      do i=1,ngrid
         ind_cell(i)=father(ind_grid(i))
      end do
-     call get3cubefather(ind_cell,nbors_father_cells,nbors_father_grids &
-          & ,ngrid,ilevel)
+     call get3cubefather(ind_cell,nbors_father_cells,nbors_father_grids,ngrid,ilevel)
 
      do i=1,ngrid
         ok(i)=.true.
@@ -464,9 +463,7 @@ subroutine poisson_refine(ind_cell,ok,ncell,ilevel)
            end do
         else if(ivar_refine>0)then
            do i=1,ncell
-              ok(i)=ok(i).or. &
-                   & (uold(ind_cell(i),ivar_refine)/uold(ind_cell(i),1) &
-                   & > var_cut_refine)
+              ok(i)=ok(i).or.(uold(ind_cell(i),ivar_refine)/uold(ind_cell(i),1) > var_cut_refine)
            end do
         else if(m_refine(ilevel)==0.0)then
            do i=1,ncell
@@ -855,8 +852,7 @@ subroutine init_refmap_fine(ilevel)
 #ifndef WITHOUTMPI
      if(IOGROUPSIZE>0) then
         if (mod(myid-1,IOGROUPSIZE)/=0) then
-           call MPI_RECV(dummy_io,1,MPI_INTEGER,myid-1-1,tag,&
-                & MPI_COMM_WORLD,MPI_STATUS_IGNORE,info2)
+           call MPI_RECV(dummy_io,1,MPI_INTEGER,myid-1-1,tag,MPI_COMM_WORLD,MPI_STATUS_IGNORE,info2)
         end if
      endif
 #endif
@@ -868,8 +864,7 @@ subroutine init_refmap_fine(ilevel)
      do i3=1,n3(ilevel)
         read(ilun) ((init_plane(i1,i2),i1=1,n1(ilevel)),i2=1,n2(ilevel))
         if(i3.ge.i3_min.and.i3.le.i3_max)then
-           init_array(i1_min:i1_max,i2_min:i2_max,i3) = &
-                & init_plane(i1_min:i1_max,i2_min:i2_max)
+           init_array(i1_min:i1_max,i2_min:i2_max,i3) = init_plane(i1_min:i1_max,i2_min:i2_max)
         end if
      end do
      close(ilun)
@@ -879,8 +874,7 @@ subroutine init_refmap_fine(ilevel)
      if(IOGROUPSIZE>0) then
         if(mod(myid,IOGROUPSIZE)/=0 .and.(myid.lt.ncpu))then
            dummy_io=1
-           call MPI_SEND(dummy_io,1,MPI_INTEGER,myid-1+1,tag, &
-                & MPI_COMM_WORLD,info2)
+           call MPI_SEND(dummy_io,1,MPI_INTEGER,myid-1+1,tag,MPI_COMM_WORLD,info2)
         end if
      endif
 #endif
@@ -903,8 +897,7 @@ subroutine init_refmap_fine(ilevel)
 #endif
         if(ncache>0)then
            if(i3.ge.i3_min.and.i3.le.i3_max)then
-              init_array(i1_min:i1_max,i2_min:i2_max,i3) = &
-                   & init_plane(i1_min:i1_max,i2_min:i2_max)
+              init_array(i1_min:i1_max,i2_min:i2_max,i3) = init_plane(i1_min:i1_max,i2_min:i2_max)
            end if
         endif
      end do
