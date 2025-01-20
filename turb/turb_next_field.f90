@@ -1,4 +1,3 @@
-#if USE_TURB==1
 ! TURB_NEXT_FIELD.F90
 ! A.McLeod - 24/11/2012
 ! Generate next turbulent field
@@ -30,4 +29,3 @@ subroutine turb_next_field
    afield_next = afield_next * turb_norm * turb_rms
 
 end subroutine turb_next_field
-#endif
