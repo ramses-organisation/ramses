@@ -1,7 +1,7 @@
 ! ------------------------------------------------------------------------
 ! Multigrid Poisson solver for refined AMR levels
 ! ------------------------------------------------------------------------
-! This file contains top-down MG-fine-level and MG-coarse-level related routines 
+! This file contains top-down MG-fine-level and MG-coarse-level related routines
 ! (OBSOLETE, UNUSED)
 !
 ! Used variables:
