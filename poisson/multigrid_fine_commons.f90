@@ -1371,93 +1371,93 @@ end subroutine make_reverse_mg_dp
 ! ########################################################################
 ! ########################################################################
 
-subroutine dump_mg_levels(ilevel,idout)
-   use amr_commons
-   use poisson_commons
-   use mpi_mod
-   implicit none
-
-   integer, intent(in) :: idout, ilevel
-
-   character(len=24)  :: cfile
-   character(len=5)   :: ccpu='00000'
-   character(len=5)   :: cout='00000'
-
-   integer :: i, ngrids, igrid, icpu, idim
-
-#ifndef WITHOUTMPI
-   integer,parameter::tag=1119
-   integer::dummy_io,info2
-#endif
-
-   write(ccpu,'(I5.5)') myid
-   write(cout,'(I5.5)') idout
-   cfile='multigrid_'//cout//'.out'//ccpu
-
-   ! Wait for the token
-#ifndef WITHOUTMPI
-   if(IOGROUPSIZE>0) then
-      if (mod(myid-1,IOGROUPSIZE)/=0) then
-         call MPI_RECV(dummy_io,1,MPI_INTEGER,myid-1-1,tag,&
-              & MPI_COMM_WORLD,MPI_STATUS_IGNORE,info2)
-      end if
-   endif
-#endif
-
-   open(unit=10,file=cfile,status='unknown',form='formatted')
-
-   write(10,'(I1)') ndim
-   write(10,'(I1)') myid
-   write(10,'(I1)') ncpu
-   write(10,'(I2)') ilevel
-
-   ! Loop over levels
-   do i=1,ilevel-1
-      ! Active grids
-      ngrids=active_mg(myid,i)%ngrid
-      write(10,*) ngrids
-      do igrid=1,ngrids
-         do idim=1,ndim
-#ifdef LIGHT_MPI_COMM
-            write(10,*) xg(active_mg(myid,i)%pcomm%igrid(igrid),idim)
-#else
-            write(10,*) xg(active_mg(myid,i)%igrid(igrid),idim)
-#endif
-         end do
-      end do
-
-      ! Reception grids
-      do icpu=1,ncpu
-         if(icpu==myid)cycle
-         ngrids=active_mg(icpu,i)%ngrid
-         write(10,*) ngrids
-         do igrid=1,ngrids
-            do idim=1,ndim
-#ifdef LIGHT_MPI_COMM
-               write(10,*) xg(active_mg(icpu,i)%pcomm%igrid(igrid),idim)
-#else
-               write(10,*) xg(active_mg(icpu,i)%igrid(igrid),idim)
-#endif
-            end do
-         end do
-      end do
-
-   end do
-
-   close(10)
-
-        ! Send the token
-#ifndef WITHOUTMPI
-   if(IOGROUPSIZE>0) then
-      if(mod(myid,IOGROUPSIZE)/=0 .and.(myid.lt.ncpu))then
-         dummy_io=1
-         call MPI_SEND(dummy_io,1,MPI_INTEGER,myid-1+1,tag, &
-              & MPI_COMM_WORLD,info2)
-      end if
-   endif
-#endif
-
-end subroutine dump_mg_levels
+!subroutine dump_mg_levels(ilevel,idout)
+!   use amr_commons
+!   use poisson_commons
+!   use mpi_mod
+!   implicit none
+!
+!   integer, intent(in) :: idout, ilevel
+!
+!   character(len=24)  :: cfile
+!   character(len=5)   :: ccpu='00000'
+!   character(len=5)   :: cout='00000'
+!
+!   integer :: i, ngrids, igrid, icpu, idim
+!
+!#ifndef WITHOUTMPI
+!   integer,parameter::tag=1119
+!   integer::dummy_io,info2
+!#endif
+!
+!   write(ccpu,'(I5.5)') myid
+!   write(cout,'(I5.5)') idout
+!   cfile='multigrid_'//cout//'.out'//ccpu
+!
+!   ! Wait for the token
+!#ifndef WITHOUTMPI
+!   if(IOGROUPSIZE>0) then
+!      if (mod(myid-1,IOGROUPSIZE)/=0) then
+!         call MPI_RECV(dummy_io,1,MPI_INTEGER,myid-1-1,tag,&
+!              & MPI_COMM_WORLD,MPI_STATUS_IGNORE,info2)
+!      end if
+!   endif
+!#endif
+!
+!   open(unit=10,file=cfile,status='unknown',form='formatted')
+!
+!   write(10,'(I1)') ndim
+!   write(10,'(I1)') myid
+!   write(10,'(I1)') ncpu
+!   write(10,'(I2)') ilevel
+!
+!   ! Loop over levels
+!   do i=1,ilevel-1
+!      ! Active grids
+!      ngrids=active_mg(myid,i)%ngrid
+!      write(10,*) ngrids
+!      do igrid=1,ngrids
+!         do idim=1,ndim
+!#ifdef LIGHT_MPI_COMM
+!            write(10,*) xg(active_mg(myid,i)%pcomm%igrid(igrid),idim)
+!#else
+!            write(10,*) xg(active_mg(myid,i)%igrid(igrid),idim)
+!#endif
+!         end do
+!      end do
+!
+!      ! Reception grids
+!      do icpu=1,ncpu
+!         if(icpu==myid)cycle
+!         ngrids=active_mg(icpu,i)%ngrid
+!         write(10,*) ngrids
+!         do igrid=1,ngrids
+!            do idim=1,ndim
+!#ifdef LIGHT_MPI_COMM
+!               write(10,*) xg(active_mg(icpu,i)%pcomm%igrid(igrid),idim)
+!#else
+!               write(10,*) xg(active_mg(icpu,i)%igrid(igrid),idim)
+!#endif
+!            end do
+!         end do
+!      end do
+!
+!   end do
+!
+!   close(10)
+!
+!        ! Send the token
+!#ifndef WITHOUTMPI
+!   if(IOGROUPSIZE>0) then
+!      if(mod(myid,IOGROUPSIZE)/=0 .and.(myid.lt.ncpu))then
+!         dummy_io=1
+!         call MPI_SEND(dummy_io,1,MPI_INTEGER,myid-1+1,tag, &
+!              & MPI_COMM_WORLD,info2)
+!      end if
+!   endif
+!#endif
+!
+!end subroutine dump_mg_levels
 
 ! ########################################################################
 ! ########################################################################
