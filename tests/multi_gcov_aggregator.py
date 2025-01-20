@@ -62,16 +62,16 @@ class GCovParser:
                     line_number = int(line_number)
                     # Aggregate counts and keep line content
                     current_count, current_line_content, directories = self.coverage_data[source_file][line_number]
-                    
+
                     if isinstance(count, int) and count > 0 and directory is not None:
                         directories.append(directory)
-                    
+
                     if isinstance(count, int):
                         if isinstance(current_count, int):
                            current_count += count
                         else:
                            current_count = count
-                        
+
                     if line_content != current_line_content and current_line_content != "":
                         print(f"Warning: Line content mismatch in {source_file} at line {line_number}")
                         print(f"  Previous line content: {current_line_content}")
@@ -99,7 +99,7 @@ class GCovParser:
         # sort files alphabetically
         sorted_files = sorted(list(self.coverage_data.keys()))
 
-        for source_file in sorted_files: 
+        for source_file in sorted_files:
             coverage = self.coverage_data[source_file]
             num_lines_tot = 0
             num_lines_exec = 0
