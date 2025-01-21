@@ -166,7 +166,7 @@ SUBROUTINE read_rt_params(nml_ok)
        .or. rt_err_grad_xHI .gt. 0.) rt_refine=.true.
 
   ! Reduced light speed. First check if only one light speed fraction set
-  ! and if so, set that same light speed fraction at all levels (which is 
+  ! and if so, set that same light speed fraction at all levels (which is
   ! the previous non-variable light speed behaviour). If more than one
   ! fraction is set, we are using a variable speed of light.
   if(rt_c_fraction(1).ne.rt_c_fraction(2) .and. rt_c_fraction(2).eq.1.0  &
@@ -248,8 +248,8 @@ SUBROUTINE read_rt_params(nml_ok)
   endif
 
   call read_rt_groups()
-112 format (' Using a level-variable speed of light, with f_c= '20(1pe12.3))  
-113 format (' Using a uniform reduced speed of light fraction of f_c='1pe10.3)  
+112 format (' Using a level-variable speed of light, with f_c= '20(1pe12.3))
+113 format (' Using a uniform reduced speed of light fraction of f_c='1pe10.3)
 END SUBROUTINE read_rt_params
 
 !*************************************************************************
@@ -600,7 +600,7 @@ SUBROUTINE rt_sources_vsweep(x,uu,dx,dt,nn,ilevel)
               ! The input flux is the fraction Fp/(c*Np) (Max 1 magnitude)
               uu(i,group_ind+1) =                                       &
                       rt_u_source(k)*rt_c(ilevel)*rt_n_source(k)/scale_Np
-#if NDIM>1 
+#if NDIM>1
               uu(i,group_ind+2) =                                       &
                       rt_v_source(k)*rt_c(ilevel)*rt_n_source(k)/scale_Np
 #endif

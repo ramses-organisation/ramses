@@ -263,7 +263,7 @@ end subroutine cmp_flux_tensors
 
 !************************************************************************
 FUNCTION cmp_face(fdn, fup, udn, uup, lminus, lplus, ilevel)
-  
+
 ! Compute intercell fluxes for all (four) RT variables, using the
 ! Harten-Lax-van Leer method (see eq. 30 in Aubert&Teyssier(2008).
 ! fdn    => flux function in the cell downwards from the border

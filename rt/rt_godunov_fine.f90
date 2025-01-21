@@ -374,7 +374,7 @@ SUBROUTINE rt_godfine1(ind_grid, ncache, ilevel, dt)
                     ! VSLA: coarser level and different light speed
                     uloc(ind_nexist(i),i3,j3,k3,ivar)        &
                          = uloc(ind_nexist(i),i3,j3,k3,ivar) &
-                         * rt_c(ilevel-1)/rt_c(ilevel)  
+                         * rt_c(ilevel-1)/rt_c(ilevel)
                  endif
               end do
            end do
