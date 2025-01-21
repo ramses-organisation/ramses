@@ -123,7 +123,7 @@ SUBROUTINE read_rt_params(nml_ok)
        & ,sed_dir, uv_file, rt_UVsrc_nHmax, nUVgroups, nSEDgroups        &
        & ,SED_isEgy, rt_output_coolstats, hll_evals_file                 &
        & ,upload_equilibrium_x, X, Y, rt_is_init_xion                    &
-       & ,rt_err_grad_n, rt_floor_n, rt_err_grad_xHII, rt_floor_xHII     &
+       & ,rt_err_grad_cn, rt_floor_cn, rt_err_grad_xHII, rt_floor_xHII   &
        & ,rt_err_grad_xHI, rt_floor_xHI, rt_refine_aexp, is_mu_H2,isHe   &
        & ,isH2, rt_isIR, is_kIR_T, rt_T_rad, rt_vc, rt_pressBoost        &
        & ,rt_isoPress, rt_isIRtrap, iPEH_group, heat_unresolved_HII      &
@@ -162,7 +162,7 @@ SUBROUTINE read_rt_params(nml_ok)
   if(nGroups.le.0) rt=.false. ! No sense  doing rt if there are no photons
   if(.not. rt .and. .not. rt_star) sedprops_update=-1
 
-  if(rt_err_grad_n .gt. 0. .or. rt_err_grad_xHII .gt. 0.                 &
+  if(rt_err_grad_cn .gt. 0. .or. rt_err_grad_xHII .gt. 0.                &
        .or. rt_err_grad_xHI .gt. 0.) rt_refine=.true.
 
   ! Reduced light speed. First check if only one light speed fraction set

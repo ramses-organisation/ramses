@@ -57,8 +57,8 @@ module rt_parameters
   logical::rt_is_outflow_bound=.false. ! Make all boundaries=outflow for RT              !
   real(dp)::rt_courant_factor=0.8d0    ! Courant factor for RT timesteps                 !
   logical::rt_refine=.false.           ! Refine on RT-related conditions?                !
-  real(dp)::rt_err_grad_n=-1.0         ! Photon number density gradient for refinement   !
-  real(dp)::rt_floor_n=1d-10           ! Photon number density floor for refinement      !
+  real(dp)::rt_err_grad_cn=-1.0        ! Photon flux gradient for refinement             !
+  real(dp)::rt_floor_cn=1d-10          ! Photon flux floor for refinement                !
   real(dp)::rt_err_grad_xHI=-1.0       ! Ionization state gradient for refinement        !
   real(dp)::rt_err_grad_xHII=-1.0      ! Ionization state gradient for refinement        !
   real(dp)::rt_refine_aexp=-1.0        ! Start a for RT gradient refinement              !

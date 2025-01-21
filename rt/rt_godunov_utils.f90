@@ -35,15 +35,15 @@ subroutine rt_hydro_refine(ug,um,ud,ok,nn)
   integer::k,i
   real(dp)::dg,dm,dd,error
 
-  if(rt .and. rt_err_grad_n >= 0.) then !---------------------------------
+  if(rt .and. rt_err_grad_cn >= 0.) then !--------------------------------
      do i=1,nGroups
         ! RT-photon density
         do k=1,nn
            dg=ug(k,iGroups(i)); dm=um(k,iGroups(i)); dd=ud(k,iGroups(i))
            error=2.0d0*MAX( &
-                & ABS((dd-dm)/(dd+dm+rt_floor_n)) , &
-                & ABS((dm-dg)/(dm+dg+rt_floor_n)) )
-           ok(k) = ok(k) .or. error > rt_err_grad_n
+                & ABS((dd-dm)/(dd+dm+rt_floor_cn)) , &
+                & ABS((dm-dg)/(dm+dg+rt_floor_cn)) )
+           ok(k) = ok(k) .or. error > rt_err_grad_cn
         end do
      end do
   end if
