@@ -1,6 +1,6 @@
 # Welcome!
 
-Please visit (link to read the docs here) for the official user and devloper documentaion of `ramses`. 
+Please visit (link to read the docs here) for the official user and devloper documentaion of `ramses`.
 If you are navigating using the GitHub webpage for a quick look at the markdown files, you can find a table of contenets below:
 
 # [Chapter 1. Getting started](./wiki/Start.md)

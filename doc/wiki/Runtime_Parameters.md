@@ -60,16 +60,16 @@ interpol_type=2
 
 ```
 
-This parameter file is organized in namelist blocks. 
-Each block starts with &BLOCK_NAME and ends with the character 
+This parameter file is organized in namelist blocks.
+Each block starts with &BLOCK_NAME and ends with the character
 "/". Within each block, you can specify parameter values using
-standard Fortran namelist syntax. There are currently 11 different 
+standard Fortran namelist syntax. There are currently 11 different
 parameter blocks implemented in RAMSES.
 
-4 parameters blocks are mandatory and must always be present in the 
+4 parameters blocks are mandatory and must always be present in the
 parameter file. These are `&RUN_PARAMS`, `&AMR_PARAMS`, `&OUTPUT_PARAMS`
 and `&INIT_PARAMS`. The 8 other blocks are optional. They must be present in
-the file only if they are relevant to the current run. These are  
+the file only if they are relevant to the current run. These are
 `&BOUNDARY_PARAMS`, `&HYDRO_PARAMS`, `&PHYSICS_PARAMS`, `&POISSON_PARAMS`,
 `&REFINE_PARAMS`,`&CLUMPFIND_PARAMS`, `&SINK_PARAMS` and `&MOVIE_PARAMS`.
 
@@ -82,18 +82,18 @@ in more details in the following sections.
 
 Global.md
 Amr.md
-Init.md
+Refine.md
 Output.md
+Init.md
 Boundary_conditions.md
 Hydro_Parameters.md
 Physics.md
 Poisson.md
-Refine.md
 PHEW.md
-unbinding.md
-mergertree.md
 Sinks.md
 Movies.md
 TurbulenceDriving.md
 Tracers.md
+RHD_params.md
+RHD_groups.md
 ```

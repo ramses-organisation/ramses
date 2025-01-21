@@ -1,8 +1,10 @@
 
 
+:::{versionchanged} 2017
 In the version of RAMSES after RUM 2017 ([PR #284](https://bitbucket.org/rteyssie/ramses/pull-requests/284) and after), new blocks were introduced instead of one large `&PHYSICS_PARAMS`:
+:::
 
-# Parameters
+# Physics and Units Parameters
 
 ## Cooling parameters ##
 
@@ -26,7 +28,7 @@ The block named `&COOLING_PARAMS` contains the parameters related to cooling / b
 | `z_ave`                  | `real` | 0.0  | Initial average metal abundance
 | `z_reion`                | `real` | 8.5  | Reionization redshift (UV background disabled for higher redshifts)
 | `ind_rsink`              | `real` | 4.0  | Number of cells defining the radius of the sphere where AGN feedback is active
-| `T2max`                  | `real` | HUGE  | Temperature ceiling for gas heating (heating ceiling if `isothermal=.false.`) 
+| `T2max`                  | `real` | HUGE  | Temperature ceiling for gas heating (heating ceiling if `isothermal=.false.`)
 | `neq_chem`               | `logical` | `.false.`  | Enable non-equilibrium chemistry
 
 
@@ -119,7 +121,7 @@ Please visit [https://grackle.readthedocs.io/en/grackle-3.0/Parameters.html](htt
 | `grackle_self_shielding_method`                  |`integer`|0| Switch to enable approximate self-shielding from the UV background
 | `grackle_Gamma`                                  |`real`|5./3.| The ratio of specific heats for an ideal gas
 | `grackle_photoelectric_heating_rate`             |`real`|8.5D-26| The heating rate in units of erg cm-3 s-1
-| `grackle_HydrogenFractionByMass`                 |`real`|0.76| 
+| `grackle_HydrogenFractionByMass`                 |`real`|0.76|
 | `grackle_DeuteriumToHydrogenRatio`               |`real`|2.0*3.4e-5|
 | `grackle_SolarMetalFractionByMass`               |`real`|0.01295|
 | `grackle_TemperatureStart`                       |`real`|1.0|
@@ -138,7 +140,12 @@ Please visit [https://grackle.readthedocs.io/en/grackle-3.0/Parameters.html](htt
 
 ## Physics parameters (LEGACY ONLY) ##
 
-The block named `&PHYSICS_PARAMS` contains the parameters related to physical models.
+:::{deprecated} 2017
+In the version of RAMSES after RUM 2017 ([PR #284](https://bitbucket.org/rteyssie/ramses/pull-requests/284) and after), new blocks were introduced instead of one large `&PHYSICS_PARAMS`:
+:::
+
+
+The block named `&PHYSICS_PARAMS` used to contain the parameters related to physical models.
 
 | Variable name | Fortran type | Default value  | Description               |
 |:------------------- |:-------|:----- |:------------------------- |
@@ -162,7 +169,7 @@ The block named `&PHYSICS_PARAMS` contains the parameters related to physical mo
 | `T2_star`                | `real` | 0.0  | Typical ISM polytropic temperature (cooling floor if `isothermal=.false.`)
 | `g_star`                 | `real` | 1.6  | Typical ISM polytropic index (cooling floor if `isothermal=.false.`)
 | `jeans_ncells`           | `real` | -1.0 | Jeans polytropic equation of state (cooling floor if `isothermal=.false.`)
-| `T2max`                  | `real` | 1D50  | Temperature ceiling for gas heating (heating ceiling if `isothermal=.false.`) 
+| `T2max`                  | `real` | 1D50  | Temperature ceiling for gas heating (heating ceiling if `isothermal=.false.`)
 | `n_star`                 | `real` | 0.1  | Star formation density threshold in H/cc
 | `m_star`                 | `real` | -1.0 | Star particle mass in units of mass_sph
 | `del_star`               | `real` | 2D2  | Star formation density threshold in critical density (`cosmo=.true.` only)
