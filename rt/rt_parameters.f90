@@ -9,8 +9,8 @@ module rt_parameters
 #endif
   integer,parameter::nRTvar=nGroups*(1+ndim) ! # of RT variables (photon density and flux)
 
-  real(dp)::rt_c=0., rt_c2=0.                ! RT constants in user units (set in init_rt)
-  real(dp)::rt_c_cgs=c_cgs                                 !   Reduced lightspeed [cm s-1]
+  real(dp),dimension(1:MAXLEVEL)::rt_c=0.,rt_c2=0.!RT  const. (user units, set in init_rt)
+  real(dp),dimension(1:MAXLEVEL)::rt_c_cgs=c_cgs           !   Reduced lightspeed [cm s-1]
   real(dp),parameter::one_over_c_cgs=3.335640484668562d-11 !         Save some computation
   real(dp),allocatable,dimension(:,:)::lambda1,lambda4                   ! HLL eigenvalues
 #ifndef NPRE
@@ -64,7 +64,7 @@ module rt_parameters
   real(dp)::rt_refine_aexp=-1.0        ! Start a for RT gradient refinement              !
   real(dp)::rt_floor_xHI=1d-10         ! Ionization state floor for refinement           !
   real(dp)::rt_floor_xHII=1d-10        ! Ionization state floor for refinement           !
-  real(dp)::rt_c_fraction=1d0          ! Actual lightspeed fraction for RT lightspeed    !
+  real(dp),dimension(1:MAXLEVEL)::rt_c_fraction=1d0  ! Lightspeed fraction for RT        !
   integer::rt_nsubcycle=1              ! Maximum number of RT-steps during one hydro/    !
                                        ! gravity/etc timestep                            !
   logical::rt_otsa=.true.              ! Use on-the-spot approximation                   !

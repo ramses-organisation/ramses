@@ -1,22 +1,22 @@
 !###########################################################
 !###########################################################
-!###########################################################
-SUBROUTINE get_rt_courant_coarse(dt)
+!###########################################################                                     
+SUBROUTINE get_rt_courant_dt(dt,ilevel)
 
 ! Determine the coarse RT timestep length set by the Courant condition
 !-------------------------------------------------------------------------
   use amr_parameters
   use rt_parameters
   implicit none
-  integer:: nx_loc
+  integer:: nx_loc, ilevel
   real(dp):: dt, scale, dx
 !-------------------------------------------------------------------------
   ! Mesh spacing at coarse level
   nx_loc=icoarse_max-icoarse_min+1
   scale=boxlen/dble(nx_loc)
-  dx=0.5D0**levelmin*scale
-  dt = rt_courant_factor*dx/3d0/rt_c
-END SUBROUTINE get_rt_courant_coarse
+  dx=0.5D0**ilevel*scale
+  dt = rt_courant_factor*dx/3d0/rt_c(ilevel)
+END SUBROUTINE get_rt_courant_dt
 !###########################################################
 !###########################################################
 !###########################################################

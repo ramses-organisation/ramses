@@ -562,7 +562,7 @@ end subroutine amr_step
 #ifdef RT
 subroutine rt_step(ilevel)
   use amr_parameters, only: dp
-  use amr_commons,    only: levelmin, t, dtnew, myid
+  use amr_commons,    only: t, dtnew, myid
   use rt_cooling_module, only: update_UVrates
   use rt_hydro_commons
   use UV_module
@@ -590,9 +590,9 @@ subroutine rt_step(ilevel)
   i_substep = 0
   do while (t_left > 0)                      !                RT sub-cycle
      i_substep = i_substep + 1
-     call get_rt_courant_coarse(dt_rt)
+     call get_rt_courant_dt(dt_rt,ilevel)
      ! Temporarily change timestep length to rt step:
-     dtnew(ilevel) = MIN(t_left, dt_rt/2**(ilevel-levelmin))
+     dtnew(ilevel) = MIN(t_left, dt_rt)
      t = t + dtnew(ilevel) ! Shift the time forwards one dt_rt
 
      ! If (myid==1) write(*,900) dt_hydro, dtnew(ilevel), i_substep, ilevel

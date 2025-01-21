@@ -2,11 +2,12 @@
 !================================================================
 !================================================================
 !================================================================
-subroutine rt_condinit(x,u,dx,nn)
+subroutine rt_condinit(x,u,dx,nn,ilevel)
   use amr_parameters
   use rt_parameters                                                    !RT
   implicit none
   integer ::nn                              ! Number of cells
+  integer:: ilevel                          ! Refinement level
   real(dp)::dx                              ! Cell size
   real(dp),dimension(1:nvector,1:nrtvar)::u ! Conservative variables
   real(dp),dimension(1:nvector,1:ndim  )::x ! Cell center position.
@@ -20,7 +21,7 @@ subroutine rt_condinit(x,u,dx,nn)
   !================================================================
 
   ! Call built-in initial condition generator
-  call rt_region_condinit(x,u,dx,nn)
+  call rt_region_condinit(x,u,dx,nn,ilevel)
 
   ! Add here, if you wish, some user-defined initial conditions
   ! ........
