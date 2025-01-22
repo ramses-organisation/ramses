@@ -8,4 +8,3 @@ if [ ! -d "cosmo_128" ]; then
 else
     echo "cosmo_128 directory already exists."
 fi
-
