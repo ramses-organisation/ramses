@@ -87,7 +87,7 @@ visu_ramses.check_solution(data["data"], 'sedov-3d', overwrite=True)
 
 Optional files:
 
-- `condinit.f90`: you can have your own initial setup if it's not entirely definable in a namelist. **REMEMBER** to set the correct `PATCH` in the `config.txt` file! (e.g. `PATCH=../tests/hydro/sedov-3d`)
+- `condinit.f90`: you can have your own initial setup if it's not entirely definable in a namelist. **REMEMBER** to set the correct `PATCH` in the `config.txt` file! (e.g. `PATCH=../tests/hydro/sedov-3d`). An other option is to add a custom condinit routine option in the existing condinit.f90 file.
 
 - `before-test.sh`: if this file is present in the test directory, it will be run before the test begins (useful for e.g. creating symbolic links to libraries...)
 

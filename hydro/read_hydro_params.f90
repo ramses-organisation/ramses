@@ -20,7 +20,7 @@ subroutine read_hydro_params(nml_ok)
   !--------------------------------------------------
 
   ! Initial conditions parameters
-  namelist/init_params/filetype,initfile,multiple,nregion,region_type &
+  namelist/init_params/condinit_kind,filetype,initfile,multiple,nregion,region_type &
        & ,x_center,y_center,z_center,aexp_ini &
        & ,length_x,length_y,length_z,exp_region &
        & ,d_region,u_region,v_region,w_region,p_region &
