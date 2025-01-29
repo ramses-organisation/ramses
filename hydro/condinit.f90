@@ -35,7 +35,7 @@ subroutine condinit(x,u,dx,nn)
      call region_condinit(x, q, dx, nn)
 
   case('ana_disk_potential')
-     call ana_disk_potential_condinit(x, q, dx, nn)  
+     call ana_disk_potential_condinit(x, q, dx, nn)
 
   ! Add here, if you wish, some user-defined initial conditions
   ! ........

@@ -41,7 +41,7 @@ subroutine  condinit(x,u,dx,nn)
      call region_condinit(x, q, dx, nn)
 
   case('orzag_tang')
-     call orzag_tang_condinit(x, q, dx, nn)  
+     call orzag_tang_condinit(x, q, dx, nn)
 
   ! Add here, if you wish, some user-defined initial conditions
   ! ........
@@ -216,4 +216,3 @@ subroutine velana(x,v,dx,t,ncell)
 
 
 end subroutine velana
-
