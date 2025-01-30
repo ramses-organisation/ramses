@@ -231,13 +231,13 @@ pure function protected_exp(x)
     protected_exp = 0
   else
     protected_exp = exp(x)
-  end if  
+  end if
 end function protected_exp
 
 pure function protected_mul(x, y)
   ! Protect the multiplication from underflows
   ! margin is the number of orders of magnitude below/above which the
-  ! multiplication is set to zero/infinity. 
+  ! multiplication is set to zero/infinity.
   !-----------------------------------------------------------------------
   real(dp),intent(in)::x, y
   real(dp)::protected_mul
