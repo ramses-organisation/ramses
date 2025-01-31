@@ -90,6 +90,10 @@ class GCovParser:
         full_code_coverage = 0
         os.makedirs(output_directory, exist_ok=True)
 
+        # output file to store the results
+        report_filename = 'coverage_report.txt'
+        f = open(report_filename, 'w')
+
         # sort files alphabetically
         sorted_files = sorted(self.coverage_data.keys())
 
@@ -119,13 +123,15 @@ class GCovParser:
             # print stats on current file and add to total
             if num_lines_tot>0:
                 coverage = 100 * num_lines_exec / num_lines_tot
-                print(f"{source_file:50s} {coverage:6.2f}%   ({num_lines_exec}/{num_lines_tot})")
+                print(f"{source_file:50s} {coverage:6.2f}%   ({num_lines_exec}/{num_lines_tot})", file=f)
                 full_code_tot = full_code_tot + num_lines_tot
                 full_code_coverage = full_code_coverage + num_lines_exec
 
         coverage = 100*full_code_coverage/full_code_tot
-        print(f"Total code coverage {coverage:.2f}% ({full_code_coverage}/{full_code_tot})")
-
+        print(f"Total code coverage {coverage:.2f}% ({full_code_coverage}/{full_code_tot})", file=f)
+        print(f"\033[92mTotal code coverage {coverage:.2f}% ({full_code_coverage}/{full_code_tot})\033[0m")
+        print("Coverage statistics writen to file:",report_filename)
+        f.close()
 
 if __name__ == "__main__":
     import argparse
