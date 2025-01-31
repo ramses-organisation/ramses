@@ -6,6 +6,7 @@
 
 import os
 import re
+import sys
 from collections import defaultdict
 from glob import glob
 
@@ -38,19 +39,16 @@ class GCovParser:
                     i_second_colon = line[i_first_colon+1:].find(':')
                     line_content = line[i_first_colon+i_second_colon+2:-1]
 
-                    if (count == "-") or (count == "#####"):  # Line not executable or not executed
+                    if count in ("-", "#####"):  # Line not executable or not executed
                         stripped_line = line_content.strip()
-                        keywords = ("integer", "logical", "character", "real","complex", "type",
-                                    "INTEGER", "LOGICAL", "CHARACTER", "REAL","COMPLEX", "TYPE",
-                                    "module",  "private", "public", "contains", "interface",
-                                    "MODULE",  "PRIVATE", "PUBLIC", "CONTAINS", "INTERFACE",
-                                    "use", "implicit", "namelist",
-                                    "USE", "IMPLICIT", "NAMELIST",
-                                    "else", "end", "case", "continue",
-                                    "ELSE", "END", "CASE", "CONTINUE",
-                                    "!", "#", "&",
-                                    "1","2","3","4","5","6","7","8","9") #format strings
-                        if len(stripped_line) == 0 or stripped_line.startswith(keywords):
+                        keywords = (
+                            'integer', 'logical', 'character', 'real', 'complex',
+                            'type', 'module', 'private', 'public', 'contains',
+                            'interface', 'use', 'implicit', 'namelist', 'else',
+                            'end', 'case', 'continue', '!', '#', '&',
+                            '1', '2', '3', '4', '5', '6', '7', '8', '9', # format strings
+                        )
+                        if len(stripped_line) == 0 or stripped_line.lower().startswith(keywords):
                             count = "-"  # Line is never executable
                         else:
                             count = 0    # Line is executable but not covered, possibly due to preprocessor directives
@@ -73,10 +71,10 @@ class GCovParser:
                            current_count = count
 
                     if line_content != current_line_content and current_line_content != "":
-                        print(f"Warning: Line content mismatch in {source_file} at line {line_number}")
-                        print(f"  Previous line content: {current_line_content}")
-                        print(f"  Current line content: {line_content}")
-                        print(f"  Using previous line content and count for aggregation.")
+                        print(f"Warning: Line content mismatch in {source_file} at line {line_number}", file=sys.stderr)
+                        print(f"  Previous line content: {current_line_content}", file=sys.stderr)
+                        print(f"  Current line content: {line_content}", file=sys.stderr)
+                        print("  Using previous line content and count for aggregation.", file=sys.stderr)
                     else:
                         self.coverage_data[source_file][line_number] = (current_count, line_content, directories)
 
@@ -97,15 +95,15 @@ class GCovParser:
         os.makedirs(output_directory, exist_ok=True)
 
         # sort files alphabetically
-        sorted_files = sorted(list(self.coverage_data.keys()))
+        sorted_files = sorted(self.coverage_data.keys())
 
         for source_file in sorted_files:
             coverage = self.coverage_data[source_file]
             num_lines_tot = 0
             num_lines_exec = 0
             # Use the source file name to create an output file, keeping info on the source directory
-            source_filename_parts = source_file.split('/')
-            output_name = (source_filename_parts[-2]).upper() + '_' + source_filename_parts[-1]
+            *_head, parent_folder, fname = source_file.split('/')
+            output_name = f"{parent_folder.upper()}_{fname}"
             output_file = os.path.join(output_directory, f"{output_name}_aggregated.gcov")
             with open(output_file, 'w') as file:
                 file.write(f"Source: {source_file}\n")
@@ -124,11 +122,13 @@ class GCovParser:
 
             # print stats on current file and add to total
             if num_lines_tot>0:
-                print("{} {:6.2f}%   ({}/{})".format(source_file.ljust(50), 100*float(num_lines_exec)/num_lines_tot, num_lines_exec,num_lines_tot))
+                coverage = 100 * num_lines_exec / num_lines_tot
+                print(f"{source_file:50s} {coverage:6.2f}%   ({num_lines_exec}/{num_lines_tot})")
                 full_code_tot = full_code_tot + num_lines_tot
                 full_code_coverage = full_code_coverage + num_lines_exec
 
-        print("Total code coverage {:.2f}% ({}/{})".format(100*float(full_code_coverage)/full_code_tot,full_code_coverage,full_code_tot))
+        coverage = 100*full_code_coverage/full_code_tot
+        print(f"Total code coverage {coverage:.2f}% ({full_code_coverage}/{full_code_tot})")
 
 
 if __name__ == "__main__":
