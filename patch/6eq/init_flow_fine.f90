@@ -8,7 +8,7 @@ subroutine init_flow
   implicit none
 
   integer::ilevel,ivar
-  
+
   if(verbose)write(*,*)'Entering init_flow'
   do ilevel=nlevelmax,1,-1
      if(ilevel>=levelmin)call init_flow_fine(ilevel)
@@ -31,7 +31,7 @@ subroutine init_flow_fine(ilevel)
   use cooling_module
   implicit none
   integer::ilevel
-  
+
   integer::i,icell,igrid,ncache,iskip,ngrid
   integer::ind,idim,ivar,imat,ix,iy,iz,nx_loc
   integer::i1,i2,i3,i1_min,i1_max,i2_min,i2_max,i3_min,i3_max
@@ -56,7 +56,7 @@ subroutine init_flow_fine(ilevel)
 
   ! Mesh size at level ilevel in coarse cell units
   dx=0.5D0**ilevel
-  
+
   ! Set position of cell centers relative to grid center
   do ind=1,twotondim
      iz=(ind-1)/4
@@ -66,7 +66,7 @@ subroutine init_flow_fine(ilevel)
      if(ndim>1)xc(ind,2)=(dble(iy)-0.5D0)*dx
      if(ndim>2)xc(ind,3)=(dble(iz)-0.5D0)*dx
   end do
-  
+
   !-------------------------------------------------------
   ! Compute initial conditions from subroutine condinit
   !-------------------------------------------------------
@@ -78,7 +78,7 @@ subroutine init_flow_fine(ilevel)
   if(ndim>1)skip_loc(2)=dble(jcoarse_min)
   if(ndim>2)skip_loc(3)=dble(kcoarse_min)
   dx_loc=dx*scale
-  
+
   ! Loop over grids by vector sweeps
   do igrid=1,ncache,nvector
      ngrid=MIN(nvector,ncache-igrid+1)
@@ -156,7 +156,7 @@ subroutine region_condinit(x,q,f,g,dx,nn)
 
   ! Loop over initial conditions regions
   do k=1,nregion
-     
+
      ! For "square" regions only:
      if(region_type(k) .eq. 'square')then
 
@@ -223,7 +223,7 @@ subroutine region_condinit(x,q,f,g,dx,nn)
               q(i,3)=w_region(k)
 #endif
            end if
-           
+
         end do
 
      end if
@@ -250,7 +250,7 @@ subroutine region_condinit(x,q,f,g,dx,nn)
            if(geom==2)r=r/(twopi*x(i,1))
            if(geom==3)r=r/(fourpi*(x(i,1)**2+dx**2/12.0))
 
-           ! If cell lies within CIC cloud, 
+           ! If cell lies within CIC cloud,
            ! ADD to primitive variables the region values
            q(i,1)          = q(i,1) + u_region(k)*r
 #if NDIM>1
@@ -264,7 +264,7 @@ subroutine region_condinit(x,q,f,g,dx,nn)
            end do
         end do
      end if
- 
+
   end do
 
   return

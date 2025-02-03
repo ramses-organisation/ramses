@@ -24,11 +24,11 @@ module amr_commons
   real(dp)::t=0.0D0                             ! Time variable
 
   ! executable identification
-  CHARACTER(LEN=80)::builddate,patchdir
-  CHARACTER(LEN=80)::gitrepo,gitbranch,githash
+  CHARACTER(LEN=300)::builddate,buildcommand,patchdir
+  CHARACTER(LEN=300)::gitrepo,gitbranch,githash
 
   ! Save namelist filename
-  CHARACTER(LEN=80)::namelist_file
+  CHARACTER(LEN=300)::namelist_file
 
   ! MPI variables
   integer::ncpu,ndomain,myid,overload=1
@@ -134,7 +134,7 @@ module amr_commons
 #ifdef LIGHT_MPI_COMM
   ! ----------- Optimized MPI buffer communicator structures suggested by P. Wautelet on the IDRIS page ------------ !
   ! ----------- http://www.idris.fr/docs/docu/support-avance/ramses.html to reduce the memory footprint ------------ !
-  ! ----------- D. Chapon (CEA Saclay - IRFU).                                                          ------------ !  
+  ! ----------- D. Chapon (CEA Saclay - IRFU).                                                          ------------ !
   ! Actual communication structure holding the data allocatable arrays
   type point_comm
      integer          ,dimension(:),  pointer::igrid
@@ -191,12 +191,6 @@ module amr_commons
   type(communicator),allocatable,dimension(:,:)::reception   ! 2D (ncpu, nlevelmax) data reception "heavy" buffer
 #endif
 
-
-  ! Types for physical boundary conditions
-  CHARACTER(LEN=20)::type_hydro  ='hydro'
-  CHARACTER(LEN=20)::type_accel  ='accel'
-  CHARACTER(LEN=20)::type_flag   ='flag'
-
   ! Units specified by the user in the UNITS_PARAMS namelist for non-cosmo runs.
   ! These values shouldn't be used directly. Instead call units() in amr/units.f90.
   real(dp)::units_density=1.0d0  ! [g/cm^3]
@@ -204,4 +198,3 @@ module amr_commons
   real(dp)::units_length=1.0d0   ! [cm]
 
 end module amr_commons
-

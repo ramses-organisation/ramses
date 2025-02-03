@@ -1,6 +1,6 @@
 This namelist contains various input parameters for RAMSES runs
 
-&RUN_PARAMS 
+&RUN_PARAMS
 hydro=.true.
 nremap=10
 ncontrol=10
@@ -38,7 +38,7 @@ slope_type=2
 riemann='hllc'
 /
 
-&REFINE_PARAMS 
+&REFINE_PARAMS
 err_grad_p=0.1
 interpol_var=0
 interpol_type=2
@@ -50,4 +50,3 @@ ibound_min=-1,+1
 ibound_max=-1,+1
 bound_type= 1, 1
 /
-

@@ -21,7 +21,7 @@ OBJS   = $(SRCS:.c=.o)
 INCL   = prototypes.h globvars.h nrsrc/nrutil.h nrsrc/nr.h
 
 
-CFLAGS = -O2 
+CFLAGS = -O2
 
 LIBS   =  -lm
 
@@ -33,9 +33,9 @@ all: $(EXEC)
 $(EXEC): $(OBJS)
 	$(CC) $(CFLAGS) $(OBJS) -o $(EPATH)$(EXEC)  $(LIBS)
 
-$(OBJS): $(INCL) 
+$(OBJS): $(INCL)
 
-clean: 
+clean:
 	rm *.o nrsrc/*.o
 
 cleanall: clean

@@ -76,11 +76,11 @@ void free_f3tensor(double ***t, long nrl, long nrh, long ncl, long nch,
 
 
 int  ***i3tensor(long nrl, long nrh, long ncl, long nch, long ndl, long ndh);
-void free_i3tensor(int ***t, long nrl, long nrh, long ncl, long nch,     
+void free_i3tensor(int ***t, long nrl, long nrh, long ncl, long nch,
 	long ndl, long ndh);
 
 unsigned char  ***b3tensor(long nrl, long nrh, long ncl, long nch, long ndl, long ndh);
-void free_b3tensor(unsigned char ***t, long nrl, long nrh, long ncl, long nch,     
+void free_b3tensor(unsigned char ***t, long nrl, long nrh, long ncl, long nch,
 	long ndl, long ndh);
 
 

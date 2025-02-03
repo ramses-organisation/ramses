@@ -22,14 +22,14 @@
 ;       OUTPUTS). The default is: tipsy.
 ;
 ;       TIPSY_DIR: If set, defines the directory (full path) where the
-;       TIPSY executable SMOOTH is installed. 
-;       Default: /home/storage/teyssier/halos_finder/smooth/ 
+;       TIPSY executable SMOOTH is installed.
+;       Default: /home/storage/teyssier/halos_finder/smooth/
 ;
 ; OUTPUTS:
 ;       Three output files are generated: tipsy.ascii, tipsy.bin and
 ;       tipsy.den. The latter file contains the particle density
 ;       array, used in PP_PART3D for example.
-;       
+;
 ; COMMON BLOCKS:
 ;       None.
 ;
@@ -39,7 +39,7 @@
 ;	        MAKE_DENS, PART, PREFIX='my_prefix'
 ;
 ;       After completion, the routine should have created 3 new files:
-;              
+;
 ;               my_prefix.ascii
 ;               my_prefix.bin
 ;               my_prefix.den

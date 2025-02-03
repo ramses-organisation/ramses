@@ -18,7 +18,7 @@
 ; OPTIONAL INPUTS:
 ;	FILE:    if set, input the scalar string containing the name of
 ;         	 the file to be read. Otherwise, a PICKFILE widget is
-;         	 launched.  
+;         	 launched.
 ;
 ;       SWAP:    if set, reverse the bit ordering (Little Endian versus
 ;                BigEndian)
@@ -26,14 +26,14 @@
 ;       ICPU:    first cpu file to be read. Default: 1.
 ;
 ;       NCPU:    number of cpu files to read, starting from
-;                icpu. Default: all files from icpu to ncpu_max.  
+;                icpu. Default: all files from icpu to ncpu_max.
 ;
 ;       DENSITY: if set, read a file containing the SPH density for
 ;                each particle. Can also be set to the density file name.
-;	
+;
 ;       TIME:    if set, read in FILE the birth eopch of each
 ;                particle. Usefull for star formation runs.
-;	
+;
 ; OUTPUTS:
 ;	Part:   structure containing particles positions, velocities,
 ;	masses and levels. If DENSITY is set, it also contains SPH
@@ -153,7 +153,7 @@ if not keyword_set(density) and not keyword_set(time) then begin
                ,vp:fltarr(npart,ndim) $
                ,id:lonarr(npart) $
                ,family:lonarr(npart) $
-               ,tag:lonarr(npart) $               
+               ,tag:lonarr(npart) $
                ,mp:fltarr(npart)}
     endelse
 endif else if not keyword_set(time) then begin
@@ -173,7 +173,7 @@ endif else if not keyword_set(time) then begin
                ,vp:fltarr(npart,ndim) $
                ,id:lonarr(npart) $
                ,family:lonarr(npart) $
-               ,tag:lonarr(npart) $                                 
+               ,tag:lonarr(npart) $
                ,mp:fltarr(npart) $
                ,dp:fltarr(npart) }
     endelse
@@ -184,7 +184,7 @@ endif else if not keyword_set(density) then begin
                ,xp:fltarr(npart,ndim) $
                ,id:lonarr(npart) $
                ,family:lonarr(npart) $
-               ,tag:lonarr(npart) $        
+               ,tag:lonarr(npart) $
                ,mp:fltarr(npart) $
                ,ap:fltarr(npart) }
     endif else begin
@@ -194,7 +194,7 @@ endif else if not keyword_set(density) then begin
                ,vp:fltarr(npart,ndim) $
                ,id:lonarr(npart) $
                ,family:lonarr(npart) $
-               ,tag:lonarr(npart) $                  
+               ,tag:lonarr(npart) $
                ,mp:fltarr(npart) $
                ,ap:fltarr(npart) }
     endelse
@@ -205,7 +205,7 @@ endif else begin
                ,xp:fltarr(npart,ndim) $
                ,id:lonarr(npart) $
                ,family:lonarr(npart) $
-               ,tag:lonarr(npart) $                  
+               ,tag:lonarr(npart) $
                ,mp:fltarr(npart) $
                ,dp:fltarr(npart) $
                ,ap:fltarr(npart) }
@@ -216,7 +216,7 @@ endif else begin
                ,vp:fltarr(npart,ndim) $
                ,id:lonarr(npart) $
                ,family:lonarr(npart) $
-               ,tag:lonarr(npart) $                  
+               ,tag:lonarr(npart) $
                ,mp:fltarr(npart) $
                ,dp:fltarr(npart) $
                ,ap:fltarr(npart) }
@@ -273,11 +273,11 @@ for jcpu=0,ncpu-1 do begin
         part.tag(i1:i2)=ll
 
         if(nstar gt 0)then begin
-            if keyword_set(time) then begin 
+            if keyword_set(time) then begin
                 readu,1,xx
                 part.ap(i1:i2)=xx
             endif
-            if keyword_set(metal) then begin 
+            if keyword_set(metal) then begin
                 readu,1,xx
                 part.zp(i1:i2)=xx
             endif
@@ -289,9 +289,9 @@ for jcpu=0,ncpu-1 do begin
     iskip=iskip+npartp
 endfor
 
-if keyword_set(density) then begin    
+if keyword_set(density) then begin
     if density eq 1 then begin
-        file=DIALOG_PICKFILE(/READ,filter='*.dis')        
+        file=DIALOG_PICKFILE(/READ,filter='*.dis')
     endif else begin
         file=density
     endelse
@@ -331,5 +331,3 @@ if keyword_set(density) then begin
 endif
 
 end
-
-

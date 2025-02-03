@@ -1,4 +1,4 @@
-&RUN_PARAMS 
+&RUN_PARAMS
 hydro=.true.
 poisson=.true.
 ncontrol=1
@@ -9,7 +9,7 @@ nremap=1
 cost_weighting=.false.
 /
 
-&AMR_PARAMS 
+&AMR_PARAMS
 levelmin=7
 levelmax=16
 ngridmax=1000000

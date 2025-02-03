@@ -34,7 +34,7 @@ subroutine output_cone()
   integer::nalloc1,nalloc2
   integer, parameter :: mode = int(O'755')
   integer::ierr
-  
+
   integer,dimension(1:nvector),save::ind_part
   logical::opened
   opened=.false.
@@ -514,7 +514,7 @@ subroutine perform_my_selection(justcount,z1,z2, &
   integer :: nrepxm,nrepxp,nrepym,nrepyp,nrepzm,nrepzp
   integer :: i,j,k,np,npartcount
   logical :: keep_part, fullsky
-  
+
   if (verbose) write(*,*) 'Entering perform_my_selection'
 
   ! Initialize cosmological parameters
@@ -551,7 +551,7 @@ subroutine perform_my_selection(justcount,z1,z2, &
      nrepzp=myint((observer(3)+dist2)/Lbox)
      fullsky=.true.
   endif
-  
+
   facnorm=1.0d0/(dist2-dist1)
   tanybound=tan(thetayrad)
   tanzbound=tan(thetazrad)
@@ -595,16 +595,16 @@ subroutine perform_my_selection(justcount,z1,z2, &
                     endif
                  endif
               end if
-              
+
               if (keep_part) then
                  ! This particle is good, we can add it to the list
                  npartcount=npartcount+1
-                 
+
                  if (.not. justcount) then
                     posout(1,npartcount)=xcoord
                     posout(2,npartcount)=ycoord
                     posout(3,npartcount)=zcoord
-                    
+
                     ! Velocities are rotated
                     vxfr=vel(1,np)
                     vyfr=vel(2,np)
@@ -618,7 +618,7 @@ subroutine perform_my_selection(justcount,z1,z2, &
                     velout(3,npartcount)=vxfr*rotm1(1,3)+ &
                          &               vyfr*rotm1(2,3)+ &
                          &               vzfr*rotm1(3,3)
-                    
+
                     ! Additional properties are just passed
                     varout(1,npartcount)=var(1,np)
                     varout(2,npartcount)=var(2,np)

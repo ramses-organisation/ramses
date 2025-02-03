@@ -801,7 +801,3 @@ subroutine prolong(ilevel)
   ! End loop over grids
 
 end subroutine prolong
-
-
-
-

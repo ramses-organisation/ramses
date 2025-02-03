@@ -48,16 +48,16 @@ NPSCAL = 0
 LIGHT_MPI_COMM = 0
 
 # Compute NVAR
-NVAR = 2+$(NDIM)
+NHYDRO = 2+$(NDIM)
 ifeq ($(SOLVER),mhd)
-   NVAR = 8
+   NHYDRO = 8
 endif
 # current is treated as a passive scalar?
 ifeq ($(NIMHD),1)
    NPSCAL := $(NPSCAL)+3
    SOLVER=mhd
 endif
-NVAR := $(NVAR)+$(NENER)+$(NPSCAL)+$(NMETALS)
+NVAR := $(NHYDRO)+$(NENER)+$(NPSCAL)+$(NMETALS)
 ifeq ($(RT),1)
    NVAR := $(NVAR)+$(NIONS)
 endif
@@ -70,8 +70,9 @@ GITHASH = $(shell git log --pretty=format:'%H' -n 1)
 GITREMOTE = $(shell git config --get branch.$(GITBRANCH).remote)
 GITREPO = $(shell git config --get remote.$(GITREMOTE).url)
 BUILDDATE = $(shell date +"%D-%T")
+BUILDCOMMAND =${MAKE} ${MAKEFLAGS}
 DEFINES = -DNVECTOR=$(NVECTOR) -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DNENER=$(NENER) \
-          -DNVAR=$(NVAR) -DSOLVER$(SOLVER)
+          -DNVAR=$(NVAR) -DNHYDRO=$(NHYDRO) -DSOLVER$(SOLVER)
 ifeq ($(ATON),1)
    DEFINES += -DATON
 endif
@@ -263,7 +264,7 @@ ramses_aton: $(MODOBJ) $(ATON_MODOBJ) $(AMRLIB) $(ATON_OBJ) ramses.o
 write_gitinfo.o: FORCE
 	$(FC) -O0 -cpp -DPATCH=\'$(PATCH)\' -DGITBRANCH=\'$(GITBRANCH)\' \
 		-DGITHASH=\'"$(GITHASH)"\' -DGITREPO=\'$(GITREPO)\' \
-		-DBUILDDATE=\'"$(BUILDDATE)"\' -c ../amr/write_gitinfo.f90 -o $@
+		-DBUILDDATE=\'"$(BUILDDATE)"\' -DBUILDCOMMAND=\'"$(BUILDCOMMAND)"\' -c ../amr/write_gitinfo.f90 -o $@
 write_makefile.o: FORCE
 	../utils/scripts/cr_write_makefile.sh $(MAKEFILE_LIST)
 	$(FC) -O0 -c write_makefile.f90 -o $@

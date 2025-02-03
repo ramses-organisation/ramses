@@ -18,17 +18,17 @@
 ; OPTIONAL INPUTS:
 ;	FILE:    if set, input the scalar string containing the name of
 ;         	 the file to be read. Otherwise, a PICKFILE widget is
-;         	 launched.  
+;         	 launched.
 ;
 ;       SWAP:    if set, reverse the bit ordering (Little Endian versus
 ;                BigEndian)
 ;
 ;       DENSITY: if set, read a file containing the SPH density for
 ;                each particle. Can also be set to the density file name.
-;	
+;
 ;       TIME:    if set, read in FILE the birth eopch of each
 ;                particle. Usefull for star formation runs.
-;	
+;
 ; OUTPUTS:
 ;	Part:   structure containing particles positions, velocities,
 ;	masses and levels. If DENSITY is set, it also contains SPH
@@ -172,15 +172,15 @@ for jcpu=icpu-1,icpu+ncpu-2 do begin
           if keyword_set(verbose) then print,jcpu+1,npartp,nstride,sqrt(abs(rmin)),sqrt(abs(rmax))
           nblocs = npartp/nstride
           res = npartp - nblocs*nstride
-          
+
 ;    print,nblocs,res
           for ibloc=0L,nblocs-1L do begin
              nread=nstride
              i1=iskip+ibloc*nstride
              i2=i1+nread-1L
 ;        print,iskip,ibloc,i1,i2,nread
-             rr=fltarr(nread) 
-             xx=fltarr(nread) 
+             rr=fltarr(nread)
+             xx=fltarr(nread)
              for idim=0L,ndim-1L do begin
                 readu,1,xx
                 xmax=max(xx,xmax)
@@ -195,7 +195,7 @@ for jcpu=icpu-1,icpu+ncpu-2 do begin
                    readu,1,xx
                    part.mp(i1:i2,idim)=xx
                 endif
-             endfor        
+             endfor
              rmin=min([rmin,min(rr)])
              rmax=max([rmax,max(rr)])
              readu,1,xx
@@ -242,5 +242,3 @@ endfor
 ;print,sqrt(rmin),sqrt(rmax)
 ;print,npart
 end
-
-

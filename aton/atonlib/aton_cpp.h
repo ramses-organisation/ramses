@@ -17,7 +17,7 @@ namespace aton {
 
   struct State {
     int size;
-    
+
     // NOTE: We use Fortran memory layout for the arrays.
 
     // Scalar quantities:
@@ -31,7 +31,7 @@ namespace aton {
     double* F; // Photon flux [photons / m^2 / s]
 
     // Point sources
-    // TODO: These should be deleted. Rather use the photon_source field. 
+    // TODO: These should be deleted. Rather use the photon_source field.
     int point_source_count;
     const int* point_source_pos;
     const double* point_source;
@@ -63,7 +63,7 @@ namespace aton {
   void cpu_add_sources(State state, double dx, double dt);
   void cpu_cooling(State state, double c_light, double dx, double dt,
 		   double aexp, double hubblet, double fudgecool);
-  
+
   // Returns false if the state is inconsistent or invalid.
   // Also prints an error.
   // FIXME: Currently this always returns true.

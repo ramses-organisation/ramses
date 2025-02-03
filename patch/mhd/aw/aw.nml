@@ -9,7 +9,7 @@ ncontrol=1
 nsubcycle=1*1,2
 /
 
-&AMR_PARAMS 
+&AMR_PARAMS
 levelmin=7
 levelmax=7
 ngridmax=100000
@@ -35,11 +35,8 @@ riemann='hlld'
 riemann2d='hlld'
 /
 
-&REFINE_PARAMS 
+&REFINE_PARAMS
 err_grad_p=0.1
 interpol_var=0
 interpol_type=2
 /
-
-
-

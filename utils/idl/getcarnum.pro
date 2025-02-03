@@ -6,10 +6,10 @@ for i = 1L, nframes do begin
        if (i gt 0) then $
          ndigit =  floor( alog10( float(i) ) ) + 1 $
        else $
-          ndigit = 1 	
+          ndigit = 1
        for j = 1L, ndigitmx - ndigit do begin
            a = '0' + a
-       endfor         
+       endfor
        car(i-1) = strcompress(a, /remove_all)
 ;       print,car(i-1)
 endfor

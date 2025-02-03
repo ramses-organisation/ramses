@@ -425,7 +425,7 @@ SUBROUTINE hll(qleft,qright,fgdnv)
 
   CALL find_mhd_flux(qleft ,uleft ,fleft )
   CALL find_mhd_flux(qright,uright,fright)
-  
+
   snleft = 0; snright = 0
   ! find the largest eigenvalue in the normal direction to the interface
   CALL find_speed_fast(qleft ,snleft,cfleft )

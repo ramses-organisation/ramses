@@ -25,7 +25,7 @@ subroutine init_stellar
     allocate(tstellar(1:nstellarmax))
     allocate(ltstellar(1:nstellarmax))
     allocate(id_stellar(1:nstellarmax))
-    
+
     ! Load stellar particles from the restart
     if(nrestart > 0) then
         ilun = 4*ncpu + myid + 11
@@ -38,7 +38,7 @@ subroutine init_stellar
             fileloc='output_'//TRIM(nchar)//'/stellar_'//TRIM(nchar)//'.csv'
         end if
 
-        ! Wait for the token                                                                                                                                                                    
+        ! Wait for the token
 #ifndef WITHOUTMPI
         if(IOGROUPSIZE > 0) then
             if(mod(myid - 1, IOGROUPSIZE) /= 0) then
@@ -66,7 +66,7 @@ subroutine init_stellar
    104  continue
         close(ilun)
 
-        ! Send the token                                                                                                                                                                        
+        ! Send the token
 #ifndef WITHOUTMPI
         if(IOGROUPSIZE > 0) then
             if(mod(myid, IOGROUPSIZE) /=0 .and. (myid < ncpu)) then

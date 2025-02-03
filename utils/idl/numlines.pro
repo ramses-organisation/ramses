@@ -1,7 +1,7 @@
 function numlines,file
 ;+
 ; NAME:
-;     NUMLINES() 
+;     NUMLINES()
 ; PURPOSE:
 ;     Return the number of lines in a file
 ;
@@ -42,9 +42,9 @@ function numlines,file
  if !VERSION.OS_FAMILY EQ 'unix' then begin
          free_lun,lun
          if strpos(file,'~') GE 0 then file = expand_tilde(file)
-         spawn,'wc -l < '+file, result, /sh    
+         spawn,'wc -l < '+file, result, /sh
          return,long(result[0])
- endif else begin                 ;=====>> Loop through file counting lines  
+ endif else begin                 ;=====>> Loop through file counting lines
         On_ioerror,NOASCII
         nl = 0l
         tmp = ' '

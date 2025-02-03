@@ -108,8 +108,3 @@ subroutine backup_poisson(filename)
   close(ilun)
 
 end subroutine backup_poisson
-
-
-
-
-

@@ -136,7 +136,3 @@ subroutine init_hydro
   end if
 
 end subroutine init_hydro
-
-
-
-

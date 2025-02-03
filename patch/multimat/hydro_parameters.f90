@@ -44,7 +44,7 @@ module hydro_parameters
   real(dp),dimension(1:MAXBOUND)::u_bound=0,v_bound=0,w_bound=0,p_bound=0
 
   ! Refinement parameters for hydro
-  real(dp)::err_grad_f=-1.0d0    ! Volume fraction 
+  real(dp)::err_grad_f=-1.0d0    ! Volume fraction
   real(dp)::err_grad_d=-1.0d0    ! Density gradient
   real(dp)::err_grad_u=-1.0d0    ! Velocity gradient
   real(dp)::err_grad_p=-1.0d0    ! Pressure gradient
@@ -53,6 +53,7 @@ module hydro_parameters
   real(dp)::floor_u=1d-10     ! Velocity floor
   real(dp)::floor_p=1d-10     ! Pressure floor
   real(dp)::mass_sph=0.0d0     ! mass_sph
+  real(dp),dimension(1:MAXLEVEL)::jeans_refine=-1
 
   ! Initial conditions hydro variables
   real(dp),dimension(1:MAXREGION)::d1_region=0,d2_region=0,d3_region=0,d4_region=0

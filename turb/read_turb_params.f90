@@ -1,4 +1,3 @@
-#if USE_TURB==1
 subroutine read_turb_params(nml_ok)
   use amr_commons
   use turb_commons
@@ -55,4 +54,3 @@ subroutine read_turb_params(nml_ok)
 87 continue
 
 end subroutine read_turb_params
-#endif

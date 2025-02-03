@@ -30,6 +30,7 @@ beta_fix=0.5
 /
 
 &INIT_PARAMS
+condinit_kind='ana_disk_potential'
 /
 
 &OUTPUT_PARAMS
@@ -46,4 +47,3 @@ units_length=3.0857d18
 cooling=.true.
 mu_gas=1.4d0
 /
-

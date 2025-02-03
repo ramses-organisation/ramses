@@ -30,7 +30,7 @@ subroutine backup_hydro(filename, filename_desc)
 #if NVAR > NDIM + 3*NMAT
   integer::ipscal,npscal
 #endif
-  
+
   if (verbose) write(*,*)'Entering backup_hydro'
 
   call title(myid, nchar)
@@ -141,7 +141,7 @@ subroutine backup_hydro(filename, filename_desc)
                     vv      = uold(ind_grid(i)+iskip,2*nmat+idim)/dtot
                     ekin    = ekin + 0.5d0*vv**2
                   end do
-                  ee        = uold(ind_grid(i)+iskip,2*nmat+ndim+imat)/ff - gg*ekin 
+                  ee        = uold(ind_grid(i)+iskip,2*nmat+ndim+imat)/ff - gg*ekin
                   gg_mat(1) = gg
                   ee_mat(1) = ee
                   call eos(gg_mat,ee_mat,pp,cc,imat,inv,1)
@@ -188,9 +188,3 @@ subroutine backup_hydro(filename, filename_desc)
 #endif
 
 end subroutine backup_hydro
-
-
-
-
-
-

@@ -24,4 +24,3 @@ class FortranFile(file):
 			raise IOError("Error reading FORTRAN binary record")
 
 		return data
-

@@ -156,7 +156,7 @@ subroutine create_stellar(ncreate, nbuf, id_new)
     !TC: remove mstellarini? I can think of only a few cases where this is useful.
     !    Maybe not worth having this extra loop and checks
     do istellar = nstellar+1, nstellar+ncreate
-       if(istellar .ge. nstellarini) then 
+       if(istellar .ge. nstellarini) then
           mstellar(istellar) = mnew(istellar-nstellar)
        else
           if (mstellarini(istellar).eq.0) then

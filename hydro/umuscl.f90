@@ -199,7 +199,7 @@ subroutine trace1d(q,dq,qm,qp,dx,dt,ngrid)
   integer::irad
   real(dp),dimension(1:nener)::e, dex, se0
 #endif
-#if NVAR > NDIM + 2 + NENER
+#if NVAR > NHYDRO + NENER
   integer::n
   real(dp)::a, dax, sa0
 #endif
@@ -276,7 +276,7 @@ subroutine trace1d(q,dq,qm,qp,dx,dt,ngrid)
      end do
   end do
 
-#if NVAR > NDIM + 2 + NENER
+#if NVAR > NHYDRO + NENER
   ! Passive scalars
   do n = ndim+nener+3, nvar
      do k = klo, khi
@@ -329,7 +329,7 @@ subroutine trace2d(q,dq,qm,qp,dx,dy,dt,ngrid)
   integer ::irad
   real(dp),dimension(1:nener)::e, dex, dey, se0
 #endif
-#if NVAR > NDIM + 2 + NENER
+#if NVAR > NHYDRO + NENER
   integer ::n
   real(dp)::a, dax, day, sa0
 #endif
@@ -449,7 +449,7 @@ subroutine trace2d(q,dq,qm,qp,dx,dy,dt,ngrid)
      end do
   end do
 
-#if NVAR > NDIM + 2 + NENER
+#if NVAR > NHYDRO + NENER
   ! passive scalars
   do n = ndim+nener+3, nvar
      do k = klo, khi
@@ -508,7 +508,7 @@ subroutine trace3d(q,dq,qm,qp,dx,dy,dz,dt,ngrid)
   integer ::irad
   real(dp),dimension(1:nener)::e, dex, dey, dez, se0
 #endif
-#if NVAR > NDIM + 2 + NENER
+#if NVAR > NHYDRO + NENER
   integer ::n
   real(dp)::a, dax, day, daz, sa0
 #endif
@@ -677,7 +677,7 @@ subroutine trace3d(q,dq,qm,qp,dx,dy,dz,dt,ngrid)
      end do
   end do
 
-#if NVAR > NDIM + 2 + NENER
+#if NVAR > NHYDRO + NENER
   ! Passive scalars
   do n = ndim+nener+3, nvar
      do k = klo, khi
@@ -735,7 +735,7 @@ subroutine cmpflxm(qm,im1,im2,jm1,jm2,km1,km2, &
   real(dp)::entho
   real(dp),dimension(1:nvector,1:nvar),save::qleft,qright
   real(dp),dimension(1:nvector,1:nvar+1),save::fgdnv
-#if NVAR > NDIM + 2
+#if NVAR > NHYDRO
   integer ::n
 #endif
 
@@ -760,8 +760,8 @@ subroutine cmpflxm(qm,im1,im2,jm1,jm2,km1,km2, &
 
            ! Pressure
            do l = 1, ngrid
-              qleft (l,3) = qm(l,i,j,k,ndim+2,xdim)
-              qright(l,3) = qp(l,i,j,k,ndim+2,xdim)
+              qleft (l,3) = qm(l,i,j,k,neul,xdim)
+              qright(l,3) = qp(l,i,j,k,neul,xdim)
            end do
 
            ! Tangential velocity 1
@@ -778,9 +778,9 @@ subroutine cmpflxm(qm,im1,im2,jm1,jm2,km1,km2, &
               qright(l,5) = qp(l,i,j,k,lt2,xdim)
            end do
 #endif
-#if NVAR > NDIM + 2
+#if NVAR > NHYDRO
            ! Other advected quantities
-           do n = ndim+3, nvar
+           do n = nhydro+1, nvar
               do l = 1, ngrid
                  qleft (l,n) = qm(l,i,j,k,n,xdim)
                  qright(l,n) = qp(l,i,j,k,n,xdim)
@@ -829,12 +829,12 @@ subroutine cmpflxm(qm,im1,im2,jm1,jm2,km1,km2, &
 #endif
            ! Total energy
            do l = 1, ngrid
-              flx(l,i,j,k,ndim+2) = fgdnv(l,3)
+              flx(l,i,j,k,neul) = fgdnv(l,3)
            end do
 
-#if NVAR > NDIM + 2
+#if NVAR > NHYDRO
            ! Other advected quantities
-           do n = ndim+3, nvar
+           do n = nhydro+1, nvar
               do l = 1, ngrid
                  flx(l,i,j,k,n) = fgdnv(l,n)
               end do
@@ -874,7 +874,7 @@ subroutine ctoprim(uin,q,c,gravin,dt,ngrid)
   integer ::i, j, k, l
   real(dp)::eint, smalle, dtxhalf, oneoverrho
   real(dp)::eken, erad
-#if NVAR > NDIM + 2 + NENER
+#if NVAR > NHYDRO + NENER
   integer ::n
 #endif
 #if NENER>0
@@ -915,19 +915,19 @@ subroutine ctoprim(uin,q,c,gravin,dt,ngrid)
               erad = zero
 #if NENER>0
               do irad = 1,nener
-                 q(l,i,j,k,ndim+2+irad) = (gamma_rad(irad)-one)*uin(l,i,j,k,ndim+2+irad)
-                 erad = erad+uin(l,i,j,k,ndim+2+irad)*oneoverrho
+                 q(l,i,j,k,nhydro+irad) = (gamma_rad(irad)-one)*uin(l,i,j,k,nhydro+irad)
+                 erad = erad+uin(l,i,j,k,nhydro+irad)*oneoverrho
               enddo
 #endif
               ! Compute thermal pressure
-              eint = MAX(uin(l,i,j,k,ndim+2)*oneoverrho-eken-erad,smalle)
-              q(l,i,j,k,ndim+2) = (gamma-one)*q(l,i,j,k,1)*eint
+              eint = MAX(uin(l,i,j,k,neul)*oneoverrho-eken-erad,smalle)
+              q(l,i,j,k,neul) = (gamma-one)*q(l,i,j,k,1)*eint
 
               ! Compute sound speed
-              c(l,i,j,k)=gamma*q(l,i,j,k,ndim+2)
+              c(l,i,j,k)=gamma*q(l,i,j,k,neul)
 #if NENER>0
               do irad=1,nener
-                 c(l,i,j,k)=c(l,i,j,k)+gamma_rad(irad)*q(l,i,j,k,ndim+2+irad)
+                 c(l,i,j,k)=c(l,i,j,k)+gamma_rad(irad)*q(l,i,j,k,nhydro+irad)
               enddo
 #endif
               c(l,i,j,k)=sqrt(c(l,i,j,k)*oneoverrho)
@@ -946,7 +946,7 @@ subroutine ctoprim(uin,q,c,gravin,dt,ngrid)
      end do
   end do
 
-#if NVAR > NDIM + 2 + NENER
+#if NVAR > NHYDRO + NENER
   ! Passive scalar
   do n = ndim+nener+3, nvar
      do k = ku1, ku2

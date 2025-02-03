@@ -1,5 +1,5 @@
 
-&RUN_PARAMS 
+&RUN_PARAMS
 poisson=.true.
 hydro=.true.
 nrestart=0
@@ -59,7 +59,7 @@ epsilon=1d-4
 cg_levelmin=100
 /
 
-&REFINE_PARAMS 
+&REFINE_PARAMS
 m_refine=7*1.
 mass_sph=0.1
 !x_refine=7*0.5
@@ -67,4 +67,3 @@ mass_sph=0.1
 !z_refine=7*0.5
 !r_refine=7*0.5
 /
-

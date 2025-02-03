@@ -34,7 +34,7 @@ void get_grid_size(int *ncellx, int *ncelly, int *ncellz, int *nbound) {
 int cell_index4(int i, int j, int k, int component) {
   return aton_cell_index4_(&i, &j, &k, &component);
 }
-  
+
 void cpu_allocate(State* state) {
   int ncellx, ncelly, ncellz, nbnd;
   aton_get_grid_size_(&ncellx, &ncelly, &ncellz, &nbnd);

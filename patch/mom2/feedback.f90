@@ -69,6 +69,7 @@ subroutine thermal_feedback(ilevel)
            endif
         enddo
         write(ilun,'(A5)',advance='no') 'tag  '
+        write(ilun,'(A4)',advance='no') 'tp  '
         write(ilun,'(A1)') ' '
      else
         open(ilun, file=fileloc, status='old', position='append', action='write', form='formatted')
@@ -276,7 +277,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
          r_c_n_exp = -0.42
    END SELECT
   endif
-  
+
   ! Photoionization momentum injection from cgs to code units
   cs_H2_2=f_esn*(22.0*1d5/scale_v)**2 ! 22 km/s
 
@@ -343,7 +344,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
         kg(j,7)=1+igg(j,1)+3*igd(j,2)+9*igd(j,3)
         kg(j,8)=1+igd(j,1)+3*igd(j,2)+9*igd(j,3)
     end do
-    
+
     do j=1,np
         call ranf(localseed,RandNum)
         hra(j) = int(RandNum*8)+1
@@ -522,17 +523,18 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
                  write(ilun,'(E24.12)',advance='no') uvar/unew(indp(j),1)
               enddo
               write(ilun,'(I10)',advance='no') typep(ind_part(i))%tag
+              write(ilun,'(E24.12)',advance='no') current_time
               write(ilun,'(A1)') ' '
            endif
         endif
      end do
-     
+
      ! Photo-ionization thermal feedback
      do j=1,np
         pressure=max(uold(indp(j),1),smallr)*cs_H2_2
         ethermal(j)=ethermal(j)+pressure
      end do
-     
+
      ! Use stellar momentum feedback
      if(momentum_feedback>0)then
         ! Momentum feedback from supernovae
@@ -552,9 +554,9 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
               pstarnew(indp(j))=pstarnew(indp(j))+p_SN*n_SN(j)*p_boost*min(1.0,(dx_min/r_cool/aexp)**(3.0/2.0))/dx_loc**3
            endif
         end do
-        
+
      endif
-     
+
   endif
 
   ! Update hydro variables due to feedback

@@ -11,8 +11,8 @@
 ;       Plotting routines.
 ;
 ; CALLING SEQUENCE:
-;       TV2D, Grid, Hydro, TYPE = type, CLT = clt, LOG = log, 
-;                          XR = xr, YR = yr, 
+;       TV2D, Grid, Hydro, TYPE = type, CLT = clt, LOG = log,
+;                          XR = xr, YR = yr,
 ;                          LEVELMAX = levelmax, SAVE = save, BYTE = byte,
 ;                          VMIN = vmin, VMAX = vmax
 ;
@@ -24,7 +24,7 @@
 ; OPTIONAL INPUTS:
 ;       TYPE:   if set, defines the variable to map. If not set (TYPE
 ;       = 0), the routine plots the level for each cell. TYPE = 1, 2,
-;       3, 4... corresponds to hydro variable number 1, 2, 3, 4... 
+;       3, 4... corresponds to hydro variable number 1, 2, 3, 4...
 ;
 ;       CLT: color table number.
 ;
@@ -37,21 +37,21 @@
 ;
 ;       LEVELMAX: if set, specifies the maximum level to be shown.
 ;       Default: 0.
-;       
+;
 ;       SAVE:     if set, the image is outputted to the
 ;       two-dimensional array save. If not, the image is outputted to
 ;       the current plotting device.
-;      
+;
 ;       BYTE:     if set, the image is converted to bytes (valid if
 ;       the SAVE keyword is used only).
-;       
+;
 ;       VMIN:     if set, the minimum value to be plotted.
 ;
 ;       VMAX:     if set, the maximum value to be plotted.
 ;
 ; OUTPUTS:
 ;       None.
-;       
+;
 ; COMMON BLOCKS:
 ;       None.
 ;
@@ -148,8 +148,8 @@ scale2=2^(levelup-leveldown+1)
 
 xmin=xmin/dxmax & xmax=xmax/dxmax
 ymin=ymin/dxmax & ymax=ymax/dxmax
-imin=floor(xmin) & imax=ceil(xmax) 
-jmin=floor(ymin) & jmax=ceil(ymax) 
+imin=floor(xmin) & imax=ceil(xmax)
+jmin=floor(ymin) & jmax=ceil(ymax)
 nimx=(imax-imin)*scale2 & nimy=(jmax-jmin)*scale2
 iimin=fix((xmin-imin)*scale2) & iimax=fix((xmax-xmin)*scale2)+iimin-1
 jjmin=fix((ymin-jmin)*scale2) & jjmax=fix((ymax-ymin)*scale2)+jjmin-1
@@ -209,7 +209,7 @@ for ilevel=leveldown,levelup do begin
                         mesh=(*hydro.levelh[ilevel-1,icpu])
                         q=mesh.u(ind,ind_cell,type-1)
                     endelse
-                    
+
                     if (ind2(0) ne -1) then begin
                         ind_xx=ind_x(ind2)+i
                         ind_yy=ind_y(ind2)+j
@@ -221,7 +221,7 @@ for ilevel=leveldown,levelup do begin
                 endfor
              endfor
             im=im > ( REBIN(subim,nimx,nimy,/sample) > im)
-            
+
        endif
     endif
 endfor

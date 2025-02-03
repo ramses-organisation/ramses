@@ -213,7 +213,7 @@ module amr_parameters
   logical ::sf_imf=.false.              ! Activate IMF sampling for SN feedback when resolution allows it
   logical ::sf_compressive=.false.      ! Advect compressive and solenoidal turbulence terms separately
   logical ::cooling_ism = .false.      ! Use cooling module from Audit & Hennebelle 2005 (non-RT)
-                                        ! instead of ramses classical cooling 
+                                        ! instead of ramses classical cooling
 
   ! EOS parameters
   character(len=20)::barotropic_eos_form='legacy'  !Type of barotropic EOS: choose from:
@@ -292,6 +292,9 @@ module amr_parameters
   real(dp)::mass_cut_refine=-1                   ! Mass threshold for particle-based refinement
   integer::ivar_refine=-1                        ! Variable index for refinement
   logical::sink_refine=.false.                   ! Fully refine on sink particles
+
+  ! Initial condition selection parameter
+  character(LEN=60)::condinit_kind ='region'
 
   ! Initial condition files for each level
   logical::multiple=.false.

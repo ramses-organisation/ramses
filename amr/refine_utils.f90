@@ -621,17 +621,11 @@ subroutine make_grid_fine(ind_grid,ind_cell,ind,ilevel,nn,ibound,boundary_region
   real(dp)::dx,dx_loc,scale
   real(dp),dimension(1:3)::xc,skip_loc
 #ifdef SOLVERmhd
-  integer::neul=5
-  real(dp),dimension(1:nvector,0:twondim  ,1:nvar+3),save::u1
-  real(dp),dimension(1:nvector,1:twotondim,1:nvar+3),save::u2
   integer ,dimension(1:nvector,0:twondim),save::ind1
-  real(dp),dimension(1:nvector,1:nvar+3),save::uu
-#else
-  integer::neul=ndim+2
-  real(dp),dimension(1:nvector,0:twondim  ,1:nvar),save::u1
-  real(dp),dimension(1:nvector,1:twotondim,1:nvar),save::u2
-  real(dp),dimension(1:nvector,1:nvar),save::uu
 #endif
+  real(dp),dimension(1:nvector,0:twondim  ,1:nvar_all),save::u1
+  real(dp),dimension(1:nvector,1:twotondim,1:nvar_all),save::u2
+  real(dp),dimension(1:nvector,1:nvar_all),save::uu
 #ifdef RT
   real(dp),dimension(1:nvector,0:twondim  ,1:nrtvar),save::urt1
   real(dp),dimension(1:nvector,1:twotondim,1:nrtvar),save::urt2
@@ -830,19 +824,11 @@ subroutine make_grid_fine(ind_grid,ind_cell,ind,ilevel,nn,ibound,boundary_region
      if(hydro)then
         do j=0,twondim
            ! Gather hydro variables
-#ifdef SOLVERmhd
-           do ivar=1,nvar+3
-#else
-              do ivar=1,nvar
-#endif
-                 do i=1,nn
-                    u1(i,j,ivar)=uold(ind_fathers(i,j),ivar)
-                 end do
-#ifdef SOLVERmhd
+           do ivar=1,nvar_all
+              do i=1,nn
+                 u1(i,j,ivar)=uold(ind_fathers(i,j),ivar)
               end do
-#else
            end do
-#endif
 #ifdef SOLVERmhd
            ! Gather son index
            do i=1,nn
@@ -859,19 +845,11 @@ subroutine make_grid_fine(ind_grid,ind_cell,ind,ilevel,nn,ibound,boundary_region
         ! Scatter to children cells
         do j=1,twotondim
            iskip=ncoarse+(j-1)*ngridmax
-#ifdef SOLVERmhd
-           do ivar=1,nvar+3
-#else
-              do ivar=1,nvar
-#endif
-                 do i=1,nn
-                    uold(iskip+ind_grid_son(i),ivar)=u2(i,j,ivar)
-                 end do
-#ifdef SOLVERmhd
+           do ivar=1,nvar_all
+              do i=1,nn
+                 uold(iskip+ind_grid_son(i),ivar)=u2(i,j,ivar)
               end do
-#else
            end do
-#endif
         enddo
      end if
 #ifdef RT
@@ -1098,20 +1076,12 @@ subroutine kill_grid(ind_cell,ilevel,nn,ibound,boundary_region)
      end if
      ! Hydro variables
      if(hydro)then
-#ifdef SOLVERmhd
-        do ivar=1,nvar+3
-#else
-        do ivar=1,nvar
-#endif
+        do ivar=1,nvar_all
            do i=1,nn
               uold(ind_cell_son(i),ivar)=0.0D0
               unew(ind_cell_son(i),ivar)=0.0D0
            end do
-#ifdef SOLVERmhd
         end do
-#else
-        end do
-#endif
      end if
      if(momentum_feedback>0)then
         do i=1,nn

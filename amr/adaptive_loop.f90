@@ -100,17 +100,9 @@ subroutine adaptive_loop
            call build_comm(ilevel)
            call make_virtual_fine_int(cpu_map(1),ilevel)
            if(hydro)then
-#ifdef SOLVERmhd
-              do ivar=1,nvar+3
-#else
-              do ivar=1,nvar
-#endif
+              do ivar=1,nvar_all
                  call make_virtual_fine_dp(uold(1,ivar),ilevel)
-#ifdef SOLVERmhd
               end do
-#else
-              end do
-#endif
               if(momentum_feedback>0)call make_virtual_fine_dp(pstarold(1),ilevel)
               if(strict_equilibrium>0)call make_virtual_fine_dp(rho_eq(1),ilevel)
               if(strict_equilibrium>0)call make_virtual_fine_dp(p_eq(1),ilevel)
@@ -149,17 +141,9 @@ subroutine adaptive_loop
            ! Hydro book-keeping
            if(hydro)then
               call upload_fine(ilevel)
-#ifdef SOLVERmhd
-              do ivar=1,nvar+3
-#else
-              do ivar=1,nvar
-#endif
+              do ivar=1,nvar_all
                  call make_virtual_fine_dp(uold(1,ivar),ilevel)
-#ifdef SOLVERmhd
               end do
-#else
-              end do
-#endif
               if(momentum_feedback>0)call make_virtual_fine_dp(pstarold(1),ilevel)
               if(strict_equilibrium>0)call make_virtual_fine_dp(rho_eq(1),ilevel)
               if(strict_equilibrium>0)call make_virtual_fine_dp(p_eq(1),ilevel)

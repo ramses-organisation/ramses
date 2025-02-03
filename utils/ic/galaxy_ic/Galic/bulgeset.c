@@ -30,8 +30,8 @@ double set_bulge_velocities(void)
 
   dum=drand48()*1e8;
 
-  printf("set bulge velocities..."); fflush(stdout);  
-  
+  printf("set bulge velocities..."); fflush(stdout);
+
   for(i=1;i<=N_BULGE;i++)
     {
       R=sqrt(xp_bulge[i]*xp_bulge[i] + yp_bulge[i]*yp_bulge[i]);
@@ -44,20 +44,20 @@ double set_bulge_velocities(void)
       iz=(int)( log(fabs(z)/LL*(pow(FZ,ZSIZE)-1)+1)/log(FZ));
       uz=( log(fabs(z)/LL*(pow(FZ,ZSIZE)-1)+1)/log(FZ)) - iz;
 
-       
+
       vdisp_rz= VelDispRz_bulge[ir][iz]*(1-ur)*(1-uz)
 	       +VelDispRz_bulge[ir+1][iz]*(ur)*(1-uz)
- 	       +VelDispRz_bulge[ir][iz+1]*(1-ur)*(uz) 
+ 	       +VelDispRz_bulge[ir][iz+1]*(1-ur)*(uz)
 	       +VelDispRz_bulge[ir+1][iz+1]*(ur)*(uz);
-      
+
       vdisp_phi=VelDispPhi_bulge[ir][iz]*(1-ur)*(1-uz)
 	       +VelDispPhi_bulge[ir+1][iz]*(ur)*(1-uz)
-	       +VelDispPhi_bulge[ir][iz+1]*(1-ur)*(uz) 
+	       +VelDispPhi_bulge[ir][iz+1]*(1-ur)*(uz)
                +VelDispPhi_bulge[ir+1][iz+1]*(ur)*(uz);
 
       vstream_phi=VelStreamPhi_bulge[ir][iz]*(1-ur)*(1-uz)
 	       +VelStreamPhi_bulge[ir+1][iz]*(ur)*(1-uz)
-	       +VelStreamPhi_bulge[ir][iz+1]*(1-ur)*(uz) 
+	       +VelStreamPhi_bulge[ir][iz+1]*(1-ur)*(uz)
                +VelStreamPhi_bulge[ir+1][iz+1]*(ur)*(uz);
 
 
@@ -96,7 +96,7 @@ double set_bulge_velocities(void)
 	}
     }
 
-  printf("done.\n"); fflush(stdout);  
+  printf("done.\n"); fflush(stdout);
 
   return 0;
 }
@@ -119,10 +119,10 @@ double set_bulge_positions(void)
     {
       q=drand48();
       R=1/(1-sqrt(q))-1;
-      
+
       phi=drand48()*PI*2;
       theta=acos(drand48()*2-1);
-	  
+
       xp_bulge[i]=R*sin(theta)*cos(phi);
       yp_bulge[i]=R*sin(theta)*sin(phi);
       zp_bulge[i]=R*cos(theta);
@@ -138,7 +138,7 @@ double set_bulge_positions(void)
 
       if((R*A)>LL)
 	countr++;
-      else 
+      else
 	i++;
     }
 
@@ -148,5 +148,3 @@ double set_bulge_positions(void)
 
   return 0;
 }
-
-

@@ -15,12 +15,12 @@
 ;
 ; OPTIONAL INPUTS:
 ;       file:   if set, input the scalar string containing the name of
-;       the file to be read. Otherwise, a PICKFILE widget is launched. 
+;       the file to be read. Otherwise, a PICKFILE widget is launched.
 ;
 ;       ana:    if set, input the scalar string containing the name of
 ;       the file to be read for the analytical solution.
 ;       Default: '$HOME/ramses/idl/tubeana.dat'
-;       The file should be an ASCII file with N lines containing in 
+;       The file should be an ASCII file with N lines containing in
 ;       each column: zone number, position, velocity, density,
 ;       pressure and internal energy
 ;

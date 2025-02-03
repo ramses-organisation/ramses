@@ -1,6 +1,6 @@
 #!/usr/bin/python
 # Draw multigrid levels as dumped by dump_mg_levels
- 
+
 import sys
 from pyx import *
 
@@ -50,4 +50,3 @@ for i in range(1,ilevel):
 			c.text(x,y,str(icpu+1),[text.halign.boxcenter,text.valign.middle])
 
 	c.writePDFfile(infile+'_level_'+str(i))
-

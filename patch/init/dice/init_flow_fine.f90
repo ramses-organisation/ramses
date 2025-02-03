@@ -1481,4 +1481,3 @@ subroutine mag_toroidal(pos,dir,A)
   end do
 end subroutine
 #endif
-

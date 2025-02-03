@@ -23,7 +23,7 @@
 ; OPTIONAL INPUTS:
 ;
 ;       X:     If set, defines the X axis mesh points
-;     
+;
 ;       Y:     If set, defines the Y axis mesh points
 ;
 ;       LOG:   If set, contours use a logarithmic color coding.
@@ -34,7 +34,7 @@
 ;
 ;       UNIT:   Character string. The name of the unit length in the
 ;       plot. Used to define the X title and Y title. Default:
-;       '(arbitrary units)'. 
+;       '(arbitrary units)'.
 ;
 ;       TITLE:  Title of the plot. Default: 'No title'.
 ;       NOERASE: standard IDL option.
@@ -43,17 +43,17 @@
 ;
 ; OUTPUTS:
 ;       None.
-;       
+;
 ; COMMON BLOCKS:
 ;       None.
 ;
 ; EXAMPLE:
 ;       Generate an image:
-;                   
+;
 ;                   image = DIST(400)
-; 
+;
 ;       Use MYCONTOUR, specifying the box units and the title:
-; 
+;
 ;                   mycontour, image, lbox=100., unit='(cm)'
 ;
 ; MODIFICATION HISTORY:
@@ -189,7 +189,7 @@ if keyword_set(table) then begin
             ,xticks=1,xtickn=[' ',' '],c_colors=clr $
             ,position=posleg,noerase=noerase $
             ,/fill,/follow,levels=niv
-    
+
 ; Plot contours
     pos=[0.1,0.1,0.8,0.8]*sizewin+offswin
 endif else begin

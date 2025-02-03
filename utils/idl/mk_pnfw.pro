@@ -30,7 +30,7 @@ for i=0L,npart-1L do begin
         x_mil=0.5*(x_left+x_right)
         p_mil=3.*ms*(alog(1.0+x_mil)-x_mil/(1.0+x_mil))
         if (p_mil lt distrib(i)) then begin
-            x_left=x_mil 
+            x_left=x_mil
         endif else begin
             x_right=x_mil
         endelse

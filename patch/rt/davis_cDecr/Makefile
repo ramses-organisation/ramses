@@ -16,14 +16,14 @@ DEFINES = -DNVECTOR=$(NVECTOR) -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DNVAR=$(NVAR) -DSO
 #############################################################################
 # Fortran compiler options and directives
 # Fortran compiler options and directives
-F90 = mpif90 
+F90 = mpif90
 FFLAGS = -O3 -fpp $(DEFINES) -DNOSYSTEM
 
 #############################################################################
 MOD = mod
 #############################################################################
 # MPI librairies
-LIBMPI = 
+LIBMPI =
 #LIBMPI = -lfmpi -lmpi -lelan
 
 # --- CUDA libraries, for Titane ---

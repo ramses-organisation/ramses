@@ -83,7 +83,7 @@ subroutine observe_level(ilevel)
            density = uu(i,1)*scale_d*0.76/mH
            xion = uu(i,ixion)/uu(i,1)
            xion_mass = xion * density
-           temperature = uu(i,ndim+2)
+           temperature = uu(i,neul)
            do ivar=1,ndim
               temperature = temperature - 0.5*uu(i,ivar+1)**2/uu(i,1)
            end do

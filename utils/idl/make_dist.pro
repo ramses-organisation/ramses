@@ -68,7 +68,7 @@ endif else begin
     k=-1
 endelse
 
-c=3.e5                  ; ligth speed in km.s-1 
+c=3.e5                  ; ligth speed in km.s-1
 nb_echan=10000.         ; number of points for the integration
 
 if k ne 0 then r0=sqrt(-k*(c/h0)^2/omega_k)

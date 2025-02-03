@@ -13,7 +13,7 @@
 ;                token on output.
 ;       token -- Token to use in splitting old.              in
 ; KEYWORD PARAMETERS:
-;       /TRIM -- set to remove leading blanks from old 
+;       /TRIM -- set to remove leading blanks from old
 ;                before returning.
 ;       /HELP -- print useful message and exit.
 ; OUTPUTS:
@@ -65,7 +65,7 @@ FUNCTION Str_token, string, token, $
 ; Back to the caller if error occurs.
     On_error, 2
 
-    IF (n_params() NE 2) OR keyword_set(Help) THEN BEGIN 
+    IF (n_params() NE 2) OR keyword_set(Help) THEN BEGIN
         offset = '   '
         print, offset+'Retrieve portion of string up to token.'
         print, offset+'new = str_token( old, token )'
@@ -93,19 +93,19 @@ FUNCTION Str_token, string, token, $
         print, offset+offset+"If old='xyz', then new=str_token(old,'a') would return with"
         print, offset+offset+"  new='xyz' and old=''."
         return, -1
-    ENDIF 
+    ENDIF
 
     pos = strpos(string, token)
 
     IF (pos GE 0) THEN BEGIN
-        front = strmid(string, 0, pos) 
+        front = strmid(string, 0, pos)
         string = strmid(string, pos + strlen(token), strlen(string))
         IF keyword_set(trim) THEN string = strtrim(string, 1)
         return, front
     ENDIF
-    
+
     front = string
     string = ''
     return, front
-    
+
 END

@@ -100,7 +100,7 @@ subroutine rt_backup_hydro(filename, filename_desc)
                  do i = 1, ncache
                     xdp(i) = rt_c*rtuold(ind_grid(i)+iskip, iGroups(ivar))
                  end do
-                 write(field_name, '("photon_density_", i0.2)') ivar
+                 write(field_name, '("photon_flux_", i0.2)') ivar
                  call generic_dump(field_name, info_var_count, xdp, unit_out, dump_info_flag, unit_info)
                  do idim = 1, ndim
                     ! Store photon flux

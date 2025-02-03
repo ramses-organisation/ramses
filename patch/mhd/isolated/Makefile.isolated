@@ -37,7 +37,7 @@ DEFINES = -DNVECTOR=$(NVECTOR) -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DNVAR=$(NVAR) -DSO
 #FFLAGS = -cpp $(DEFINES) -DWITHOUTMPI
 
 # --- MPI, gfortran syntax ------------------------------
-#F90 = mpif90 -frecord-marker=4 -O3 -ffree-line-length-none -g -fbacktrace 
+#F90 = mpif90 -frecord-marker=4 -O3 -ffree-line-length-none -g -fbacktrace
 #FFLAGS = -x f95-cpp-input $(DEFINES)
 
 # --- MPI, pgf90 syntax ------------------------------
@@ -54,7 +54,7 @@ FFLAGS = -cpp $(DEFINES)
 
 # --- MPI, ifort syntax ------------------------------
 #F90 = ftn
-#FFLAGS = -xAVX -g -traceback -fpp -fast $(DEFINES) -DNOSYSTEM #-DRT 
+#FFLAGS = -xAVX -g -traceback -fpp -fast $(DEFINES) -DNOSYSTEM #-DRT
 
 # --- MPI, ifort syntax, additional checks -----------
 #F90 = ftn
@@ -64,7 +64,7 @@ FFLAGS = -cpp $(DEFINES)
 MOD = mod
 #############################################################################
 # MPI librairies
-LIBMPI = 
+LIBMPI =
 #LIBMPI = -lfmpi -lmpi -lelan
 
 # --- CUDA libraries, for Titane ---

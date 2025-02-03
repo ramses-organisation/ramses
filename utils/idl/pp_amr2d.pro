@@ -13,7 +13,7 @@
 ; CALLING SEQUENCE:
 ;       PP_AMR2D, Grid, SCALE=scale, NOERASE=noerase, NODATA=nodata,
 ;                       XR=xr, YR=yr, X0=x0, Y0=y0, LEVEL=level,
-;                       COLOR=color 
+;                       COLOR=color
 ;
 ; INPUTS:
 ;       Grid: structure defining the AMR grid.
@@ -21,7 +21,7 @@
 ; OPTIONAL INPUTS:
 ;       SCALE:   if set, defines the scale of the
 ;       plot. Scale=1. corresponds to the full box size, while
-;       scale=0.5 corresponds to half the box size and so on. 
+;       scale=0.5 corresponds to half the box size and so on.
 ;       Default: 1.
 ;
 ;       NOERASE: standard IDL option.
@@ -30,25 +30,25 @@
 ;
 ;       XR:      if set, the routine plots only octs that lie within
 ;       these boundaries, defined along the X axis. Default: the
-;       whole box ! 
+;       whole box !
 ;
 ;       YR:      Same for the Y axis.
 ;
 ;       X0:      Move the center to this new coordinate. Default: the
 ;       center of the box.
-;       
+;
 ;       Y0:      Move the center to this new coordinate. Default: the
 ;       center of the box.
-;      
+;
 ;       LEVEL:   If set, the routine plots only octs belonging to
 ;       level = level. Otherwise, all levels are shown (default).
-;       
+;
 ;       COLOR:   If set, each level is shown with a different
 ;       color. Otherwise, all levels are shown in white (default).
 ;
 ; OUTPUTS:
 ;       None.
-;       
+;
 ; COMMON BLOCKS:
 ;       None.
 ;

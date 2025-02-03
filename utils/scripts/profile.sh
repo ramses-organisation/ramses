@@ -73,4 +73,3 @@ amr2cylprof -inp output_$count -out gal_$count.cyl -xce $xc -yce $yc -zce $zc -u
 part2cylprof -inp output_$count -out gal_$count.cyl -xce $xc -yce $yc -zce $zc -uce $uc -vce $vc -wce $wc -jx $jxc -jy $jyc -jz $jzc -rma $rgal -nra 200 -hma $hgal -cir  gal_$count.prof.tot
 
 part2cylprof -inp output_$count -out virial_$count.cyl -xce $xc -yce $yc -zce $zc -uce $uc -vce $vc -wce $wc -jx $jxc -jy $jyc -jz $jzc -rma $r200 -nra 400 -hma $r200 -cir  virial_$count.prof.tot
-
