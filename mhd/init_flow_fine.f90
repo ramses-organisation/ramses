@@ -591,7 +591,6 @@ subroutine region_condinit(x,q,dx,nn)
               q(i,ivar)=var_region(k,ivar-nhydro-nener)
            end do
 #endif
-#endif
         end do
      end if
   end do
