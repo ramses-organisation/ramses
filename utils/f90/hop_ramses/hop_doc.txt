@@ -616,7 +616,7 @@ The HOP algorithm was presented in a paper by Daniel J. Eisenstein
 (deisenstein@as.arizona.edu) and Piet Hut (piet@sns.ias.edu). We're at the
 Institute for Advanced Study.
 
-This is the documentation for version 1.0 of HOP. Version 1.1 fixes a 
+This is the documentation for version 1.0 of HOP. Version 1.1 fixes a
 bug in regroup.c that may affect large particle numbers (code will
-crash if the bug is hit, so no results are corrupted).  Further information 
+crash if the bug is hit, so no results are corrupted).  Further information
 and updates will be posted at cmb.as.arizona.edu/~eisenste/hop/hop.html.

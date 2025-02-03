@@ -8,7 +8,7 @@
 #define  CM_PER_MPC  3.085677e24
 #define  SEC_PER_MEGAYEAR   3.15576e13
 
-#define  HUBBLE      0.73     /* Hubble constant in 100km/sec/Mpc */  
+#define  HUBBLE      0.73     /* Hubble constant in 100km/sec/Mpc */
 
 
 
@@ -37,18 +37,18 @@ extern double  LAMBDA;    /* spin parameter  */
 extern double  MD;        /* disk mass fraction */
 extern double  JD;        /* disk spin fraction */
 extern double  MB;        /* bulge mass fraction */
-extern double  GasFraction;  
-extern double  DiskHeight; 
+extern double  GasFraction;
+extern double  DiskHeight;
 extern double  BulgeSize;
 extern double  HI_GasMassFraction;    /* in terms of the total gas mass */
-extern double  HI_GasDiskScaleLength;  /* in terms of scale length of the disk */ 
+extern double  HI_GasDiskScaleLength;  /* in terms of scale length of the disk */
 
 extern double  Qstabilizefactor;
 
 extern int     N_HALO;    /* desired number of particles in halo */
 extern int     N_DISK;    /* desired number of collsionless particles in disk */
-extern int     N_GAS;     /* number of gas particles in stellar disk */ 
-extern int     N_BULGE;   /* number of gas particles in stellar disk */ 
+extern int     N_GAS;     /* number of gas particles in stellar disk */
+extern int     N_BULGE;   /* number of gas particles in stellar disk */
 
 /*********************************************/
 
@@ -123,7 +123,7 @@ double  LL;       /* LL = extension of fields in R and z. */
 
 extern double **Dphi_z,**Dphi_R,**Dphi_z_dR;  /* derivatives of total potential */
 
-extern double *epi_gamma2,*epi_kappa2;  /* epicycle gamma^2  */ 
+extern double *epi_gamma2,*epi_kappa2;  /* epicycle gamma^2  */
 
 
 

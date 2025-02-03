@@ -1,5 +1,5 @@
 
-&RUN_PARAMS 
+&RUN_PARAMS
 cosmo=.true.
 pic=.true.
 poisson=.true.
@@ -29,7 +29,7 @@ npartmax=300000
 nexpand=1
 /
 
-&POISSON_PARAMS 
+&POISSON_PARAMS
 epsilon=1.d-3
 /
 
@@ -57,10 +57,8 @@ eta_sn=0.1
 yield=0.1
 /
 
-&REFINE_PARAMS 
+&REFINE_PARAMS
 m_refine=7*8.
 interpol_var=1
 interpol_type=0
 /
-
-

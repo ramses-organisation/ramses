@@ -187,7 +187,7 @@ SUBROUTINE update_coolrates_tables(aexp)
   call mpi_distribute_coolrates_table(tbl_cr_com)
 #endif
 
-  if(myid==0) print*,'Coolrates table updated'
+  !if(myid==0) print*,'Coolrates table updated'
 END SUBROUTINE update_coolrates_tables
 
 #ifndef WITHOUTMPI

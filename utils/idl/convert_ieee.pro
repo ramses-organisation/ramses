@@ -11,7 +11,7 @@ if type eq 'part' then begin
     openr,1,file,/f77_unformatted,swap_endian=1
     readu,1,ndimp
     readu,1,npart
-    print,ndimp,npart,format='("ndim=",I1," npart=",I8)'    
+    print,ndimp,npart,format='("ndim=",I1," npart=",I8)'
     if not keyword_set(float)then begin
 ; If file is in REAL*8
         xp=dblarr(npart,ndimp)
@@ -30,7 +30,7 @@ if type eq 'part' then begin
     readu,1,mp
     readu,1,lp
     close,1
-    
+
     fileout=file+'.ieee'
     print,'Writing file ',fileout
     openw,1,fileout,/f77_unformatted

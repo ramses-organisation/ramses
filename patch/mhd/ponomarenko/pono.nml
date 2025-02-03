@@ -9,7 +9,7 @@ ncontrol=1
 nsubcycle=4*1,2
 /
 
-&AMR_PARAMS 
+&AMR_PARAMS
 levelmin=5
 levelmax=8
 ngridmax=2000000
@@ -36,10 +36,8 @@ scheme='induction'
 eta_mag=0.0025
 /
 
-&REFINE_PARAMS 
+&REFINE_PARAMS
 err_grad_u=0.1
 interpol_var=0
 interpol_type=2
 /
-
-

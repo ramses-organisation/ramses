@@ -9,7 +9,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/statvfs.h> 
+#include <sys/statvfs.h>
 
 #define BUFSIZE 8388608 /* 8 Mo */
 #define MAXLINE 256

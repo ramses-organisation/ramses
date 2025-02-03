@@ -113,6 +113,7 @@ subroutine star_formation(ilevel)
            endif
         enddo
         write(ilun,'(A5)',advance='no') 'tag  '
+        write(ilun,'(A4)',advance='no') 'tp  '
         write(ilun,'(A1)') ' '
      else
         open(ilun, file=fileloc, status='old', position='append', action='write', form='formatted')
@@ -331,12 +332,10 @@ subroutine star_formation(ilevel)
 
                        CASE (5)
                           ! Virial parameter
-                          alpha0    = (5.0*(sigma2+cs2))/(pi*factG*d*dx_loc**2)
+                          alpha0    = (15.0*(sigma2+cs2))/(pi*factG*d*dx_loc**2)
                           M2        = max(sigma2/cs2,smallr)
                           ! Turbulent forcing parameter (Federrath 2008 & 2010)
-                          b_turb    = 0.4
-                          ! Fudge for alpha dependence (KM 2005).
-                          ! phi_x     = 1.12
+                          b_turb    = 1.0 ! 1=compressive 0.3=solenidal
                           ! The prefered value for eps_star = 1.0,
                           ! which represents the theoretical maximum efficiency.
                           sigs      = log(1.0+(b_turb**2)*(M2))
@@ -587,6 +586,7 @@ subroutine star_formation(ilevel)
                  write(ilun,'(E24.12)',advance='no') uvar
               enddo
               write(ilun,'(I10)',advance='no') typep(ind_part(i))%tag
+              write(ilun,'(E24.12)',advance='no') tp(ind_part(i))
               write(ilun,'(A1)') ' '
            endif
 

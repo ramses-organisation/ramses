@@ -31,9 +31,9 @@ zmi=`echo $zc $imsize|awk '{print $1-$2}'`
 zma=`echo $zc $imsize|awk '{print $1+$2}'`
 
 
-part2map -inp output_$count -out cdm_${count}_dir${dir}.map -xmi $xmi -xma $xma -ymi $ymi -yma $yma -zmi $zmi -zma $zma -nx 512 -ny 512 -dir ${dir} -den hop/hop$count.den #-fil ascii 
+part2map -inp output_$count -out cdm_${count}_dir${dir}.map -xmi $xmi -xma $xma -ymi $ymi -yma $yma -zmi $zmi -zma $zma -nx 512 -ny 512 -dir ${dir} -den hop/hop$count.den #-fil ascii
 
-sunset -inp output_$count -out i_band_${count}_dir${dir}.map -xmi $xmi -xma $xma -ymi $ymi -yma $yma -zmi $zmi -zma $zma -nx 512 -ny 512 -dir ${dir} -bnd i_prime 
+sunset -inp output_$count -out i_band_${count}_dir${dir}.map -xmi $xmi -xma $xma -ymi $ymi -yma $yma -zmi $zmi -zma $zma -nx 512 -ny 512 -dir ${dir} -bnd i_prime
 
 #./part2map -inp output_$count -out cdm.map -xmi $xmi -xma $xma -ymi $ymi -yma $yma -zmi $zmi -zma $zma -nx 1024 -ny 1024 -dir ${dir}
 
@@ -48,4 +48,3 @@ map2img.py i_band_${count}_dir${dir}.map -o i_band_${count}_dir${dir}.png -c gra
 map2img.py dens_${count}_dir${dir}.map -o dens_${count}_dir${dir}.png -l -c gray -m 0.15 -M 15000.
 map2img.py temp_${count}_dir${dir}.map -o temp_${count}_dir${dir}.png -l -c gray -m 1e-5 -M 5e-3
 map2img.py metal_${count}_dir${dir}.map -o metal_${count}_dir${dir}.png -l -c gray -m 2e-5 -M 2e-2
-

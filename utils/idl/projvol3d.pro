@@ -14,7 +14,7 @@
 ;       matrix (!P.T) is used as the 4x4 matrix.
 ;
 ;       This routine is largely inspired from the IDL routine
-;       PROJECT_VOL. 
+;       PROJECT_VOL.
 ;
 ; CATEGORY:
 ;	Volume Rendering.
@@ -83,7 +83,7 @@
 ;               rd_hydro,a,h
 ;
 ;       Use "PP_AMR3D" with the NODATA keyword to set up a viewing
-;       projection without plotting the mesh: 
+;       projection without plotting the mesh:
 ;
 ;               pp_amr3d,a,/col,ax=30,ay=30,scale=2,persp=2,/nodata
 ;
@@ -91,9 +91,9 @@
 ;       volume, and for the chosen variable:
 ;
 ;               vol = meshijk(a,h,xr=[0,32],yr=[0,32],zr=[0,32],lev=3)
-;               
+;
 ;       Render the volume of data using "PROJVOL3D":
-;       
+;
 ;               image = projvol3d(vol,256,256,256)
 ;
 ;       Plot the image:
@@ -101,7 +101,7 @@
 ;               tvscl,image
 ;
 ; MODIFICATION HISTORY:
-;       ROUTINE PROJECT_VOL written by Daniel Carr 01/09/1992 
+;       ROUTINE PROJECT_VOL written by Daniel Carr 01/09/1992
 ;
 ;       ROUTINE PROJVOL3D written by Romain Teyssier 17/09/2001
 ;                                    Romain.Teyssier@cea.fr
@@ -178,7 +178,7 @@ zmin=zr[0] & zmax=zr[1]
 
 ; Minimize number of planar cuts
 ; Define corners
-x_corners=[xmin,xmin,xmin,xmax,xmin,xmax,xmax,xmax] 
+x_corners=[xmin,xmin,xmin,xmax,xmin,xmax,xmax,xmax]
 y_corners=[ymin,ymin,ymax,ymin,ymax,ymin,ymax,ymax]
 z_corners=[zmin,zmax,zmin,zmin,zmax,zmax,zmin,zmax]
 
@@ -213,36 +213,36 @@ img = Fltarr(x_sample,y_sample)
 for i=0L,z_sample-1L do begin
 
     zcut=zcut_min+float(i)/Float(z_sample)*(zcut_max-zcut_min)
-    
+
 ; Generate plane in normalized coordinates
     x_rays_norm=(Findgen(x_sample)+0.5)/Float(x_sample) # Replicate(1.0, y_sample)
     y_rays_norm=Replicate(1.0,x_sample)  # (Findgen(y_sample)+0.5)/Float(y_sample)
     z_rays_norm=Replicate(zcut, xy_sample)
-    
+
 ; Rotate plane using inverse rotation matrix
     index=[[x_rays_norm[*]],[y_rays_norm[*]],[z_rays_norm[*]],[replicate(1.0, xy_sample)]] # trans
     x_rays_rot = index[*, 0] / index[*, 3]
     y_rays_rot = index[*, 1] / index[*, 3]
     z_rays_rot = index[*, 2] / index[*, 3]
-    
+
 ; Convert to data coordinates
     x_rays_data=(x_rays_rot-!x.s[0])/!x.s[1]
     y_rays_data=(y_rays_rot-!y.s[0])/!y.s[1]
     z_rays_data=(z_rays_rot-!z.s[0])/!z.s[1]
-    
+
 ; Convert to index in data cube
     indx = (x_rays_data-xmin)/(xmax-xmin)*Float(size_vol[1])
     indy = (y_rays_data-ymin)/(ymax-ymin)*Float(size_vol[2])
     indz = (z_rays_data-zmin)/(zmax-zmin)*Float(size_vol[3])
-    
+
     ind = where (x_rays_data ge xmin and x_rays_data lt xmax and $
                  y_rays_data ge ymin and y_rays_data lt ymax and $
                  z_rays_data ge zmin and z_rays_data lt zmax, n_in_cube)
-    
+
 ; Opacity
     if (block_out) then begin
         subim=0.*x_rays_data
-        if n_in_cube gt 0 then begin    
+        if n_in_cube gt 0 then begin
             subim(ind)=opacity(fix(indx(ind)),fix(indy(ind)),fix(indz(ind)))
         endif
         img = img - (subim < img)

@@ -16,7 +16,7 @@ subroutine upload_fine(ilevel)
   integer ,dimension(1:nvector,0:twondim),save::igridn
 
   integer,dimension(1:3,1:2,1:8)::iii,jjj
-  integer::ind_left,ind_right,neul=5
+  integer::ind_left,ind_right
   integer::id1,id2,ig1,ig2,ih1,ih2
   integer::i,idim,ncache,igrid,ngrid,ind,iskip,nsplit,icell
 
@@ -242,7 +242,7 @@ subroutine upl(ind_cell,ncell)
   ! interpol_var=0: use rho, rho u and E
   ! interpol_tar=1: use rho, rho u and rho epsilon
   !---------------------------------------------------------------------
-  integer::ivar,i,idim,ind_son,iskip_son,ind,neul=5
+  integer::ivar,i,idim,ind_son,iskip_son,ind
 #if NENER>0
   integer::irad
 #endif
@@ -464,7 +464,7 @@ subroutine upl(ind_cell,ncell)
 #if NENER>0
         do irad=1,nener
            do i=1,ncell
-              erad(i)=erad(i)+uold(ind_cell_son(i),8+irad)
+              erad(i)=erad(i)+uold(ind_cell_son(i),nhydro+irad)
            end do
         end do
 #endif
@@ -496,7 +496,7 @@ subroutine upl(ind_cell,ncell)
 #if NENER>0
      do irad=1,nener
         do i=1,ncell
-           erad(i)=erad(i)+uold(ind_cell(i),8+irad)
+           erad(i)=erad(i)+uold(ind_cell(i),nhydro+irad)
         end do
      end do
 #endif
@@ -523,7 +523,7 @@ subroutine upl_left(ind_cell,igrid_son,idim,ncell)
   ! This routine performs a restriction operation (averaging down)
   ! for the magnetic field on cell faces
   !---------------------------------------------------------------------
-  integer::i,ind_son,iskip_son,ind,neul=5
+  integer::i,ind_son,iskip_son,ind
   integer ,dimension(1:nvector),save::ind_cell_son
   real(dp),dimension(1:nvector),save::getx
   integer,dimension(1:6,1:4)::hhh
@@ -571,7 +571,7 @@ subroutine upl_right(ind_cell,igrid_son,idim,ncell)
   ! This routine performs a restriction operation (averaging down)
   ! for the magnetic field on cell faces
   !---------------------------------------------------------------------
-  integer::i,ind_son,iskip_son,ind,neul=5
+  integer::i,ind_son,iskip_son,ind
   integer ,dimension(1:nvector),save::ind_cell_son
   real(dp),dimension(1:nvector),save::getx
   integer,dimension(1:6,1:4)::hhh
@@ -630,7 +630,7 @@ subroutine interpol_hydro(u1,ind1,u2,nn)
   ! interpol_type=2 linear interpolation with Monotonized Central slope
   ! interpol_type=3 linear interpolation without limiters
   !----------------------------------------------------------
-  integer::i,j,ivar,idim,ind,ix,iy,iz,neul=5
+  integer::i,j,ivar,idim,ind,ix,iy,iz
 #if NENER>0
   integer::irad
 #endif
@@ -670,7 +670,7 @@ subroutine interpol_hydro(u1,ind1,u2,nn)
 #if NENER>0
         do irad=1,nener
            do i=1,nn
-              erad(i)=erad(i)+u1(i,j,8+irad)
+              erad(i)=erad(i)+u1(i,j,nhydro+irad)
            end do
         end do
 #endif
@@ -780,7 +780,7 @@ subroutine interpol_hydro(u1,ind1,u2,nn)
 #if NENER>0
         do irad=1,nener
            do i=1,nn
-              erad(i)=erad(i)+u2(i,ind,8+irad)
+              erad(i)=erad(i)+u2(i,ind,nhydro+irad)
            end do
         end do
 #endif
@@ -810,10 +810,10 @@ subroutine compute_limiter_minmod(a,w,nn)
 
   do idim=1,ndim
      do i=1,nn
-        diff_left=0.5*(a(i,2*idim)-a(i,0))
-        diff_right=0.5*(a(i,0)-a(i,2*idim-1))
+        diff_left=0.5d0*(a(i,2*idim)-a(i,0))
+        diff_right=0.5d0*(a(i,0)-a(i,2*idim-1))
         if(diff_left*diff_right<=0.0)then
-           minmod=0.0
+           minmod=0
         else
            minmod=MIN(ABS(diff_left),ABS(diff_right)) &
                 &   *diff_left/ABS(diff_left)
@@ -841,7 +841,7 @@ subroutine compute_central(a,w,nn)
 
   do idim=1,ndim
      do i=1,nn
-        w(i,idim)=0.5*(a(i,2*idim)-a(i,2*idim-1))
+        w(i,idim)=0.5d0*(a(i,2*idim)-a(i,2*idim-1))
      end do
   end do
 
@@ -1245,7 +1245,7 @@ end subroutine interpol_faces
 !###########################################################
 subroutine copy_from_refined_faces(ind1,u,v,w,nn)
   use amr_commons
-  use hydro_commons, ONLY: nvar,uold
+  use hydro_commons, ONLY: nvar,uold,neul
   implicit none
   integer::nn
   integer ,dimension(1:nvector,0:twondim)::ind1
@@ -1254,7 +1254,7 @@ subroutine copy_from_refined_faces(ind1,u,v,w,nn)
   real(dp),dimension(1:nvector,0:1,0:1,-1:1)::w
 
   ! TVD interpolation from coarse faces
-  integer::i,j,k,l,ind,iskip,imax,jmax,kmax,neul=5
+  integer::i,j,k,l,ind,iskip,imax,jmax,kmax
 
   imax=1; jmax=0; kmax=0
 #if NDIM>1

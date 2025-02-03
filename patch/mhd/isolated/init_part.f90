@@ -1222,4 +1222,3 @@ subroutine compute_ncloud_sink
   end do
 
 end subroutine compute_ncloud_sink
-

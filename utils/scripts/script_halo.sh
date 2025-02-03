@@ -23,10 +23,3 @@ fi
 sed -i '1,8d' sat_$count.list
 
 cat sat_$count.list
-
-
-
-
-
-
-

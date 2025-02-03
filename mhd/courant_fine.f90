@@ -26,7 +26,7 @@ subroutine courant_fine(ilevel)
   real(dp)::dt_lev,dx,vol,scale
   real(kind=8)::mass_loc,ekin_loc,eint_loc,emag_loc,dt_loc
   real(kind=8)::mass_all,ekin_all,eint_all,emag_all,dt_all
-  real(dp),dimension(1:nvector,1:nvar+3),save::uu
+  real(dp),dimension(1:nvector,1:nvar_all),save::uu
   real(dp),dimension(1:nvector,1:ndim),save::gg
 #ifdef NIMHD
   ! maybe to see if ambipolar dt at a certain level restricts the global dt?
@@ -61,7 +61,7 @@ subroutine courant_fine(ilevel)
 
   if (ischeme .eq. 1) then
      CALL velocity_fine(ilevel)
-     do ivar=1,nvar+3
+     do ivar=1,nvar_all
         call make_virtual_fine_dp(uold(1,ivar),ilevel)
      end do
      if(simple_boundary)call make_boundary_hydro(ilevel)
@@ -92,7 +92,7 @@ subroutine courant_fine(ilevel)
         end do
 
         ! Gather hydro variables
-        do ivar=1,nvar+3
+        do ivar=1,nvar_all
            do i=1,nleaf
               uu(i,ivar)=uold(ind_leaf(i),ivar)
            end do
@@ -125,7 +125,7 @@ subroutine courant_fine(ilevel)
 
         ! Compute total energy
         do i=1,nleaf
-           ekin_loc=ekin_loc+uu(i,5)*vol
+           ekin_loc=ekin_loc+uu(i,neul)*vol
         end do
 
         ! Compute total magnetic energy
@@ -137,18 +137,18 @@ subroutine courant_fine(ilevel)
 
         ! Compute total internal energy
         do i=1,nleaf
-           eint_loc=eint_loc+uu(i,5)*vol
+           eint_loc=eint_loc+uu(i,neul)*vol
         end do
         do ivar=1,3
            do i=1,nleaf
               eint_loc=eint_loc-0.5d0*uu(i,1+ivar)**2/uu(i,1)*vol &
-                   & -0.125d0*(uu(i,5+ivar)+uu(i,nvar+ivar))**2*vol
+                   & -0.125d0*(uu(i,neul+ivar)+uu(i,nvar+ivar))**2*vol
            end do
         end do
 #if NENER>0
         do ivar=1,nener
            do i=1,nleaf
-              eint_loc=eint_loc-uu(i,8+ivar)*vol
+              eint_loc=eint_loc-uu(i,nhydro+ivar)*vol
            end do
         end do
 #endif
@@ -267,7 +267,7 @@ subroutine velocity_fine(ilevel)
   ! the maximum density rho_max, and the potential energy
   !----------------------------------------------------------
   integer::igrid,ngrid,ncache,i,ind,iskip,ix,iy,iz
-  integer::nx_loc,idim,neul=5
+  integer::nx_loc,idim
   real(dp)::dx,dx_loc,scale,d,u,v,w,A,B,C
   real(dp),dimension(1:twotondim,1:3)::xc
   real(dp),dimension(1:3)::skip_loc

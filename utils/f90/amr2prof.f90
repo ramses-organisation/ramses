@@ -54,7 +54,7 @@ program amr2prof
   integer::nprof=23
   logical::logscale=.false.
   integer::nvarin=6,ivartemp=5,ivarmet=6
-  
+
   call read_params
 
   if(mhd)then
@@ -62,7 +62,7 @@ program amr2prof
      ivartemp=11
      ivarmet=12
   endif
-  
+
   ! Initialize random number generator
   call rans(1,iseed,allseed)
   localseed=allseed(1,1:IRandNumSize)

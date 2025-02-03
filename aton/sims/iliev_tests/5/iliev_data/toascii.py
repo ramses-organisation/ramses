@@ -44,7 +44,7 @@ for i in range(n1):
             bin = int(math.sqrt(i*i + j*j + k*k))
             if bin >= len(bins):
                 continue
-            
+
             array_index = (width + i + j*n1 + k*n1*n2) * float_size
 
             q1s, q2s = [], []
@@ -54,7 +54,7 @@ for i in range(n1):
                 q2 = struct.unpack_from('f', s2, offset=pos)[0]
                 q1s.append(q1)
                 q2s.append(q2)
-            
+
             rho = q2s[0]
             xneutral = q1s[0]
             pressure = q1s[1]

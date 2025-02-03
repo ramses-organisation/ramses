@@ -1,4 +1,4 @@
-&RUN_PARAMS 
+&RUN_PARAMS
 hydro=.true.
 rt=.true.
 nrestart=0
@@ -22,7 +22,7 @@ p_region=8.69869d-10		  ! 100 K
 var_region(1,1)=1e-6
 /
 
-&AMR_PARAMS 
+&AMR_PARAMS
 levelmin=7
 levelmax=7
 ngridmax=300000
@@ -90,7 +90,7 @@ group_egy = 18.85, 35.079, 65.666
 spec2group    = 1,2,3             ! HI, HeI, HeII -> pck
 /
 
-&BOUNDARY_PARAMS 
+&BOUNDARY_PARAMS
 nboundary=6
 bound_type= 1, 2,  1,  2,  1,  2
 ibound_min=-1, 1, -1, -1, -1, -1

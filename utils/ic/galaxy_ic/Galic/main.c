@@ -17,7 +17,7 @@ int main(int argc,char *argv[])
   char fname[256];
   FILE *fd;
   double convert_unit;
-  
+
   /*******************************************/
 
   CC=     10.;       /* halo concentration   (NFW DM Halo only)   */
@@ -29,17 +29,17 @@ int main(int argc,char *argv[])
   MB=     0.004;     /* bulge mass fraction     */
   JD= MD;            /* disk spin fraction      */
 
-  GasFraction= 0.2;  /* relative content of gas in the disk*/ 
+  GasFraction= 0.2;  /* relative content of gas in the disk*/
   DiskHeight=  0.1;  /* thickness of disk in units of radial scale length */
   BulgeSize=   0.1;  /* bulge scale length in units of disk scale length  */
 
   N_HALO= 100000;    /* desired number of particles in dark halo */
   N_DISK= 100000;    /* desired number of collisionless particles in disk */
-  N_GAS=  100000;    /* number of gas particles in disk */ 
-  N_BULGE= 10000;    /* number of bulge particles */ 
+  N_GAS=  100000;    /* number of gas particles in disk */
+  N_BULGE= 10000;    /* number of bulge particles */
 
   HI_GasMassFraction=    0.1;     /* in terms of the total gas mass */
-  HI_GasDiskScaleLength= 1.0;    /* in terms of scale length of the disk */ 
+  HI_GasDiskScaleLength= 1.0;    /* in terms of scale length of the disk */
 
   Qstabilizefactor=1.3;
 
@@ -64,22 +64,22 @@ int main(int argc,char *argv[])
   set_bulge_positions();
   set_gas_positions();
 
-  
+
   compute_force_field();
 
   compute_velocity_dispersions_disk();
-  compute_velocity_dispersions_halo();  
-  compute_velocity_dispersions_bulge();  
- 
+  compute_velocity_dispersions_halo();
+  compute_velocity_dispersions_bulge();
+
   compute_local_escape_speed();
 
   set_halo_velocities();
-  set_disk_velocities();    
+  set_disk_velocities();
   set_gas_velocities();
   set_bulge_velocities();
 
 
-  
+
   save_particles(filedir);
 
 
@@ -113,7 +113,7 @@ int main(int argc,char *argv[])
       exit(0);
     }
   printf("done.\n");
-  
+
   convert_unit = H * UnitLength_in_cm * 1.0E3 / CM_PER_MPC;
   printf("Disk scale length (kpc) : %g\n",convert_unit);
   convert_unit = R200 * UnitLength_in_cm * 1.0E3 / CM_PER_MPC;
@@ -125,7 +125,7 @@ int main(int argc,char *argv[])
 int write_header(FILE *fd)
 {
   double convert_unit;
-  
+
   fprintf(fd,"CC=%g\n",CC);
   convert_unit= V200 * UnitVelocity_in_cm_per_s / 1.0E5;
   fprintf(fd,"V200(km/s)=%g\n",convert_unit);

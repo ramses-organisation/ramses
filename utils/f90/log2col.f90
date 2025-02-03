@@ -85,7 +85,7 @@ contains
     implicit none
 
     integer       :: i,n
-    
+
     character(len=4)   :: opt
     character(len=128) :: arg
     logical       :: bad, ok

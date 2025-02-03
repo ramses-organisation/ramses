@@ -1,5 +1,5 @@
 
-&RUN_PARAMS 
+&RUN_PARAMS
 poisson=.true.
 hydro=.true.
 verbose=.false.
@@ -47,7 +47,6 @@ epsilon=1d-6
 cg_levelmin=100
 /
 
-&REFINE_PARAMS 
+&REFINE_PARAMS
 err_grad_d=0.01
 /
-

@@ -380,7 +380,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
               enddo
               write(ilun,'(E24.12)',advance='no') unew(indp(j),1)
               do ivar=2,nvar
-                 if(ivar.eq.ndim+2)then
+                 if(ivar.eq.neul)then
                     e=0.0d0
                     do idim=1,ndim
                        e=e+0.5d0*unew(indp(j),idim+1)**2/max(unew(indp(j),1),smallr)
@@ -392,11 +392,11 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
 #endif
 #ifdef SOLVERmhd
                     do idim=1,ndim
-                       e=e+0.125d0*(unew(indp(j),idim+ndim+2)+unew(indp(j),idim+nvar))**2
+                       e=e+0.125d0*(unew(indp(j),idim+neul)+unew(indp(j),idim+nvar))**2
                     enddo
 #endif
                     ! Temperature
-                    uvar=(gamma-1.0d0)*(unew(indp(j),ndim+2)-e)*scale_T2
+                    uvar=(gamma-1.0d0)*(unew(indp(j),neul)-e)*scale_T2
                  else
                     uvar=unew(indp(j),ivar)
                  endif

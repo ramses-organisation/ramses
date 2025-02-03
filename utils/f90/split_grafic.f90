@@ -47,7 +47,7 @@ program spg
 
   integer::info
   integer::narg
-  
+
   real,dimension(:,:),allocatable::ics
   integer::ncode,bit_length
 

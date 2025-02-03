@@ -72,7 +72,7 @@ subroutine synchydrofine1(ind_cell,ncell,dteff,which_force)
   integer::i,idim,neul=2*nmat+ndim
   real(dp),dimension(1:nvector),save::pp,dtot
   real(dp)::d_mat
-  
+
   if (which_force==2) then
      if(myid==1)write(*,*)'Turbulence driving not supported for 6eq patch'
      call clean_stop
@@ -101,7 +101,7 @@ subroutine synchydrofine1(ind_cell,ncell,dteff,which_force)
         uold(ind_cell(i),neul+imat) = pp(i)
      end do
   end do
-  
+
   ! Update momentum
   do idim=1,ndim
      do i=1,ncell
@@ -111,7 +111,7 @@ subroutine synchydrofine1(ind_cell,ncell,dteff,which_force)
         uold(ind_cell(i),2*nmat+idim)=pp(i)
      end do
   end do
-  
+
   ! Update total energy
   do imat=1,nmat
      do i=1,ncell
@@ -133,4 +133,3 @@ end subroutine synchydrofine1
 !################################################################
 !################################################################
 !################################################################
-

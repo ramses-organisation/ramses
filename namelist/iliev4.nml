@@ -1,4 +1,4 @@
-&RUN_PARAMS 
+&RUN_PARAMS
 hydro=.true.
 static=.true.
 nrestart=0
@@ -11,7 +11,7 @@ filetype='grafic'
 initfile(1)='./IC_better'		! Point to Iliev's density cube
 /
 
-&AMR_PARAMS 
+&AMR_PARAMS
 levelmin=7
 levelmax=7
 ngridtot=500000
@@ -20,7 +20,7 @@ boxlen=71.429			! 0.5 h-1 Mpc at z=9
 
 &OUTPUT_PARAMS
 noutput=6
-tout= 0.01, 0.05, 0.1, 0.2, 0.3, 0.4 
+tout= 0.01, 0.05, 0.1, 0.2, 0.3, 0.4
 /
 
 &HYDRO_PARAMS

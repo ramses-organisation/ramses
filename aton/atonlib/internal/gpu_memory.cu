@@ -39,9 +39,9 @@ extern "C" void aton_gpu_malloc_(int* source_count) {
   cudaMalloc((void**)&cuegy, ((NCELLX+NBOUND2)*(NCELLY+NBOUND2)*(NCELLZ+NBOUND2))*sizeof(double));
   cudaMalloc((void**)&cuflx, ((NCELLX+NBOUND2)*(NCELLY+NBOUND2)*(NCELLZ+NBOUND2)*3)*sizeof(double));
 
-  cudaMalloc((void**)&cuegy_new, ((NCELLX+NBOUND2)*(NCELLY+NBOUND2)*(NCELLZ+NBOUND2))*sizeof(double)); 
+  cudaMalloc((void**)&cuegy_new, ((NCELLX+NBOUND2)*(NCELLY+NBOUND2)*(NCELLZ+NBOUND2))*sizeof(double));
   cudaMalloc((void**)&cuflx_new, ((NCELLX+NBOUND2)*(NCELLY+NBOUND2)*(NCELLZ+NBOUND2)*3)*sizeof(double));
- 
+
   cudaMalloc((void**)&cusrc0, (*source_count)*sizeof(double));
   cudaMalloc((void**)&cusrc0pos, 3*(*source_count)*sizeof(int));
 
@@ -161,7 +161,7 @@ namespace aton {
   void cpu_to_gpu_boundary_values(const double *values) {
     aton_cpu_to_gpu_boundary_(values);
   }
-  
+
   void gpu_to_cpu_boundary_values(double *values) {
     aton_gpu_to_cpu_boundary_(values);
   }
@@ -173,7 +173,7 @@ extern "C" void aton_gpu_to_cpu_full_(double *e, double *f, double *xion, double
   cudaMemcpy(xion,cuxion,((NCELLX+NBOUND2)*(NCELLY+NBOUND2)*(NCELLZ+NBOUND2))*sizeof(double),cudaMemcpyDeviceToHost);
   cudaMemcpy(temp,cutemperature,((NCELLX+NBOUND2)*(NCELLY+NBOUND2)*(NCELLZ+NBOUND2))*sizeof(double),cudaMemcpyDeviceToHost);
   cudaMemcpy(dens,cudensity,((NCELLX+NBOUND2)*(NCELLY+NBOUND2)*(NCELLZ+NBOUND2))*sizeof(double),cudaMemcpyDeviceToHost);
-  cudaMemcpy(src,cusrc0,(*nsrc)*sizeof(double),cudaMemcpyDeviceToHost); 
+  cudaMemcpy(src,cusrc0,(*nsrc)*sizeof(double),cudaMemcpyDeviceToHost);
   cudaMemcpy(srcpos,cusrc0pos,3*(*nsrc)*sizeof(int),cudaMemcpyDeviceToHost);
 }
 

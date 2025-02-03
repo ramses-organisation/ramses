@@ -36,7 +36,7 @@ if (file_test(dir)eq 0) then file_mkdir,dir
 
 fileout=['ic_d','ic_u','ic_v','ic_w','ic_p','ic_bxleft','ic_byleft','ic_bzleft','ic_bxright','ic_byright','ic_bzright']
 
-for ivar=0,nvar-1 do begin    
+for ivar=0,nvar-1 do begin
     openw,1,dir+'/'+fileout(ivar),/f77_unf
     writeu,1,n1,n2,n3,dxini,xoff1,xoff2,xoff3,astart,omega_m,omega_l,h0
     for i3=0,n3-1 do begin

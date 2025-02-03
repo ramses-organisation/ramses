@@ -3,6 +3,9 @@ subroutine courant_fine(ilevel)
   use hydro_commons
   use poisson_commons
   use mpi_mod
+#if USE_TURB==1
+  use turb_commons
+#endif
   implicit none
 #ifndef WITHOUTMPI
   integer::info
@@ -87,6 +90,16 @@ subroutine courant_fine(ilevel)
            end do
         end if
 
+#if USE_TURB==1
+        if (turb .AND. turb_type/=3) then
+           do idim=1,ndim
+              do i=1,nleaf
+                 gg(i,idim)=gg(i,idim)+fturb(ind_leaf(i),idim)
+              end do
+           end do
+        end if
+#endif
+
         ! Compute total mass
         do i=1,nleaf
            mass_loc=mass_loc+uu(i,1)*vol
@@ -94,7 +107,7 @@ subroutine courant_fine(ilevel)
 
         ! Compute total energy
         do i=1,nleaf
-           ekin_loc=ekin_loc+uu(i,5)*vol
+           ekin_loc=ekin_loc+uu(i,neul)*vol
         end do
 
         ! Compute total magnetic energy
@@ -106,18 +119,18 @@ subroutine courant_fine(ilevel)
 
         ! Compute total internal energy
         do i=1,nleaf
-           eint_loc=eint_loc+uu(i,5)*vol
+           eint_loc=eint_loc+uu(i,neul)*vol
         end do
         do ivar=1,3
            do i=1,nleaf
               eint_loc=eint_loc-0.5d0*uu(i,1+ivar)**2/uu(i,1)*vol &
-                   & -0.125d0*(uu(i,5+ivar)+uu(i,nvar+ivar))**2*vol
+                   & -0.125d0*(uu(i,neul+ivar)+uu(i,nvar+ivar))**2*vol
            end do
         end do
 #if NENER>0
         do ivar=1,nener
            do i=1,nleaf
-              eint_loc=eint_loc-uu(i,8+ivar)*vol
+              eint_loc=eint_loc-uu(i,nhydro+ivar)*vol
            end do
         end do
 #endif
@@ -192,7 +205,7 @@ subroutine energy_fine(ilevel)
   integer ,dimension(1:nvector),save::ind_grid,ind_cell
   real(dp),dimension(1:nvector,1:ndim),save::xx
   real(dp),dimension(1:nvector)::ee
-  real(dp),dimension(1:nvector,1:nvar+3)::uut 
+  real(dp),dimension(1:nvector,1:nvar+3)::uut
   real(dp),dimension(1:nvector)::req,peq
   real(kind=8)::uud,ekin,uuv
   real(dp),save::vol_heat=0.0d0
@@ -271,7 +284,7 @@ subroutine energy_fine(ilevel)
           end do
           uold(ind_cell(i),neul) = uold(ind_cell(i),neul)-ekin
         end do
-        
+
         ! Scatter variables
         do ivar=1,nvar+3
           do i=1,ngrid
@@ -282,17 +295,17 @@ subroutine energy_fine(ilevel)
         do i=1,ngrid
           req(i) = rho_eq(ind_cell(i))
           peq(i) = p_eq(ind_cell(i))
-        end do 
+        end do
 
         ! Spongy layers that damp the profiles towards the equilibrium ones
         !call spongelayers(xx,uut,req,peq,t,ngrid)
-        
+
         ! rescatter variables
         do ivar=1,nvar+3
           do i=1,ngrid
             uold(ind_cell(i),ivar) = uut(i,ivar)
           end do
-        end do 
+        end do
 
         ! Impose analytical energy field
         call eneana(xx,ee,dx_loc,t,ngrid,vol_heat,vol_cool,compute_volumes)
@@ -302,8 +315,8 @@ subroutine energy_fine(ilevel)
 #if NVAR>8
           ! Entropy
           uold(ind_cell(i),9)=uold(ind_cell(i),9)+(gamma-1.0d0)/(uold(ind_cell(i),1)**(gamma-1.0d0))*ee(i)*dtnew(ilevel)
-#else          
-          
+#else
+
 #endif
         end do
 
@@ -321,7 +334,7 @@ subroutine energy_fine(ilevel)
      ! End loop over cells
   end do
   ! End loop over grids
-  ! If first call, then set compute_volumes to false and 
+  ! If first call, then set compute_volumes to false and
   ! do MPI comm if necessary
   if (compute_volumes.eqv..true.) then
     compute_volumes=.false.
@@ -334,8 +347,8 @@ subroutine energy_fine(ilevel)
     vol_heat=comm_buffout(1)
     vol_cool=comm_buffout(2)
 #endif
-  end if 
-end subroutine energy_fine 
+  end if
+end subroutine energy_fine
 !#########################################################
 !#########################################################
 !#########################################################
@@ -350,7 +363,7 @@ subroutine velocity_fine(ilevel)
   ! the maximum density rho_max, and the potential energy
   !----------------------------------------------------------
   integer::igrid,ngrid,ncache,i,ind,iskip,ix,iy,iz
-  integer::nx_loc,idim,neul=5
+  integer::nx_loc,idim
   real(dp)::dx,dx_loc,scale,d,u,v,w,A,B,C
   real(dp),dimension(1:twotondim,1:3)::xc
   real(dp),dimension(1:3)::skip_loc

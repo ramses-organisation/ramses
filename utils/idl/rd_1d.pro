@@ -13,7 +13,7 @@
 ;
 ; OPTIONAL INPUTS:
 ;       FILE:   if set, input the scalar string containing the name of
-;       the file to be read. Otherwise, a PICKFILE widget is launched. 
+;       the file to be read. Otherwise, a PICKFILE widget is launched.
 ;
 ;       NMAX:  if set, the maximum number of time steps to be
 ;       read from the file. Default: 100.

@@ -31,9 +31,9 @@
 ;	Converted to IDL V5.0   W. Landsman   September 1997
 ;-
 ;-------------------------------------------------------------
- 
+
 	FUNCTION REPCHR, OLD, C1, C2, help=hlp
- 
+
 	if (n_params(0) lt 2) or keyword_set(help) then begin
 	  print,' Replace all occurrences of one character with another '+$
 	    'in a text string.'
@@ -45,7 +45,7 @@
 	  print,'   new = edited string.                 out'
 	  return, -1
 	endif
- 
+
 	B = BYTE(OLD)			   ; convert string to a byte array.
 	CB1 = BYTE(C1)			   ; convert char 1 to byte.
 	W = WHERE(B EQ CB1[0])		   ; find occurrences of char 1.

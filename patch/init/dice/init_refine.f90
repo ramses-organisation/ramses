@@ -176,7 +176,7 @@ subroutine init_refine_2
      dice_init=.false.
   ! ----------
   endif ! if .not. 'grafic'
-  
+
 
 #ifdef RT
   if(neq_chem .and. rt_is_init_xion) then

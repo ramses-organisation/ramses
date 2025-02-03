@@ -92,7 +92,7 @@ class FortranFile(file):
 
     def __init__(self, fname, endian='@', header_prec='i', *args, **kwargs):
         """Open a Fortran unformatted file for writing.
-        
+
         Parameters
         ----------
         endian : character, optional
@@ -132,7 +132,7 @@ class FortranFile(file):
 
     def _write_check(self, number_of_bytes):
         """Write the header for the given number of bytes"""
-        self.write(numpy.array(number_of_bytes, 
+        self.write(numpy.array(number_of_bytes,
                                dtype=self.ENDIAN+self.HEADER_PREC,).tostring()
                   )
 
@@ -168,7 +168,7 @@ class FortranFile(file):
         Parameters
         ----------
         s : the string to write
-        
+
         """
         self.writeRecord(s)
 
@@ -176,22 +176,22 @@ class FortranFile(file):
 
     def readReals(self, prec='f'):
         """Read in an array of real numbers.
-        
+
         Parameters
         ----------
         prec : character, optional
             Specify the precision of the array using character codes from
             Python's struct module.  Possible values are 'd' and 'f'.
-            
+
         """
-        
+
         _numpy_precisions = {'d': numpy.float64,
                              'f': numpy.float32
                             }
 
         if prec not in self._real_precisions:
             raise ValueError('Not an appropriate precision')
-            
+
         data_str = self.readRecord()
         return numpy.fromstring(data_str, dtype=self.ENDIAN+prec)
 
@@ -207,26 +207,26 @@ class FortranFile(file):
         """
         if prec not in self._real_precisions:
             raise ValueError('Not an appropriate precision')
-        
+
         nums = numpy.array(reals, dtype=self.ENDIAN+prec)
         self.writeRecord(nums.tostring())
-    
+
     _int_precisions = 'hilq'
 
     def readInts(self, prec='i'):
         """Read an array of integers.
-        
+
         Parameters
         ----------
         prec : character, optional
-            Specify the precision of the data to be read using 
+            Specify the precision of the data to be read using
             character codes from Python's struct module.  Possible
             values are 'h', 'i', 'l' and 'q'
-            
+
         """
         if prec not in self._int_precisions:
             raise ValueError('Not an appropriate precision')
-            
+
         data_str = self.readRecord()
         return numpy.fromstring(data_str, dtype=self.ENDIAN+prec)
 
@@ -242,6 +242,6 @@ class FortranFile(file):
         """
         if prec not in self._int_precisions:
             raise ValueError('Not an appropriate precision')
-        
+
         nums = numpy.array(ints, dtype=self.ENDIAN+prec)
         self.writeRecord(nums.tostring())

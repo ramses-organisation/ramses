@@ -1,6 +1,6 @@
 This namelist contains various input parameters for RAMSES runs
 
-&RUN_PARAMS 
+&RUN_PARAMS
 hydro=.true.
 poisson=.true.
 pic=.true.
@@ -16,7 +16,7 @@ gravity_type=0
 epsilon=1e-4
 /
 
-&AMR_PARAMS 
+&AMR_PARAMS
 levelmin=6
 levelmax=10
 ngridmax=100000
@@ -54,16 +54,8 @@ T2_star=1.0
 cooling=.true.
 /
 
-&REFINE_PARAMS 
+&REFINE_PARAMS
 jeans_refine=4.,4.,4.,4.,
 interpol_type=0
 interpol_var=1
 /
-
-
-
-
-
-
-
-

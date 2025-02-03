@@ -1,7 +1,7 @@
 from matplotlib import pyplot as plt
 from numpy import loadtxt
 
-from argparse import ArgumentParser 
+from argparse import ArgumentParser
 
 def main():
 	# parsing arguments
@@ -10,12 +10,12 @@ def main():
 			default=None, help='Directory')
 
 	args = parser.parse_args()
-	
+
 	if args.dir == None:
 		from sys import exit
 		exit()
 	print args.dir
-	path = "/zbox/user/biernack/"  
+	path = "/zbox/user/biernack/"
 	dir = path + args.dir + "movie1/"
 
 	# loading sink data and times of snapshots
@@ -31,7 +31,7 @@ def main():
 	  if i == 17:
 	    unit_t = float(line.split()[2]) # in seconds
 	  if i == 16:
-	    unit_d = float(line.split()[2]) 
+	    unit_d = float(line.split()[2])
 	  if i == 15:
 	    unit_l = float(line.split()[2])
 	  if i > 18:

@@ -19,7 +19,7 @@ subroutine condinit(x,u,dx,nn)
   ! Q is the primitive variable vector. Conventions are here:
   ! Q(i,1): d, Q(i,2:ndim+1):u,v,w and Q(i,ndim+2): P.
   ! If nvar >= ndim+3, remaining variables are treated as passive
-  ! scalars in the hydro solver. 
+  ! scalars in the hydro solver.
   ! U(:,:) and Q(:,:) are in user units.
   !================================================================
   integer::ivar,imat

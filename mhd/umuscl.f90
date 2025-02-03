@@ -482,7 +482,7 @@ SUBROUTINE  trace1d(q,dq,qm,qp,dx,dt,ngrid)
   END DO
 
   ! passive scalars
-#if NVAR>8+NENER
+#if NVAR>NHYDRO+NENER
   DO n = 9+nener, nvar
      DO k = klo, khi
         DO j = jlo, jhi
@@ -549,7 +549,7 @@ SUBROUTINE trace2d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dt,ngrid)
   INTEGER::irad
   REAL(dp),dimension(1:nener)::e, dex, dey, se0
 #endif
-#if NVAR>8+NENER
+#if NVAR>NHYDRO+NENER
   INTEGER::n
 #endif
 
@@ -817,7 +817,7 @@ SUBROUTINE trace2d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dt,ngrid)
      END DO
   END DO
 
-#if NVAR>8+NENER
+#if NVAR>NHYDRO+NENER
   ! Passive scalars
   DO n = 9+nener, nvar
      DO k = klo, khi
@@ -897,7 +897,7 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
   real(dp),dimension(1:nener)::e, dex, dey, dez, se0
   integer ::irad
 #endif
-#if NVAR>8+NENER
+#if NVAR>NHYDRO+NENER
   integer ::n
 #endif
 
@@ -1372,7 +1372,7 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
      END DO
   END DO
 
-#if NVAR>8+NENER
+#if NVAR>NHYDRO+NENER
   ! Passive scalars
   DO n = 9+nener, nvar
      DO k = klo, khi
@@ -1433,7 +1433,7 @@ subroutine cmpflxm(qm,im1,im2,jm1,jm2,km1,km2, &
   real(dp)::zero_flux, bn_mean, entho
   logical::check_switch_solver=.false.
 
-#if NVAR>8
+#if NVAR>NHYDRO
   integer::n
 #endif
 
@@ -1469,7 +1469,7 @@ subroutine cmpflxm(qm,im1,im2,jm1,jm2,km1,km2, &
               qright(8) = qp(l,i,j,k,bt2,xdim) ! Tangential magnetic field 2
 
               ! Other advected quantities
-#if NVAR>8
+#if NVAR>NHYDRO
               do n = 9, nvar
                  qleft (n) = qm(l,i,j,k,n,xdim)
                  qright(n) = qp(l,i,j,k,n,xdim)
@@ -1505,7 +1505,7 @@ subroutine cmpflxm(qm,im1,im2,jm1,jm2,km1,km2, &
                  endif
               CASE (3)
                  if(check_switch_solver)  then
-                    CALL lax_friedrich (qleft,qright,fgdnv,zero_flux) 
+                    CALL lax_friedrich (qleft,qright,fgdnv,zero_flux)
                  else
                     CALL hlld          (qleft,qright,fgdnv)
                  endif
@@ -1532,7 +1532,7 @@ subroutine cmpflxm(qm,im1,im2,jm1,jm2,km1,km2, &
               flx(l,i,j,k,bt2) = fgdnv(8)  ! Transverse magnetic field 2
 
               ! Other advected quantities
-#if NVAR>8
+#if NVAR>NHYDRO
               do n = 9, nvar
                  flx(l,i,j,k,n) = fgdnv(n)
               end do
@@ -1678,10 +1678,10 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
            ! Non-thermal energies
            do irad = 1,nener
               DO l = 1, ngrid
-                 qLL (l,8+irad) = qRT(l,i,j,k,8+irad,xdim)
-                 qRL (l,8+irad) = qLT(l,i,j,k,8+irad,xdim)
-                 qLR (l,8+irad) = qRB(l,i,j,k,8+irad,xdim)
-                 qRR (l,8+irad) = qLB(l,i,j,k,8+irad,xdim)
+                 qLL (l,nhydro+irad) = qRT(l,i,j,k,nhydro+irad,xdim)
+                 qRL (l,nhydro+irad) = qLT(l,i,j,k,nhydro+irad,xdim)
+                 qLR (l,nhydro+irad) = qRB(l,i,j,k,nhydro+irad,xdim)
+                 qRR (l,nhydro+irad) = qLB(l,i,j,k,nhydro+irad,xdim)
               END DO
            end do
 #endif
@@ -1706,10 +1706,10 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
 
 #if NENER>0
                   do irad = 1,nener
-                     pLL = pLL + qLL(l,8+irad)
-                     pLR = pLR + qLR(l,8+irad)
-                     pRL = pRL + qRL(l,8+irad)
-                     pRR = pRR + qRR(l,8+irad)
+                     pLL = pLL + qLL(l,nhydro+irad)
+                     pLR = pLR + qLR(l,nhydro+irad)
+                     pRL = pRL + qRL(l,nhydro+irad)
+                     pRR = pRR + qRR(l,nhydro+irad)
                   end do
 #endif
 
@@ -1718,7 +1718,7 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
                   qtmp(3)=qLL(l,3); qtmp(4)=qLL(l,6); qtmp(5)=qLL(l,4); qtmp(6)=qLL(l,7)
 #if NENER>0
                   do irad = 1,nener
-                     qtmp(8+irad) = qLL(l,8+irad)
+                     qtmp(nhydro+irad) = qLL(l,nhydro+irad)
                   end do
 #endif
                   call find_speed_fast(qtmp,cfastLLx)
@@ -1726,7 +1726,7 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
                   qtmp(3)=qLR(l,3); qtmp(4)=qLR(l,6); qtmp(5)=qLR(l,4); qtmp(6)=qLR(l,7)
 #if NENER>0
                   do irad = 1,nener
-                     qtmp(8+irad) = qLR(l,8+irad)
+                     qtmp(nhydro+irad) = qLR(l,nhydro+irad)
                   end do
 #endif
                   call find_speed_fast(qtmp,cfastLRx)
@@ -1734,7 +1734,7 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
                   qtmp(3)=qRL(l,3); qtmp(4)=qRL(l,6); qtmp(5)=qRL(l,4); qtmp(6)=qRL(l,7)
 #if NENER>0
                   do irad = 1,nener
-                     qtmp(8+irad) = qRL(l,8+irad)
+                     qtmp(nhydro+irad) = qRL(l,nhydro+irad)
                   end do
 #endif
                   call find_speed_fast(qtmp,cfastRLx)
@@ -1742,7 +1742,7 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
                   qtmp(3)=qRR(l,3); qtmp(4)=qRR(l,6); qtmp(5)=qRR(l,4); qtmp(6)=qRR(l,7)
 #if NENER>0
                   do irad = 1,nener
-                     qtmp(8+irad) = qRR(l,8+irad)
+                     qtmp(nhydro+irad) = qRR(l,nhydro+irad)
                   end do
 #endif
                   call find_speed_fast(qtmp,cfastRRx)
@@ -1752,7 +1752,7 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
                   qtmp(3)=qLL(l,4); qtmp(4)=qLL(l,7); qtmp(5)=qLL(l,3); qtmp(6)=qLL(l,6)
 #if NENER>0
                   do irad = 1,nener
-                     qtmp(8+irad) = qLL(l,8+irad)
+                     qtmp(nhydro+irad) = qLL(l,nhydro+irad)
                   end do
 #endif
                   call find_speed_fast(qtmp,cfastLLy)
@@ -1760,7 +1760,7 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
                   qtmp(3)=qLR(l,4); qtmp(4)=qLR(l,7); qtmp(5)=qLR(l,3); qtmp(6)=qLR(l,6)
 #if NENER>0
                   do irad = 1,nener
-                     qtmp(8+irad) = qLR(l,8+irad)
+                     qtmp(nhydro+irad) = qLR(l,nhydro+irad)
                   end do
 #endif
                   call find_speed_fast(qtmp,cfastLRy)
@@ -1768,7 +1768,7 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
                   qtmp(3)=qRL(l,4); qtmp(4)=qRL(l,7); qtmp(5)=qRL(l,3); qtmp(6)=qRL(l,6)
 #if NENER>0
                   do irad = 1,nener
-                     qtmp(8+irad) = qRL(l,8+irad)
+                     qtmp(nhydro+irad) = qRL(l,nhydro+irad)
                   end do
 #endif
                   call find_speed_fast(qtmp,cfastRLy)
@@ -1776,7 +1776,7 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
                   qtmp(3)=qRR(l,4); qtmp(4)=qRR(l,7); qtmp(5)=qRR(l,3); qtmp(6)=qRR(l,6)
 #if NENER>0
                   do irad = 1,nener
-                     qtmp(8+irad) = qRR(l,8+irad)
+                     qtmp(nhydro+irad) = qRR(l,nhydro+irad)
                   end do
 #endif
                   call find_speed_fast(qtmp,cfastRRy)
@@ -1886,7 +1886,7 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
                   qtmp(3)=qLL(l,3); qtmp(4)=qLL(l,6); qtmp(5)=qLL(l,4); qtmp(6)=qLL(l,7)
 #if NENER>0
                   do irad = 1,nener
-                     qtmp(8+irad) = qLL(l,8+irad)
+                     qtmp(nhydro+irad) = qLL(l,nhydro+irad)
                   end do
 #endif
                   vLLx=qtmp(3); call find_speed_fast(qtmp,cLLx)
@@ -1894,7 +1894,7 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
                   qtmp(3)=qLR(l,3); qtmp(4)=qLR(l,6); qtmp(5)=qLR(l,4); qtmp(6)=qLR(l,7)
 #if NENER>0
                   do irad = 1,nener
-                     qtmp(8+irad) = qLR(l,8+irad)
+                     qtmp(nhydro+irad) = qLR(l,nhydro+irad)
                   end do
 #endif
                   vLRx=qtmp(3); call find_speed_fast(qtmp,cLRx)
@@ -1902,7 +1902,7 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
                   qtmp(3)=qRL(l,3); qtmp(4)=qRL(l,6); qtmp(5)=qRL(l,4); qtmp(6)=qRL(l,7)
 #if NENER>0
                   do irad = 1,nener
-                     qtmp(8+irad) = qRL(l,8+irad)
+                     qtmp(nhydro+irad) = qRL(l,nhydro+irad)
                   end do
 #endif
                   vRLx=qtmp(3); call find_speed_fast(qtmp,cRLx)
@@ -1910,7 +1910,7 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
                   qtmp(3)=qRR(l,3); qtmp(4)=qRR(l,6); qtmp(5)=qRR(l,4); qtmp(6)=qRR(l,7)
 #if NENER>0
                   do irad = 1,nener
-                     qtmp(8+irad) = qRR(l,8+irad)
+                     qtmp(nhydro+irad) = qRR(l,nhydro+irad)
                   end do
 #endif
                   vRRx=qtmp(3); call find_speed_fast(qtmp,cRRx)
@@ -1920,7 +1920,7 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
                   qtmp(3)=qLL(l,4); qtmp(4)=qLL(l,7); qtmp(5)=qLL(l,3); qtmp(6)=qLL(l,6)
 #if NENER>0
                   do irad = 1,nener
-                     qtmp(8+irad) = qLL(l,8+irad)
+                     qtmp(nhydro+irad) = qLL(l,nhydro+irad)
                   end do
 #endif
                   vLLy=qtmp(3); call find_speed_fast(qtmp,cLLy)
@@ -1928,7 +1928,7 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
                   qtmp(3)=qLR(l,4); qtmp(4)=qLR(l,7); qtmp(5)=qLR(l,3); qtmp(6)=qLR(l,6)
 #if NENER>0
                   do irad = 1,nener
-                     qtmp(8+irad) = qLR(l,8+irad)
+                     qtmp(nhydro+irad) = qLR(l,nhydro+irad)
                   end do
 #endif
                   vLRy=qtmp(3); call find_speed_fast(qtmp,cLRy)
@@ -1936,7 +1936,7 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
                   qtmp(3)=qRL(l,4); qtmp(4)=qRL(l,7); qtmp(5)=qRL(l,3); qtmp(6)=qRL(l,6)
 #if NENER>0
                   do irad = 1,nener
-                     qtmp(8+irad) = qRL(l,8+irad)
+                     qtmp(nhydro+irad) = qRL(l,nhydro+irad)
                   end do
 #endif
                   vRLy=qtmp(3); call find_speed_fast(qtmp,cRLy)
@@ -1944,7 +1944,7 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
                   qtmp(3)=qRR(l,4); qtmp(4)=qRR(l,7); qtmp(5)=qRR(l,3); qtmp(6)=qRR(l,6)
 #if NENER>0
                   do irad = 1,nener
-                     qtmp(8+irad) = qRR(l,8+irad)
+                     qtmp(nhydro+irad) = qRR(l,nhydro+irad)
                   end do
 #endif
                   vRRy=qtmp(3); call find_speed_fast(qtmp,cRRy)
@@ -2039,8 +2039,8 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
 #if NENER>0
                   !non-thermal energies
                   do irad = 1,nener
-                     qleft (8+irad) = half*(qLL(l,8+irad)+qLR(l,8+irad))
-                     qright(8+irad) = half*(qRR(l,8+irad)+qRL(l,8+irad))
+                     qleft (nhydro+irad) = half*(qLL(l,nhydro+irad)+qLR(l,nhydro+irad))
+                     qright(nhydro+irad) = half*(qRR(l,nhydro+irad)+qRL(l,nhydro+irad))
                   end do
 #endif
 
@@ -2093,8 +2093,8 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
 #if NENER>0
                   !non-thermal energies
                   do irad = 1,nener
-                     qleft (8+irad) = half*(qLL(l,8+irad)+qRL(l,8+irad))
-                     qright(8+irad) = half*(qRR(l,8+irad)+qLR(l,8+irad))
+                     qleft (nhydro+irad) = half*(qLL(l,nhydro+irad)+qRL(l,nhydro+irad))
+                     qright(nhydro+irad) = half*(qRR(l,nhydro+irad)+qLR(l,nhydro+irad))
                   end do
 #endif
 
@@ -2148,7 +2148,7 @@ subroutine ctoprim(uin,q,bf,gravin,dt,ngrid)
 #if NENER>0
   integer::irad
 #endif
-#if NVAR>8+NENER
+#if NVAR>NHYDRO+NENER
   integer::n
 #endif
 
@@ -2242,8 +2242,8 @@ subroutine ctoprim(uin,q,bf,gravin,dt,ngrid)
 #if NENER>0
            do irad = 1,nener
               do l = 1, ngrid
-                 q(l,i,j,k,8+irad) = (gamma_rad(irad)-one)*uin(l,i,j,k,8+irad)
-                 erad(l) = erad(l)+uin(l,i,j,k,8+irad)
+                 q(l,i,j,k,nhydro+irad) = (gamma_rad(irad)-one)*uin(l,i,j,k,nhydro+irad)
+                 erad(l) = erad(l)+uin(l,i,j,k,nhydro+irad)
               end do
            enddo
 #endif
@@ -2267,7 +2267,7 @@ subroutine ctoprim(uin,q,bf,gravin,dt,ngrid)
   end do
 
   ! Passive scalar
-#if NVAR>8+NENER
+#if NVAR>NHYDRO+NENER
   do n = 9+nener, nvar
      do k = ku1, ku2
         do j = ju1, ju2

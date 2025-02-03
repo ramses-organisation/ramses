@@ -733,7 +733,7 @@ contains
        deallocate(emission_part(1)%f)
        deallocate(emission_part(1)%f8)
     end if
- 
+
     ! Count particles
     offset=0
     sendbuf_cum=0
@@ -747,7 +747,7 @@ contains
           offset=offset+ncache
        end if
     end do
- 
+
     ! Allocate communicator structures (emission)
     if(emission_part(1)%nactive>0)then
        allocate(emission_part(1)%cpuid(emission_part(1)%nactive))
@@ -763,7 +763,7 @@ contains
             idx=idx+1
          end if
        end do
- 
+
        ! Fill communicator structures with particle data
        jpart=0
        sendbuf=0
@@ -889,7 +889,7 @@ contains
        ncache=sendbuf(icpu)
        if(ncache>0)then
           buf_count=ncache*(twondim+1)
-          countsend=countsend+1 
+          countsend=countsend+1
 #ifdef LIGHT_MPI_COMM
           call MPI_ISEND(emission_part(1)%u(sendbuf_cum(icpu)+ncache,1),buf_count, &
                & MPI_DOUBLE_PRECISION,icpu-1,&
