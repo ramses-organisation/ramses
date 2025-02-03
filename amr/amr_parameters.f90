@@ -293,6 +293,9 @@ module amr_parameters
   integer::ivar_refine=-1                        ! Variable index for refinement
   logical::sink_refine=.false.                   ! Fully refine on sink particles
 
+  ! Initial condition selection parameter
+  character(LEN=60)::condinit_kind ='region'
+
   ! Initial condition files for each level
   logical::multiple=.false.
   character(LEN=80),dimension(1:MAXLEVEL)::initfile=' '

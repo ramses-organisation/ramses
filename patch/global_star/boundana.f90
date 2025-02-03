@@ -2,25 +2,23 @@
 !############################################################
 !############################################################
 !############################################################
-subroutine boundana(x,u,dx,ibound,nn)
+subroutine boundana(x,u,dx,ibound,ncell)
   use amr_parameters
   use hydro_parameters
   use poisson_parameters
   implicit none
   integer ::ibound                        ! Index of boundary region
-  integer ::nn                            ! Number of active cells
+  integer ::ncell                         ! Number of active cells
   real(dp)::dx                            ! Cell size
-#ifdef SOLVERmhd
-  real(dp),dimension(1:nvector,1:nvar+3)::u ! Conservative variables
-#else
-  real(dp),dimension(1:nvector,1:nvar)::u ! Conservative variables
-#endif
+  real(dp),dimension(1:nvector,1:nvar_all)::u ! Conservative variables
   real(dp),dimension(1:nvector,1:ndim)::x ! Cell center position.
   !================================================================
   ! This routine generates boundary conditions for RAMSES.
   ! Positions are in user units:
   ! x(i,1:3) are in [0,boxlen]**ndim.
   ! U is the conservative variable vector. Conventions are here:
+  ! U(i,1): d, U(i,2:ndim+1): d.u,d.v,d.w and U(i,neul): E.
+  ! If MHD, then:
   ! U(i,1): d, U(i,2:4): d.u,d.v,d.w, U(i,5): E,
   ! U(i,6:8): Bleft, U(i,nvar+1:nvar+3): Bright
   ! U is in user units.
@@ -53,19 +51,15 @@ subroutine boundana(x,u,dx,ibound,nn)
   gammainit3=gamma_region(3)
   g = abs(gravity_params(1))
 
-#ifdef SOLVERmhd
-  do ivar=1,nvar+3
-#else
-  do ivar=1,nvar
-#endif
-     do i=1,nn
+  do ivar=1,nvar_all
+     do i=1,ncell
         u(i,ivar)=boundary_var(ibound,ivar)
      end do
   end do
 
   ! User defined boundary conditions
 
-  do i=1,nn
+  do i=1,ncell
     !! rho, P
     ! Bottom stable zone
     if(x(i,1) .le. x1)then
@@ -119,36 +113,36 @@ subroutine boundana(x,u,dx,ibound,nn)
 
   ! Convert primitive to conservative variables
   ! density -> density
-  u(1:nn,1)=q(1:nn,1)
+  u(1:ncell,1)=q(1:ncell,1)
   ! velocity -> momentum
-  u(1:nn,2)=q(1:nn,1)*q(1:nn,2)
-  u(1:nn,3)=q(1:nn,1)*q(1:nn,3)
-  u(1:nn,4)=q(1:nn,1)*q(1:nn,4)
+  u(1:ncell,2)=q(1:ncell,1)*q(1:ncell,2)
+  u(1:ncell,3)=q(1:ncell,1)*q(1:ncell,3)
+  u(1:ncell,4)=q(1:ncell,1)*q(1:ncell,4)
   ! kinetic energy
-  u(1:nn,5)=0.0d0
-  u(1:nn,5)=u(1:nn,5)+0.5*q(1:nn,1)*q(1:nn,2)**2
-  u(1:nn,5)=u(1:nn,5)+0.5*q(1:nn,1)*q(1:nn,3)**2
-  u(1:nn,5)=u(1:nn,5)+0.5*q(1:nn,1)*q(1:nn,4)**2
+  u(1:ncell,5)=0.0d0
+  u(1:ncell,5)=u(1:ncell,5)+0.5*q(1:ncell,1)*q(1:ncell,2)**2
+  u(1:ncell,5)=u(1:ncell,5)+0.5*q(1:ncell,1)*q(1:ncell,3)**2
+  u(1:ncell,5)=u(1:ncell,5)+0.5*q(1:ncell,1)*q(1:ncell,4)**2
   ! pressure -> total fluid energy
-  u(1:nn,5)=u(1:nn,5)+q(1:nn,5)/(gamma-1.0d0)
+  u(1:ncell,5)=u(1:ncell,5)+q(1:ncell,5)/(gamma-1.0d0)
   ! magnetic energy -> total fluid energy
-  u(1:nn,5)=u(1:nn,5)+0.125d0*(q(1:nn,6)+q(1:nn,nvar+1))**2
-  u(1:nn,5)=u(1:nn,5)+0.125d0*(q(1:nn,7)+q(1:nn,nvar+2))**2
-  u(1:nn,5)=u(1:nn,5)+0.125d0*(q(1:nn,8)+q(1:nn,nvar+3))**2
-  u(1:nn,6:8)=q(1:nn,6:8)
-  u(1:nn,nvar+1:nvar+3)=q(1:nn,nvar+1:nvar+3)
+  u(1:ncell,5)=u(1:ncell,5)+0.125d0*(q(1:ncell,6)+q(1:ncell,nvar+1))**2
+  u(1:ncell,5)=u(1:ncell,5)+0.125d0*(q(1:ncell,7)+q(1:ncell,nvar+2))**2
+  u(1:ncell,5)=u(1:ncell,5)+0.125d0*(q(1:ncell,8)+q(1:ncell,nvar+3))**2
+  u(1:ncell,6:8)=q(1:ncell,6:8)
+  u(1:ncell,nvar+1:nvar+3)=q(1:ncell,nvar+1:nvar+3)
 #if NENER>0
   ! radiative pressure -> radiative energy
   ! radiative energy -> total fluid energy
   do irad=1,nener
-     u(1:nn,8+irad)=q(1:nn,8+irad)/(gamma_rad(irad)-1.0d0)
-     u(1:nn,5)=u(1:nn,5)+u(1:nn,8+irad)
+     u(1:ncell,8+irad)=q(1:ncell,8+irad)/(gamma_rad(irad)-1.0d0)
+     u(1:ncell,5)=u(1:ncell,5)+u(1:ncell,8+irad)
   enddo
 #endif
 #if NVAR>8+NENER
   ! passive scalars
   do ivar=9+nener,nvar
-     u(1:nn,ivar)=q(1:nn,1)*q(1:nn,ivar)
+     u(1:ncell,ivar)=q(1:ncell,1)*q(1:ncell,ivar)
   end do
 #endif
 

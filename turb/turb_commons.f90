@@ -1,4 +1,3 @@
-#if USE_TURB==1
 module turb_commons
   use amr_commons
   use turb_parameters
@@ -28,4 +27,3 @@ module turb_commons
   integer(ILP)       :: kiss64_state(1:4) ! State variables for KISS64 PRNG (Marsaglia)
 
 end module turb_commons
-#endif

@@ -2,14 +2,16 @@
 !================================================================
 !================================================================
 !================================================================
-subroutine condinit(x,u,dx,nn)
-  use amr_parameters
+subroutine  condinit(x,u,dx,nn)
+  use amr_commons
   use hydro_parameters
   implicit none
   integer ::nn                            ! Number of cells
   real(dp)::dx                            ! Cell size
   real(dp),dimension(1:nvector,1:nvar+3)::u ! Conservative variables
   real(dp),dimension(1:nvector,1:ndim)::x ! Cell center position.
+  logical,save:: first_call = .true.       ! True if this is the first call to condinit
+
   !================================================================
   ! This routine generates initial conditions for RAMSES.
   ! Positions are in user units:
@@ -32,11 +34,25 @@ subroutine condinit(x,u,dx,nn)
 #endif
   real(dp),dimension(1:nvector,1:nvar+3),save::q   ! Primitive variables
 
-  ! Call built-in initial condition generator
-  call region_condinit(x,q,dx,nn)
+  select case (condinit_kind)
+
+  case('region')
+    ! Call built-in initial condition generator
+     call region_condinit(x, q, dx, nn)
+
+  case('orzag_tang')
+     call orzag_tang_condinit(x, q, dx, nn)
 
   ! Add here, if you wish, some user-defined initial conditions
   ! ........
+
+  case DEFAULT
+     if (myid == 1.and. first_call)  write(*,*) "[condinit] Void or invalid condinit_kind, using default IC"
+     call region_condinit(x, q, dx, nn)
+
+  end select
+
+  first_call = .false.
 
   ! Convert primitive to conservative variables
   ! density -> density
@@ -74,10 +90,62 @@ subroutine condinit(x,u,dx,nn)
 #endif
 
 end subroutine condinit
+
+
 !================================================================
 !================================================================
 !================================================================
 !================================================================
+subroutine orzag_tang_condinit(x,q,dx,nn)
+  use amr_parameters
+  use hydro_parameters
+  implicit none
+  integer ::nn                            ! Number of cells
+  real(dp)::dx                            ! Cell size
+  real(dp),dimension(1:nvector,1:nvar+3)::q ! Primitive variables
+  real(dp),dimension(1:nvector,1:ndim)::x ! Cell center position.
+  !================================================================
+  ! This routine generates Orzag-Tang initial conditions for RAMSES.
+  !================================================================
+  integer::i
+  real(dp)::xc,xr,xl,yl,yr,yc,al,ar,B0,pi
+
+  pi=ACOS(-1.0_dp)
+  B0=1.0_dp/sqrt(4.0_dp*pi)
+  do i=1,nn
+
+     xl=x(i,1)-0.5_dp*dx
+     xr=x(i,1)+0.5_dp*dx
+     xc=x(i,1)
+     yl=x(i,2)-0.5_dp*dx
+     yr=x(i,2)+0.5_dp*dx
+     yc=x(i,2)
+
+     q(i,1)=25.0_dp/(36.0_dp*pi)
+     q(i,2)=-sin(2.0_dp*pi*yc)
+     q(i,3)=+sin(2.0_dp*pi*xc)
+     q(i,4)=0.0_dp
+     q(i,5)=5.0_dp/(12.0_dp*pi)
+
+     Ar = B0*(cos(4.0_dp*pi*xl)/(4.0_dp*pi)+cos(2.0_dp*pi*yr)/(2.0_dp*pi))
+     Al = B0*(cos(4.0_dp*pi*xl)/(4.0_dp*pi)+cos(2.0_dp*pi*yl)/(2.0_dp*pi))
+     q(i,6)=(Ar-Al)/dx
+     Ar = B0*(cos(4.0_dp*pi*xr)/(4.0_dp*pi)+cos(2.0_dp*pi*yr)/(2.0_dp*pi))
+     Al = B0*(cos(4.0_dp*pi*xr)/(4.0_dp*pi)+cos(2.0_dp*pi*yl)/(2.0_dp*pi))
+     q(i,nvar+1)=(Ar-Al)/dx
+     Ar = B0*(cos(4.0_dp*pi*xr)/(4.0_dp*pi)+cos(2.0_dp*pi*yl)/(2.0_dp*pi))
+     Al = B0*(cos(4.0_dp*pi*xl)/(4.0_dp*pi)+cos(2.0_dp*pi*yl)/(2.0_dp*pi))
+     q(i,7)=(Al-Ar)/dx
+     Ar = B0*(cos(4.0_dp*pi*xr)/(4.0_dp*pi)+cos(2.0_dp*pi*yr)/(2.0_dp*pi))
+     Al = B0*(cos(4.0_dp*pi*xl)/(4.0_dp*pi)+cos(2.0_dp*pi*yr)/(2.0_dp*pi))
+     q(i,nvar+2)=(Al-Ar)/dx
+
+     q(i,8)=0.0_dp
+     q(i,nvar+3)=0.0_dp
+  end do
+
+end subroutine orzag_tang_condinit
+
 subroutine velana(x,v,dx,t,ncell)
   use amr_parameters
   use hydro_parameters

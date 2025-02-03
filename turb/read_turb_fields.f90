@@ -1,4 +1,3 @@
-#if USE_TURB==1
 subroutine read_turb_fields
    use turb_commons
    implicit none
@@ -52,4 +51,3 @@ subroutine read_turb_fields
    close(ilun)
 
 end subroutine read_turb_fields
-#endif

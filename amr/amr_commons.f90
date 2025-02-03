@@ -179,12 +179,6 @@ module amr_commons
   type(communicator),allocatable,dimension(:,:)::reception   ! 2D (ncpu, nlevelmax) data reception "heavy" buffer
 #endif
 
-
-  ! Types for physical boundary conditions
-  CHARACTER(LEN=20)::type_hydro  ='hydro'
-  CHARACTER(LEN=20)::type_accel  ='accel'
-  CHARACTER(LEN=20)::type_flag   ='flag'
-
   ! Units specified by the user in the UNITS_PARAMS namelist for non-cosmo runs.
   ! These values shouldn't be used directly. Instead call units() in amr/units.f90.
   real(dp)::units_density=1.0d0  ! [g/cm^3]

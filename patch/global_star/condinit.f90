@@ -29,7 +29,7 @@ subroutine condinit(x,u,dx,pert,nn)
 #if NENER>0
   integer::irad
 #endif
-#if NVAR>8+NENER
+#if NVAR>NHYDRO+NENER
   integer::ivar
 #endif
   integer::i,id,iu,iv,iw,ip,is                     ! Indices Euler
@@ -135,29 +135,29 @@ subroutine condinit(x,u,dx,pert,nn)
   u(1:nn,3)=q(1:nn,1)*q(1:nn,3)
   u(1:nn,4)=q(1:nn,1)*q(1:nn,4)
   ! kinetic energy
-  u(1:nn,5)=0.0d0
-  u(1:nn,5)=u(1:nn,5)+0.5*q(1:nn,1)*q(1:nn,2)**2
-  u(1:nn,5)=u(1:nn,5)+0.5*q(1:nn,1)*q(1:nn,3)**2
-  u(1:nn,5)=u(1:nn,5)+0.5*q(1:nn,1)*q(1:nn,4)**2
+  u(1:nn,neul)=0.0d0
+  u(1:nn,neul)=u(1:nn,neul)+0.5*q(1:nn,1)*q(1:nn,2)**2
+  u(1:nn,neul)=u(1:nn,neul)+0.5*q(1:nn,1)*q(1:nn,3)**2
+  u(1:nn,neul)=u(1:nn,neul)+0.5*q(1:nn,1)*q(1:nn,4)**2
   ! pressure -> total fluid energy
-  u(1:nn,5)=u(1:nn,5)+q(1:nn,5)/(gamma-1.0d0)
+  u(1:nn,neul)=u(1:nn,neul)+q(1:nn,neul)/(gamma-1.0d0)
   ! magnetic energy -> total fluid energy
-  u(1:nn,5)=u(1:nn,5)+0.125d0*(q(1:nn,6)+q(1:nn,nvar+1))**2
-  u(1:nn,5)=u(1:nn,5)+0.125d0*(q(1:nn,7)+q(1:nn,nvar+2))**2
-  u(1:nn,5)=u(1:nn,5)+0.125d0*(q(1:nn,8)+q(1:nn,nvar+3))**2
+  u(1:nn,neul)=u(1:nn,neul)+0.125d0*(q(1:nn,6)+q(1:nn,nvar+1))**2
+  u(1:nn,neul)=u(1:nn,neul)+0.125d0*(q(1:nn,7)+q(1:nn,nvar+2))**2
+  u(1:nn,neul)=u(1:nn,neul)+0.125d0*(q(1:nn,8)+q(1:nn,nvar+3))**2
   u(1:nn,6:8)=q(1:nn,6:8)
   u(1:nn,nvar+1:nvar+3)=q(1:nn,nvar+1:nvar+3)
 #if NENER>0
   ! radiative pressure -> radiative energy
   ! radiative energy -> total fluid energy
   do irad=1,nener
-     u(1:nn,8+irad)=q(1:nn,8+irad)/(gamma_rad(irad)-1.0d0)
-     u(1:nn,5)=u(1:nn,5)+u(1:nn,8+irad)
+     u(1:nn,nhydro+irad)=q(1:nn,nhydro+irad)/(gamma_rad(irad)-1.0d0)
+     u(1:nn,neul)=u(1:nn,neul)+u(1:nn,nhydro+irad)
   enddo
 #endif
-#if NVAR>8+NENER
+#if NVAR>NHYDRO+NENER
   ! passive scalars
-  do ivar=9+nener,nvar
+  do ivar=nhydro+1+nener,nvar
      u(1:nn,ivar)=q(1:nn,1)*q(1:nn,ivar)
   end do
 #endif

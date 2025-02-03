@@ -1,4 +1,3 @@
-#if USE_TURB==1
 module turb_parameters
   use amr_parameters
 
@@ -51,4 +50,3 @@ module turb_parameters
   real(dp) :: turb_min_rho=1d-50  ! Minimum density for turbulence
 
 end module turb_parameters
-#endif
