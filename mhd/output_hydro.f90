@@ -174,6 +174,7 @@ subroutine backup_hydro(filename, filename_desc)
                  call generic_dump(field_name, info_var_count, xdp, unit_out, dump_info_flag, unit_info)
               end do
 #endif
+#endif
               ! We did one output, deactivate dumping of variables
               dump_info_flag = .false.
            end do
