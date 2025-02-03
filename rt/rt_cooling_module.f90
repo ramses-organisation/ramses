@@ -939,13 +939,13 @@ SUBROUTINE cmp_chem_eq(TK, nH, t_rad_spec, nSpec, nTot, mu, Zsol)
      if(isHe) then
         D_HeI   = b_HEI*n_E_min  + g_HEI           !  HeI destr. (s-1)
         if(cosmic_rays) D_HeI = D_HeI + 1.1 * cosray_HI
-        C_HeIII = b_HEII*n_E_min + g_HEII          !  HeIII cre. (s-1)
+        C_HeIII = max(b_HEII*n_E_min+g_HEII, 1d-99)!  HeIII cre. (s-1)
         f_HeI   = D_HeI / a_HeI / n_E_min          !  Destr/Cre [unitless]
         f_HeIII = a_HeII * n_E_min / C_HeIII       !  Destr/Cre [unitless]
 
-        n_HEI   = nHe / (1d0 + f_HeI + f_HeI/f_HeIII)
-        n_HEII  = nHe / (1d0 + 1d0/f_HeI + 1d0/f_HeIII)
-        n_HEIII = nHe / (1d0 + f_HeIII + f_HeIII/f_HeI)
+        n_HEI   = nHe / (1d0 + f_HeI + f_HeI/max(f_HeIII,1d-99))
+        n_HEII  = nHe / (1d0 + 1d0/max(f_HeI,1d-99) + 1d0/max(f_HeIII,1d-99))
+        n_HEIII = nHe / (1d0 + f_HeIII + f_HeIII/max(f_HeI,1d-99))
      endif ! if(isHe)
 
      err_nE = ABS((n_E - (n_HII + n_HEII + 2.*n_HEIII))/nH)
@@ -1012,7 +1012,7 @@ SUBROUTINE rt_evol_single_cell(astart,aend,dasura,h,omegab,omega0,omegaL &
 
   mu_dp = mu
   call cmp_Equilibrium_Abundances(                                       &
-          T2_com/aexp**2, nH_com/aexp**3, pHI_rates, mu_dp, n_Spec, z_ave)
+          T2_com/aexp**2, nH_com/aexp**3, pHI_rates, mu_dp, n_Spec, 0.0)
   ! Initialize cell state
   T2(1)=T2_com                                          !      Temperature
   if(isH2) xion(ixHI,1)=n_Spec(3)/(nH_com/aexp**3)      !   HI frac

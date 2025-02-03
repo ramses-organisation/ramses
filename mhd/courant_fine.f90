@@ -23,7 +23,7 @@ subroutine courant_fine(ilevel)
   real(dp)::dt_lev,dx,vol,scale
   real(kind=8)::mass_loc,ekin_loc,eint_loc,emag_loc,dt_loc
   real(kind=8)::mass_all,ekin_all,eint_all,emag_all,dt_all
-  real(dp),dimension(1:nvector,1:nvar+3),save::uu
+  real(dp),dimension(1:nvector,1:nvar_all),save::uu
   real(dp),dimension(1:nvector,1:ndim),save::gg
 
   if(numbtot(1,ilevel)==0)return
@@ -43,7 +43,7 @@ subroutine courant_fine(ilevel)
 
   if (ischeme .eq. 1) then
      CALL velocity_fine(ilevel)
-     do ivar=1,nvar+3
+     do ivar=1,nvar_all
         call make_virtual_fine_dp(uold(1,ivar),ilevel)
      end do
      if(simple_boundary)call make_boundary_hydro(ilevel)
@@ -74,7 +74,7 @@ subroutine courant_fine(ilevel)
         end do
 
         ! Gather hydro variables
-        do ivar=1,nvar+3
+        do ivar=1,nvar_all
            do i=1,nleaf
               uu(i,ivar)=uold(ind_leaf(i),ivar)
            end do

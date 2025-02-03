@@ -4,7 +4,7 @@
 !################################################################
 subroutine init_flow
   use amr_commons
-  use hydro_commons, ONLY: nvar, uold
+  use hydro_commons, ONLY: nvar_all, uold
   implicit none
 
   integer::ilevel,ivar
@@ -13,7 +13,7 @@ subroutine init_flow
   do ilevel=nlevelmax,1,-1
      if(ilevel>=levelmin)call init_flow_fine(ilevel)
      call upload_fine(ilevel)
-     do ivar=1,nvar+3
+     do ivar=1,nvar_all
         call make_virtual_fine_dp(uold(1,ivar),ilevel)
      end do
      if(simple_boundary)call make_boundary_hydro(ilevel)

@@ -1,7 +1,4 @@
 [1]: https://ramses-organisation.readthedocs.io/en/latest
-[2]: https://bitbucket.org/rteyssie/ramses/wiki/AutoTests
-[3]: http://www.ics.uzh.ch/~teyssier/ramses/RAMSES.html
-[4]: https://bitbucket.org/rteyssie/ramses/wiki/ramses_ug.pdf
 [5]: https://bitbucket.org/vperret/dice
 [6]: https://bitbucket.org/ohahn/music
 [7]: https://github.com/osyris-project/osyris

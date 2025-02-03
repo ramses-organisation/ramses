@@ -25,7 +25,7 @@ def read_descriptor(fname):
 # =======================================================================
 # Load RAMSES data a la OSIRIS
 # =======================================================================
-def load_snapshot(nout, read_grav=False):
+def load_snapshot(nout, read_hydro=True, read_grav=False):
 
     infile = generate_fname(nout)
 
@@ -127,9 +127,10 @@ def load_snapshot(nout, read_grav=False):
             amrContent = amr_file.read()
 
         # Read binary HYDRO file
-        hydro_fname = generate_fname(nout,ftype="hydro",cpuid=k+1)
-        with open(hydro_fname, mode='rb') as hydro_file: # b is important -> binary
-            hydroContent = hydro_file.read()
+        if read_hydro:
+            hydro_fname = generate_fname(nout,ftype="hydro",cpuid=k+1)
+            with open(hydro_fname, mode='rb') as hydro_file: # b is important -> binary
+                hydroContent = hydro_file.read()
 
         # Read binary GRAV file
         if read_grav:
@@ -298,12 +299,10 @@ def load_snapshot(nout, read_grav=False):
                             offset = 4*(ninteg+ind*ncache) + 8*(nlines+nfloat+ind) + nstrin + 4
                             son[:ncache,ind] = struct.unpack("%ii"%(ncache), amrContent[offset:offset+4*ncache])
                             # var: hydro variables
-                            #jvar = 0
-                            for ivar in range(info["nvar"]):
-                                #if var_read[ivar]:
-                                offset = 4*ninteg_hydro + 8*(nlines_hydro+nfloat_hydro+(ind*info["nvar"]+ivar)*(ncache+1)) + nstrin_hydro + 4
-                                var[:ncache,ind,ivar] = struct.unpack("%id"%(ncache), hydroContent[offset:offset+8*ncache])
-                                #jvar += 1
+                            if read_hydro:
+                                for ivar in range(info["nvar"]):
+                                    offset = 4*ninteg_hydro + 8*(nlines_hydro+nfloat_hydro+(ind*info["nvar"]+ivar)*(ncache+1)) + nstrin_hydro + 4
+                                    var[:ncache,ind,ivar] = struct.unpack("%id"%(ncache), hydroContent[offset:offset+8*ncache])
                             # grav variables
                             if read_grav:
                                 for ivar in range(info["ndim"]+1):

@@ -5,6 +5,7 @@ This sets of parameters, contained in the namelist block `&INIT_PARAMS`. This is
 
 | Variable name, syntax, default value | Fortran type | Description |
 |:---------------------------- |:------------- |:------------------------- |
+| `condinit_kind=region` | `60*char` | Set which kind of initial condition to use. Default is the region-based initialisation |
 | `nregion=1`  | `integer` | Number of independent regions in the computational box used to set up initial flow variables. |
 | `region_type=square`  | `10*char` | Geometry defining each region. `square` defines a generalized ellipsoidal shape, while `point` defines a delta function in the flow. |
 | `x_center=0.0`  | `real arrays` | X coordinate of the center of each region. |
@@ -39,6 +40,26 @@ real value containing the cell size for all the cells and ncell is the number of
 
 This routine
 can be used to set the initial conditions directly with Fortran instructions.
+
+:::{versionchanged} 2025
+There is now the possibility to change initial condition without recompiling each time.
+Just write you initial condition as a new routine and add it to the select/case structure
+```
+  select case (condinit_kind)
+
+  case('region')
+     call condinit_default(x, u, dx, nn)
+
+  case('your_new_routine')
+     call condinit_your_new_routine(x, u, dx, nn)
+
+  case DEFAULT
+     if (myid == 1.and. first_call)  write(*,*) "[condinit] Void or invalid condinit_kind, using default IC"
+     call condinit_default(x, u, dx, nn)
+
+  end select
+```
+:::
 
 
 ## Input files

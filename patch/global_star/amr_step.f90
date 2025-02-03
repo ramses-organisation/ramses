@@ -3,6 +3,7 @@ recursive subroutine amr_step(ilevel,icount)
   use pm_commons
   use hydro_commons
   use poisson_commons
+  use tracer_utils, only: reset_tracer_move_flag
 #ifdef RT
   use rt_hydro_commons
   use SED_module
@@ -10,12 +11,16 @@ recursive subroutine amr_step(ilevel,icount)
   use coolrates_module, only: update_coolrates_tables
   use rt_cooling_module, only: update_UVrates
 #endif
+  use sink_feedback_parameters, only: sn_feedback_sink
+#if USE_TURB==1
+  use turb_commons
+#endif
   use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
   integer::mpi_err
 #endif
-  integer::ilevel,icount
+  integer, intent(in)::ilevel,icount
   !-------------------------------------------------------------------!
   ! This routine is the adaptive-mesh/adaptive-time-step main driver. !
   ! Each routine is called using a specific order, don't change it,   !
@@ -48,17 +53,9 @@ recursive subroutine amr_step(ilevel,icount)
               !--------------------------
               call make_virtual_fine_int(cpu_map(1),i)
               if(hydro)then
-#ifdef SOLVERmhd
-                 do ivar=1,nvar+3
-#else
-                 do ivar=1,nvar
-#endif
+                 do ivar=1,nvar_all
                     call make_virtual_fine_dp(uold(1,ivar),i)
-#ifdef SOLVERmhd
                  end do
-#else
-                 end do
-#endif
                  if(momentum_feedback>0)call make_virtual_fine_dp(pstarold(1),i)
                  if(strict_equilibrium>0)call make_virtual_fine_dp(rho_eq(1),i)
                  if(strict_equilibrium>0)call make_virtual_fine_dp(p_eq(1),i)
@@ -142,7 +139,9 @@ recursive subroutine amr_step(ilevel,icount)
      call MPI_BARRIER(MPI_COMM_WORLD,mpi_err)
      call MPI_ALLREDUCE(output_now,output_now_all,1,MPI_LOGICAL,MPI_LOR,MPI_COMM_WORLD,mpi_err)
 #endif
-     if(mod(nstep_coarse,foutput)==0.or.aexp>=aout(iout).or.t>=tout(iout).or.output_now_all.EQV..true.)then
+     if(foutput>0)then
+     if(mod(nstep_coarse,foutput)==0.or.aexp>=aout(iout).or.t>=tout(iout) &
+        &.or.aexp>=aout_next.or.t>=tout_next.or.output_now_all.EQV..true.)then
                                call timer('io','start')
         if(.not.ok_defrag)then
            call defrag
@@ -159,8 +158,13 @@ recursive subroutine amr_step(ilevel,icount)
 
         if (output_now_all.EQV..true.) then
           output_now=.false.
+          if (finish_run) then
+            ! trick to stop the code after walltime triggered output
+            tout(iout)=t
+            aout(iout)=aexp
+          endif
         endif
-
+     endif
      endif
 
      ! Dump lightcone
@@ -190,6 +194,16 @@ recursive subroutine amr_step(ilevel,icount)
                                call timer('feedback','start')
      if(hydro.and.star.and.eta_sn>0.and.f_w>0)call kinetic_feedback
 
+  endif
+
+  !----------------------------------------------------
+  ! Feedback on sink particles
+  !----------------------------------------------------
+  if(stellar) then
+     call make_stellar_from_sinks
+  endif
+  if (sn_feedback_sink) then
+     call make_sn_stellar
   endif
 
   !--------------------
@@ -222,7 +236,7 @@ recursive subroutine amr_step(ilevel,icount)
 
      ! Remove gravity source term with half time step and old force
      if(hydro)then
-        call synchro_hydro_fine(ilevel,-0.5*dtnew(ilevel))
+        call synchro_hydro_fine(ilevel,-0.5*dtnew(ilevel),1)
      endif
 
      ! Compute gravitational potential
@@ -255,20 +269,12 @@ recursive subroutine amr_step(ilevel,icount)
                                call timer('poisson','start')
 
         ! Add gravity source term with half time step and new force
-        call synchro_hydro_fine(ilevel,+0.5*dtnew(ilevel))
+        call synchro_hydro_fine(ilevel,+0.5*dtnew(ilevel),1)
 
         ! Update boundaries
-#ifdef SOLVERmhd
-        do ivar=1,nvar+3
-#else
-        do ivar=1,nvar
-#endif
+        do ivar=1,nvar_all
            call make_virtual_fine_dp(uold(1,ivar),ilevel)
-#ifdef SOLVERmhd
         end do
-#else
-        end do
-#endif
         if(simple_boundary)call make_boundary_hydro(ilevel)
 
         ! Compute Bondi-Hoyle accretion parameters
@@ -281,9 +287,21 @@ recursive subroutine amr_step(ilevel,icount)
 
 #ifdef RT
   ! Turn on RT in case of rt_stars and first stars just created:
-  ! Update photon packages according to star particles
+  ! Update photon packages according to star particles and sink particles
                                call timer('radiative transfer','start')
   if(rt .and. rt_star) call update_star_RT_feedback(ilevel)
+#if NDIM==3
+  if(rt .and. rt_sink) call update_sink_RT_feedback
+#endif
+#endif
+
+#if USE_TURB==1
+  ! Compute turbulent forcing
+                               call timer('turb','start')
+  if (turb .and. turb_type/=3) then
+     ! Calculate turbulent acceleration on each cell in this level
+     call calc_turb_forcing(ilevel)
+  end if
 #endif
 
   !----------------------
@@ -356,17 +374,19 @@ recursive subroutine amr_step(ilevel,icount)
 
      ! Reverse update boundaries
                                call timer('hydro - rev ghostzones','start')
-#ifdef SOLVERmhd
-     do ivar=1,nvar+3
-#else
-     do ivar=1,nvar
-#endif
+     do ivar=1,nvar_all
         call make_virtual_reverse_dp(unew(1,ivar),ilevel)
-#ifdef SOLVERmhd
      end do
-#else
-     end do
-#endif
+     ! MC Tracer
+     ! Communicate fluxes accross boundaries
+     if(MC_tracer)then
+                                call timer('tracer','start')
+        do ivar=1,twondim
+           call make_virtual_reverse_dp(fluxes(1,ivar),ilevel-1)
+           call make_virtual_fine_dp(fluxes(1,ivar),ilevel-1)
+        end do
+     end if
+
      if(momentum_feedback>0)then
         call make_virtual_reverse_dp(pstarnew(1),ilevel)
      endif
@@ -382,7 +402,16 @@ recursive subroutine amr_step(ilevel,icount)
      ! Add gravity source term with half time step and old force
      ! in order to complete the time step
                                call timer('poisson','start')
-     if(poisson)call synchro_hydro_fine(ilevel,+0.5*dtnew(ilevel))
+     if(poisson)call synchro_hydro_fine(ilevel,+0.5*dtnew(ilevel),1)
+
+#if USE_TURB==1
+     ! Compute turbulent forcing
+                               call timer('turb','start')
+     if (turb .AND. turb_type/=3) then
+        ! Euler step, adding turbulent acceleration
+        call synchro_hydro_fine(ilevel,dtnew(ilevel),2)
+     end if
+#endif
 
      ! Restriction operator
                                call timer('hydro upload fine','start')
@@ -401,7 +430,7 @@ recursive subroutine amr_step(ilevel,icount)
      ! Still need a chemistry call if RT is defined but not
      ! actually doing radiative transfer (i.e. rt==false):
                                call timer('cooling','start')
-     if(hydro .and. (neq_chem.or.cooling.or.T2_star>0.0))call cooling_fine(ilevel)
+     if(hydro .and. (neq_chem.or.cooling.or.T2_star>0.0.or.barotropic_eos))call cooling_fine(ilevel)
   endif
   ! Regular updates and book-keeping:
   if(ilevel==levelmin) then
@@ -417,7 +446,7 @@ recursive subroutine amr_step(ilevel,icount)
 #else
                                call timer('cooling','start')
   if((hydro).and.(.not.static_gas)) then
-    if(neq_chem.or.cooling.or.T2_star>0.0)call cooling_fine(ilevel)
+    if(neq_chem.or.cooling.or.T2_star>0.0.or.barotropic_eos)call cooling_fine(ilevel)
   endif
   !--------------------
   ! call energy_fine
@@ -451,17 +480,9 @@ recursive subroutine amr_step(ilevel,icount)
   !---------------------------------------
   if((hydro).and.(.not.static_gas))then
                                call timer('hydro - ghostzones','start')
-#ifdef SOLVERmhd
-     do ivar=1,nvar+3
-#else
-     do ivar=1,nvar
-#endif
+     do ivar=1,nvar_all
         call make_virtual_fine_dp(uold(1,ivar),ilevel)
-#ifdef SOLVERmhd
      end do
-#else
-     end do
-#endif
      if(momentum_feedback>0)call make_virtual_fine_dp(pstarold(1),ilevel)
      if(strict_equilibrium>0)call make_virtual_fine_dp(rho_eq(1),ilevel)
      if(strict_equilibrium>0)call make_virtual_fine_dp(p_eq(1),ilevel)
@@ -528,7 +549,14 @@ recursive subroutine amr_step(ilevel,icount)
      if(icount==2)dtnew(ilevel-1)=dtold(ilevel)+dtnew(ilevel)
   end if
 
-999 format(' Entering amr_step',i1,' for level',i2)
+  ! Reset move flag flag
+  if(MC_tracer) then
+                                call timer('tracer','start')
+     ! Decrease the move flag by 1
+     call reset_tracer_move_flag(ilevel)
+  end if
+
+999 format(' Entering amr_step(',i1,') for level',i2)
 
 end subroutine amr_step
 
@@ -577,6 +605,9 @@ subroutine rt_step(ilevel)
      if (i_substep > 1) call rt_set_unew(ilevel)
 
      if(rt_star) call star_RT_feedback(ilevel,dtnew(ilevel))
+#if NDIM==3
+     if(rt_sink) call sink_RT_feedback(ilevel,dtnew(ilevel))
+#endif
 
      ! Hyperbolic solver
      if(rt_advect) call rt_godunov_fine(ilevel,dtnew(ilevel))
@@ -592,7 +623,7 @@ subroutine rt_step(ilevel)
      call rt_set_uold(ilevel)
 
                                call timer('cooling','start')
-     if(neq_chem.or.cooling.or.T2_star>0.0)call cooling_fine(ilevel)
+     if(neq_chem.or.cooling.or.T2_star>0.0.or.barotropic_eos)call cooling_fine(ilevel)
                                call timer('radiative transfer','start')
 
      do ivar=1,nrtvar
