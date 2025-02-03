@@ -43,6 +43,9 @@ subroutine  condinit(x,u,dx,nn)
   case('orzag_tang')
      call orzag_tang_condinit(x, q, dx, nn)
 
+  case('coeur')
+     call coeur_condinit(x, q, dx, nn)
+
   ! Add here, if you wish, some user-defined initial conditions
   ! ........
 
@@ -145,6 +148,92 @@ subroutine orzag_tang_condinit(x,q,dx,nn)
   end do
 
 end subroutine orzag_tang_condinit
+!================================================================
+!================================================================
+!================================================================
+!================================================================
+subroutine coeur_condinit(x,q,dx,nn)
+  use amr_parameters
+  use hydro_parameters
+  use constants,ONLY:kB,mH,pi,M_sun
+  implicit none
+  integer ::nn                            ! Number of cells
+  real(dp)::dx                            ! Cell size
+  real(dp),dimension(1:nvector,1:nvar+3)::q ! Primitive variables
+  real(dp),dimension(1:nvector,1:ndim)::x ! Cell center position.
+  !================================================================
+  ! This routine generates collapsing core initial conditions for RAMSES.
+  !================================================================
+
+ ! Cloud parameters
+  real(dp):: mass_c = 1.0d0 ! in solar masses
+  real(dp)::delta_rho=0.1
+  real(dp)::alpha_dense_core=0.1
+  real(dp)::beta_dense_core=0.01
+  real(dp)::crit_dense_core=0.1
+
+  integer :: i,id,iu,iv,iw,ip
+  real(dp):: x0,y0,z0,rc,rs,xx,yy,zz,r0,d0,B0,p0,omega0,C_s,Temp
+  real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
+
+  ! Conversion factor from user units to cgs units
+  call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
+
+  id=1; iu=2; iv=3; iw=4; ip=5
+  x0=0.5d0*boxlen
+  y0=0.5d0*boxlen
+  z0=0.5d0*boxlen
+  Temp = 10.0d0
+  r0=(alpha_dense_core*2.*6.67d-8*(mass_c*M_sun)*mu_gas*mH/(5.*kB*Temp))/scale_l
+  ! cloud density equal to unity
+  d0 = 3.0d0*(mass_c*M_sun/scale_l**3/scale_d)/(4.0d0*pi*r0**3.)
+  ! cloud rotation
+  omega0 = sqrt(beta_dense_core*4.*pi*d0)
+
+  ! sound speed
+  C_s = sqrt( Temp / scale_T2 )
+  ! cloud pressure
+  p0 = C_s**2*d0
+  ! vertical magnetic field
+
+  B0 = sqrt(4.*pi/5.)/0.53*(crit_dense_core*d0*r0)  / 2.26d0
+  DO i=1,nn
+     xx=x(i,1)-x0
+     yy=x(i,2)-y0
+     zz=x(i,3)-z0
+     rc=sqrt(xx**2+yy**2)
+     rs=sqrt(xx**2+yy**2+zz**2)
+
+     !Bx component
+     q(i,6     ) = 0.
+     q(i,nvar+1) = 0.
+
+     !By component
+     q(i,7     ) = 0.
+     q(i,nvar+2) = 0.
+
+     !Bz component
+     q(i,8     ) = B0
+     q(i,nvar+3) = B0
+
+     IF(rs .le. r0) THEN
+       q(i,id) = d0*(1.0+delta_rho*cos(2.*atan(yy/xx)))!(2.0*(xx/rc)**2-1.0))
+       q(i,iu) = omega0 * yy
+       q(i,iv) = -omega0 * xx
+       q(i,iw) = 0.0
+       q(i,ip) = p0
+     ELSE
+       q(i,id) = d0/100.
+       xx = r0 * xx / rc
+       yy = r0 * yy / rc
+       q(i,iu) = 0.0! omega0 * yy
+       q(i,iv) = 0.0!-omega0 * xx
+       q(i,iw) = 0.0
+       q(i,ip) = p0/100.
+     ENDIF
+  ENDDO
+
+end subroutine coeur_condinit
 
 subroutine velana(x,v,dx,t,ncell)
   use amr_parameters

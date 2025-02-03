@@ -16,10 +16,8 @@ nexpand=30*4
 boxlen=1.9140529831524967d-2
 /
 
-&BOUNDARY_PARAMS
-/
-
 &INIT_PARAMS
+condinit_kind='coeur'
 /
 
 &OUTPUT_PARAMS
@@ -63,9 +61,9 @@ interpol_type=0
 /
 
 &NONIDEALMHD_PARAMS
-nambipolar=.true
+nambipolar=.true.
 nmagdiffu=.true.
-nminitimestep=1
+nminitimestep=.true.
 resistivity_method=2
 coefad=0.1d0
 coefalfven=0.3
