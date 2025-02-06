@@ -1,4 +1,3 @@
-#if USE_TURB==1
 subroutine init_turb
   use turb_commons
   implicit none
@@ -199,4 +198,3 @@ subroutine init_turb
    afield_now = turb_last_tfrac*afield_last + turb_next_tfrac*afield_next
 
 end subroutine init_turb
-#endif

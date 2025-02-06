@@ -3,13 +3,14 @@
 !================================================================
 !================================================================
 subroutine condinit(x,u,dx,nn)
-  use amr_parameters
+  use amr_commons
   use hydro_parameters
   implicit none
   integer ::nn                            ! Number of cells
   real(dp)::dx                            ! Cell size
   real(dp),dimension(1:nvector,1:nvar)::u ! Conservative variables
   real(dp),dimension(1:nvector,1:ndim)::x ! Cell center position.
+  logical,save:: first_call = .true.       ! True if this is the first call to condinit
   !================================================================
   ! This routine generates initial conditions for RAMSES.
   ! Positions are in user units:
@@ -27,11 +28,25 @@ subroutine condinit(x,u,dx,nn)
 #endif
   real(dp),dimension(1:nvector,1:nvar),save::q   ! Primitive variables
 
-  ! Call built-in initial condition generator
-  call region_condinit(x,q,dx,nn)
+  select case (condinit_kind)
+
+  case('region')
+    ! Call built-in initial condition generator
+     call region_condinit(x, q, dx, nn)
+
+  case('ana_disk_potential')
+     call ana_disk_potential_condinit(x, q, dx, nn)
 
   ! Add here, if you wish, some user-defined initial conditions
   ! ........
+
+  case DEFAULT
+     if (myid == 1.and. first_call)  write(*,*) "[condinit] Void or invalid condinit_kind, using default IC"
+     call region_condinit(x, q, dx, nn)
+
+  end select
+
+  first_call = .false.
 
   ! Convert primitive to conservative variables
   ! density -> density
@@ -71,3 +86,46 @@ subroutine condinit(x,u,dx,nn)
 #endif
 
 end subroutine condinit
+
+
+!================================================================
+!================================================================
+!================================================================
+!================================================================
+subroutine ana_disk_potential_condinit(x,q,dx,nn)
+  use amr_parameters
+  use hydro_parameters
+  use constants
+
+  implicit none
+  integer ::nn                            ! Number of cells
+  real(dp)::dx                            ! Cell size
+  real(dp),dimension(1:nvector,1:nvar)::q ! Primitive variables
+  real(dp),dimension(1:nvector,1:ndim)::x ! Cell center position.
+  !================================================================
+  ! This routine generates an analytical disk potential initial conditions for RAMSES.
+  !================================================================
+  real(dp)::scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2
+  integer::i
+
+  real(dp)::height0=150 ! disk height [c.u.]
+  real(dp)::dens0=0.66d0 ! central density [c.u.]
+  real(dp)::temp0=8000  ! initial temperature [T]
+
+  call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
+
+  ! Call built-in initial condition generator
+  call region_condinit(x,q,dx,nn)
+
+  do i=1,nn
+    ! density
+    ! exponential profile along z
+    q(i,1) = dens0 * exp(-( x(i,ndim) - 0.5d0 * boxlen)**2 / (2.*height0**2))
+
+    ! pressure via constant temperature
+    ! ideal gas: P = n kB T
+    q(i,ndim+2) = q(i,1) * (kB*temp0/(mu_gas*mH))/scale_v**2
+
+  end do
+
+end subroutine ana_disk_potential_condinit

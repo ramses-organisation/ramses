@@ -51,37 +51,7 @@ subroutine make_boundary_force(ilevel)
   ! Loop over boundaries
   do ibound=1,nboundary
 
-     ! Compute direction of reference neighbors
-     boundary_dir=boundary_type(ibound)-10*(boundary_type(ibound)/10)
-     if(boundary_dir==1)inbor=2
-     if(boundary_dir==2)inbor=1
-     if(boundary_dir==3)inbor=4
-     if(boundary_dir==4)inbor=3
-     if(boundary_dir==5)inbor=6
-     if(boundary_dir==6)inbor=5
-
-     ! Compute index of reference cells
-     ! Reflexive boundary
-     if(boundary_type(ibound)== 1)ind_ref(1:8)=(/2,1,4,3,6,5,8,7/)
-     if(boundary_type(ibound)== 2)ind_ref(1:8)=(/2,1,4,3,6,5,8,7/)
-     if(boundary_type(ibound)== 3)ind_ref(1:8)=(/3,4,1,2,7,8,5,6/)
-     if(boundary_type(ibound)== 4)ind_ref(1:8)=(/3,4,1,2,7,8,5,6/)
-     if(boundary_type(ibound)== 5)ind_ref(1:8)=(/5,6,7,8,1,2,3,4/)
-     if(boundary_type(ibound)== 6)ind_ref(1:8)=(/5,6,7,8,1,2,3,4/)
-     ! Free boundary
-     if(boundary_type(ibound)==11)ind_ref(1:8)=(/1,1,3,3,5,5,7,7/)
-     if(boundary_type(ibound)==12)ind_ref(1:8)=(/2,2,4,4,6,6,8,8/)
-     if(boundary_type(ibound)==13)ind_ref(1:8)=(/1,2,1,2,5,6,5,6/)
-     if(boundary_type(ibound)==14)ind_ref(1:8)=(/3,4,3,4,7,8,7,8/)
-     if(boundary_type(ibound)==15)ind_ref(1:8)=(/1,2,3,4,1,2,3,4/)
-     if(boundary_type(ibound)==16)ind_ref(1:8)=(/5,6,7,8,5,6,7,8/)
-     ! Imposed boundary (used only for flag1)
-     if(boundary_type(ibound)==21)ind_ref(1:8)=(/1,1,3,3,5,5,7,7/)
-     if(boundary_type(ibound)==22)ind_ref(1:8)=(/2,2,4,4,6,6,8,8/)
-     if(boundary_type(ibound)==23)ind_ref(1:8)=(/1,2,1,2,5,6,5,6/)
-     if(boundary_type(ibound)==24)ind_ref(1:8)=(/3,4,3,4,7,8,7,8/)
-     if(boundary_type(ibound)==25)ind_ref(1:8)=(/1,2,3,4,1,2,3,4/)
-     if(boundary_type(ibound)==26)ind_ref(1:8)=(/5,6,7,8,5,6,7,8/)
+     call set_boundary_references(ibound,ind_ref,boundary_dir,inbor)
 
      ! Vector sign switch for reflexive boundary conditions
      gs=(/1,1,1/)
