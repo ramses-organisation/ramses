@@ -201,6 +201,8 @@ HYDROOBJ = init_hydro.o init_flow_fine.o write_screen.o output_hydro.o \
            courant_fine.o godunov_fine.o umuscl.o interpol_hydro.o \
            godunov_utils.o condinit.o hydro_flag.o hydro_boundary.o boundana.o \
            read_hydro_params.o synchro_hydro_fine.o cooling_module_ism.o
+# MHD specific objects
+MHDOBJ = diffusion.o
 # RT objects
 RTOBJ = rt_init_hydro.o rt_init_xion.o rt_init.o rt_init_flow_fine.o \
         rt_output_hydro.o rt_godunov_fine.o rt_interpol_hydro.o \
@@ -215,6 +217,9 @@ sinclude $(PATCH)/Makefile
 
 # All objects
 AMRLIB = $(AMROBJ) $(HYDROOBJ) $(PMOBJ) $(POISSONOBJ)
+ifeq ($(SOLVER),mhd)
+   AMRLIB += $(MHDOBJ)
+endif
 ifeq ($(RT),1)
    AMRLIB += $(RTOBJ)
 endif
