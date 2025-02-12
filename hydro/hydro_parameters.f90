@@ -92,10 +92,9 @@ module hydro_parameters
   real(dp)::gamma=1.4d0
   real(dp),dimension(1:512)::gamma_rad=1.33333333334d0
   real(dp)::courant_factor=0.5d0
-  real(dp)::difmag=0
   real(dp)::smallc=1.0d-10
   real(dp)::smallr=1.0d-10
-  character(LEN=10)::scheme='muscl'
+  character(LEN=10)::scheme='muscl' !muscl is the only option in hydro
   character(LEN=10)::riemann='llf'
 
   ! Interpolation parameters

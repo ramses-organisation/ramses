@@ -26,7 +26,6 @@ sink_refine=.true.
 &HYDRO_PARAMS
 gamma=1.666667
 courant_factor=0.8
-scheme='muscl'
 slope_type=1
 riemann='hllc'
 pressure_fix=.true.

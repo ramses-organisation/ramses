@@ -69,7 +69,6 @@ module hydro_parameters
   integer ::slope_type=1
   real(dp)::gamma=-999d0
   real(dp)::courant_factor=0.5d0
-  real(dp)::difmag=0
   real(dp)::smallc=1.0d-10
   real(dp)::smallr=1.0d-10
   real(dp)::smallf=1.0d-10

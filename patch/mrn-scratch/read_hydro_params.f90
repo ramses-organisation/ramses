@@ -41,7 +41,7 @@ subroutine read_hydro_params(nml_ok)
 
   ! Hydro parameters
   namelist/hydro_params/gamma,courant_factor,smallr,smallc &
-       & ,niter_riemann,slope_type,difmag &
+       & ,niter_riemann,slope_type &
 #if NENER>0
        & ,gamma_rad &
 #endif

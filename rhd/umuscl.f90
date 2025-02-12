@@ -76,34 +76,15 @@ subroutine unsplit(uin,gravin,flux,tmp,dx,dy,dz,dt,ngrid)
   call uslope(qin,dq,dx,dt,ngrid)
 
   ! Compute 3D traced-states in all three directions
-  if(scheme=='muscl')then
 #if NDIM==1
-     call trace1d(qin,dq,qm,qp,dx      ,dt,ngrid)
+  call trace1d(qin,dq,qm,qp,dx      ,dt,ngrid)
 #endif
 #if NDIM==2
-     call trace2d(qin,dq,qm,qp,dx,dy   ,dt,ngrid)
+  call trace2d(qin,dq,qm,qp,dx,dy   ,dt,ngrid)
 #endif
 #if NDIM==3
-     call trace3d(qin,dq,qm,qp,dx,dy,dz,dt,ngrid)
+  call trace3d(qin,dq,qm,qp,dx,dy,dz,dt,ngrid)
 #endif
-
-   else if (scheme=='plmde')then
-!#if NDIM==1
-     call tracex  (qin,dq,cin,qm,qp,dx      ,dt,ngrid)
-!#endif
-#if NDIM>1
-     call tracexy (qin,dq,cin,qm,qp,dx,dy   ,dt,ngrid)
-#endif
-#if NDIM>2
-     call tracexyz(qin,dq,cin,qm,qp,dx,dy,dz,dt,ngrid)
-#endif
-   else
-      write(*,*),'no valid scheme'
-      stop
-
-   endif
-
-
 
 
   ! Solve for 1D flux in X direction

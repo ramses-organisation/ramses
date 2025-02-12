@@ -42,7 +42,6 @@ tout=0.0,1.0
 &HYDRO_PARAMS
 gamma=1.4
 courant_factor=0.8
-scheme='muscl'
 slope_type=1
 /
 

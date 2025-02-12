@@ -22,7 +22,6 @@ gravity_params=1.42d-3, 5.49d-4, 0.18d3 ! a1, a2, z0
 &HYDRO_PARAMS
 gamma=1.666667
 courant_factor=0.8
-scheme='muscl'
 slope_type=1
 riemann='hllc'
 pressure_fix=.true.
