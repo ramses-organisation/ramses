@@ -44,7 +44,7 @@ jobs:
             python-version: '3.13'
             cache: 'pip' # caching pip dependencies
         - name: Install python dependencies
-          run: pip install -r requirements.txt
+          run: pip install -r .github/workflows/requirements.txt
         - name: Setup tectonic
           uses: wtfjoke/setup-tectonic@v3
           with:
