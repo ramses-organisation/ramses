@@ -43,6 +43,8 @@ jobs:
           with:
             python-version: '3.13'
             cache: 'pip' # caching pip dependencies
+        - name: Install python dependencies
+          run: pip install -r tests/requirements.txt
         - name: Setup tectonic
           uses: wtfjoke/setup-tectonic@v3
           with:
