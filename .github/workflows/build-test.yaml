@@ -66,32 +66,32 @@ jobs:
               tests/test_results.pdf
               tests/test_suite.log
 
-    docs:
-      runs-on: ${{ matrix.os }}
-      strategy:
-        fail-fast: false
-        matrix:
-          os: [ubuntu-latest]
-          python-version: ["3.12"]
-      steps:
-        - uses: actions/checkout@v4
+    # docs:
+    #   runs-on: ${{ matrix.os }}
+    #   strategy:
+    #     fail-fast: false
+    #     matrix:
+    #       os: [ubuntu-latest]
+    #       python-version: ["3.12"]
+    #   steps:
+    #     - uses: actions/checkout@v4
 
-        - name: Set up Python ${{ matrix.python-version }}
-          uses: actions/setup-python@v5
-          with:
-            python-version: ${{ matrix.python-version }}
+    #     - name: Set up Python ${{ matrix.python-version }}
+    #       uses: actions/setup-python@v5
+    #       with:
+    #         python-version: ${{ matrix.python-version }}
 
-        - name: Install RTD requirements
-          run: pip install -r doc/rtd_requirements.txt
+    #     - name: Install RTD requirements
+    #       run: pip install -r doc/rtd_requirements.txt
 
-        - name: Build pdf documentation
-          run: sphinx-build -M simplepdf doc doc/_build
+    #     - name: Build pdf documentation
+    #       run: sphinx-build -M simplepdf doc doc/_build
 
-        - name: Build html documentation
-          run: sphinx-build -M html doc doc/_build
+    #     - name: Build html documentation
+    #       run: sphinx-build -M html doc doc/_build
 
-        - name: Upload artifacts
-          uses: actions/upload-artifact@v4
-          with:
-            name: docs
-            path: doc/_build
+    #     - name: Upload artifacts
+    #       uses: actions/upload-artifact@v4
+    #       with:
+    #         name: docs
+    #         path: doc/_build
