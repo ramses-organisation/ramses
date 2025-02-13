@@ -43,8 +43,6 @@ jobs:
           with:
             python-version: '3.13'
             cache: 'pip' # caching pip dependencies
-        - name: Install python dependencies
-          run: pip install numpy matplotlib scipy
         - name: Setup tectonic
           uses: wtfjoke/setup-tectonic@v3
           with:
