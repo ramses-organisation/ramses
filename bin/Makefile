@@ -193,7 +193,7 @@ PMOBJ = init_part.o output_part.o rho_fine.o synchro_fine.o move_fine.o \
         stellar_particle.o init_stellar.o output_stellar.o
 # Poisson solver objects
 POISSONOBJ = init_poisson.o phi_fine_cg.o interpol_phi.o force_fine.o \
-             multigrid_coarse.o multigrid_fine_commons.o multigrid_fine_fine.o \
+             multigrid_fine_commons.o multigrid_fine_fine.o \
              multigrid_fine_coarse.o gravana.o boundary_potential.o rho_ana.o \
              output_poisson.o
 # Hydro objects
