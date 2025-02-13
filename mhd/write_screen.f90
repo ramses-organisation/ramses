@@ -157,8 +157,8 @@ subroutine write_screen
                     ei(icell)=et(icell)-em(icell)-dd(icell)*ek(icell)
 #if NENER>0
                     do irad=1,nener
-                       ei(icell)=ei(icell)-uold(ind_cell(i),8+irad)
-                       prad(icell,irad)=(gamma_rad(irad)-1.0d0)*uold(ind_cell(i),8+irad)
+                       ei(icell)=ei(icell)-uold(ind_cell(i),nhydro+irad)
+                       prad(icell,irad)=(gamma_rad(irad)-1.0d0)*uold(ind_cell(i),nhydro+irad)
                     end do
 #endif
                  end if

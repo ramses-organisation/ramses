@@ -939,13 +939,13 @@ SUBROUTINE cmp_chem_eq(TK, nH, t_rad_spec, nSpec, nTot, mu, Zsol)
      if(isHe) then
         D_HeI   = b_HEI*n_E_min  + g_HEI           !  HeI destr. (s-1)
         if(cosmic_rays) D_HeI = D_HeI + 1.1 * cosray_HI
-        C_HeIII = b_HEII*n_E_min + g_HEII          !  HeIII cre. (s-1)
+        C_HeIII = max(b_HEII*n_E_min+g_HEII, 1d-99)!  HeIII cre. (s-1)
         f_HeI   = D_HeI / a_HeI / n_E_min          !  Destr/Cre [unitless]
         f_HeIII = a_HeII * n_E_min / C_HeIII       !  Destr/Cre [unitless]
 
-        n_HEI   = nHe / (1d0 + f_HeI + f_HeI/f_HeIII)
-        n_HEII  = nHe / (1d0 + 1d0/f_HeI + 1d0/f_HeIII)
-        n_HEIII = nHe / (1d0 + f_HeIII + f_HeIII/f_HeI)
+        n_HEI   = nHe / (1d0 + f_HeI + f_HeI/max(f_HeIII,1d-99))
+        n_HEII  = nHe / (1d0 + 1d0/max(f_HeI,1d-99) + 1d0/max(f_HeIII,1d-99))
+        n_HEIII = nHe / (1d0 + f_HeIII + f_HeIII/max(f_HeI,1d-99))
      endif ! if(isHe)
 
      err_nE = ABS((n_E - (n_HII + n_HEII + 2.*n_HEIII))/nH)
@@ -1012,7 +1012,7 @@ SUBROUTINE rt_evol_single_cell(astart,aend,dasura,h,omegab,omega0,omegaL &
 
   mu_dp = mu
   call cmp_Equilibrium_Abundances(                                       &
-          T2_com/aexp**2, nH_com/aexp**3, pHI_rates, mu_dp, n_Spec, z_ave)
+          T2_com/aexp**2, nH_com/aexp**3, pHI_rates, mu_dp, n_Spec, 0.0)
   ! Initialize cell state
   T2(1)=T2_com                                          !      Temperature
   if(isH2) xion(ixHI,1)=n_Spec(3)/(nH_com/aexp**3)      !   HI frac
@@ -1372,7 +1372,7 @@ SUBROUTINE heat_unresolved_HII_regions_vsweep(ind_grid,ngrid,ilevel)
 
      ! Compute thermal pressure
      do i=1,nleaf
-        T2(i)=uold(ind_leaf(i),ndim+2)
+        T2(i)=uold(ind_leaf(i),neul)
      end do
      do i=1,nleaf
         ekk(i)=0.0d0 ! Kinetic energy
@@ -1400,7 +1400,7 @@ SUBROUTINE heat_unresolved_HII_regions_vsweep(ind_grid,ngrid,ilevel)
      do idim=1,ndim
         do i=1,nleaf
            emag(i)=emag(i)+0.125d0* &
-                (uold(ind_leaf(i),idim+ndim+2)+uold(ind_leaf(i),idim+nvar))**2
+                (uold(ind_leaf(i),idim+neul)+uold(ind_leaf(i),idim+nvar))**2
         end do
      end do
 #endif
@@ -1470,7 +1470,7 @@ SUBROUTINE heat_unresolved_HII_regions_vsweep(ind_grid,ngrid,ilevel)
 
               !print*,'HIT! ' &
               !      ,r_stag(i),dx_half_cgs,T2(i),nh(i),lum(i)
-              uold(ind_leaf(i),ndim+2) =                  &
+              uold(ind_leaf(i),neul) =                  &
                    (Tmu_ionised + T2min(i))               &
                    * nH(i)/scale_nH/scale_T2/(gamma-1.0)  &
                    + ekk(i) + err(i) + emag(i)
@@ -1491,8 +1491,8 @@ SUBROUTINE heat_unresolved_HII_regions_vsweep(ind_grid,ngrid,ilevel)
      if(heat_unresolved_HII.eq.2 .and. nener.gt.0) then
         do irad=0,nener-1
            do i=1,nleaf
-              uold(ind_leaf(i),ndim+2) = &
-                   uold(ind_leaf(i),ndim+2)-uold(ind_leaf(i),inener+irad)
+              uold(ind_leaf(i),neul) = &
+                   uold(ind_leaf(i),neul)-uold(ind_leaf(i),inener+irad)
            end do
         end do
 
@@ -1514,8 +1514,8 @@ SUBROUTINE heat_unresolved_HII_regions_vsweep(ind_grid,ngrid,ilevel)
 
         do irad=0,nener-1
            do i=1,nleaf
-              uold(ind_leaf(i),ndim+2) = &
-                   uold(ind_leaf(i),ndim+2)+uold(ind_leaf(i),inener+irad)
+              uold(ind_leaf(i),neul) = &
+                   uold(ind_leaf(i),neul)+uold(ind_leaf(i),inener+irad)
            end do
         end do
      endif

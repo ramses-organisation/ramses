@@ -1,4 +1,3 @@
-#if USE_TURB==1
 subroutine turb_check_time
    use amr_commons
    use turb_commons
@@ -39,4 +38,3 @@ subroutine turb_check_time
    end if
 
 end subroutine turb_check_time
-#endif

@@ -55,9 +55,9 @@ subroutine backup_hydro_send
                     do i=1,ncache
                        xdp(i)=uold(ind_grid(i)+iskip,ivar)/uold(ind_grid(i)+iskip,1)
                     end do
-                 else if(ivar==ndim+2)then ! Write pressure
+                 else if(ivar==neul)then ! Write pressure
                     do i=1,ncache
-                       xdp(i)=uold(ind_grid(i)+iskip,ndim+2)
+                       xdp(i)=uold(ind_grid(i)+iskip,neul)
                        xdp(i)=xdp(i)-0.5d0*uold(ind_grid(i)+iskip,2)**2/uold(ind_grid(i)+iskip,1)
 #if NDIM>1
                        xdp(i)=xdp(i)-0.5d0*uold(ind_grid(i)+iskip,3)**2/uold(ind_grid(i)+iskip,1)

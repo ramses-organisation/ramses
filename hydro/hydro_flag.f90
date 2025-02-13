@@ -23,11 +23,7 @@ subroutine hydro_flag(ilevel)
   real(dp),dimension(1:3)::skip_loc
   real(dp),dimension(1:twotondim,1:3)::xc
   real(dp),dimension(1:nvector,1:ndim),save::xx
-#ifdef SOLVERmhd
-  real(dp),dimension(1:nvector,1:nvar+3),save::uug,uum,uud
-#else
-  real(dp),dimension(1:nvector,1:nvar),save::uug,uum,uud
-#endif
+  real(dp),dimension(1:nvector,1:nvar_all),save::uug,uum,uud
 
   if(ilevel==nlevelmax)return
   if(numbtot(1,ilevel)==0)return
@@ -119,11 +115,7 @@ subroutine hydro_flag(ilevel)
         ! Loop over dimensions
         do idim=1,ndim
            ! Gather hydro variables
-#ifdef SOLVERmhd
-           do ivar=1,nvar+3
-#else
-           do ivar=1,nvar
-#endif
+           do ivar=1,nvar_all
               do i=1,ngrid
                  uug(i,ivar)=uold(indn(i,2*idim-1),ivar)
                  uum(i,ivar)=uold(ind_cell(i     ),ivar)
@@ -215,11 +207,7 @@ subroutine jeans_length_refine(ind_cell,ok,ncell,ilevel)
      indi = ind_cell(i)
      ! the thermal energy
      dens = max(uold(indi,1),smallr)
-#ifdef SOLVERmhd
-     etherm = uold(indi,5)
-#else
-     etherm = uold(indi,ndim+2)
-#endif
+     etherm = uold(indi,neul)
      etherm = etherm - 0.5d0*uold(indi,2)**2/dens
 #if NDIM > 1 || SOLVERmhd
      etherm = etherm - 0.5d0*uold(indi,3)**2/dens
@@ -237,11 +225,7 @@ subroutine jeans_length_refine(ind_cell,ok,ncell,ilevel)
 #endif
 #if NENER>0
      do irad=1,nener
-#ifdef SOLVERmhd
-        etherm=etherm-uold(indi,8+irad)
-#else
-        etherm=etherm-uold(indi,ndim+2+irad)
-#endif
+        etherm=etherm-uold(indi,nhydro+irad)
      end do
 #endif
      ! the temperature

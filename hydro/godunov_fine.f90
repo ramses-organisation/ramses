@@ -78,10 +78,10 @@ subroutine set_unew(ilevel)
            if(ndim>0)u=uold(active(ilevel)%igrid(i)+iskip,2)/d
            if(ndim>1)v=uold(active(ilevel)%igrid(i)+iskip,3)/d
            if(ndim>2)w=uold(active(ilevel)%igrid(i)+iskip,4)/d
-           e=uold(active(ilevel)%igrid(i)+iskip,ndim+2)-0.5d0*d*(u**2+v**2+w**2)
+           e=uold(active(ilevel)%igrid(i)+iskip,neul)-0.5d0*d*(u**2+v**2+w**2)
 #if NENER>0
            do irad=1,nener
-              e=e-uold(active(ilevel)%igrid(i)+iskip,ndim+2+irad)
+              e=e-uold(active(ilevel)%igrid(i)+iskip,nhydro+irad)
            end do
 #endif
            enew(active(ilevel)%igrid(i)+iskip)=e
@@ -173,16 +173,16 @@ subroutine set_uold(ilevel)
 
      ! -------------------------------------------------------------------------------------------------------------------------------------------------------------
      ! L. Romano 13.06.2023 -- Catch advection errors due to smallr
-#if NVAR > NDIM + 2 + NENER
+#if NVAR > NHYDRO+NENER
      do i=1,active(ilevel)%ngrid
         if(uold(active(ilevel)%igrid(i)+iskip,1).lt.smallr.and.unew(active(ilevel)%igrid(i)+iskip,1).gt.uold(active(ilevel)%igrid(i)+iskip,1))then
            ! inflow into previously floored cell: fix concentrations
-           do ivar = ndim+nener+3, nvar
+           do ivar = nhydro+1+nener, nvar
               unew(active(ilevel)%igrid(i)+iskip,ivar) = uold(active(ilevel)%igrid(i)+iskip,ivar) * max(unew(active(ilevel)%igrid(i)+iskip, 1), smallr) / smallr
            end do
         else if(unew(active(ilevel)%igrid(i)+iskip,1).lt.smallr.and.uold(active(ilevel)%igrid(i)+iskip,1).gt.unew(active(ilevel)%igrid(i)+iskip,1))then
            ! outflow leading to density below floor: apply density floor to scalar density
-           do ivar = ndim+nener+3, nvar
+           do ivar = nhydro+1+nener, nvar
               unew(active(ilevel)%igrid(i)+iskip,ivar) = uold(active(ilevel)%igrid(i)+iskip,ivar) * smallr / max(uold(active(ilevel)%igrid(i)+iskip, 1), smallr)
            end do
         end if
@@ -212,16 +212,16 @@ subroutine set_uold(ilevel)
            e_kin=0.5d0*d*(u**2+v**2+w**2)
 #if NENER>0
            do irad=1,nener
-              e_kin=e_kin+uold(ind_cell,ndim+2+irad)
+              e_kin=e_kin+uold(ind_cell,nhydro+irad)
            end do
 #endif
-           e_cons=uold(ind_cell,ndim+2)-e_kin
+           e_cons=uold(ind_cell,neul)-e_kin
            e_prim=enew(ind_cell)
            ! Note: here divu=-div.u*dt
            div=abs(divu(ind_cell))*dx/dtnew(ilevel)
            e_trunc=beta_fix*d*max(div,3.0d0*hexp*dx)**2
            if(e_cons<e_trunc)then
-              uold(ind_cell,ndim+2)=e_prim+e_kin
+              uold(ind_cell,neul)=e_prim+e_kin
            end if
         end do
      end if
@@ -263,7 +263,7 @@ subroutine add_gravity_source_terms(ilevel)
         if(ndim>1)v=unew(ind_cell,3)/d
         if(ndim>2)w=unew(ind_cell,4)/d
         e_kin=0.5d0*d*(u**2+v**2+w**2)
-        e_prim=unew(ind_cell,ndim+2)-e_kin
+        e_prim=unew(ind_cell,neul)-e_kin
         d_old=max(uold(ind_cell,1),smallr)
         if(strict_equilibrium>0)req=rho_eq(ind_cell)
         fact=(d_old-req)/d*0.5d0*dtnew(ilevel)
@@ -280,7 +280,7 @@ subroutine add_gravity_source_terms(ilevel)
            unew(ind_cell,4)=d*w
         endif
         e_kin=0.5d0*d*(u**2+v**2+w**2)
-        unew(ind_cell,ndim+2)=e_prim+e_kin
+        unew(ind_cell,neul)=e_prim+e_kin
      end do
   end do
 
@@ -407,10 +407,10 @@ subroutine add_pdv_source_terms(ilevel)
               if(ndim>0)u=uold(ind_cell(i),2)/d
               if(ndim>1)v=uold(ind_cell(i),3)/d
               if(ndim>2)w=uold(ind_cell(i),4)/d
-              eold=uold(ind_cell(i),ndim+2)-0.5d0*d*(u**2+v**2+w**2)
+              eold=uold(ind_cell(i),neul)-0.5d0*d*(u**2+v**2+w**2)
 #if NENER>0
               do irad=1,nener
-                 eold=eold-uold(ind_cell(i),ndim+2+irad)
+                 eold=eold-uold(ind_cell(i),nhydro+irad)
               end do
 #endif
               ! Add -pdV term
@@ -423,8 +423,8 @@ subroutine add_pdv_source_terms(ilevel)
         do irad=1,nener
            do i=1,ngrid
               ! Add -pdV term
-              unew(ind_cell(i),ndim+2+irad)=unew(ind_cell(i),ndim+2+irad) &
-                & -(gamma_rad(irad)-1.0d0)*uold(ind_cell(i),ndim+2+irad)*divu_loc(i)*dtnew(ilevel)
+              unew(ind_cell(i),nhydro+irad)=unew(ind_cell(i),nhydro+irad) &
+                & -(gamma_rad(irad)-1.0d0)*uold(ind_cell(i),nhydro+irad)*divu_loc(i)*dtnew(ilevel)
            end do
         end do
 #endif
@@ -450,10 +450,10 @@ subroutine add_pdv_source_terms(ilevel)
            if(ndim>0)u=uold(ind_cell1,2)/d
            if(ndim>1)v=uold(ind_cell1,3)/d
            if(ndim>2)w=uold(ind_cell1,4)/d
-           eold=uold(ind_cell1,ndim+2)-0.5d0*d*(u**2+v**2+w**2)
+           eold=uold(ind_cell1,neul)-0.5d0*d*(u**2+v**2+w**2)
 #if NENER>0
            do irad=1,nener
-              eold=eold-uold(ind_cell1,ndim+2+irad)
+              eold=eold-uold(ind_cell1,nhydro+irad)
            end do
 #endif
            ! Add pdV term
@@ -469,8 +469,8 @@ subroutine add_pdv_source_terms(ilevel)
         iskip=ncoarse+(ind-1)*ngridmax
         do i=1,active(ilevel)%ngrid
            ind_cell1=active(ilevel)%igrid(i)+iskip
-           unew(ind_cell1,ndim+2+irad)=unew(ind_cell1,ndim+2+irad) &
-                & +(gamma_rad(irad)-1.0d0)*uold(ind_cell1,ndim+2+irad)*divu(ind_cell1) ! Note: here divu=-div.u*dt
+           unew(ind_cell1,nhydro+irad)=unew(ind_cell1,nhydro+irad) &
+                & +(gamma_rad(irad)-1.0d0)*uold(ind_cell1,nhydro+irad)*divu(ind_cell1) ! Note: here divu=-div.u*dt
         end do
      end do
   end do

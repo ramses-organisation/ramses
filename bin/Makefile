@@ -45,11 +45,11 @@ NPSCAL = 0
 LIGHT_MPI_COMM = 0
 
 # Compute NVAR
-NVAR = 2+$(NDIM)
+NHYDRO = 2+$(NDIM)
 ifeq ($(SOLVER),mhd)
-   NVAR = 8
+   NHYDRO = 8
 endif
-NVAR := $(NVAR)+$(NENER)+$(NPSCAL)+$(NMETALS)
+NVAR := $(NHYDRO)+$(NENER)+$(NPSCAL)+$(NMETALS)
 ifeq ($(RT),1)
    NVAR := $(NVAR)+$(NIONS)
 endif
@@ -64,7 +64,7 @@ GITREPO = $(shell git config --get remote.$(GITREMOTE).url)
 BUILDDATE = $(shell date +"%D-%T")
 BUILDCOMMAND =${MAKE} ${MAKEFLAGS}
 DEFINES = -DNVECTOR=$(NVECTOR) -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DNENER=$(NENER) \
-          -DNVAR=$(NVAR) -DSOLVER$(SOLVER)
+          -DNVAR=$(NVAR) -DNHYDRO=$(NHYDRO) -DSOLVER$(SOLVER)
 ifeq ($(ATON),1)
    DEFINES += -DATON
 endif
@@ -193,7 +193,7 @@ PMOBJ = init_part.o output_part.o rho_fine.o synchro_fine.o move_fine.o \
         stellar_particle.o init_stellar.o output_stellar.o
 # Poisson solver objects
 POISSONOBJ = init_poisson.o phi_fine_cg.o interpol_phi.o force_fine.o \
-             multigrid_coarse.o multigrid_fine_commons.o multigrid_fine_fine.o \
+             multigrid_fine_commons.o multigrid_fine_fine.o \
              multigrid_fine_coarse.o gravana.o boundary_potential.o rho_ana.o \
              output_poisson.o
 # Hydro objects

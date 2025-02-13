@@ -2,15 +2,18 @@
 
 # Advanced simulations
 
-In this section, we describe in more detail how to configure RAMSES to perform more advanced simulations. 
+In this section, we describe in more detail how to configure RAMSES to perform more advanced simulations.
 
 
 ```{toctree}
 :maxdepth: 1
-:caption: Parameters:
+:caption: Contents:
 
-./Patching
-./RHD
+Patching.md
+RHD.md
+unbinding.md
+mergertree.md
+Zoom_Simulations.md
 ```
 
 <!-- 1. [Patching the code](./Patching)

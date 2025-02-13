@@ -37,7 +37,7 @@ the code will be compiled.
 
 You need to go first to the `bin/`directory:
 ```
-$ cd trunk/ramses/bin
+$ cd ramses/bin
 $ ls -F
 Makefile	Makefile.rt
 ```
@@ -62,7 +62,7 @@ later.
 
 [1]: http://gcc.gnu.org/fortran
 
-Other preprocessor directives are defined in variable `DEFINES` in the 
+Other preprocessor directives are defined in variable `DEFINES` in the
 `Makefile`:
 
 ```
@@ -78,7 +78,7 @@ DEFINES = -DNVECTOR=$(NVECTOR) -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DNVAR=$(NVAR) -DSO
 ```
 
 These   additional    directives   are   called    _Compilation   Time
-Parameters_. They should be defined  in the `Makefile` and the code must 
+Parameters_. They should be defined  in the `Makefile` and the code must
 be recompiled entirely using:
 
 ```
@@ -89,13 +89,13 @@ $ make
 We list now the definitions of these parameters.
 
 `NVECTOR=64`
-: This parameter is used   to    set   the   vector    size   for 
+: This parameter is used   to    set   the   vector    size   for
 computation-intensive   operations.   It    must   be   determined
 experimentally on each new hardware.
 
 `NPRE=4`
-: This parameter sets the precision of the floating point operations. 
-`NPRE=4`stands for single precision arithmetics, while `NPRE=8` is 
+: This parameter sets the precision of the floating point operations.
+`NPRE=4`stands for single precision arithmetics, while `NPRE=8` is
 for double precision.
 
 `NENER=0`
@@ -103,19 +103,19 @@ for double precision.
 
 `NDIM=3`
 : This parameter sets the dimensionality of the problem.
-The value `NDIM=1`is for 1D, plan-parallel flows. `NDIM=2` and 
+The value `NDIM=1`is for 1D, plan-parallel flows. `NDIM=2` and
 `NDIM=3` are resp. for 2D and 3D flows.
 
 `SOLVER=hydro`
-: This parameter selects the type of hyperbolic solver used. 
+: This parameter selects the type of hyperbolic solver used.
 Possible values are: `hydro` for the adiabatic Euler equations,
 `mhd`, the Constrained Transport scheme for the ideal MHD equations.
 and `rhd` for relativistic hydro.
 
 `NVAR=8`
-: This parameters defines the number of variables in the hyperbolic solver. 
-For `SOLVER=hydro`, `NVAR>=NDIM+2`. 
-For `SOLVER=mhd`, `NVAR>=8` and for `SOLVER=rhd`, one has `NVAR>=5`. 
+: This parameters defines the number of variables in the hyperbolic solver.
+For `SOLVER=hydro`, `NVAR>=NDIM+2`.
+For `SOLVER=mhd`, `NVAR>=8` and for `SOLVER=rhd`, one has `NVAR>=5`.
 
 Our goal is now to compile the code for a simple one-dimensional problem.
 You need to modify the `Makefile` so that:
@@ -132,7 +132,7 @@ Then type:
 $ make
 ```
 
-If everything goes well, all source files will be compiled and 
+If everything goes well, all source files will be compiled and
 linked into an executable called `ramses1d`.
 
 ### Additional compilation preprocessor flags
@@ -164,11 +164,11 @@ $ bin/ramses1d namelist/tube1d.nml
 ```
 
 The first part of the command is the executable we have just compiled.
-The second part, the only command line argument, is an input file 
-containing the _run time parameters_. Several examples of such parameter 
-files are stored in the `namelist/` directory. The namelist file we 
-have just used `tube1d.nml` is the Sod test, a simple shock tube simulation 
-in 1D. For comparison, we now show the last 14 lines of the standard output: 
+The second part, the only command line argument, is an input file
+containing the _run time parameters_. Several examples of such parameter
+files are stored in the `namelist/` directory. The namelist file we
+have just used `tube1d.nml` is the Sod test, a simple shock tube simulation
+in 1D. For comparison, we now show the last 14 lines of the standard output:
 
 ```
  Mesh structure
@@ -251,18 +251,18 @@ variables  defined for  this run.  The code  then reports  that it  is
 building the initial AMR grid. The  next lines give the resulting mesh
 structure.
 
-The first level of refinement in _ramses_ covers the whole computational 
+The first level of refinement in _ramses_ covers the whole computational
 domain with 2 (resp. 4 and 8) cells in 1 (resp. 2 and 3) space dimension.
 The grid is then entirely refined up to `levelmin`, which in this case is
-defined in the parameter file to be `levelmin=3`. This defines the 
-_coarse grid_. The grid is then adaptively refined up to `levelmax`, which 
-in this case `levelmax=10`. Each line in the log file indicates the 
+defined in the parameter file to be `levelmin=3`. This defines the
+_coarse grid_. The grid is then adaptively refined up to `levelmax`, which
+in this case `levelmax=10`. Each line in the log file indicates the
 number of octs (or grids) at each level of refinement. The maximum number
 of grids in each level `level` is equal to `2**(level-1)` for `NDIM=1`,
 to `4**(level-1)` for `NDIM=2` and to `8**(level-1)` for `NDIM=3`.
 
-The numbers inside parentheses give the minimum, maximum and average 
-number of grids per processor. This is obviously only relevant to 
+The numbers inside parentheses give the minimum, maximum and average
+number of grids per processor. This is obviously only relevant to
 parallel runs.
 
 The code then indicates that the  time integration starts. After outputting
@@ -320,7 +320,7 @@ with   other   parameter  values,   in   order   to  test   the   code
 performances.  You  can   also  use  other  parameter   files  in  the
 `namelist/` directory
 
-If you would like to run a 2D simulation (using file `sedov2d.nml` for 
+If you would like to run a 2D simulation (using file `sedov2d.nml` for
 example), do not forget to recompile entirely the code using:
 
 ```

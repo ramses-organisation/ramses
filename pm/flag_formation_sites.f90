@@ -285,9 +285,9 @@ end subroutine flag_formation_sites
 subroutine compute_clump_properties_round2
   use amr_commons
 #if NENER>0
-  use hydro_commons, ONLY:uold,gamma,nvar,nener,inener,smallr
+  use hydro_commons, ONLY:uold,gamma,nvar,neul,nener,inener,smallr
 #else
-  use hydro_commons, ONLY:uold,gamma,nvar,smallr
+  use hydro_commons, ONLY:uold,gamma,nvar,neul,smallr
 #endif
   use poisson_commons, ONLY:f,rho
   use clfind_commons
@@ -431,7 +431,7 @@ subroutine compute_clump_properties_round2
         rho_star=rho(icellp(ipart))
 
         ! Cell total energy density
-        etot=uold(icellp(ipart),ndim+2)
+        etot=uold(icellp(ipart),neul)
 
         ! Cell velocity
         do i=1,ndim
@@ -456,7 +456,7 @@ subroutine compute_clump_properties_round2
         ! Cell magnetic field
 #ifdef SOLVERmhd
         do i=1,ndim
-           B(i)=0.5d0*(uold(icellp(ipart),5+i)+uold(icellp(ipart),nvar+i))
+           B(i)=0.5d0*(uold(icellp(ipart),neul+i)+uold(icellp(ipart),nvar+i))
         end do
 #endif
 
@@ -828,9 +828,9 @@ subroutine surface_int_np(ind_cell,np,ilevel)
   use clfind_commons, ONLY: center_of_mass,Psurf
 #endif
 #if NENER>0
-  use hydro_commons, ONLY: uold,gamma,nvar,nener,inener,smallr
+  use hydro_commons, ONLY: uold,gamma,nvar,neul,nener,inener,smallr
 #else
-  use hydro_commons, ONLY: uold,gamma,nvar,smallr
+  use hydro_commons, ONLY: uold,gamma,nvar,neul,smallr
 #endif
   implicit none
   integer::np,ilevel
@@ -907,7 +907,7 @@ subroutine surface_int_np(ind_cell,np,ilevel)
 
 #ifdef SOLVERmhd
      do idim=1,3
-        emag_cell(j)=emag_cell(j)+0.125d0*(uold(ind_cell(j),idim+5)+uold(ind_cell(j),idim+nvar))**2
+        emag_cell(j)=emag_cell(j)+0.125d0*(uold(ind_cell(j),idim+neul)+uold(ind_cell(j),idim+nvar))**2
      end do
 #endif
 #if NENER>0
@@ -915,7 +915,7 @@ subroutine surface_int_np(ind_cell,np,ilevel)
         err_cell(j)=err_cell(j)+uold(ind_cell(j),nener_offset+irad)
      end do
 #endif
-     P_cell(j)=(gamma-1d0)*(uold(ind_cell(j),ndim+2)-ekk_cell(j)-err_cell(j)-emag_cell(j))
+     P_cell(j)=(gamma-1d0)*(uold(ind_cell(j),neul)-ekk_cell(j)-err_cell(j)-emag_cell(j))
   end do
 
   do j=1,np
@@ -1034,7 +1034,7 @@ subroutine surface_int_np(ind_cell,np,ilevel)
                     emag_neigh=0d0
 #ifdef SOLVERmhd
                     do jdim=1,ndim
-                       emag_neigh=emag_neigh+0.125d0*(uold(cell_index(j),jdim+5)+uold(cell_index(j),jdim+nvar))**2
+                       emag_neigh=emag_neigh+0.125d0*(uold(cell_index(j),jdim+neul)+uold(cell_index(j),jdim+nvar))**2
                     end do
 #endif
                     err_neigh=0d0
@@ -1043,7 +1043,7 @@ subroutine surface_int_np(ind_cell,np,ilevel)
                        err_neigh=err_neigh+uold(cell_index(j),nener_offset+irad)
                     end do
 #endif
-                    P_neigh=(gamma-1.0d0)*(uold(cell_index(j),ndim+2)-ekk_neigh-emag_neigh-err_neigh)
+                    P_neigh=(gamma-1.0d0)*(uold(cell_index(j),neul)-ekk_neigh-emag_neigh-err_neigh)
 
                     ! add to the actual terms for the virial analysis
                     Psurf(loc_clump_nr(j))    = Psurf(loc_clump_nr(j))    + 0.5d0*(P_neigh + P_cell(j)) * r_dot_n(j) * dx_loc**2
@@ -1171,7 +1171,7 @@ subroutine surface_int_np(ind_cell,np,ilevel)
                        emag_neigh=0d0
 #ifdef SOLVERmhd
                        do jdim=1,ndim
-                          emag_neigh=emag_neigh+0.125d0*(uold(cell_index(j),jdim+5)+uold(cell_index(j),jdim+nvar))**2
+                          emag_neigh=emag_neigh+0.125d0*(uold(cell_index(j),jdim+neul)+uold(cell_index(j),jdim+nvar))**2
                        end do
 #endif
                        err_neigh=0d0
@@ -1180,7 +1180,7 @@ subroutine surface_int_np(ind_cell,np,ilevel)
                           err_neigh=err_neigh+uold(cell_index(j),nener_offset+irad)
                        end do
 #endif
-                       P_neigh=(gamma-1.0d0)*(uold(cell_index(j),ndim+2)-ekk_neigh-emag_neigh-err_neigh)
+                       P_neigh=(gamma-1.0d0)*(uold(cell_index(j),neul)-ekk_neigh-emag_neigh-err_neigh)
 
                        ! add to the actual terms for the virial analysis
                        Psurf(loc_clump_nr(j))    = Psurf(loc_clump_nr(j))    + 0.5d0*(P_neigh + P_cell(j)) * r_dot_n(j) * 0.25d0 * dx_loc**2

@@ -416,15 +416,12 @@ subroutine output_frame()
                    endif
                    if((ok(i)).and.(ivar_frame(proj_ind)>0).and.(ivar_frame(proj_ind)<=nvar))then
                       uvar = uold(ind_cell(i),ivar_frame(proj_ind))
-#ifdef SOLVERmhd
                       ! Scale temperature to K
-                      if(ivar_frame(proj_ind)==5)then
+                      if(ivar_frame(proj_ind)==neul)then
                          e = 0.0d0
+#ifdef SOLVERmhd
                          do idim=1,3
 #else
-                      ! Scale temperature to K
-                      if(ivar_frame(proj_ind)==ndim+2)then
-                         e = 0.0d0
                          do idim=1,ndim
 #endif
                             e = e+0.5*uold(ind_cell(i),idim+1)**2/uold(ind_cell(i),1)
@@ -436,7 +433,7 @@ subroutine output_frame()
 #endif
 #ifdef SOLVERmhd
                          do idim=1,3
-                            e = e+0.125d0*(uold(ind_cell(i),idim+5)+uold(ind_cell(i),idim+nvar))**2
+                            e = e+0.125d0*(uold(ind_cell(i),idim+neul)+uold(ind_cell(i),idim+nvar))**2
                          enddo
 #endif
                          ! Pressure
@@ -446,13 +443,8 @@ subroutine output_frame()
                       if(ivar_frame(proj_ind)>1) uvar = uvar/uold(ind_cell(i),1)
                       ! Scale density to cm**-3
                       if(ivar_frame(proj_ind)==1) uvar = uvar*scale_nH
-#ifdef SOLVERmhd
                       ! Scale velocities to km/s
-                      if(ivar_frame(proj_ind)>1.and.ivar_frame(proj_ind)<5) uvar = uvar*scale_v/1e5
-#else
-                      ! Scale velocities to km/s
-                      if(ivar_frame(proj_ind)>1.and.ivar_frame(proj_ind)<ndim+2) uvar = uvar*scale_v/1e5
-#endif
+                      if(ivar_frame(proj_ind)>1.and.ivar_frame(proj_ind)<neul) uvar = uvar*scale_v/1e5
                       ok(i) = ok(i).and.(uvar.ge.varmin_frame(proj_ind))
                       ok(i) = ok(i).and.(uvar.le.varmax_frame(proj_ind))
                    endif
@@ -692,12 +684,10 @@ subroutine output_frame()
 #endif
 #ifdef SOLVERmhd
                                      do idim=1,3
-                                        e = e+0.125d0*(uold(ind_cell(i),idim+5)+uold(ind_cell(i),idim+nvar))**2
+                                        e = e+0.125d0*(uold(ind_cell(i),idim+neul)+uold(ind_cell(i),idim+nvar))**2
                                      enddo
-                                     uvar = (gamma-1.0)*(uold(ind_cell(i),5)-e)
-#else
-                                     uvar = (gamma-1.0)*(uold(ind_cell(i),ndim+2)-e)
 #endif
+                                     uvar = (gamma-1.0)*(uold(ind_cell(i),neul)-e)
                                      uvar = uvar/uold(ind_cell(i),1)*scale_T2
 
                                      ! Density map
@@ -708,7 +698,7 @@ subroutine output_frame()
                                      ! Pressure map
                                   else if(movie_vars(kk).eq.i_mv_p)then
                                      ok_frame=.true.
-                                     uvar = uold(ind_cell(i),ndim+2)
+                                     uvar = uold(ind_cell(i),neul)
 
                                      ! Speed map
                                   else if(movie_vars(kk).eq.i_mv_speed)then

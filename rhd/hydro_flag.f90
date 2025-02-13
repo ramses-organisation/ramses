@@ -176,7 +176,7 @@ subroutine jeans_length_refine(ind_cell,ok,ncell,ilevel)
      indi = ind_cell(i)
      ! the thermal energy
      dens = max(uold(indi,1),smallr)
-     etherm = uold(indi,ndim+2)
+     etherm = uold(indi,neul)
      etherm = etherm - 0.5d0*uold(indi,2)**2/dens
 #if NDIM > 1
      etherm = etherm - 0.5d0*uold(indi,3)**2/dens

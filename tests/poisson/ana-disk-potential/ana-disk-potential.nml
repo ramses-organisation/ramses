@@ -30,6 +30,7 @@ beta_fix=0.5
 /
 
 &INIT_PARAMS
+condinit_kind='ana_disk_potential'
 /
 
 &OUTPUT_PARAMS

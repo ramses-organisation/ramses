@@ -1,4 +1,3 @@
-#if USE_TURB==1
 ! TURB_FORCE_UTILS.F90
 ! A.McLeod - 24/11/2012
 ! Utility routines for turbulent forcing
@@ -725,4 +724,3 @@ subroutine kiss64_double(N, s, out_array)
 #endif
 
 end subroutine kiss64_double
-#endif

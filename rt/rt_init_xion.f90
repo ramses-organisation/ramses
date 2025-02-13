@@ -48,11 +48,6 @@ SUBROUTINE rt_init_xion_vsweep(ind_grid, ngrid)
   real(dp)::nH, T2, ekk, err, emag, x, mu, Zsolar
   real(dp),dimension(nIons)::phI_rates       ! Photoionization rates [s-1]
   real(dp),dimension(7)::nSpec               !          Species abundances
-#ifdef SOLVERmhd
-  integer::neul=5
-#else
-  integer::neul=ndim+2
-#endif
 #if NENER>0
   integer::irad
 #endif
@@ -97,7 +92,7 @@ SUBROUTINE rt_init_xion_vsweep(ind_grid, ngrid)
         emag = 0.0d0
 #ifdef SOLVERmhd
         do idim=1,3
-           emag=emag+0.125d0*(uold(ind_leaf(i),idim+5)+uold(ind_leaf(i),idim+nvar))**2
+           emag=emag+0.125d0*(uold(ind_leaf(i),idim+neul)+uold(ind_leaf(i),idim+nvar))**2
         end do
 #endif
         T2 = (gamma-1.0)*(T2-ekk-err-emag)     !     Gamma is ad. exponent
@@ -147,13 +142,7 @@ SUBROUTINE calc_equilibrium_xion(vars, rtvars, xion)
   use cooling_module,only:Y
   use rt_cooling_module,only:UVrates,signc
   implicit none
-#ifdef SOLVERmhd
-  integer::neul=5
-  real(dp),dimension(nvar+3)::vars
-#else
-  integer::neul=ndim+2
-  real(dp),dimension(nvar)::vars
-#endif
+  real(dp),dimension(nvar_all)::vars
   real(dp),dimension(nrtvar)::rtvars
   real(dp),dimension(nIons)::xion
   integer::ip, iI, idim
@@ -198,7 +187,7 @@ SUBROUTINE calc_equilibrium_xion(vars, rtvars, xion)
   emag = 0.0d0
 #ifdef SOLVERmhd
   do idim=1,3
-     emag=emag+0.125d0*(vars(idim+5)+vars(idim+nvar))**2
+     emag=emag+0.125d0*(vars(idim+neul)+vars(idim+nvar))**2
   end do
 #endif
   T2 = (gamma-1.0)*(T2-ekk-err-emag)        !        Gamma is ad. exponent

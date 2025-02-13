@@ -59,11 +59,7 @@ subroutine adaptive_loop
            call build_comm(ilevel)
            call make_virtual_fine_int(cpu_map(1),ilevel)
            if(hydro)then
-#ifdef SOLVERmhd
-              do ivar=1,nvar+3
-#else
-              do ivar=1,nvar
-#endif
+              do ivar=1,nvar_all
                  call make_virtual_fine_dp(uold(1,ivar),ilevel)
               end do
               if(simple_boundary)call make_boundary_hydro(ilevel)
@@ -85,11 +81,7 @@ subroutine adaptive_loop
         if(hydro)then
            do ilevel=levelmin-1,1,-1
               call upload_fine(ilevel)
-#ifdef SOLVERmhd
-              do ivar=1,nvar+3
-#else
-              do ivar=1,nvar
-#endif
+              do ivar=1,nvar_all
                  call make_virtual_fine_dp(uold(1,ivar),ilevel)
               end do
               if(simple_boundary)call make_boundary_hydro(ilevel)

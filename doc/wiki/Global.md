@@ -2,8 +2,8 @@
 
 # Global parameters
 
-This block, called `&RUN_PARAMS`, contains the run global control 
-parameters. These parameters are now briefly described. 
+This block, called `&RUN_PARAMS`, contains the run global control
+parameters. These parameters are now briefly described.
 More thorough explanations will be given in dedicated sections of the wiki.
 
 
@@ -24,9 +24,9 @@ More thorough explanations will be given in dedicated sections of the wiki.
 | `cost_weighting=.true.`      |  `logical`    | Load balancing based on computational cost, not memory. This is rather expensive in term of memory usage. For memory limited runs, using `cost_weighting=.false.` is better. |
 | `nrestart=0`                 |  `integer`    | Output file number from which the code loads backup data and resumes the simulation, The default value, zero, is for a fresh start from the beginning (time=0).   |
 | `nrestart_quad=0`                 |  `integer`    | Restart with double precision Hilbert keys. Must be equal to `nrestart`. Default value is 0.|
-| `nstepmax=1000000`                 |  `integer`    | Maximum number of coarse time step. This can be used to terminate the simulation after a fixed amount of main steps. | 
-| `ncontrol=1`                 |  `integer`    | Frequency of screen output for control lines (to stdout), usually redirected into a log file. | 
-| `nremap=0`                   |  `integer`    | Frequency of call, in units of coarse time steps, for the load balancing routine, for MPI runs only. The default value, zero, means never. Load balancing is a slow operation, so use as high a value as possible. | 
+| `nstepmax=1000000`                 |  `integer`    | Maximum number of coarse time step. This can be used to terminate the simulation after a fixed amount of main steps. |
+| `ncontrol=1`                 |  `integer`    | Frequency of screen output for control lines (to stdout), usually redirected into a log file. |
+| `nremap=0`                   |  `integer`    | Frequency of call, in units of coarse time steps, for the load balancing routine, for MPI runs only. The default value, zero, means never. Load balancing is a slow operation, so use as high a value as possible. |
 | `ordering="hilbert"`         |  `character(len=128)`    | Cell ordering method used in the domain decomposition of the grid, for MPI runs only. Possible values are `hilbert`, `planar` and `angular`. |
 | `nsubcycle=2,2,2,2,2,2,`     |  `integer array`    | Number of fine level sub-cycling steps within one coarser level time step. Each value in the array corresponds to a given level of refinement, starting from the coarse grid at `levelmin` up to the finest level at `levelmax`. `nsubcycle(1)=1` means that `levelmin` and `levelmin+1` are synchronized. To enforce single time stepping across the whole AMR hierarchy, you need to set `nsubcycle=1,1,1,1,1,1,1,`|
 | `static=.false.`            |  `logical`    | Activate full static mode (RT post processing) |

@@ -53,17 +53,9 @@ recursive subroutine amr_step(ilevel,icount)
               !--------------------------
               call make_virtual_fine_int(cpu_map(1),i)
               if(hydro)then
-#ifdef SOLVERmhd
-                 do ivar=1,nvar+3
-#else
-                 do ivar=1,nvar
-#endif
+                 do ivar=1,nvar_all
                     call make_virtual_fine_dp(uold(1,ivar),i)
-#ifdef SOLVERmhd
                  end do
-#else
-                 end do
-#endif
                  if(momentum_feedback>0)call make_virtual_fine_dp(pstarold(1),i)
                  if(strict_equilibrium>0)call make_virtual_fine_dp(rho_eq(1),i)
                  if(strict_equilibrium>0)call make_virtual_fine_dp(p_eq(1),i)
@@ -280,17 +272,9 @@ recursive subroutine amr_step(ilevel,icount)
         call synchro_hydro_fine(ilevel,+0.5*dtnew(ilevel),1)
 
         ! Update boundaries
-#ifdef SOLVERmhd
-        do ivar=1,nvar+3
-#else
-        do ivar=1,nvar
-#endif
+        do ivar=1,nvar_all
            call make_virtual_fine_dp(uold(1,ivar),ilevel)
-#ifdef SOLVERmhd
         end do
-#else
-        end do
-#endif
         if(simple_boundary)call make_boundary_hydro(ilevel)
 
         ! Compute Bondi-Hoyle accretion parameters
@@ -390,17 +374,9 @@ recursive subroutine amr_step(ilevel,icount)
 
      ! Reverse update boundaries
                                call timer('hydro - rev ghostzones','start')
-#ifdef SOLVERmhd
-     do ivar=1,nvar+3
-#else
-     do ivar=1,nvar
-#endif
+     do ivar=1,nvar_all
         call make_virtual_reverse_dp(unew(1,ivar),ilevel)
-#ifdef SOLVERmhd
      end do
-#else
-     end do
-#endif
      ! MC Tracer
      ! Communicate fluxes accross boundaries
      if(MC_tracer)then
@@ -498,17 +474,9 @@ recursive subroutine amr_step(ilevel,icount)
   !---------------------------------------
   if((hydro).and.(.not.static_gas))then
                                call timer('hydro - ghostzones','start')
-#ifdef SOLVERmhd
-     do ivar=1,nvar+3
-#else
-     do ivar=1,nvar
-#endif
+     do ivar=1,nvar_all
         call make_virtual_fine_dp(uold(1,ivar),ilevel)
-#ifdef SOLVERmhd
      end do
-#else
-     end do
-#endif
      if(momentum_feedback>0)call make_virtual_fine_dp(pstarold(1),ilevel)
      if(strict_equilibrium>0)call make_virtual_fine_dp(rho_eq(1),ilevel)
      if(strict_equilibrium>0)call make_virtual_fine_dp(p_eq(1),ilevel)

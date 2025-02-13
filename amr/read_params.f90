@@ -101,15 +101,15 @@ subroutine read_params
   ! Check nvar is not too small
 #ifdef SOLVERhydro
   write(*,'(" Using solver = hydro with nvar = ",I2)')nvar
-  if(nvar<ndim+2)then
+  if(nvar<nhydro)then
      write(*,*)'You should have: nvar>=ndim+2'
-     write(*,'(" Please recompile with -DNVAR=",I2)')ndim+2
+     write(*,'(" Please recompile with -DNVAR=",I2)')nhydro
      call clean_stop
   endif
 #endif
 #ifdef SOLVERmhd
   write(*,'(" Using solver = mhd with nvar = ",I2)')nvar
-  if(nvar<8)then
+  if(nvar<nhydro)then
      write(*,*)'You should have: nvar>=8'
      write(*,'(" Please recompile with -DNVAR=8")')
      call clean_stop
@@ -167,10 +167,10 @@ subroutine read_params
   !-------------------------------------------------
   ! Default passive scalar map
   !-------------------------------------------------
-#if NVAR>NDIM+2
-  allocate(remap_pscalar(1:nvar-(ndim+2)))
-  do i=1,nvar-(ndim+2)
-     remap_pscalar(i) = i+ndim+2
+#if NVAR>NHYDRO
+  allocate(remap_pscalar(1:nvar-nhydro))
+  do i=1,nvar-nhydro
+     remap_pscalar(i) = i+nhydro
   enddo
 #endif
 

@@ -29,7 +29,7 @@ A new output file `part_file_descriptor.txt` has been introduced. It contains in
 The `header_XXXXX.txt` has also been updated so that it counts the number of particles and output them. Please note that the fields provided in this file *should* be the same as the ones in `part_file_descriptor.txt`, but you should trust the `part_file_descriptor.txt` file for this.
 
 ## Note for developers ##
-In `pm_commons.f90`, there is now a group of functions designed to check the particle type, with names like `is_star` or `is_tracer`. This is the preferred method to check for particle type and should be used instead of matching the id, mass or formation time of the particles. 
+In `pm_commons.f90`, there is now a group of functions designed to check the particle type, with names like `is_star` or `is_tracer`. This is the preferred method to check for particle type and should be used instead of matching the id, mass or formation time of the particles.
 
 For implementing a new subtype of particle(e.g. popIII and popII stars), we recommend that users create a new tag `TAG_<tagname>` in pm_commons and a function that matches the tag (similarly to e.g. `is_star`).
 Here is an example:
@@ -51,7 +51,7 @@ contains
     logical pure function is_star_popII(typep)
         type(part_t), intent(in) :: typep
         is_star_popII = (typep%family == FAM_STAR) .and. (typep%family == TAG_POPII)
-    end function    
+    end function
 end module pm_commons
 ```
 

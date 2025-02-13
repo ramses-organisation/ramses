@@ -5,7 +5,6 @@
 subroutine gravana(x,f,dx,ncell)
   use amr_parameters
   use poisson_parameters
-  use poisson_commons, only: multipole
   use constants
 
   implicit none

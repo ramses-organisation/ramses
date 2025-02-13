@@ -1,4 +1,3 @@
-#if USE_TURB==1
 ! MPI_SHARE_TURB_FIELDS.F90
 ! A.McLeod - 24/11/2012
 ! Share turbulent acceleration fields to non-root tasks
@@ -39,5 +38,4 @@ subroutine mpi_share_turb_fields(include_last)
                   & MPI_COMM_WORLD, ierr)
 
 end subroutine mpi_share_turb_fields
-#endif
 #endif

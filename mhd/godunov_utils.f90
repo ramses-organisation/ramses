@@ -37,28 +37,28 @@ subroutine cmpdt(uu,gg,dx,dt,ncell)
   end do
   do idim = 1,3
      do k = 1, ncell
-        Bc = half*(uu(k,5+idim)+uu(k,nvar+idim))
+        Bc = half*(uu(k,neul+idim)+uu(k,nvar+idim))
         B2(k)=B2(k)+Bc**2
-        uu(k,5) = uu(k,5)-half*uu(k,1)*uu(k,idim+1)**2-half*Bc**2
+        uu(k,neul) = uu(k,neul)-half*uu(k,1)*uu(k,idim+1)**2-half*Bc**2
      end do
   end do
 #if NENER>0
   do irad = 1,nener
      do k = 1, ncell
-        uu(k,5) = uu(k,5)-uu(k,8+irad)
+        uu(k,neul) = uu(k,neul)-uu(k,nhydro+irad)
      end do
   end do
 #endif
 
   ! Compute thermal sound speed
   do k = 1, ncell
-     uu(k,5) = max((gamma-one)*uu(k,5),smallp)
-     a2(k)=gamma*uu(k,5)/uu(k,1)
+     uu(k,neul) = max((gamma-one)*uu(k,neul),smallp)
+     a2(k)=gamma*uu(k,neul)/uu(k,1)
   end do
 #if NENER>0
   do irad = 1,nener
      do k = 1, ncell
-        a2(k) = a2(k) + gamma_rad(irad)*(gamma_rad(irad)-1.0d0)*uu(k,8+irad)/uu(k,1)
+        a2(k) = a2(k) + gamma_rad(irad)*(gamma_rad(irad)-1)*uu(k,nhydro+irad)/uu(k,1)
      end do
   end do
 #endif
@@ -173,20 +173,20 @@ subroutine hydro_refine(ug,um,ud,ok,nn,ilevel)
 #if NENER>0
   do irad = 1,nener
      do k = 1, nn
-        eking(k) = eking(k) + ug(k,8+irad)
-        ekinm(k) = ekinm(k) + um(k,8+irad)
-        ekind(k) = ekind(k) + ud(k,8+irad)
+        eking(k) = eking(k) + ug(k,nhydro+irad)
+        ekinm(k) = ekinm(k) + um(k,nhydro+irad)
+        ekind(k) = ekind(k) + ud(k,nhydro+irad)
      end do
   end do
 #endif
   do k = 1,nn
-     ug(k,5) = (gamma-one)*(ug(k,5)-eking(k)-emagg(k))
-     um(k,5) = (gamma-one)*(um(k,5)-ekinm(k)-emagm(k))
-     ud(k,5) = (gamma-one)*(ud(k,5)-ekind(k)-emagd(k))
+     ug(k,neul) = (gamma-one)*(ug(k,neul)-eking(k)-emagg(k))
+     um(k,neul) = (gamma-one)*(um(k,neul)-ekinm(k)-emagm(k))
+     ud(k,neul) = (gamma-one)*(ud(k,neul)-ekind(k)-emagd(k))
   end do
   ! Passive scalars
-#if NVAR>8+NENER
-  do idim = 9+nener,nvar
+#if NVAR>NHYDRO+NENER
+  do idim = nhydro+1+nener,nvar
      do k = 1,nn
         ug(k,idim) = ug(k,idim)/ug(k,1)
         um(k,idim) = um(k,idim)/um(k,1)
@@ -204,13 +204,11 @@ subroutine hydro_refine(ug,um,ud,ok,nn,ilevel)
              & ABS((dm-dg)/(dm+dg+floor_d)) )
         ok(k) = ok(k) .or. error > err_grad_d
      end do
-     do k=1,nn
-     end do
   end if
 
   if(err_grad_p >= 0.)then
      do k=1,nn
-        pg=ug(k,5); pm=um(k,5); pd=ud(k,5)
+        pg=ug(k,neul); pm=um(k,neul); pd=ud(k,neul)
         error=2.0d0*MAX( &
              & ABS((pd-pm)/(pd+pm+floor_p)), &
              & ABS((pm-pg)/(pm+pg+floor_p)) )
@@ -231,9 +229,9 @@ subroutine hydro_refine(ug,um,ud,ok,nn,ilevel)
   if(err_grad_A >= 0.)then
      idim = 1
      do k=1,nn
-        vg=0.5*(ug(k,5+idim)+ug(k,nvar+idim))
-        vm=0.5*(um(k,5+idim)+um(k,nvar+idim))
-        vd=0.5*(ud(k,5+idim)+ud(k,nvar+idim))
+        vg=0.5*(ug(k,neul+idim)+ug(k,nvar+idim))
+        vm=0.5*(um(k,neul+idim)+um(k,nvar+idim))
+        vd=0.5*(ud(k,neul+idim)+ud(k,nvar+idim))
         cg=sqrt(emagg(k))
         cm=sqrt(emagm(k))
         cd=sqrt(emagd(k))
@@ -442,7 +440,7 @@ SUBROUTINE hlld(qleft,qright,fgdnv)
   REAL(dp)::ro,uo,vo,wo,bo,co,ptoto,etoto,vdotbo
   REAL(dp)::einto,eintl,eintr,eintstarr,eintstarl
 
-#if NVAR>8+NENER
+#if NVAR>NHYDRO+NENER
   INTEGER ::ivar
 #endif
 #if NENER>0
@@ -467,9 +465,9 @@ SUBROUTINE hlld(qleft,qright,fgdnv)
   vdotBl= ul*A+vl*Bl+wl*cl
 #if NENER>0
   do irad = 1,nener
-     eradl(irad) = qleft(8+irad)/(gamma_rad(irad)-1.0d0)
+     eradl(irad) = qleft(nhydro+irad)/(gamma_rad(irad)-1.0d0)
      etotl = etotl + eradl(irad)
-     Ptotl = Ptotl + qleft(8+irad)
+     Ptotl = Ptotl + qleft(nhydro+irad)
   end do
 #endif
   eintl=Pl*entho
@@ -484,9 +482,9 @@ SUBROUTINE hlld(qleft,qright,fgdnv)
   vdotBr= ur*A+vr*Br+wr*Cr
 #if NENER>0
   do irad = 1,nener
-     eradr(irad) = qright(8+irad)/(gamma_rad(irad)-1.0d0)
+     eradr(irad) = qright(nhydro+irad)/(gamma_rad(irad)-1.0d0)
      etotr = etotr + eradr(irad)
-     Ptotr = Ptotr + qright(8+irad)
+     Ptotr = Ptotr + qright(nhydro+irad)
   end do
 #endif
   eintr=Pr*entho
@@ -682,10 +680,10 @@ SUBROUTINE hlld(qleft,qright,fgdnv)
   fgdnv(8) = Co*uo-A*wo
 #if NENER>0
   do irad = 1,nener
-     fgdnv(8+irad) = uo*erado(irad)
+     fgdnv(nhydro+irad) = uo*erado(irad)
   end do
 #endif
-#if NVAR>8+NENER
+#if NVAR>NHYDRO+NENER
   do ivar = 9+nener,nvar
      if(fgdnv(1)>0)then
         fgdnv(ivar) = fgdnv(1)*qleft (ivar)
@@ -713,7 +711,7 @@ SUBROUTINE find_mhd_flux(qvar,cvar,ff)
 #if NENER>0
   INTEGER :: irad
 #endif
-#if NVAR>8+NENER
+#if NVAR>NHYDRO+NENER
   INTEGER :: ivar
 #endif
   REAL(dp),DIMENSION(1:nvar  ):: qvar
@@ -730,8 +728,8 @@ SUBROUTINE find_mhd_flux(qvar,cvar,ff)
   Ptot = P + emag
 #if NENER>0
   do irad = 1,nener
-     etot    = etot + qvar(8+irad)/(gamma_rad(irad)-one)
-     Ptot    = Ptot + qvar(8+irad)
+     etot    = etot + qvar(nhydro+irad)/(gamma_rad(irad)-one)
+     Ptot    = Ptot + qvar(nhydro+irad)
   end do
 #endif
 
@@ -746,10 +744,10 @@ SUBROUTINE find_mhd_flux(qvar,cvar,ff)
   cvar(8) = C
 #if NENER>0
   do irad = 1,nener
-     cvar(8+irad) = qvar(8+irad)/(gamma_rad(irad)-one)
+     cvar(nhydro+irad) = qvar(nhydro+irad)/(gamma_rad(irad)-one)
   end do
 #endif
-#if NVAR>8+NENER
+#if NVAR>NHYDRO+NENER
   do ivar = 9+nener,nvar
      cvar(ivar) = d*qvar(ivar)
   end do
@@ -768,10 +766,10 @@ SUBROUTINE find_mhd_flux(qvar,cvar,ff)
   ff(8) = C*u-A*w
 #if NENER>0
   do irad = 1,nener
-     ff(8+irad) = u*cvar(8+irad)
+     ff(nhydro+irad) = u*cvar(nhydro+irad)
   end do
 #endif
-#if NVAR>8+NENER
+#if NVAR>NHYDRO+NENER
   do ivar = 9+nener,nvar
      ff(ivar) = d*u*qvar(ivar)
   end do
@@ -807,7 +805,7 @@ SUBROUTINE find_speed_info(qvar,vel_info)
   c2 = gamma*P/d
 #if NENER>0
   do irad = 1,nener
-     c2 = c2 + gamma_rad(irad)*qvar(8+irad)/d
+     c2 = c2 + gamma_rad(irad)*qvar(nhydro+irad)/d
   end do
 #endif
 
@@ -842,7 +840,7 @@ SUBROUTINE find_speed_fast(qvar,vel_info)
   c2 = gamma*P/d
 #if NENER>0
   do irad = 1,nener
-     c2 = c2 + gamma_rad(irad)*qvar(8+irad)/d
+     c2 = c2 + gamma_rad(irad)*qvar(nhydro+irad)/d
   end do
 #endif
   d2 = half*(B2/d+c2)
@@ -1074,8 +1072,8 @@ SUBROUTINE athena_roe(qleft,qright,fmean,zero_flux)
   fmean(6) = half * fluxby
   fmean(7) = half * fluxmz
   fmean(8) = half * fluxbz
-#if NVAR>8
-  DO n=9,nvar
+#if NVAR>NHYDRO
+  DO n=nhydro+1,nvar
      if(fmean(1)>0)then
         fmean(n)=qleft (n)*fmean(1)
      else

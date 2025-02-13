@@ -89,13 +89,13 @@ subroutine init_hydro
      if(myid==1)then
         write(*,*)'Restart - Non-thermal pressure / Passive scalar mapping'
         write(*,'(A50)')"__________________________________________________"
-        do i=1,nvar2-(ndim+2)
+        do i=1,nvar2-nhydro
             if(remap_pscalar(i).gt.0) then
-               write(*,'(A,I3,A,I3)') ' Restart var',i+ndim+2,' loaded in var',remap_pscalar(i)
+               write(*,'(A,I3,A,I3)') ' Restart var',i+nhydro,' loaded in var',remap_pscalar(i)
             else if(remap_pscalar(i).gt.-1)then
-               write(*,'(A,I3,A)') ' Restart var',i+ndim+2,' read but not loaded'
+               write(*,'(A,I3,A)') ' Restart var',i+nhydro,' read but not loaded'
             else
-               write(*,'(A,I3,A)') ' Restart var',i+ndim+2,' not read'
+               write(*,'(A,I3,A)') ' Restart var',i+nhydro,' not read'
             endif
         enddo
         write(*,'(A50)')"__________________________________________________"
@@ -146,29 +146,30 @@ subroutine init_hydro
               do ind=1,twotondim
                  iskip=ncoarse+(ind-1)*ngridmax
 
+                 ! Loop over conservative variables
                  ! Read density and velocities --> density and momenta
-                 do ivar=1,ndim+1
+                 do ivar=1,neul-1
                     read(ilun)xx
-                    if(ivar==1)then
+                    if(ivar==1)then ! Read density
                        do i=1,ncache
                           uold(ind_grid(i)+iskip,1)=xx(i)
                        end do
-                    else if(ivar>=2.and.ivar<=ndim+1)then
+                    else  ! Read velocity field
                        do i=1,ncache
                           uold(ind_grid(i)+iskip,ivar)=xx(i)*max(uold(ind_grid(i)+iskip,1),smallr)
                        end do
-                    endif
+                    end if
                  end do
 
 #if NENER>0
                  ! Read non-thermal pressures --> non-thermal energies
-                 do ivar=ndim+3,ndim+2+nener
-                    if(remap_pscalar(ivar-ndim-2).gt.-1) read(ilun)xx
+                 do ivar=nhydro+1,nhydro+nener
+                    if(remap_pscalar(ivar-nhydro).gt.-1) read(ilun)xx
                     do i=1,ncache
-                       if(remap_pscalar(ivar-ndim-2).gt.0) then
-                          uold(ind_grid(i)+iskip,remap_pscalar(ivar-ndim-2))=xx(i)/(gamma_rad(ivar-ndim-2)-1d0)
-                       else if(remap_pscalar(ivar-ndim-2).lt.0) then
-                          uold(ind_grid(i)+iskip,abs(remap_pscalar(ivar-ndim-2)))=0d0
+                       if(remap_pscalar(ivar-nhydro).gt.0) then
+                          uold(ind_grid(i)+iskip,remap_pscalar(ivar-nhydro))=xx(i)/(gamma_rad(ivar-nhydro)-1d0)
+                       else if(remap_pscalar(ivar-nhydro).lt.0) then
+                          uold(ind_grid(i)+iskip,abs(remap_pscalar(ivar-nhydro)))=0d0
                        endif
                     end do
                  end do
@@ -187,26 +188,26 @@ subroutine init_hydro
 #endif
 #if NENER>0
                     do irad=1,nener
-                       xx(i)=xx(i)+uold(ind_grid(i)+iskip,ndim+2+irad)
+                       xx(i)=xx(i)+uold(ind_grid(i)+iskip,nhydro+irad)
                     end do
 #endif
                  else
                     xx(i)=0
                  end if
-                    uold(ind_grid(i)+iskip,ndim+2)=xx(i)
+                    uold(ind_grid(i)+iskip,neul)=xx(i)
                  end do
-#if NVAR>NDIM+2+NENER
+#if NVAR>NHYDRO+NENER
                  ! Read passive scalars
-                 do ivar=ndim+3+nener,max(nvar2,nvar)
-                    if(remap_pscalar(ivar-ndim-2).gt.-1) read(ilun)xx
+                 do ivar=nhydro+1+nener,max(nvar2,nvar)
+                    if(remap_pscalar(ivar-nhydro).gt.-1) read(ilun)xx
                     if(ivar.gt.nvar)then
                        continue
                     endif
                     do i=1,ncache
-                       if(remap_pscalar(ivar-ndim-2).gt.0)then
-                          uold(ind_grid(i)+iskip,remap_pscalar(ivar-ndim-2))=xx(i)*max(uold(ind_grid(i)+iskip,1),smallr)
-                       else if(remap_pscalar(ivar-ndim-2).lt.0) then
-                          uold(ind_grid(i)+iskip,abs(remap_pscalar(ivar-ndim-2)))=0d0
+                       if(remap_pscalar(ivar-nhydro).gt.0)then
+                          uold(ind_grid(i)+iskip,remap_pscalar(ivar-nhydro))=xx(i)*max(uold(ind_grid(i)+iskip,1),smallr)
+                       else if(remap_pscalar(ivar-nhydro).lt.0) then
+                          uold(ind_grid(i)+iskip,abs(remap_pscalar(ivar-nhydro)))=0d0
                        endif
                     end do
                  end do
@@ -240,8 +241,6 @@ subroutine init_hydro
         end if
      endif
 #endif
-
-
 
 #ifndef WITHOUTMPI
      if(debug)write(*,*)'hydro.tmp read for processor ',myid

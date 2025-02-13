@@ -1,7 +1,7 @@
 ! ------------------------------------------------------------------------
 ! Multigrid Poisson solver for refined AMR levels
 ! ------------------------------------------------------------------------
-! This file contains all MG-fine-level related routines
+! This file contains all MG-fine-level related routines (bottom-up)
 !
 ! Used variables:
 !                       finest(AMR)level     coarse(MG)levels
@@ -14,72 +14,6 @@
 !
 ! ------------------------------------------------------------------------
 
-
-! ------------------------------------------------------------------------
-! Mask restriction (top-down, OBSOLETE, UNUSED)
-! ------------------------------------------------------------------------
-
-subroutine restrict_mask_fine(ifinelevel,allmasked)
-   use amr_commons
-   use poisson_commons
-   implicit none
-   integer, intent(in)  :: ifinelevel
-   logical, intent(out) :: allmasked
-
-   integer :: ind_c_cell,ind_f_cell
-
-   integer :: iskip_f_amr, iskip_c_amr, iskip_c_mg
-   integer :: igrid_f_amr, igrid_c_amr, igrid_c_mg
-   integer :: icell_f_amr, icell_c_amr, icell_c_mg
-
-   real(dp) :: ngpmask
-   real(dp) :: dtwotondim = (twotondim)
-
-   integer :: icoarselevel
-   icoarselevel=ifinelevel-1
-   allmasked=.true.
-
-   if(ifinelevel==1) return
-
-   ! Loop over coarse cells of the coarse active comm for myid
-   do ind_c_cell=1,twotondim
-      iskip_c_amr=ncoarse+(ind_c_cell-1)*ngridmax
-      iskip_c_mg =(ind_c_cell-1)*active_mg(myid,icoarselevel)%ngrid
-
-      ! Loop over coarse grids
-      do igrid_c_mg=1,active_mg(myid,icoarselevel)%ngrid
-#ifdef LIGHT_MPI_COMM
-         igrid_c_amr=active_mg(myid,icoarselevel)%pcomm%igrid(igrid_c_mg)
-#else
-         igrid_c_amr=active_mg(myid,icoarselevel)%igrid(igrid_c_mg)
-#endif
-         icell_c_amr=iskip_c_amr+igrid_c_amr
-         icell_c_mg =iskip_c_mg +igrid_c_mg
-
-         if(son(icell_c_amr)==0) then
-            ! Cell is not refined
-            ngpmask      = -1.0d0
-         else
-            igrid_f_amr=son(icell_c_amr)
-            ngpmask = 0.0d0
-            do ind_f_cell=1,twotondim
-               iskip_f_amr=ncoarse+(ind_f_cell-1)*ngridmax
-               icell_f_amr=iskip_f_amr+igrid_f_amr
-               ngpmask=ngpmask+f(icell_f_amr,3)
-            end do
-            ngpmask=ngpmask/dtwotondim
-         end if
-         ! Store cell mask
-#ifdef LIGHT_MPI_COMM
-         active_mg(myid,icoarselevel)%pcomm%u(icell_c_mg,4)=ngpmask
-#else
-         active_mg(myid,icoarselevel)%u(icell_c_mg,4)=ngpmask
-#endif
-         allmasked=allmasked .and. (ngpmask<=0.0)
-      end do
-   end do
-
-end subroutine restrict_mask_fine
 
 ! ------------------------------------------------------------------------
 ! Mask restriction (bottom-up)
@@ -286,45 +220,6 @@ subroutine cmp_residual_norm2_fine(ilevel, norm2)
 
 end subroutine cmp_residual_norm2_fine
 
-subroutine cmp_ivar_norm2_fine(ilevel, ivar, norm2)
-   use amr_commons
-   use poisson_commons
-   implicit none
-
-   integer,  intent(in)  :: ilevel, ivar
-   real(kind=8), intent(out) :: norm2
-
-   real(kind=8) :: dx2
-   integer  :: ngrid
-   integer  :: ind, igrid_mg
-   integer  :: igrid_amr, icell_amr, iskip_amr
-
-   ! Set constants
-   dx2  = (0.5d0**ilevel)**ndim
-   ngrid=active(ilevel)%ngrid
-
-   norm2 = 0.0d0
-   ! Loop over cells
-   do ind=1,twotondim
-      iskip_amr = ncoarse+(ind-1)*ngridmax
-      ! Loop over active grids
-      do igrid_mg=1,ngrid
-         igrid_amr = active(ilevel)%igrid(igrid_mg)
-         icell_amr = iskip_amr + igrid_amr
-         if(f(icell_amr,3)<=0.0) then      ! Do not count masked cells
-            cycle
-         end if
-         if(ivar>0)then
-            norm2 = norm2 + f(icell_amr,ivar)**2
-         else
-            norm2 = norm2 + phi(icell_amr)**2
-         endif
-      end do
-   end do
-   norm2 = dx2*norm2
-
-end subroutine cmp_ivar_norm2_fine
-
 ! ------------------------------------------------------------------------
 ! Gauss-Seidel smoothing
 ! ------------------------------------------------------------------------
@@ -449,76 +344,6 @@ subroutine gauss_seidel_mg_fine(ilevel,redstep)
       end do
    end do
 end subroutine gauss_seidel_mg_fine
-
-! ------------------------------------------------------------------------
-! Residual restriction (top-down, OBSOLETE, UNUSED)
-! ------------------------------------------------------------------------
-
-subroutine restrict_residual_fine(ifinelevel)
-   ! Restrict fine (AMR) residual at level ifinelevel using injection
-   ! into coarser residual at level ifinelevel-1
-   ! Restricted residual is stored into the RHS at the coarser level
-   use amr_commons
-   use pm_commons
-   use poisson_commons
-   implicit none
-   integer, intent(in) :: ifinelevel
-
-   real(dp) :: val
-   real(dp) :: dtwotondim = (twotondim)
-
-   integer  :: icoarselevel
-   integer  :: ngrid_c, ind_c, iskip_c_amr, iskip_c_mg
-   integer  :: igrid_c_amr, icell_c_amr, icell_c_mg, igrid_c_mg
-   integer  :: ind_f, igrid_f_amr, iskip_f_amr, icell_f_amr
-
-   icoarselevel=ifinelevel-1
-
-   ! Loop over coarse MG cells
-   ngrid_c=active_mg(myid,icoarselevel)%ngrid
-   do ind_c=1,twotondim
-      iskip_c_amr = ncoarse + (ind_c-1)*ngridmax
-      iskip_c_mg  = (ind_c-1)*ngrid_c
-
-      do igrid_c_mg=1,ngrid_c
-#ifdef LIGHT_MPI_COMM
-         igrid_c_amr = active_mg(myid,icoarselevel)%pcomm%igrid(igrid_c_mg)
-#else
-         igrid_c_amr = active_mg(myid,icoarselevel)%igrid(igrid_c_mg)
-#endif
-         icell_c_amr = igrid_c_amr + iskip_c_amr
-         icell_c_mg  = igrid_c_mg  + iskip_c_mg
-
-         ! Get AMR child grid
-         igrid_f_amr = son(icell_c_amr)
-         if(igrid_f_amr==0) then
-            ! Nullify residual (coarser RHS)
-#ifdef LIGHT_MPI_COMM
-            active_mg(myid,icoarselevel)%pcomm%u(icell_c_mg,2) = 0.0d0
-#else
-            active_mg(myid,icoarselevel)%u(icell_c_mg,2) = 0.0d0
-#endif
-            cycle
-         end if
-
-         val = 0.0d0
-         ! Loop over child (fine MG) cells
-         do ind_f=1,twotondim
-            iskip_f_amr = ncoarse + (ind_f-1)*ngridmax
-            icell_f_amr = igrid_f_amr + iskip_f_amr
-
-            if (f(icell_f_amr,3)<=0.0) cycle
-            val = val + f(icell_f_amr,1)
-         end do
-         ! Store restricted residual into RHS of coarse level
-#ifdef LIGHT_MPI_COMM
-         active_mg(myid,icoarselevel)%pcomm%u(icell_c_mg,2) = val/dtwotondim
-#else
-         active_mg(myid,icoarselevel)%u(icell_c_mg,2) = val/dtwotondim
-#endif
-      end do
-   end do
-end subroutine restrict_residual_fine
 
 
 ! ------------------------------------------------------------------------

@@ -91,17 +91,9 @@ subroutine init_refine_2
            if(pic)call merge_tree_fine(ilevel)
            if(hydro)then
               call upload_fine(ilevel)
-#ifdef SOLVERmhd
-              do ivar=1,nvar+3
-#else
-                 do ivar=1,nvar
-#endif
-                    call make_virtual_fine_dp(uold(1,ivar),ilevel)
-#ifdef SOLVERmhd
-                 end do
-#else
+              do ivar=1,nvar_all
+                 call make_virtual_fine_dp(uold(1,ivar),ilevel)
               end do
-#endif
               if(simple_boundary)call make_boundary_hydro(ilevel)
            endif
 #ifdef RT
@@ -131,17 +123,9 @@ subroutine init_refine_2
      do ilevel=nlevelmax,1,-1
         call rt_init_xion(ilevel)
         call upload_fine(ilevel)
-#ifdef SOLVERmhd
-        do ivar=1,nvar+3
-#else
-        do ivar=1,nvar
-#endif
+        do ivar=1,nvar_all
            call make_virtual_fine_dp(uold(1,ivar),ilevel)
-#ifdef SOLVERmhd
         end do
-#else
-        end do
-#endif
         if(simple_boundary)call make_boundary_hydro(ilevel)
      end do
   endif

@@ -53,6 +53,7 @@ module hydro_parameters
   real(dp)::floor_u=1d-10     ! Velocity floor
   real(dp)::floor_p=1d-10     ! Pressure floor
   real(dp)::mass_sph=0.0d0     ! mass_sph
+  real(dp),dimension(1:MAXLEVEL)::jeans_refine=-1
 
   ! Initial conditions hydro variables
   real(dp),dimension(1:MAXREGION)::d1_region=0,d2_region=0,d3_region=0,d4_region=0
