@@ -875,7 +875,7 @@ subroutine make_grid_fine(ind_grid,ind_cell,ind,ilevel,nn,ibound,boundary_region
                  rtuold(iskip+ind_grid_son(i),ivar)=urt2(i,j,ivar)
                  ! Rescale according to different speeds of light
                  if(rt_nsubcycle.eq.1) then
-                    ! Without RT subcycling, we conserver the number of photons
+                    ! Without RT subcycling, we conserve the number of photons
                     if (ivar.le. nrtvar .and. mod(ivar,ndim+1).ne.1) &
                         rtuold(iskip+ind_grid_son(i),ivar) = &
                           rtuold(iskip+ind_grid_son(i),ivar) * rt_c(ilevel)/rt_c(ilevel-1)
