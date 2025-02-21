@@ -762,7 +762,6 @@ subroutine godfine1(ind_grid,ncache,ilevel)
 
   integer,dimension(1:nvector),save::igrid_nbor,ind_cell,ind_buffer,ind_exist,ind_nexist
 
-  integer::neul=5
   integer::ind_buffer1,ind_buffer2,ind_buffer3
   integer::ind_father1,ind_father2,ind_father3
   integer::i,j,ivar,idim,ind_son,ind_father,iskip,nbuffer
