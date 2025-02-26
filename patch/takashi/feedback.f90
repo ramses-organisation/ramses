@@ -510,7 +510,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      !unew(indp(j),5)=unew(indp(j),5)+mloss(j)*ekinetic(j)+ &
          ! & ethermal(j)*(1d0+RAD_BOOST)
      unew(indp(j),5)=unew(indp(j),5)+mloss(j)*ekinetic(j)+ethermal(j)
-     if(ethermal(j) .gt. 0.99*(f_esn*ESN/vol_loc(j))) then
+     if((ethermal(j) .gt. 0.99*(f_esn*ESN/vol_loc(j))).and.f_esn .gt. 0) then
          e = 0.d0
          do idim=1,ndim
              e=e+0.5d0*unew(indp(j),idim+1)**2/max(unew(indp(j),1),smallr)

@@ -826,7 +826,7 @@ subroutine star_formation(ilevel)
            else
               call ranf(localseed, RandNum)
               if (RandNum < mp(ind_part(i))*scale_Msol*1d-2) then
-                  msp0(ind_part(i)) = 1d2/scal_Msol ! 100 Msun
+                  msp0(ind_part(i)) = 1d2/scale_Msol ! 100 Msun
               else
                   msp0(ind_part(i)) = 0 ! no energetic feedback from this particle
               endif

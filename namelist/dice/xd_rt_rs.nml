@@ -1,0 +1,210 @@
+&RUN_PARAMS
+pic=.true.
+poisson=.true.
+hydro=.true.
+rt=.true.
+nrestart=-1
+nremap=4
+nsubcycle=1,2,2,2,2,2,2,2,2,2
+ncontrol=1
+verbose=.false.
+sink=.false.
+use_proper_time=.true.
+!verbose=.true.
+/
+
+&POISSON_PARAMS
+gravity_type=0
+cic_levelmax=100
+/
+
+&INIT_PARAMS
+filetype='dice'
+initfile(1)='/work/okamtotk/dwarf/dice/run'
+omega_b=0.048794
+/
+
+&OUTPUT_PARAMS
+delta_tout=0.6708241192497575 ! 10 Myr
+tend=67.08241192497575 ! 1 Gyr
+walltime_hrs=24
+minutes_dump=10
+restart_hrs=3
+/
+
+&AMR_PARAMS
+levelmin=6
+levelmax=15
+!levelmax=9
+!nexpand=3,3,3,3,3,3,3,3,3,3
+nexpand=1,1,1,1,1,1,1,1,1,1
+ngridtot=50000000
+!nparttot=30000000
+npartmax=1000000
+boxlen=100.
+/
+
+&REFINE_PARAMS
+mass_sph=1.d-7
+m_refine=20*8.,
+jeans_refine=0,4,4,4,4,4,4,4,4,4
+interpol_var=1
+interpol_type=0
+/
+
+&HYDRO_PARAMS
+gamma=1.666667         ! gamma for the equation of state
+courant_factor=0.8     ! courant factor
+slope_type=1           ! recommended by Romain for cosmological simulations
+scheme='muscl'         ! don't change
+riemann='hllc'         ! reimann solver
+pressure_fix=.true.    ! recommended by Romain for cosmological simulations
+beta_fix=0.5           ! recommended by Romain for cosmological simulations
+modify_pressure_fix_cond=.true.
+pressure_fix_maxMach=10.0
+/
+
+&COOLING_PARAMS
+cooling = .true.
+metal = .true.
+haardt_madau =.true.
+z_reion=8.5
+self_shielding =.true.
+neq_chem = .true.
+Zsolar_Asplund = .true.
+/
+
+&SF_PARAMS
+m_star = 0.15
+n_star = 0.1
+eps_star = 1.0
+sf_virial=.false.
+sf_model = 6
+sf_trelax=300.0
+sf_tdiss = 0
+sf_compressive = .flase.
+sf_log_properties = .true.
+/
+
+&FEEDBACK_PARAMS
+f_esn = 1.0
+eta_sn = 0.1                    ! dummy
+t_sne  = 10.0                   ! dummy
+yield  = 0.1                    ! dummy
+/
+
+&RT_PARAMS
+isHe=.true.                     ! is there helium
+isH2=.true.                     ! is there molecular hydrogen
+X=7.6d-1                        ! mass fraction of hydrogen
+Y=2.4d-1                        ! mass fraction of helium
+rt_output_coolstats=.true.      ! for additional cooling information
+rt_flux_scheme='glf'            ! always use glf solver
+rt_smooth=.true.                ! use this parameter, see rosdahl paper
+rt_courant_factor=0.8           ! courant number for RT timesteps
+rt_c_fraction=0.01              ! fraction of actual lightspeed set to RT lightspeed.
+rt_otsa=.true.                  ! OTSA
+rt_nsubcycle=2                 !If you want to use subcycles with VSLA, you need to compile with rt_step.f90
+uv_file='/work/okamtotk/dwarf/ramses_tables/hm12/hm12_ramses.dat'
+cloudy_metal_cooling=.true.
+cloudy_metal_file='/work/okamtotk/dwarf/ramses_tables/cloudy_cooling/cloudy_excess_metal_cooling.bin'
+iPEH_group=3
+!rt_isIR=.true.	                ! logical	Assume first photon group represents IR photons, in local thermal equilibrium (LTE) with dust
+rt_isIR=.false.	                ! logical	Assume first photon group represents IR photons, in local thermal equilibrium (LTE) with dust
+rt_isIR_alt=.true.              ! logical	Assume first photon group represents IR photons
+rt_isIRtrap=.false.	            ! logical	Apply trapping of IR photons in optically thick gas, in effect correctly modelling the IR propagation
+is_kIR_T=.ture.
+rt_star=.true.                 ! do we want star particles to emit radiation?
+rt_esc_frac=1.0d0                ! escape fraction of radiation from those star particles
+sed_dir='/work/okamtotk/dwarf/ramses_tables/SED/bc03_Chabrier'             ! directory which contains SED files
+sedprops_update=1              ! how often to up mean energies and cross sections
+attn_after_chem=.true.         ! absorption will be estimated after chemistry
+rt_skip_convergence=.true.
+/
+
+&RT_GROUPS
+group_egy     = 0.55, 3.3, 8.4,  12.44, 18.85,  35.079, 65.666
+groupL0       = 0.1,  1.0, 5.6,  11.20, 13.60,  24.590,  54.42
+groupL1       = 1.0,  5.6, 11.20, 13.60, 24.590, 54.42,  0.0
+spec2group    = 4,5,6,7             ! H2, HI, HeI, HeII -> pck
+group_on      = 1, 1, 1, 1, 1, 1, 1
+group_csn(1,:) = 0.0, 0.0, 0.0, 0.0
+group_csn(2,:) = 0.0, 0.0, 0.0, 0.0
+group_csn(3,:) = 0.0, 0.0, 0.0, 0.0
+group_csn(4,:) = 2.1d-19, 0.0, 0.0, 0.0
+group_csn(5,:) = 5.0d-18, 3.007d-18, 0.0, 0.0
+group_csn(6,:) = 2.9d-18, 5.687d-19, 4.478d-18, 0.0
+group_csn(7,:) = 4.1d-19, 7.889d-20, 1.197d-18, 1.055d-18
+group_cse(1,:) = 0.0, 0.0, 0.0, 0.0
+group_cse(2,:) = 0.0, 0.0, 0.0, 0.0
+group_cse(3,:) = 0.0, 0.0, 0.0, 0.0
+group_cse(4,:) = 2.1d-19, 0.0, 0.0, 0.0
+group_cse(5,:) = 5.3d-18, 2.781d-18, 0.0, 0.0
+group_cse(6,:) = 2.8d-18, 5.042d-19, 4.130d-18, 0.0
+group_cse(7,:) = 4.1d-19, 7.456d-20, 1.142d-18, 1.001d-18
+
+kappaAbs= 10.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0, 1000.0
+kappaSc = 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
+/
+
+&BOUNDARY_PARAMS
+nboundary=6
+bound_type= 2, 2,  2,  2,  2,  2
+ibound_min=-1, 1, -1, -1, -1, -1
+ibound_max=-1, 1,  1,  1,  1,  1
+jbound_min= 0, 0, -1,  1, -1, -1
+jbound_max= 0, 0, -1,  1,  1,  1
+kbound_min= 0, 0,  0,  0, -1,  1
+kbound_max= 0, 0,  0,  0, -1,  1
+no_inflow=.true.
+/
+
+&UNITS_PARAMS
+units_density = 0.677025430198932E-22 ! 1e9 Msol/kpc^3
+units_time    = 0.470430312423675E+15 ! G=1
+units_length  = 0.308567758128200E+22 ! kpc
+/
+
+&DICE_PARAMS
+!ic_file='dice_dw1.g2'         ! Name of the initial conditions file
+ic_file='dice_hu.g2'         ! Name of the initial conditions file
+ic_nfile=1                    ! If greater than one, look for files with name matching ic_file//'.n'
+ic_ifout=1                    ! Change ramses output index for restarts
+ic_format='Gadget2'           ! Format of the initial conditions. 'Gadget1' or 'Gadget2'
+ic_center=0.0,0.0,0.0         ! Shift center parameter. ICs are automatically shifted with boxlen/2
+ic_scale_pos=1.0              ! Scaling factor for the position vector
+ic_scale_vel=1.0              ! Scaling factor for the velocity vector
+ic_scale_mass=1.0             ! Scaling factor for the mass
+ic_scale_u=1.0                ! Scaling factor for the internal energy
+ic_scale_age=1.0              ! Scaling factor for the particles age
+ic_scale_metal=0.0142         ! Scaling factor for the metallicity
+ic_head_name='HEAD'           ! Name of the Header datablock (Gadget2 format only)
+ic_pos_name='POS '            ! Name of the position vector datablock (Gadget2 format only)
+ic_vel_name='VEL '            ! Name of the velocity vector datablock (Gadget2 format only)
+ic_mass_name='MASS'           ! Name of the mass datablock (Gadget2 format only)
+ic_id_name='ID  '             ! Name of the particle identifier datablock (Gadget2 format only)
+ic_u_name='U   '              ! Name of the internal energy datablock (Gadget2 format only)
+ic_metal_name='Z   '          ! Name of the metallicity datablock (Gadget2 format only)
+ic_age_name='AGE '            ! Name of the particle age datablock (Gadget2 format only)
+IG_rho=1.0D-6                 ! Intergalactic gas density
+IG_T2=1.0D6                   ! Intergalactic gas temperature
+IG_metal=1.0D-4               ! Intergalactic gas metallicity
+amr_struct=.false.            ! Reproduce the AMR structure of the Gadget2 file resulting from a ramses to gadget conversion
+gadget_scale_l=3.085677581282D21 ! Gadget file length unit
+gadget_scale_v=1.0D5             ! Gadget file velocity unit
+gadget_scale_m=1.9891D43         ! Gadget file mass unit
+gadget_scale_t=3.15360e+13       ! Gadget file time unit
+ic_skip_type        = -1      ! Skip specific particle type
+cosmo_add_gas_index = -1      ! Gas particle type index for cosmo runs
+ic_mag_const=0.0,0.0,0.0      ! Background magnetic field value for x,y,z component
+ic_mag_center_x=0.0           ! x-coordinate of the magnetic field symmetry center
+ic_mag_center_y=0.0           ! y-coordinate of the magnetic field symmetry center
+ic_mag_center_z=0.0           ! z-coordinate of the magnetic field symmetry center
+ic_mag_axis_x=0.0             ! Magnetic field normal vector x-component
+ic_mag_axis_y=0.0             ! Magnetic field normal vector y-component
+ic_mag_axis_z=1.0             ! Magnetic field normal vector z-component
+ic_mag_scale_R=1.0            ! Toroidal magnetic field scalelength
+ic_mag_scale_H=1.0            ! Toroidal magnetic field scaleheight
+ic_mag_scale_B=0.0            ! Foreground toroidal magnetic field value
+star_as_nbody=.true.          ! Make star particles in DICE IC into non-star particles 
+/

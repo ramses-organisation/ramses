@@ -5,12 +5,11 @@
 #rm -rf ~/work/GIZMO_Tables
 #cp -r ~/GIZMO_Tables ~/work/
 
-module swich PrgEnv-cray PrgEnv-intel
 #module add gsl/2.4_intel-18.0
 #module add fftw3
 #module add fftw/2.1.5.9
 #module add gsl/115
-#module add cray-hdf5/1.8.16
+#module add cray-hdf5/1.8.16 
 
 #module swich PrgEnv-cray PrgEnv-gnu
 #module add gsl/2.4_gnu-7.3
@@ -20,4 +19,4 @@ module swich PrgEnv-cray PrgEnv-intel
 
 module list > m.log 2>& 1
 
-make -f Makefile.xd_intel >> m.log 2>& 1
+make -f Makefile.xd_dice_intel >> m.log 2>& 1

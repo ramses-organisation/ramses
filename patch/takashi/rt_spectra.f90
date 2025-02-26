@@ -1509,6 +1509,7 @@ SUBROUTINE inp_UV_rates_table(z, ret, z_damp)
   logical, optional, intent (in) :: z_damp
 !-------------------------------------------------------------------------
   ret=0. ; if(z .gt. UV_maxz) RETURN
+  if (z .gt. z_reion) RETURN
   call inp_1d(UV_zeds, UV_nz, z, iz0, iz1, dz0, dz1)
   ret = dz0*UV_rates_table(iz1, :, :) + dz1*UV_rates_table(iz0, :, :)
   ret = max(0d0,ret)                         ! Only positive rates allowed
@@ -1585,7 +1586,8 @@ SUBROUTINE update_UVsrc
 
   if(redshift .gt. UV_maxz) return ! UV background not turned on yet
 
-  call inp_UV_groups_table(redshift, UVprops, .true.)
+  !call inp_UV_groups_table(redshift, UVprops, .true.)
+  call inp_UV_groups_table(redshift, UVprops, .false.)
   UV_fluxes_cgs(:)      = UVprops(:,1)
   UV_Nphot_cgs          = UV_fluxes_cgs/rt_c_cgs
   group_egy(iUVgroups)  = UVprops(:,2)

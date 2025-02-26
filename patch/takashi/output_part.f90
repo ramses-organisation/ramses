@@ -182,14 +182,25 @@ subroutine backup_part(filename, filename_desc)
      end if
 #ifdef INIT_STELLAR_MASS
      ! Write initial mass
-      ipart = 0
-      do i = 1, npartmax
-         if (levelp(i) > 0) then
-             ipart = ipart+1
-             xdp(ipart) = mp0(i)
-         end if
-       end do
-       call generic_dump("initial_stellar_mass", ivar, xdp, unit_out, dump_info, unit_info)
+     ipart = 0
+     do i = 1, npartmax
+        if (levelp(i) > 0) then
+            ipart = ipart+1
+            xdp(ipart) = mp0(i)
+        end if
+     end do
+     call generic_dump("initial_stellar_mass", ivar, xdp, unit_out, dump_info, unit_info)
+#endif
+#ifdef STELLAR_POPULATION_MASS
+     ! Write initial stellar population mass
+     ipart = 0
+     do i = 1, npartmax
+        if (levelp(i) > 0) then
+            ipart = ipart+1
+            xdp(ipart) = msp0(i)
+        end if
+     end do
+     call generic_dump("initial_stellar_mass", ivar, xdp, unit_out, dump_info, unit_info)
 #endif
      deallocate(xdp)
   end if
