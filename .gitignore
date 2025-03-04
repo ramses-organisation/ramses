@@ -1,3 +1,4 @@
+# build objects
 *.o
 *.i
 *.mod
@@ -22,6 +23,14 @@ part2cylprof
 Makefile.*
 doc/*_build
 __pycache__
+# gprof
 *.gcda
 *.gcno
 *.gcov
+# test byproducts
+*output_0*
+*.tex
+*.pdf
+*.log
+# IDEs files
+.vscode
