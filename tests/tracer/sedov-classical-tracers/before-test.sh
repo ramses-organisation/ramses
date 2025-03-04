@@ -1,2 +1,2 @@
 pip install osyris
-python generate_tracers_file.py
+python generate-tracer-file.py
