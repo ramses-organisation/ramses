@@ -280,7 +280,7 @@ subroutine init_part
      end select
 
      ! Initialize tracer particles
-     if(MC_tracer) call init_tracer
+     if(tracer) call init_tracer
 
   end if
 
