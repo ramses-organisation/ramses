@@ -873,6 +873,18 @@ subroutine make_grid_fine(ind_grid,ind_cell,ind,ilevel,nn,ibound,boundary_region
            do ivar=1,nrtvar
               do i=1,nn
                  rtuold(iskip+ind_grid_son(i),ivar)=urt2(i,j,ivar)
+                 ! Rescale according to different speeds of light
+                 if(rt_nsubcycle.eq.1) then
+                    ! Without RT subcycling, we conserve the number of photons
+                    if (ivar.le. nrtvar .and. mod(ivar,ndim+1).ne.1) &
+                        rtuold(iskip+ind_grid_son(i),ivar) = &
+                          rtuold(iskip+ind_grid_son(i),ivar) * rt_c(ilevel)/rt_c(ilevel-1)
+                 else
+                    ! RT subcycling: photons not convserved -> prevent level boundary problems
+                    if (ivar.le. nrtvar .and. mod(ivar,ndim+1).eq.1) &
+                        rtuold(iskip+ind_grid_son(i),ivar) = &
+                          rtuold(iskip+ind_grid_son(i),ivar) * rt_c(ilevel-1)/rt_c(ilevel)
+                 endif
               end do
            end do
         enddo
@@ -959,12 +971,25 @@ subroutine kill_grid(ind_cell,ilevel,nn,ibound,boundary_region)
   if(upload_equilibrium_x) then
      ! Enforce equilibrium on ionization states when merging, to
      ! prevent unnatural values (e.g when merging hot and cold cells).
+     call updateRTGroups_CoolConstants(ilevel)
      do i=1,nn
         call calc_equilibrium_xion(uold(ind_cell(i),:) &
              , rtuold(ind_cell(i),1:nrtvar), xion)
         uold(ind_cell(i),iIons:iIons+nIons-1)=xion*uold(ind_cell(i),1)
      enddo
   endif
+  do ivar=1,nrtvar
+     do i=1,nn
+        ! Rescale according to speed of light difference
+        if(rt_nsubcycle.eq.1) then
+           if (ivar.le. nrtvar .and. mod(ivar,ndim+1).ne.1) &
+             rtuold(ind_cell(i),ivar) = rtuold(ind_cell(i),ivar) * rt_c(ilevel-1)/rt_c(ilevel)
+        else
+           if (ivar.le. nrtvar .and. mod(ivar,ndim+1).eq.1) &
+             rtuold(ind_cell(i),ivar) = rtuold(ind_cell(i),ivar) * rt_c(ilevel)/rt_c(ilevel-1)
+        endif
+     end do
+  end do
 #endif
 
   ! Gather son grids

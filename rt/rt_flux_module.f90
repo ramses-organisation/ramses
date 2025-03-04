@@ -79,7 +79,7 @@ SUBROUTINE read_hll_eigenvalues()
 END SUBROUTINE read_hll_eigenvalues
 
 !************************************************************************
-SUBROUTINE cmp_eigenvals(uin, iP0, ngrid, lmin, lmax)
+SUBROUTINE cmp_eigenvals(uin, iP0, ngrid, lmin, lmax, ilevel)
 
 !  Compute Jacobian eigenvalues for given vector of sub-grids.
 !
@@ -94,13 +94,13 @@ SUBROUTINE cmp_eigenvals(uin, iP0, ngrid, lmin, lmax)
 !  ju1,ju2     |cell centered,
 !  ku1,ku2     |including buffer cells.
 !------------------------------------------------------------------------
-  real(dp), dimension(nvector, iu1:iu2, ju1:ju2, ku1:ku2, nrtvar),  &
+  real(dp), dimension(nvector, iu1:iu2, ju1:ju2, ku1:ku2, nrtvar),      &
                                                           intent(in)::uin
   real(dp),dimension(nvector,iu1:iu2,ju1:ju2,ku1:ku2,ndim)::  lmin, lmax
   integer,intent(in)::iP0, ngrid!----------------------------------------
   real(dp), dimension(ndim)::f, costheta
   real(dp)::ff, np
-  integer::i, j, k, n, id, nedge
+  integer::i, j, k, n, id, nedge, ilevel
 !------------------------------------------------------------------------
   do k=kfrt1,kf2                                !
   do j=jfrt1,jf2                                !  Loop each cell in grid
@@ -124,7 +124,7 @@ SUBROUTINE cmp_eigenvals(uin, iP0, ngrid, lmin, lmax)
         costheta=0d0
      endif
      if(np>0d0)then
-        ff=ff/rt_c/np
+        ff=ff/rt_c(ilevel)/np
      else
         ff=0.0d0
      endif
@@ -186,7 +186,7 @@ SUBROUTINE inp_eigenvals(ff, omega, lmin, lmax)
 END SUBROUTINE inp_eigenvals
 
 !************************************************************************
-subroutine cmp_flux_tensors(uin, iP0, nGrid, F)
+subroutine cmp_flux_tensors(uin, iP0, nGrid, F, ilevel)
 
 ! Compute central fluxes for a photon group, for each cell in a vector
 ! of grids.
@@ -201,12 +201,12 @@ subroutine cmp_flux_tensors(uin, iP0, nGrid, F)
 ! ngrid     => Number of 'valid' grids in uin.
 ! F        <=  Group flux tensors for all the cells.
 !------------------------------------------------------------------------
-  real(dp),dimension(1:nvector, iu1:iu2, ju1:ju2, ku1:ku2, 1:nrtvar)::    uin
-  real(dp),dimension(1:nvector, iu1:iu2, ju1:ju2, ku1:ku2, 1:nDim+1, 1:ndim)::F
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nrtvar)::uin
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nDim+1,1:ndim)::F
   integer::iP0, nGrid!---------------------------------------------------
   real(dp),dimension(1:ndim)::pflux, u
   real(dp)::Np, Np_c_sq, pflux_sq, chi, iterm, oterm
-  integer::i, j, k, p, q, n, nedge
+  integer::i, j, k, p, q, n, nedge, ilevel
 !------------------------------------------------------------------------
   ! Loop 4X4X4 cells in grid. All go from 0 to 3, out of 6X6X6 cells.
   ! We only need to calculate tensors for those cells which have faces to
@@ -234,18 +234,18 @@ subroutine cmp_flux_tensors(uin, iP0, nGrid, F)
         F(n,i,j,k,1,1:nDim)= pflux            !   First col is photon flux
         ! Rest is Eddington tensor...initalize it to zero
         F(n,i,j,k,2:ndim+1,1:nDim) = 0d0
-        Np_c_sq = Np*rt_c2*Np
-        if(Np_c_sq .eq. 0d0) cycle           !Zero density => no pressure
+        Np_c_sq = Np * rt_c2(ilevel) * Np
+        if(Np_c_sq .eq. 0d0) cycle            !Zero density => no pressure
 
         pflux_sq = sum(pflux**2)              !  Sq. photon flux magnitude
-        u(:) = 0d0                           !           Flux unit vector
+        u(:) = 0d0                            !           Flux unit vector
         if(pflux_sq .gt. 0d0) u(:) = pflux/sqrt(pflux_sq)
         pflux_sq = pflux_sq/Np_c_sq           !      Reduced flux, squared
-        chi = max(4d0-3d0*pflux_sq, 0d0)   !           Eddington factor
+        chi = max(4d0-3d0*pflux_sq, 0d0)      !           Eddington factor
         chi = (3d0+ 4d0*pflux_sq)/(5d0 + 2d0*sqrt(chi))
 
-        iterm = (1d0-chi)/2d0               !    Identity term in tensor
-        oterm = (3d0*chi-1d0)/2d0          !         Outer product term
+        iterm = (1d0-chi)/2d0                 !    Identity term in tensor
+        oterm = (3d0*chi-1d0)/2d0             !         Outer product term
         do p = 1, ndim
            do q = 1, ndim
               F(n,i,j,k,p+1,q) = oterm * u(p) * u(q)
@@ -253,7 +253,7 @@ subroutine cmp_flux_tensors(uin, iP0, nGrid, F)
            F(n,i,j,k,p+1,p) = F(n,i,j,k,p+1,p) + iterm
         enddo
         F(n, i, j, k, 2:ndim+1, 1:ndim) =                                &
-             F(n, i, j, k, 2:ndim+1, 1:ndim) * rt_c2 * Np
+             F(n, i, j, k, 2:ndim+1, 1:ndim) * rt_c2(ilevel) * Np
   enddo
   enddo
   enddo
@@ -262,7 +262,7 @@ subroutine cmp_flux_tensors(uin, iP0, nGrid, F)
 end subroutine cmp_flux_tensors
 
 !************************************************************************
-FUNCTION cmp_face(fdn, fup, udn, uup, lminus, lplus)
+FUNCTION cmp_face(fdn, fup, udn, uup, lminus, lplus, ilevel)
 
 ! Compute intercell fluxes for all (four) RT variables, using the
 ! Harten-Lax-van Leer method (see eq. 30 in Aubert&Teyssier(2008).
@@ -278,6 +278,7 @@ FUNCTION cmp_face(fdn, fup, udn, uup, lminus, lplus)
   real(dp),dimension(nDim+1)::fdn, fup, udn, uup, cmp_face
   real(dp)::lminus, lplus
   real(dp)::div
+  integer::ilevel
 !------------------------------------------------------------------------
   if(rt_use_hll) then
      div=lplus-lminus
@@ -287,16 +288,17 @@ FUNCTION cmp_face(fdn, fup, udn, uup, lminus, lplus)
      !   return
      !endif
      cmp_face =                                                          &
-          ( lplus*fdn - lminus*fup + lplus*lminus*rt_c*( uup-udn )) / div
+          &   (lplus*fdn-lminus*fup+lplus*lminus*rt_c(ilevel)*(uup-udn)) &
+          & / div
   else
-     cmp_face = ( fdn + fup - rt_c*( uup-udn )) / 2d0
+     cmp_face = ( fdn + fup - rt_c(ilevel)*( uup-udn )) / 2d0
   endif
   return
 END FUNCTION cmp_face
 
 
 !************************************************************************
-SUBROUTINE cmp_rt_faces(uin, iFlx, dx, dy, dz, dt, iP0, ngrid)
+SUBROUTINE cmp_rt_faces(uin,iFlx,dx,dy,dz,dt,iP0,ngrid,ilevel)
 
 !  Compute intercell fluxes for one photon group in all dimensions,
 !  using the Eddington tensor with the M1 closure relation.
@@ -314,6 +316,7 @@ SUBROUTINE cmp_rt_faces(uin, iFlx, dx, dy, dz, dt, iP0, ngrid)
 !  dt          => time step
 !  iP0         => Starting index, among the RT variables, of the group.
 !  ngrid       => number of sub-grids
+!  ilevel      => level being updated
 !
 !  other vars
 !  iu1,iu2     |First and last index of input array,
@@ -330,11 +333,11 @@ SUBROUTINE cmp_rt_faces(uin, iFlx, dx, dy, dz, dt, iP0, ngrid)
   real(dp),dimension(nvector,if1:if2,jf1:jf2,kf1:kf2, 1:nrtvar, 1:ndim) &
        ::iFlx
   real(dp)::dx, dy, dz, dt
-  integer ::iP0, iP1, nGrid!---------------------------------------------
+  integer ::iP0, iP1, nGrid, ilevel !------------------------------------
   real(dp),save, &                                     !   Central fluxes
            dimension(nvector,iu1:iu2,ju1:ju2,ku1:ku2, ndim+1, ndim)::cFlx
   real(dp),save, &                                     ! Cell eigenvalues
-           dimension(nvector,iu1:iu2,ju1:ju2,ku1:ku2, ndim)::  lmin, lmax
+        dimension(nvector,iu1:iu2,ju1:ju2,ku1:ku2, ndim)::lmin=0.,lmax=0.
   ! Upwards and downwards fluxes and states of the group
   real(dp),dimension(nDim+1),save:: fdn, fup, udn, uup
   real(dp):: lminus, lplus                        ! Intercell eigenvalues
@@ -344,10 +347,10 @@ SUBROUTINE cmp_rt_faces(uin, iFlx, dx, dy, dz, dt, iP0, ngrid)
   iP1=iP0+nDim                                ! end index of photon group
 
   ! compute flux tensors for all the cells
-  call cmp_flux_tensors(uin, iP0, ngrid, cFlx)    ! flux tensors of cells
+  call cmp_flux_tensors(uin, iP0, ngrid, cFlx, ilevel)    !  flux tensors
 
   if(rt_use_hll) &
-       call cmp_eigenvals(uin, iP0, ngrid, lmin, lmax) ! eigenvs of cells
+       call cmp_eigenvals(uin, iP0, ngrid, lmin, lmax, ilevel)  ! eigenvs
 
   ! Solve for 1D flux in X direction
   !----------------------------------------------------------------------
@@ -363,7 +366,7 @@ SUBROUTINE cmp_rt_faces(uin, iFlx, dx, dy, dz, dt, iP0, ngrid)
            lminus=MIN(lmin(n,i-1,j,k,1), lmin(n,i,j,k,1), 0d0)
            lplus =MAX(lmax(n,i-1,j,k,1), lmax(n,i,j,k,1), 0d0)
            iFlx(n, i, j, k, iP0:iP1, 1)=&
-                        cmp_face( fdn, fup, udn, uup, lminus, lplus)*dtdx
+                cmp_face( fdn, fup, udn, uup, lminus, lplus, ilevel)*dtdx
       end do
   end do
   end do
@@ -384,7 +387,7 @@ SUBROUTINE cmp_rt_faces(uin, iFlx, dx, dy, dz, dt, iP0, ngrid)
            lminus=MIN(lmin(n,i,j-1,k,2), lmin(n,i,j,k,2), 0d0)
            lplus =MAX(lmax(n,i,j-1,k,2), lmax(n,i,j,k,2), 0d0)
            iFlx(n,i,j,k,iP0:iP1,2)=&
-                       cmp_face( fdn, fup, udn, uup, lminus, lplus )*dtdx
+                cmp_face( fdn, fup, udn, uup, lminus, lplus, ilevel)*dtdx
      end do
   end do
   end do
@@ -406,7 +409,7 @@ SUBROUTINE cmp_rt_faces(uin, iFlx, dx, dy, dz, dt, iP0, ngrid)
            lminus=MIN(lmin(n,i,j,k-1,3), lmin(n,i,j,k,3), 0d0)
            lplus =MAX(lmax(n,i,j,k-1,3), lmax(n,i,j,k,3), 0d0)
            iFlx(n,i,j,k,iP0:iP1,3)=&
-                       cmp_face( fdn, fup, udn, uup, lminus, lplus )*dtdx
+                cmp_face( fdn, fup, udn, uup, lminus, lplus, ilevel)*dtdx
       end do
   end do
   end do

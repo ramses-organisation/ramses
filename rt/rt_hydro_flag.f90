@@ -1,4 +1,4 @@
-! RT patch: Only change here is to possibly do refinement if rt_err_grad_n
+! RT patch: Only change here is to possibly do refinement if rt_err_grad_cn
 !           or rt_err_grad_xH namelist parameters are set
 ! ________________________________________________________________________
 
@@ -17,6 +17,7 @@ subroutine rt_hydro_flag(ilevel)
   integer,dimension(1:nvector),save::ind_grid,ind_cell
   integer,dimension(1:nvector,0:twondim),save::igridn
   integer,dimension(1:nvector,1:twondim),save::indn
+  integer,dimension(1:nvector,1:twondim),save::c_factor
 
   logical,dimension(1:nvector),save::ok
 
@@ -49,7 +50,8 @@ subroutine rt_hydro_flag(ilevel)
      if(ndim>2)xc(ind,3)=(dble(iz)-0.5D0)*dx
   end do
 
-  if( rt_err_grad_n==-1.0) return
+  if( rt_err_grad_cn==-1.0) return
+  c_factor(:,:)=rt_c(ilevel)
 
   ! Loop over active grids
   ncache=active(ilevel)%ngrid
@@ -86,6 +88,7 @@ subroutine rt_hydro_flag(ilevel)
            do i=1,ngrid
               if(indn(i,j)==0)then
                  indn(i,j)=nbor(ind_grid(i),j)
+                 c_factor(i,j) = rt_c(ilevel-1)
               end if
            end do
         end do
@@ -95,9 +98,9 @@ subroutine rt_hydro_flag(ilevel)
            ! Gather hydro variables
            do ivar=1,nrtvar
               do i=1,ngrid
-                 uug(i,ivar)=rtuold(indn(i,2*idim-1),ivar)
-                 uum(i,ivar)=rtuold(ind_cell(i     ),ivar)
-                 uud(i,ivar)=rtuold(indn(i,2*idim  ),ivar)
+                 uug(i,ivar)=rtuold(indn(i,2*idim-1),ivar)*c_factor(i,2*idim-1)
+                 uum(i,ivar)=rtuold(ind_cell(i     ),ivar)*rt_c(ilevel)
+                 uud(i,ivar)=rtuold(indn(i,2*idim  ),ivar)*c_factor(i,2*idim)
               end do
            end do
            call rt_hydro_refine(uug,uum,uud,ok,ngrid)

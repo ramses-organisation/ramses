@@ -116,7 +116,7 @@ SUBROUTINE rt_set_uold(ilevel)
            icell=active(ilevel)%igrid(i)+iskip
            ! No negative photon densities:
            rtuold(icell,iGroups(ig)) = max(rtuold(icell,iGroups(ig)),smallNp)
-           Npc=rtuold(icell,iGroups(ig))*rt_c
+           Npc=rtuold(icell,iGroups(ig))*rt_c(ilevel)
            ! Reduced flux, should always be .le. 1
            fred = sqrt(sum((rtuold(icell,iGroups(ig)+1:iGroups(ig)+ndim))**2))/Npc
            if(fred .gt. 1d0) then ! Too big so normalize flux to one
@@ -179,7 +179,8 @@ SUBROUTINE rt_godfine1(ind_grid, ncache, ilevel, dt)
 
   logical,dimension(1:nvector),save:: rt_per_bnd=.false.
   integer::ind_nbor
-  real(dp)::dx8,maxDist
+  real(dp)::dx8,maxDist,rt_c_diff
+
 !------------------------------------------------------------------------
   oneontwotondim = 1d0/dble(twotondim) ! 1/8 in 3D
 
@@ -332,6 +333,12 @@ SUBROUTINE rt_godfine1(ind_grid, ncache, ilevel, dt)
                  do ivar=1,nrtvar
                     uloc(ind_exist(i),i3,j3,k3,ivar) =                   &
                                                   rtuold(ind_cell(i),ivar)
+                    if(son(ind_cell(i))>0 .and. mod(ivar,ndim+1)==1)  then
+                       ! VSLA: finer level and different light speed
+                       uloc(ind_exist(i),i3,j3,k3,ivar)        &
+                            = uloc(ind_exist(i),i3,j3,k3,ivar) &
+                            * rt_c(ilevel+1)/rt_c(ilevel)
+                    endif
                  end do
               endif
            end do
@@ -341,6 +348,12 @@ SUBROUTINE rt_godfine1(ind_grid, ncache, ilevel, dt)
               else
                  do ivar=1,nrtvar
                     uloc(ind_nexist(i),i3,j3,k3,ivar)=u2(i,ind_son,ivar)
+                    if(mod(ivar,ndim+1)==1) then
+                       ! VSLA: coarser level and different light speed
+                       uloc(ind_nexist(i),i3,j3,k3,ivar)        &
+                            = uloc(ind_nexist(i),i3,j3,k3,ivar) &
+                            * rt_c(ilevel-1)/rt_c(ilevel)
+                    endif
                  end do
               endif
            end do
@@ -348,22 +361,25 @@ SUBROUTINE rt_godfine1(ind_grid, ncache, ilevel, dt)
            do ivar=1,nrtvar
               do i=1,nexist
                  uloc(ind_exist(i),i3,j3,k3,ivar)=rtuold(ind_cell(i),ivar)
+                 if(son(ind_cell(i))>0 .and. mod(ivar,ndim+1)==1) then
+                    ! VSLA: finer level and different light speed
+                    uloc(ind_exist(i),i3,j3,k3,ivar) &
+                         = uloc(ind_exist(i),i3,j3,k3,ivar) &
+                         * rt_c(ilevel+1)/rt_c(ilevel)
+                 endif
               end do
               do i=1,nbuffer
                  uloc(ind_nexist(i),i3,j3,k3,ivar)=u2(i,ind_son,ivar)
+                 if(mod(ivar,ndim+1)==1) then
+                    ! VSLA: coarser level and different light speed
+                    uloc(ind_nexist(i),i3,j3,k3,ivar)        &
+                         = uloc(ind_nexist(i),i3,j3,k3,ivar) &
+                         * rt_c(ilevel-1)/rt_c(ilevel)
+                 endif
               end do
            end do
         endif
         ! RT outflow boundary end-----------------------------------------
-
-        !do ivar=1,nrtvar
-        !    do i=1,nexist
-        !       uloc(ind_exist(i),i3,j3,k3,ivar) = rtuold(ind_cell(i),ivar)
-        !    end do
-        !    do i=1,nbuffer
-        !       uloc(ind_nexist(i),i3,j3,k3,ivar) = u2(i,ind_son,ivar)
-        !    end do
-        !end do
 
         ! Gather refinement flag
         do i=1,nexist
@@ -387,11 +403,12 @@ SUBROUTINE rt_godfine1(ind_grid, ncache, ilevel, dt)
   ! Compute fluxes of each photon group, using Eddington tensor
   !----------------------------------------------------------------------
   do i = 1,nGroups
-     call cmp_rt_faces(uloc, flux, dx, dx, dx, dt, iGroups(i), ncache)
+     call cmp_rt_faces(uloc, flux, dx, dx, dx, dt, iGroups(i), ncache   &
+          ,ilevel)
   end do
 
   !----------------------------------------------------------------------
-  ! Reset flux along direction at refined interface
+  ! Reset flux along direction at refined interface, if not rt-subcycling
   !----------------------------------------------------------------------
   if (rt_nsubcycle == 1)then
   do idim=1,ndim
@@ -436,10 +453,10 @@ SUBROUTINE rt_godfine1(ind_grid, ncache, ilevel, dt)
         ! Update conservative variables new state vector
         do ivar=1,nrtvar
            do i=1,ncache
-              rtunew(ind_cell(i),ivar)=                 &
-                   &  rtunew(ind_cell(i),ivar)          &
-                   & +(flux(i,i3   ,j3   ,k3   ,ivar,idim)  &
-                   & - flux(i,i3+i0,j3+j0,k3+k0,ivar,idim))
+              rtunew(ind_cell(i),ivar) =                    &
+                   &  rtunew(ind_cell(i),ivar) +            &
+                   &  (flux(i,i3   ,j3   ,k3   ,ivar,idim)  &
+                   &  -flux(i,i3+i0,j3+j0,k3+k0,ivar,idim))
            end do
         end do
      end do
@@ -473,13 +490,21 @@ SUBROUTINE rt_godfine1(ind_grid, ncache, ilevel, dt)
         end do
         ! Conservative update of new state variables
         do ivar=1,nrtvar
+           ! For VSLA, when updating coarser level, rescale radiation flux
+           ! to the expression which would be seen from there.
+           rt_c_diff = rt_c(ilevel-1)/rt_c(ilevel)
+           if (mod(ivar,ndim+1)==1) then
+              rt_c_diff=1.d0
+           end if
            ! Loop over boundary cells
            do k3=k3min,k3max-k0 ! 1 to 1 if dim=3, 1 to 2 otherwise
               do j3=j3min,j3max-j0 ! 1 to 1 if dim=2, 1 to 2 otherwise
                  do i3=i3min,i3max-i0 ! 1 to 1 if dim=1, 1 to 2 otherwise
                     do i=1,nb_noneigh
-                       rtunew(ind_buffer(i),ivar)=rtunew(ind_buffer(i),ivar) &
-                            & -flux(ind_cell(i),i3,j3,k3,ivar,idim)*oneontwotondim
+                       rtunew(ind_buffer(i),ivar) =                      &
+                           & rtunew(ind_buffer(i),ivar)                  &
+                           & - flux(ind_cell(i),i3,j3,k3,ivar,idim)      &
+                           & * oneontwotondim * rt_c_diff
                     end do
                  end do
               end do
@@ -501,13 +526,20 @@ SUBROUTINE rt_godfine1(ind_grid, ncache, ilevel, dt)
         end do
         ! Conservative update of new state variables
         do ivar=1,nrtvar
+           ! Rescale for VSLA, as above
+           rt_c_diff = rt_c(ilevel-1)/rt_c(ilevel)
+           if (mod(ivar,ndim+1)==1) then
+              rt_c_diff=1.d0
+           end if
            ! Loop over boundary cells
            do k3=k3min+k0,k3max
               do j3=j3min+j0,j3max
                  do i3=i3min+i0,i3max
                     do i=1,nb_noneigh
-                       rtunew(ind_buffer(i),ivar)=rtunew(ind_buffer(i),ivar) &
-                            & +flux(ind_cell(i),i3+i0,j3+j0,k3+k0,ivar,idim)*oneontwotondim
+                       rtunew(ind_buffer(i),ivar) =                          &
+                           & rtunew(ind_buffer(i),ivar)                      &
+                           & + flux(ind_cell(i),i3+i0,j3+j0,k3+k0,ivar,idim) &
+                           & * oneontwotondim * rt_c_diff
                     end do
                  end do
               end do

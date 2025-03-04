@@ -40,6 +40,7 @@ module pm_parameters
   logical::clump_core=.false.                ! Trims the clump (for star formation)
   logical::verbose_AGN=.false.               ! Controls print verbosity for the SMBH case
   real(dp)::acc_sink_boost=1                 ! Boost coefficient for accretion
+  real(dp)::eddington_cap=1                  ! Set the accretion cap in units of the Eddington limit
 
   real(dp)::AGN_fbk_frac_ener=1              ! Fraction of AGN feedback released as thermal blast
   real(dp)::AGN_fbk_frac_mom=0               ! Fraction of AGN feedback released as momentum injection

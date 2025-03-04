@@ -1,22 +1,22 @@
 !###########################################################
 !###########################################################
 !###########################################################
-SUBROUTINE get_rt_courant_coarse(dt)
+SUBROUTINE get_rt_courant_dt(dt,ilevel)
 
 ! Determine the coarse RT timestep length set by the Courant condition
 !-------------------------------------------------------------------------
   use amr_parameters
   use rt_parameters
   implicit none
-  integer:: nx_loc
+  integer:: nx_loc, ilevel
   real(dp):: dt, scale, dx
 !-------------------------------------------------------------------------
   ! Mesh spacing at coarse level
   nx_loc=icoarse_max-icoarse_min+1
   scale=boxlen/dble(nx_loc)
-  dx=0.5D0**levelmin*scale
-  dt = rt_courant_factor*dx/3d0/rt_c
-END SUBROUTINE get_rt_courant_coarse
+  dx=0.5D0**ilevel*scale
+  dt = rt_courant_factor*dx/3d0/rt_c(ilevel)
+END SUBROUTINE get_rt_courant_dt
 !###########################################################
 !###########################################################
 !###########################################################
@@ -35,15 +35,15 @@ subroutine rt_hydro_refine(ug,um,ud,ok,nn)
   integer::k,i
   real(dp)::dg,dm,dd,error
 
-  if(rt .and. rt_err_grad_n >= 0.) then !---------------------------------
+  if(rt .and. rt_err_grad_cn >= 0.) then !--------------------------------
      do i=1,nGroups
         ! RT-photon density
         do k=1,nn
            dg=ug(k,iGroups(i)); dm=um(k,iGroups(i)); dd=ud(k,iGroups(i))
            error=2.0d0*MAX( &
-                & ABS((dd-dm)/(dd+dm+rt_floor_n)) , &
-                & ABS((dm-dg)/(dm+dg+rt_floor_n)) )
-           ok(k) = ok(k) .or. error > rt_err_grad_n
+                & ABS((dd-dm)/(dd+dm+rt_floor_cn)) , &
+                & ABS((dm-dg)/(dm+dg+rt_floor_cn)) )
+           ok(k) = ok(k) .or. error > rt_err_grad_cn
         end do
      end do
   end if

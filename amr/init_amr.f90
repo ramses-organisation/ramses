@@ -134,11 +134,9 @@ subroutine init_amr
     ! Set initial cpu boundaries
     do i=0,ndomain-1
 #ifdef QUADHILBERT
-       bound_key(i)=order_all_min+real(i,16)/real(ndomain,16)* &
-            & (order_all_max-order_all_min)
+       bound_key(i)=order_all_min+real(i,16)/real(ndomain,16)*(order_all_max-order_all_min)
 #else
-       bound_key(i)=order_all_min+real(i,8)/real(ndomain,8)* &
-            & (order_all_max-order_all_min)
+       bound_key(i)=order_all_min+real(i,8)/real(ndomain,8)*(order_all_max-order_all_min)
 #endif
     end do
     bound_key(ndomain)=order_all_max
@@ -264,8 +262,7 @@ subroutine init_amr
 #ifndef WITHOUTMPI
      if(IOGROUPSIZE>0) then
         if (mod(myid-1,IOGROUPSIZE)/=0) then
-           call MPI_RECV(dummy_io,1,MPI_INTEGER,myid-1-1,tag,&
-                & MPI_COMM_WORLD,MPI_STATUS_IGNORE,info2)
+           call MPI_RECV(dummy_io,1,MPI_INTEGER,myid-1-1,tag,MPI_COMM_WORLD,MPI_STATUS_IGNORE,info2)
         end if
      endif
 #endif
@@ -530,8 +527,7 @@ subroutine init_amr
      if(IOGROUPSIZE>0) then
         if(mod(myid,IOGROUPSIZE)/=0 .and.(myid.lt.ncpu))then
            dummy_io=1
-           call MPI_SEND(dummy_io,1,MPI_INTEGER,myid-1+1,tag, &
-                & MPI_COMM_WORLD,info2)
+           call MPI_SEND(dummy_io,1,MPI_INTEGER,myid-1+1,tag,MPI_COMM_WORLD,info2)
         end if
      endif
 #endif

@@ -22,3 +22,6 @@ part2cylprof
 Makefile.*
 doc/*_build
 __pycache__
+*.gcda
+*.gcno
+*.gcov

@@ -34,17 +34,23 @@ testlist="hydro,mhd,poisson,rt,sink,turb,tracer";
 #######################################################################
 MPI=0;
 NCPU=1;
+GCOV=0;
 VERBOSE=false;
 DELDATA=true;
+COVERAGE=false;
 CLEAN_ALL=false;
 SELECTTEST=false;
-while getopts "cdp:qt:v" OPTION; do
+while getopts "cdsp:qt:v" OPTION; do
    case $OPTION in
       c)
          CLEAN_ALL=true;
       ;;
       d)
          DELDATA=false;
+      ;;
+      s)
+         GCOV=1;
+         COVERAGE=true;
       ;;
       p)
          MPI=1;
@@ -69,7 +75,7 @@ BIN_DIRECTORY="${BASE_DIRECTORY}/bin";    # The bin directory
 VISU_DIR="${TEST_DIRECTORY}/visu";        # The visualization directory
 
 export PYTHONPATH=${VISU_DIR}:$PYTHONPATH;
-DELETE_RESULTS="rm -rf output_* *.tex data*.dat *.pdf *.pyc";
+DELETE_RESULTS="rm -rf output_* *.tex data*.dat *.pdf *.pyc *.gc* coverage_stats.txt";
 RETURN_TO_BIN="cd ${BIN_DIRECTORY}";
 EXECNAME="test_exe_";
 LOGFILE="${TEST_DIRECTORY}/test_suite.log";
@@ -286,7 +292,7 @@ for ((i=0;i<$ntests;i++)); do
 
    # Compile source
    echo "Compiling source" | tee -a $LOGFILE;
-   MAKESTRING="make EXEC=${EXECNAME} MPI=${MPI} ${FLAGS}";
+   MAKESTRING="make EXEC=${EXECNAME} MPI=${MPI} GCOV=${GCOV} ${FLAGS}";
    # if [ ${MPI} -eq 1 ]; then
    #    MAKESTRING="${MAKESTRING} -j ${NCPU}";
    # fi
@@ -361,6 +367,13 @@ for ((i=0;i<$ntests;i++)); do
    minutes_glob[${i}]=$minutes;
    seconds_glob[${i}]=$seconds;
 
+   # move coverage files to test dir
+   if ${COVERAGE} ; then
+      $RETURN_TO_BIN;
+      gcov *.gcno > coverage_stats.txt
+      cd -
+      mv ${BIN_DIRECTORY}/*.gc* .
+   fi
 done
 
 # Total time ##########################################################
@@ -482,6 +495,21 @@ rm ${latexfile/.tex/.log};
 rm ${latexfile/.tex/.aux};
 rm ${latexfile/.tex/.out};
 rm $latexfile;
+
+#######################################################################
+# Generate total coverage data
+#######################################################################
+if ${COVERAGE} ; then
+   rm -r coverage
+   ALL_TEST_DIRS=""
+   for ((i=0;i<$ntests;i++)); do
+      n=${testnum[i]};
+      test_dir_name=${TEST_DIRECTORY}/${testname[n]};
+      ALL_TEST_DIRS="${ALL_TEST_DIRS} ${test_dir_name}"
+   done
+   mkdir coverage
+   python3 multi_gcov_aggregator.py ${ALL_TEST_DIRS} coverage
+fi
 
 #######################################################################
 # Clean up
