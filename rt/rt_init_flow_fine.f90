@@ -293,7 +293,7 @@ subroutine rt_init_flow_fine(ilevel)
            end do
 
            ! Call initial condition routine
-           call rt_condinit(xx,uu,dx_loc,ngrid)
+           call rt_condinit(xx,uu,dx_loc,ngrid,ilevel)
            ! Scatter variables
            do ivar=1,nrtvar
               do i=1,ngrid
@@ -316,7 +316,7 @@ end subroutine rt_init_flow_fine
 !################################################################
 
 !************************************************************************
-SUBROUTINE rt_region_condinit(x,uu,dx,nn)
+SUBROUTINE rt_region_condinit(x,uu,dx,nn,ilevel)
 
 ! Initialize RT regions, as defined in the namelist setup file.
 !
@@ -331,7 +331,7 @@ SUBROUTINE rt_region_condinit(x,uu,dx,nn)
   real(dp)::dx,dx_cgs
   real(dp),dimension(1:nvector,1:nrtvar)::uu
   real(dp),dimension(1:nvector,1:ndim)  ::x
-  integer::i,k,group_ind
+  integer::i,k,group_ind,ilevel
   real(dp)::vol,r,xn,yn,zn,en
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,scale_np,scale_fp
 !------------------------------------------------------------------------
@@ -373,12 +373,12 @@ SUBROUTINE rt_region_condinit(x,uu,dx,nn)
            ! If cell lies within region, inject value
            if(r .lt. 1.0)then
               uu(i,group_ind)=rt_n_region(k)
-              uu(i,group_ind+1)=rt_u_region(k) * rt_c
+              uu(i,group_ind+1)=rt_u_region(k) * rt_c(ilevel)
 #if NDIM>1
-              uu(i,group_ind+2)=rt_v_region(k) * rt_c
+              uu(i,group_ind+2)=rt_v_region(k) * rt_c(ilevel)
 #endif
 #if NDIM>2
-              uu(i,group_ind+3)=rt_w_region(k) * rt_c
+              uu(i,group_ind+3)=rt_w_region(k) * rt_c(ilevel)
 #endif
            end if
         end do
@@ -403,12 +403,15 @@ SUBROUTINE rt_region_condinit(x,uu,dx,nn)
               ! If cell lies within CIC cloud, inject value
               ! Convert photon number to photon number density
               uu(i,group_ind) = rt_n_region(k)/scale_Np *r/vol
-              uu(i,group_ind+1) = rt_u_region(k)/scale_Np*r/vol*rt_c
+              uu(i,group_ind+1) = rt_u_region(k)/scale_Np*r/vol          &
+                                * rt_c(ilevel)
 #if NDIM>1
-              uu(i,group_ind+2) = rt_v_region(k)/scale_Np*r/vol*rt_c
+              uu(i,group_ind+2) = rt_v_region(k)/scale_Np*r/vol          &
+                                * rt_c(ilevel)
 #endif
 #if NDIM>2
-              uu(i,group_ind+3) = rt_w_region(k)/scale_Np *r/vol*rt_c
+              uu(i,group_ind+3) = rt_w_region(k)/scale_Np *r/vol         &
+                                * rt_c(ilevel)
 #endif
            endif
         end do

@@ -556,7 +556,9 @@ SUBROUTINE update_SED_group_props()
         enddo
      endif
   end do
-  call updateRTgroups_coolConstants
+  do i=levelmin,nlevelmax
+     call updateRTgroups_CoolConstants(i)
+  enddo
   if(myid==1) write(*,*) &
                     'SED Photon groups updated through stellar polling'
   !call write_group_props(.true.,6)
@@ -716,7 +718,7 @@ FUNCTION getSEDLuminosity(X, Y, N, e0, e1)
   if(.not. SED_isEgy) then               !  Photon number per sec per Msun
      getSEDLuminosity = const &
           * integrateSpectrum(X, Y, N, e0, e1, species, fLambda)
-     getSEDLuminosity = getSEDLuminosity*L_sun  ! Scale by solar luminosity
+     getSEDLuminosity = getSEDLuminosity*L_sun ! Scale by solar luminosity
   else                             ! SED_isEgy=true -> eV per sec per Msun
      getSEDLuminosity = integrateSpectrum(X, Y, N, e0, e1, species, f1)
      ! Scale by solar lum and convert to eV (bc group energies are in eV)
@@ -1264,7 +1266,7 @@ MODULE UV_module
 
   implicit none
 
-  PUBLIC nUVgroups, iUVvars_cool, UV_Nphot_cgs, init_UV_background       &
+  PUBLIC nUVgroups, iUVvars_cool, UV_fluxes_cgs, init_UV_background      &
        , inp_UV_rates_table, inp_UV_groups_table, UV_minz, UV_maxz       &
        , update_UVsrc, iUVgroups
 
@@ -1280,7 +1282,6 @@ MODULE UV_module
   real(dp),allocatable,dimension(:,:,:)::UV_rates_table
   ! rt_n_UVsrc vectors of redshift dependent fluxes for UV background
   real(dp),allocatable::UV_fluxes_cgs(:)    !                    [#/cm2/s]
-  real(dp),allocatable::UV_Nphot_cgs(:)     !        Photon density [cm-3]
   integer::nUVgroups=0                      !        # of UV photon groups
   ! UV group indexes among nGroup groups,
   ! UV Np indexes among solve_cooling vars:
@@ -1434,7 +1435,6 @@ SUBROUTINE init_UV_background()
      end do
      if(nUVgroups .gt. 0) then
         allocate(UV_fluxes_cgs(nUVgroups))             ; UV_fluxes_cgs=0.
-        allocate(UV_Nphot_cgs(nUVgroups))              ; UV_Nphot_cgs=0.
      endif
 
      ! Initialize photon groups table-------------------------------------
@@ -1568,14 +1568,15 @@ SUBROUTINE update_UVsrc
 
   call inp_UV_groups_table(redshift, UVprops, .true.)
   UV_fluxes_cgs(:)      = UVprops(:,1)
-  UV_Nphot_cgs          = UV_fluxes_cgs/rt_c_cgs
   group_egy(iUVgroups)  = UVprops(:,2)
   do i=1,nIonsUsed
      group_csn(iUVgroups,i)  = UVprops(:,1+2*i)
      group_cse(iUVgroups,i)  = UVprops(:,2+2*i)
   enddo
 
-  call updateRTgroups_CoolConstants
+  do i=levelmin,nlevelmax
+     call updateRTgroups_CoolConstants(i)
+  enddo
 
   if(myid==1) then
      write(*,*) 'Updated UV fluxes [# cm-2 s-1] to'

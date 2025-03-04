@@ -187,7 +187,7 @@ subroutine velocity_fine(ilevel)
   ! the maximum density rho_max, and the potential energy
   !----------------------------------------------------------
   integer::igrid,ngrid,ncache,i,ind,iskip,ix,iy,iz
-  integer::nx_loc,idim,neul=5
+  integer::nx_loc,idim
   real(dp)::dx,dx_loc,scale,d,u,v,w,A,B,C
   real(dp),dimension(1:twotondim,1:3)::xc
   real(dp),dimension(1:3)::skip_loc

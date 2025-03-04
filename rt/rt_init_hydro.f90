@@ -130,7 +130,8 @@ subroutine rt_init_hydro
                  ! Read photon density in flux units
                  read(ilun)xx
                  do i=1,ncache
-                    rtuold(ind_grid(i)+iskip,iGroups(ivar))=xx(i)/rt_c
+                    rtuold(ind_grid(i)+iskip,iGroups(ivar))              &
+                                                      = xx(i)/rt_c(ilevel)
                  end do
                  ! Read photon flux
                  do idim=1,ndim

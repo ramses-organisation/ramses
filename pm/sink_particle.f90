@@ -1098,7 +1098,7 @@ subroutine compute_accretion_rate(write_sinks)
 
      ! Compute final sink accretion rate
      if(bondi_accretion)dMsink_overdt(isink)=dMBHoverdt(isink)
-     if(eddington_limit)dMsink_overdt(isink)=min(dMBHoverdt(isink),dMEDoverdt(isink))
+     if(eddington_limit)dMsink_overdt(isink)=min(dMBHoverdt(isink),eddington_cap*dMEDoverdt(isink))
 
      if(smbh.and.mass_smbh_seed>0.0)then
         r2_smbh=(factG*msmbh(isink)/v_bondi**2)**2
@@ -2501,7 +2501,7 @@ subroutine read_sink_params()
   namelist/sink_params/n_sink,rho_sink,d_sink,accretion_scheme,merging_timescale,&
        ir_cloud_massive,sink_soft,mass_sink_direct_force,ir_cloud,nsinkmax,create_sinks,&
        check_energies,mass_sink_seed,mass_smbh_seed,c_acc,nlevelmax_sink,&
-       eddington_limit,acc_sink_boost,mass_merger_vel_check,&
+       eddington_limit,eddington_cap,acc_sink_boost,mass_merger_vel_check,&
        clump_core,verbose_AGN,T2_AGN,T2_min,cone_opening,mass_halo_AGN,mass_clump_AGN,mass_star_AGN,&
        AGN_fbk_frac_ener,AGN_fbk_frac_mom,T2_max,v_max,boost_threshold_density,&
        epsilon_kin,AGN_fbk_mode_switch_threshold,kin_mass_loading,bondi_use_vrel,smbh,agn,max_mass_nsc,&
