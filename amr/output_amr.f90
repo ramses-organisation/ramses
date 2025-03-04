@@ -508,9 +508,9 @@ subroutine output_header(filename)
   integer::ilun
   character(LEN=80)::fileloc
 #ifdef LONGINT
-  integer(i8b)::npart_family_loc(-5:5), npart_family(-5:5), npart_all_loc, npart_all
+  integer(i8b)::npart_family_loc(-NFAMILIES:NFAMILIES), npart_family(-NFAMILIES:NFAMILIES), npart_all_loc, npart_all
 #else
-  integer::npart_family_loc(-5:5), npart_family(-5:5), npart_all_loc, npart_all
+  integer::npart_family_loc(-NFAMILIES:NFAMILIES), npart_family(-NFAMILIES:NFAMILIES), npart_all_loc, npart_all
 #endif
   integer :: ifam, ipart
 
