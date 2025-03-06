@@ -28,7 +28,7 @@ rho = data["data"]["density"]*scale_d
 P = data["data"]["pressure"]*scale_d*scale_v**2
 mu_gas = 1.e0       # mean molecular weight
 mH = 1.6737236e-24  #g                      # hydrogen mass
-kB = 1.38064852e-16 #cm^2 g s^-2 K^-1       # Boltzman constant                 
+kB = 1.38064852e-16 #cm^2 g s^-2 K^-1       # Boltzman constant
 T = P/rho * mu_gas * mH/kB
 ion1 = data["data"]["scalar_00"]
 
