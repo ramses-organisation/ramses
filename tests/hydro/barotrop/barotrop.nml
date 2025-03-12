@@ -29,7 +29,7 @@ courant_factor=0.8
 scheme='muscl'
 slope_type=1
 riemann='hllc'
-pressure_fix=.true.
+pressure_fix=.false.
 beta_fix=0.5
 /
 
