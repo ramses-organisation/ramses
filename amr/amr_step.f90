@@ -395,6 +395,17 @@ recursive subroutine amr_step(ilevel,icount)
         call make_virtual_reverse_dp(divu(1),ilevel)
      endif
 
+     ! Add gravity source terms to unew
+     if(poisson)then
+        call add_gravity_source_terms(ilevel)
+     end if
+
+     ! Add non conservative pdV terms to unew
+     ! for thermal and/or non-thermal energies
+     if(pressure_fix.OR.nener>0)then
+        call add_pdv_source_terms(ilevel)
+     endif
+
      ! Set uold equal to unew
                                call timer('hydro - set uold','start')
      call set_uold(ilevel)

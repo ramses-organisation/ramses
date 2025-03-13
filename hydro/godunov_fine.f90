@@ -156,17 +156,6 @@ subroutine set_uold(ilevel)
   scale=boxlen/dble(nx_loc)
   dx=0.5d0**ilevel*scale
 
-  ! Add gravity source terms to unew
-  if(poisson)then
-     call add_gravity_source_terms(ilevel)
-  end if
-
-  ! Add non conservative pdV terms to unew
-  ! for thermal and/or non-thermal energies
-  if(pressure_fix.OR.nener>0)then
-     call add_pdv_source_terms(ilevel)
-  endif
-
   ! Set uold to unew for myid cells
   do ind=1,twotondim
      iskip=ncoarse+(ind-1)*ngridmax
