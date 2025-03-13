@@ -108,7 +108,7 @@ ifeq ($(COMPILER),GNU)
    FC += -ffree-line-length-none -fimplicit-none
    ifeq ($(OPENMP),1)
       FFLAGS += -fopenmp
-      LIBS += -lgomp 	
+      LIBS += -lgomp
    endif
    ifeq ($(GCOV),1)
          F90 += -O0 -fprofile-arcs -ftest-coverage
@@ -138,8 +138,8 @@ ifeq ($(COMPILER),INTEL)
    FC += -fp-model source
    ifeq ($(OPENMP),1)
       FFLAGS += -fpp -qopenmp -DNOSYSTEM
-      LIBS += -liomp5 
-   endif	
+      LIBS += -liomp5
+   endif
    ifeq ($(DEBUG),1)
       F90 += -warn all -O0 -g -traceback -check bounds
       FFLAGS += -fpe0 -ftrapuv -init=zero -init=snan -init=arrays
