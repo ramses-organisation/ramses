@@ -487,7 +487,7 @@ recursive subroutine amr_step(ilevel,icount)
   ! Magnetic diffusion step
   if((hydro).and.(.not.static_gas))then
      if(eta_mag>0d0.and.ilevel==levelmin)then
-                               call timer('hydro - diffusion','start')
+                               call timer('mhd - diffusion','start')
         call diffusion
      endif
   end if

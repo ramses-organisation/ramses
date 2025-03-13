@@ -527,7 +527,6 @@ subroutine make_multipole_phi(ilevel)
   use amr_commons
   use pm_commons
   use poisson_commons
-  use constants, only: twopi
   implicit none
   integer::ilevel
 
