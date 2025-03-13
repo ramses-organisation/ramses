@@ -395,6 +395,17 @@ recursive subroutine amr_step(ilevel,icount)
         call make_virtual_reverse_dp(divu(1),ilevel)
      endif
 
+     ! Add gravity source terms to unew
+     if(poisson)then
+        call add_gravity_source_terms(ilevel)
+     end if
+
+     ! Add non conservative pdV terms to unew
+     ! for thermal and/or non-thermal energies
+     if(pressure_fix.OR.nener>0)then
+        call add_pdv_source_terms(ilevel)
+     endif
+
      ! Set uold equal to unew
                                call timer('hydro - set uold','start')
      call set_uold(ilevel)
@@ -493,7 +504,7 @@ recursive subroutine amr_step(ilevel,icount)
   ! Magnetic diffusion step
   if((hydro).and.(.not.static_gas))then
      if(eta_mag>0d0.and.ilevel==levelmin)then
-                               call timer('hydro - diffusion','start')
+                               call timer('mhd - diffusion','start')
         call diffusion
      endif
   end if
@@ -568,7 +579,7 @@ end subroutine amr_step
 #ifdef RT
 subroutine rt_step(ilevel)
   use amr_parameters, only: dp
-  use amr_commons,    only: levelmin, t, dtnew, myid
+  use amr_commons,    only: t, dtnew, myid
   use rt_cooling_module, only: update_UVrates
   use rt_hydro_commons
   use UV_module
@@ -596,9 +607,9 @@ subroutine rt_step(ilevel)
   i_substep = 0
   do while (t_left > 0)                      !                RT sub-cycle
      i_substep = i_substep + 1
-     call get_rt_courant_coarse(dt_rt)
+     call get_rt_courant_dt(dt_rt,ilevel)
      ! Temporarily change timestep length to rt step:
-     dtnew(ilevel) = MIN(t_left, dt_rt/2**(ilevel-levelmin))
+     dtnew(ilevel) = MIN(t_left, dt_rt)
      t = t + dtnew(ilevel) ! Shift the time forwards one dt_rt
 
      ! If (myid==1) write(*,900) dt_hydro, dtnew(ilevel), i_substep, ilevel
