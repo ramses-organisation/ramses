@@ -26,6 +26,8 @@ USE_TURB = 0
 # Use MPI? 1=Yes, 0=No
 MPI = 0
 MPIF90 = mpif90
+# Use OpenMP? 1=Yes, 0=No
+OPENMP = 0
 # Root name of executable
 EXEC = ramses
 # Number of additional energies
@@ -85,9 +87,12 @@ endif
 ifeq ($(LIGHT_MPI_COMM), 1)
    DEFINES += -DLIGHT_MPI_COMM
 endif
+ifeq ($(OPENMP),1)
+   DEFINES += -DOPENMP
+endif
 #############################################################################
 # Fortran compiler options and directives
-
+LIBS =
 # GNU compiler (gfortran)
 ifeq ($(COMPILER),GNU)
    FFLAGS = -cpp $(DEFINES)
@@ -101,6 +106,10 @@ ifeq ($(COMPILER),GNU)
    endif
    F90 += -ffree-line-length-none -fimplicit-none
    FC += -ffree-line-length-none -fimplicit-none
+   ifeq ($(OPENMP),1)
+      FFLAGS += -fopenmp
+      LIBS += -lgomp
+   endif
    ifeq ($(GCOV),1)
          F90 += -O0 -fprofile-arcs -ftest-coverage
    else
@@ -127,6 +136,10 @@ ifeq ($(COMPILER),INTEL)
    endif
    F90 += -fp-model source
    FC += -fp-model source
+   ifeq ($(OPENMP),1)
+      FFLAGS += -fpp -qopenmp -DNOSYSTEM
+      LIBS += -liomp5
+   endif
    ifeq ($(DEBUG),1)
       F90 += -warn all -O0 -g -traceback -check bounds
       FFLAGS += -fpe0 -ftrapuv -init=zero -init=snan -init=arrays
@@ -154,7 +167,7 @@ ifeq ($(USE_TURB),1)
    LIBS_TURB = -L$(HOME)/local/lib -lfftw3
    LIBS_OBJ_TURB = -I$(HOME)/local/include -lfftw3
 endif
-LIBS = $(LIBMPI) $(LIBS_GRACKLE) $(LIBS_TURB)
+LIBS += $(LIBMPI) $(LIBS_GRACKLE) $(LIBS_TURB)
 #############################################################################
 # Sources directories are searched in this exact order
 VPATH = $(PATCH):../$(SOLVER):../aton:
