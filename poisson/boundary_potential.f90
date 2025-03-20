@@ -23,6 +23,8 @@ subroutine make_boundary_force(ilevel)
   real(dp),dimension(1:nvector,1:ndim),save::xx
   real(dp),dimension(1:nvector,1:ndim),save::ff
 
+!$omp threadprivate(ind_grid,ind_grid_ref,ind_cell,ind_cell_ref,xx,ff)
+
   if(.not. simple_boundary)return
   if(verbose)write(*,111)ilevel
 
@@ -166,6 +168,8 @@ subroutine make_boundary_phi(ilevel)
   real(dp),dimension(1:nvector),save::rr,pp
   real(dp),dimension(1:nvector,1:ndim),save::xx
 
+!$omp threadprivate(ind_grid,ind_cell,rr,pp,xx)
+
   if(.not. simple_boundary)return
   if(verbose)write(*,111)ilevel
 
@@ -266,6 +270,8 @@ subroutine make_boundary_mask(ilevel)
   integer::i,ncache,igrid,ngrid,ind
   integer::iskip
   integer,dimension(1:nvector),save::ind_grid,ind_cell
+
+!$omp threadprivate(ind_grid,ind_cell)
 
   if(.not. simple_boundary)return
   if(verbose)write(*,111)ilevel

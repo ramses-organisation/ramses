@@ -26,6 +26,8 @@ subroutine init_tree
   real(dp),dimension(1:3)::skip_loc
   real(dp)::scale
 
+!$omp threadprivate(ix,iy,iz,ind_grid,ind_part,ok)
+
   if(verbose)write(*,*)'  Entering init_tree'
 
   ! Local constants
@@ -193,6 +195,8 @@ subroutine make_tree_fine(ilevel)
   integer::ig,ip,npart1,icpu
   integer,dimension(1:nvector),save::ind_grid,ind_part,ind_grid_part
 
+!$omp threadprivate(ind_grid,ind_part,ind_grid_part)
+
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
 
@@ -289,6 +293,9 @@ subroutine check_tree(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   integer,dimension(1:nvector),save::list1,list2
   logical,dimension(1:nvector),save::ok
   real(dp),dimension(1:3)::skip_loc
+
+!$omp threadprivate(nbors_father_cells,nbors_father_grids,x0,ind_father)
+!$omp threadprivate(ind_son,igrid_son,list1,list2,ok)
 
   ! Mesh spacing in that level
   dx=0.5D0**ilevel
@@ -400,6 +407,8 @@ subroutine kill_tree_fine(ilevel)
   integer::i,ig,ip,npart1,icpu
   integer,dimension(1:nvector),save::ind_grid,ind_part,ind_grid_part
 
+!$omp threadprivate(ind_grid,ind_part,ind_grid_part)
+
   if(numbtot(1,ilevel)==0)return
   if(ilevel==nlevelmax)return
   if(numbtot(1,ilevel+1)==0)return
@@ -493,6 +502,8 @@ subroutine kill_tree(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   logical,dimension(1:nvector),save::ok
   real(dp),dimension(1:3)::skip_loc
 
+!$omp threadprivate(x0,igrid_son,ind_son,list1,list2,ok)
+
   ! Mesh spacing in that level
   dx=0.5D0**ilevel
   nx_loc=(icoarse_max-icoarse_min+1)
@@ -570,6 +581,8 @@ subroutine merge_tree_fine(ilevel)
   integer::i,ind,ncache,ngrid
   integer,dimension(1:nvector),save::ind_grid,ind_cell,ind_grid_son
   logical,dimension(1:nvector),save::ok
+
+!$omp threadprivate(ind_grid,ind_cell,ind_grid_son,ok)
 
   if(numbtot(1,ilevel)==0)return
   if(ilevel==nlevelmax)return
@@ -670,6 +683,8 @@ subroutine virtual_tree_fine(ilevel)
   real(dp) :: dx, d2min, d2, x1(1:ndim), x2(1:ndim)
   integer :: ipart2, jpart2
 #endif
+
+!$omp threadprivate(ind_part,ind_com,ind_list)
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
@@ -1105,6 +1120,8 @@ subroutine fill_comm(ind_part,ind_com,ind_list,np,ilevel,icpu)
   integer::i,idim
   logical,dimension(1:nvector),save::ok=.true.
 
+!$omp threadprivate(ok)
+
   ! Gather particle level and identity
   do i=1,np
 #ifdef LIGHT_MPI_COMM
@@ -1226,6 +1243,8 @@ subroutine empty_comm(ind_com,np,ilevel,icpu)
   integer,dimension(1:nvector),save::ind_list,ind_part
   logical,dimension(1:nvector),save::ok=.true.
   integer::current_property
+
+!$omp threadprivate(ind_list,ind_part,ok)
 
 #ifdef LIGHT_MPI_COMM
   offset_ig=0

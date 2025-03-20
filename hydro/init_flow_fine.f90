@@ -62,6 +62,8 @@ subroutine init_flow_fine(ilevel)
 
   integer,parameter::tag=1107
 
+!$omp threadprivate(ind_grid,ind_cell,vv,xx,uu)
+
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
 

@@ -782,6 +782,8 @@ subroutine consup(uin,flux,div,dt,ngrid)
   real(dp)::factor
   real(dp),dimension(1:nvector),save:: div1
 
+!$omp threadprivate(div1)
+
   factor=half**(ndim-1)
 
   ! Add diffusive flux where flow is compressing

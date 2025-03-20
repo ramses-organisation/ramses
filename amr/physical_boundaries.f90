@@ -19,6 +19,8 @@ subroutine init_boundary_fine(ilevel)
   integer,dimension(1:nvector),save::ind_grid,ind_cell
   integer,dimension(1:nvector,0:twondim),save::igridn
 
+!$omp threadprivate(ind_grid,ind_cell,igridn)
+
   if(ilevel==nlevelmax)return
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
@@ -171,6 +173,8 @@ subroutine make_boundary_flag(ilevel)
   integer,dimension(1:nvector),save::ind_grid,ind_grid_ref
   integer,dimension(1:nvector),save::ind_cell,ind_cell_ref
   integer,dimension(1:nvector),save::fff
+
+!$omp threadprivate(ind_grid,ind_grid_ref,ind_cell,ind_cell_ref,fff)
 
   if(.not. simple_boundary)return
   if(verbose)write(*,111)ilevel

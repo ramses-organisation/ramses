@@ -14,6 +14,8 @@ subroutine cooling_fine(ilevel)
   integer::ncache,i,igrid,ngrid
   integer,dimension(1:nvector),save::ind_grid
 
+  !$omp threadprivate(ind_grid)
+
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
 
@@ -103,6 +105,8 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
 #if NENER>0
   integer::irad
 #endif
+
+!$omp threadprivate(ind_cell,ind_leaf,nH,T2,delta_T2,ekk,err,emag,T2min,Zsolar,boost)
 
   ! Mesh spacing in that level
   dx=0.5D0**ilevel

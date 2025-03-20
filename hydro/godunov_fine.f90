@@ -16,6 +16,8 @@ subroutine godunov_fine(ilevel)
   integer::i,igrid,ncache,ngrid
   integer,dimension(1:nvector),save::ind_grid
 
+!$omp threadprivate(ind_grid)
+
   if(numbtot(1,ilevel)==0)return
   if(static)return
   if(verbose)write(*,111)ilevel
@@ -304,6 +306,8 @@ subroutine add_pdv_source_terms(ilevel)
   integer::irad
 #endif
 
+!$omp threadprivate(ind_grid,ind_cell,igridn,ind_left,ind_right,velg,veld,dx_g,dx_d,divu_loc)
+
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
 
@@ -514,6 +518,9 @@ subroutine godfine1(ind_grid,ncache,ilevel)
   integer::i2min,i2max,j2min,j2max,k2min,k2max
   integer::i3min,i3max,j3min,j3max,k3min,k3max
   real(dp)::dx,scale,oneontwotondim,d
+
+!$omp threadprivate(nbors_father_cells,nbors_father_grids,ibuffer_father,u1,u2,req2,peq2)
+!$omp threadprivate(uloc,gloc,ploc,req_loc,peq_loc,flux,tmp,ok)
 
   oneontwotondim = 1d0/dble(twotondim)
 

@@ -38,6 +38,8 @@ subroutine refine_coarse
   integer(i8b)::tmp_long
 #endif
 
+!$omp threadprivate(ind_cell_tmp)
+
   if(verbose)write(*,*)'  Entering refine_coarse'
 
   ! Constants
@@ -180,6 +182,8 @@ subroutine make_grid_coarse(ind_cell,ibound,boundary_region)
   real(dp),dimension(1:3)::xc,skip_loc
   real(dp),dimension(1:nvector,1:ndim),save::xx
   integer ,dimension(1:nvector),save::cc
+
+!$omp threadprivate(xx,cc)
 
   ! Local constants
   nxny=nx*ny
@@ -358,6 +362,8 @@ subroutine refine_fine(ilevel)
 #ifdef LONGINT
   integer(i8b)::tmp_long
 #endif
+
+!$omp threadprivate(ind_grid,ind_grid_tmp,ind_cell,ind_cell_tmp,ok)
 
   if(ilevel==nlevelmax)return
   if(numbtot(1,ilevel)==0)return
@@ -634,6 +640,10 @@ subroutine make_grid_fine(ind_grid,ind_cell,ind,ilevel,nn,ibound,boundary_region
   integer ,dimension(1:nvector),save::cc
 
   logical::error
+
+!$omp threadprivate(ind_grid_son,ind_fathers,igridn,indn)
+!$omp threadprivate(u1,u2,uu,xx,cc)
+
 
   ! Mesh spacing in father level
   dx=0.5D0**(ilevel-1)
@@ -966,6 +976,8 @@ subroutine kill_grid(ind_cell,ilevel,nn,ibound,boundary_region)
 #ifdef RT
   real(dp),dimension(nIons)::xion
 #endif
+
+!$omp threadprivate(ind_grid_son,ind_cell_son)
 
 #ifdef RT
   if(upload_equilibrium_x) then

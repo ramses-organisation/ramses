@@ -23,6 +23,8 @@ subroutine interpol_phi(ind_cell,phi_int,ncell,ilevel,icount)
   integer,dimension(1:8,1:8)::ccc
   real(dp),dimension(1:8)::bbbb
 
+!$omp threadprivate(nbors_father_grids,nbors_father_cells)
+
   ! CIC method constants
   aa = 1d0/4d0**ndim
   bb = 3*aa

@@ -535,6 +535,8 @@ subroutine interpolate_and_correct_coarse(ifinelevel)
    integer,  dimension(1:nvector,1:twotondim), save    :: nbors_father_grids
    real(dp), dimension(1:nvector), save                :: corr
 
+!$omp threadprivate(igrid_f_amr, icell_amr, cpu_amr,nbors_father_cells,nbors_father_grids,corr)
+
    ! Local constants
    a = 1d0/4d0**ndim
    b = 3*a

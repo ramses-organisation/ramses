@@ -315,6 +315,8 @@ subroutine cmp_new_cpu_map
   real(kind=8),dimension(0:ndomain)::bigdbl,bigtmp
 #endif
 
+!$omp threadprivate(ind_grid,ind_cell,xx,dom,order_min,order_max,niter_cost,xx_tmp,c_tmp)
+
   ! Local constants
   nxny=nx*ny
   nx_loc=icoarse_max-icoarse_min+1
@@ -658,6 +660,8 @@ subroutine cmp_cpumap(x,c,nn)
   integer::i,idom
   real(qdp),dimension(1:nvector),save::order
 
+!$omp threadprivate(order)
+
   if(ordering /= 'bisection') then
      call cmp_ordering(x,order,nn)
      do i=1,nn
@@ -693,6 +697,8 @@ subroutine cmp_dommap(x,c,nn)
 
   integer::i,idom
   real(qdp),dimension(1:nvector),save::order
+
+  !$omp threadprivate(order)
 
   call cmp_ordering(x,order,nn)
   do i=1,nn
@@ -736,6 +742,8 @@ subroutine cmp_ordering(x,order,nn)
 #if NDIM>2
   real(kind=8)::zz,zc
 #endif
+
+!$omp threadprivate(ix,iy,iz)
 
   nx_loc=icoarse_max-icoarse_min+1
   scale=boxlen/dble(nx_loc)
@@ -849,6 +857,8 @@ subroutine cmp_minmaxorder(x,order_min,order_max,dx,nn)
 #endif
   real(kind=8)::scale,bscaleloc,bscale
   real(qdp)::dkey,oneqdp=1
+
+!$omp threadprivate(ix,iy,iz)
 
   nx_loc=icoarse_max-icoarse_min+1
   scale=boxlen/dble(nx_loc)

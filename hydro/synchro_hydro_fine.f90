@@ -18,6 +18,8 @@ subroutine synchro_hydro_fine(ilevel,dteff,which_force)
   integer::ncache,ngrid,i,igrid,iskip,ind
   integer,dimension(1:nvector),save::ind_grid,ind_cell
 
+!$omp threadprivate(ind_grid,ind_cell)
+
 #if USE_TURB==1
   if(.not. (poisson.or.turb))return
 #else
@@ -76,6 +78,8 @@ subroutine synchydrofine1(ind_cell,ncell,dteff,which_force)
   integer::nndim=ndim
 #endif
   real(dp),dimension(1:nvector),save::pp
+
+!$omp threadprivate(pp)
 
   ! Compute internal + magnetic + radiative energy
   do i=1,ncell

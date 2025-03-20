@@ -23,6 +23,8 @@ subroutine get3cubefather(ind_cell_father,nbors_father_cells,&
   integer,dimension(1:nvector,1:twotondim),save::nbors_grids_ok
   logical::oups
 
+!$omp threadprivate(ix,iy,iz,iix,iiy,iiz,pos,ind_grid_father,ind_grid_ok,nbors_father_ok,nbors_grids_ok)
+
   nxny=nx*ny
 
   if(ilevel==1)then  ! Easy...
@@ -220,6 +222,8 @@ subroutine get3cubepos(ind_grid,ind,nbors_father_cells,nbors_father_grids,ng)
   integer,dimension(1:27,1:8,1:3)::lll,mmm
   integer,dimension(1:nvector),save::ind_grid1,ind_grid2,ind_grid3
   integer,dimension(1:nvector,1:twotondim),save::nbors_grids
+
+!$omp threadprivate(ind_grid1,ind_grid2,ind_grid3,nbors_grids)
 
   call getindices3cube(lll,mmm)
 
@@ -419,6 +423,8 @@ subroutine getnborfather(ind_cell,ind_father,ncell,ilevel)
   integer,dimension(1:nvector),save::ind_grid_father,pos
   integer,dimension(1:nvector,0:twondim),save::igridn,igridn_ok
   integer,dimension(1:nvector,1:twondim),save::icelln_ok
+
+!$omp threadprivate(ix,ind_grid_father,pos,igridn,igridn_ok,icelln_ok)
 
   nxny=nx*ny
 

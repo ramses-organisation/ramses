@@ -37,6 +37,9 @@ subroutine output_cone()
 
   integer,dimension(1:nvector),save::ind_part
   logical::opened
+
+!$omp threadprivate(pos,vel,var,ind_part)
+
   opened=.false.
 
   if(nstep_coarse.lt.2)return

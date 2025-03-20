@@ -226,6 +226,8 @@ subroutine ensure_ref_rules(ilevel)
   integer,dimension(1:nvector,1:twotondim),save::nbors_father_grids
   logical,dimension(1:nvector),save::ok
 
+!$omp threadprivate(ind_grid,ind_cell,nbors_father_cells,nbors_father_grids,ok)
+
   ncache=active(ilevel)%ngrid
   do igrid=1,ncache,nvector
      ! Gather nvector grids
@@ -301,6 +303,8 @@ subroutine userflag_fine(ilevel)
   real(dp),dimension(1:nvector,1:ndim),save::xx
 
   logical::prevent_refine
+
+!$omp threadprivate(ind_grid,ind_cell,ok,xx)
 
   if(ilevel==nlevelmax)return
   if(numbtot(1,ilevel)==0)return
@@ -569,6 +573,8 @@ subroutine smooth_fine(ilevel)
   integer,dimension(1:nvector),save::ind_grid,ind_cell
   integer,dimension(1:nvector,0:twondim),save::igridn
 
+!$omp threadprivate(ind_grid,ind_cell,igridn)
+
   if(ilevel==nlevelmax)return
   if(numbtot(1,ilevel)==0)return
 
@@ -653,6 +659,9 @@ subroutine count_nbors(igridn,ind,n_nbor,nn)
   integer::i,in,iskip
   integer,dimension(1:nvector),save::ind_cell,i_nbor
   integer,dimension(1:nvector,1:twondim),save::indn
+
+!$omp threadprivate(ind_cell,i_nbor,indn)
+
   ! Compute cell number
   iskip=ncoarse+(ind-1)*ngridmax
   do i=1,nn
@@ -692,6 +701,9 @@ subroutine count_nbors2(igridn,ind,n_nbor,nn)
   integer::i,in,iskip
   integer,dimension(1:nvector),save::ind_cell,i_nbor
   integer,dimension(1:nvector,1:twondim),save::indn
+
+!$omp threadprivate(ind_cell,i_nbor,indn)
+
   ! Compute cell number
   iskip=ncoarse+(ind-1)*ngridmax
   do i=1,nn

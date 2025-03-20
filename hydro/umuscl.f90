@@ -59,6 +59,8 @@ subroutine unsplit(uin,gravin,pin,flux,tmp,dx,dy,dz,dt,ngrid)
   integer::i,j,k,l,ivar
   integer::ilo,ihi,jlo,jhi,klo,khi
 
+!$omp threadprivate(qin,cin,dq,qm,qp,fx,tx)
+
   ilo=MIN(1,iu1+2); ihi=MAX(1,iu2-2)
   jlo=MIN(1,ju1+2); jhi=MAX(1,ju2-2)
   klo=MIN(1,ku1+2); khi=MAX(1,ku2-2)
@@ -738,6 +740,8 @@ subroutine cmpflxm(qm,im1,im2,jm1,jm2,km1,km2, &
 #if NVAR > NHYDRO
   integer ::n
 #endif
+
+!$omp threadprivate(qleft,qright,fgdnv)
 
   entho=one/(gamma-one)
   xdim=ln-1

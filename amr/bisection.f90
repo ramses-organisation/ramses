@@ -483,6 +483,8 @@ contains
 
       integer,dimension(1:nvector),save::ind_grid,ind_cell
 
+!$omp threadprivate(ind_grid,ind_cell)
+
       real(dp)::dx,scale
 
       if(verbose) print *,'entering init_bisection_histogram'
