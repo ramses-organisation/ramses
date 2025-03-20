@@ -42,10 +42,12 @@ subroutine restrict_mask_fine_reverse(ifinelevel)
    icoarselevel=ifinelevel-1
 
    ! Loop over fine cells of the myid active comm
+!$omp parallel private(iskip_f_amr,igrid_f_amr,icell_f_amr,icell_c_amr,ind_c_cell,igrid_c_amr,cpu_amr,igrid_c_mg,iskip_c_mg,icell_c_mg,ngpmask)
    do ind_f_cell=1,twotondim
       iskip_f_amr=ncoarse+(ind_f_cell-1)*ngridmax
 
       ! Loop over fine grids of myid
+!$omp do
       do igrid_f_mg=1,active(ifinelevel)%ngrid
          igrid_f_amr=active(ifinelevel)%igrid(igrid_f_mg)
          icell_f_amr=igrid_f_amr+iskip_f_amr
@@ -71,7 +73,9 @@ subroutine restrict_mask_fine_reverse(ifinelevel)
             active_mg(cpu_amr,icoarselevel)%u(icell_c_mg,4)+ngpmask
 #endif
       end do
+!$omp end do nowait
    end do
+!$omp end parallel
 end subroutine restrict_mask_fine_reverse
 
 ! ------------------------------------------------------------------------
@@ -101,10 +105,13 @@ subroutine cmp_residual_mg_fine(ilevel)
    ngrid=active(ilevel)%ngrid
 
    ! Loop over cells
+!$omp parallel private(iskip_amr,igshift,igrid_nbor_amr,igrid_amr,icell_nbor_amr,icell_amr,phi_c,nb_sum)
    do ind=1,twotondim
       iskip_amr = ncoarse+(ind-1)*ngridmax
 
       ! Loop over active grids
+!$omp do
+      !TC: TODO vectorize? 
       do igrid_mg=1,ngrid
          igrid_amr = active(ilevel)%igrid(igrid_mg)
          icell_amr = iskip_amr + igrid_amr
@@ -170,7 +177,9 @@ subroutine cmp_residual_mg_fine(ilevel)
          ! Store ***MINUS THE RESIDUAL*** in f(:,1), using BC-modified RHS
          f(icell_amr,1) = -oneoverdx2*( nb_sum - dtwondim*phi_c )+f(icell_amr,2)
       end do
+!$omp end do nowait
    end do
+!$omp end parallel
 
 end subroutine cmp_residual_mg_fine
 
@@ -196,9 +205,11 @@ subroutine cmp_residual_norm2_fine(ilevel, norm2)
 
    norm2 = 0.0d0
    ! Loop over cells
+!$omp parallel private(iskip_amr,igrid_amr,icell_amr) reduction(+:norm2)
    do ind=1,twotondim
       iskip_amr = ncoarse+(ind-1)*ngridmax
       ! Loop over active grids
+!$omp do
       do igrid_mg=1,ngrid
          igrid_amr = active(ilevel)%igrid(igrid_mg)
          icell_amr = iskip_amr + igrid_amr
@@ -207,7 +218,9 @@ subroutine cmp_residual_norm2_fine(ilevel, norm2)
          end if
          norm2 = norm2 + f(icell_amr,1)**2
       end do
+!$omp end do nowait
    end do
+!$omp end parallel
    norm2 = dx2*norm2
 
 end subroutine cmp_residual_norm2_fine
@@ -248,7 +261,9 @@ subroutine gauss_seidel_mg_fine(ilevel,redstep)
    ngrid=active(ilevel)%ngrid
 
    ! Loop over cells, with red/black ordering
-   do ind0=1,twotondim/2      ! Only half of the cells for a red or black sweep
+   ! TC: todo vectorize?
+!$omp parallel private(ind,iskip_amr,igshift,igrid_nbor_amr,igrid_amr,icell_nbor_amr,icell_amr,nb_sum,weight)
+  do ind0=1,twotondim/2      ! Only half of the cells for a red or black sweep
       if(redstep) then
          ind = ired  (ndim,ind0)
       else
@@ -258,6 +273,7 @@ subroutine gauss_seidel_mg_fine(ilevel,redstep)
       iskip_amr = ncoarse+(ind-1)*ngridmax
 
       ! Loop over active grids
+!$omp do
       do igrid_mg=1,ngrid
          igrid_amr = active(ilevel)%igrid(igrid_mg)
          icell_amr = iskip_amr + igrid_amr
@@ -327,7 +343,9 @@ subroutine gauss_seidel_mg_fine(ilevel,redstep)
             phi(icell_amr) = (nb_sum - dx2*f(icell_amr,2)) / (dtwondim - weight)
          end if
       end do
+!$omp end do nowait
    end do
+!$omp end parallel
 end subroutine gauss_seidel_mg_fine
 
 
@@ -358,10 +376,12 @@ subroutine restrict_residual_fine_reverse(ifinelevel)
    icoarselevel=ifinelevel-1
 
    ! Loop over fine cells of the myid active comm
+!$omp parallel private(iskip_f_amr,iskip_c_mg,ind_c_cell,igrid_f_amr,igrid_c_mg,igrid_c_amr,icell_f_amr,icell_c_mg,icell_c_amr,cpu_amr,res)
    do ind_f_cell=1,twotondim
       iskip_f_amr=ncoarse+(ind_f_cell-1)*ngridmax
 
       ! Loop over fine grids of myid
+!$omp do
       do igrid_f_mg=1,active(ifinelevel)%ngrid
          igrid_f_amr=active(ifinelevel)%igrid(igrid_f_mg)
          icell_f_amr=igrid_f_amr+iskip_f_amr
@@ -396,7 +416,9 @@ subroutine restrict_residual_fine_reverse(ifinelevel)
             active_mg(cpu_amr,icoarselevel)%u(icell_c_mg,2)+res
 #endif
       end do
+!$omp end do nowait
    end do
+!$omp end parallel
 end subroutine restrict_residual_fine_reverse
 
 ! ------------------------------------------------------------------------
@@ -445,6 +467,7 @@ subroutine interpolate_and_correct_fine(ifinelevel)
 
    ! Loop over fine grids by vector sweeps
    ngrid_f=active(ifinelevel)%ngrid
+!$omp parallel do private(nbatch,iskip_f_amr,ind_father,ind_c,igrid_c_mg,igrid_c_amr,icell_c_mg,icell_c_amr,cpu_amr,coeff)
    do istart=1,ngrid_f,nvector
 
       ! Gather nvector grids
@@ -531,8 +554,10 @@ subroutine set_scan_flag_fine(ilevel)
    ngrid = active(ilevel)%ngrid
 
    ! Loop over cells and set fine SCAN flag
+!$omp parallel private(iskip_amr,igrid_amr,icell_amr,scan_flag,igshift,igrid_nbor_amr,icell_nbor_amr)
    do ind=1,twotondim
       iskip_amr = ncoarse+(ind-1)*ngridmax
+!$omp do
       do igrid_mg=1,ngrid
          igrid_amr = active(ilevel)%igrid(igrid_mg)
          icell_amr = iskip_amr + igrid_amr
@@ -571,5 +596,7 @@ subroutine set_scan_flag_fine(ilevel)
          ! Do NOT overwrite flag2 !
          flag2(icell_amr)=flag2(icell_amr)+ngridmax*scan_flag
       end do
+!$omp end do nowait
    end do
+!$omp end parallel
 end subroutine set_scan_flag_fine
