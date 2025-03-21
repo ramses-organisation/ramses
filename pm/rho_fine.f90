@@ -221,7 +221,6 @@ subroutine rho_from_current_level(ilevel)
   ! This routine computes the density field at level ilevel using
   ! the CIC scheme from particles that are not entirely in
   ! level ilevel (boundary particles).
-  ! Arrays flag1 and flag2 are used as temporary work space.
   !------------------------------------------------------------------
   integer::igrid,jgrid,ipart,jpart,idim,icpu
   integer::i,ig,ip,npart1
@@ -231,13 +230,15 @@ subroutine rho_from_current_level(ilevel)
   integer,dimension(1:nvector),save::ind_part,ind_grid_part
   real(dp),dimension(1:nvector,1:ndim),save::x0
 
+  integer :: counter
+
 !$omp threadprivate(ind_grid,ind_cell,ind_part,ind_grid_part,x0)
 
-  integer :: counter
   ! Mesh spacing in that level
   dx=0.5D0**ilevel
 
   ! Loop over cpus
+!$omp parallel do private(i,ig,ip,npart1,igrid,jgrid,ipart,jpart,idim,counter)
   do icpu=1,ncpu
      ! Loop over grids
      igrid=headl(icpu,ilevel)
@@ -276,11 +277,13 @@ subroutine rho_from_current_level(ilevel)
                  do i=1,ig
                     ind_cell(i)=father(ind_grid(i))
                  end do
+!$omp critical
 #ifdef TSC
                  call tsc_amr(ind_cell,ind_part,ind_grid_part,x0,ig,ip,ilevel)
 #else
                  call cic_amr(ind_cell,ind_part,ind_grid_part,x0,ig,ip,ilevel)
 #endif
+!$omp end critical
                  ip=0
                  ig=0
                  counter=0
@@ -309,11 +312,13 @@ subroutine rho_from_current_level(ilevel)
         do i=1,ig
            ind_cell(i)=father(ind_grid(i))
         end do
+!$omp critical
 #ifdef TSC
         call tsc_amr(ind_cell,ind_part,ind_grid_part,x0,ig,ip,ilevel)
 #else
         call cic_amr(ind_cell,ind_part,ind_grid_part,x0,ig,ip,ilevel)
 #endif
+!$omp end critical
      end if
 
   end do

@@ -211,6 +211,7 @@ subroutine make_tree_fine(ilevel)
   scale=boxlen/dble(nx_loc)
 
   ! Loop over cpus
+!!!$omp parallel do private(ig,ip,npart1,igrid,jgrid,ipart,jpart,next_part,idim)
   do icpu=1,ncpu
      igrid=headl(icpu,ilevel)
      ig=0
