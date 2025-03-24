@@ -1061,10 +1061,9 @@ subroutine make_fine_bc_rhs(ilevel,icount)
    use pm_commons
    use poisson_commons
    use constants, only: twopi
+   use amr_constants, only:iii,jjj
    implicit none
    integer, intent(in) :: ilevel,icount
-
-   integer, dimension(1:3,1:2,1:8) :: iii, jjj
 
    real(dp) :: dx, oneoverdx2, phi_b, nb_mask, nb_phi, w
 
@@ -1089,13 +1088,6 @@ subroutine make_fine_bc_rhs(ilevel,icount)
 
    dx  = 0.5d0**ilevel
    oneoverdx2 = 1.0d0/(dx*dx)
-
-   iii(1,1,1:8)=(/1,0,1,0,1,0,1,0/); jjj(1,1,1:8)=(/2,1,4,3,6,5,8,7/)
-   iii(1,2,1:8)=(/0,2,0,2,0,2,0,2/); jjj(1,2,1:8)=(/2,1,4,3,6,5,8,7/)
-   iii(2,1,1:8)=(/3,3,0,0,3,3,0,0/); jjj(2,1,1:8)=(/3,4,1,2,7,8,5,6/)
-   iii(2,2,1:8)=(/0,0,4,4,0,0,4,4/); jjj(2,2,1:8)=(/3,4,1,2,7,8,5,6/)
-   iii(3,1,1:8)=(/5,5,5,5,0,0,0,0/); jjj(3,1,1:8)=(/5,6,7,8,1,2,3,4/)
-   iii(3,2,1:8)=(/0,0,0,0,6,6,6,6/); jjj(3,2,1:8)=(/5,6,7,8,1,2,3,4/)
 
    ngrid=active(ilevel)%ngrid
 

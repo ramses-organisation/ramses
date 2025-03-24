@@ -82,10 +82,9 @@ subroutine cmp_residual_mg_fine(ilevel)
    ! Computes the residual the fine (AMR) level, and stores it into f(:,1)
    use amr_commons
    use poisson_commons
+   use amr_constants, only:iii,jjj
    implicit none
    integer, intent(in) :: ilevel
-
-   integer, dimension(1:3,1:2,1:8) :: iii, jjj
 
    real(dp) :: dx, oneoverdx2, phi_c, nb_sum
    integer  :: ngrid
@@ -98,13 +97,6 @@ subroutine cmp_residual_mg_fine(ilevel)
    ! Set constants
    dx  = 0.5d0**ilevel
    oneoverdx2 = 1.0d0/(dx*dx)
-
-   iii(1,1,1:8)=(/1,0,1,0,1,0,1,0/); jjj(1,1,1:8)=(/2,1,4,3,6,5,8,7/)
-   iii(1,2,1:8)=(/0,2,0,2,0,2,0,2/); jjj(1,2,1:8)=(/2,1,4,3,6,5,8,7/)
-   iii(2,1,1:8)=(/3,3,0,0,3,3,0,0/); jjj(2,1,1:8)=(/3,4,1,2,7,8,5,6/)
-   iii(2,2,1:8)=(/0,0,4,4,0,0,4,4/); jjj(2,2,1:8)=(/3,4,1,2,7,8,5,6/)
-   iii(3,1,1:8)=(/5,5,5,5,0,0,0,0/); jjj(3,1,1:8)=(/5,6,7,8,1,2,3,4/)
-   iii(3,2,1:8)=(/0,0,0,0,6,6,6,6/); jjj(3,2,1:8)=(/5,6,7,8,1,2,3,4/)
 
    ngrid=active(ilevel)%ngrid
 
@@ -228,11 +220,11 @@ subroutine gauss_seidel_mg_fine(ilevel,redstep)
    use amr_commons
    use pm_commons
    use poisson_commons
+   use amr_constants, only:iii,jjj
    implicit none
    integer, intent(in) :: ilevel
    logical, intent(in) :: redstep
 
-   integer, dimension(1:3,1:2,1:8) :: iii, jjj
    integer, dimension(1:3,1:4)     :: ired, iblack
 
    real(dp) :: dx2, nb_sum, weight
@@ -252,13 +244,6 @@ subroutine gauss_seidel_mg_fine(ilevel,redstep)
    iblack(2,1:4)=(/2,3,0,0/)
    ired  (3,1:4)=(/1,4,6,7/)
    iblack(3,1:4)=(/2,3,5,8/)
-
-   iii(1,1,1:8)=(/1,0,1,0,1,0,1,0/); jjj(1,1,1:8)=(/2,1,4,3,6,5,8,7/)
-   iii(1,2,1:8)=(/0,2,0,2,0,2,0,2/); jjj(1,2,1:8)=(/2,1,4,3,6,5,8,7/)
-   iii(2,1,1:8)=(/3,3,0,0,3,3,0,0/); jjj(2,1,1:8)=(/3,4,1,2,7,8,5,6/)
-   iii(2,2,1:8)=(/0,0,4,4,0,0,4,4/); jjj(2,2,1:8)=(/3,4,1,2,7,8,5,6/)
-   iii(3,1,1:8)=(/5,5,5,5,0,0,0,0/); jjj(3,1,1:8)=(/5,6,7,8,1,2,3,4/)
-   iii(3,2,1:8)=(/0,0,0,0,6,6,6,6/); jjj(3,2,1:8)=(/5,6,7,8,1,2,3,4/)
 
    ngrid=active(ilevel)%ngrid
 
@@ -530,6 +515,7 @@ end subroutine interpolate_and_correct_fine
 subroutine set_scan_flag_fine(ilevel)
    use amr_commons
    use poisson_commons
+   use amr_constants, only:iii,jjj
    implicit none
 
    integer, intent(in) :: ilevel
@@ -539,15 +525,6 @@ subroutine set_scan_flag_fine(ilevel)
    integer :: igrid_amr, igrid_nbor_amr
 
    integer :: iskip_amr, icell_amr, icell_nbor_amr
-
-   integer, dimension(1:3,1:2,1:8) :: iii, jjj
-
-   iii(1,1,1:8)=(/1,0,1,0,1,0,1,0/); jjj(1,1,1:8)=(/2,1,4,3,6,5,8,7/)
-   iii(1,2,1:8)=(/0,2,0,2,0,2,0,2/); jjj(1,2,1:8)=(/2,1,4,3,6,5,8,7/)
-   iii(2,1,1:8)=(/3,3,0,0,3,3,0,0/); jjj(2,1,1:8)=(/3,4,1,2,7,8,5,6/)
-   iii(2,2,1:8)=(/0,0,4,4,0,0,4,4/); jjj(2,2,1:8)=(/3,4,1,2,7,8,5,6/)
-   iii(3,1,1:8)=(/5,5,5,5,0,0,0,0/); jjj(3,1,1:8)=(/5,6,7,8,1,2,3,4/)
-   iii(3,2,1:8)=(/0,0,0,0,6,6,6,6/); jjj(3,2,1:8)=(/5,6,7,8,1,2,3,4/)
 
    ngrid = active(ilevel)%ngrid
 

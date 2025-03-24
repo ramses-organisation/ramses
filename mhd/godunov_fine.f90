@@ -329,6 +329,7 @@ end subroutine add_gravity_source_terms
 subroutine add_pdv_source_terms(ilevel)
   use amr_commons
   use hydro_commons
+  use amr_constants, only:iii,jjj
   implicit none
   integer::ilevel
   !---------------------------------------------------------
@@ -337,7 +338,6 @@ subroutine add_pdv_source_terms(ilevel)
   !---------------------------------------------------------
   integer::i,ind,iskip,nx_loc,ind_cell1
   integer::ncache,igrid,ngrid,idim,id1,ig1,ih1,id2,ig2,ih2
-  integer,dimension(1:3,1:2,1:8)::iii,jjj
   real(dp)::scale,dx,dx_loc,d,u,v,w,eold,A,B,C
 
   integer ,dimension(1:nvector),save::ind_grid,ind_cell
@@ -359,13 +359,6 @@ subroutine add_pdv_source_terms(ilevel)
   dx_loc=dx*scale
 
   velg=0.0; veld=0.0d0
-
-  iii(1,1,1:8)=(/1,0,1,0,1,0,1,0/); jjj(1,1,1:8)=(/2,1,4,3,6,5,8,7/)
-  iii(1,2,1:8)=(/0,2,0,2,0,2,0,2/); jjj(1,2,1:8)=(/2,1,4,3,6,5,8,7/)
-  iii(2,1,1:8)=(/3,3,0,0,3,3,0,0/); jjj(2,1,1:8)=(/3,4,1,2,7,8,5,6/)
-  iii(2,2,1:8)=(/0,0,4,4,0,0,4,4/); jjj(2,2,1:8)=(/3,4,1,2,7,8,5,6/)
-  iii(3,1,1:8)=(/5,5,5,5,0,0,0,0/); jjj(3,1,1:8)=(/5,6,7,8,1,2,3,4/)
-  iii(3,2,1:8)=(/0,0,0,0,6,6,6,6/); jjj(3,2,1:8)=(/5,6,7,8,1,2,3,4/)
 
   ! Loop over myid grids by vector sweeps
   ncache=active(ilevel)%ngrid

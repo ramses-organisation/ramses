@@ -214,6 +214,7 @@ subroutine cmp_residual_cg(ilevel,icount)
   use hydro_commons
   use poisson_commons
   use constants, only: twopi
+  use amr_constants, only:iii,jjj
   implicit none
   integer::ilevel,icount
   !------------------------------------------------------------------
@@ -223,7 +224,6 @@ subroutine cmp_residual_cg(ilevel,icount)
   integer::i,idim,igrid,ngrid,ncache,ind,iskip,nx_loc
   integer::id1,id2,ig1,ig2,ih1,ih2
   real(dp)::dx2,fourpi,scale,oneoversix,fact
-  integer,dimension(1:3,1:2,1:8)::iii,jjj
 
   integer ,dimension(1:nvector),save::ind_grid,ind_cell
   integer ,dimension(1:nvector,0:twondim),save::igridn
@@ -240,13 +240,6 @@ subroutine cmp_residual_cg(ilevel,icount)
   if(cosmo)fourpi=1.5D0*omega_m*aexp*scale
   oneoversix=1.0D0/dble(twondim)
   fact=oneoversix*fourpi*dx2
-
-  iii(1,1,1:8)=(/1,0,1,0,1,0,1,0/); jjj(1,1,1:8)=(/2,1,4,3,6,5,8,7/)
-  iii(1,2,1:8)=(/0,2,0,2,0,2,0,2/); jjj(1,2,1:8)=(/2,1,4,3,6,5,8,7/)
-  iii(2,1,1:8)=(/3,3,0,0,3,3,0,0/); jjj(2,1,1:8)=(/3,4,1,2,7,8,5,6/)
-  iii(2,2,1:8)=(/0,0,4,4,0,0,4,4/); jjj(2,2,1:8)=(/3,4,1,2,7,8,5,6/)
-  iii(3,1,1:8)=(/5,5,5,5,0,0,0,0/); jjj(3,1,1:8)=(/5,6,7,8,1,2,3,4/)
-  iii(3,2,1:8)=(/0,0,0,0,6,6,6,6/); jjj(3,2,1:8)=(/5,6,7,8,1,2,3,4/)
 
   ! Loop over myid grids by vector sweeps
   ncache=active(ilevel)%ngrid
@@ -346,6 +339,7 @@ subroutine cmp_Ap_cg(ilevel)
   use pm_commons
   use hydro_commons
   use poisson_commons
+  use amr_constants, only:iii,jjj
   implicit none
   integer::ilevel
   !------------------------------------------------------------------
@@ -355,7 +349,6 @@ subroutine cmp_Ap_cg(ilevel)
   integer::i,idim,igrid,ngrid,ncache,ind,iskip
   integer::id1,id2,ig1,ig2,ih1,ih2
   real(dp)::oneoversix
-  integer,dimension(1:3,1:2,1:8)::iii,jjj
 
   integer,dimension(1:nvector),save::ind_grid,ind_cell
   integer,dimension(1:nvector,0:twondim),save::igridn
@@ -364,13 +357,6 @@ subroutine cmp_Ap_cg(ilevel)
 
   ! Set constants
   oneoversix=1.0D0/dble(twondim)
-
-  iii(1,1,1:8)=(/1,0,1,0,1,0,1,0/); jjj(1,1,1:8)=(/2,1,4,3,6,5,8,7/)
-  iii(1,2,1:8)=(/0,2,0,2,0,2,0,2/); jjj(1,2,1:8)=(/2,1,4,3,6,5,8,7/)
-  iii(2,1,1:8)=(/3,3,0,0,3,3,0,0/); jjj(2,1,1:8)=(/3,4,1,2,7,8,5,6/)
-  iii(2,2,1:8)=(/0,0,4,4,0,0,4,4/); jjj(2,2,1:8)=(/3,4,1,2,7,8,5,6/)
-  iii(3,1,1:8)=(/5,5,5,5,0,0,0,0/); jjj(3,1,1:8)=(/5,6,7,8,1,2,3,4/)
-  iii(3,2,1:8)=(/0,0,0,0,6,6,6,6/); jjj(3,2,1:8)=(/5,6,7,8,1,2,3,4/)
 
   ! Loop over myid grids by vector sweeps
   ncache=active(ilevel)%ngrid
