@@ -362,6 +362,7 @@ end subroutine getindices3cube
 !##############################################################
 subroutine getnborcells(igridn,ind,icelln,ng)
   use amr_commons
+  use amr_constants, only:iii,jjj
   implicit none
   integer::ng,ind
   integer,dimension(1:nvector,0:twondim)::igridn
@@ -372,28 +373,23 @@ subroutine getnborcells(igridn,ind,icelln,ng)
   ! grids and the cell's grid (see routine getnborgrids).
   ! ind is the cell index in the grid.
   !--------------------------------------------------------------
-  integer::i,in,ig,ih,iskip
-  integer,dimension(1:8,1:6)::ggg,hhh
-
-  ggg(1:8,1)=(/1,0,1,0,1,0,1,0/); hhh(1:8,1)=(/2,1,4,3,6,5,8,7/)
-  ggg(1:8,2)=(/0,2,0,2,0,2,0,2/); hhh(1:8,2)=(/2,1,4,3,6,5,8,7/)
-  ggg(1:8,3)=(/3,3,0,0,3,3,0,0/); hhh(1:8,3)=(/3,4,1,2,7,8,5,6/)
-  ggg(1:8,4)=(/0,0,4,4,0,0,4,4/); hhh(1:8,4)=(/3,4,1,2,7,8,5,6/)
-  ggg(1:8,5)=(/5,5,5,5,0,0,0,0/); hhh(1:8,5)=(/5,6,7,8,1,2,3,4/)
-  ggg(1:8,6)=(/0,0,0,0,6,6,6,6/); hhh(1:8,6)=(/5,6,7,8,1,2,3,4/)
+  integer::i,in,ig,ih,iskip,inbor,idim
 
   ! Reset indices
   icelln(1:ng,1:twondim)=0
   ! Compute cell numbers
-  do in=1,twondim
-     ig=ggg(ind,in)
-     ih=hhh(ind,in)
-     iskip=ncoarse+(ih-1)*ngridmax
-     do i=1,ng
-        if(igridn(i,ig)>0)then
-           icelln(i,in)=iskip+igridn(i,ig)
-        end if
-     end do
+  do idim=1,ndim
+     do inbor=1,2
+        in=(idim-1)*2 + inbor
+        ig=iii(idim,inbor,ind)
+        ih=jjj(idim,inbor,ind)
+        iskip=ncoarse+(ih-1)*ngridmax
+        do i=1,ng
+           if(igridn(i,ig)>0)then
+              icelln(i,in)=iskip+igridn(i,ig)
+           end if
+        end do
+     enddo
   end do
 
 end subroutine getnborcells
