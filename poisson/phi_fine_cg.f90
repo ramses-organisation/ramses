@@ -429,6 +429,7 @@ subroutine make_initial_phi(ilevel,icount)
 
   ! Loop over myid grids by vector sweeps
   ncache=active(ilevel)%ngrid
+!$omp parallel do
   do igrid=1,ncache,nvector
      ! Gather nvector grids
      ngrid=MIN(nvector,ncache-igrid+1)
@@ -530,6 +531,7 @@ subroutine make_multipole_phi(ilevel)
 
   ! Loop over myid grids by vector sweeps
   ncache=active(ilevel)%ngrid
+!$omp parallel do
   do igrid=1,ncache,nvector
      ! Gather nvector grids
      ngrid=MIN(nvector,ncache-igrid+1)
