@@ -991,50 +991,94 @@ subroutine make_fine_mask(ilevel)
    implicit none
    integer, intent(in) :: ilevel
 
-   integer  :: ngrid
-   integer  :: ind, igrid_mg, icpu, ibound
-   integer  :: igrid_amr, icell_amr, iskip_amr
+   integer  :: ngrid,ncache
+   integer  :: ind, igrid_mg, icpu, ibound,i, icell_amr
+   integer,dimension(1:nvector),save::igrid_amr
+   integer,dimension(1:twotondim)::iskip_amr
 
-   ngrid=active(ilevel)%ngrid
+!$omp threadprivate(igrid_amr)
+
+   ! precalculate iskip_amr
    do ind=1,twotondim
-      iskip_amr = ncoarse+(ind-1)*ngridmax
-      do igrid_mg=1,ngrid
-         igrid_amr = active(ilevel)%igrid(igrid_mg)
-         icell_amr = iskip_amr + igrid_amr
-         ! Init mask to 1.0 on active cells :
-         f(icell_amr,3) = 1.0d0
-      end do
+      iskip_amr(ind) = ncoarse+(ind-1)*ngridmax
    end do
 
-   do icpu=1,ncpu
-      ngrid=reception(icpu,ilevel)%ngrid
+!$omp parallel private(igrid_mg, icell_amr, ngrid, ind, ncache)
+
+   ! ---------------------------------
+   ! Init mask to 1.0 on active cells 
+   ! ---------------------------------
+
+   ncache=active(ilevel)%ngrid
+!$omp do
+   do i=1,ncache,nvector
+      ! gather nvector grids
+      ngrid=MIN(nvector,ncache-i+1)
+      do igrid_mg=1,ngrid
+         igrid_amr(igrid_mg)=active(ilevel)%igrid(i+igrid_mg-1)
+      end do
+      ! set f(i,3)
       do ind=1,twotondim
-         iskip_amr = ncoarse+(ind-1)*ngridmax
          do igrid_mg=1,ngrid
-#ifdef LIGHT_MPI_COMM
-            igrid_amr = reception(icpu,ilevel)%pcomm%igrid(igrid_mg)
-#else
-            igrid_amr = reception(icpu,ilevel)%igrid(igrid_mg)
-#endif
-            icell_amr = iskip_amr + igrid_amr
-            ! Init mask to 1.0 on virtual cells :
+            icell_amr = iskip_amr(ind) + igrid_amr(igrid_mg)
             f(icell_amr,3) = 1.0d0
          end do
       end do
    end do
+!$omp end do nowait
 
-   do ibound=1,nboundary
-      ngrid=boundary(ibound,ilevel)%ngrid
-      do ind=1,twotondim
-         iskip_amr=ncoarse+(ind-1)*ngridmax
+   ! ---------------------------------
+   ! Init mask to 1.0 on virtual cells 
+   ! ---------------------------------
+
+   do icpu=1,ncpu
+      ncache=reception(icpu,ilevel)%ngrid
+!$omp do
+      do i=1,ncache,nvector
+         ! gather nvector grids
+         ngrid=MIN(nvector,ncache-i+1)
          do igrid_mg=1,ngrid
-            igrid_amr = boundary(ibound,ilevel)%igrid(igrid_mg)
-            icell_amr = iskip_amr + igrid_amr
-            ! Init mask to -1.0 on boundary cells :
-            f(icell_amr,3) = -1.0d0
+#ifdef LIGHT_MPI_COMM
+            igrid_amr(igrid_mg) = reception(icpu,ilevel)%pcomm%igrid(i+igrid_mg-1)
+#else
+            igrid_amr(igrid_mg) = reception(icpu,ilevel)%igrid(i+igrid_mg-1)
+#endif
+         end do
+         ! set f(i,3)
+         do ind=1,twotondim
+            do igrid_mg=1,ngrid
+               icell_amr = iskip_amr(ind) + igrid_amr(igrid_mg)
+               f(icell_amr,3) = 1.0d0
+            end do
          end do
       end do
+!$omp end do nowait
    end do
+
+   ! ---------------------------------
+   ! Init mask to -1.0 on boundary cells 
+   ! ---------------------------------
+
+   do ibound=1,nboundary
+      ncache=boundary(ibound,ilevel)%ngrid
+!$omp do
+      do i=1,ncache,nvector
+         ! gather nvector grids
+         ngrid=MIN(nvector,ncache-i+1)
+         do igrid_mg=1,ngrid
+            igrid_amr(igrid_mg) = boundary(ibound,ilevel)%igrid(i+igrid_mg-1)
+         end do
+         ! set f(i,3)
+         do ind=1,twotondim
+            do igrid_mg=1,ngrid
+               icell_amr = iskip_amr(ind) + igrid_amr(igrid_mg)
+               f(icell_amr,3) = -1.0d0
+            end do
+         end do
+      end do
+!$omp end do nowait
+   end do
+!$omp end parallel
 
 end subroutine make_fine_mask
 
