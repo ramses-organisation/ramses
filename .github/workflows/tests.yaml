@@ -3,20 +3,18 @@ name: Test RAMSES
 
 on:
   pull_request:
+    types: [labeled]
   workflow_dispatch:
-
-
 
 defaults:
   run:
     shell: bash
 
 jobs:
-   
+
     run:
         name: "Tests ${{ matrix.test-family }}"
-        environment:
-            name: tests
+        if: ${{ github.event.label.name == 'run tests' }}
         runs-on: ubuntu-latest
         strategy:
             matrix:
