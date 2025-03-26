@@ -626,7 +626,7 @@ def check_solution(data,test_name,tolerance=None,threshold=2.0e-14,norm_min=1.0e
             else:
                 error = abs(this_sol-this_ref)/min(abs(this_sol),abs(this_ref))
         else:
-            error = np.Inf
+            error = np.inf
 
         if error > tol:
             ok = False
