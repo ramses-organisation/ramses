@@ -547,12 +547,12 @@ subroutine output_header(filename)
 #endif
 
   if (myid == 1) then
-     write(ilun, '(a1,a12,a10)') '#', 'Family', 'Count'
+     write(ilun, '(a1,a12,a15)') '#', 'Family', 'Count'
      do ifam = -NFAMILIES, NFAMILIES
-        write(ilun, '(a13, i10)') &
+        write(ilun, '(a13, i15)') &
              trim(particle_family_keys(ifam)), npart_family(ifam)
      end do
-     write(ilun, '(a13, i10)') &
+     write(ilun, '(a13, i15)') &
           'undefined', npart_all - sum(npart_family)
   end if
 
