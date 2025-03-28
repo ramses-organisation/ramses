@@ -127,15 +127,10 @@ subroutine authorize_fine(ilevel)
            do i=1,ngrid
               ind_cell(i)=iskip+ind_grid(i)
            end do
-           ! Gather cell centre positions
+           ! Gather cell centre positions and rescale position from code units to user units
            do idim=1,ndim
               do i=1,ngrid
                  xx(i,idim)=xg(ind_grid(i),idim)+xc(ind,idim)
-              end do
-           end do
-           ! Rescale position from code units to user units
-           do idim=1,ndim
-              do i=1,ngrid
                  xx(i,idim)=(xx(i,idim)-skip_loc(idim))*scale
               end do
            end do
