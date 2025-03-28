@@ -33,7 +33,7 @@ subroutine output_cone()
   integer::i,ip,npart1
   integer::nalloc1,nalloc2
   integer, parameter :: mode = int(O'755')
-  integer::ierr
+  integer::ierror
 
   integer,dimension(1:nvector),save::ind_part
   logical::opened
@@ -67,7 +67,7 @@ subroutine output_cone()
   conecmd = "mkdir -p " // trim(conedir)
   if(.not.withoutmkdir) then
 !     if (myid==1) call system(conecmd)
-     if (myid==1) call mkdir(trim(conedir),mode,ierr)
+     if (myid==1) call mkdir(trim(conedir),mode,ierror)
   endif
 
 #ifndef WITHOUTMPI

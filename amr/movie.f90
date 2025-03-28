@@ -24,7 +24,7 @@ subroutine output_frame()
   integer::info2
 #endif
 
-  integer::ierr
+  integer::ierror
   integer,parameter::tag=100
 
   character(len=5)::istep_str
@@ -154,14 +154,14 @@ subroutine output_frame()
        if(myid==1)call PXFMKDIR(TRIM(moviedir),LEN(TRIM(moviedir)),O'755',info2)
 #else
        if(myid==1)then
-          ierr=1
-          ! call system(moviecmd,ierr)
-          ! call EXECUTE_COMMAND_LINE(moviecmd,exitstat=ierr,wait=.true.)
-          call mkdir(trim(moviedir),mode,ierr)
+          ierror=1
+          ! call system(moviecmd,ierror)
+          ! call EXECUTE_COMMAND_LINE(moviecmd,exitstat=ierror,wait=.true.)
+          call mkdir(trim(moviedir),mode,ierror)
        endif
 #ifndef WITHOUTMPI
-       call MPI_BCAST(ierr,1,MPI_INTEGER,0,MPI_COMM_WORLD,info)
-       if(ierr.ne.0 .and. ierr.ne.127)then
+       call MPI_BCAST(ierror,1,MPI_INTEGER,0,MPI_COMM_WORLD,info)
+       if(ierror.ne.0 .and. ierror.ne.127)then
           write(*,*) 'Error - Could not create ',trim(moviedir)
           call MPI_ABORT(MPI_COMM_WORLD,1,info)
           stop
@@ -305,8 +305,8 @@ subroutine output_frame()
     endif
 
     ! Allocate image
-    allocate(data_frame(1:nw_frame,1:nh_frame,1:n_movie_vars),stat=ierr)
-    if(ierr .ne. 0)then
+    allocate(data_frame(1:nw_frame,1:nh_frame,1:n_movie_vars),stat=ierror)
+    if(ierror .ne. 0)then
        write(*,*) 'Error - Movie frame allocation failed'
 #ifndef WITHOUTMPI
        call MPI_ABORT(MPI_COMM_WORLD,1,info)
@@ -315,8 +315,8 @@ subroutine output_frame()
 #endif
     endif
 
-    allocate(weights(1:nw_frame,1:nh_frame),stat=ierr)
-    if(ierr .ne. 0)then
+    allocate(weights(1:nw_frame,1:nh_frame),stat=ierror)
+    if(ierror .ne. 0)then
        write(*,*) 'Error - Movie frame allocation failed'
 #ifndef WITHOUTMPI
        call MPI_ABORT(MPI_COMM_WORLD,1,info)
@@ -905,13 +905,13 @@ subroutine output_frame()
 
 #ifndef WITHOUTMPI
     ! Maps communication
-    allocate(data_single(1:nw_frame*nh_frame),stat=ierr)
-    if(ierr .ne. 0)then
+    allocate(data_single(1:nw_frame*nh_frame),stat=ierror)
+    if(ierror .ne. 0)then
        write(*,*) 'Error - Movie frame allocation failed'
        call MPI_ABORT(MPI_COMM_WORLD,1,info)
     endif
-    allocate(data_single_all(1:nw_frame*nh_frame),stat=ierr)
-    if(ierr .ne. 0)then
+    allocate(data_single_all(1:nw_frame*nh_frame),stat=ierror)
+    if(ierror .ne. 0)then
        write(*,*) 'Error - Movie frame allocation failed'
        call MPI_ABORT(MPI_COMM_WORLD,1,info)
     endif
@@ -1001,7 +1001,7 @@ subroutine output_frame()
 
     if(myid==1)then
        ilun = 10
-       if(ierr .ne. 0)then
+       if(ierror .ne. 0)then
           write(*,*) 'Error - Cannot alllocate movie frame'
 #ifndef WITHOUTMPI
           call MPI_ABORT(MPI_COMM_WORLD,1,info)
@@ -1012,8 +1012,8 @@ subroutine output_frame()
        ! Write the frames to files
        do kk=1, n_movie_vars
           filename = trim(moviedir)//trim(movie_vars_txt(kk))//'_'//trim(istep_str)//'.map'
-          open(ilun,file=TRIM(filename),form='unformatted',iostat=ierr)
-          if(ierr .ne. 0)then
+          open(ilun,file=TRIM(filename),form='unformatted',iostat=ierror)
+          if(ierror .ne. 0)then
              write(*,*) 'Error - Could not open ',TRIM(filename)
 #ifndef WITHOUTMPI
              call MPI_ABORT(MPI_COMM_WORLD,1,info)

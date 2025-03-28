@@ -20,7 +20,7 @@ subroutine read_params
   logical::nml_ok, info_ok
   integer,parameter::tag=1134
 #ifndef WITHOUTMPI
-  integer::dummy_io,ierr,info2
+  integer::dummy_io,info2
 #endif
 #if NDIM==1
   integer, parameter :: max_level_wout_quadhilbert = 61

@@ -50,6 +50,7 @@ contains
 
    ! MAIN BISECTION CREATION/UPDATING ROUTINE
    subroutine build_bisection(update)
+      use amr_commons, only:ierr
       use mpi_mod
 
       logical, intent(in) :: update
@@ -74,9 +75,6 @@ contains
       integer :: nc, dir, i, lvl, iter
       integer :: lncpu, cpuid, child1, child2
       integer :: cur_levelstart, cur_cell
-#ifndef WITHOUTMPI
-      integer :: ierr
-#endif
 
       scale=boxlen/dble(icoarse_max-icoarse_min+1)
 

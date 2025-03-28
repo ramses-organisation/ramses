@@ -258,15 +258,14 @@ SUBROUTINE init_SED_table()
 ! each photon group as a function of stellar population age and
 ! metallicity.  The SED is read from a directory specified by sed_dir.
 !-------------------------------------------------------------------------
-  use amr_commons,only:myid
+  use amr_commons,only:myid,ncpu,ierr,IOGROUPSIZE
   use rt_parameters
   use spectrum_integrator_module
   use constants,only:c_cgs, eV2erg, hplanck
   use mpi_mod
 #ifndef WITHOUTMPI
-  use amr_commons,only:IOGROUPSIZE,ncpu
   real(kind=8),allocatable::tbl2(:,:,:)
-  integer::dummy_io,info2,ierr
+  integer::dummy_io,info2
 #endif
   ! Temporary SSP/SED parameters (read from SED files):
   integer:: nAges, nzs, nLs              ! # of bins of age, z, wavelength
@@ -277,7 +276,6 @@ SUBROUTINE init_SED_table()
   character(len=128)::fZs, fAges, fSEDs                        ! Filenames
   logical::ok,okAge,okZ
   real(kind=8)::dlgA, pL0, pL1, tmp
-  integer::locid,ncpu2
   integer::nv=3+2*nIons  ! # vars in SED table: L,Lacc,egy,nions*(csn,egy)
   integer,parameter::tag=1132
 !-------------------------------------------------------------------------
@@ -371,23 +369,13 @@ SUBROUTINE init_SED_table()
   endif
 #endif
 
-  ! If MPI then share the SED integration between the cpus:
-#ifndef WITHOUTMPI
-  call MPI_COMM_RANK(MPI_COMM_WORLD,locid,ierr)
-  call MPI_COMM_SIZE(MPI_COMM_WORLD,ncpu2,ierr)
-#endif
-#ifdef WITHOUTMPI
-  locid=0
-  ncpu2=1
-#endif
-
   ! Perform SED integration of luminosity, csn and egy per (age,Z) bin----
   allocate(tbl(nAges,nZs,nv))
   do ip = 1,nSEDgroups                                ! Loop photon groups
      tbl=0.
      pL0 = groupL0(ip) ; pL1 = groupL1(ip)! eV interval of photon group ip
      do iz = 1, nzs                                     ! Loop metallicity
-     do ia = locid+1,nAges,ncpu2                                ! Loop age
+     do ia = myid,nAges,ncpu                                ! Loop age
         tbl(ia,iz,1) = getSEDLuminosity(Ls,SEDs(:,ia,iz),nLs,pL0,pL1)
         tbl(ia,iz,3) = getSEDEgy(Ls,SEDs(:,ia,iz),nLs,pL0,pL1)
         do ii = 1,nIonsUsed                                ! Loop species
@@ -1306,20 +1294,19 @@ SUBROUTINE init_UV_background()
 ! d) wavelengths (increasing order) [Angstrom]
 ! e) fluxes per (redshift,wavelength) [photons cm-2 s-1 A-1 sr-1]
 !-------------------------------------------------------------------------
-  use amr_commons,only:myid
+  use amr_commons,only:myid,ierr,ncpu,IOGROUPSIZE
   use rt_parameters
   use SED_module
   use mpi_mod
 #ifndef WITHOUTMPI
-  use amr_commons,only:IOGROUPSIZE,ncpu
   real(kind=8),allocatable  :: tbl2(:,:)
-  integer::dummy_io,info2,ierr
+  integer::dummy_io,info2
 #endif
   integer:: nLs                                 ! # of bins of wavelength
   real(kind=8),allocatable  :: Ls(:)            ! Wavelengths
   real(kind=8),allocatable  :: UV(:,:)          ! UV f(lambda,z)
   real(kind=8),allocatable  :: tbl(:,:)
-  integer::i,iz,ip,ii,locid,ncpu2
+  integer::i,iz,ip,ii
   logical::ok
   real(kind=8)::pL0,pL1
   integer,parameter::tag=1133
@@ -1371,14 +1358,6 @@ SUBROUTINE init_UV_background()
   endif
 #endif
 
-  ! If mpi then share the UV integration between the cpus:
-#ifndef WITHOUTMPI
-  call MPI_COMM_RANK(MPI_COMM_WORLD,locid,ierr)
-  call MPI_COMM_SIZE(MPI_COMM_WORLD,ncpu2,ierr)
-#endif
-#ifdef WITHOUTMPI
-  locid=0 ; ncpu2=1
-#endif
 
   ! Shift the highest z in the table (10) to reionization epoch,
   ! so that we start injecting at z_reion
@@ -1392,7 +1371,7 @@ SUBROUTINE init_UV_background()
      allocate(tbl(UV_nz, 2))
      do ii = 1, nIonsUsed
         tbl=0.
-        do iz = locid+1,UV_nz,ncpu2
+        do iz = myid,UV_nz,ncpu
            tbl(iz,1)= getUV_Irate(Ls,UV(:,iz),nLs,ii)
            tbl(iz,2)= getUV_Hrate(Ls,UV(:,iz),nLs,ii)
         end do
@@ -1444,7 +1423,7 @@ SUBROUTINE init_UV_background()
         tbl=0.
         pL0 = groupL0(nSEDgroups+ip) !  Energy interval of photon group ip
         pL1 = groupL1(nSEDgroups+ip) !
-        do iz = locid+1,UV_nz,ncpu2
+        do iz = myid,UV_nz,ncpu
            tbl(iz,1) =        getUVFlux(Ls,UV(:,iz),nLs,pL0,pL1)
            if(tbl(iz,1) .eq. 0d0) cycle     ! Can't integrate zero fluxes
            tbl(iz,2) =        getUVEgy(Ls,UV(:,iz),nLs,pL0,pL1)
