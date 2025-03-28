@@ -71,17 +71,6 @@ subroutine read_params
        & ,tracer_mass,tracer_first_balance_part_per_cell &
        & ,tracer_first_balance_levelmin
 
-  ! MPI initialization
-#ifndef WITHOUTMPI
-  call MPI_INIT(ierr)
-  call MPI_COMM_RANK(MPI_COMM_WORLD,myid,ierr)
-  call MPI_COMM_SIZE(MPI_COMM_WORLD,ncpu,ierr)
-  myid=myid+1 ! Careful with this...
-#endif
-#ifdef WITHOUTMPI
-  ncpu=1
-  myid=1
-#endif
   !--------------------------------------------------
   ! Advertise RAMSES
   !--------------------------------------------------
