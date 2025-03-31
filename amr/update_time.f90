@@ -13,6 +13,24 @@ subroutine update_time(ilevel)
   real(kind=8),save::ttstart=0
 #endif
   integer::ilevel
+  !---------------------------------------------------------------------------------
+  ! This routine does several things.
+  ! 
+  ! It reports the progress of the simulation by printing following stats:
+  !   - the AMR mesh structure
+  !   - mass and energy conservation
+  !   - time step number and size dt
+  !   - current simulation time t and expension factor aexp  
+  !   - percentage of grid and particle memory in use
+  ! 
+  ! It checks whether the simulation reached the end, and calculates the total
+  ! execution time.
+  !
+  ! It advances the global time variations: t, nstep, aexp, hexp, texp.
+  ! If required, the magnetic field is adjusted to cosmic expansion.
+  ! 
+  ! The turbulence forcing is evolved.
+  !--------------------------------------------------------------------------------
 
   real(dp)::dt,econs,mcons
 #ifdef SOLVERmhd
