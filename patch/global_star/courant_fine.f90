@@ -23,7 +23,7 @@ subroutine courant_fine(ilevel)
   real(dp)::dt_lev,dx,vol,scale
   real(kind=8)::mass_loc,ekin_loc,eint_loc,emag_loc,dt_loc
   real(kind=8)::mass_all,ekin_all,eint_all,emag_all,dt_all
-  real(dp),dimension(1:nvector,1:nvar+3),save::uu
+  real(dp),dimension(1:nvector,1:nvar_all),save::uu
   real(dp),dimension(1:nvector,1:ndim),save::gg
 
   if(numbtot(1,ilevel)==0)return
@@ -43,7 +43,7 @@ subroutine courant_fine(ilevel)
 
   if (ischeme .eq. 1) then
      CALL velocity_fine(ilevel)
-     do ivar=1,nvar+3
+     do ivar=1,nvar_all
         call make_virtual_fine_dp(uold(1,ivar),ilevel)
      end do
      if(simple_boundary)call make_boundary_hydro(ilevel)
@@ -74,7 +74,7 @@ subroutine courant_fine(ilevel)
         end do
 
         ! Gather hydro variables
-        do ivar=1,nvar+3
+        do ivar=1,nvar_all
            do i=1,nleaf
               uu(i,ivar)=uold(ind_leaf(i),ivar)
            end do
@@ -179,6 +179,114 @@ subroutine courant_fine(ilevel)
 111 format('   Entering courant_fine for level ',I2)
 
 end subroutine courant_fine
+!###########################################################
+!###########################################################
+!###########################################################
+!###########################################################
+subroutine cmpdt(uu,gg,dx,dt,ncell)
+  use amr_parameters
+  use hydro_parameters
+  use const
+  implicit none
+  integer::ncell
+  real(dp)::dx,dt
+  real(dp),dimension(1:nvector,1:nvar+3)::uu
+  real(dp),dimension(1:nvector,1:ndim)::gg
+  real(dp),dimension(1:nvector),save::a2,B2,rho,ctot
+
+  real(dp)::dtcell,smallp,cf,cc,bc,bn
+  integer::k,idim
+#if NENER>0
+  integer::irad
+#endif
+
+  smallp = smallr*smallc**2/gamma
+
+  ! Convert to primitive variables
+  do k = 1,ncell
+     uu(k,1)=max(uu(k,1),smallr)
+     rho(k)=uu(k,1)
+  end do
+  do idim = 1,3
+     do k = 1, ncell
+        uu(k,idim+1) = uu(k,idim+1)/rho(k)
+     end do
+  end do
+
+  do k = 1,ncell
+     B2(k)=zero
+  end do
+  do idim = 1,3
+     do k = 1, ncell
+        Bc = half*(uu(k,neul+idim)+uu(k,nvar+idim))
+        B2(k)=B2(k)+Bc**2
+        uu(k,neul) = uu(k,neul)-half*uu(k,1)*uu(k,idim+1)**2-half*Bc**2
+     end do
+  end do
+#if NENER>0
+  do irad = 1,nener
+     do k = 1, ncell
+        uu(k,neul) = uu(k,neul)-uu(k,nhydro+irad)
+     end do
+  end do
+#endif
+
+  ! Compute thermal sound speed
+  do k = 1, ncell
+     uu(k,neul) = max((gamma-one)*uu(k,neul),smallp)
+     a2(k)=gamma*uu(k,neul)/uu(k,1)
+  end do
+#if NENER>0
+  do irad = 1,nener
+     do k = 1, ncell
+        a2(k) = a2(k) + gamma_rad(irad)*(gamma_rad(irad)-1)*uu(k,nhydro+irad)/uu(k,1)
+     end do
+  end do
+#endif
+
+  ! Compute maximum wave speed (fast magnetosonic)
+  do k = 1, ncell
+     ctot(k)=zero
+  end do
+  if(ischeme.eq.1)then
+     do idim = 1,ndim   ! WARNING: ndim instead of 3
+        do k = 1, ncell
+           ctot(k)=ctot(k)+abs(uu(k,idim+1))
+        end do
+     end do
+  else
+     do idim = 1,ndim   ! WARNING: ndim instead of 3
+        do k = 1, ncell
+           cc=half*(B2(k)/rho(k)+a2(k))
+           BN=half*(uu(k,5+idim)+uu(k,nvar+idim))
+           cf=sqrt(cc+sqrt(cc**2-a2(k)*BN**2/rho(k)))
+           ctot(k)=ctot(k)+abs(uu(k,idim+1))+cf
+        end do
+     end do
+  endif
+
+  ! Compute gravity strength ratio
+  do k = 1, ncell
+     rho(k)=zero
+  end do
+  do idim = 1,ndim
+     do k = 1, ncell
+        rho(k)=rho(k)+abs(gg(k,idim))
+     end do
+  end do
+  do k = 1, ncell
+     rho(k)=rho(k)*dx/ctot(k)**2
+     rho(k)=MAX(rho(k),0.0001_dp)
+  end do
+
+  ! Compute maximum time step for each authorized cell
+  dt = courant_factor*dx/smallc
+  do k = 1,ncell
+     dtcell=dx/ctot(k)*(sqrt(one+two*courant_factor*rho(k))-one)/rho(k)
+     dt = min(dt,dtcell)
+  end do
+
+end subroutine cmpdt
 !#########################################################
 !#########################################################
 !#########################################################
