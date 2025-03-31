@@ -185,7 +185,7 @@ ifeq ($(USE_TURB),1)
 endif
 
 AMROBJ = read_params.o init_amr.o init_time.o init_refine.o tracer_utils.o adaptive_loop.o \
-         amr_step.o update_time.o output_amr.o flag_utils.o \
+         amr_step.o update_time.o timer.o output_amr.o flag_utils.o \
          physical_boundaries.o virtual_boundaries.o refine_utils.o \
          nbors_utils.o hilbert.o load_balance.o title.o sort.o cooling_fine.o \
          eos.o units.o light_cone.o movie.o memory.o end.o
