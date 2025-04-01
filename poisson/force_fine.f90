@@ -27,6 +27,8 @@ subroutine force_fine(ilevel,icount)
   integer ,dimension(1:nvector),save::ind_grid,ind_cell
   real(dp),dimension(1:nvector,1:ndim),save::xx,ff
 
+!$omp threadprivate(ind_grid,ind_cell,xx,ff)
+
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
 
@@ -221,6 +223,8 @@ subroutine gradient_phi(ind_grid,ngrid,ilevel,icount)
   integer ,dimension(1:nvector,0:twondim),save::igridn
   real(dp),dimension(1:nvector),save::phi1,phi2,phi3,phi4
   real(dp),dimension(1:nvector,1:twotondim,1:ndim),save::phi_left,phi_right
+
+!$omp threadprivate(ind_cell,ind_left,ind_right,igridn,phi1,phi2,phi3,phi4,phi_left,phi_right)
 
   ! Mesh size at level ilevel
   dx=0.5D0**ilevel

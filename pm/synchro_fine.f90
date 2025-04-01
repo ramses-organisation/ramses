@@ -17,6 +17,8 @@ subroutine synchro_fine(ilevel)
   integer::ig,ip,npart1,isink,local_counter
   integer,dimension(1:nvector),save::ind_grid,ind_part,ind_grid_part
 
+!$omp threadprivate(ind_grid,ind_part,ind_grid_part)
+
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
 
@@ -112,6 +114,8 @@ subroutine synchro_fine_static(ilevel)
   integer::igrid,jgrid,ipart,jpart
   integer::ig,ip,next_part,npart1,npart2,isink
   integer,dimension(1:nvector),save::ind_grid,ind_part,ind_grid_part
+
+!$omp threadprivate(ind_grid,ind_part,ind_grid_part)
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
@@ -249,6 +253,9 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   real(dp),dimension(1:nvector,1:twotondim),save::vol
   integer ,dimension(1:nvector,1:twotondim),save::igrid,icell,indp,kg
   real(dp),dimension(1:3)::skip_loc
+
+!$omp threadprivate(x0,ind_cell,nbors_father_cells,nbors_father_grids)
+!$omp threadprivate(ok,dteff,x,ff,new_vp,dd,dg,ig,id,igg,igd,icg,icd,vol,igrid,icell,indp,kg)
 
   ! Mesh spacing in that level
   dx=0.5D0**ilevel

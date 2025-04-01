@@ -232,6 +232,8 @@ subroutine cmp_residual_cg(ilevel,icount)
   real(dp),dimension(1:nvector,1:twotondim,1:ndim),save::phi_left,phi_right
   real(dp),dimension(1:nvector),save::residu
 
+!$omp threadprivate(ind_grid,ind_cell,igridn,ind_left,ind_right,phig,phid,phi_left,phi_right,residu)
+
   ! Set constants
   dx2=(0.5D0**ilevel)**2
   nx_loc=icoarse_max-icoarse_min+1
@@ -362,6 +364,8 @@ subroutine cmp_Ap_cg(ilevel)
   real(dp),dimension(1:nvector,1:ndim),save::phig,phid
   real(dp),dimension(1:nvector),save::residu
 
+!$omp threadprivate(ind_grid,ind_cell,igridn,phig,phid,residu)
+
   ! Set constants
   oneoversix=1.0D0/dble(twondim)
 
@@ -462,6 +466,8 @@ subroutine make_initial_phi(ilevel,icount)
   integer ,dimension(1:nvector),save::ind_grid,ind_cell,ind_cell_father
   real(dp),dimension(1:nvector,1:twotondim),save::phi_int
 
+!$omp threadprivate(ind_grid,ind_cell,ind_cell_father,phi_int)
+
   ! Loop over myid grids by vector sweeps
   ncache=active(ilevel)%ngrid
   do igrid=1,ncache,nvector
@@ -540,6 +546,8 @@ subroutine make_multipole_phi(ilevel)
   real(dp),dimension(1:twotondim,1:3)::xc
   real(dp),dimension(1:nvector),save::rr,pp
   real(dp),dimension(1:nvector,1:ndim),save::xx
+
+!$omp threadprivate(ind_grid,ind_cell,rr,pp,xx)
 
   ! Mesh size at level ilevel
   dx=0.5D0**ilevel

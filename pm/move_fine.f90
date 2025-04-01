@@ -12,6 +12,8 @@ subroutine move_fine(ilevel)
   integer::igrid,jgrid,ipart,jpart,next_part,ig,ip,npart1,local_counter
   integer,dimension(1:nvector),save::ind_grid,ind_part,ind_grid_part
 
+!$omp threadprivate(ind_grid,ind_part,ind_grid_part)
+
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
 
@@ -90,6 +92,8 @@ subroutine move_fine_static(ilevel)
   !----------------------------------------------------------------------
   integer::igrid,jgrid,ipart,jpart,next_part,ig,ip,npart1,npart2,local_counter
   integer,dimension(1:nvector),save::ind_grid,ind_part,ind_grid_part
+
+!$omp threadprivate(ind_grid,ind_part,ind_grid_part)
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
@@ -208,7 +212,7 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   !------------------------------------------------------------
   logical::error
   integer::i,j,ind,idim,nx_loc,isink
-  real(dp)::dx,dx_loc,scale,vol_loc
+  real(dp)::dx,scale
   ! Grid-based arrays
   integer ,dimension(1:nvector),save::father_cell
   real(dp),dimension(1:nvector,1:ndim),save::x0
@@ -224,6 +228,12 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   ! Family
   logical,dimension(1:nvector),save :: classical_tracer
 
+!$omp threadprivate(father_cell,x0,nbors_father_cells,nbors_father_grids)
+!$omp threadprivate(ok,x,ff,new_xp,new_vp,dd,dg)
+!$omp threadprivate(ig,id,igg,igd,icg,icd,vol)
+!$omp threadprivate(igrid,icell,indp,kg)
+!$omp threadprivate(classical_tracer)
+
   ! Mesh spacing in that level
   dx=0.5D0**ilevel
   nx_loc=(icoarse_max-icoarse_min+1)
@@ -232,8 +242,6 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   if(ndim>1)skip_loc(2)=dble(jcoarse_min)
   if(ndim>2)skip_loc(3)=dble(kcoarse_min)
   scale=boxlen/dble(nx_loc)
-  dx_loc=dx*scale
-  vol_loc=dx_loc**3
 
   ! Lower left corner of 3x3x3 grid-cube
   do idim=1,ndim
@@ -484,7 +492,7 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
         do idim=1,ndim
            do j=1,np
               if (.not. classical_tracer(j)) then
-              ff(j,idim)=ff(j,idim)+f(indp(j,ind),idim)*vol(j,ind)
+                 ff(j,idim)=ff(j,idim)+f(indp(j,ind),idim)*vol(j,ind)
               end if
            end do
         end do

@@ -57,6 +57,8 @@ subroutine authorize_fine(ilevel)
   logical::test
   real(dp),dimension(1:ndim)::xmin,xmax
 
+!$omp threadprivate(ind_grid,ind_cell,igridn,xx,order_min,order_max)
+
   if(ilevel==nlevelmax)return
   if(verbose)write(*,111)ilevel
 
@@ -1313,6 +1315,8 @@ subroutine build_comm(ilevel)
   integer::countsend,countrecv
 #endif
   integer,dimension(1:nvector),save::ind_grid,ind_cell
+
+!$omp threadprivate(ind_grid,ind_cell)
 
   if(verbose)write(*,111)ilevel
   nxny=nx*ny

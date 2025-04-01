@@ -434,9 +434,13 @@ subroutine build_parent_comms_mg(active_loc, ifinelevel)
    integer, dimension(1:ncpu) :: reqsend, reqrecv
    integer :: countrecv, countsend
    integer :: tag = 777, info
-   recvbuf  = 0
 #endif
 
+!$omp threadprivate(ind_cell_father,nbors_father_cells,nbors_father_grids)
+
+#ifndef WITHOUTMPI
+   recvbuf  = 0
+#endif
 
    icoarselevel=ifinelevel-1
 

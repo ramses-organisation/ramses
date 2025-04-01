@@ -26,6 +26,8 @@ subroutine courant_fine(ilevel)
   real(dp),dimension(1:nvector,1:nvar_all),save::uu
   real(dp),dimension(1:nvector,1:ndim),save::gg
 
+!$omp threadprivate(ind_grid,ind_cell,ind_leaf,uu,gg)
+
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
 
@@ -201,6 +203,8 @@ subroutine velocity_fine(ilevel)
   integer ,dimension(1:nvector),save::ind_grid,ind_cell
   real(dp),dimension(1:nvector,1:ndim),save::xx
   real(dp),dimension(1:nvector,1:3),save::vv
+
+!$omp threadprivate(ind_grid,ind_cell,xx,vv)
 
   if(numbtot(1,ilevel)==0)return
 

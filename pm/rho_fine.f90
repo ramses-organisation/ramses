@@ -249,6 +249,8 @@ subroutine rho_from_current_level(ilevel)
   integer,dimension(1:nvector),save::ind_part,ind_grid_part
   real(dp),dimension(1:nvector,1:ndim),save::x0
 
+!$omp threadprivate(ind_grid,ind_cell,ind_part,ind_grid_part,x0)
+
   integer :: counter
   ! Mesh spacing in that level
   dx=0.5D0**ilevel
@@ -371,6 +373,9 @@ subroutine cic_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
   real(dp),dimension(1:nvector,1:twotondim),save::vol
   integer ,dimension(1:nvector,1:twotondim),save::igrid,icell,indp,kg
   real(dp),dimension(1:3)::skip_loc
+
+!$omp threadprivate(nbors_father_cells,nbors_father_grids,ok,mmm)
+!$omp threadprivate(fam,vol2,x,dd,dg,ig,id,igg,igd,icg,icd,vol,igrid,icell,indp,kg)
 
   ! Mesh spacing in that level
   dx=0.5D0**ilevel
@@ -688,6 +693,8 @@ subroutine multipole_fine(ilevel)
   real(dp),dimension(1:3)::skip_loc
   real(dp),dimension(1:twotondim,1:3)::xc
 
+!$omp threadprivate(ind_grid,ind_cell,ind_leaf,ind_split,xx,dd)
+
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
 
@@ -841,6 +848,8 @@ subroutine cic_from_multipole(ilevel)
   integer::ind,i,icpu,ncache,ngrid,iskip,ibound,igrid
   integer,dimension(1:nvector),save::ind_grid
 
+!$omp threadprivate(ind_grid)
+
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
 
@@ -917,6 +926,11 @@ subroutine cic_cell(ind_grid,ngrid,ilevel)
   real(dp),dimension(1:3)::skip_loc
   real(kind=8)::dx,dx_loc,scale,vol_loc
   logical::error
+
+
+!$omp threadprivate(ind_cell,nbors_father_cells,nbors_father_grids,ok,mmm)
+!$omp threadprivate(vol2,x,dd,dg,ig,id,igg,igd,icg,icd,vol,igrid,icell,indp,kg)
+
 
   ! Mesh spacing in that level
   dx=0.5D0**ilevel
@@ -1176,6 +1190,9 @@ subroutine tsc_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
   real(dp),dimension(1:nvector,1:threetondim),save::vol
   integer ,dimension(1:nvector,1:threetondim),save::igrid,icell,indp,kg
   real(dp),dimension(1:3)::skip_loc
+
+!$omp threadprivate(nbors_father_cells,nbors_father_grids,ok,abandoned,mmm)
+!$omp threadprivate(fam,vol2,x,cl,cr,cc,wl,wr,wc,igl,igr,igc,icl,icr,icc,vol,igrid,icell,indp,kg)
 
   if (ndim .ne. 3)then
      write(*,*)'TSC not supported for ndim neq 3'
@@ -1506,6 +1523,8 @@ subroutine tsc_from_multipole(ilevel)
   integer::igrid
   integer,dimension(1:nvector),save::ind_grid
 
+!$omp threadprivate(ind_grid)
+
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
 
@@ -1584,6 +1603,9 @@ subroutine tsc_cell(ind_grid,ngrid,ilevel)
   real(dp),dimension(1:3)::skip_loc
   real(kind=8)::dx,dx_loc,scale,vol_loc
   logical::error
+
+!$omp threadprivate(ind_cell,nbors_father_cells,nbors_father_grids,ok,mmm)
+!$omp threadprivate(vol2,x,cl,cr,cc,wl,wr,wc,igl,igr,igc,icl,icr,icc,vol,igrid,icell,indp,kg)
 
   ! Mesh spacing in that level
   dx=0.5D0**ilevel
