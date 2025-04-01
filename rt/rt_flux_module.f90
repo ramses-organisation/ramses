@@ -154,13 +154,13 @@ SUBROUTINE inp_eigenvals(ff, omega, lmin, lmax)
 ! lmax      => Biggest eigenvalue in cell for given direction
 !------------------------------------------------------------------------
  use amr_commons
+ use constants, only:pi
  real(dp), intent(in):: ff,omega
  real(dp):: lmin, lmax
- real(dp)::theta,pi,dd1,dd2,de1,de2,lff,ltt
+ real(dp)::theta,dd1,dd2,de1,de2,lff,ltt
  integer::ii,jj
 !------------------------------------------------------------------------
  theta=ACOS(omega)
- pi=ACOS(-1.0d0)
  lff=ff*100.
  ltt=theta/pi*100.
 

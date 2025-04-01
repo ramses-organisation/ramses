@@ -280,7 +280,7 @@ subroutine init_part
      end select
 
      ! Initialize tracer particles
-     if(MC_tracer) call init_tracer
+     if(tracer) call init_tracer
 
   end if
 
@@ -1042,7 +1042,7 @@ contains
        end if
     end do
 
-    write(*,*)'npart=',ipart,'/',npartmax,' for PE=',myid
+    if(debug)write(*,*)'npart=',ipart,'/',npartmax,' for PE=',myid
 #endif
 
     ! Compute particle initial level

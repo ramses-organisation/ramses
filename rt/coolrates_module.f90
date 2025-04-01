@@ -215,6 +215,45 @@ SUBROUTINE mpi_distribute_coolrates_table(table)
 END SUBROUTINE mpi_distribute_coolrates_table
 #endif
 
+
+pure function protected_exp(x)
+  ! Protect the exponential function from underflows and overflows
+  ! margin is the number of orders of magnitude below/above which the
+  ! exponential is set to zero/infinity.
+  !-----------------------------------------------------------------------
+  real(dp),intent(in)::x
+  real(dp)::protected_exp
+  real(dp),parameter::margin = 4
+  !-----------------------------------------------------------------------
+  if(x > log(huge(1d0)) - margin) then
+    protected_exp = huge(1d0)*exp(-margin)
+  else if (x < log(tiny(1d0)) + margin) then
+    protected_exp = 0
+  else
+    protected_exp = exp(x)
+  end if
+end function protected_exp
+
+pure function protected_mul(x, y)
+  ! Protect the multiplication from underflows
+  ! margin is the number of orders of magnitude below/above which the
+  ! multiplication is set to zero/infinity.
+  !-----------------------------------------------------------------------
+  real(dp),intent(in)::x, y
+  real(dp)::protected_mul
+  real(dp),parameter::margin = 4
+  !-----------------------------------------------------------------------
+  if (x == 0 .or. y == 0) then
+    protected_mul = 0
+  else if(log(abs(x)) + log(abs(y)) > log(huge(1d0)) - margin) then
+    protected_mul = sign(huge(1d0),x)*sign(exp(-margin), y)
+  else if (log(abs(x)) + log(abs(y)) < log(tiny(1d0)) + margin) then
+    protected_mul = 0
+  else
+    protected_mul = x*y
+  end if
+end function protected_mul
+
 !PRIVATEXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 SUBROUTINE comp_table_rates(iT, aexp)
 ! Fill in index iTK in all rates tables.
@@ -295,17 +334,17 @@ SUBROUTINE comp_table_rates(iT, aexp)
   ! Collisional ionization rate [cm3 s-1] of HI (Maselli&'03)-------------
   T5 = T/1d5
   f = 1d0+sqrt(T5) ; hf=0.5d0/f
-  tbl_beta_HI%rates(iT)  = 5.85d-11 * sqrt(T) / f * exp(-157809.1d0/T)
+  tbl_beta_HI%rates(iT)  = protected_mul(5.85d-11 * sqrt(T) / f, protected_exp(-157809.1d0/T))
   tbl_beta_HI%primes(iT) = (hf+157809.1d0/T)                             &
                          * log(10d0) * tbl_beta_HI%rates(iT)
 
   ! Collisional ionization rate [cm3 s-1] of HeI (Maselli&'03)------------
-  tbl_beta_HeI%rates(iT)  = 2.38d-11 * sqrt(T) / f * exp(-285335.4d0/T)
+  tbl_beta_HeI%rates(iT)  = protected_mul(2.38d-11 * sqrt(T) / f, protected_exp(-285335.4d0/T))
   tbl_beta_HeI%primes(iT) = (hf+285335.4d0/T)                            &
                           * log(10d0) * tbl_beta_HeI%rates(iT)
 
   ! Collisional ionization rate [cm3 s-1] of HeII (Maselli&'03)-----------
-  tbl_beta_HeII%rates(iT)  = 5.68d-12 * sqrt(T) / f * exp(-631515d0/T)
+  tbl_beta_HeII%rates(iT)  = protected_mul(5.68d-12 * sqrt(T) / f, protected_exp(-631515d0/T))
   tbl_beta_HeII%primes(iT) = (hf+631515d0/T)                            &
                            * log(10d0) * tbl_beta_HeII%rates(iT)
 
@@ -314,28 +353,28 @@ SUBROUTINE comp_table_rates(iT, aexp)
   f = 1d0+sqrt(T5) ; hf=0.5d0/f
 
   ! Coll. Ionization Cooling from Cen 1992 (via Maselli et al 2003)
-  tbl_cr_ci_HI%rates(iT)  = 1.27d-21 * sqrt(T) / f * exp(-157809.1/T)
+  tbl_cr_ci_HI%rates(iT)  = protected_mul(1.27d-21 * sqrt(T) / f, protected_exp(-157809.1/T))
   tbl_cr_ci_HI%primes(iT) = (hf+157809.1/T)                              &
                           * log(10d0) * tbl_cr_ci_HI%rates(iT)
 
-  tbl_cr_ci_HeI%rates(iT)  = 9.38d-22 * sqrt(T) / f * exp(-285335.4/T)
+  tbl_cr_ci_HeI%rates(iT)  = protected_mul(9.38d-22 * sqrt(T) / f, protected_exp(-285335.4/T))
   tbl_cr_ci_HeI%primes(iT) = (hf+285335.4/T)                             &
                            * log(10d0) * tbl_cr_ci_HeI%rates(iT)
 
-  tbl_cr_ci_HeII%rates(iT)  = 4.95d-22 * sqrt(T) / f * exp(-631515. /T)
+  tbl_cr_ci_HeII%rates(iT)  = protected_mul(4.95d-22 * sqrt(T) / f, protected_exp(-631515. /T))
   tbl_cr_ci_HeII%primes(iT) = (hf+631515.0/T)                            &
                             * log(10d0) * tbl_cr_ci_HeII%rates(iT)
 
   ! Collisional excitation cooling from Cen'92
-  tbl_cr_ce_HI%rates(iT)  = 7.5d-19 / f * exp(-118348./T)
+  tbl_cr_ce_HI%rates(iT)  = protected_mul(7.5d-19 / f, protected_exp(-118348./T))
   tbl_cr_ce_HI%primes(iT) = (118348./T - 0.5d0 * sqrt(T5) / f )          &
                           * log(10d0) * tbl_cr_ce_HI%rates(iT)
 
-  tbl_cr_ce_HeI%rates(iT)  = 9.10d-27 * T**(-0.1687) / f * exp(-13179./T)
+  tbl_cr_ce_HeI%rates(iT)  = protected_mul(9.10d-27 * T**(-0.1687) / f, protected_exp(-13179./T))
   tbl_cr_ce_HeI%primes(iT) = (13179./T - 0.1687 - 0.5d0 * sqrt(T5) / f)  &
                            * log(10d0) * tbl_cr_ce_HeI%rates(iT)
 
-  tbl_cr_ce_HeII%rates(iT) = 5.54d-17 * T**(-0.397)  / f * exp(-473638./T)
+  tbl_cr_ce_HeII%rates(iT) = protected_mul(5.54d-17 * T**(-0.397)  / f, protected_exp(-473638./T))
   tbl_cr_ce_HeII%primes(iT) = (473638./T - 0.397 - 0.5d0 * sqrt(T5) / f) &
                             * log(10d0) * tbl_cr_ce_HeII%rates(iT)
 
@@ -386,8 +425,8 @@ SUBROUTINE comp_table_rates(iT, aexp)
                          * log(10d0) * tbl_cr_com%rates(iT)
 
   ! Dielectronic recombination cooling, from Black 1981
-  f = 1.24d-13*T**(-1.5d0)*exp(-470000d0/T)
-  tbl_cr_die%rates(iT) = f*(1d0+0.3d0*exp(-94000d0/T))
+  f = protected_mul(1.24d-13*T**(-1.5d0), protected_exp(-470000d0/T))
+  tbl_cr_die%rates(iT) = f*(1d0+0.3d0*protected_exp(-94000d0/T))
   tbl_cr_die%primes(iT)=0d0
   if(tbl_cr_die%rates(iT) .gt. 0d0) then ! Can simplify w algebra
      tbl_cr_die%primes(iT) = (tbl_cr_die%rates(iT)*(564000.-1.5*T)       &
@@ -398,10 +437,10 @@ SUBROUTINE comp_table_rates(iT, aexp)
 
   ! Collisional dissociation ground state (Dove&Mandy 1986) [cm3 s-1]
   tbl_Beta_H2HI%rates(iT) =                                              &
-       7.073d-19*(T**2.012)*exp(-5.179d4/T)/(1d0+2.130d-5*T)**3.512
+       protected_mul(7.073d-19*(T**2.012), protected_exp(-5.179d4/T))/(1d0+2.130d-5*T)**3.512
   ! Col dissociation ground state (Martin&Keogh&Mandy 1998)  [cm3 s-1]
   tbl_Beta_H2H2%rates(iT) = &
-       5.996d-30*(T**4.1881)*exp(-5.466d4/T)/(1d0+6.761d-6*T)**5.6881
+       protected_mul(5.996d-30*(T**4.1881), protected_exp(-5.466d4/T))/(1d0+6.761d-6*T)**5.6881
   ! Three body H2 formation 3H -> H2 + H (Forrey 2013) [cm6 s-1]
   ! For H2+2H -> 2H2 use Beta_H3B/8 (Palla 1983)
   tbl_Beta_H3B%rates(iT) = &
@@ -409,12 +448,12 @@ SUBROUTINE comp_table_rates(iT, aexp)
   ! Prefer to use numerical prime, rather than analytic:
   TT=T*1.0001
   tbl_Beta_H2HI%primes(iT) =                                             &
-       7.073d-19*(TT**2.012)*exp(-5.179d4/TT)/(1d0+2.130d-5*TT)**3.512
+       protected_mul(7.073d-19*(TT**2.012),protected_exp(-5.179d4/TT))/(1d0+2.130d-5*TT)**3.512
   tbl_Beta_H2HI%primes(iT) = &
        (tbl_Beta_H2HI%primes(iT) - tbl_Beta_H2HI%rates(iT)) &
        / (0.0001*T) * T * log(10d0) ! last two terms for log-log
   tbl_Beta_H2H2%primes(iT) = &
-      5.996d-30*(TT**4.1881)*exp(-5.466d4/TT)/(1d0+6.761d-6*TT)**5.6881
+       protected_mul(5.996d-30*(TT**4.1881),protected_exp(-5.466d4/TT))/(1d0+6.761d-6*TT)**5.6881
   tbl_Beta_H2H2%primes(iT) = &
        (tbl_Beta_H2H2%primes(iT) - tbl_Beta_H2H2%rates(iT))              &
        / (0.0001*T) * T * log(10d0) ! last two terms for log-log
@@ -426,28 +465,28 @@ SUBROUTINE comp_table_rates(iT, aexp)
 
   ! Collisional H2 cooling************************************************
   ! Hallenbach McKee (1979) + Halle Combes (2012) in cgs
-  lowrleft=1.25*exp(-1.70d2/T)*2.35d-14
-  lowrright=1.75*exp(-5.05d2/T)*6.97d-14
-  lowr_hi=lowrleft*gamma_hi(T,2d0)+lowrright*gamma_hi(T,3d0)
-  lowr_h2=lowrleft*gamma_h2(T,2d0)+lowrright*gamma_h2(T,3d0)
-  lowvleft_hi=exp(-5860.0/T)*8.09d-13*1.0d-12*sqrt(T)*exp(-1.0d3/T)
-  lowvright_hi=exp(-11720.0/T)*1.6d-12*1.6d-12*sqrt(T)*exp(-1.0*(4.0d2/T)**2)
+  lowrleft=1.25*protected_mul(protected_exp(-1.70d2/T),2.35d-14)
+  lowrright=1.75*protected_mul(protected_exp(-5.05d2/T),6.97d-14)
+  lowr_hi=protected_mul(lowrleft,gamma_hi(T,2d0))+protected_mul(lowrright,gamma_hi(T,3d0))
+  lowr_h2=protected_mul(lowrleft,gamma_h2(T,2d0))+protected_mul(lowrright,gamma_h2(T,3d0))
+  lowvleft_hi=protected_mul(protected_mul(protected_exp(-5860.0/T),8.09d-13*1.0d-12),sqrt(T)*protected_exp(-1.0d3/T))
+  lowvright_hi=protected_mul(protected_mul(protected_exp(-11720.0/T),1.6d-12*1.6d-12),sqrt(T)*protected_exp(-1.0*(4.0d2/T)**2))
   lowv_hi=lowvleft_hi+lowvright_hi
-  lowv_h2=exp(-5860.0/T)*8.09d-13*1.4d-12*sqrt(T)*exp(-1.2d4/(T+1.2d3))
+  lowv_h2=protected_mul(protected_exp(-5860.0/T),8.09d-13*1.4d-12)*sqrt(T)*protected_exp(-1.2d4/(T+1.2d3))
 
   tbl_cr_H2HI%rates(iT)=lowr_hi+lowv_hi
   tbl_cr_H2H2%rates(iT)=lowr_h2+lowv_h2
 
   ! Collisional H2 cooling derivatives (calculated numerically)
   TT=T*1.0001
-  lowrleft=1.25*exp(-1.70d2/TT)*2.35d-14
-  lowrright=1.75*exp(-5.05d2/TT)*6.97d-14
-  lowr_hi=lowrleft*gamma_hi(TT,2d0)+lowrright*gamma_hi(TT,3d0)
-  lowr_h2=lowrleft*gamma_h2(TT,2d0)+lowrright*gamma_h2(TT,3d0)
-  lowvleft_hi=exp(-5860.0/TT)*8.09d-13*1.0d-12*sqrt(TT)*exp(-1.0d3/TT)
-  lowvright_hi=exp(-11720.0/TT)*1.6d-12*1.6d-12*sqrt(TT)*exp(-1.0*(4.0d2/TT)**2)
+  lowrleft=1.25*protected_mul(protected_exp(-1.70d2/TT),2.35d-14)
+  lowrright=1.75*protected_mul(protected_exp(-5.05d2/TT),6.97d-14)
+  lowr_hi=protected_mul(lowrleft,gamma_hi(TT,2d0))+protected_mul(lowrright,gamma_hi(TT,3d0))
+  lowr_h2=protected_mul(lowrleft,gamma_h2(TT,2d0))+protected_mul(lowrright,gamma_h2(TT,3d0))
+  lowvleft_hi=protected_mul(protected_mul(protected_exp(-5860.0/TT),8.09d-13*1.0d-12),sqrt(TT)*protected_exp(-1.0d3/TT))
+  lowvright_hi=protected_mul(protected_mul(protected_exp(-11720.0/TT),1.6d-12*1.6d-12), sqrt(TT)*protected_exp(-1.0*(4.0d2/TT)**2))
   lowv_hi=lowvleft_hi+lowvright_hi
-  lowv_h2=exp(-5860.0/TT)*8.09d-13*1.4d-12*sqrt(TT)*exp(-1.2d4/(TT+1.2d3))
+  lowv_h2=protected_mul(protected_mul(protected_exp(-5860.0/TT),8.09d-13*1.4d-12),sqrt(TT)*protected_exp(-1.2d4/(TT+1.2d3)))
 
   tbl_cr_H2HI%primes(iT)=lowr_hi+lowv_hi
   tbl_cr_H2HI%primes(iT) = &
@@ -673,7 +712,7 @@ ELEMENTAL FUNCTION gamma_hi(T,J)
   real(dp)::gamma_hi, T3, jconsts
   !-------------------------------------------------------------------------
   T3 = T/1d3
-  jconsts=0.33+0.9*exp(-1.0d0*((J-3.5d0)/0.9d0)**2)
+  jconsts=0.33+0.9*protected_exp(-1.0d0*((J-3.5d0)/0.9d0)**2)
   gamma_hi = &
        jconsts*(1.0d-11*sqrt(T3)/(1.0d0+60.0d0*T3**(-4)) + 1.0d-12*T3)
 
@@ -686,7 +725,7 @@ ELEMENTAL FUNCTION gamma_h2(T,J)
   real(dp)::gamma_h2, T3, jconsts
   !----------------------------------------------------------
   T3 = T/1d3
-  jconsts=(0.276*J**2)*exp(-1.0d0*(J/3.18d0)**1.7)
+  jconsts=(0.276*J**2)*protected_exp(-1.0d0*(J/3.18d0)**1.7)
   gamma_h2 = jconsts*(3.3d-12 +6.6d-12*T3)
 
 END FUNCTION gamma_h2
