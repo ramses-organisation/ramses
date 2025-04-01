@@ -849,7 +849,7 @@ subroutine cic_from_multipole(ilevel)
   integer,dimension(1:nvector),save::ind_grid
 
 !$omp threadprivate(ind_grid)
-  
+
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
 

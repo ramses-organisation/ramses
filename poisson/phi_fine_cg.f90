@@ -548,7 +548,7 @@ subroutine make_multipole_phi(ilevel)
   real(dp),dimension(1:nvector,1:ndim),save::xx
 
 !$omp threadprivate(ind_grid,ind_cell,rr,pp,xx)
-  
+
   ! Mesh size at level ilevel
   dx=0.5D0**ilevel
 

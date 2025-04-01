@@ -574,7 +574,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
 !$omp threadprivate(nbors_father_cells,nbors_father_grids,ibuffer_father,ind1,u1,u2)
 !$omp threadprivate(uloc,gloc,flux,emfx,emfy,emfz,tmp,ok)
 !$omp threadprivate(igrid_nbor,ind_cell,ind_buffer,ind_exist,ind_nexist)
-  
+
   oneontwotondim = 1d0/dble(twotondim)
 
   ! Mesh spacing in that level
