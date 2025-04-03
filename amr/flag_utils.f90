@@ -31,7 +31,7 @@ subroutine flag_coarse
   ! Constants
   nxny=nx*ny
   ! Reset flag1 array at coarse level
-  flag1(0:ncoarse)=0
+  flag1(1:ncoarse)=0
   ! Set flag1 to 1 at coarse level for inner cells only
   nflag=0
   do iz=kcoarse_min,kcoarse_max
@@ -572,7 +572,6 @@ subroutine smooth_fine(ilevel)
   if(numbtot(1,ilevel)==0)return
 
   n_nbor(1:3)=(/1,2,2/)
-  flag1(0)=0
   ncache=active(ilevel)%ngrid
   ! Loop over steps
   do ismooth=1,ndim

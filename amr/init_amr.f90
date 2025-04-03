@@ -49,8 +49,8 @@ subroutine init_amr
   dtnew=0.0D0
 
   ! Allocate AMR cell-based arrays
-  allocate(flag1(0:ncell)) ! Note: starting from 0
-  allocate(flag2(0:ncell)) ! Note: starting from 0
+  allocate(flag1(1:ncell))
+  allocate(flag2(1:ncell))
   allocate(son  (1:ncell)) ! Son index
   flag1=0; flag2=0; son=0
 
