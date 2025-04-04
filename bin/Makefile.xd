@@ -21,6 +21,8 @@ INIT_STELLAR_MASS = 1
 # define stellar population mass separately from the initial stellar mass
 STELLAR_POPULATION_MASS = 1
 # Patch
+#DICE_MHD =../patch/takashi/to_dice/mhd
+DICE_MHD =
 DICE =../patch/takashi/to_dice
 PATCH =../patch/takashi
 # Use RT? 1=Yes, 0=No
@@ -96,7 +98,7 @@ endif
 
 # GNU compiler (gfortran)
 ifeq ($(COMPILER),GNU)
-   FFLAGS = -cpp $(DEFINES)
+   FFLAGS = -cpp -DUSE_MPI_MOD $(DEFINES)
    ifeq ($(MPI),1)
       F90 = $(MPIF90)
       FC = gfortran
@@ -135,11 +137,38 @@ ifeq ($(COMPILER),INTEL)
       F90 += -O3
    endif
 endif
+ifeq ($(COMPILER),XD-CRAY)
+   FFLAGS = -cpp $(DEFINES)
+   F90 = ftn
+   FC = ftn
+   F90 += 
+   FC += 
+   ifeq ($(DEBUG),1)
+      F90 += -g -O0 -h backtrace -Rb -Wuninitialized -Wall
+      FFLAGS += fp_trap=zerodiv,underflow,overflow,invalid -h zeroinit
+   else
+      F90 += -O3
+   endif
+endif
 ifeq ($(COMPILER),XD-GNU)
    FFLAGS = -cpp $(DEFINES)
    F90 = ftn
-   FC = gfortran
-   F90 += -ffree-line-length-none -fimplicit-none
+   FC = ftn
+   F90 += -fallow-argument-mismatch -ffree-line-length-none -fimplicit-none
+   FC += -fallow-argument-mismatch -ffree-line-length-none -fimplicit-none
+   ifeq ($(DEBUG),1)
+      F90 += -g -O0 -fbacktrace -fbounds-check -Wuninitialized -Wall
+      FFLAGS += -ffpe-trap=zero,underflow,overflow,invalid -finit-real=nan
+   else
+      F90 += -O3
+   endif
+endif
+ifeq ($(COMPILER),XD-INTEL)
+   FFLAGS = -cpp $(DEFINES)
+   F90 = mpiifx
+   FC = ftn
+   FFLAGS += -DNOSYSTEM
+   F90 += -fp-model source
    FC += -ffree-line-length-none -fimplicit-none
    ifeq ($(DEBUG),1)
       F90 += -g -O0 -fbacktrace -fbounds-check -Wuninitialized -Wall

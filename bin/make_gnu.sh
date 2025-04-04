@@ -10,7 +10,7 @@ source /work/opt/local/bin/enable-cpe.sh
 #module add fftw3
 #module add fftw/2.1.5.9
 #module add gsl/115
-#module add cray-hdf5/1.8.16
+#module add cray-hdf5/1.8.16 
 
 module swich PrgEnv-cray PrgEnv-gnu
 #module add gsl/2.4_gnu-7.3
@@ -20,4 +20,4 @@ module swich PrgEnv-cray PrgEnv-gnu
 
 module list > m.log 2>& 1
 
-make -f Makefile.xc >> m.log 2>& 1
+make -f Makefile.xd >> m.log 2>& 1

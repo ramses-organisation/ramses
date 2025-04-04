@@ -20,8 +20,8 @@ INIT_STELLAR_MASS = 1
 # define stellar population mass separately from the initial stellar mass
 STELLAR_POPULATION_MASS = 1
 # Patch
-#DICE_MHD =../patch/takashi/to_dice
-#DICE_MHD =
+#DICE_MHD =../patch/takashi/to_dice/mhd
+DICE_MHD =
 DICE =../patch/takashi/to_dice
 #DICE =
 PATCH =../patch/takashi
