@@ -156,7 +156,7 @@ program defrag
         mapping=0
         allocate(headl2(1:ncpu,1:nlevelmax))
         allocate(taill2(1:ncpu,1:nlevelmax))
-        allocate(flag1(0:ncell2))
+        allocate(flag1(1:ncell2))
         allocate(cpu_map(1:ncell2))
         allocate(xg(1:ngridmax2,1:ndim))
         allocate(father(1:ngridmax2))
