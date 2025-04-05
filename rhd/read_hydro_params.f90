@@ -220,4 +220,12 @@ subroutine read_hydro_params(nml_ok)
      jeans_refine(i)=-1.0
   end do
 
+  !-----------------
+  ! Max size checks
+  !-----------------
+  if(nregion>MAXREGION)then
+     write(*,*) 'Error: nregion>MAXREGION'
+     call clean_stop
+  end if
+
 end subroutine read_hydro_params
