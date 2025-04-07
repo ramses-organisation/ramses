@@ -3136,7 +3136,7 @@ subroutine make_galaxies()
   integer::i,ip
   integer::nalloc1,nalloc2
   integer, parameter :: mode = int(O'755')
-  integer::ierror
+  integer::ierr
 
   logical::opened
 

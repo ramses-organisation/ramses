@@ -31,7 +31,7 @@ module amr_commons
   CHARACTER(LEN=300)::namelist_file
 
   ! MPI variables
-  integer::ncpu,ndomain,myid,ierr,overload=1
+  integer::ncpu,ndomain,myid,overload=1
 
   ! Friedman model variables
   integer::n_frw

@@ -21,7 +21,7 @@ subroutine dump_all
   character::nml_char
   character(LEN=5)::nchar,ncharcpu
   character(LEN=80)::filename,filename_desc,filedir
-  integer::ierror
+  integer::ierr
 
   if(nstep_coarse==nstep_coarse_old.and.nstep_coarse>0)return
   if(nstep_coarse==0.and.nrestart>0)return
@@ -87,8 +87,8 @@ subroutine dump_all
      OPEN(10, FILE=namelist_file, ACCESS="STREAM", ACTION="READ")
      OPEN(11, FILE=filename,      ACCESS="STREAM", ACTION="WRITE")
      DO
-        READ(10, IOSTAT=ierror)nml_char
-        IF (ierror.NE.0) EXIT
+        READ(10, IOSTAT=IERR)nml_char
+        IF (IERR.NE.0) EXIT
         WRITE(11)nml_char
      END DO
      CLOSE(11)
@@ -417,7 +417,7 @@ subroutine output_info(filename)
   implicit none
   character(LEN=80)::filename
 
-  integer::nx_loc,ny_loc,nz_loc,ilun,icpu,idom,ierror
+  integer::nx_loc,ny_loc,nz_loc,ilun,icpu,idom,ierr
   real(dp)::scale
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   character(LEN=80)::fileloc
@@ -438,8 +438,8 @@ subroutine output_info(filename)
 
   ! Open file
   fileloc=TRIM(filename)
-  open(unit=ilun,file=fileloc,form='formatted',iostat=ierror)
-  if(ierror .ne. 0)then
+  open(unit=ilun,file=fileloc,form='formatted',iostat=ierr)
+  if(ierr .ne. 0)then
      write(*,*) 'Error - Could not write ',fileloc
 #ifndef WITHOUTMPI
      call MPI_ABORT(MPI_COMM_WORLD,1,ierr)
@@ -680,7 +680,7 @@ subroutine create_output_dirs(filedir)
   integer :: info_sys
 #else
   character(LEN=80)::filecmd
-  integer :: ierror
+  integer :: ierr
 #endif
 #ifndef WITHOUTMPI
   integer :: info
@@ -695,12 +695,12 @@ subroutine create_output_dirs(filedir)
       call PXFMKDIR(TRIM(filedir),LEN(TRIM(filedir)),O'755',info_sys)
 #else
       filecmd='mkdir -p '//TRIM(filedir)
-      ierror=1
-!      call system(filecmd,ierror)
-!      call EXECUTE_COMMAND_LINE(filecmd,exitstat=ierror,wait=.true.)
-      call mkdir(TRIM(filedir),mode,ierror)
-      if(ierror.ne.0 .and. ierror.ne.127)then
-        write(*,*) 'Error - Could not create ',TRIM(filedir),' error code=',ierror
+      ierr=1
+!      call system(filecmd,ierr)
+!      call EXECUTE_COMMAND_LINE(filecmd,exitstat=ierr,wait=.true.)
+      call mkdir(TRIM(filedir),mode,ierr)
+      if(ierr.ne.0 .and. ierr.ne.127)then
+        write(*,*) 'Error - Could not create ',TRIM(filedir),' error code=',ierr
 #ifndef WITHOUTMPI
         call MPI_ABORT(MPI_COMM_WORLD,1,info)
 #else

@@ -16,7 +16,7 @@ subroutine read_params
   logical::nml_ok, info_ok
   integer,parameter::tag=1134
 #ifndef WITHOUTMPI
-  integer::dummy_io,info2
+  integer::dummy_io,ierr,info2
 #endif
 
 #ifdef LIGHT_MPI_COMM

@@ -178,11 +178,11 @@ SUBROUTINE mpi_distribute_coolrates_table(table)
 ! entries on each cpu, but the whole table is acquired by summing those
 ! partial tables
 !-------------------------------------------------------------------------
-  use amr_commons, only:ierr
   use mpi_mod
   implicit none
   type(coolrates_table)::table
   real(dp),dimension(:),allocatable :: table_mpi_sum
+  integer::ierr
 !-------------------------------------------------------------------------
   allocate(table_mpi_sum(nbinT))
   call MPI_ALLREDUCE(table%rates,table_mpi_sum                           &

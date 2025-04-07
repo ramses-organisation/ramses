@@ -684,7 +684,7 @@ end function J0simple
 !=======================================================================
 subroutine cmp_table(nH_min,nH_max,T2_min,T2_max,nbin_n,nbin_T,aexp)
 !=======================================================================
-  use amr_commons, only:myid,ncpu,ierr
+  use amr_commons, only:myid,ncpu
   use mpi_mod
   implicit none
   real(kind=8)::nH_min,nH_max,T2_min,T2_max,aexp,tmp
@@ -692,6 +692,9 @@ subroutine cmp_table(nH_min,nH_max,T2_min,T2_max,nbin_n,nbin_T,aexp)
   integer::i_n,i_T
   real(kind=8),dimension(1:3)::t_rad_spec,h_rad_spec
   logical,save::first=.true.
+#ifndef WITHOUTMPI
+  integer::ierr
+#endif
 
   if(.not.first)then
      deallocate(table%cool)

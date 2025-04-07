@@ -4,7 +4,6 @@
 ! ============================================================================
 #ifndef WITHOUTMPI
 subroutine mpi_share_turb_fields(include_last)
-  use amr_commons, only:ierr
   use turb_commons
   use mpi_mod
   implicit none
@@ -23,6 +22,7 @@ subroutine mpi_share_turb_fields(include_last)
 
    integer, parameter :: message_length=NDIM*TURB_GS**NDIM
                                                ! Length of flattened arrays
+   integer            :: ierr                  ! MPI error variable
 
    ! Share afield_last and afield_next
    if (include_last) then
