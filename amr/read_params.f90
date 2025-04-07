@@ -1,9 +1,6 @@
 subroutine read_params
   use amr_commons
-  use pm_parameters
-  use poisson_parameters
-  use hydro_parameters
-  use sink_feedback_parameters
+  use hydro_parameters, only:nvar,nhydro
   use mpi_mod
   implicit none
   !--------------------------------------------------
@@ -34,9 +31,10 @@ subroutine read_params
    type(communicator_legacy),allocatable,dimension(:,:)::emission_reception_legacy  ! 2D (ncpu,nlevelmax) data emission/reception/active_mg/emission_mg "heavy" buffer
 #endif
 
-  !--------------------------------------------------
-  ! Advertise RAMSES
-  !--------------------------------------------------
+  !-----------------------------------------------------
+  ! Advertise RAMSES and print some general information
+  !-----------------------------------------------------
+
   if(myid==1)then
   write(*,*)'_/_/_/       _/_/     _/    _/    _/_/_/   _/_/_/_/    _/_/_/  '
   write(*,*)'_/    _/    _/  _/    _/_/_/_/   _/    _/  _/         _/    _/ '
@@ -100,16 +98,6 @@ subroutine read_params
 #endif
 
   !-------------------------------------------------
-  ! Default passive scalar map
-  !-------------------------------------------------
-#if NVAR>NHYDRO
-  allocate(remap_pscalar(1:nvar-nhydro))
-  do i=1,nvar-nhydro
-     remap_pscalar(i) = i+nhydro
-  enddo
-#endif
-
-  !-------------------------------------------------
   ! Read the namelist
   !-------------------------------------------------
 
@@ -131,8 +119,10 @@ subroutine read_params
      call clean_stop
   end if
 
-  ! Open namelist and read parameter blocks
+  ! Open namelist
   open(1,file=infile)
+
+  ! Read parameter blocks
   call read_run_params(1,nml_ok)  !should be read first
   call read_amr_params(1,nml_ok)
   call read_output_params(1,nml_ok)
@@ -155,9 +145,21 @@ subroutine read_params
   call read_turb_params(nml_ok)
 #endif
 #endif
-  if (movie)call set_movie_vars
 
+  ! DEV INFO: add here your call for new namelist blocks
+
+  ! Close namelist
   close(1)
+
+  if(.not. nml_ok)then
+     if(myid==1)write(*,*)'Too many errors in the namelist'
+     if(myid==1)write(*,*)'Aborting...'
+     call clean_stop
+  end if
+
+  !-------------------------------------------------
+  ! LIGHT MPI memory usage message
+  !-------------------------------------------------
 
 #ifndef WITHOUTMPI
 #ifdef LIGHT_MPI_COMM
@@ -214,11 +216,15 @@ subroutine read_params
   !-------------------------------------------------
   ! Read optional nrestart command-line argument
   !-------------------------------------------------
+
+  ! Will overwrite whatever was set in the namelist
   if (myid==1 .and. narg == 2) then
      CALL getarg(2,cmdarg)
      read(cmdarg,*) nrestart
   endif
 
+  ! Check if info file of restart output exists,
+  ! otherwise look for earlier outputs
   if (myid==1 .and. nrestart .gt. 0) then
      call title(nrestart,nchar)
      info_file='output_'//TRIM(nchar)//'/info_'//TRIM(nchar)//'.txt'
@@ -288,12 +294,6 @@ subroutine read_params
      initfile  (i)= ' '
   end do
 
-  if(.not. nml_ok)then
-     if(myid==1)write(*,*)'Too many errors in the namelist'
-     if(myid==1)write(*,*)'Aborting...'
-     call clean_stop
-  end if
-
 #ifndef WITHOUTMPI
   call MPI_BARRIER(MPI_COMM_WORLD,ierr)
 #endif
@@ -305,9 +305,13 @@ end subroutine read_params
 subroutine read_run_params(namelist_unit,nml_ok)
    use amr_parameters
    use amr_commons
+   use hydro_parameters, only:nhydro,nvar
    integer,intent(in)::namelist_unit
    logical,intent(inout)::nml_ok
    integer::nml_err
+#if NVAR>NHYDRO
+   integer::i
+#endif
 
    ! Namelist definition for general run parameters
    namelist/run_params/clumpfind,cosmo,pic,sink,tracer,lightcone,poisson,hydro,rt,verbose,debug &
@@ -316,6 +320,14 @@ subroutine read_run_params(namelist_unit,nml_ok)
    & ,static_dm,static_gas,static_stars,convert_birth_times,use_proper_time,remap_pscalar &
    & ,unbind,make_mergertree,stellar
 
+  ! Default passive scalar map
+#if NVAR>NHYDRO
+   allocate(remap_pscalar(1:nvar-nhydro))
+   do i=1,nvar-nhydro
+      remap_pscalar(i) = i+nhydro
+   enddo
+#endif
+
    ! Go to the beginning of the file
    rewind(namelist_unit)
 
@@ -323,6 +335,7 @@ subroutine read_run_params(namelist_unit,nml_ok)
    read(namelist_unit,NML=run_params,IOSTAT=nml_err)
 
    if(nml_err<0)then
+      ! EOF reached before namelist was found
       if(myid==1)write(*,*)'You need to set up namelist &RUN_PARAMS in parameter file.'
       nml_ok=.false.
    elseif(nml_err>0)then
@@ -387,6 +400,7 @@ subroutine read_amr_params(namelist_unit,nml_ok)
    read(namelist_unit,NML=amr_params,IOSTAT=nml_err)
  
    if(nml_err<0)then
+      ! EOF reached before namelist was found
       if(myid==1)write(*,*)'You need to set up namelist &AMR_PARAMS in parameter file.'
       nml_ok=.false.
    elseif(nml_err>0)then
@@ -437,7 +451,7 @@ end subroutine read_amr_params
 !###############################################################
 subroutine read_output_params(namelist_unit,nml_ok)
    use amr_parameters
-   use amr_commons, only:myid,ncpu
+   use amr_commons, only:myid
    integer,intent(in)::namelist_unit
    logical,intent(inout)::nml_ok
    integer::nml_err
@@ -453,6 +467,11 @@ subroutine read_output_params(namelist_unit,nml_ok)
 
    ! Read namelist
    read(namelist_unit,NML=output_params,IOSTAT=nml_err)
+
+   if(nml_err>0)then
+      if(myid==1)write(*,*)'Error reading namelist &OUTPUT_PARAMS. Check formatting.'
+      nml_ok=.false.    
+   endif
 
    !-------------------------------------------------
    ! Compute time step for outputs
@@ -487,7 +506,7 @@ end subroutine read_output_params
 !###############################################################
 subroutine read_movie_params(namelist_unit,nml_ok)
    use amr_parameters
-   use amr_commons, only:myid,ncpu
+   use amr_commons, only:myid
    integer,intent(in)::namelist_unit
    logical,intent(inout)::nml_ok
    integer::nml_err,i
@@ -506,6 +525,11 @@ subroutine read_movie_params(namelist_unit,nml_ok)
 
    ! Read namelist
    read(namelist_unit,NML=movie_params,IOSTAT=nml_err)
+
+   if(nml_err>0)then
+      if(myid==1)write(*,*)'Error reading namelist &MOVIE_PARAMS. Check formatting.'
+      nml_ok=.false.    
+   endif
 
    ! Setup up movie times
    if(imovout>0) then
@@ -526,13 +550,15 @@ subroutine read_movie_params(namelist_unit,nml_ok)
       if(tendmov==0.and.aendmov==0)movie=.false.
    endif
 
+   if (movie)call set_movie_vars
+
 end subroutine read_movie_params
 !###############################################################
 !###############################################################
 !###############################################################
 subroutine read_lightcone_params(namelist_unit,nml_ok)
    use amr_parameters
-   use amr_commons, only:myid,ncpu
+   use amr_commons, only:myid
    integer,intent(in)::namelist_unit
    logical,intent(inout)::nml_ok
    integer::nml_err
@@ -545,13 +571,18 @@ subroutine read_lightcone_params(namelist_unit,nml_ok)
    ! Read namelist
    read(namelist_unit,NML=lightcone_params,IOSTAT=nml_err)
 
+   if(nml_err>0)then
+      if(myid==1)write(*,*)'Error reading namelist &LIGHTCONE_PARAMS. Check formatting.'
+      nml_ok=.false.    
+   endif
+
 end subroutine read_lightcone_params
 !###############################################################
 !###############################################################
 !###############################################################
 subroutine read_tracer_params(namelist_unit,nml_ok)
-   use amr_parameters
-   use amr_commons, only:myid,ncpu
+   use amr_parameters, only:tracer,mc_tracer,pic,nlevelmax
+   use amr_commons, only:myid
    use pm_parameters
    integer,intent(in)::namelist_unit
    logical,intent(inout)::nml_ok
@@ -567,17 +598,21 @@ subroutine read_tracer_params(namelist_unit,nml_ok)
    ! Read namelist
    read(namelist_unit,NML=tracer_params,IOSTAT=nml_err)
 
-   ! Verify input
+   if(nml_err>0)then
+      if(myid==1)write(*,*)'Error reading namelist &TRACER_PARAMS. Check formatting.'
+      nml_ok=.false.    
+   endif
 
+   ! Verify input
    if (tracer_first_balance_levelmin <= 0) tracer_first_balance_levelmin = nlevelmax + 1
 
    if(MC_tracer .and. (.not. tracer))then
-      write(*,*)'Error: you have activated the MC tracer but not the tracers in RUN_PARAMS.'
+      if(myid==1)write(*,*)'Error: you have activated the MC tracer but not the tracers in RUN_PARAMS.'
       call clean_stop
    end if
  
    if(MC_tracer .and. (.not. pic)) then
-      write(*,*)'Error: you have activated the MC tracer but pic is false.'
+      if(myid==1)write(*,*)'Error: you have activated the MC tracer but pic is false.'
       call clean_stop
    end if
 
@@ -586,8 +621,7 @@ end subroutine read_tracer_params
 !###############################################################
 !###############################################################
 subroutine read_poisson_params(namelist_unit,nml_ok)
-   use amr_parameters
-   use amr_commons, only:myid,ncpu
+   use amr_commons, only:myid
    use poisson_parameters
    integer,intent(in)::namelist_unit
    logical,intent(inout)::nml_ok
@@ -601,5 +635,10 @@ subroutine read_poisson_params(namelist_unit,nml_ok)
 
    ! Read namelist
    read(namelist_unit,NML=poisson_params,IOSTAT=nml_err)
+
+   if(nml_err>0)then
+      if(myid==1)write(*,*)'Error reading namelist &POISSON_PARAMS. Check formatting.'
+      nml_ok=.false.    
+   endif
 
 end subroutine read_poisson_params
