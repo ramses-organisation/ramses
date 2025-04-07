@@ -340,7 +340,7 @@ subroutine read_run_params(namelist_unit,nml_ok)
       nml_ok=.false.
    elseif(nml_err>0)then
       if(myid==1)write(*,*)'Error reading namelist &RUN_PARAMS. Check formatting.'
-      nml_ok=.false.    
+      nml_ok=.false.
    endif
 
    ! Verify input
@@ -389,25 +389,25 @@ subroutine read_amr_params(namelist_unit,nml_ok)
 
    !TODO replace nlevelmax by levelmax everywhere
 
-   ! AMR grid parameters 
+   ! AMR grid parameters
    namelist/amr_params/levelmin,levelmax,ngridmax,ngridtot &
    & ,npartmax,nparttot,nexpand,boxlen,nlevel_collapse
 
    ! Go to the beginning of the file
    rewind(namelist_unit)
- 
+
    ! Read namelist
    read(namelist_unit,NML=amr_params,IOSTAT=nml_err)
- 
+
    if(nml_err<0)then
       ! EOF reached before namelist was found
       if(myid==1)write(*,*)'You need to set up namelist &AMR_PARAMS in parameter file.'
       nml_ok=.false.
    elseif(nml_err>0)then
       if(myid==1)write(*,*)'Error reading namelist &INIT_PARAMS. Check formatting.'
-      nml_ok=.false.    
+      nml_ok=.false.
    endif
- 
+
    ! Verify input
    levelmin=MAX(levelmin,1)
    nlevelmax=levelmax
@@ -470,7 +470,7 @@ subroutine read_output_params(namelist_unit,nml_ok)
 
    if(nml_err>0)then
       if(myid==1)write(*,*)'Error reading namelist &OUTPUT_PARAMS. Check formatting.'
-      nml_ok=.false.    
+      nml_ok=.false.
    endif
 
    !-------------------------------------------------
@@ -528,7 +528,7 @@ subroutine read_movie_params(namelist_unit,nml_ok)
 
    if(nml_err>0)then
       if(myid==1)write(*,*)'Error reading namelist &MOVIE_PARAMS. Check formatting.'
-      nml_ok=.false.    
+      nml_ok=.false.
    endif
 
    ! Setup up movie times
@@ -573,7 +573,7 @@ subroutine read_lightcone_params(namelist_unit,nml_ok)
 
    if(nml_err>0)then
       if(myid==1)write(*,*)'Error reading namelist &LIGHTCONE_PARAMS. Check formatting.'
-      nml_ok=.false.    
+      nml_ok=.false.
    endif
 
 end subroutine read_lightcone_params
@@ -600,7 +600,7 @@ subroutine read_tracer_params(namelist_unit,nml_ok)
 
    if(nml_err>0)then
       if(myid==1)write(*,*)'Error reading namelist &TRACER_PARAMS. Check formatting.'
-      nml_ok=.false.    
+      nml_ok=.false.
    endif
 
    ! Verify input
@@ -610,7 +610,7 @@ subroutine read_tracer_params(namelist_unit,nml_ok)
       if(myid==1)write(*,*)'Error: you have activated the MC tracer but not the tracers in RUN_PARAMS.'
       call clean_stop
    end if
- 
+
    if(MC_tracer .and. (.not. pic)) then
       if(myid==1)write(*,*)'Error: you have activated the MC tracer but pic is false.'
       call clean_stop
@@ -638,7 +638,7 @@ subroutine read_poisson_params(namelist_unit,nml_ok)
 
    if(nml_err>0)then
       if(myid==1)write(*,*)'Error reading namelist &POISSON_PARAMS. Check formatting.'
-      nml_ok=.false.    
+      nml_ok=.false.
    endif
 
 end subroutine read_poisson_params
