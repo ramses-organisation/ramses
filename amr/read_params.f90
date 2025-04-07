@@ -306,6 +306,7 @@ subroutine read_run_params(namelist_unit,nml_ok)
    use amr_parameters
    use amr_commons
    use hydro_parameters, only:nhydro,nvar
+   implicit none
    integer,intent(in)::namelist_unit
    logical,intent(inout)::nml_ok
    integer::nml_err
@@ -373,6 +374,7 @@ subroutine read_amr_params(namelist_unit,nml_ok)
    use amr_parameters
    use amr_commons, only:myid,ncpu
    use pm_parameters, only:npartmax
+   implicit none
    integer,intent(in)::namelist_unit
    logical,intent(inout)::nml_ok
    integer::nml_err
@@ -452,6 +454,7 @@ end subroutine read_amr_params
 subroutine read_output_params(namelist_unit,nml_ok)
    use amr_parameters
    use amr_commons, only:myid
+   implicit none
    integer,intent(in)::namelist_unit
    logical,intent(inout)::nml_ok
    integer::nml_err
@@ -507,6 +510,7 @@ end subroutine read_output_params
 subroutine read_movie_params(namelist_unit,nml_ok)
    use amr_parameters
    use amr_commons, only:myid
+   implicit none
    integer,intent(in)::namelist_unit
    logical,intent(inout)::nml_ok
    integer::nml_err,i
@@ -559,6 +563,7 @@ end subroutine read_movie_params
 subroutine read_lightcone_params(namelist_unit,nml_ok)
    use amr_parameters
    use amr_commons, only:myid
+   implicit none
    integer,intent(in)::namelist_unit
    logical,intent(inout)::nml_ok
    integer::nml_err
@@ -584,6 +589,7 @@ subroutine read_tracer_params(namelist_unit,nml_ok)
    use amr_parameters, only:tracer,mc_tracer,pic,nlevelmax
    use amr_commons, only:myid
    use pm_parameters
+   implicit none
    integer,intent(in)::namelist_unit
    logical,intent(inout)::nml_ok
    integer::nml_err
@@ -608,12 +614,12 @@ subroutine read_tracer_params(namelist_unit,nml_ok)
 
    if(MC_tracer .and. (.not. tracer))then
       if(myid==1)write(*,*)'Error: you have activated the MC tracer but not the tracers in RUN_PARAMS.'
-      call clean_stop
+      nml_ok=.false.
    end if
 
    if(MC_tracer .and. (.not. pic)) then
       if(myid==1)write(*,*)'Error: you have activated the MC tracer but pic is false.'
-      call clean_stop
+      nml_ok=.false.
    end if
 
 end subroutine read_tracer_params
@@ -623,6 +629,7 @@ end subroutine read_tracer_params
 subroutine read_poisson_params(namelist_unit,nml_ok)
    use amr_commons, only:myid
    use poisson_parameters
+   implicit none
    integer,intent(in)::namelist_unit
    logical,intent(inout)::nml_ok
    integer::nml_err
