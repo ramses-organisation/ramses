@@ -116,6 +116,13 @@ subroutine read_params
   endif
 #endif
 
+#ifdef TSC
+  if (ndim/=3)then
+     write(*,*)'TSC not supported for ndim neq 3'
+     call clean_stop
+  end if
+#endif
+
   !Write I/O group size information
   if(IOGROUPSIZE>0.or.IOGROUPSIZECONE>0.or.IOGROUPSIZEREP>0)write(*,*)' '
   if(IOGROUPSIZE>0) write(*,*)'IOGROUPSIZE=',IOGROUPSIZE

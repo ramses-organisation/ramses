@@ -47,18 +47,8 @@ subroutine rho_fine(ilevel,icount)
      do i=nlevelmax,ilevel,-1
         ! Compute mass multipole
         if(hydro)call multipole_fine(i)
-        ! Perform TSC using pseudo-particle
-#ifdef TSC
-        if (ndim==3)then
-           call tsc_from_multipole(i)
-        else
-           write(*,*)'TSC not supported for ndim neq 3'
-           call clean_stop
-        end if
-#else
-        ! Perform CIC using pseudo-particle
+        ! Perform CIC or TSC using pseudo-particle
         call cic_from_multipole(i)
-#endif
         ! Update boundaries
         call make_virtual_reverse_dp(rho(1),i)
         call make_virtual_fine_dp   (rho(1),i)
@@ -882,7 +872,11 @@ subroutine cic_from_multipole(ilevel)
         do i=1,ngrid
            ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
         end do
+#ifdef TSC
+        call tsc_cell(ind_grid,ngrid,ilevel)
+#else
         call cic_cell(ind_grid,ngrid,ilevel)
+#endif
      end do
   end if
 
@@ -1176,11 +1170,6 @@ subroutine tsc_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
   real(dp),dimension(1:nvector,1:threetondim),save::vol
   integer ,dimension(1:nvector,1:threetondim),save::igrid,icell,indp,kg
   real(dp),dimension(1:3)::skip_loc
-
-  if (ndim .ne. 3)then
-     write(*,*)'TSC not supported for ndim neq 3'
-     call clean_stop
-  end if
 
   ! Mesh spacing in that level
   dx=0.5D0**ilevel
@@ -1480,80 +1469,6 @@ subroutine tsc_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
 
   end do
 end subroutine tsc_amr
-#endif
-!###########################################################
-!###########################################################
-!###########################################################
-!###########################################################
-#if NDIM==3
-subroutine tsc_from_multipole(ilevel)
-  use amr_commons
-  use hydro_commons
-  use poisson_commons
-  use mpi_mod
-  implicit none
-  integer::ilevel
-  !-------------------------------------------------------------------
-  ! This routine compute array rho (source term for Poisson equation)
-  ! by first reseting array rho to zero, then
-  ! by affecting the gas density to leaf cells, and finally
-  ! by performing a restriction operation for split cells.
-  ! For pure particle runs, the restriction is not necessary and the
-  ! routine only set rho to zero. On the other hand, for the Multigrid
-  ! solver, the restriction is necessary in any case.
-  !-------------------------------------------------------------------
-  integer::ind,i,icpu,ncache,ngrid,iskip,ibound
-  integer::igrid
-  integer,dimension(1:nvector),save::ind_grid
-
-  if(numbtot(1,ilevel)==0)return
-  if(verbose)write(*,111)ilevel
-
-  ! Initialize density field to zero
-  do icpu=1,ncpu
-     do ind=1,twotondim
-        iskip=ncoarse+(ind-1)*ngridmax
-        do i=1,reception(icpu,ilevel)%ngrid
-#ifdef LIGHT_MPI_COMM
-           rho(reception(icpu,ilevel)%pcomm%igrid(i)+iskip)=0.0D0
-#else
-           rho(reception(icpu,ilevel)%igrid(i)+iskip)=0.0D0
-#endif
-        end do
-     end do
-  end do
-  do ind=1,twotondim
-     iskip=ncoarse+(ind-1)*ngridmax
-     do i=1,active(ilevel)%ngrid
-        rho(active(ilevel)%igrid(i)+iskip)=0.0D0
-     end do
-  end do
-  ! Reset rho in physical boundaries
-  do ibound=1,nboundary
-     do ind=1,twotondim
-        iskip=ncoarse+(ind-1)*ngridmax
-        do i=1,boundary(ibound,ilevel)%ngrid
-           rho(boundary(ibound,ilevel)%igrid(i)+iskip)=0
-        end do
-     end do
-  end do
-
-  if(hydro)then
-     ! Perform a restriction over split cells (ilevel+1)
-     ncache=active(ilevel)%ngrid
-     do igrid=1,ncache,nvector
-        ! Gather nvector grids
-        ngrid=MIN(nvector,ncache-igrid+1)
-        do i=1,ngrid
-           ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
-        end do
-        call tsc_cell(ind_grid,ngrid,ilevel)
-     end do
-  end if
-
-111 format('   Entering tsc_from_multipole for level',i2)
-
-end subroutine tsc_from_multipole
 #endif
 !###########################################################
 !###########################################################
