@@ -26,7 +26,7 @@ subroutine rho_fine(ilevel,icount)
   ! - cpu_map2 containing the refinement map due to particle
   !   number density criterion (quasi Lagrangian mesh).
   !------------------------------------------------------------------
-  integer::iskip,icpu,ind,i,nx_loc,ibound
+  integer::iskip,icpu,ind,i,nx_loc,ibound,ind_cell
   real(dp)::dx,d_scale,scale,dx_loc,scalar
 
   if(.not. poisson)return
@@ -73,9 +73,9 @@ subroutine rho_fine(ilevel,icount)
      do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
         do i=1,active(ilevel)%ngrid
-           rho_top(active(ilevel)%igrid(i)+iskip)=rho_top(father(active(ilevel)%igrid(i)))
-           rho(active(ilevel)%igrid(i)+iskip)=rho(active(ilevel)%igrid(i)+iskip)+ &
-                & rho_top(active(ilevel)%igrid(i)+iskip)
+           ind_cell=active(ilevel)%igrid(i)+iskip
+           rho_top(ind_cell)=rho_top(father(active(ilevel)%igrid(i)))
+           rho(ind_cell)=rho(ind_cell)+rho_top(ind_cell)
         end do
      end do
   endif
@@ -90,17 +90,16 @@ subroutine rho_fine(ilevel,icount)
         if(hydro)then
            if(ivar_refine>0)then
               do i=1,active(ilevel)%ngrid
-                 scalar=uold(active(ilevel)%igrid(i)+iskip,ivar_refine) &
-                      & /max(uold(active(ilevel)%igrid(i)+iskip,1),smallr)
+                 ind_cell=active(ilevel)%igrid(i)+iskip
+                 scalar=uold(ind_cell,ivar_refine)/max(uold(ind_cell,1),smallr)
                  if(scalar>var_cut_refine)then
-                    phi(active(ilevel)%igrid(i)+iskip)= &
-                         & rho(active(ilevel)%igrid(i)+iskip)/d_scale
+                    phi(ind_cell)=rho(ind_cell)/d_scale
                  endif
               end do
            else
               do i=1,active(ilevel)%ngrid
-                 phi(active(ilevel)%igrid(i)+iskip)= &
-                      & rho(active(ilevel)%igrid(i)+iskip)/d_scale
+                 ind_cell=active(ilevel)%igrid(i)+iskip
+                 phi(ind_cell)=rho(ind_cell)/d_scale
               end do
            endif
         endif
@@ -192,10 +191,11 @@ subroutine rho_fine(ilevel,icount)
      do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
         do i=1,active(ilevel)%ngrid
-           if(phi(active(ilevel)%igrid(i)+iskip)>=m_refine(ilevel))then
-              cpu_map2(active(ilevel)%igrid(i)+iskip)=1
+           ind_cell=active(ilevel)%igrid(i)+iskip
+           if(phi(ind_cell)>=m_refine(ilevel))then
+              cpu_map2(ind_cell)=1
            else
-              cpu_map2(active(ilevel)%igrid(i)+iskip)=0
+              cpu_map2(ind_cell)=0
            end if
         end do
      end do
