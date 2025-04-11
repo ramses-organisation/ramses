@@ -13,7 +13,7 @@ integer,dimension(1:nvector,1:threetondim)::nbors_father_cells
 integer::i,j,nxny,i1,j1,k1,ind,iok
 integer::i1min,i1max,j1min,j1max,k1min,k1max,ind_father
 integer,dimension(1:nvector),save::ix,iy,iz,iix,iiy,iiz
-integer,dimension(1:nvector),save::pos,ind_grid_father,ind_grid_ok
+integer,dimension(1:nvector),save::pos,ind_grid_father,ind_grid_ok,ind_cell_ok
 integer,dimension(1:nvector,1:threetondim),save::nbors_father_ok
 logical::oups
 
@@ -91,23 +91,20 @@ else    ! else, more complicated...
          if(pos(i)==ind)then
             iok=iok+1
             ind_grid_ok(iok)=ind_grid_father(i)
+            ind_cell_ok(iok)=i
          end if
       end do
 
       if(iok>0)then
          call get3cubepos_bis(ind_grid_ok,ind,nbors_father_ok,iok)
-      endif
 
-      ! Store neighboring father cells for selected cells
-      do j=1,threetondim
-         iok=0
-         do i=1,ncell
-            if(pos(i)==ind)then
-               iok=iok+1
-               nbors_father_cells(i,j)=nbors_father_ok(iok,j)
-            end if
+         ! Store neighboring father cells for selected cells
+         do j=1,threetondim
+            do i=1,iok
+               nbors_father_cells(ind_cell_ok(i),j)=nbors_father_ok(i,j)
+            end do
          end do
-      end do
+      end if
 
    end do
 
@@ -134,7 +131,7 @@ subroutine get3cubefather(ind_cell_father,nbors_father_cells,&
   integer::i,j,nxny,i1,j1,k1,ind,iok
   integer::i1min,i1max,j1min,j1max,k1min,k1max,ind_father
   integer,dimension(1:nvector),save::ix,iy,iz,iix,iiy,iiz
-  integer,dimension(1:nvector),save::pos,ind_grid_father,ind_grid_ok
+  integer,dimension(1:nvector),save::pos,ind_grid_father,ind_grid_ok,ind_cell_ok
   integer,dimension(1:nvector,1:threetondim),save::nbors_father_ok
   integer,dimension(1:nvector,1:twotondim),save::nbors_grids_ok
   logical::oups
@@ -142,16 +139,6 @@ subroutine get3cubefather(ind_cell_father,nbors_father_cells,&
   nxny=nx*ny
 
   if(ilevel==1)then  ! Easy...
-
-     oups=.false.
-     do i=1,ncell
-        if(ind_cell_father(i)>ncoarse)oups=.true.
-     end do
-     if(oups)then
-        write(*,*)'get3cubefather'
-        write(*,*)'oupsssss !'
-        call clean_stop
-     endif
 
      do i=1,ncell
         iz(i)=(ind_cell_father(i)-1)/nxny
@@ -262,34 +249,27 @@ subroutine get3cubefather(ind_cell_father,nbors_father_cells,&
            if(pos(i)==ind)then
               iok=iok+1
               ind_grid_ok(iok)=ind_grid_father(i)
+              ind_cell_ok(iok)=i
            end if
         end do
 
         if(iok>0)then
            call get3cubepos(ind_grid_ok,ind,nbors_father_ok,nbors_grids_ok,iok)
+
+           ! Store neighboring father cells for selected cells
+           do j=1,threetondim
+              do i=1,iok
+                 nbors_father_cells(ind_cell_ok(i),j)=nbors_father_ok(i,j)
+              end do
+           end do
+
+           ! Store neighboring father grids for selected cells
+           do j=1,twotondim
+              do i=1,iok
+                 nbors_father_grids(ind_cell_ok(i),j)=nbors_grids_ok(i,j)
+              end do
+           end do
         endif
-
-        ! Store neighboring father cells for selected cells
-        do j=1,threetondim
-           iok=0
-           do i=1,ncell
-              if(pos(i)==ind)then
-                 iok=iok+1
-                 nbors_father_cells(i,j)=nbors_father_ok(iok,j)
-              end if
-           end do
-        end do
-
-        ! Store neighboring father grids for selected cells
-        do j=1,twotondim
-           iok=0
-           do i=1,ncell
-              if(pos(i)==ind)then
-                 iok=iok+1
-                 nbors_father_grids(i,j)=nbors_grids_ok(iok,j)
-              end if
-           end do
-        end do
 
      end do
 
