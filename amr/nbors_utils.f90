@@ -456,7 +456,7 @@ subroutine getnborfather(ind_cell,ind_father,ncell,ilevel)
   integer,dimension(1:3)::ibound,iskip1,iskip2
   integer,dimension(1:nvector,1:3),save::ix
   integer,dimension(1:nvector),save::ind_grid_father,pos
-  integer,dimension(1:nvector,0:twondim),save::igridn,igridn_ok
+  integer,dimension(1:nvector,0:twondim),save::igridn,igridn_ok,icell_ok
   integer,dimension(1:nvector,1:twondim),save::icelln_ok
 
   nxny=nx*ny
@@ -535,27 +535,26 @@ subroutine getnborfather(ind_cell,ind_father,ncell,ilevel)
               if(pos(i)==ind)then
                  iok=iok+1
                  igridn_ok(iok,j)=igridn(i,j)
+                 icell_ok(iok,j)=i
               end if
            end do
         end do
 
         ! Get neighboring cells for selected cells
-        if(iok>0)call getnborcells(igridn_ok,ind,icelln_ok,iok)
+        if(iok>0) then
+           call getnborcells(igridn_ok,ind,icelln_ok,iok)
 
-        ! Update neighboring father cells for selected cells
-        do j=1,twondim
-           iok=0
-           do i=1,ncell
-              if(pos(i)==ind)then
-                 iok=iok+1
-                 if(icelln_ok(iok,j)>0)then
-                    ind_father(i,j)=icelln_ok(iok,j)
+           ! Update neighboring father cells for selected cells
+           do j=1,twondim
+              do i=1,iok
+                 if(icelln_ok(i,j)>0)then
+                    ind_father(icell_ok(i,j),j)=icelln_ok(i,j)
                  else
-                    ind_father(i,j)=nbor(ind_grid_father(i),j)
+                    ind_father(icell_ok(i,j),j)=nbor(ind_grid_father(icell_ok(i,j)),j)
                  end if
-              end if
+              end do
            end do
-        end do
+        end if
 
      end do
 
