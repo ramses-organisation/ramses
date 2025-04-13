@@ -456,7 +456,7 @@ subroutine interpolate_and_correct_fine(ifinelevel)
       end do
 
       ! Gather 3x3x3 neighboring parent cells
-      call get3cubefather_bis(icell_amr,nbors_father_cells, &
+      call get3cubefather(icell_amr,nbors_father_cells, &
               nbatch,ifinelevel)
 
       ! Update solution for fine grid cells

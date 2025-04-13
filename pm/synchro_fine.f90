@@ -267,7 +267,7 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   do i=1,ng
      ind_cell(i)=father(ind_grid(i))
   end do
-  call get3cubefather_bis(ind_cell,nbors_father_cells,ng,ilevel)
+  call get3cubefather(ind_cell,nbors_father_cells,ng,ilevel)
 
   ! Rescale position at level ilevel
   do idim=1,ndim

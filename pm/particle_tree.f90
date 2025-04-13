@@ -310,7 +310,7 @@ subroutine check_tree(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   do i=1,ng
      ind_father(i)=father(ind_grid(i))
   end do
-  call get3cubefather_bis(ind_father,nbors_father_cells,ng,ilevel)
+  call get3cubefather(ind_father,nbors_father_cells,ng,ilevel)
 
   ! Compute particle position in 3-cube
   error=.false.

@@ -366,7 +366,7 @@ subroutine cic_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
 
 
   ! Gather neighboring father cells (should be present anytime !)
-  call get3cubefather_bis(ind_cell,nbors_father_cells,ng,ilevel)
+  call get3cubefather(ind_cell,nbors_father_cells,ng,ilevel)
 
   ! Rescale particle position at level ilevel
   do idim=1,ndim
@@ -909,7 +909,7 @@ subroutine cic_cell(ind_grid,ngrid,ilevel)
   end do
 
   ! Gather 3x3x3 neighboring parent cells
-  call get3cubefather_bis(ind_cell,nbors_father_cells,ngrid,ilevel)
+  call get3cubefather(ind_cell,nbors_father_cells,ngrid,ilevel)
 
   ! Loop over grid cells
   do ind_son=1,twotondim
@@ -1151,7 +1151,7 @@ subroutine tsc_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
   vol_loc=dx_loc**ndim
 
   ! Gather neighboring father cells (should be present at anytime!)
-  call get3cubefather_bis(ind_cell,nbors_father_cells,ng,ilevel)
+  call get3cubefather(ind_cell,nbors_father_cells,ng,ilevel)
 
   ! Rescale particle position at level ilevel
   do idim=1,ndim
@@ -1472,7 +1472,7 @@ subroutine tsc_cell(ind_grid,ngrid,ilevel)
   end do
 
   ! Gather 3x3x3 neighboring parent cells
-  call get3cubefather_bis(ind_cell,nbors_father_cells,ngrid,ilevel)
+  call get3cubefather(ind_cell,nbors_father_cells,ngrid,ilevel)
 
   ! Loop over grid cells
   do ind_son=1,twotondim

@@ -1052,7 +1052,6 @@ SUBROUTINE star_RT_vsweep(ind_grid,ind_part,ind_grid_part,ng,np,dt,ilevel)
   real(dp),dimension(1:nvector,1:ndim),save::x0
   integer ,dimension(1:nvector),save::ind_cell
   integer ,dimension(1:nvector,1:threetondim),save::nbors_father_cells
-  integer ,dimension(1:nvector,1:twotondim),save::nbors_father_grids
   ! Particle based arrays
   logical,dimension(1:nvector),save::ok
   real(dp),dimension(1:nvector,ngroups),save::part_NpInp
@@ -1098,10 +1097,8 @@ SUBROUTINE star_RT_vsweep(ind_grid,ind_part,ind_grid_part,ng,np,dt,ilevel)
      ind_cell(i) = father(ind_grid(i))
   end do
   call get3cubefather(&
-          ind_cell, nbors_father_cells, nbors_father_grids, ng, ilevel)
-  ! now nbors_father cells are a cube of 27 cells with ind_cell in the
-  ! middle and nbors_father_grids are the 8 grids that contain these 27
-  ! cells (though only one of those is fully included in the cube)
+          ind_cell, nbors_father_cells, ng, ilevel)
+  ! now nbors_father_cells are a cube of 27 cells with ind_cell in the middle
 
   ! Rescale position of stars to positions within 3x3x3 cell supercube
   do idim = 1, ndim

@@ -53,7 +53,7 @@ subroutine interpol_phi(ind_cell,phi_int,ncell,ilevel,icount)
 
   ! Mesh size at level ilevel
   dx=0.5D0**ilevel
-  call get3cubefather_bis(ind_cell,nbors_father_cells,ncell,ilevel)
+  call get3cubefather(ind_cell,nbors_father_cells,ncell,ilevel)
 
   ! Third order phi interpolation
   do ind=1,twotondim

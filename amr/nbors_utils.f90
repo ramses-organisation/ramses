@@ -1,141 +1,25 @@
-subroutine get3cubefather_bis(ind_cell_father,nbors_father_cells,&
-   &                    ncell,ilevel)
-use amr_commons
-implicit none
-integer::ncell,ilevel
-integer,dimension(1:nvector)::ind_cell_father
-integer,dimension(1:nvector,1:threetondim)::nbors_father_cells
-!------------------------------------------------------------------
-! This subroutine determines the 3^ndim neighboring father cells
-! of the input father cell. According to the refinement rule,
-! they should be present anytime.
-!------------------------------------------------------------------
-integer::i,j,nxny,i1,j1,k1,ind,iok
-integer::i1min,i1max,j1min,j1max,k1min,k1max,ind_father
-integer,dimension(1:nvector),save::ix,iy,iz,iix,iiy,iiz
-integer,dimension(1:nvector),save::pos,ind_grid_father,ind_grid_ok,ind_cell_ok
-integer,dimension(1:nvector,1:threetondim),save::nbors_father_ok
-integer,dimension(1:nvector,1:twotondim),save::nbors_grids_ok
-logical::oups
-
-nxny=nx*ny
-
-if(ilevel==1)then  ! Easy...
-
-   do i=1,ncell
-      iz(i)=(ind_cell_father(i)-1)/nxny
-      iy(i)=(ind_cell_father(i)-1-iz(i)*nxny)/nx
-      ix(i)=(ind_cell_father(i)-1-iy(i)*nx-iz(i)*nxny)
-   end do
-
-   i1min=0; i1max=0
-   if(ndim > 0)i1max=2
-   j1min=0; j1max=0
-   if(ndim > 1)j1max=2
-   k1min=0; k1max=0
-   if(ndim > 2)k1max=2
-
-   ! Loop over 3^ndim neighboring father cells
-   do k1=k1min,k1max
-      iiz=iz
-      if(ndim > 2)then
-         do i=1,ncell
-            iiz(i)=iz(i)+k1-1
-            if(iiz(i) < 0   )iiz(i)=nz-1
-            if(iiz(i) > nz-1)iiz(i)=0
-         end do
-      end if
-      do j1=j1min,j1max
-         iiy=iy
-         if(ndim > 1)then
-            do i=1,ncell
-               iiy(i)=iy(i)+j1-1
-               if(iiy(i) < 0   )iiy(i)=ny-1
-               if(iiy(i) > ny-1)iiy(i)=0
-            end do
-         end if
-         do i1=i1min,i1max
-            iix=ix
-            if(ndim > 0)then
-               do i=1,ncell
-                  iix(i)=ix(i)+i1-1
-                  if(iix(i) < 0   )iix(i)=nx-1
-                  if(iix(i) > nx-1)iix(i)=0
-               end do
-            end if
-            ind_father=1+i1+3*j1+9*k1
-            do i=1,ncell
-               nbors_father_cells(i,ind_father)=1 &
-                    & +iix(i) &
-                    & +iiy(i)*nx &
-                    & +iiz(i)*nxny
-            end do
-         end do
-      end do
-   end do
-
-else    ! else, more complicated...
-
-   do i=1,ncell
-      ! Get father cell position in the grid
-      pos(i)=(ind_cell_father(i)-ncoarse-1)/ngridmax+1
-      ! Get father grid
-      ind_grid_father(i)=ind_cell_father(i)-ncoarse-(pos(i)-1)*ngridmax
-   end do
-
-   ! Loop over position
-   do ind=1,twotondim
-
-      ! Select father cells that sit at position ind
-      iok=0
-      do i=1,ncell
-         if(pos(i)==ind)then
-            iok=iok+1
-            ind_grid_ok(iok)=ind_grid_father(i)
-            ind_cell_ok(iok)=i
-         end if
-      end do
-
-      if(iok>0)then
-         call get3cubepos(ind_grid_ok,ind,nbors_father_ok,nbors_grids_ok,iok)
-
-         ! Store neighboring father cells for selected cells
-         do j=1,threetondim
-            do i=1,iok
-               nbors_father_cells(ind_cell_ok(i),j)=nbors_father_ok(i,j)
-            end do
-         end do
-      end if
-
-   end do
-
-end if
-
-end subroutine get3cubefather_bis
 !##############################################################
 !##############################################################
 !##############################################################
 !##############################################################
-subroutine get3cubefather(ind_cell_father,nbors_father_cells,&
-     &                    nbors_father_grids,ncell,ilevel)
+subroutine get3cubefather(ind_cell_father,nbors_father_cells,ncell,ilevel)
   use amr_commons
   implicit none
-  integer::ncell,ilevel
-  integer,dimension(1:nvector)::ind_cell_father
-  integer,dimension(1:nvector,1:threetondim)::nbors_father_cells
-  integer,dimension(1:nvector,1:twotondim)::nbors_father_grids
+  integer,intent(in)::ncell,ilevel
+  integer,dimension(1:nvector),intent(in)::ind_cell_father
+  integer,dimension(1:nvector,1:threetondim),intent(out)::nbors_father_cells
   !------------------------------------------------------------------
   ! This subroutine determines the 3^ndim neighboring father cells
   ! of the input father cell. According to the refinement rule,
   ! they should be present anytime.
+  ! For example in 3D, as output, nbors_father_cells contains the cube of 27 cells 
+  ! around, and including, ind_cell_father.
   !------------------------------------------------------------------
   integer::i,j,nxny,i1,j1,k1,ind,iok
   integer::i1min,i1max,j1min,j1max,k1min,k1max,ind_father
   integer,dimension(1:nvector),save::ix,iy,iz,iix,iiy,iiz
   integer,dimension(1:nvector),save::pos,ind_grid_father,ind_grid_ok,ind_cell_ok
   integer,dimension(1:nvector,1:threetondim),save::nbors_father_ok
-  integer,dimension(1:nvector,1:twotondim),save::nbors_grids_ok
-  logical::oups
 
   nxny=nx*ny
 
@@ -147,8 +31,7 @@ subroutine get3cubefather(ind_cell_father,nbors_father_cells,&
         ix(i)=(ind_cell_father(i)-1-iy(i)*nx-iz(i)*nxny)
      end do
 
-     i1min=0; i1max=0
-     if(ndim > 0)i1max=2
+     i1min=0; i1max=2
      j1min=0; j1max=0
      if(ndim > 1)j1max=2
      k1min=0; k1max=0
@@ -193,6 +76,87 @@ subroutine get3cubefather(ind_cell_father,nbors_father_cells,&
         end do
      end do
 
+  else    ! else, more complicated...
+
+     do i=1,ncell
+        ! Get father cell position in the grid
+        pos(i)=(ind_cell_father(i)-ncoarse-1)/ngridmax+1
+        ! Get father grid
+        ind_grid_father(i)=ind_cell_father(i)-ncoarse-(pos(i)-1)*ngridmax
+     end do
+
+     ! Loop over position
+     do ind=1,twotondim
+
+        ! Select father cells that sit at position ind
+        iok=0
+        do i=1,ncell
+           if(pos(i)==ind)then
+              iok=iok+1
+              ind_grid_ok(iok)=ind_grid_father(i)
+              ind_cell_ok(iok)=i
+           end if
+        end do
+
+        if(iok>0)then
+           call get3cubepos(ind_grid_ok,ind,nbors_father_ok,iok)
+
+           ! Store neighboring father cells for selected cells
+           do j=1,threetondim
+              do i=1,iok
+                 nbors_father_cells(ind_cell_ok(i),j)=nbors_father_ok(i,j)
+              end do
+           end do
+        end if
+
+     end do
+
+  end if
+
+end subroutine get3cubefather
+!##############################################################
+!##############################################################
+!##############################################################
+!##############################################################
+subroutine get3cubefather_grids(ind_cell_father,nbors_father_grids,ncell,ilevel)
+  use amr_commons
+  implicit none
+  integer,intent(in)::ncell,ilevel
+  integer,dimension(1:nvector),intent(in)::ind_cell_father
+  integer,dimension(1:nvector,1:twotondim),intent(out)::nbors_father_grids
+  !------------------------------------------------------------------
+  ! This subroutine determines the 2^ndim neighboring father grids
+  ! of the input father cell. According to the refinement rule,
+  ! they should be present anytime.
+  !
+  ! example 1D:
+  !
+  !           ||           father grid             || the other neighbor father grid ||
+  !           || neighbor cell |  IND CELL FATHER  || neighbor cell  | neighbor cell ||
+  !
+  !------------------------------------------------------------------
+  integer::i,j,nxny,i1,j1,k1,ind,iok
+  integer::i1min,i1max,j1min,j1max,k1min,k1max,ind_father
+  integer,dimension(1:nvector),save::ix,iy,iz,iix,iiy,iiz
+  integer,dimension(1:nvector),save::pos,ind_grid_father,ind_grid_ok,ind_cell_ok
+  integer,dimension(1:nvector,1:twotondim),save::nbors_grids_ok
+
+  nxny=nx*ny
+
+  if(ilevel==1)then  ! Easy...
+
+     do i=1,ncell
+        iz(i)=(ind_cell_father(i)-1)/nxny
+        iy(i)=(ind_cell_father(i)-1-iz(i)*nxny)/nx
+        ix(i)=(ind_cell_father(i)-1-iy(i)*nx-iz(i)*nxny)
+     end do
+
+     i1min=0; i1max=2
+     j1min=0; j1max=0
+     if(ndim > 1)j1max=2
+     k1min=0; k1max=0
+     if(ndim > 2)k1max=2
+
      ! Loop over 2^ndim neighboring father grids
      do k1=k1min,k1max
         iiz=iz
@@ -233,6 +197,7 @@ subroutine get3cubefather(ind_cell_father,nbors_father_cells,&
      end do
 
   else    ! else, more complicated...
+     !TC: can this be simplified now?
 
      do i=1,ncell
         ! Get father cell position in the grid
@@ -255,14 +220,7 @@ subroutine get3cubefather(ind_cell_father,nbors_father_cells,&
         end do
 
         if(iok>0)then
-           call get3cubepos(ind_grid_ok,ind,nbors_father_ok,nbors_grids_ok,iok)
-
-           ! Store neighboring father cells for selected cells
-           do j=1,threetondim
-              do i=1,iok
-                 nbors_father_cells(ind_cell_ok(i),j)=nbors_father_ok(i,j)
-              end do
-           end do
+           call get_nbor_grids(ind_grid_ok,ind,nbors_grids_ok,iok)
 
            ! Store neighboring father grids for selected cells
            do j=1,twotondim
@@ -276,19 +234,18 @@ subroutine get3cubefather(ind_cell_father,nbors_father_cells,&
 
   end if
 
-end subroutine get3cubefather
+end subroutine get3cubefather_grids
 !##############################################################
 !##############################################################
 !##############################################################
 !##############################################################
-subroutine get3cubepos(ind_grid,ind,nbors_father_cells,nbors_father_grids,ng)
+subroutine get3cubepos(ind_grid,ind,nbors_father_cells,ng)
   use amr_commons
   use amr_constants, only:lll,mmm
   implicit none
   integer::ng,ind
   integer,dimension(1:nvector)::ind_grid
   integer,dimension(1:nvector,1:threetondim)::nbors_father_cells
-  integer,dimension(1:nvector,1:twotondim)::nbors_father_grids
   !--------------------------------------------------------------------
   ! This subroutine determines the 3^ndim neighboring father cells
   ! of the input cell at position ind in grid ind_grid. 
@@ -315,24 +272,78 @@ subroutine get3cubepos(ind_grid,ind,nbors_father_cells,nbors_father_grids,ng)
   !       level i-1   || another cell | nbor fath cell || nbor fath cell | nbor fath cell ||
   !       level i                     || neighbor grid ||    IND_GRID    || neighbor grid ||
   !
+  ! TC: I don't see how ind matters here??
   !--------------------------------------------------------------------
   integer::i,j,iskip
-  integer::ii,iimin,iimax
-  integer::jj,jjmin,jjmax
-  integer::kk,kkmin,kkmax
-  integer::icell,igrid,inbor
-  integer,dimension(1:8)::iii=(/1,2,1,2,1,2,1,2/)
-  integer,dimension(1:8)::jjj=(/3,3,4,4,3,3,4,4/)
-  integer,dimension(1:8)::kkk=(/5,5,5,5,6,6,6,6/)
-  integer,dimension(1:nvector),save::ind_grid1,ind_grid2,ind_grid3
+  integer::icell,igrid
+  integer,dimension(1:nvector,1:twotondim),save::nbors_grids
   integer,dimension(1:threetondim),save::lll_loc,mmm_loc
+
+  ! get the neighbor grids
+  call get_nbor_grids(ind_grid,ind,nbors_grids,ng)
 
   ! fetch magic indices
   lll_loc = lll(:,ind)
   mmm_loc = mmm(:,ind)
 
-  iimin=0; iimax=0
-  if(ndim>0)iimax=1
+  do j=1,threetondim
+     igrid=lll(j,ind,ndim)
+     icell=mmm(j,ind,ndim)
+     iskip=ncoarse+(icell-1)*ngridmax
+     do i=1,ng
+        !nbors_father_cells(i,j) = merge(iskip+nbors_grids(i,igrid),0,(nbors_grids(i,igrid)>0))
+        if(nbors_grids(i,igrid)>0)then
+           nbors_father_cells(i,j)=iskip+nbors_grids(i,igrid)
+        else
+           nbors_father_cells(i,j)=0
+        endif
+     end do
+  end do
+
+end subroutine get3cubepos
+!##############################################################
+!##############################################################
+!##############################################################
+!##############################################################
+subroutine get_nbor_grids(ind_grid,ind,nbors_grids,ng)
+  use amr_commons
+  implicit none
+  integer,intent(in)::ng,ind
+  integer,dimension(1:nvector),intent(in)::ind_grid
+  integer,dimension(1:nvector,1:twotondim),intent(out)::nbors_grids
+  !--------------------------------------------------------------------
+  ! This subroutine determines the two^ndim neighboring grids
+  ! of the input cell at position ind in grid ind_grid. 
+  ! According to the refinements rules and since the input cell is refined,
+  ! they should be present anytime.
+  !
+  ! example 1D:
+  !
+  !   input:            || IND_GRID ||
+  !                       containing
+  !              ||  cell=ind  | another cell ||
+  !
+  !   ind_grid is itself a cell at ilevel-1:
+  !                            || father grid ||
+  !                     || father cell | another cell ||
+  !                     ||  IND_GRID  || another grid ||
+  !
+  !   ind_grid has 2 neighbor grids:
+  !    || neighbor grid ||  IND_GRID  || neighbor grid ||
+  !
+  ! TC: I don't see how ind matters here??
+  ! TC maybe my drawing isn't right
+  !--------------------------------------------------------------------
+  integer::i,inbor
+  integer::ii,iimin,iimax
+  integer::jj,jjmin,jjmax
+  integer::kk,kkmin,kkmax
+  integer,dimension(1:8)::iii=(/1,2,1,2,1,2,1,2/)
+  integer,dimension(1:8)::jjj=(/3,3,4,4,3,3,4,4/)
+  integer,dimension(1:8)::kkk=(/5,5,5,5,6,6,6,6/)
+  integer,dimension(1:nvector),save::ind_grid1,ind_grid2,ind_grid3
+
+  iimin=0; iimax=1
   jjmin=0; jjmax=0
   if(ndim>1)jjmax=1
   kkmin=0; kkmax=0
@@ -372,6 +383,7 @@ subroutine get3cubepos(ind_grid,ind,nbors_father_cells,nbors_father_grids,ng)
               inbor=iii(ind)
               do i=1,ng
                  if(ind_grid2(i)>0)then
+                    ! TC: I don't really get this son(nbor) thing. What does son and nbor really contain?
                     ind_grid3(i)=son(nbor(ind_grid2(i),inbor))
                  endif
               end do
@@ -379,28 +391,14 @@ subroutine get3cubepos(ind_grid,ind,nbors_father_cells,nbors_father_grids,ng)
 
            inbor=1+ii+2*jj+4*kk
            do i=1,ng
-              nbors_father_grids(i,inbor)=ind_grid3(i)
+              nbors_grids(i,inbor)=ind_grid3(i)
            end do
 
         end do
      end do
   end do
 
-  do j=1,threetondim
-     igrid=lll_loc(j)
-     icell=mmm_loc(j)
-     iskip=ncoarse+(icell-1)*ngridmax
-     do i=1,ng
-        !nbors_father_cells(i,j) = merge(iskip+nbors_father_grids(i,igrid),0,(nbors_father_grids(i,igrid)>0))
-        if(nbors_father_grids(i,igrid)>0)then
-           nbors_father_cells(i,j)=iskip+nbors_father_grids(i,igrid)
-        else
-           nbors_father_cells(i,j)=0
-        endif
-     end do
-  end do
-
-end subroutine get3cubepos
+end subroutine get_nbor_grids
 !##############################################################
 !##############################################################
 !##############################################################
@@ -571,14 +569,16 @@ end subroutine getnborfather
 subroutine getnborgrids(igrid,igridn,ngrid)
   use amr_commons
   implicit none
-  integer::ngrid
-  integer,dimension(1:nvector)::igrid
-  integer,dimension(1:nvector,0:twondim)::igridn
+  integer,intent(in)::ngrid
+  integer,dimension(1:nvector),intent(in)::igrid
+  integer,dimension(1:nvector,0:twondim),intent(out)::igridn
   !---------------------------------------------------------
-  ! This routine computes the index of the 6 neighboring
+  ! This routine computes the index of the 2 x ndim neighboring
   ! grids for grid igrid(:). The index for the central
   ! grid is stored in igridn(:,0). If for some reasons
   ! the neighboring grids don't exist, then igridn(:,j) = 0.
+  ! TC: =0 is not guaranteed?
+  ! TC: is it needed to store igrid?
   !---------------------------------------------------------
   integer::i,j
 
@@ -608,6 +608,7 @@ subroutine getnborgrids_check(igrid,igridn,ngrid)
   ! This routine does EXACTLY the same as getnborgrids
   ! but it checks if the neighbor of igrid exists in order
   ! to avoid son(0) leading to crash.
+  ! TC: doesn't this possibly result in a garbage value for igridn where son was 0? 
   !---------------------------------------------------------
   integer::i,j
 

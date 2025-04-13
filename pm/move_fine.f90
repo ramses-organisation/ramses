@@ -243,7 +243,7 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   do i=1,ng
      father_cell(i)=father(ind_grid(i))
   end do
-  call get3cubefather_bis(father_cell,nbors_father_cells,&
+  call get3cubefather(father_cell,nbors_father_cells,&
        & ng,ilevel)
 
   ! Rescale particle position at level ilevel
