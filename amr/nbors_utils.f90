@@ -24,7 +24,7 @@ subroutine get3cubefather(ind_cell_father,nbors_father_cells,ncell,ilevel)
   nxny=nx*ny
 
   if(ilevel==1)then  ! Easy...
-
+     if(myid==1)write(*,*)'NCELL',ncell
      do i=1,ncell
         iz(i)=(ind_cell_father(i)-1)/nxny
         iy(i)=(ind_cell_father(i)-1-iz(i)*nxny)/nx
@@ -43,8 +43,10 @@ subroutine get3cubefather(ind_cell_father,nbors_father_cells,ncell,ilevel)
         if(ndim > 2)then
            do i=1,ncell
               iiz(i)=iz(i)+k1-1
-              if(iiz(i) < 0   )iiz(i)=nz-1
-              if(iiz(i) > nz-1)iiz(i)=0
+              iiz(i)=merge(nz-1, iiz(i), (iiz(i) < 0))
+              iiz(i)=merge(   0, iiz(i), (iiz(i) > nz-1))
+              !if(iiz(i) < 0   )iiz(i)=nz-1
+              !if(iiz(i) > nz-1)iiz(i)=0
            end do
         end if
         do j1=j1min,j1max
@@ -52,8 +54,10 @@ subroutine get3cubefather(ind_cell_father,nbors_father_cells,ncell,ilevel)
            if(ndim > 1)then
               do i=1,ncell
                  iiy(i)=iy(i)+j1-1
-                 if(iiy(i) < 0   )iiy(i)=ny-1
-                 if(iiy(i) > ny-1)iiy(i)=0
+                 iiy(i)=merge(ny-1, iiy(i), (iiy(i) < 0))
+                 iiy(i)=merge(   0, iiy(i), (iiy(i) > ny-1))
+                 !if(iiy(i) < 0   )iiy(i)=ny-1
+                 !if(iiy(i) > ny-1)iiy(i)=0
               end do
            end if
            do i1=i1min,i1max
@@ -61,8 +65,10 @@ subroutine get3cubefather(ind_cell_father,nbors_father_cells,ncell,ilevel)
               if(ndim > 0)then
                  do i=1,ncell
                     iix(i)=ix(i)+i1-1
-                    if(iix(i) < 0   )iix(i)=nx-1
-                    if(iix(i) > nx-1)iix(i)=0
+                    iix(i)=merge(nx-1, iix(i), (iix(i) < 0))
+                    iix(i)=merge(   0, iix(i), (iix(i) > nx-1))
+                    !if(iix(i) < 0   )iix(i)=nx-1
+                    !if(iix(i) > nx-1)iix(i)=0
                  end do
               end if
               ind_father=1+i1+3*j1+9*k1
@@ -133,7 +139,7 @@ subroutine get3cubefather_grids(ind_cell_father,nbors_father_grids,ncell,ilevel)
   !
   !           ||           father grid             || the other neighbor father grid ||
   !           || neighbor cell |  IND CELL FATHER  || neighbor cell  | neighbor cell ||
-  !
+  ! TC: not sure this is correct
   !------------------------------------------------------------------
   integer::i,j,nxny,i1,j1,k1,ind,iok
   integer::i1min,i1max,j1min,j1max,k1min,k1max,ind_father
@@ -163,8 +169,10 @@ subroutine get3cubefather_grids(ind_cell_father,nbors_father_grids,ncell,ilevel)
         if(ndim > 2)then
            do i=1,ncell
               iiz(i)=iz(i)+2*k1-1
-              if(iiz(i) < 0   )iiz(i)=nz-1
-              if(iiz(i) > nz-1)iiz(i)=0
+              iiz(i)=merge(nz-1, iiz(i), (iiz(i) < 0))
+              iiz(i)=merge(   0, iiz(i), (iiz(i) > nz-1))
+              !if(iiz(i) < 0   )iiz(i)=nz-1
+              !if(iiz(i) > nz-1)iiz(i)=0
            end do
         end if
         do j1=j1min,j1max
@@ -172,8 +180,10 @@ subroutine get3cubefather_grids(ind_cell_father,nbors_father_grids,ncell,ilevel)
            if(ndim > 1)then
               do i=1,ncell
                  iiy(i)=iy(i)+2*j1-1
-                 if(iiy(i) < 0   )iiy(i)=ny-1
-                 if(iiy(i) > ny-1)iiy(i)=0
+                 iiy(i)=merge(ny-1, iiy(i), (iiy(i) < 0))
+                 iiy(i)=merge(   0, iiy(i), (iiy(i) > ny-1))
+                 !if(iiy(i) < 0   )iiy(i)=ny-1
+                 !if(iiy(i) > ny-1)iiy(i)=0
               end do
            end if
            do i1=i1min,i1max
@@ -181,8 +191,10 @@ subroutine get3cubefather_grids(ind_cell_father,nbors_father_grids,ncell,ilevel)
               if(ndim > 0)then
                  do i=1,ncell
                     iix(i)=ix(i)+2*i1-1
-                    if(iix(i) < 0   )iix(i)=nx-1
-                    if(iix(i) > nx-1)iix(i)=0
+                    iix(i)=merge(nx-1, iix(i), (iix(i) < 0))
+                    iix(i)=merge(   0, iix(i), (iix(i) > nx-1))
+                    !if(iix(i) < 0   )iix(i)=nx-1
+                    !if(iix(i) > nx-1)iix(i)=0
                  end do
               end if
               ind_father=1+i1+2*j1+4*k1
@@ -291,12 +303,12 @@ subroutine get3cubepos(ind_grid,ind,nbors_father_cells,ng)
      icell=mmm(j,ind,ndim)
      iskip=ncoarse+(icell-1)*ngridmax
      do i=1,ng
-        !nbors_father_cells(i,j) = merge(iskip+nbors_grids(i,igrid),0,(nbors_grids(i,igrid)>0))
-        if(nbors_grids(i,igrid)>0)then
-           nbors_father_cells(i,j)=iskip+nbors_grids(i,igrid)
-        else
-           nbors_father_cells(i,j)=0
-        endif
+        nbors_father_cells(i,j) = merge(iskip+nbors_grids(i,igrid),0,(nbors_grids(i,igrid)>0))
+        !if(nbors_grids(i,igrid)>0)then
+        !   nbors_father_cells(i,j)=iskip+nbors_grids(i,igrid)
+        !else
+        !   nbors_father_cells(i,j)=0
+        !endif
      end do
   end do
 
@@ -419,7 +431,7 @@ subroutine getnborcells(igridn,ind,icelln,ng)
   integer::i,in,ig,ih,iskip,inbor,idim
 
   ! Reset indices
-  icelln(1:ng,1:twondim)=0
+  !icelln(1:ng,1:twondim)=0
   ! Compute cell numbers
   do inbor=1,2
      do idim=1,ndim
@@ -428,9 +440,10 @@ subroutine getnborcells(igridn,ind,icelln,ng)
         ih=jjj(idim,inbor,ind)
         iskip=ncoarse+(ih-1)*ngridmax
         do i=1,ng
-           if(igridn(i,ig)>0)then
-              icelln(i,in)=iskip+igridn(i,ig)
-           end if
+           icelln(i,in)=merge(iskip+igridn(i,ig), 0, (igridn(i,ig)>0))
+           !if(igridn(i,ig)>0)then
+           !   icelln(i,in)=iskip+igridn(i,ig)
+           !end if
         end do
      enddo
   end do
@@ -480,45 +493,37 @@ subroutine getnborfather(ind_cell,ind_father,ncell,ilevel)
 
      do i=1,ncell
         ix(i,3)=(ind_father(i,0)-1)/nxny
-     end do
-     do i=1,ncell
         ix(i,2)=(ind_father(i,0)-1-ix(i,3)*nxny)/nx
-     end do
-     do i=1,ncell
         ix(i,1)=(ind_father(i,0)-1-ix(i,2)*nx-ix(i,3)*nxny)
      end do
 
      do idim=1,ndim
         do i=1,ncell
-           if(ix(i,idim)>0)then
-              ind_father(i,2*idim-1)=ind_father(i,0)-iskip1(idim)
-           else
-              ind_father(i,2*idim-1)=ind_father(i,0)+iskip2(idim)
-           end if
-        end do
-        do i=1,ncell
-           if(ix(i,idim)<ibound(idim))then
-              ind_father(i,2*idim)=ind_father(i,0)+iskip1(idim)
-           else
-              ind_father(i,2*idim)=ind_father(i,0)-iskip2(idim)
-           end if
+           ind_father(i,2*idim-1)=merge(ind_father(i,0)-iskip1(idim), ind_father(i,0)+iskip2(idim), (ix(i,idim)>0))
+           !if(ix(i,idim)>0)then
+           !   ind_father(i,2*idim-1)=ind_father(i,0)-iskip1(idim)
+           !else
+           !   ind_father(i,2*idim-1)=ind_father(i,0)+iskip2(idim)
+           !end if
+        !end do
+        !do i=1,ncell
+           ind_father(i,2*idim)=merge(ind_father(i,0)+iskip1(idim), ind_father(i,0)-iskip2(idim), (ix(i,idim)<ibound(idim)))
+           !if(ix(i,idim)<ibound(idim))then
+           !   ind_father(i,2*idim)=ind_father(i,0)+iskip1(idim)
+           !else
+           !   ind_father(i,2*idim)=ind_father(i,0)-iskip2(idim)
+           !end if
         end do
      end do
 
   else
 
-     ! Get father cell
      do i=1,ncell
+        ! Get father cell
         ind_father(i,0)=ind_cell(i)
-     end do
-
-     ! Get father cell position in the grid
-     do i=1,ncell
+        ! Get father cell position in the grid
         pos(i)=(ind_father(i,0)-ncoarse-1)/ngridmax+1
-     end do
-
-     ! Get father grid
-     do i=1,ncell
+        ! Get father grid
         ind_grid_father(i)=ind_father(i,0)-ncoarse-(pos(i)-1)*ngridmax
      end do
 
@@ -547,11 +552,14 @@ subroutine getnborfather(ind_cell,ind_father,ncell,ilevel)
            ! Update neighboring father cells for selected cells
            do j=1,twondim
               do i=1,iok
-                 if(icelln_ok(i,j)>0)then
-                    ind_father(icell_ok(i,j),j)=icelln_ok(i,j)
-                 else
-                    ind_father(icell_ok(i,j),j)=nbor(ind_grid_father(icell_ok(i,j)),j)
-                 end if
+                 ind_father(icell_ok(i,j),j)=merge(icelln_ok(i,j), &
+                                                 & nbor(ind_grid_father(icell_ok(i,j)),j), &
+                                                 &(icelln_ok(i,j)>0))
+                 !if(icelln_ok(i,j)>0)then
+                 !   ind_father(icell_ok(i,j),j)=icelln_ok(i,j)
+                 !else
+                 !   ind_father(icell_ok(i,j),j)=nbor(ind_grid_father(icell_ok(i,j)),j)
+                 !end if
               end do
            end do
         end if
