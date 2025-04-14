@@ -62,7 +62,7 @@ subroutine restrict_mask_fine_reverse(ifinelevel)
          icell_c_mg=iskip_c_mg+igrid_c_mg
 
          ! Stack cell volume fraction in coarse cell
-         ngpmask=(1d0+f(icell_f_amr,3))/2/dtwotondim
+         ngpmask=(1d0+f(icell_f_amr,3))/2d0/dtwotondim
 #ifdef LIGHT_MPI_COMM
          active_mg(cpu_amr,icoarselevel)%pcomm%u(icell_c_mg,4)=&
             active_mg(cpu_amr,icoarselevel)%pcomm%u(icell_c_mg,4)+ngpmask

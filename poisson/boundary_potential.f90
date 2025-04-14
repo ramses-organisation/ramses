@@ -64,11 +64,9 @@ subroutine make_boundary_force(ilevel)
      do igrid=1,ncache,nvector
         ngrid=MIN(nvector,ncache-igrid+1)
         do i=1,ngrid
+           ! Gather nvector grids
            ind_grid(i)=boundary(ibound,ilevel)%igrid(igrid+i-1)
-        end do
-
-        ! Gather neighboring reference grid
-        do i=1,ngrid
+           ! Gather neighboring reference grid
            ind_grid_ref(i)=son(nbor(ind_grid(i),inbor))
         end do
 
