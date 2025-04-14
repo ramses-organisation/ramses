@@ -364,9 +364,9 @@ subroutine getnborcells(igridn,ind,icelln,ng)
   use amr_commons
   use amr_constants, only:iii,jjj
   implicit none
-  integer::ng,ind
-  integer,dimension(1:nvector,0:twondim)::igridn
-  integer,dimension(1:nvector,1:twondim)::icelln
+  integer,intent(in)::ng,ind
+  integer,dimension(1:nvector,0:twondim),intent(in)::igridn
+  integer,dimension(1:nvector,1:twondim),intent(out)::icelln
   !--------------------------------------------------------------
   ! This routine computes the index of 6-neighboring cells
   ! The user must provide igridn = index of the 6 neighboring
@@ -378,8 +378,8 @@ subroutine getnborcells(igridn,ind,icelln,ng)
   ! Reset indices
   icelln(1:ng,1:twondim)=0
   ! Compute cell numbers
-  do idim=1,ndim
-     do inbor=1,2
+  do inbor=1,2
+     do idim=1,ndim
         in=(idim-1)*2 + inbor
         ig=iii(idim,inbor,ind)
         ih=jjj(idim,inbor,ind)
