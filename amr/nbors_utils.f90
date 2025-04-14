@@ -220,6 +220,11 @@ subroutine get3cubepos(ind_grid,ind,nbors_father_cells,nbors_father_grids,ng)
   integer,dimension(1:8)::kkk=(/5,5,5,5,6,6,6,6/)
   integer,dimension(1:nvector),save::ind_grid1,ind_grid2,ind_grid3
   integer,dimension(1:nvector,1:twotondim),save::nbors_grids
+  integer,dimension(1:threetondim),save::lll_loc,mmm_loc
+
+  ! fetch magic indices
+  lll_loc = lll(:,ind)
+  mmm_loc = mmm(:,ind)
 
   iimin=0; iimax=0
   if(ndim>0)iimax=1
@@ -283,8 +288,8 @@ subroutine get3cubepos(ind_grid,ind,nbors_father_cells,nbors_father_grids,ng)
   end do
 
   do j=1,threetondim
-     igrid=lll(j,ind)
-     icell=mmm(j,ind)
+     igrid=lll_loc(j)
+     icell=mmm_loc(j)
      iskip=ncoarse+(icell-1)*ngridmax
      do i=1,ng
         if(nbors_grids(i,igrid)>0)then
