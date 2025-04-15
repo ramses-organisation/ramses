@@ -34,7 +34,7 @@ subroutine output_cone()
   integer::nalloc1,nalloc2
   integer, parameter :: mode = int(O'755')
   integer::ierr
-  
+
   integer,dimension(1:nvector),save::ind_part
   logical::opened
   opened=.false.
@@ -432,11 +432,11 @@ subroutine perform_my_selection(justcount,z1,z2, &
   ! parameter and omLin is the cosmological constant.
   !
   ! NOTE 1 : radiation density contribution is neglected. It should be
-  ! taken into account for more accurate results. 
+  ! taken into account for more accurate results.
   !
   ! NOTE 2 : the "xcoord > small" test should be improved (excludes particles
-  !        too close to the observer in the non full sky case). 
-  ! 
+  !        too close to the observer in the non full sky case).
+  !
   ! All the quantities below are real*8 except
   !      juscount : logical
   !      npart,npartout : integer*4
@@ -524,7 +524,7 @@ subroutine perform_my_selection(justcount,z1,z2, &
   integer :: nrepxm,nrepxp,nrepym,nrepyp,nrepzm,nrepzp
   integer :: i,j,k,np,npartcount
   logical :: keep_part, fullsky
-  
+
   if (verbose) write(*,*) 'Entering perform_my_selection'
 
   ! Initialize cosmological parameters
@@ -561,7 +561,7 @@ subroutine perform_my_selection(justcount,z1,z2, &
      nrepzp=myint((observer(3)+dist2)/Lbox)
      fullsky=.true.
   endif
-  
+
   facnorm=1.0d0/(dist2-dist1)
   tanybound=tan(thetayrad)
   tanzbound=tan(thetazrad)
@@ -605,16 +605,16 @@ subroutine perform_my_selection(justcount,z1,z2, &
                     endif
                  endif
               end if
-              
+
               if (keep_part) then
                  ! This particle is good, we can add it to the list
                  npartcount=npartcount+1
-                 
+
                  if (.not. justcount) then
                     posout(1,npartcount)=xcoord
                     posout(2,npartcount)=ycoord
                     posout(3,npartcount)=zcoord
-                    
+
                     ! Velocities are rotated
                     vxfr=vel(1,np)
                     vyfr=vel(2,np)
@@ -628,7 +628,7 @@ subroutine perform_my_selection(justcount,z1,z2, &
                     velout(3,npartcount)=vxfr*rotm1(1,3)+ &
                          &               vyfr*rotm1(2,3)+ &
                          &               vzfr*rotm1(3,3)
-                    
+
                     ! Additional properties are just passed
                     varout(1,npartcount)=var(1,np)
                     varout(2,npartcount)=var(2,np)
@@ -790,7 +790,7 @@ subroutine init_cosmo_cone(om0in,omLin,hubin,Omega0,OmegaL,OmegaR,coverH0)
   ! However: the routine can be modified to include contribution of radiation
   !          or consider non standard cosmologies. Flatness OmegaR=0 probably
   !          remains mandatory for the lightcone algorithm approach to remain
-  !          correct as implemented now.                  
+  !          correct as implemented now.
   !===========================================================================
   implicit none
   real(kind=8) :: om0in,omLin,hubin
@@ -818,7 +818,7 @@ function coord_distance(z,Omega0,OmegaL,OmegaR,coverH0)
   !
   ! where c is the speed of light, z the redshift of interest,
   ! t the time, a the expansion factor, H(z) the Hubble parameter, H0=H(z=0)
-  ! the Hubble constant. 
+  ! the Hubble constant.
   !
   ! To improve the accuracy of the calculations, the integral is performed
   ! after the change of variable 1+z=(2/y)^2:
@@ -838,7 +838,7 @@ function coord_distance(z,Omega0,OmegaL,OmegaR,coverH0)
   real(kind=8) :: res,zz,del
   real(kind=8), parameter :: eps=1.0d-12
   integer :: error,intgfuncEo
-  
+
   zz=abs(z)
   error=intgfuncEo(2.0d0/sqrt(1.0d0+zz),2.0d0,eps,res,del,omega0,omegaL,OmegaR)
   coord_distance=coverH0*res
@@ -849,18 +849,18 @@ end function coord_distance
 function funcEo(y,Omega0,OmegaL,OmegaR)
   !===========================================================================
   ! This function can be modified for a different cosmological model.
-  ! 
+  !
   ! distance(z)=\int_t(z)^t(0) c dt/a=(c/H0) \int_0^z (H0/H(Z)) dZ
   !                                  =(c/H0) \int_{2/sqrt(1+z)}^{2} funEo(y) dy
   !
   ! change of variable : 1+z=(y/2)^(-2)
   !                      funcEo(y)=(2/y)^3 * H0/H[(y/2)^(-2)-1]
-  ! 
+  !
   ! Omega0 : total matter density term
   ! OmegaL : cosmological constant term
   ! OmegaR : curvature term
-  ! Note : the radiation density contribution is neglected 
-  !===========================================================================  
+  ! Note : the radiation density contribution is neglected
+  !===========================================================================
   implicit none
   real(kind=8) :: funcEo,y
   real(kind=8) :: omega0,omegaL,OmegaR
@@ -886,8 +886,8 @@ function intgfuncEo(a,b,eps,ans,del,omega0,omegaL,OmegaR)
   ! inputs:  a, b, eps (remain unchanged)
   ! outputs: ans, del
   !
-  ! with i(1)=0 and [x = 3/2 y - 1/2 y^3] substitution, 
-  ! this routine reproduces order by order the results 
+  ! with i(1)=0 and [x = 3/2 y - 1/2 y^3] substitution,
+  ! this routine reproduces order by order the results
   ! of HP-34C, HP-15C, ...
   !=======================================================================
   ! intgfuncEo:
@@ -899,14 +899,14 @@ function intgfuncEo(a,b,eps,ans,del,omega0,omegaL,OmegaR)
   implicit none
   integer :: intgfuncEo
   real(kind=8) :: a,b,eps,ans,del
-  
-  real(kind=8) :: Omega0,OmegaL,OmegaR  
+
+  real(kind=8) :: Omega0,OmegaL,OmegaR
   real(kind=8) :: funcEo
-  
+
   real(kind=8) :: t(0:24,0:24)
   real(kind=8) :: c,d,e,s,y,x,p
   integer :: n,m,i,j,k
-  
+
   c = .5d0 * (b + a)
   d = .5d0 * (b - a)
   n = 2
@@ -915,27 +915,27 @@ function intgfuncEo(a,b,eps,ans,del,omega0,omegaL,OmegaR)
   t(1,1) = 0.d0
   t(1,2) = 2.d0 * d * funcEo(c,Omega0,OmegaL,OmegaR)
   t(2,1) = 0.75d0 * t(1,2)
-  
-  do while (n .lt. 24) 
+
+  do while (n .lt. 24)
      n = n + 1
      m = m * 2
      e = e * .5d0
      s = 0.d0
-     do j = 2, m, 2 
+     do j = 2, m, 2
         y = dble(j-1) * e
         x = .5d0*y*(3.d0 - y**2)
         s = s + (1.d0 - y**2) * (funcEo(c-d*x,omega0,omegaL,OmegaR) &
              &                  +funcEo(c+d*x,omega0,omegaL,OmegaR))
      enddo
      t(n,1) = 1.5d0*s*d*e + .5d0*t(n-1,1)
-     
+
      p = 1.d0
-     do k = 1, n-1 
+     do k = 1, n-1
         p = p * 4.d0
         i = n + 1 - k
         t(i-1,k+1) = t(i,k) + (t(i,k) - t(i-1,k))/(p-1.d0)
      enddo
-     
+
      ans = t(1,n)
      del = abs(t(1,n)-t(2,n-1))
      if (n .ge. 9) then

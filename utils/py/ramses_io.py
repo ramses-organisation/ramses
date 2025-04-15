@@ -1204,14 +1204,14 @@ def rd_cone(nout, icpus="all", path="./", verbose=False):
             return f"{path}/cone_{padded_nout}/cone_{padded_nout}.out{padded_icpu}.txt"
         else:
             return f"{path}/cone_{padded_nout}/cone_{padded_nout}.out{padded_icpu}"
-        
+
     def list_cpus(nout, path="./", sort=True):
         cpus = [int(f.split(".")[-2][-5:]) for f in os.listdir(f"{path}/cone_{str(nout).zfill(5)}") if f.endswith(".txt")]
         ## sort the list of cpus
         sort and cpus.sort()
 
         return cpus
-    
+
     if icpus == "all":
         cpus = list_cpus(nout, path=path, sort=True)
         verbose and print(f"Found {len(cpus)} CPUs")
