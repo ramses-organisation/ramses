@@ -23,12 +23,12 @@ module amr_constants
   integer,dimension(1:threetondim,1:twotondim),parameter::lll=reshape( (/ &
                                                                    2,1,1, &  !ind=1
                                                                    1,1,2  &  !ind=2
-                                               /), shape=(/threetondim,twotondim/))  
+                                               /), shape=(/threetondim,twotondim/))
 
   integer,dimension(1:threetondim,1:twotondim),parameter::mmm=reshape( (/ &
                                                                    2,1,2, &  !ind=1
                                                                    1,2,1  &  !ind=2
-                                               /), shape=(/threetondim,twotondim/))  
+                                               /), shape=(/threetondim,twotondim/))
 
 #elif NDIM==2
   integer,dimension(1:threetondim,1:twotondim),parameter::lll=reshape( (/ &
@@ -36,14 +36,14 @@ module amr_constants
                                                        3,3,4,1,1,2,1,1,2, &  !ind=2
                                                        2,1,1,2,1,1,4,3,3, &  !ind=3
                                                        1,1,2,1,1,2,3,3,4  &  !ind=4
-                                               /), shape=(/threetondim,twotondim/))  
+                                               /), shape=(/threetondim,twotondim/))
 
   integer,dimension(1:threetondim,1:twotondim),parameter::mmm=reshape( (/ &
                                                        4,3,4,2,1,2,4,3,4, &  !ind=1
                                                        3,4,3,1,2,1,3,4,3, &  !ind=2
                                                        2,1,2,4,3,4,2,1,2, &  !ind=3
                                                        1,2,1,3,4,3,1,2,1  &  !ind=4
-                                               /), shape=(/threetondim,twotondim/))  
+                                               /), shape=(/threetondim,twotondim/))
 
 #elif NDIM==3
   integer,dimension(1:threetondim,1:twotondim),parameter::lll=reshape( (/ &
@@ -55,7 +55,7 @@ module amr_constants
                    3,3,4,1,1,2,1,1,2,3,3,4,1,1,2,1,1,2,7,7,8,5,5,6,5,5,6, &  !ind=6
                    2,1,1,2,1,1,4,3,3,2,1,1,2,1,1,4,3,3,6,5,5,6,5,5,8,7,7, &  !ind=7
                    1,1,2,1,1,2,3,3,4,1,1,2,1,1,2,3,3,4,5,5,6,5,5,6,7,7,8  &  !ind=8
-                                               /), shape=(/threetondim,twotondim/))  
+                                               /), shape=(/threetondim,twotondim/))
 
   integer,dimension(1:threetondim,1:twotondim),parameter::mmm=reshape( (/ &
                    8,7,8,6,5,6,8,7,8,4,3,4,2,1,2,4,3,4,8,7,8,6,5,6,8,7,8, &  !ind=1
@@ -66,7 +66,7 @@ module amr_constants
                    3,4,3,1,2,1,3,4,3,7,8,7,5,6,5,7,8,7,3,4,3,1,2,1,3,4,3, &  !ind=6
                    2,1,2,4,3,4,2,1,2,6,5,6,8,7,8,6,5,6,2,1,2,4,3,4,2,1,2, &  !ind=7
                    1,2,1,3,4,3,1,2,1,5,6,5,7,8,7,5,6,5,1,2,1,3,4,3,1,2,1  &  !ind=8
-                                               /), shape=(/threetondim,twotondim/))  
+                                               /), shape=(/threetondim,twotondim/))
 #endif
 
 end module amr_constants
