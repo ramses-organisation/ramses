@@ -93,34 +93,36 @@ subroutine get3cubefather(ind_cell_father,nbors_father_cells,ncell,ilevel)
         ind_grid_father(i)=ind_cell_father(i)-iskip
      end do
 
+     call get3cubepos(ind_grid_father,pos,nbors_father_cells,ncell)
+
      ! Loop over position
      ! TC: we could just call 
-     do ind=1,twotondim
+     !do ind=1,twotondim
 
         ! Gather father cells that sit at position ind
         ! TC this is to make call to get3cubepos vectorizable?
         ! could just make ind an nvector array?
-        iok=0
-        do i=1,ncell
-           if(pos(i)==ind)then
-              iok=iok+1
-              ind_grid_ok(iok)=ind_grid_father(i)
-              ind_cell_ok(iok)=i
-           end if
-        end do
+        !iok=0
+        !do i=1,ncell
+        !   if(pos(i)==ind)then
+        !      iok=iok+1
+         !     ind_grid_ok(iok)=ind_grid_father(i)
+         !     ind_cell_ok(iok)=i
+         !  end if
+        !end do
 
-        if(iok>0)then
-           call get3cubepos(ind_grid_ok,ind,nbors_father_ok,iok)
-
+        !if(iok>0)then
+        !   call get3cubepos(ind_grid_ok,ind,nbors_father_ok,iok)
+!
            ! Store neighboring father cells for selected cells
-           do j=1,threetondim
-              do i=1,iok
-                 nbors_father_cells(ind_cell_ok(i),j)=nbors_father_ok(i,j)
-              end do
-           end do
-        end if
+ !          do j=1,threetondim
+  !!            do i=1,iok
+    !             nbors_father_cells(ind_cell_ok(i),j)=nbors_father_ok(i,j)
+     !!         end do
+       !    end do
+        !end if
 
-     end do
+     !end do
 
   end if
 
@@ -217,33 +219,35 @@ subroutine get3cubefather_grids(ind_cell_father,nbors_father_grids,ncell,ilevel)
         ind_grid_father(i)=ind_cell_father(i)-iskip
      end do
 
+     call get_grids_of_nbor_cells(ind_grid_father,pos,nbors_father_grids,ncell)
+
      ! Loop over position
-     do ind=1,twotondim
+     !do ind=1,twotondim
 
         ! Select father cells that sit at position ind
-        iok=0
-        do i=1,ncell
-           if(pos(i)==ind)then
-              iok=iok+1
-              ind_grid_ok(iok)=ind_grid_father(i)
-              ind_cell_ok(iok)=i
-           end if
-        end do
+        !iok=0
+        !do i=1,ncell
+        !   if(pos(i)==ind)then
+        !      iok=iok+1
+        !      ind_grid_ok(iok)=ind_grid_father(i)
+        !      ind_cell_ok(iok)=i
+        !   end if
+        !end do
 
-        if(iok>0)then
+        !if(iok>0)then
            ! Get the grids that contain the 3x3x3 neighbor cells of
            ! the cell at position ind in the grid ind_grid_ok
-           call get_grids_of_nbor_cells(ind_grid_ok,ind,nbors_grids_ok,iok)
+        !   call get_grids_of_nbor_cells(ind_grid_ok,ind,nbors_grids_ok,iok)
 
            ! Store neighboring father grids for selected cells
-           do j=1,twotondim
-              do i=1,iok
-                 nbors_father_grids(ind_cell_ok(i),j)=nbors_grids_ok(i,j)
-              end do
-           end do
-        endif
+         !  do j=1,twotondim
+         !     do i=1,iok
+         !        nbors_father_grids(ind_cell_ok(i),j)=nbors_grids_ok(i,j)
+         !     end do
+         !  end do
+        !endif
 
-     end do
+    ! end do
 
   end if
 
@@ -256,8 +260,8 @@ subroutine get3cubepos(ind_grid,ind,nbors_cells,ng)
   use amr_commons
   use amr_constants, only:lll,mmm
   implicit none
-  integer,intent(in)::ng,ind
-  integer,dimension(1:nvector),intent(in)::ind_grid
+  integer,intent(in)::ng
+  integer,dimension(1:nvector),intent(in)::ind_grid,ind
   integer,dimension(1:nvector,1:threetondim)::nbors_cells
   !--------------------------------------------------------------------
   ! This subroutine determines the 3^ndim neighboring cells
@@ -287,17 +291,20 @@ subroutine get3cubepos(ind_grid,ind,nbors_cells,ng)
   call get_grids_of_nbor_cells(ind_grid,ind,nbors_grids,ng)
 
   ! Fetch magic indices
-  lll_loc = lll(:,ind)
-  mmm_loc = mmm(:,ind)
+  !lll_loc = lll!(:,ind)
+  !mmm_loc = mmm!(:,ind)
 
   ! Loop over 3x3x3 neighbor cells
   do j=1,threetondim
      ! index in the list of nbor_grids of the grid in which the j-th neighbor cell should be located
-     igrid=lll_loc(j)
+     !igrid=lll_loc(j)
      ! position in which the neighbor cell should be located in its grid
-     icell=mmm_loc(j)
-     iskip=ncoarse+(icell-1)*ngridmax
+     !icell=mmm_loc(j)
+     !iskip=ncoarse+(icell-1)*ngridmax
      do i=1,ng
+        igrid = lll(j,ind(i))
+        icell = mmm(j,ind(i))
+        iskip=ncoarse+(icell-1)*ngridmax
         ! If the grid for neighbor cell j exists,
         ! determine its index based on the index of the grid in which is sits
         ! otherwise set 0.
@@ -315,8 +322,8 @@ end subroutine get3cubepos
 subroutine get_grids_of_nbor_cells(ind_grid,ind,nbors_grids,ng)
   use amr_commons
   implicit none
-  integer,intent(in)::ng,ind
-  integer,dimension(1:nvector),intent(in)::ind_grid
+  integer,intent(in)::ng
+  integer,dimension(1:nvector),intent(in)::ind_grid,ind
   integer,dimension(1:nvector,1:twotondim),intent(out)::nbors_grids
   !--------------------------------------------------------------------
   ! This subroutine determines the two^ndim grids that contain the
@@ -368,10 +375,10 @@ subroutine get_grids_of_nbor_cells(ind_grid,ind,nbors_grids,ng)
         ind_grid1(i)=ind_grid(i)
      end do
      if(kk>0)then
-        inbor=kkk(ind)
+        !inbor=kkk(ind)
         do i=1,ng
            if(ind_grid(i)>0)then
-              ind_grid1(i)=son(nbor(ind_grid(i),inbor))
+              ind_grid1(i)=son(nbor(ind_grid(i),kkk(ind(i))))!inbor))
            endif
         end do
      end if
@@ -381,10 +388,10 @@ subroutine get_grids_of_nbor_cells(ind_grid,ind,nbors_grids,ng)
            ind_grid2(i)=ind_grid1(i)
         end do
         if(jj>0)then
-           inbor=jjj(ind)
+           !inbor=jjj(ind)
            do i=1,ng
               if(ind_grid1(i)>0)then
-                 ind_grid2(i)=son(nbor(ind_grid1(i),inbor))
+                 ind_grid2(i)=son(nbor(ind_grid1(i),jjj(ind(i))))!inbor))
               endif
            end do
         end if
@@ -394,10 +401,10 @@ subroutine get_grids_of_nbor_cells(ind_grid,ind,nbors_grids,ng)
               ind_grid3(i)=ind_grid2(i)
            end do
            if(ii>0)then
-              inbor=iii(ind)
+              !inbor=iii(ind)
               do i=1,ng
                  if(ind_grid2(i)>0)then
-                    ind_grid3(i)=son(nbor(ind_grid2(i),inbor))
+                    ind_grid3(i)=son(nbor(ind_grid2(i),iii(ind(i))))!inbor))
                  endif
               end do
            end if
