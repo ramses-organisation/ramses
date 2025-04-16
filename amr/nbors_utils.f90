@@ -94,9 +94,12 @@ subroutine get3cubefather(ind_cell_father,nbors_father_cells,ncell,ilevel)
      end do
 
      ! Loop over position
+     ! TC: we could just call 
      do ind=1,twotondim
 
-        ! Select father cells that sit at position ind
+        ! Gather father cells that sit at position ind
+        ! TC this is to make call to get3cubepos vectorizable?
+        ! could just make ind an nvector array?
         iok=0
         do i=1,ncell
            if(pos(i)==ind)then
@@ -228,6 +231,8 @@ subroutine get3cubefather_grids(ind_cell_father,nbors_father_grids,ncell,ilevel)
         end do
 
         if(iok>0)then
+           ! Get the grids that contain the 3x3x3 neighbor cells of
+           ! the cell at position ind in the grid ind_grid_ok
            call get_grids_of_nbor_cells(ind_grid_ok,ind,nbors_grids_ok,iok)
 
            ! Store neighboring father grids for selected cells
