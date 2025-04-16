@@ -80,9 +80,7 @@ if [ ! -d "$VISU_DIR" ]; then
    git clone https://github.com/osyris-project/osyris.git $VISU_DIR
    cd $VISU_DIR;
    git checkout remove-config;
-else
-   cd $VISU_DIR;
-   git pull origin remove-config;
+   cd -;
 fi
 
 # export PYTHONPATH=${VISU_DIR}:$PYTHONPATH;
