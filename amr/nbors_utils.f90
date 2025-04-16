@@ -1,26 +1,44 @@
+! This file contains subroutines to obtains neighboring cells 
+! or grids. There are several options, depending on your needs:
+!   * get3cubefather: give the 
+!
+!
+!
+!   * getnborcells: obtain the 2**ndim direct neighboring cells
+!                   of a cell at position ind in a grid.
+!                   The result contains only the neighbors, not
+!                   the cell itself.
+!                   The input for this function is the output of
+!                   getnborgrids and ind.
+
+!   * getnborgrids: obtain the 2**ndim direct neighboring grids
+!                   of a grid. The result includes the grid itself
+!                   at position 0 in the array.
+!                   Often called before getnborcells.
+! 
 !##############################################################
 !##############################################################
 !##############################################################
 !##############################################################
-subroutine get3cubefather(ind_cell_father,nbors_father_cells,ncell,ilevel)
-  use amr_commons
+subroutine get3cubefather(ind_cell,nbor_cells,ncell,ilevel)
+  use amr_parameters, only:nx,ny,nz,ndim,ngridmax,nvector,threetondim
+  use amr_commons, only:ncoarse
   implicit none
   integer,intent(in)::ncell,ilevel
-  integer,dimension(1:nvector),intent(in)::ind_cell_father  ! input cell
-  !3x3x3 neighbors of input cell (including the center input cell)
-  integer,dimension(1:nvector,1:threetondim),intent(out)::nbors_father_cells
+  integer,dimension(1:nvector),intent(in)::ind_cell
+  integer,dimension(1:nvector,1:threetondim),intent(out)::nbor_cells
   !------------------------------------------------------------------
-  ! This subroutine determines the 3^ndim neighboring (including diagonal) cells
-  ! of the input cell. According to the refinement rule,
-  ! they should be present anytime.
-  ! For example in 3D, as output, nbors_father_cells contains the cube of 27 cells 
-  ! around, and including, ind_cell_father.
+  ! This subroutine determines the 3^ndim neighboring cells
+  ! of the input cell ind_cell. This includes diagonal neighbors and 
+  ! the center input cell itself.
+  ! For example in 3D, as output, nbor_cells contains the 3x3x3 cube
+  ! of 27 cells around, and including, ind_cell.
+  ! According to the refinement rule, they should be present anytime.
   !------------------------------------------------------------------
   integer::i,j,nxny,i1,j1,k1,ind,iok,iskip
   integer::i1min,i1max,j1min,j1max,k1min,k1max,ind_father
   integer,dimension(1:nvector),save::ix,iy,iz,iix,iiy,iiz
-  integer,dimension(1:nvector),save::pos,ind_grid_father,ind_grid_ok,ind_cell_ok
-  integer,dimension(1:nvector,1:threetondim),save::nbors_father_ok
+  integer,dimension(1:nvector),save::pos,ind_grid_father
 
   nxny=nx*ny
 
@@ -29,9 +47,9 @@ subroutine get3cubefather(ind_cell_father,nbors_father_cells,ncell,ilevel)
      ! (because currently only cubic domains are supported, meaning 
      ! there is only 1 root cell)
      do i=1,ncell
-        iz(i)=(ind_cell_father(i)-1)/nxny
-        iy(i)=(ind_cell_father(i)-1-iz(i)*nxny)/nx
-        ix(i)=(ind_cell_father(i)-1-iy(i)*nx-iz(i)*nxny)
+        iz(i)=(ind_cell(i)-1)/nxny
+        iy(i)=(ind_cell(i)-1-iz(i)*nxny)/nx
+        ix(i)=(ind_cell(i)-1-iy(i)*nx-iz(i)*nxny)
      end do
 
      i1min=0; i1max=2
@@ -40,7 +58,8 @@ subroutine get3cubefather(ind_cell_father,nbors_father_cells,ncell,ilevel)
      k1min=0; k1max=0
      if(ndim > 2)k1max=2
 
-     ! Loop over 3^ndim neighboring father cells
+     ! Loop over 3^ndim neighboring cells by looking 
+     ! left, center and right of the root cell
      do k1=k1min,k1max
         iiz=iz
         if(ndim > 2)then
@@ -70,7 +89,7 @@ subroutine get3cubefather(ind_cell_father,nbors_father_cells,ncell,ilevel)
               end if
               ind_father=1+i1+3*j1+9*k1
               do i=1,ncell
-                 nbors_father_cells(i,ind_father)=1 &
+                 nbor_cells(i,ind_father)=1 &
                       & +iix(i) &
                       & +iiy(i)*nx &
                       & +iiz(i)*nxny
@@ -81,48 +100,20 @@ subroutine get3cubefather(ind_cell_father,nbors_father_cells,ncell,ilevel)
 
   else    ! else, more complicated...
 
+     ! Get the cell's position in its grid, that is the
+     ! index ind, between 1 and twotondim.
      do i=1,ncell
-        ! Get father cell position in its grid, that is the
-        ! index ind, between 1 and twotondim.
-        ! Remark that this is an integer division.
-        ! We need to know this to know whether to search neighbors 
-        ! left or right in the AMR tree
-        pos(i)=(ind_cell_father(i)-ncoarse-1)/ngridmax+1
-        ! convert cell index to grid index to get the grid to which the cell belongs
-        iskip=ncoarse+(pos(i)-1)*ngridmax
-        ind_grid_father(i)=ind_cell_father(i)-iskip
+        pos(i)=(ind_cell(i)-ncoarse-1)/ngridmax+1  !integer devision
      end do
 
-     call get3cubepos(ind_grid_father,pos,nbors_father_cells,ncell)
+     ! Convert the cell's index to the index of the grid to which the cell belongs
+     do i=1,ncell
+        iskip=ncoarse+(pos(i)-1)*ngridmax
+        ind_grid_father(i)=ind_cell(i)-iskip
+     end do
 
-     ! Loop over position
-     ! TC: we could just call 
-     !do ind=1,twotondim
-
-        ! Gather father cells that sit at position ind
-        ! TC this is to make call to get3cubepos vectorizable?
-        ! could just make ind an nvector array?
-        !iok=0
-        !do i=1,ncell
-        !   if(pos(i)==ind)then
-        !      iok=iok+1
-         !     ind_grid_ok(iok)=ind_grid_father(i)
-         !     ind_cell_ok(iok)=i
-         !  end if
-        !end do
-
-        !if(iok>0)then
-        !   call get3cubepos(ind_grid_ok,ind,nbors_father_ok,iok)
-!
-           ! Store neighboring father cells for selected cells
- !          do j=1,threetondim
-  !!            do i=1,iok
-    !             nbors_father_cells(ind_cell_ok(i),j)=nbors_father_ok(i,j)
-     !!         end do
-       !    end do
-        !end if
-
-     !end do
+     ! Using the grid index and cell position, get the neighbor cells
+     call get3cubepos(ind_grid_father,pos,nbor_cells,ncell)
 
   end if
 
@@ -131,15 +122,15 @@ end subroutine get3cubefather
 !##############################################################
 !##############################################################
 !##############################################################
-subroutine get3cubefather_grids(ind_cell_father,nbors_father_grids,ncell,ilevel)
+subroutine get3cubefather_grids(ind_cell,nbors_grids,ncell,ilevel)
   use amr_commons
   implicit none
   integer,intent(in)::ncell,ilevel
-  integer,dimension(1:nvector),intent(in)::ind_cell_father
-  integer,dimension(1:nvector,1:twotondim),intent(out)::nbors_father_grids
+  integer,dimension(1:nvector),intent(in)::ind_cell
+  integer,dimension(1:nvector,1:twotondim),intent(out)::nbors_grids
   !------------------------------------------------------------------
-  ! This subroutine determines the 2^ndim neighboring father grids
-  ! of the input father cell. According to the refinement rule,
+  ! This subroutine determines the 2^ndim neighboring grids
+  ! of the input cell. According to the refinement rule,
   ! they should be present anytime.
   !
   ! example 1D:
@@ -151,7 +142,7 @@ subroutine get3cubefather_grids(ind_cell_father,nbors_father_grids,ncell,ilevel)
   integer::i,j,nxny,i1,j1,k1,ind,iok,iskip
   integer::i1min,i1max,j1min,j1max,k1min,k1max,ind_father
   integer,dimension(1:nvector),save::ix,iy,iz,iix,iiy,iiz
-  integer,dimension(1:nvector),save::pos,ind_grid_father,ind_grid_ok,ind_cell_ok
+  integer,dimension(1:nvector),save::pos,ind_grid_father
   integer,dimension(1:nvector,1:twotondim),save::nbors_grids_ok
 
   nxny=nx*ny
@@ -159,9 +150,9 @@ subroutine get3cubefather_grids(ind_cell_father,nbors_father_grids,ncell,ilevel)
   if(ilevel==1)then  ! Easy...
 
      do i=1,ncell
-        iz(i)=(ind_cell_father(i)-1)/nxny
-        iy(i)=(ind_cell_father(i)-1-iz(i)*nxny)/nx
-        ix(i)=(ind_cell_father(i)-1-iy(i)*nx-iz(i)*nxny)
+        iz(i)=(ind_cell(i)-1)/nxny
+        iy(i)=(ind_cell(i)-1-iz(i)*nxny)/nx
+        ix(i)=(ind_cell(i)-1-iy(i)*nx-iz(i)*nxny)
      end do
 
      i1min=0; i1max=2
@@ -200,7 +191,7 @@ subroutine get3cubefather_grids(ind_cell_father,nbors_father_grids,ncell,ilevel)
               end if
               ind_father=1+i1+2*j1+4*k1
               do i=1,ncell
-                 nbors_father_grids(i,ind_father)=1 &
+                 nbors_grids(i,ind_father)=1 &
                       & +(iix(i)/2) &
                       & +(iiy(i)/2)*(nx/2) &
                       & +(iiz(i)/2)*(nxny/4)
@@ -211,43 +202,20 @@ subroutine get3cubefather_grids(ind_cell_father,nbors_father_grids,ncell,ilevel)
 
   else    ! else, more complicated...
 
+     ! Get the cell's position in its grid, that is the
+     ! index ind, between 1 and twotondim.
      do i=1,ncell
-        ! Get father cell position in the grid
-        pos(i)=(ind_cell_father(i)-ncoarse-1)/ngridmax+1
-        ! Get father grid
-        iskip=ncoarse+(pos(i)-1)*ngridmax
-        ind_grid_father(i)=ind_cell_father(i)-iskip
+        pos(i)=(ind_cell(i)-ncoarse-1)/ngridmax+1  !integer devision
      end do
 
-     call get_grids_of_nbor_cells(ind_grid_father,pos,nbors_father_grids,ncell)
+     ! Convert the cell's index to the index of the grid to which the cell belongs
+     do i=1,ncell
+        iskip=ncoarse+(pos(i)-1)*ngridmax
+        ind_grid_father(i)=ind_cell(i)-iskip
+     end do
 
-     ! Loop over position
-     !do ind=1,twotondim
-
-        ! Select father cells that sit at position ind
-        !iok=0
-        !do i=1,ncell
-        !   if(pos(i)==ind)then
-        !      iok=iok+1
-        !      ind_grid_ok(iok)=ind_grid_father(i)
-        !      ind_cell_ok(iok)=i
-        !   end if
-        !end do
-
-        !if(iok>0)then
-           ! Get the grids that contain the 3x3x3 neighbor cells of
-           ! the cell at position ind in the grid ind_grid_ok
-        !   call get_grids_of_nbor_cells(ind_grid_ok,ind,nbors_grids_ok,iok)
-
-           ! Store neighboring father grids for selected cells
-         !  do j=1,twotondim
-         !     do i=1,iok
-         !        nbors_father_grids(ind_cell_ok(i),j)=nbors_grids_ok(i,j)
-         !     end do
-         !  end do
-        !endif
-
-    ! end do
+     ! Using the 
+     call get_grids_of_nbor_cells(ind_grid_father,pos,nbors_grids,ncell)
 
   end if
 
@@ -275,36 +243,39 @@ subroutine get3cubepos(ind_grid,ind,nbors_cells,ng)
   !                       containing
   !              ||  cell=ind  | another cell ||
   !
-  !   First, the grids of that contain the neighbors are determined by
+  !   The grids of that contain the neighbors are determined by
   !   the subroutine get_grids_of_nbor_cells:
   !
   !     ||   NBOR GRID   ||    IND_GRID   || 
   !     || cell |  nbor  ||  IND  |  nbor ||
   !
+  !   Then, to extract the cells from the grids, we use the indices from 
+  !   lll and mmm
+  !
   !--------------------------------------------------------------------
   integer::i,j,iskip
   integer::icell,igrid
   integer,dimension(1:nvector,1:twotondim),save::nbors_grids
-  integer,dimension(1:threetondim),save::lll_loc,mmm_loc
+  integer,dimension(1:twotondim),save::lll_loc,mmm_loc
 
   ! Get the grids that contain all neighbor cells
   call get_grids_of_nbor_cells(ind_grid,ind,nbors_grids,ng)
 
-  ! Fetch magic indices
-  !lll_loc = lll!(:,ind)
-  !mmm_loc = mmm!(:,ind)
-
-  ! Loop over 3x3x3 neighbor cells
+  ! Extract each of the 3x3x3 neighbor cells out of the grids
   do j=1,threetondim
-     ! index in the list of nbor_grids of the grid in which the j-th neighbor cell should be located
-     !igrid=lll_loc(j)
-     ! position in which the neighbor cell should be located in its grid
-     !icell=mmm_loc(j)
-     !iskip=ncoarse+(icell-1)*ngridmax
+
+     ! Fetch magic indices
+     lll_loc = lll(j,:)
+     mmm_loc = mmm(j,:)
+
      do i=1,ng
-        igrid = lll(j,ind(i))
-        icell = mmm(j,ind(i))
+        ! index in the list of nbor_grids of the grid in which the j-th neighbor cell should be located
+        igrid = lll_loc(ind(i))
+        ! position in which the neighbor cell should be located in its grid
+        icell = mmm_loc(ind(i))
+
         iskip=ncoarse+(icell-1)*ngridmax
+
         ! If the grid for neighbor cell j exists,
         ! determine its index based on the index of the grid in which is sits
         ! otherwise set 0.
@@ -353,7 +324,7 @@ subroutine get_grids_of_nbor_cells(ind_grid,ind,nbors_grids,ng)
   !                     || SON GRID OF NBOR ||  IND_GRID  || son grid of nbor ||
   !                     ||  cell   | nbor   || ind  | nbor||  cell  |   cell  ||
   ! 
-  ! so the output in this case is the left and middle grid (in capital letters).
+  !   In this example, the requested grids are the left and middle grid (in capital letters).
   !--------------------------------------------------------------------
   integer::i,inbor
   integer::ii,iimin,iimax
@@ -375,10 +346,9 @@ subroutine get_grids_of_nbor_cells(ind_grid,ind,nbors_grids,ng)
         ind_grid1(i)=ind_grid(i)
      end do
      if(kk>0)then
-        !inbor=kkk(ind)
         do i=1,ng
            if(ind_grid(i)>0)then
-              ind_grid1(i)=son(nbor(ind_grid(i),kkk(ind(i))))!inbor))
+              ind_grid1(i)=son(nbor(ind_grid(i),kkk(ind(i))))
            endif
         end do
      end if
@@ -388,10 +358,9 @@ subroutine get_grids_of_nbor_cells(ind_grid,ind,nbors_grids,ng)
            ind_grid2(i)=ind_grid1(i)
         end do
         if(jj>0)then
-           !inbor=jjj(ind)
            do i=1,ng
               if(ind_grid1(i)>0)then
-                 ind_grid2(i)=son(nbor(ind_grid1(i),jjj(ind(i))))!inbor))
+                 ind_grid2(i)=son(nbor(ind_grid1(i),jjj(ind(i))))
               endif
            end do
         end if
@@ -401,10 +370,9 @@ subroutine get_grids_of_nbor_cells(ind_grid,ind,nbors_grids,ng)
               ind_grid3(i)=ind_grid2(i)
            end do
            if(ii>0)then
-              !inbor=iii(ind)
               do i=1,ng
                  if(ind_grid2(i)>0)then
-                    ind_grid3(i)=son(nbor(ind_grid2(i),iii(ind(i))))!inbor))
+                    ind_grid3(i)=son(nbor(ind_grid2(i),iii(ind(i))))
                  endif
               end do
            end if
@@ -423,35 +391,38 @@ end subroutine get_grids_of_nbor_cells
 !##############################################################
 !##############################################################
 !##############################################################
-subroutine getnborcells(igridn,ind,icelln,ng)
+subroutine getnborcells(nbors_grids,ind,ind_cell,ng)
   use amr_commons
   use amr_constants, only:iii,jjj
   implicit none
   integer,intent(in)::ng,ind
-  integer,dimension(1:nvector,0:twondim),intent(in)::igridn
-  integer,dimension(1:nvector,1:twondim),intent(out)::icelln
+  integer,dimension(1:nvector,0:twondim),intent(in)::nbors_grids
+  integer,dimension(1:nvector,1:twondim),intent(out)::ind_cell
   !--------------------------------------------------------------
-  ! This routine computes the index of 6-neighboring cells
-  ! The user must provide igridn = index of the 6 neighboring
-  ! grids and the cell's grid (see routine getnborgrids).
-  ! ind is the cell index in the grid.
+  ! This routine computes the index of 6-neighboring cells (non-diagonal).
+  ! The user must provide nbors_grids = index of the 6 neighboring
+  ! grids with the cell's grid at position 0 in the list,
+  ! as returned by the routine getnborgrids.
+  ! ind is the position index of the center cell in its grid.
   !--------------------------------------------------------------
-  integer::i,in,ig,ih,iskip,inbor,idim
+  integer::i,in,igrid,icell,iskip,inbor,idim
 
-  ! Reset indices
-  !icelln(1:ng,1:twondim)=0
-  ! Compute cell numbers
+  ! Extract, out of the input grids, the left and right 
+  ! neighbor cell in each dimension.
   do inbor=1,2
      do idim=1,ndim
+        ! index for neighbor order
         in=(idim-1)*2 + inbor
-        ig=iii(idim,inbor,ind)
-        ih=jjj(idim,inbor,ind)
-        iskip=ncoarse+(ih-1)*ngridmax
+        ! index in the input list nbors_grids, of the grid in which the j-th neighbor cell should be located
+        igrid=iii(idim,inbor,ind)
+        ! position in which the neighbor cell should be located in its grid
+        icell=jjj(idim,inbor,ind)
+
+        iskip=ncoarse+(icell-1)*ngridmax
         do i=1,ng
-           icelln(i,in)=merge(iskip+igridn(i,ig), 0, (igridn(i,ig)>0))
-           !if(igridn(i,ig)>0)then
-           !   icelln(i,in)=iskip+igridn(i,ig)
-           !end if
+           ind_cell(i,in)=merge(iskip+nbors_grids(i,igrid), & !if-part
+                            &                            0, & !else-part
+                            &       (nbors_grids(i,igrid)>0)) !condition
         end do
      enddo
   end do
@@ -473,10 +444,10 @@ subroutine getnborfather(ind_cell,ind_father,ncell,ilevel)
   ! If for some reasons they don't exist, the routine returns
   ! the neighboring father cells of the input cell.
   !-----------------------------------------------------------------
-  integer::nxny,i,idim,j,iok,ind
+  integer::nxny,i,idim,j,iok,ind,iskip
   integer,dimension(1:3)::ibound,iskip1,iskip2
   integer,dimension(1:nvector,1:3),save::ix
-  integer,dimension(1:nvector),save::ind_grid_father,pos
+  integer,dimension(1:nvector),save::ind_grid,pos
   integer,dimension(1:nvector,0:twondim),save::igridn,igridn_ok,icell_ok
   integer,dimension(1:nvector,1:twondim),save::icelln_ok
 
@@ -529,14 +500,24 @@ subroutine getnborfather(ind_cell,ind_father,ncell,ilevel)
      do i=1,ncell
         ! Get father cell
         ind_father(i,0)=ind_cell(i)
-        ! Get father cell position in the grid
-        pos(i)=(ind_father(i,0)-ncoarse-1)/ngridmax+1
-        ! Get father grid
-        ind_grid_father(i)=ind_father(i,0)-ncoarse-(pos(i)-1)*ngridmax
      end do
 
-     ! Get neighboring father grids
-     call getnborgrids(ind_grid_father,igridn,ncell)
+     ! Get the cell's position in its grid, that is the
+     ! index ind, between 1 and twotondim.
+     do i=1,ncell
+        pos(i)=(ind_cell(i)-ncoarse-1)/ngridmax+1  !integer devision
+     end do
+
+     ! Convert the cell's index to the index of the grid to which the cell belongs
+     do i=1,ncell
+        iskip=ncoarse+(pos(i)-1)*ngridmax
+        ind_grid(i)=ind_cell(i)-iskip
+     end do
+
+     ! Get the 2**ndim neighboring grids of the grid
+     call getnborgrids(ind_grid,igridn,ncell)
+
+     ! TODO same trick to get rid of iok as in get3cubefather?
 
      ! Loop over position
      do ind=1,twotondim
@@ -561,7 +542,7 @@ subroutine getnborfather(ind_cell,ind_father,ncell,ilevel)
            do j=1,twondim
               do i=1,iok
                  ind_father(icell_ok(i,j),j)=merge(icelln_ok(i,j), &
-                                                 & nbor(ind_grid_father(icell_ok(i,j)),j), &
+                                                 & nbor(ind_grid(icell_ok(i,j)),j), &
                                                  &(icelln_ok(i,j)>0))
                  !if(icelln_ok(i,j)>0)then
                  !   ind_father(icell_ok(i,j),j)=icelln_ok(i,j)
@@ -581,30 +562,30 @@ end subroutine getnborfather
 !##############################################################
 !##############################################################
 !##############################################################
-subroutine getnborgrids(igrid,igridn,ngrid)
+subroutine getnborgrids(igrid,igridn,ng)
   use amr_commons
   implicit none
-  integer,intent(in)::ngrid
+  integer,intent(in)::ng
   integer,dimension(1:nvector),intent(in)::igrid
   integer,dimension(1:nvector,0:twondim),intent(out)::igridn
   !---------------------------------------------------------
   ! This routine computes the index of the 2 x ndim neighboring
   ! grids for grid igrid(:). The index for the central
-  ! grid is stored in igridn(:,0). If for some reasons
-  ! the neighboring grids don't exist, then igridn(:,j) = 0.
-  ! TC: =0 is not guaranteed? Yes it is because son is 0
-  ! if son if 0 then its a leaf cell
-  ! TC: is it needed to store igrid? yes for loop?
+  ! grid is stored in igridn(:,0).  We need it for when we want
+  ! to later derive the neighbor cells from these grids (see
+  ! getnborcells).
+  ! If for some reasons the neighboring grids don't exist, 
+  ! then igridn(:,j) = 0 (because son is 0, i.e. it's a leaf cell).
   !---------------------------------------------------------
   integer::i,j
 
-  ! Store central grid
-  do i=1,ngrid
+  ! Store central grid at position 0
+  do i=1,ng
      igridn(i,0)=igrid(i)
   end do
   ! Store neighboring grids
   do j=1,twondim
-     do i=1,ngrid
+     do i=1,ng
         ! nbor(igrid(i),j) is the jth neighbor cell of the father cell
         ! of the grid with index igrid
         ! Son points to the child grid of that cell.
@@ -617,10 +598,10 @@ end subroutine getnborgrids
 !##############################################################
 !##############################################################
 !##############################################################
-subroutine getnborgrids_check(igrid,igridn,ngrid)
+subroutine getnborgrids_check(igrid,igridn,ng)
   use amr_commons
   implicit none
-  integer::ngrid
+  integer::ng
   integer,dimension(1:nvector)::igrid
   integer,dimension(1:nvector,0:twondim)::igridn
   !---------------------------------------------------------
@@ -632,12 +613,12 @@ subroutine getnborgrids_check(igrid,igridn,ngrid)
   integer::i,j
 
   ! Store central grid
-  do i=1,ngrid
+  do i=1,ng
      igridn(i,0)=igrid(i)
   end do
   ! Store neighboring grids
   do j=1,twondim
-     do i=1,ngrid
+     do i=1,ng
         if (nbor(igrid(i),j)>0)igridn(i,j)=son(nbor(igrid(i),j))
      end do
   end do
