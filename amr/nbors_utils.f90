@@ -247,17 +247,16 @@ end subroutine get3cubefather_grids
 !##############################################################
 !##############################################################
 !##############################################################
-subroutine get3cubepos(ind_grid,ind,nbors_father_cells,ng)
+subroutine get3cubepos(ind_grid,ind,nbors_cells,ng)
   use amr_commons
   use amr_constants, only:lll,mmm
   implicit none
-  integer::ng,ind
-  integer,dimension(1:nvector)::ind_grid
-  integer,dimension(1:nvector,1:threetondim)::nbors_father_cells
+  integer,intent(in)::ng,ind
+  integer,dimension(1:nvector),intent(in)::ind_grid
+  integer,dimension(1:nvector,1:threetondim)::nbors_cells
   !--------------------------------------------------------------------
-  ! This subroutine determines the 3^ndim neighboring father cells
-  ! of the input cell at position ind in grid ind_grid. 
-  ! For this, first the two neighboring grids of ind_grid are determined.
+  ! This subroutine determines the 3^ndim neighboring cells
+  ! of the input cell at position ind in grid ind_grid.
   ! According to the refinements rules and since the input cell is refined,
   ! they should be present anytime.
   !
@@ -267,44 +266,39 @@ subroutine get3cubepos(ind_grid,ind,nbors_father_cells,ng)
   !                       containing
   !              ||  cell=ind  | another cell ||
   !
-  !   ind_grid is itself a cell at ilevel-1:
-  !                            || father grid ||
-  !                     || father cell | another cell ||
-  !                     ||  IND_GRID  || another grid ||
+  !   First, the grids of that contain the neighbors are determined by
+  !   the subroutine get_grids_of_nbor_cells:
   !
-  !   ind_grid has 2 neighbor grids:
-  !    || neighbor grid ||  IND_GRID  || neighbor grid ||
+  !     ||   NBOR GRID   ||    IND_GRID   || 
+  !     || cell |  nbor  ||  IND  |  nbor ||
   !
-  !   so there are 3 neighbor father cells in total for the cell ind in grid ind_grid:
-  !
-  !       level i-1   || another cell | nbor fath cell || nbor fath cell | nbor fath cell ||
-  !       level i                     || neighbor grid ||    IND_GRID    || neighbor grid ||
-  !
-  ! TC: I don't see how ind matters here??
   !--------------------------------------------------------------------
   integer::i,j,iskip
   integer::icell,igrid
   integer,dimension(1:nvector,1:twotondim),save::nbors_grids
   integer,dimension(1:threetondim),save::lll_loc,mmm_loc
 
-  ! get the neighbor grids
+  ! Get the grids that contain all neighbor cells
   call get_grids_of_nbor_cells(ind_grid,ind,nbors_grids,ng)
 
-  ! fetch magic indices
+  ! Fetch magic indices
   lll_loc = lll(:,ind)
   mmm_loc = mmm(:,ind)
 
+  ! Loop over 3x3x3 neighbor cells
   do j=1,threetondim
+     ! index in the list of nbor_grids of the grid in which the j-th neighbor cell should be located
      igrid=lll_loc(j)
+     ! position in which the neighbor cell should be located in its grid
      icell=mmm_loc(j)
      iskip=ncoarse+(icell-1)*ngridmax
      do i=1,ng
-        nbors_father_cells(i,j) = merge(iskip+nbors_grids(i,igrid),0,(nbors_grids(i,igrid)>0))
-        !if(nbors_grids(i,igrid)>0)then
-        !   nbors_father_cells(i,j)=iskip+nbors_grids(i,igrid)
-        !else
-        !   nbors_father_cells(i,j)=0
-        !endif
+        ! If the grid for neighbor cell j exists,
+        ! determine its index based on the index of the grid in which is sits
+        ! otherwise set 0.
+        nbors_cells(i,j) = merge(iskip+nbors_grids(i,igrid), & ! if-part
+                              &                           0, & ! else-part
+                              & (nbors_grids(i,igrid)>0))      ! condition
      end do
   end do
 
