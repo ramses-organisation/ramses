@@ -295,8 +295,8 @@ subroutine get3cubepos(ind_grid,ind,nbors_father_cells,ng)
   mmm_loc = mmm(:,ind)
 
   do j=1,threetondim
-     igrid=lll(j,ind,ndim)
-     icell=mmm(j,ind,ndim)
+     igrid=lll_loc(j)
+     icell=mmm_loc(j)
      iskip=ncoarse+(icell-1)*ngridmax
      do i=1,ng
         nbors_father_cells(i,j) = merge(iskip+nbors_grids(i,igrid),0,(nbors_grids(i,igrid)>0))
