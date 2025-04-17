@@ -1,21 +1,46 @@
-! This file contains subroutines to obtains neighboring cells 
-! or grids. There are several options, depending on your needs:
-!   * get3cubefather: give the 
+! This file contains subroutines to help access neighboring cells or grids.
 !
+!   GETTING 3^NDIM SURROUNDING NEIGHBORS, i.e. 3x3x3 cube incl. diagonal
 !
+!   * get3cubefather: IN: cell, OUT: 3^ndim neighbor cells
+!                     Obtain the neighboring cells of the cell.
+!                     Calls get3cubepos.
 !
-!   * getnborcells: obtain the 2**ndim direct neighboring cells
-!                   of a cell at position ind in a grid.
+!   * get3cubefather_grids: IN: cell, OUT: 2^ndim neighbor grids
+!                           Obtain the grids that contain the neighboring cells.
+!                           Calls get_grids_of_nbor_cells.
+
+!   (*) get3cubepos: IN: grid & ind, OUT: 3^ndim neighbor cells
+!                    Obtain the neighboring cells of a cell sitting at position
+!                    ind in the input grid.
+!                    Helper for get3cubefather. Calls get_grids_of_nbor_cells.
+
+!   (*) get_grids_of_nbor_cells: IN: grid & ind, OUT: 2^ndim neighbor grids
+!                                Obtain the grids that contain the neighbor cells 
+!                                of a cell sitting at position ind in the input grid.
+!                                Helper for get3cubepos and get3cubefather_grids.
+!
+!   GETTING 2xNDIM DIRECT NEIGHBORS
+!
+!   * getnborfather: IN: cell, OUT: 2*ndim neighbor cells
+!                    Obtain the direct neighboring cells of the cell.
+!                    Calls getnborgrids and getnborcells.
+!
+!   * getnborgrids: IN: grid, OUT: 2*ndim neighbor grids
+!                   Obtain the direct neighboring grids of a grid. 
+!                   The result includes the grid itself at
+!                   position 0 in the array.
+!                   Often called before getnborcells.
+!
+!   * getnborcells: IN: neighbor grids & ind, OUT: 2*ndim neighbor cells
+!                   Obtain the 2*ndim direct neighboring cells
+!                   of a cell at position ind in its grid, of which the neighbor
+!                   grids are provided.
 !                   The result contains only the neighbors, not
 !                   the cell itself.
 !                   The input for this function is the output of
 !                   getnborgrids and ind.
-
-!   * getnborgrids: obtain the 2**ndim direct neighboring grids
-!                   of a grid. The result includes the grid itself
-!                   at position 0 in the array.
-!                   Often called before getnborcells.
-! 
+!
 !##############################################################
 !##############################################################
 !##############################################################
@@ -129,15 +154,10 @@ subroutine get3cubefather_grids(ind_cell,nbors_grids,ncell,ilevel)
   integer,dimension(1:nvector),intent(in)::ind_cell
   integer,dimension(1:nvector,1:twotondim),intent(out)::nbors_grids
   !------------------------------------------------------------------
-  ! This subroutine determines the 2^ndim neighboring grids
-  ! of the input cell. According to the refinement rule,
-  ! they should be present anytime.
-  !
-  ! example 1D:
-  !
-  !           ||           father grid             || the other neighbor father grid ||
-  !           || neighbor cell |  IND CELL FATHER  || neighbor cell  | neighbor cell ||
-  ! TC: not sure this is correct
+  ! This subroutine determines the two^ndim grids that contain the
+  ! 3x3x3 neighboring cells of the cell ind_cell.
+  ! According to the refinement rule,they should be present anytime.
+  ! Example 1D: see get_grids_of_nbor_cells.
   !------------------------------------------------------------------
   integer::i,j,nxny,i1,j1,k1,ind,iok,iskip
   integer::i1min,i1max,j1min,j1max,k1min,k1max,ind_father
@@ -214,7 +234,7 @@ subroutine get3cubefather_grids(ind_cell,nbors_grids,ncell,ilevel)
         ind_grid_father(i)=ind_cell(i)-iskip
      end do
 
-     ! Using the 
+     ! Using the grid index and cell position to get neighbor grids
      call get_grids_of_nbor_cells(ind_grid_father,pos,nbors_grids,ncell)
 
   end if
@@ -514,7 +534,7 @@ subroutine getnborfather(ind_cell,ind_father,ncell,ilevel)
         ind_grid(i)=ind_cell(i)-iskip
      end do
 
-     ! Get the 2**ndim neighboring grids of the grid
+     ! Get the 2**ndim grids that contain the neighboring cells
      call getnborgrids(ind_grid,igridn,ncell)
 
      ! TODO same trick to get rid of iok as in get3cubefather?
