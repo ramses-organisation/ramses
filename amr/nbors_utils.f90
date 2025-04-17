@@ -285,8 +285,8 @@ subroutine get3cubepos(ind_grid,ind,nbors_cells,ng)
   do j=1,threetondim
 
      ! Fetch magic indices
-     lll_loc = lll(j,:)
-     mmm_loc = mmm(j,:)
+     lll_loc = lll(:,j)
+     mmm_loc = mmm(:,j)
 
      do i=1,ng
         ! index in the list of nbor_grids of the grid in which the j-th neighbor cell should be located
