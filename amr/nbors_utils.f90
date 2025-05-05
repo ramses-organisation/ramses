@@ -16,7 +16,7 @@
 !                    Helper for get3cubefather. Calls get_grids_of_nbor_cells.
 
 !   (*) get_grids_of_nbor_cells: IN: grid & ind, OUT: 2^ndim neighbor grids
-!                                Obtain the grids that contain the neighbor cells 
+!                                Obtain the grids that contain the neighbor cells
 !                                of a cell sitting at position ind in the input grid.
 !                                Helper for get3cubepos and get3cubefather_grids.
 !
@@ -27,7 +27,7 @@
 !                    Calls getnborgrids and getnborcells.
 !
 !   * getnborgrids: IN: grid, OUT: 2*ndim neighbor grids
-!                   Obtain the direct neighboring grids of a grid. 
+!                   Obtain the direct neighboring grids of a grid.
 !                   The result includes the grid itself at
 !                   position 0 in the array.
 !                   Often called before getnborcells.
@@ -54,7 +54,7 @@ subroutine get3cubefather(ind_cell,nbor_cells,ncell,ilevel)
   integer,dimension(1:nvector,1:threetondim),intent(out)::nbor_cells
   !------------------------------------------------------------------
   ! This subroutine determines the 3^ndim neighboring cells
-  ! of the input cell ind_cell. This includes diagonal neighbors and 
+  ! of the input cell ind_cell. This includes diagonal neighbors and
   ! the center input cell itself.
   ! For example in 3D, as output, nbor_cells contains the 3x3x3 cube
   ! of 27 cells around, and including, ind_cell.
@@ -69,7 +69,7 @@ subroutine get3cubefather(ind_cell,nbor_cells,ncell,ilevel)
 
   if(ilevel==1)then  ! Easy...
      ! ncell is always 1 in this case
-     ! (because currently only cubic domains are supported, meaning 
+     ! (because currently only cubic domains are supported, meaning
      ! there is only 1 root cell)
      do i=1,ncell
         iz(i)=(ind_cell(i)-1)/nxny
@@ -83,7 +83,7 @@ subroutine get3cubefather(ind_cell,nbor_cells,ncell,ilevel)
      k1min=0; k1max=0
      if(ndim > 2)k1max=2
 
-     ! Loop over 3^ndim neighboring cells by looking 
+     ! Loop over 3^ndim neighboring cells by looking
      ! left, center and right of the root cell
      do k1=k1min,k1max
         iiz=iz
@@ -266,10 +266,10 @@ subroutine get3cubepos(ind_grid,ind,nbors_cells,ng)
   !   The grids of that contain the neighbors are determined by
   !   the subroutine get_grids_of_nbor_cells:
   !
-  !     ||   NBOR GRID   ||    IND_GRID   || 
+  !     ||   NBOR GRID   ||    IND_GRID   ||
   !     || cell |  nbor  ||  IND  |  nbor ||
   !
-  !   Then, to extract the cells from the grids, we use the indices from 
+  !   Then, to extract the cells from the grids, we use the indices from
   !   lll and mmm
   !
   !--------------------------------------------------------------------
@@ -329,7 +329,7 @@ subroutine get_grids_of_nbor_cells(ind_grid,ind,nbors_grids,ng)
   !
   !   for IND_GRID we have access to the father cell (through father(grid))
   !   and the neighboring cells of the father cell (through nbor(grid,:)):
-  !  
+  !
   !      || another cell | neighbor f. cell || father cell | neighbor f. cell ||
   !                                         ||  IND_GRID  ||
   !
@@ -337,13 +337,13 @@ subroutine get_grids_of_nbor_cells(ind_grid,ind,nbors_grids,ng)
   !
   !      || another cell | neighbor f. cell || father cell | neighbor f. cell ||
   !                     || son grid of nbor ||  IND_GRID  || son grid of nbor ||
-  ! 
+  !
   !   We need only the grids which contain the neighbor cells. This will be ind_grid
   !   itself and either its left or right neighbor:
   !
   !                     || SON GRID OF NBOR ||  IND_GRID  || son grid of nbor ||
   !                     ||  cell   | nbor   || ind  | nbor||  cell  |   cell  ||
-  ! 
+  !
   !   In this example, the requested grids are the left and middle grid (in capital letters).
   !--------------------------------------------------------------------
   integer::i,inbor
@@ -430,7 +430,7 @@ subroutine getnborcells(igridn,ind,icelln,ng)
   ! Reset indices
   icelln(1:ng,1:twondim)=0
 
-  ! Extract, out of the input grids, the left and right 
+  ! Extract, out of the input grids, the left and right
   ! neighbor cell in each dimension.
   do inbor=1,2
      do idim=1,ndim
@@ -591,7 +591,7 @@ subroutine getnborgrids(igrid,igridn,ngrid)
   ! grid is stored in igridn(:,0).  We need it for when we want
   ! to later derive the neighbor cells from these grids (see
   ! getnborcells).
-  ! If for some reasons the neighboring grids don't exist, 
+  ! If for some reasons the neighboring grids don't exist,
   ! then igridn(:,j) = 0 (because son is 0, i.e. it's a leaf cell).
   !---------------------------------------------------------
   integer::i,j
