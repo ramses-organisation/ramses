@@ -453,6 +453,7 @@ subroutine build_parent_comms_mg(active_loc, ifinelevel)
 
    ! Loop over the AMR active communicator first
    ngrids = active_loc%ngrid
+!!!$omp parallel do private(nbatch,i,ind,cur_grid,cur_cpu,)
    do istart=1,ngrids,nvector
       nbatch=min(nvector,ngrids-istart+1)
       ! Gather grid indices and retrieve parent cells
@@ -476,6 +477,7 @@ subroutine build_parent_comms_mg(active_loc, ifinelevel)
             if(cur_cpu==myid) then
                ! Stack grid for local activation
                ! We own the grid: fill lookup_mg with its final value
+               !TC problematic for openmp
                nact_tot=nact_tot+1
                flag2(nact_tot)=cur_grid
                lookup_mg(cur_grid)=nact_tot
