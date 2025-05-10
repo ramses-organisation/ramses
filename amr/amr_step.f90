@@ -210,10 +210,10 @@ recursive subroutine amr_step(ilevel,icount)
   ! Poisson source term
   !--------------------
   if(poisson)then
-                               call timer('poisson','start')
+                               call timer('poisson - save phi','start')
      !save old potential for time-extrapolation at level boundaries
      call save_phi_old(ilevel)
-                               call timer('rho','start')
+                               call timer('poisson - rho','start')
      call rho_fine(ilevel,icount)
   endif
 
@@ -232,26 +232,28 @@ recursive subroutine amr_step(ilevel,icount)
   ! Gravity update
   !---------------
   if(poisson)then
-                               call timer('poisson','start')
-
      ! Remove gravity source term with half time step and old force
      if(hydro)then
+                               call timer('poisson - hydro','start')
         call synchro_hydro_fine(ilevel,-0.5*dtnew(ilevel),1)
      endif
 
      ! Compute gravitational potential
-     if(ilevel>levelmin)then
-        if(ilevel .ge. cg_levelmin) then
-           call phi_fine_cg(ilevel,icount)
-        else
-           call multigrid_fine(ilevel,icount)
-        end if
+     if((ilevel>levelmin).and.(ilevel.ge.cg_levelmin))then
+                               call timer('poisson - phi cg','start')
+        call phi_fine_cg(ilevel,icount)
      else
-        call multigrid_fine(levelmin,icount)
+                               call timer('poisson - phi multigrid','start')
+        call multigrid_fine(max(ilevel,levelmin),icount)
      end if
-     !when there is no old potential...
-     if (nstep==0)call save_phi_old(ilevel)
 
+     !when there is no old potential...
+     if (nstep==0)then
+                               call timer('poisson - save phi','start')
+        call save_phi_old(ilevel)
+     endif
+
+                               call timer('poisson - force','start')
      ! Compute gravitational acceleration
      call force_fine(ilevel,icount)
 
@@ -266,11 +268,11 @@ recursive subroutine amr_step(ilevel,icount)
      end if
 
      if(hydro)then
-                               call timer('poisson','start')
-
+                               call timer('poisson - hydro','start')
         ! Add gravity source term with half time step and new force
         call synchro_hydro_fine(ilevel,+0.5*dtnew(ilevel),1)
 
+                               call timer('poisson - boundaries','start')
         ! Update boundaries
         do ivar=1,nvar_all
            call make_virtual_fine_dp(uold(1,ivar),ilevel)
@@ -397,6 +399,7 @@ recursive subroutine amr_step(ilevel,icount)
 
      ! Add gravity source terms to unew
      if(poisson)then
+                               call timer('poisson - hydro','start')
         call add_gravity_source_terms(ilevel)
      end if
 
@@ -412,8 +415,10 @@ recursive subroutine amr_step(ilevel,icount)
 
      ! Add gravity source term with half time step and old force
      ! in order to complete the time step
-                               call timer('poisson','start')
-     if(poisson)call synchro_hydro_fine(ilevel,+0.5*dtnew(ilevel),1)
+     if(poisson)then
+                               call timer('poisson - hydro','start')
+        call synchro_hydro_fine(ilevel,+0.5*dtnew(ilevel),1)
+     endif
 
 #if USE_TURB==1
      ! Compute turbulent forcing
