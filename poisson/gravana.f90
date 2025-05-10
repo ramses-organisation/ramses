@@ -107,19 +107,13 @@ subroutine phi_ana(rr,pp,ngrid)
 
   fourpi=2*twopi
 
+  do i=1,ngrid
 #if NDIM==1
-  do i=1,ngrid
      pp(i)=multipole(1)*fourpi/2*rr(i)
-  end do
-#endif
-#if NDIM==2
-  do i=1,ngrid
+#elif NDIM==2
      pp(i)=multipole(1)*2*log(rr(i))
-  end do
-#endif
-#if NDIM==3
-  do i=1,ngrid
+#elif NDIM==3
      pp(i)=-multipole(1)/rr(i)
-  end do
 #endif
+  end do
 end subroutine phi_ana

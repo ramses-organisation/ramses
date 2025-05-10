@@ -170,7 +170,7 @@ subroutine read_hydro_params(nml_ok)
 
   CASE DEFAULT
     write(*,*)'unknown scheme'
-    call clean_stop
+    nml_ok=.false.
   END SELECT
   !------------------------------------------------
   ! set iriemann
@@ -191,7 +191,7 @@ subroutine read_hydro_params(nml_ok)
 
   CASE DEFAULT
     write(*,*)'unknown riemann solver'
-    call clean_stop
+    nml_ok=.false.
   END SELECT
   !------------------------------------------------
   ! set iriemann
@@ -211,7 +211,7 @@ subroutine read_hydro_params(nml_ok)
     iriemann2d = 5
   CASE DEFAULT
     write(*,*)'unknown 2D riemann solver'
-    call clean_stop
+    nml_ok=.false.
   END SELECT
 
   !--------------------------------------------------

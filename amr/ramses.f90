@@ -1,6 +1,9 @@
 program ramses
   implicit none
 
+  ! Set myid, ncpu and initialize MPI
+  call initialize_mpi
+
   ! Read run parameters
   call read_params
 
@@ -13,6 +16,29 @@ program ramses
   call adaptive_loop
 
 end program ramses
+
+
+subroutine initialize_mpi
+  use amr_commons, only:myid,ncpu
+  use mpi_mod
+  implicit none
+#ifndef WITHOUTMPI
+  integer::ierr
+#endif
+
+  ! MPI initialization
+#ifdef WITHOUTMPI
+  ncpu=1
+  myid=1
+#else
+  call MPI_INIT(ierr)
+  call MPI_COMM_RANK(MPI_COMM_WORLD,myid,ierr)
+  call MPI_COMM_SIZE(MPI_COMM_WORLD,ncpu,ierr)
+  myid=myid+1 ! Careful with this...
+#endif
+
+end subroutine initialize_mpi
+
 
 #ifndef CRAY
 ! sets the hook to catch signal 10, doesn't work with CRAY

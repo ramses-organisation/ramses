@@ -29,6 +29,7 @@ end module data_common
 
 subroutine rad_step(time_step_user)
   use amr_parameters
+  use amr_commons, only:myid
   use radiation_commons
   use cooling_module
   use timing
@@ -46,8 +47,6 @@ subroutine rad_step(time_step_user)
   integer::num_steps    ! Number of radiation steps.
   integer::i            ! Radiation step counter.
 
-  integer::ierr
-
   ! 1.0 corresponds to the maximum Courant condition.
   real(kind=8)::cfl=0.9
 
@@ -55,9 +54,6 @@ subroutine rad_step(time_step_user)
   call timer_start(total_timer)
   call timer_stop(ramses_timer)
 
-  call MPI_COMM_RANK(MPI_COMM_WORLD,myid,ierr)
-  myid = myid + 1  ! We need a 1-based id.
-  call MPI_COMM_SIZE(MPI_COMM_WORLD,ncpu,ierr)
 
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
   time_step_s = time_step_user * scale_t

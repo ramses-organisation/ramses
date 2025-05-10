@@ -5,6 +5,7 @@
 subroutine upload_fine(ilevel)
   use amr_commons
   use hydro_commons
+  use amr_constants, only:iii,jjj
   implicit none
   integer::ilevel
   !----------------------------------------------------------------------
@@ -15,7 +16,6 @@ subroutine upload_fine(ilevel)
   integer,dimension(1:nvector),save::ind_unsplit,igrid_son
   integer ,dimension(1:nvector,0:twondim),save::igridn
 
-  integer,dimension(1:3,1:2,1:8)::iii,jjj
   integer::ind_left,ind_right
   integer::id1,id2,ig1,ig2,ih1,ih2
   integer::i,idim,ncache,igrid,ngrid,ind,iskip,nsplit,icell
@@ -79,12 +79,6 @@ subroutine upload_fine(ilevel)
   ! Average down the magnetic field on each face of unsplit cells
   ! that is in contact with neighboring split cells
   !----------------------------------------------------------------
-  iii(1,1,1:8)=(/1,0,1,0,1,0,1,0/); jjj(1,1,1:8)=(/2,1,4,3,6,5,8,7/)
-  iii(1,2,1:8)=(/0,2,0,2,0,2,0,2/); jjj(1,2,1:8)=(/2,1,4,3,6,5,8,7/)
-  iii(2,1,1:8)=(/3,3,0,0,3,3,0,0/); jjj(2,1,1:8)=(/3,4,1,2,7,8,5,6/)
-  iii(2,2,1:8)=(/0,0,4,4,0,0,4,4/); jjj(2,2,1:8)=(/3,4,1,2,7,8,5,6/)
-  iii(3,1,1:8)=(/5,5,5,5,0,0,0,0/); jjj(3,1,1:8)=(/5,6,7,8,1,2,3,4/)
-  iii(3,2,1:8)=(/0,0,0,0,6,6,6,6/); jjj(3,2,1:8)=(/5,6,7,8,1,2,3,4/)
 
   ! Loop over active grids by vector sweeps
   ncache=active(ilevel)%ngrid

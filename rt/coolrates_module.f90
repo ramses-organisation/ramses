@@ -76,22 +76,12 @@ SUBROUTINE init_coolrates_tables(aexp)
 
 ! Initialise the cooling rates tables.
 !-------------------------------------------------------------------------
+  use amr_commons, only:myid,ncpu
   use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  integer :: ierr
-#endif
   real(dp) :: aexp
-  integer :: myid, ncpu, iT
+  integer :: iT
 !-------------------------------------------------------------------------
-#ifndef WITHOUTMPI
-  call MPI_COMM_RANK(MPI_COMM_WORLD,myid,ierr)
-  call MPI_COMM_SIZE(MPI_COMM_WORLD,ncpu,ierr)
-#endif
-#ifdef WITHOUTMPI
-  myid=0
-  ncpu=1
-#endif
 
   ! Initialise the table lookup temperatures -----------------------------
   do iT=1, nbinT
@@ -109,7 +99,7 @@ SUBROUTINE init_coolrates_tables(aexp)
   three_over_h2Table = 3d0/h2Table
   two_over_h3Table = 2d0/h3Table
 
-  do iT = myid+1, nbinT, ncpu ! Loop over TK and assign rates
+  do iT = myid, nbinT, ncpu ! Loop over TK and assign rates
      call comp_table_rates(iT,aexp)
   end do ! end TK loop
 
@@ -153,7 +143,7 @@ SUBROUTINE init_coolrates_tables(aexp)
 
 #endif
 
-  if(myid==0) print*,'Coolrates tables initialised '
+  if(myid==1) print*,'Coolrates tables initialised '
 
 END SUBROUTINE init_coolrates_tables
 
@@ -161,24 +151,15 @@ END SUBROUTINE init_coolrates_tables
 SUBROUTINE update_coolrates_tables(aexp)
 ! Update cooling rates lookup tables which depend on aexp
 !-------------------------------------------------------------------------
+  use amr_commons, only:myid,ncpu
   use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  integer :: ierr
-#endif
   real(dp) :: aexp
-  integer:: myid, ncpu, iT
+  integer:: iT
 !-------------------------------------------------------------------------
-#ifndef WITHOUTMPI
-  call MPI_COMM_RANK(MPI_COMM_WORLD,myid,ierr)
-  call MPI_COMM_SIZE(MPI_COMM_WORLD,ncpu,ierr)
-#endif
-#ifdef WITHOUTMPI
-  myid=0
-  ncpu=1
-#endif
+
   tbl_cr_com%rates  = 0d0 ; tbl_cr_com%primes = 0d0
-  do iT = myid+1, nbinT, ncpu ! Loop over TK and assign rates
+  do iT = myid, nbinT, ncpu ! Loop over TK and assign rates
      call update_table_rates(iT, aexp)
   end do ! end TK loop
 
@@ -187,7 +168,7 @@ SUBROUTINE update_coolrates_tables(aexp)
   call mpi_distribute_coolrates_table(tbl_cr_com)
 #endif
 
-  !if(myid==0) print*,'Coolrates table updated'
+  !if(myid==1) print*,'Coolrates table updated'
 END SUBROUTINE update_coolrates_tables
 
 #ifndef WITHOUTMPI
