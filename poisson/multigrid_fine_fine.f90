@@ -467,7 +467,8 @@ subroutine interpolate_and_correct_fine(ifinelevel)
 
    ! Loop over fine grids by vector sweeps
    ngrid_f=active(ifinelevel)%ngrid
-!$omp parallel do private(nbatch,iskip_f_amr,ind_father,ind_c,igrid_c_mg,igrid_c_amr,icell_c_mg,icell_c_amr,cpu_amr,coeff)
+!!!$omp parallel do private(nbatch,iskip_f_amr,ind_father,ind_c,igrid_c_mg,igrid_c_amr,icell_c_mg,icell_c_amr,cpu_amr,coeff)
+! TC test fails
    do istart=1,ngrid_f,nvector
 
       ! Gather nvector grids

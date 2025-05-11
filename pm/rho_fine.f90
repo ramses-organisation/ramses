@@ -242,8 +242,8 @@ subroutine rho_from_current_level(ilevel)
   multipole_loc = 0
 
   ! Loop over cpus
-!$omp parallel do private(i,ig,ip,npart1,igrid,jgrid,ipart,jpart,idim,counter) &
-!$omp & reduction(+:multipole_loc)
+!!!$omp parallel do private(i,ig,ip,npart1,igrid,jgrid,ipart,jpart,idim,counter) &
+!!!$omp & reduction(+:multipole_loc)
   do icpu=1,ncpu
      ! Loop over grids
      igrid=headl(icpu,ilevel)
@@ -569,7 +569,7 @@ subroutine cic_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel,multipole_loc
      if(cic_levelmax==0.or.ilevel<=cic_levelmax)then
         do j=1,np
            if(ok(j))then
-!$omp atomic update
+!!!$omp atomic update
               rho(indp(j,ind))=rho(indp(j,ind))+vol2(j)
            end if
         end do
@@ -577,7 +577,7 @@ subroutine cic_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel,multipole_loc
         do j=1,np
            ! check for non-DM (and non-tracer)
            if ( ok(j) .and. is_not_DM(fam(j)) ) then
-!$omp atomic update
+!!!$omp atomic update
               rho(indp(j,ind))=rho(indp(j,ind))+vol2(j)
            end if
         end do
@@ -587,7 +587,7 @@ subroutine cic_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel,multipole_loc
         do j=1,np
            ! check for DM
            if ( ok(j) .and. is_DM(fam(j)) ) then
-!$omp atomic update
+!!!$omp atomic update
               rho_top(indp(j,ind))=rho_top(indp(j,ind))+vol2(j)
            end if
         end do
@@ -625,14 +625,14 @@ subroutine cic_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel,multipole_loc
      if(cic_levelmax==0.or.ilevel<cic_levelmax)then
         do j=1,np
            if(ok(j))then
-!$omp atomic update
+!!!$omp atomic update
               phi(indp(j,ind))=phi(indp(j,ind))+vol2(j)
            end if
         end do
      else if(ilevel>=cic_levelmax)then
         do j=1,np
            if ( ok(j) .and. is_not_DM(fam(j)) ) then
-!$omp atomic update
+!!!$omp atomic update
               phi(indp(j,ind))=phi(indp(j,ind))+vol2(j)
            end if
         end do
@@ -644,7 +644,7 @@ subroutine cic_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel,multipole_loc
         do j=1,np
            if ( is_cloud(fam(j)) ) then
               ! if (direct_force_sink(-1*idp(ind_part(j))))then
-!$omp atomic update
+!!!$omp atomic update
               phi(indp(j,ind))=phi(indp(j,ind))+m_refine(ilevel)
               ! endif
            end if
