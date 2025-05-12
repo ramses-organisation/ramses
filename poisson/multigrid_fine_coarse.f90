@@ -558,7 +558,7 @@ subroutine interpolate_and_correct_coarse(ifinelevel)
 
    ! Loop over fine grids by vector sweeps
    ngrid_f=active_mg(myid,ifinelevel)%ngrid
-!!!$omp parallel do private(nbatch,iskip_f_mg,iskip_f_amr,ind_father,ind_c,igrid_c_mg,igrid_c_amr,icell_f_mg,icell_c_mg,icell_c_amr,cpu_c_amr,coeff)
+!!!$omp parallel do private(nbatch,i,ind_f,ind_average,iskip_f_mg,iskip_f_amr,ind_father,ind_c,igrid_c_mg,igrid_c_amr,icell_f_mg,icell_c_mg,icell_c_amr,cpu_c_amr,coeff)
 !TC test fail
    do istart=1,ngrid_f,nvector
 
@@ -625,6 +625,7 @@ subroutine interpolate_and_correct_coarse(ifinelevel)
          ! Correct potential
          do i=1,nbatch
             icell_f_mg  = iskip_f_mg + istart+i-1
+!!!$omp atomic update
 #ifdef LIGHT_MPI_COMM
             active_mg(cpu_amr(i),ifinelevel)%pcomm%u(icell_f_mg,1) = active_mg(cpu_amr(i),ifinelevel)%pcomm%u(icell_f_mg,1) + corr(i)
 #else
