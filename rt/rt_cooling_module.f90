@@ -337,6 +337,8 @@ contains
     real(dp),save:: rho, TR, one_over_C_v, E_rad, dE_T, fluxMag, mom_fact
     real(dp),save:: G0, eff_peh, cdex, ncr
     logical::newAtomicCons=.true.
+!$omp threadprivate(dmom,alpha, beta, nN, nI,recRad, phAbs, phSc, dustAbs,dustSc, kAbs_loc,kSc_loc)
+!$omp threadprivate(rho, TR, one_over_C_v, E_rad, dE_T, fluxMag, mom_fact,G0, eff_peh, cdex, ncr)
     !---------------------------------------------------------------------
     dt_ok=.false.
     nHe=0.25*nH(icell)*Y/X  !         Helium number density
@@ -1270,6 +1272,7 @@ SUBROUTINE heat_unresolved_HII_regions(ilevel)
   integer::ilevel
   integer::ncache,i,igrid,ngrid
   integer,dimension(1:nvector),save::ind_grid
+!$omp threadprivate(ind_grid)
 !------------------------------------------------------------------------
 
   if(numbtot(1,ilevel)==0)return
@@ -1324,6 +1327,8 @@ SUBROUTINE heat_unresolved_HII_regions_vsweep(ind_grid,ngrid,ilevel)
 #endif
   real(dp),parameter::alphab = 2.6d-13 ! ~recombination rate in HII region
   real(dp),parameter::Tmu_ionised= 1.8d4  !      temperature in HII region
+
+!$omp threadprivate(ind_cell,ind_leaf,nH,T2,ekk,err,emag,lum,T2min,r_strom,r_stag)
 
   ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)

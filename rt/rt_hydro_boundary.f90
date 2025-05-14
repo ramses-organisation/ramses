@@ -25,6 +25,8 @@ subroutine rt_make_boundary_hydro(ilevel)
 
   integer::rtType !RT-- Type of rt variable =0,1,2,3
 
+!$omp threadprivate(ind_grid,ind_grid_ref,ind_cell,ind_cell_ref,xx,uu)
+
   if(.not. simple_boundary)return
   if(verbose)write(*,111)ilevel
 

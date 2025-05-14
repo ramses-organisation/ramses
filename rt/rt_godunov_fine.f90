@@ -13,12 +13,14 @@ SUBROUTINE rt_godunov_fine(ilevel, dt)
   integer::i,igrid,ncache,ngrid
   integer,dimension(1:nvector),save::ind_grid
   real(dp)::dt
+!$omp threadprivate(ind_grid)
 !------------------------------------------------------------------------
   if(numbtot(1,ilevel)==0)return  ! # of grids at ilevel
   if(verbose)write(*,111)ilevel
 
   ! Loop over active grids by vector sweeps
   ncache=active(ilevel)%ngrid  ! total # of grids at level ilevel
+!$omp parallel do private(ngrid)
   do igrid=1,ncache,nvector    ! take steps of 500 grids up to ncache
      ngrid=MIN(nvector,ncache-igrid+1) ! # of grids in each sweep
      do i=1,ngrid              ! collect grid indices for one sweep
@@ -180,6 +182,8 @@ SUBROUTINE rt_godfine1(ind_grid, ncache, ilevel, dt)
   integer::ind_nbor
   real(dp)::dx8,maxDist,rt_c_diff
 
+!$omp threadprivate(nbors_father_cells,ibuffer_father,u1,u2,uloc,flux,ok)
+!$omp threadprivate(igrid_nbor,ind_cell,ind_buffer,ind_exist,ind_nexist,rt_per_bnd)
 !------------------------------------------------------------------------
   oneontwotondim = 1d0/dble(twotondim) ! 1/8 in 3D
 
@@ -476,6 +480,7 @@ SUBROUTINE rt_godfine1(ind_grid, ncache, ilevel, dt)
               do j3=j3min,j3max-j0 ! 1 to 1 if dim=2, 1 to 2 otherwise
                  do i3=i3min,i3max-i0 ! 1 to 1 if dim=1, 1 to 2 otherwise
                     do i=1,nb_noneigh
+!!!$omp atomic update
                        rtunew(ind_buffer(i),ivar) =                      &
                            & rtunew(ind_buffer(i),ivar)                  &
                            & - flux(ind_cell(i),i3,j3,k3,ivar,idim)      &
@@ -511,6 +516,7 @@ SUBROUTINE rt_godfine1(ind_grid, ncache, ilevel, dt)
               do j3=j3min+j0,j3max
                  do i3=i3min+i0,i3max
                     do i=1,nb_noneigh
+!!!$omp atomic update
                        rtunew(ind_buffer(i),ivar) =                          &
                            & rtunew(ind_buffer(i),ivar)                      &
                            & + flux(ind_cell(i),i3+i0,j3+j0,k3+k0,ivar,idim) &

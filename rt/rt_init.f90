@@ -403,6 +403,7 @@ SUBROUTINE add_rt_sources(ilevel,dt)
   real(dp),dimension(1:twotondim,1:3)::xc
   real(dp),dimension(1:nvector,1:ndim),save::xx
   real(dp),dimension(1:nvector,1:nrtvar),save::uu
+!$omp threadprivate(ind_grid,ind_cell,xx,uu)
 !------------------------------------------------------------------------
   call add_UV_background(ilevel)
   if(numbtot(1,ilevel)==0)return    ! no grids at this level
@@ -499,6 +500,7 @@ SUBROUTINE add_UV_background(ilevel)
   integer ,dimension(1:nvector),save::ind_grid
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,scale_np  &
             ,scale_fp,efactor,nH
+!$omp threadprivate(ind_grid)
 !------------------------------------------------------------------------
   if(numbtot(1,ilevel)==0)return     ! no grids at this level
   if(.not. rt_isDiffuseUVsrc) return ! no propagated UV background

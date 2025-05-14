@@ -1064,6 +1064,7 @@ SUBROUTINE star_RT_vsweep(ind_grid,ind_part,ind_grid_part,ng,np,dt,ilevel)
        & , scale_Fp, age, z=0., scale_inp, scale_Nphot, dt_Gyr           &
        & , dt_loc_Gyr, scale_msun, mass, t_sne_Gyr
   real(dp),parameter::vol_factor=2**ndim   ! Vol factor for ilevel-1 cells
+!$omp threadprivate(x0,ind_cell,nbors_father_cells,ok,part_NpInp,x,id,igd,icd,igrid,icell,indp,kg)
 !-------------------------------------------------------------------------
   if(.not. metal) z = max(z_ave*0.02, 10d-5)![m_metals/m_tot]
   ! Conversion factor from user units to cgs units
@@ -1521,6 +1522,7 @@ SUBROUTINE update_UVsrc
   integer::i
   real(dp),allocatable,save::UVprops(:,:) !Each group: flux, egy, csn, cse
   real(dp)::scale_Np, scale_Fp, redshift
+!$omp threadprivate(UVprops)
 !-------------------------------------------------------------------------
   if(.not.rt_isDiffuseUVsrc) return
   if(nUVgroups.le.0) then

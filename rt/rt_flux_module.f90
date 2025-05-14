@@ -343,6 +343,7 @@ SUBROUTINE cmp_rt_faces(uin,iFlx,dx,dy,dz,dt,iP0,ngrid,ilevel)
   real(dp):: lminus, lplus                        ! Intercell eigenvalues
   real(dp)::dtdx
   integer ::i, j, k, n
+!$omp threadprivate(cFlx,lmin,lmax,fdn, fup, udn, uup)
 !------------------------------------------------------------------------
   iP1=iP0+nDim                                ! end index of photon group
 
