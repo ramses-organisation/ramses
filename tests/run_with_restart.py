@@ -3,7 +3,7 @@ import os
 import argparse
 import shutil
 
-""" 
+"""
 This script modifies the namelist file of a test to prepare for a restart test.
 It performs the following steps:
 1. Modify the namelist file to divide the output time by 2 and create a backup.
@@ -21,23 +21,23 @@ The script uses the f90nml library to read and write Fortran namelist files.
 """
 
 
-def step_1(test_name): 
+def step_1(test_name):
     """
-    Step 1: Modify the namelist file to  
+    Step 1: Modify the namelist file to
     divide the output time by 2 and create a backup.
     """
-    
+
     nml_path = f"{test_name}.nml"
-    
+
     # backup the original namelist file
     if os.path.exists(nml_path):
         shutil.copyfile(nml_path, nml_path + "_backup")
     else:
         print(f"Warning: {nml_path} does not exist")
         return
-    
+
     nml = f90nml.read(nml_path)
-    
+
     if "tout" in nml["output_params"]:
         tout = nml["output_params"]["tout"]
         nml["output_params"]["tout"] = tout / 2
@@ -48,16 +48,16 @@ def step_1(test_name):
         print("ERROR: tout or aout not found in output_params")
         return
     f90nml.write(nml=nml, nml_path=nml_path, force=True)
-    
+
 def step_2(test_name):
-    """ 
-    Step 2: Modify the namelist file to 
+    """
+    Step 2: Modify the namelist file to
     add a second output time and set nrestart to 2.
-    """ 
+    """
 
     nml_path = f"{test_name}.nml"
     nml = f90nml.read(nml_path)
-    
+
     nml["output_params"]["noutput"] = 2
     nml["run_params"]["nrestart"] = 2
 
@@ -72,7 +72,7 @@ def step_2(test_name):
         return
 
     f90nml.write(nml=nml, nml_path=nml_path, force=True)
-    
+
 def step_3(test_name):
     """
     Step 3: Cleaning: recover the original namelist file
@@ -81,13 +81,13 @@ def step_3(test_name):
 
     nml_path = f"{test_name}.nml"
     os.rename(nml_path + "_backup", nml_path)
-    
+
     try:
         # Remove output 2
         shutil.rmtree(f"output_00002")
         # Move output 3 into output 2
         os.rename(f"output_00003", f"output_00002")
-        
+
         for file in os.listdir("output_00002"):
             # remove extension
             name, ext = os.path.splitext(file)
@@ -98,7 +98,7 @@ def step_3(test_name):
     except FileNotFoundError:
         print(f"Warning: output_00003 or output_00002 does not exist")
         return
-        
+
 if __name__ == "__main__":
     # Parse command line arguments
     parser = argparse.ArgumentParser(description='Prepare the test for restarts.')
@@ -106,16 +106,15 @@ if __name__ == "__main__":
     parser.add_argument("-t", "--test_name", help="Test name", type=str)
 
     args = parser.parse_args()
-    
+
     steps = {
         1: step_1,
         2: step_2,
         3: step_3
     }
-    
+
     # Run the specified step
     if args.step in steps:
         steps[args.step](args.test_name)
     else:
         print(f"Step {args.step} not recognized. Available steps are: {list(steps.keys())}")
-    
