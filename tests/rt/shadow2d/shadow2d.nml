@@ -28,7 +28,6 @@ p_region=1.4d-08, 1.4d-08	    ! 8000 K and 40 K
 /
 
 &OUTPUT_PARAMS
-!foutput=100                      ! Number of timesteps between snapshot outputs
 noutput=1
 tout=5                           ! End-time for the simulation (in unit_time=Myr)
 /

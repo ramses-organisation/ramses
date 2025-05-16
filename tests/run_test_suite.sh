@@ -23,6 +23,10 @@
 #       ./run_test_suite.sh -t mhd
 #   - Run quick test suite:
 #       ./run_test_suite.sh -q
+#   - Run test suite with coverage:
+#       ./run_test_suite.sh -s
+#   - Run tests with restart:
+#       ./run_test_suite.sh -r
 #
 #######################################################################
 
@@ -40,7 +44,8 @@ DELDATA=true;
 COVERAGE=false;
 CLEAN_ALL=false;
 SELECTTEST=false;
-while getopts "cdsp:qt:v" OPTION; do
+RESTART=false;
+while getopts "cdsp:qt:vr" OPTION; do
    case $OPTION in
       c)
          CLEAN_ALL=true;
@@ -62,6 +67,9 @@ while getopts "cdsp:qt:v" OPTION; do
       ;;
       v)
          VERBOSE=true;
+      ;;
+      r)
+         RESTART=true;
       ;;
    esac
 done
@@ -305,21 +313,35 @@ for ((i=0;i<$ntests;i++)); do
    # Run test
    cd ${TEST_DIRECTORY}/${testname[n]};
    $DELETE_RESULTS;
-   RUN_TEST="${RUN_TEST_BASE}${ndim}d ${rawname[i]}.nml";
+
+   if $VERBOSE ; then
+      RUN_BEFORE_TEST="${SHELL} ${BEFORETEST} 2>&1 | tee -a ${LOGFILE}"
+      RUN_TEST="${RUN_TEST_BASE}${ndim}d ${rawname[i]}.nml 2>&1 | tee -a ${LOGFILE}"
+   else
+      RUN_BEFORE_TEST="${SHELL} ${BEFORETEST} >> ${LOGFILE} 2>&1"
+      RUN_TEST="${RUN_TEST_BASE}${ndim}d ${rawname[i]}.nml  >> $LOGFILE 2>&1"
    echo -n "Running test:" | tee -a $LOGFILE;
    STARTTIME_TEST=$(python3 -c 'import time; print(int(time.time()*1000))');
    # prepname="prepare-${rawname[i]}.sh";
-   if $VERBOSE ; then
-      if [ -f ${BEFORETEST} ]; then
-         ${SHELL} ${BEFORETEST} 2>&1 | tee -a $LOGFILE;
-      fi
-      ${RUN_TEST} 2>&1 | tee -a $LOGFILE;
-   else
-      if [ -f ${BEFORETEST} ]; then
-         ${SHELL} ${BEFORETEST} >> $LOGFILE 2>&1;
-      fi
-      ${RUN_TEST} >> $LOGFILE 2>&1;
    fi
+
+   if [ -f ${BEFORETEST} ]; then
+         ${RUN_BEFORE_TEST};
+   fi
+
+   if ${RESTART} ; then
+      echo  "Restart: step 1 ..." | tee -a $LOGFILE;
+      python3 ../../run_with_restart.py -s 1 -t ${rawname[i]}
+      ${RUN_TEST};
+      echo  "Restart: step 2 ..." | tee -a $LOGFILE;
+      python3 ../../run_with_restart.py -s 2 -t ${rawname[i]}
+      ${RUN_TEST};
+      echo  "Restart: step 3 ..." | tee -a $LOGFILE;
+      python3 ../../run_with_restart.py -s 3 -t ${rawname[i]}
+   else
+      ${RUN_TEST};
+   fi
+
    # Record test time
    ENDTIME_TEST=$(python3 -c 'import time; print(int(time.time()*1000))');
    milliseconds=$(($ENDTIME_TEST - $STARTTIME_TEST));

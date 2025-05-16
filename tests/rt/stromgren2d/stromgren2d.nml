@@ -29,7 +29,6 @@ p_region= 8.69869d-6		! Initial pressure (corresponds to 10^4 K)
 /
 
 &OUTPUT_PARAMS
-foutput=50000                   ! Number of timesteps between snapshot outputs
 noutput=1
 tout=15                         ! End-time for the simulation (in unit_time=Myr)
 /

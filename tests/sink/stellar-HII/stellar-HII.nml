@@ -42,7 +42,8 @@ boxlen=250. ! pc
 /
 
 &OUTPUT_PARAMS
-tend=0.18
+noutput=1
+tout=0.18
 /
 
 &HYDRO_PARAMS

@@ -9,8 +9,8 @@ nstepmax=100
 /
 
 &OUTPUT_PARAMS
-noutput=3
-foutput=100
+noutput=1
+aout=1.359E-01
 /
 
 &INIT_PARAMS
