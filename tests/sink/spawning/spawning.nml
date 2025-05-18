@@ -53,7 +53,7 @@ p_region=0.030361026190591216
 
 &OUTPUT_PARAMS
 noutput=2
-tout=0.0,0.4
+tout=0.4
 /
 
 &UNITS_PARAMS

@@ -320,7 +320,7 @@ for ((i=0;i<$ntests;i++)); do
    else
       RUN_BEFORE_TEST="${SHELL} ${BEFORETEST} >> ${LOGFILE} 2>&1"
       RUN_TEST="${RUN_TEST_BASE}${ndim}d ${rawname[i]}.nml  >> $LOGFILE 2>&1"
-   echo -n "Running test:" | tee -a $LOGFILE;
+   echo "Running test:" | tee -a $LOGFILE;
    STARTTIME_TEST=$(python3 -c 'import time; print(int(time.time()*1000))');
    # prepname="prepare-${rawname[i]}.sh";
    fi
@@ -329,22 +329,22 @@ for ((i=0;i<$ntests;i++)); do
          ${RUN_BEFORE_TEST};
    fi
 
-   if ${RESTART} ; then
+   if $RESTART ; then
       echo  "Restart: step 1 ..." | tee -a $LOGFILE;
-      python3 ../../run_with_restart.py -s 1 -t ${rawname[i]}
+      python3 ../../run_with_restart.py -s 1 -t ${rawname[i]}  | tee -a $LOGFILE;
       ${RUN_TEST};
       echo  "Restart: step 2 ..." | tee -a $LOGFILE;
-      python3 ../../run_with_restart.py -s 2 -t ${rawname[i]}
+      python3 ../../run_with_restart.py -s 2 -t ${rawname[i]}  | tee -a $LOGFILE;
       ${RUN_TEST};
       echo  "Restart: step 3 ..." | tee -a $LOGFILE;
-      python3 ../../run_with_restart.py -s 3 -t ${rawname[i]}
+      python3 ../../run_with_restart.py -s 3 -t ${rawname[i]}  | tee -a $LOGFILE;
    else
       ${RUN_TEST};
    fi
 
    # Record test time
    ENDTIME_TEST=$(python3 -c 'import time; print(int(time.time()*1000))');
-   milliseconds=$(($ENDTIME_TEST - $STARTTIME_TEST));
+   milliseconds=$((${ENDTIME_TEST} - ${STARTTIME_TEST}));
    seconds=$(($milliseconds / 1000));
    hours=$(($seconds / 3600));
    seconds=$(($seconds % 3600));
