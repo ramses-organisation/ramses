@@ -320,10 +320,9 @@ for ((i=0;i<$ntests;i++)); do
    else
       RUN_BEFORE_TEST="${SHELL} ${BEFORETEST} >> ${LOGFILE} 2>&1"
       RUN_TEST="${RUN_TEST_BASE}${ndim}d ${rawname[i]}.nml  >> $LOGFILE 2>&1"
+   fi
    echo "Running test:" | tee -a $LOGFILE;
    STARTTIME_TEST=$(python3 -c 'import time; print(int(time.time()*1000))');
-   # prepname="prepare-${rawname[i]}.sh";
-   fi
 
    if [ -f ${BEFORETEST} ]; then
          ${RUN_BEFORE_TEST};
