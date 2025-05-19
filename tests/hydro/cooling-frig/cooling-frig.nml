@@ -1,66 +1,68 @@
-&run_params
-    hydro = .true.
+This is the RAMSES parameter file for the cooling-frig test.
+
+&RUN_PARAMS
+hydro=.true.
 /
 
-&amr_params
-    levelmin = 5
-    levelmax = 5
-    ngridmax = 10000
-    boxlen = 500
+&AMR_PARAMS
+levelmin=5
+levelmax=5
+ngridmax=10000
+boxlen=500
 /
 
-&hydro_params
-    gamma = 1.666667
-    courant_factor = 0.8
-    scheme = 'muscl'
-    slope_type = 1
-    riemann = 'hllc'
-    pressure_fix = .true.
-    beta_fix = 0.5
+&HYDRO_PARAMS
+gamma=1.666667
+courant_factor=0.8
+scheme='muscl'
+slope_type=1
+riemann='hllc'
+pressure_fix=.true.
+beta_fix=0.5
 /
 
-&init_params
-    nregion = 1
-    region_type = 'square'
-    x_center = 250
-    y_center = 250
-    z_center = 250
-    length_x = 500
-    length_y = 500
-    length_z = 500
-    exp_region = 10
-    d_region = 1
-    p_region = 319266
+&INIT_PARAMS
+nregion=1
+region_type='square'
+x_center=250
+y_center=250
+z_center=250
+length_x=500
+length_y=500
+length_z=500
+exp_region=10
+d_region=1      ! 1 cm-3
+p_region=319266 ! 8000 K
 /
 
-&output_params
-    noutput = 2
-    tout = 0.31
+&OUTPUT_PARAMS
+noutput=1
+tout=0.62  ! 100Myr
 /
 
-&units_params
-    units_density = 2.3247434e-24
-    units_time = 2539507900000000.0
-    units_length = 3.0857e+18
+&UNITS_PARAMS
+units_density=2.3247434d-24
+units_time=2.5395079d15
+units_length=3.0857d18
 /
 
-&cooling_params
-    isothermal = .false.
-    cooling = .true.
-    cooling_ism = .true.
-    mu_gas = 1.4
-    z_ave = 1.0
+&COOLING_PARAMS
+isothermal=.false.
+cooling=.true.
+cooling_ism=.true.
+mu_gas=1.4d0
+z_ave=1.0
 /
 
-&turb_params
-    turb = .true.
-    turb_type = 1
-    turb_seed = 1
-    comp_frac = 0.5
-    instant_turb = .true.
-    forcing_power_spectrum = 'power_law'
-    turb_t = 0.5
-    turb_ndt = 100
-    turb_rms = 3000
-    turb_min_rho = 0.01
+&TURB_PARAMS
+turb=.true.
+turb_type=1
+turb_seed=1
+comp_frac=0.5
+instant_turb=.true.
+forcing_power_spectrum='power_law'
+turb_T=0.5
+turb_Ndt=100
+turb_rms=3000
+turb_min_rho=1d-2
 /
