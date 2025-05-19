@@ -37,7 +37,7 @@ p_region=1.0,0.4
 /
 
 &OUTPUT_PARAMS
-noutput=2
+noutput=1
 tout=5.0
 /
 
