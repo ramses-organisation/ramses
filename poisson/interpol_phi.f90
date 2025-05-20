@@ -111,7 +111,7 @@ subroutine save_phi_old(ilevel)
            phi_old(igrid+iskip)=phi(igrid+iskip)
         end do
         igrid=next(igrid)
-      end do 
+      end do
   end do
 
 end subroutine save_phi_old
