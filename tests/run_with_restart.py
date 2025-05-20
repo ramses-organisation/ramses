@@ -74,7 +74,7 @@ def step_2(test_name):
     nml_path = f"{test_name}.nml"
     nml = f90nml.read(nml_path)
 
-    
+
     if "noutput" in nml["output_params"]:
         nml["run_params"]["nrestart"] = 2
         nml["output_params"]["noutput"] = 2
@@ -86,7 +86,7 @@ def step_2(test_name):
         nml["run_params"]["nrestart"] = last_output
         tend = nml["output_params"]["tend"]
         nml["output_params"]["tend"] = tend * 2
-    
+
 
     f90nml.write(nml=nml, nml_path=nml_path, force=True)
 
