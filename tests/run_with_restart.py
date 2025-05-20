@@ -37,7 +37,7 @@ def apply_output_factor(nml, factor, keep_tout=False):
         nml["output_params"]["aout"] = aout * factor
     else:
         print("ERROR: noutput found but tout or aout not found in output_params")
-    
+
     return nml
 
 
