@@ -211,7 +211,8 @@ recursive subroutine amr_step(ilevel,icount)
   !--------------------
   if(poisson)then
                                call timer('poisson','start')
-     !save old potential for time-extrapolation at level boundaries
+     ! Save old potential for time-extrapolation at level boundaries
+     ! Needs to be done before rho_fine, because there phi is used as work array
      call save_phi_old(ilevel)
                                call timer('rho','start')
      call rho_fine(ilevel,icount)

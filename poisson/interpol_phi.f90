@@ -88,12 +88,12 @@ subroutine save_phi_old(ilevel)
   use poisson_commons, only:phi,phi_old
   implicit none
   integer ilevel
-
-  !save the old potential for time extrapolation in case of subcycling
-
+  !--------------------------------------------------------------------
+  ! Save the old potential for time extrapolation in case of subcycling
+  !--------------------------------------------------------------------
   integer::i,ncache,ind,igrid,iskip,istart,ibound
-  integer,allocatable,dimension(:)::ind_grid
 
+  ! Loop over MPI domains and boundaries
   do ibound=1,nboundary+ncpu
      if(ibound<=ncpu)then
         ncache=numbl(ibound,ilevel)
@@ -102,24 +102,16 @@ subroutine save_phi_old(ilevel)
         ncache=numbb(ibound-ncpu,ilevel)
         istart=headb(ibound-ncpu,ilevel)
      end if
-     if(ncache>0)then
-        allocate(ind_grid(1:ncache))
-        ! Loop over level grids
-        igrid=istart
-        do i=1,ncache
-           ind_grid(i)=igrid
-           igrid=next(igrid)
-        end do
-        ! Loop over cells
+     ! Loop over grids by following the linked list
+     igrid=istart
+     do i=1,ncache
+        ! Loop over cells in the current grid
         do ind=1,twotondim
            iskip=ncoarse+(ind-1)*ngridmax
-           ! save phi
-           do i=1,ncache
-              phi_old(ind_grid(i)+iskip)=phi(ind_grid(i)+iskip)
-           end do
+           phi_old(igrid+iskip)=phi(igrid+iskip)
         end do
-        deallocate(ind_grid)
-     end if
+        igrid=next(igrid)
+      end do 
   end do
 
 end subroutine save_phi_old
