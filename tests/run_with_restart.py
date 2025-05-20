@@ -21,20 +21,24 @@ Where:
 The script uses the f90nml library to read and write Fortran namelist files.
 """
 
-def apply_output_factor(nml, factor):
+def apply_output_factor(nml, factor, keep_tout=False):
     """
     Apply a factor to the output time in the namelist.
     This function modifies the namelist in place.
     """
     if "tout" in nml["output_params"]:
         tout = nml["output_params"]["tout"]
-        nml["output_params"]["tout"] = tout * factor
+        if keep_tout:
+            nml["output_params"]["tout"] = [tout, tout * factor]
+        else:
+            nml["output_params"]["tout"] = tout * factor
     elif "aout" in nml["output_params"]:
         aout = nml["output_params"]["aout"]
         nml["output_params"]["aout"] = aout * factor
     else:
         print("ERROR: noutput found but tout or aout not found in output_params")
-        return
+    
+    return nml
 
 
 def step_1(test_name):
@@ -55,14 +59,15 @@ def step_1(test_name):
     nml = f90nml.read(nml_path)
 
     if "noutput" in nml["output_params"]:
-        assert(nml["output_params"]["nouput"] == 1)
-        apply_output_factor(nml, 0.5)
+        assert(nml["output_params"]["noutput"] == 1)
+        nml = apply_output_factor(nml, 0.5)
     else:
         assert("tend" in nml["output_params"])
         assert("tout" not in nml["output_params"])
         assert("foutput" in nml["output_params"])
         tend = nml["output_params"]["tend"]
         nml["output_params"]["tend"] = tend / 2
+
     f90nml.write(nml=nml, nml_path=nml_path, force=True)
 
 def step_2(test_name):
@@ -78,7 +83,7 @@ def step_2(test_name):
     if "noutput" in nml["output_params"]:
         nml["run_params"]["nrestart"] = 2
         nml["output_params"]["noutput"] = 2
-        apply_output_factor(nml, 2)
+        nml = apply_output_factor(nml, 2, keep_tout=True)
     else:
         # Find the last output time
         last_output = int(glob.glob("output_*")[-1].split("_")[-1])
