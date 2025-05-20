@@ -40,8 +40,8 @@ boxlen=250. ! pc
 /
 
 &OUTPUT_PARAMS
-noutput=1
-tout=0.25
+foutput=1
+tend=0.25
 /
 
 &HYDRO_PARAMS

@@ -34,8 +34,8 @@ boxlen=1. ! kpc
 /
 
 &OUTPUT_PARAMS
-noutput=1
-tout=0.05  ! 0.05 Myr
+foutput=1
+tend=0.05  ! 0.05 Myr
 /
 
 &HYDRO_PARAMS

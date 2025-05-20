@@ -2,13 +2,14 @@ import f90nml
 import os
 import argparse
 import shutil
+import glob
 
 """
 This script modifies the namelist file of a test to prepare for a restart test.
 It performs the following steps:
 1. Modify the namelist file to divide the output time by 2 and create a backup.
-2. Modify the namelist file to add a second output time and set nrestart to 2.
-3. Clean up by recovering the original namelist file and copying output_00003 to output_00002.
+2. Modify the namelist file to add a second output time and set nrestart to 2 (or stop at the middle if more that one output time).
+3. Clean up by recovering the original namelist file and, if needed, copy output_00003 to output_00002.
 
 Usage:
 python run_with_restart.py -s <step> -t <test_name>
@@ -19,6 +20,21 @@ Where:
 
 The script uses the f90nml library to read and write Fortran namelist files.
 """
+
+def apply_output_factor(nml, factor):
+    """
+    Apply a factor to the output time in the namelist.
+    This function modifies the namelist in place.
+    """
+    if "tout" in nml["output_params"]:
+        tout = nml["output_params"]["tout"]
+        nml["output_params"]["tout"] = tout * factor
+    elif "aout" in nml["output_params"]:
+        aout = nml["output_params"]["aout"]
+        nml["output_params"]["aout"] = aout * factor
+    else:
+        print("ERROR: noutput found but tout or aout not found in output_params")
+        return
 
 
 def step_1(test_name):
@@ -38,15 +54,15 @@ def step_1(test_name):
 
     nml = f90nml.read(nml_path)
 
-    if "tout" in nml["output_params"]:
-        tout = nml["output_params"]["tout"]
-        nml["output_params"]["tout"] = tout / 2
-    elif "aout" in nml["output_params"]:
-        aout = nml["output_params"]["aout"]
-        nml["output_params"]["aout"] = aout / 2
+    if "noutput" in nml["output_params"]:
+        assert(nml["output_params"]["nouput"] == 1)
+        apply_output_factor(nml, 0.5)
     else:
-        print("ERROR: tout or aout not found in output_params")
-        return
+        assert("tend" in nml["output_params"])
+        assert("tout" not in nml["output_params"])
+        assert("foutput" in nml["output_params"])
+        tend = nml["output_params"]["tend"]
+        nml["output_params"]["tend"] = tend / 2
     f90nml.write(nml=nml, nml_path=nml_path, force=True)
 
 def step_2(test_name):
@@ -58,46 +74,50 @@ def step_2(test_name):
     nml_path = f"{test_name}.nml"
     nml = f90nml.read(nml_path)
 
-    nml["output_params"]["noutput"] = 2
-    nml["run_params"]["nrestart"] = 2
-
-    if "tout" in nml["output_params"]:
-        tout = nml["output_params"]["tout"]
-        nml["output_params"]["tout"] = [tout, 2*tout]
-    elif "aout" in nml["output_params"]:
-        aout = nml["output_params"]["aout"]
-        nml["output_params"]["aout"] = [aout, 2*aout]
+    
+    if "noutput" in nml["output_params"]:
+        nml["run_params"]["nrestart"] = 2
+        nml["output_params"]["noutput"] = 2
+        apply_output_factor(nml, 2)
     else:
-        print("ERROR: tout or aout not found in output_params")
-        return
+        # Find the last output time
+        last_output = int(glob.glob("output_*")[-1].split("_")[-1])
+        print(f"Restarting from output {last_output}")
+        nml["run_params"]["nrestart"] = last_output
+        tend = nml["output_params"]["tend"]
+        nml["output_params"]["tend"] = tend * 2
+    
 
     f90nml.write(nml=nml, nml_path=nml_path, force=True)
 
 def step_3(test_name):
     """
     Step 3: Cleaning: recover the original namelist file
-    and copy output_00003 to output_00002.
+    and, if needed, copy output_00003 to output_00002.
     """
 
     nml_path = f"{test_name}.nml"
     os.rename(nml_path + "_backup", nml_path)
 
-    try:
-        # Remove output 2
-        shutil.rmtree(f"output_00002")
-        # Move output 3 into output 2
-        os.rename(f"output_00003", f"output_00002")
+    nml = f90nml.read(nml_path)
 
-        for file in os.listdir("output_00002"):
-            # remove extension
-            name, ext = os.path.splitext(file)
-            # rename file
-            if name.endswith("00003"):
-                new_name = name[:-5] + "00002" + ext
-                os.rename(os.path.join("output_00002", file), os.path.join("output_00002", new_name))
-    except FileNotFoundError:
-        print(f"Warning: output_00003 or output_00002 does not exist")
-        return
+    if "noutput" in nml["output_params"]:
+        try:
+            # Remove output 2
+            shutil.rmtree(f"output_00002")
+            # Move output 3 into output 2
+            os.rename(f"output_00003", f"output_00002")
+
+            for file in os.listdir("output_00002"):
+                # remove extension
+                name, ext = os.path.splitext(file)
+                # rename file
+                if name.endswith("00003"):
+                    new_name = name[:-5] + "00002" + ext
+                    os.rename(os.path.join("output_00002", file), os.path.join("output_00002", new_name))
+        except FileNotFoundError:
+            print(f"Warning: output_00003 or output_00002 does not exist")
+            return -1
 
 if __name__ == "__main__":
     # Parse command line arguments
