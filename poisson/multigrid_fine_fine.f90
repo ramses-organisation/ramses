@@ -467,8 +467,12 @@ subroutine interpolate_and_correct_fine(ifinelevel)
 
    ! Loop over fine grids by vector sweeps
    ngrid_f=active(ifinelevel)%ngrid
-!!!$omp parallel do private(nbatch,i,ind_f,ind_average,iskip_f_amr,ind_father,ind_c,igrid_c_mg,igrid_c_amr,icell_c_mg,icell_c_amr,cpu_amr,coeff)
-! TC test fails
+!$omp parallel do default(none) schedule(guided) &
+!$omp&         private(istart,i,nbatch,igrid_f_amr,icell_amr,nbors_father_cells,&
+!$omp&                 nbors_father_grids,ind_f,iskip_f_amr,corr,ind_average,&
+!$omp&                 ind_father,coeff,icell_c_amr,ind_c,igrid_c_amr,cpu_amr,igrid_c_mg,icell_c_mg,icell_amr_a) &
+!$omp&         shared(ngrid_f,ifinelevel,icoarselevel,active,father,phi,bbb,ccc,&
+!$omp&                f,ncoarse,ngridmax,cpu_map,lookup_mg,active_mg)  
    do istart=1,ngrid_f,nvector
 
       ! Gather nvector grids
@@ -487,8 +491,6 @@ subroutine interpolate_and_correct_fine(ifinelevel)
               nbatch,ifinelevel)
 
       ! Update solution for fine grid cells
-!$omp parallel do private(iskip_f_amr, i, ind_average, ind_father, coeff, icell_c_amr,ind_c,igrid_c_amr,cpu_amr,igrid_c_mg,icell_c_mg, icell_amr) &
-!$omp & reduction(+:corr)
       do ind_f=1,twotondim
          iskip_f_amr = ncoarse+(ind_f-1)*ngridmax
 
