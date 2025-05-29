@@ -39,7 +39,6 @@ subroutine unsplit(uin,gravin,pin,flux,tmp,dx,dy,dz,dt,ngrid)
 
   ! Primitive variables
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar),save::qin
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2       ),save::cin
 
   ! Slopes
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim),save::dq
@@ -64,7 +63,7 @@ subroutine unsplit(uin,gravin,pin,flux,tmp,dx,dy,dz,dt,ngrid)
   klo=MIN(1,ku1+2); khi=MAX(1,ku2-2)
 
   ! Translate to primitive variables, compute sound speeds
-  call ctoprim(uin,qin,cin,gravin,dt,ngrid)
+  call ctoprim(uin,qin,gravin,dt,ngrid)
 
   ! Compute TVD slopes
   call uslope(qin,dq,dx,dt,ngrid)
@@ -83,13 +82,13 @@ subroutine unsplit(uin,gravin,pin,flux,tmp,dx,dy,dz,dt,ngrid)
   endif
   if(scheme=='plmde')then
 #if NDIM==1
-     call tracex  (qin,dq,cin,qm,qp,dx      ,dt,ngrid)
+     call tracex  (qin,dq,qm,qp,dx      ,dt,ngrid)
 #endif
 #if NDIM==2
-     call tracexy (qin,dq,cin,qm,qp,dx,dy   ,dt,ngrid)
+     call tracexy (qin,dq,qm,qp,dx,dy   ,dt,ngrid)
 #endif
 #if NDIM==3
-     call tracexyz(qin,dq,cin,qm,qp,dx,dy,dz,dt,ngrid)
+     call tracexyz(qin,dq,qm,qp,dx,dy,dz,dt,ngrid)
 #endif
   endif
 
@@ -858,7 +857,7 @@ end subroutine cmpflxm
 !###########################################################
 !###########################################################
 !###########################################################
-subroutine ctoprim(uin,q,c,gravin,dt,ngrid)
+subroutine ctoprim(uin,q,gravin,dt,ngrid)
   use amr_parameters
   use hydro_parameters
   use const
@@ -868,10 +867,8 @@ subroutine ctoprim(uin,q,c,gravin,dt,ngrid)
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar),intent(in)::uin
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:ndim),intent(in)::gravin
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar),intent(out)::q
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),intent(out)::c
   !---------------------------------------------------------
   ! Translate Conservative variables uin to PRIMitive variables q.
-  ! Also calculates the sound speed c
   !---------------------------------------------------------
   integer ::i, j, k, l
   real(dp)::eint, smalle, dtxhalf, oneoverrho
@@ -924,15 +921,6 @@ subroutine ctoprim(uin,q,c,gravin,dt,ngrid)
               ! Compute thermal pressure
               eint = MAX(uin(l,i,j,k,neul)*oneoverrho-eken-erad,smalle)
               q(l,i,j,k,neul) = (gamma-one)*q(l,i,j,k,1)*eint
-
-              ! Compute sound speed
-              c(l,i,j,k)=gamma*q(l,i,j,k,neul)
-#if NENER>0
-              do irad=1,nener
-                 c(l,i,j,k)=c(l,i,j,k)+gamma_rad(irad)*q(l,i,j,k,nhydro+irad)
-              enddo
-#endif
-              c(l,i,j,k)=sqrt(c(l,i,j,k)*oneoverrho)
 
               ! Gravity predictor step
               q(l,i,j,k,2) = q(l,i,j,k,2) + gravin(l,i,j,k,1)*dtxhalf
