@@ -863,14 +863,16 @@ subroutine ctoprim(uin,q,c,gravin,dt,ngrid)
   use hydro_parameters
   use const
   implicit none
-
-  integer ::ngrid
-  real(dp)::dt
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::uin
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:ndim)::gravin
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2)::c
-
+  integer, intent(in)::ngrid
+  real(dp),intent(in)::dt
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar),intent(in)::uin
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:ndim),intent(in)::gravin
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar),intent(out)::q
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),intent(out)::c
+  !---------------------------------------------------------
+  ! Translate Conservative variables uin to PRIMitive variables q.
+  ! Also calculates the sound speed c
+  !---------------------------------------------------------
   integer ::i, j, k, l
   real(dp)::eint, smalle, dtxhalf, oneoverrho
   real(dp)::eken, erad
