@@ -1103,6 +1103,7 @@ subroutine uslope2d(q,dq,dx,dt,ngrid)
   use amr_parameters
   use hydro_parameters
   use const
+  use slope_types
   implicit none
 
   integer::ngrid
@@ -1126,7 +1127,37 @@ subroutine uslope2d(q,dq,dx,dt,ngrid)
      return
   end if
 
-  if(slope_type==1.or.slope_type==2)then  ! minmod or average
+  if(slope_type==1)then  ! minmod
+     do n = 1, nvar
+        do k = klo, khi
+           do j = jlo, jhi
+              do i = ilo, ihi
+                 ! slopes in first coordinate direction
+                 do l = 1, ngrid
+                    dlft = (q(l,i  ,j,k,n) - q(l,i-1,j,k,n))
+                    drgt = (q(l,i+1,j,k,n) - q(l,i  ,j,k,n))
+                    dcen = half*(dlft+drgt)
+                    dsgn = sign(one, dcen)
+                    slop = min(abs(dlft),abs(drgt))
+                    dlim = min(abs(dlft),abs(drgt))
+                    if((dlft*drgt)<=zero)dlim=zero
+                    dq(l,i,j,k,n,1) = dsgn*min(dlim,abs(dcen))
+                 end do
+                 ! slopes in second coordinate direction
+                 do l = 1, ngrid
+                    dlft = (q(l,i,j  ,k,n) - q(l,i,j-1,k,n))
+                    drgt = (q(l,i,j+1,k,n) - q(l,i,j  ,k,n))
+                    dcen = half*(dlft+drgt)
+                    dsgn = sign(one,dcen)
+                    dlim = min(abs(dlft),abs(drgt))
+                    if((dlft*drgt)<=zero)dlim=zero
+                    dq(l,i,j,k,n,2) = dsgn*min(dlim,abs(dcen))
+                 end do
+              end do
+           end do
+        end do
+     end do
+  else if(slope_type==2)then  ! average
      do n = 1, nvar
         do k = klo, khi
            do j = jlo, jhi
@@ -1205,21 +1236,13 @@ subroutine uslope2d(q,dq,dx,dt,ngrid)
                  do l = 1, ngrid
                     dlft = (q(l,i  ,j,k,n) - q(l,i-1,j,k,n))
                     drgt = (q(l,i+1,j,k,n) - q(l,i  ,j,k,n))
-                    if((dlft*drgt)<=zero) then
-                       dq(l,i,j,k,n,1)=zero
-                    else
-                       dq(l,i,j,k,n,1)=(2*dlft*drgt/(dlft+drgt))
-                       end if
+                    dq(l,i,j,k,n,1)=slope_vanLeer(dlft,drgt)
                  end do
                  ! slopes in second coordinate direction
                  do l = 1, ngrid
                     dlft = (q(l,i,j  ,k,n) - q(l,i,j-1,k,n))
                     drgt = (q(l,i,j+1,k,n) - q(l,i,j  ,k,n))
-                    if((dlft*drgt)<=zero) then
-                       dq(l,i,j,k,n,2)=zero
-                    else
-                       dq(l,i,j,k,n,2)=(2*dlft*drgt/(dlft+drgt))
-                    end if
+                    dq(l,i,j,k,n,2)=slope_vanLeer(dlft,drgt)
                  end do
               end do
            end do
@@ -1234,23 +1257,13 @@ subroutine uslope2d(q,dq,dx,dt,ngrid)
                  do l = 1, ngrid
                     dlft = (q(l,i  ,j,k,n) - q(l,i-1,j,k,n))
                     drgt = (q(l,i+1,j,k,n) - q(l,i  ,j,k,n))
-                    dcen = half*(dlft+drgt)
-                    dsgn = sign(one, dcen)
-                    slop = min(slope_theta*abs(dlft),slope_theta*abs(drgt))
-                    dlim = slop
-                    if((dlft*drgt)<=zero)dlim=zero
-                    dq(l,i,j,k,n,1) = dsgn*min(dlim,abs(dcen))
+                    dq(l,i,j,k,n,1) = slope_vanLeer_bis(dlft,drgt)
                  end do
                  ! slopes in second coordinate direction
                  do l = 1, ngrid
                     dlft = (q(l,i,j  ,k,n) - q(l,i,j-1,k,n))
                     drgt = (q(l,i,j+1,k,n) - q(l,i,j  ,k,n))
-                    dcen = half*(dlft+drgt)
-                    dsgn = sign(one,dcen)
-                    slop = min(slope_theta*abs(dlft),slope_theta*abs(drgt))
-                    dlim = slop
-                    if((dlft*drgt)<=zero)dlim=zero
-                    dq(l,i,j,k,n,2) = dsgn*min(dlim,abs(dcen))
+                    dq(l,i,j,k,n,2) = slope_vanLeer_bis(dlft,drgt)
                  end do
               end do
            end do
