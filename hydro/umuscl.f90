@@ -67,7 +67,15 @@ subroutine unsplit(uin,gravin,pin,flux,tmp,dx,dy,dz,dt,ngrid)
   call ctoprim(uin,qin,cin,gravin,dt,ngrid)
 
   ! Compute TVD slopes
-  call uslope(qin,dq,dx,dt,ngrid)
+#if NDIM==1
+     call uslope1d(qin,dq,dx,dt,ngrid)
+#endif
+#if NDIM==2
+     call uslope2d(qin,dq,dx,dt,ngrid)
+#endif
+#if NDIM==3
+     call uslope3d(qin,dq,dx,dt,ngrid)
+#endif
 
   ! Compute 3D traced-states in all three directions
   if(scheme=='muscl')then
@@ -967,7 +975,7 @@ end subroutine ctoprim
 !###########################################################
 !###########################################################
 !###########################################################
-subroutine uslope(q,dq,dx,dt,ngrid)
+subroutine uslope1d(q,dq,dx,dt,ngrid)
   use amr_parameters
   use hydro_parameters
   use const
@@ -981,18 +989,6 @@ subroutine uslope(q,dq,dx,dt,ngrid)
   ! local arrays
   integer::i, j, k, l, n
   real(dp)::dsgn, dlim, dcen, dlft, drgt, slop
-#if NDIM==2
-  real(dp)::dfll,dflm,dflr,dfml,dfmm,dfmr,dfrl,dfrm,dfrr
-#endif
-#if NDIM==3
-  real(dp)::dflll,dflml,dflrl,dfmll,dfmml,dfmrl,dfrll,dfrml,dfrrl
-  real(dp)::dfllm,dflmm,dflrm,dfmlm,dfmmm,dfmrm,dfrlm,dfrmm,dfrrm
-  real(dp)::dfllr,dflmr,dflrr,dfmlr,dfmmr,dfmrr,dfrlr,dfrmr,dfrrr
-  real(dp)::dfz
-#endif
-#if NDIM>1
-  real(dp)::vmin,vmax,dfx,dfy,dff
-#endif
   integer::ilo,ihi,jlo,jhi,klo,khi
 
   ilo=MIN(1,iu1+1); ihi=MAX(1,iu2-1)
@@ -1004,7 +1000,6 @@ subroutine uslope(q,dq,dx,dt,ngrid)
      return
   end if
 
-#if NDIM==1
   do n = 1, nvar
      do k = klo, khi
         do j = jlo, jhi
@@ -1098,9 +1093,39 @@ subroutine uslope(q,dq,dx,dt,ngrid)
         end do
      end do
   end do
-#endif
 
-#if NDIM==2
+end subroutine uslope1d
+!###########################################################
+!###########################################################
+!###########################################################
+!###########################################################
+subroutine uslope2d(q,dq,dx,dt,ngrid)
+  use amr_parameters
+  use hydro_parameters
+  use const
+  implicit none
+
+  integer::ngrid
+  real(dp)::dx,dt
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::dq
+
+  ! local arrays
+  integer::i, j, k, l, n
+  real(dp)::dsgn, dlim, dcen, dlft, drgt, slop
+  real(dp)::dfll,dflm,dflr,dfml,dfmm,dfmr,dfrl,dfrm,dfrr
+  real(dp)::vmin,vmax,dfx,dfy,dff
+  integer::ilo,ihi,jlo,jhi,klo,khi
+
+  ilo=MIN(1,iu1+1); ihi=MAX(1,iu2-1)
+  jlo=MIN(1,ju1+1); jhi=MAX(1,ju2-1)
+  klo=MIN(1,ku1+1); khi=MAX(1,ku2-1)
+
+  if(slope_type==0)then
+     dq=zero
+     return
+  end if
+
   if(slope_type==1.or.slope_type==2)then  ! minmod or average
      do n = 1, nvar
         do k = klo, khi
@@ -1235,9 +1260,43 @@ subroutine uslope(q,dq,dx,dt,ngrid)
      write(*,*)'Unknown slope type',dx,dt
      stop
   endif
-#endif
 
-#if NDIM==3
+
+end subroutine uslope2d
+!###########################################################
+!###########################################################
+!###########################################################
+!###########################################################
+subroutine uslope3d(q,dq,dx,dt,ngrid)
+  use amr_parameters
+  use hydro_parameters
+  use const
+  implicit none
+
+  integer::ngrid
+  real(dp)::dx,dt
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::dq
+
+  ! local arrays
+  integer::i, j, k, l, n
+  real(dp)::dsgn, dlim, dcen, dlft, drgt, slop
+  real(dp)::dflll,dflml,dflrl,dfmll,dfmml,dfmrl,dfrll,dfrml,dfrrl
+  real(dp)::dfllm,dflmm,dflrm,dfmlm,dfmmm,dfmrm,dfrlm,dfrmm,dfrrm
+  real(dp)::dfllr,dflmr,dflrr,dfmlr,dfmmr,dfmrr,dfrlr,dfrmr,dfrrr
+  real(dp)::dfz
+  real(dp)::vmin,vmax,dfx,dfy,dff
+  integer::ilo,ihi,jlo,jhi,klo,khi
+
+  ilo=MIN(1,iu1+1); ihi=MAX(1,iu2-1)
+  jlo=MIN(1,ju1+1); jhi=MAX(1,ju2-1)
+  klo=MIN(1,ku1+1); khi=MAX(1,ku2-1)
+
+  if(slope_type==0)then
+     dq=zero
+     return
+  end if
+
   if(slope_type==1)then  ! minmod
      do n = 1, nvar
         do k = klo, khi
@@ -1475,6 +1534,5 @@ subroutine uslope(q,dq,dx,dt,ngrid)
      write(*,*)'Unknown slope type',dx,dt
      stop
   endif
-#endif
 
-end subroutine uslope
+end subroutine uslope3d
