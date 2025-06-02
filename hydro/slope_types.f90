@@ -49,6 +49,20 @@ contains
  
    end function slope_vanLeer
    !#######################################################
-
+   pure function slope_vanLeer_bis(dlft,drgt) result(slope)
+      real(dp),intent(in)::dlft,drgt
+      real(dp)::slope
+      ! generalized moncen/minmod parameterisation (van Leer 1979)
+      real(dp)::dcen,dsgn,dlim
+      real(dp),parameter::slope_theta=1.5d0
+ 
+      dcen = half*(dlft+drgt)
+      dsgn = sign(one, dcen)
+      dlim = min(slope_theta*abs(dlft),slope_theta*abs(drgt))
+      if((dlft*drgt)<=zero)dlim=zero
+      slope = dsgn*min(dlim,abs(dcen))
+ 
+   end function slope_vanLeer_bis
+   !#######################################################
 
 end module slope_types
