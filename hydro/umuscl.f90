@@ -1334,34 +1334,19 @@ subroutine uslope3d(q,dq,dx,dt,ngrid)
                  do l = 1, ngrid
                     dlft = slope_type*(q(l,i  ,j,k,n) - q(l,i-1,j,k,n))
                     drgt = slope_type*(q(l,i+1,j,k,n) - q(l,i  ,j,k,n))
-                    dcen = half*(dlft+drgt)/slope_type
-                    dsgn = sign(one, dcen)
-                    slop = min(abs(dlft),abs(drgt))
-                    dlim = slop
-                    if((dlft*drgt)<=zero)dlim=zero
-                    dq(l,i,j,k,n,1) = dsgn*min(dlim,abs(dcen))
+                    dq(l,i,j,k,n,1) = slope_moncen(dlft,drgt)
                  end do
                  ! slopes in second coordinate direction
                  do l = 1, ngrid
                     dlft = slope_type*(q(l,i,j  ,k,n) - q(l,i,j-1,k,n))
                     drgt = slope_type*(q(l,i,j+1,k,n) - q(l,i,j  ,k,n))
-                    dcen = half*(dlft+drgt)/slope_type
-                    dsgn = sign(one,dcen)
-                    slop = min(abs(dlft),abs(drgt))
-                    dlim = slop
-                    if((dlft*drgt)<=zero)dlim=zero
-                    dq(l,i,j,k,n,2) = dsgn*min(dlim,abs(dcen))
+                    dq(l,i,j,k,n,2) = slope_moncen(dlft,drgt)
                  end do
                  ! slopes in third coordinate direction
                  do l = 1, ngrid
                     dlft = slope_type*(q(l,i,j,k  ,n) - q(l,i,j,k-1,n))
                     drgt = slope_type*(q(l,i,j,k+1,n) - q(l,i,j,k  ,n))
-                    dcen = half*(dlft+drgt)/slope_type
-                    dsgn = sign(one,dcen)
-                    slop = min(abs(dlft),abs(drgt))
-                    dlim = slop
-                    if((dlft*drgt)<=zero)dlim=zero
-                    dq(l,i,j,k,n,3) = dsgn*min(dlim,abs(dcen))
+                    dq(l,i,j,k,n,3) = slope_moncen(dlft,drgt)
                  end do
               end do
            end do
@@ -1441,31 +1426,19 @@ subroutine uslope3d(q,dq,dx,dt,ngrid)
                  do l = 1, ngrid
                     dlft = (q(l,i  ,j,k,n) - q(l,i-1,j,k,n))
                     drgt = (q(l,i+1,j,k,n) - q(l,i  ,j,k,n))
-                    if((dlft*drgt)<=zero) then
-                       dq(l,i,j,k,n,1)=zero
-                    else
-                       dq(l,i,j,k,n,1)=(2*dlft*drgt/(dlft+drgt))
-                    end if
+                    dq(l,i,j,k,n,1)=slope_vanLeer(dlft,drgt)
                  end do
                  ! slopes in second coordinate direction
                  do l = 1, ngrid
                     dlft = (q(l,i,j  ,k,n) - q(l,i,j-1,k,n))
                     drgt = (q(l,i,j+1,k,n) - q(l,i,j  ,k,n))
-                    if((dlft*drgt)<=zero) then
-                       dq(l,i,j,k,n,2)=zero
-                    else
-                       dq(l,i,j,k,n,2)=(2*dlft*drgt/(dlft+drgt))
-                    end if
+                    dq(l,i,j,k,n,2)=slope_vanLeer(dlft,drgt)
                  end do
                  ! slopes in third coordinate direction
                  do l = 1, ngrid
                     dlft = (q(l,i,j,k  ,n) - q(l,i,j,k-1,n))
                     drgt = (q(l,i,j,k+1,n) - q(l,i,j,k  ,n))
-                    if((dlft*drgt)<=zero) then
-                       dq(l,i,j,k,n,3)=zero
-                    else
-                       dq(l,i,j,k,n,3)=(2*dlft*drgt/(dlft+drgt))
-                    end if
+                    dq(l,i,j,k,n,3)=slope_vanLeer(dlft,drgt)
                  end do
               end do
            end do
