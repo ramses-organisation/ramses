@@ -9,6 +9,7 @@ contains
    pure function slope_minmod(dlft,drgt) result(slope)
       real(dp),intent(in)::dlft,drgt
       real(dp)::slope
+      ! slope_type==1
  
       if((dlft*drgt)<=zero) then
          slope = zero
@@ -23,6 +24,7 @@ contains
    pure function slope_moncen(dlft,drgt) result(slope)
       real(dp),intent(in)::dlft,drgt
       real(dp)::slope
+      ! slope_type==2
       real(dp)::dcen,dsgn,dlim
       integer,parameter::slope_type=2
  
@@ -40,6 +42,7 @@ contains
    pure function slope_vanLeer(dlft,drgt) result(slope)
       real(dp),intent(in)::dlft,drgt
       real(dp)::slope
+      ! slope_type==7
  
       if((dlft*drgt)<=zero) then
          slope=zero
@@ -52,6 +55,7 @@ contains
    pure function slope_vanLeer_bis(dlft,drgt) result(slope)
       real(dp),intent(in)::dlft,drgt
       real(dp)::slope
+      ! slope_type==8
       ! generalized moncen/minmod parameterisation (van Leer 1979)
       real(dp)::dcen,dsgn,dlim
       real(dp),parameter::slope_theta=1.5d0

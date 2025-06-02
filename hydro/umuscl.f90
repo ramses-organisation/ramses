@@ -975,10 +975,12 @@ end subroutine ctoprim
 !###########################################################
 !###########################################################
 !###########################################################
+#if NDIM==1
 subroutine uslope1d(q,dq,dx,dt,ngrid)
   use amr_parameters
   use hydro_parameters
   use const
+  use slope_types
   implicit none
 
   integer::ngrid
@@ -1068,22 +1070,13 @@ subroutine uslope1d(q,dq,dx,dt,ngrid)
                  do l = 1, ngrid
                     dlft = (q(l,i  ,j,k,n) - q(l,i-1,j,k,n))
                     drgt = (q(l,i+1,j,k,n) - q(l,i  ,j,k,n))
-                    if((dlft*drgt)<=zero) then
-                       dq(l,i,j,k,n,1)=zero
-                    else
-                       dq(l,i,j,k,n,1)=(2*dlft*drgt/(dlft+drgt))
-                    end if
+                    dq(l,i,j,k,n,1)=slope_vanLeer(dlft,drgt)
                  end do
               else if(slope_type==8)then ! generalized moncen/minmod parameterisation (van Leer 1979)
                  do l = 1, ngrid
                     dlft = (q(l,i  ,j,k,n) - q(l,i-1,j,k,n))
                     drgt = (q(l,i+1,j,k,n) - q(l,i  ,j,k,n))
-                    dcen = half*(dlft+drgt)
-                    dsgn = sign(one, dcen)
-                    slop = min(slope_theta*abs(dlft),slope_theta*abs(drgt))
-                    dlim = slop
-                    if((dlft*drgt)<=zero)dlim=zero
-                    dq(l,i,j,k,n,1) = dsgn*min(dlim,abs(dcen))
+                    dq(l,i,j,k,n,1) = slope_vanLeer_bis(dlft,drgt)
                  end do
               else
                  write(*,*)'Unknown slope type',dx,dt
@@ -1095,10 +1088,12 @@ subroutine uslope1d(q,dq,dx,dt,ngrid)
   end do
 
 end subroutine uslope1d
+#endif
 !###########################################################
 !###########################################################
 !###########################################################
 !###########################################################
+#if NDIM==2
 subroutine uslope2d(q,dq,dx,dt,ngrid)
   use amr_parameters
   use hydro_parameters
@@ -1166,23 +1161,13 @@ subroutine uslope2d(q,dq,dx,dt,ngrid)
                  do l = 1, ngrid
                     dlft = slope_type*(q(l,i  ,j,k,n) - q(l,i-1,j,k,n))
                     drgt = slope_type*(q(l,i+1,j,k,n) - q(l,i  ,j,k,n))
-                    dcen = half*(dlft+drgt)/slope_type
-                    dsgn = sign(one, dcen)
-                    slop = min(abs(dlft),abs(drgt))
-                    dlim = slop
-                    if((dlft*drgt)<=zero)dlim=zero
-                    dq(l,i,j,k,n,1) = dsgn*min(dlim,abs(dcen))
+                    dq(l,i,j,k,n,1) = slope_moncen(dlft,drgt)
                  end do
                  ! slopes in second coordinate direction
                  do l = 1, ngrid
                     dlft = slope_type*(q(l,i,j  ,k,n) - q(l,i,j-1,k,n))
                     drgt = slope_type*(q(l,i,j+1,k,n) - q(l,i,j  ,k,n))
-                    dcen = half*(dlft+drgt)/slope_type
-                    dsgn = sign(one,dcen)
-                    slop = min(abs(dlft),abs(drgt))
-                    dlim = slop
-                    if((dlft*drgt)<=zero)dlim=zero
-                    dq(l,i,j,k,n,2) = dsgn*min(dlim,abs(dcen))
+                    dq(l,i,j,k,n,2) = slope_moncen(dlft,drgt)
                  end do
               end do
            end do
@@ -1276,10 +1261,12 @@ subroutine uslope2d(q,dq,dx,dt,ngrid)
 
 
 end subroutine uslope2d
+#endif
 !###########################################################
 !###########################################################
 !###########################################################
 !###########################################################
+#if NDIM==3
 subroutine uslope3d(q,dq,dx,dt,ngrid)
   use amr_parameters
   use hydro_parameters
@@ -1488,3 +1475,5 @@ subroutine uslope3d(q,dq,dx,dt,ngrid)
   endif
 
 end subroutine uslope3d
+#endif
+
