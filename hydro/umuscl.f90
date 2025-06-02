@@ -1281,7 +1281,7 @@ subroutine uslope3d(q,dq,dx,dt,ngrid)
 
   ! local arrays
   integer::i, j, k, l, n
-  real(dp)::dsgn, dlim, dcen, dlft, drgt, slop
+  real(dp)::dlim, dlft, drgt
   real(dp)::dflll,dflml,dflrl,dfmll,dfmml,dfmrl,dfrll,dfrml,dfrrl
   real(dp)::dfllm,dflmm,dflrm,dfmlm,dfmmm,dfmrm,dfrlm,dfrmm,dfrrm
   real(dp)::dfllr,dflmr,dflrr,dfmlr,dfmmr,dfmrr,dfrlr,dfrmr,dfrrr
@@ -1401,12 +1401,10 @@ subroutine uslope3d(q,dq,dx,dt,ngrid)
                     dff  = half*(abs(dfx)+abs(dfy)+abs(dfz))
 
                     if(dff>zero)then
-                       slop = min(one,min(abs(vmin),abs(vmax))/dff)
+                       dlim = min(one,min(abs(vmin),abs(vmax))/dff)
                     else
-                       slop = one
+                       dlim = one
                     endif
-
-                    dlim = slop
 
                     dq(l,i,j,k,n,1) = dlim*dfx
                     dq(l,i,j,k,n,2) = dlim*dfy
