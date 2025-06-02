@@ -871,6 +871,7 @@ subroutine ctoprim(uin,q,gravin,dt,ngrid)
   ! Translate Conservative variables uin to PRIMitive variables q.
   !---------------------------------------------------------
   integer ::i, j, k, l
+  real(dp) ::rho_grid,vx_grid,vy_grid,vz_grid
   real(dp)::eint, smalle, dtxhalf, oneoverrho
   real(dp)::eken, erad
 #if NVAR > NHYDRO + NENER
@@ -890,25 +891,26 @@ subroutine ctoprim(uin,q,gravin,dt,ngrid)
            do l = 1, ngrid
 
               ! Compute density
-              q(l,i,j,k,1) = max(uin(l,i,j,k,1),smallr)
+              ! We keep it in a local scalar to avoid store-load dependencies of q(l,i,j,k,1) 
+              rho_grid = max(uin(l,i,j,k,1),smallr)
 
               ! Compute velocities
-              oneoverrho = one/q(l,i,j,k,1)
-              q(l,i,j,k,2) = uin(l,i,j,k,2)*oneoverrho
+              oneoverrho = one/rho_grid
+              vx_grid = uin(l,i,j,k,2)*oneoverrho
 #if NDIM>1
-              q(l,i,j,k,3) = uin(l,i,j,k,3)*oneoverrho
+              vy_grid = uin(l,i,j,k,3)*oneoverrho
 #endif
 #if NDIM>2
-              q(l,i,j,k,4) = uin(l,i,j,k,4)*oneoverrho
+              vz_grid = uin(l,i,j,k,4)*oneoverrho
 #endif
 
               ! Compute specific kinetic energy
-              eken = half*q(l,i,j,k,2)*q(l,i,j,k,2)
+              eken = half*vx_grid*vx_grid
 #if NDIM>1
-              eken = eken + half*q(l,i,j,k,3)*q(l,i,j,k,3)
+              eken = eken + half*vy_grid*vy_grid
 #endif
 #if NDIM>2
-              eken = eken + half*q(l,i,j,k,4)*q(l,i,j,k,4)
+              eken = eken + half*vz_grid*vz_grid
 #endif
               ! Compute non-thermal pressure
               erad = zero
@@ -920,15 +922,18 @@ subroutine ctoprim(uin,q,gravin,dt,ngrid)
 #endif
               ! Compute thermal pressure
               eint = MAX(uin(l,i,j,k,neul)*oneoverrho-eken-erad,smalle)
-              q(l,i,j,k,neul) = (gamma-one)*q(l,i,j,k,1)*eint
+              q(l,i,j,k,neul) = (gamma-one)*rho_grid*eint
 
-              ! Gravity predictor step
-              q(l,i,j,k,2) = q(l,i,j,k,2) + gravin(l,i,j,k,1)*dtxhalf
+              ! Now, we store the density
+              q(l,i,j,k,1) = rho_grid
+
+              ! Store velocity and apply gravity predictor step
+              q(l,i,j,k,2) = vx_grid + gravin(l,i,j,k,1)*dtxhalf
 #if NDIM>1
-              q(l,i,j,k,3) = q(l,i,j,k,3) + gravin(l,i,j,k,2)*dtxhalf
+              q(l,i,j,k,3) = vy_grid + gravin(l,i,j,k,2)*dtxhalf
 #endif
 #if NDIM>2
-              q(l,i,j,k,4) = q(l,i,j,k,4) + gravin(l,i,j,k,3)*dtxhalf
+              q(l,i,j,k,4) = vz_grid + gravin(l,i,j,k,3)*dtxhalf
 #endif
 
            end do
