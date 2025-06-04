@@ -1267,7 +1267,7 @@ subroutine empty_comm(ind_com,np,ilevel,icpu)
      typep(ind_part(i)) =int2part(int(emission_part(ilevel)%f8(4, offset_np+ind_com(i)-1), 4))
 #else
      levelp(ind_part(i))=int(emission(icpu,ilevel)%fp(ind_com(i),2), 4)
-     idp   (ind_part(i))=int(emission(icpu,ilevel)%fp(ind_com(i),3))
+     idp   (ind_part(i))= emission(icpu,ilevel)%fp(ind_com(i),3)
      typep(ind_part(i)) =int2part(int(emission(icpu,ilevel)%fp(ind_com(i),4), 4))
 #endif
   end do
