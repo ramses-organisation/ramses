@@ -558,8 +558,8 @@ subroutine interpolate_and_correct_coarse(ifinelevel)
 
    ! Loop over fine grids by vector sweeps
    ngrid_f=active_mg(myid,ifinelevel)%ngrid
-!!!$omp parallel do private(nbatch,i,ind_f,ind_average,iskip_f_mg,iskip_f_amr,ind_father,ind_c,igrid_c_mg,igrid_c_amr,icell_f_mg,icell_c_mg,icell_c_amr,cpu_c_amr,coeff)
-!TC test fail
+!$omp parallel do private(nbatch,i,ind_f,ind_average,iskip_f_mg,iskip_f_amr) &
+!$omp private(ind_father,ind_c,igrid_c_mg,igrid_c_amr,icell_f_mg,icell_c_mg,icell_c_amr,cpu_c_amr,coeff)
    do istart=1,ngrid_f,nvector
 
       ! Gather nvector grids
