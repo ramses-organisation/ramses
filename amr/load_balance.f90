@@ -682,6 +682,81 @@ end subroutine cmp_cpumap
 !#########################################################################
 !#########################################################################
 !#########################################################################
+! A modified version of the subroutine'cmp_cpumap'
+! Instead of looping over all the cpu ids, it tests 'suggested' ids first 
+
+! particle_cpu : try particle_cpu (an id suggestion) first , if true : exit 
+! if not: try the cpus from cpu_list 
+! cpu_list is 125 list (3d) containing a list of suggested cpu ids to try -
+! (if it has less than 125 ids, the rest is filled with zeros)
+! if still false: loop over all the cpus  
+! exit the loop when you find it.
+
+subroutine cmp_cpumap_modified(x,c,nn,particle_cpu,cpu_list)
+  use amr_parameters
+  use amr_commons
+  use bisection
+  implicit none
+  integer, intent(in) ::nn , particle_cpu
+  integer, dimension(5**ndim), intent(in):: cpu_list
+
+  real(dp),dimension(1:nvector,1:ndim), intent(in)::x
+  integer ,dimension(1:nvector), intent(out)::c
+  
+  integer::i,idom , idx, found
+  real(qdp),dimension(1:nvector),save::order
+
+ 
+  if(ordering /= 'bisection') then
+     call cmp_ordering(x,order,nn)
+     do i=1,nn
+        found = -1
+        c(i)=ndomain ! default value
+        
+        if(    order(i) .ge. bound_key(particle_cpu-1) .and. &
+                & order(i) .lt. bound_key(particle_cpu  )) then
+              c(i)=particle_cpu 
+              found = 1 
+        else 
+            do idx=1,5**ndim 
+               if (cpu_list(idx)==0) exit
+               if(    order(i) .ge. bound_key(cpu_list(idx)-1) .and. &
+                   & order(i) .lt. bound_key(cpu_list(idx))) then
+                 c(i)=cpu_list(idx)
+                 found = 1 
+                 exit
+               end if 
+            end do 
+         end if
+
+         if (found==-1) then
+              do idom=1,ndomain
+                 if(    order(i) .ge. bound_key(idom-1) .and. &
+                      & order(i) .lt. bound_key(idom)) then
+                    c(i)=idom
+                    found = 1
+                  exit 
+
+                 endif
+              end do
+         end if 
+
+     end do
+     do i=1,nn
+        c(i)=MOD(c(i)-1,ncpu)+1
+!        c(i)=c(i)-((c(i)-1)/ncpu)*ncpu
+     end do
+  else
+     call cmp_bisection_cpumap(x,c,nn)
+  end if
+
+end subroutine cmp_cpumap_modified
+
+
+!#########################################################################
+!#########################################################################
+!#########################################################################
+!#########################################################################
 subroutine cmp_dommap(x,c,nn)
   use amr_parameters
   use amr_commons
