@@ -440,12 +440,12 @@ subroutine interpolate_and_correct_fine(ifinelevel)
    real(dp), dimension(1:8)     :: bbb
    integer,  dimension(1:8,1:8) :: ccc
 
-   integer,  dimension(1:nvector)               :: igrid_f_amr, icell_amr, icell_amr_a
-   integer,  dimension(1:nvector,1:threetondim) :: nbors_father_cells
-   integer,  dimension(1:nvector,1:twotondim)   :: nbors_father_grids
-   real(dp), dimension(1:nvector)               :: corr
+   integer,  dimension(1:nvector), save               :: igrid_f_amr, icell_amr
+   integer,  dimension(1:nvector,1:threetondim), save :: nbors_father_cells
+   integer,  dimension(1:nvector,1:twotondim), save   :: nbors_father_grids
+   real(dp), dimension(1:nvector), save               :: corr
 
-!!!$omp threadprivate(igrid_f_amr, icell_amr,nbors_father_cells,nbors_father_grids,corr)
+!$omp threadprivate(igrid_f_amr, icell_amr,nbors_father_cells,nbors_father_grids,corr)
 
    ! Local constants
    a = 1d0/4d0**ndim
@@ -468,9 +468,9 @@ subroutine interpolate_and_correct_fine(ifinelevel)
    ! Loop over fine grids by vector sweeps
    ngrid_f=active(ifinelevel)%ngrid
 !$omp parallel do default(none) schedule(guided) &
-!$omp&         private(istart,i,nbatch,igrid_f_amr,icell_amr,nbors_father_cells,&
-!$omp&                 nbors_father_grids,ind_f,iskip_f_amr,corr,ind_average,&
-!$omp&                 ind_father,coeff,icell_c_amr,ind_c,igrid_c_amr,cpu_amr,igrid_c_mg,icell_c_mg,icell_amr_a) &
+!$omp&         private(istart,i,nbatch,&
+!$omp&                 ind_f,iskip_f_amr,ind_average,&
+!$omp&                 ind_father,coeff,icell_c_amr,ind_c,igrid_c_amr,cpu_amr,igrid_c_mg,icell_c_mg) &
 !$omp&         shared(ngrid_f,ifinelevel,icoarselevel,active,father,phi,bbb,ccc,&
 !$omp&                f,ncoarse,ngridmax,cpu_map,lookup_mg,active_mg)  
    do istart=1,ngrid_f,nvector
@@ -483,11 +483,11 @@ subroutine interpolate_and_correct_fine(ifinelevel)
 
       ! Compute father (coarse) cell index
       do i=1,nbatch
-         icell_amr_a(i)=father(igrid_f_amr(i))
+         icell_amr(i)=father(igrid_f_amr(i))
       end do
 
       ! Gather 3x3x3 neighboring parent cells
-      call get3cubefather(icell_amr_a,nbors_father_cells,nbors_father_grids, &
+      call get3cubefather(icell_amr,nbors_father_cells,nbors_father_grids, &
               nbatch,ifinelevel)
 
       ! Update solution for fine grid cells

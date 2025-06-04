@@ -997,9 +997,11 @@ subroutine make_fine_mask(ilevel)
    integer  :: ind, igrid_mg, icpu, ibound
    integer  :: igrid_amr, icell_amr, iskip_amr
 
+!$omp parallel private(ngrid,ind,iskip_amr,igrid_mg,igrid_amr,icell_amr,icpu,ibound)
    ngrid=active(ilevel)%ngrid
    do ind=1,twotondim
       iskip_amr = ncoarse+(ind-1)*ngridmax
+!$omp do
       do igrid_mg=1,ngrid
          igrid_amr = active(ilevel)%igrid(igrid_mg)
          icell_amr = iskip_amr + igrid_amr
@@ -1012,6 +1014,7 @@ subroutine make_fine_mask(ilevel)
       ngrid=reception(icpu,ilevel)%ngrid
       do ind=1,twotondim
          iskip_amr = ncoarse+(ind-1)*ngridmax
+!$omp do
          do igrid_mg=1,ngrid
 #ifdef LIGHT_MPI_COMM
             igrid_amr = reception(icpu,ilevel)%pcomm%igrid(igrid_mg)
@@ -1029,6 +1032,7 @@ subroutine make_fine_mask(ilevel)
       ngrid=boundary(ibound,ilevel)%ngrid
       do ind=1,twotondim
          iskip_amr=ncoarse+(ind-1)*ngridmax
+!$omp do
          do igrid_mg=1,ngrid
             igrid_amr = boundary(ibound,ilevel)%igrid(igrid_mg)
             icell_amr = iskip_amr + igrid_amr
@@ -1037,6 +1041,7 @@ subroutine make_fine_mask(ilevel)
          end do
       end do
    end do
+!$omp end parallel
 end subroutine make_fine_mask
 
 ! ########################################################################
