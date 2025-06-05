@@ -23,7 +23,8 @@ subroutine get3cubefather(ind_cell_father,nbors_father_cells,&
   integer,dimension(1:nvector,1:twotondim),save::nbors_grids_ok
   logical::oups
 
-!$omp threadprivate(ix,iy,iz,iix,iiy,iiz,pos,ind_grid_father,ind_grid_ok,nbors_father_ok,nbors_grids_ok)
+!$omp threadprivate(ix,iy,iz,iix,iiy,iiz)
+!$omp threadprivate(pos,ind_grid_father,ind_grid_ok,nbors_father_ok,nbors_grids_ok)
 
   nxny=nx*ny
 
@@ -225,6 +226,7 @@ subroutine get3cubepos(ind_grid,ind,nbors_father_cells,nbors_father_grids,ng)
   integer,dimension(1:threetondim),save::lll_loc,mmm_loc
 
 !$omp threadprivate(ind_grid1,ind_grid2,ind_grid3,nbors_grids)
+!$omp threadprivate(lll_loc,mmm_loc)
 
   ! fetch magic indices
   lll_loc = lll(:,ind)

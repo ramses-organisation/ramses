@@ -47,7 +47,11 @@ subroutine read_params
   write(*,*)'       written by Romain Teyssier (Princeton University)       '
   write(*,*)'           (c) CEA 1999-2007, UZH 2008-2021, PU 2022           '
   write(*,*)' '
+#ifdef OPENMP
+  write(*,'(" Working with nproc = ",I4," and nthr = ",I3," for ndim = ",I1)')ncpu,nthr,ndim
+#else
   write(*,'(" Working with nproc = ",I5," for ndim = ",I1)')ncpu,ndim
+#endif
   ! Check nvar is not too small
 #ifdef SOLVERhydro
   write(*,'(" Using solver = hydro with nvar = ",I2)')nvar
