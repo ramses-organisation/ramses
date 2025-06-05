@@ -1,7 +1,7 @@
 program ramses
   implicit none
 
-  ! Set myid, ncpu and initialize MPI
+  ! Set myid, ncpu and initialize MPI and OpenMP
   call initialize_mpi
 
   ! Read run parameters
@@ -19,22 +19,43 @@ end program ramses
 
 
 subroutine initialize_mpi
-  use amr_commons, only:myid,ncpu
+  use amr_commons, only:myid,ncpu,nthr
   use mpi_mod
+#ifdef OPENMP
+  use omp_lib
+#endif
   implicit none
 #ifndef WITHOUTMPI
-  integer::ierr
+  integer::ierr,info
 #endif
+integer::mythr
 
   ! MPI initialization
 #ifdef WITHOUTMPI
   ncpu=1
   myid=1
 #else
+#ifdef OPENMP
+  call MPI_INIT_THREAD(MPI_THREAD_SERIALIZED,info,ierr)
+  if(info<MPI_THREAD_SERIALIZED) then
+      write(*,*) 'Error: MPI_THREAD_SERIALIZED is not supported in current MPI library'
+      stop
+  end if
+#else
   call MPI_INIT(ierr)
+#endif
   call MPI_COMM_RANK(MPI_COMM_WORLD,myid,ierr)
   call MPI_COMM_SIZE(MPI_COMM_WORLD,ncpu,ierr)
   myid=myid+1 ! Careful with this...
+#endif
+
+#ifdef OPENMP
+!$omp parallel private(mythr)
+  mythr=omp_get_thread_num()+1
+  if(mythr==1) then
+     nthr=omp_get_num_threads()
+  end if
+!$omp end parallel
 #endif
 
 end subroutine initialize_mpi
