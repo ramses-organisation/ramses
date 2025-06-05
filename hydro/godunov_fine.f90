@@ -514,6 +514,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
 
 !$omp threadprivate(nbors_father_cells,nbors_father_grids,ibuffer_father,u1,u2,req2,peq2)
 !$omp threadprivate(uloc,gloc,ploc,req_loc,peq_loc,flux,tmp,ok)
+!$omp threadprivate(igrid_nbor,ind_cell,ind_buffer,ind_exist,ind_nexist)
 
   oneontwotondim = 1d0/dble(twotondim)
 
