@@ -70,11 +70,20 @@ done
 # Setup paths and commands
 #######################################################################
 TEST_DIRECTORY=$(pwd);                    # The test suite directory
-BASE_DIRECTORY="${TEST_DIRECTORY}/.."; # The main RAMSES directory
+BASE_DIRECTORY="${TEST_DIRECTORY}/..";    # The main RAMSES directory
 BIN_DIRECTORY="${BASE_DIRECTORY}/bin";    # The bin directory
-VISU_DIR="${TEST_DIRECTORY}/visu";        # The visualization directory
+VISU_DIR="${TEST_DIRECTORY}/.osyris";     # The visualization directory
 
-export PYTHONPATH=${VISU_DIR}:$PYTHONPATH;
+# Clone visualization software if not already present
+# bash check if folder exists
+if [ ! -d "$VISU_DIR" ]; then
+   git clone https://github.com/osyris-project/osyris.git $VISU_DIR
+   cd $VISU_DIR;
+   git checkout remove-config;
+   cd -;
+fi
+
+# export PYTHONPATH=${VISU_DIR}:$PYTHONPATH;
 DELETE_RESULTS="rm -rf output_* *.tex data*.dat *.pdf *.pyc *.gc* coverage_stats.txt";
 RETURN_TO_BIN="cd ${BIN_DIRECTORY}";
 EXECNAME="test_exe_";
