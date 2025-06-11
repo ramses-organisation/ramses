@@ -85,7 +85,7 @@ In that directory, you will need:
 - A namelist: `sedov-3d.nml` (the name needs to be the same as the test directory)
 
 :::{warning}
-For the restart system to work, there is some limitations on the output parameters you can use. I has to be either on the form
+For the restart system to work, there is some limitations on the output parameters you can use. They have to be on the form
 ```
 &OUTPUT_PARAMS
 noutput=1 ! should be 1
@@ -100,7 +100,7 @@ aout=1.355E-01
 /
 /
 ```
-or
+for cosmo runs or
 ```
 &OUTPUT_PARAMS
 foutput=1 ! should be 1
