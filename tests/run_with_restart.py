@@ -106,7 +106,7 @@ def step_3(test_name):
 
     nml = f90nml.read(nml_path)
 
-    if "noutput" in nml["output_params"]:
+    if "noutput" in nml["output_params"] and os.path.exists("output_00003"):
         try:
             # Remove output 2
             shutil.rmtree(f"output_00002")
