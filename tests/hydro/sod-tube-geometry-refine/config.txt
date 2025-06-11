@@ -1,1 +1,0 @@
-FLAGS: NDIM=1 PATCH= SOLVER=hydro
