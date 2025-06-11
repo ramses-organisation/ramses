@@ -63,7 +63,7 @@ Once the tests have completed, a report is generated in a `.pdf` file named `tes
 ```
 ./run_test_suite.sh -r
 ```
-This will add an intermediate output in the middle of the test, and restart from it. 
+This will add an intermediate output in the middle of the test, and restart from it.
 
 ## 2. Creating a new test
 
@@ -92,7 +92,7 @@ noutput=1 ! should be 1
 tout=0.620
 /
 ```
-or 
+or
 ```
 &OUTPUT_PARAMS
 noutput=1 ! should be 1
@@ -104,7 +104,7 @@ or
 ```
 &OUTPUT_PARAMS
 foutput=1 ! should be 1
-tend=0.05  
+tend=0.05
 /
 ```
 
