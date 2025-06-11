@@ -38,7 +38,7 @@ jobs:
         - name: "Run tests ${{ matrix.test-family }}"
           run: |
             cd tests
-            bash run_test_suite.sh -p 2 -r -v -t ${{ matrix.test-family }}
+            bash run_test_suite.sh -p 2 -v -t ${{ matrix.test-family }}
         - name: "Upload artifacts  ${{ matrix.test-family }}"
           uses: actions/upload-artifact@v4
           if: always()
