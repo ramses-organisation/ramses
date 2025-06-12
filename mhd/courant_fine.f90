@@ -369,7 +369,12 @@ subroutine velocity_fine(ilevel)
         end do
 
         ! Impose analytical velocity field
-        call velana(xx,vv,dx_loc,t,ngrid)
+        select case (condinit_kind)
+            case('ponomarenko')
+               call velana_ponomarenko(xx,vv,dx_loc,t,ngrid)
+            case default
+               call velana(xx,vv,dx_loc,t,ngrid)
+         end select
 
         ! Impose induction variables
         do i=1,ngrid

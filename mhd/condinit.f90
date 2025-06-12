@@ -430,3 +430,66 @@ function A_screw(xx,yy,zz,dir)
 
   return
 end function A_screw
+!================================================================
+!================================================================
+!================================================================
+!================================================================
+subroutine velana_ponomarenko(x,v,dx,t,ncell)
+  use amr_parameters
+  use hydro_parameters
+  implicit none
+  integer ::ncell                         ! Size of input arrays
+  real(dp)::dx                            ! Cell size
+  real(dp)::t                             ! Current time
+  real(dp),dimension(1:nvector,1:3)::v    ! Velocity field
+  real(dp),dimension(1:nvector,1:ndim)::x ! Cell center position.
+  !================================================================
+  ! This routine computes the user defined velocity fields.
+  ! x(i,1:ndim) are cell center position in [0,boxlen] (user units).
+  ! v(i,1:3) is the imposed 3-velocity in user units.
+  !================================================================
+  integer::i
+  real(dp)::xx,yy,zz,vx,vy,vz,rr,tt,omega,aa,twopi
+
+  ! Add here, if you wish, some user-defined initial conditions
+  aa=1.0
+  twopi=2d0*ACOS(-1d0)
+  do i=1,ncell
+
+     xx=x(i,1)
+#if NDIM > 1
+     yy=x(i,2)
+#endif
+#if NDIM > 2
+     zz=x(i,3)
+#endif
+     ! Ponomarenko
+     xx=xx-boxlen/2.0
+     yy=yy-boxlen/2.0
+     rr=sqrt(xx**2+yy**2)
+     if(yy>0)then
+        tt=acos(xx/rr)
+     else
+        tt=-acos(xx/rr)+twopi
+     endif
+     if(rr<1.0)then
+        omega=0.609711
+        vz=0.792624
+     else
+        omega=0.0
+        vz=0.0
+     endif
+     vx=-sin(tt)*rr*omega
+     vy=+cos(tt)*rr*omega
+
+     v(i,1)=vx
+#if NDIM > 1
+     v(i,2)=vy
+#endif
+#if NDIM > 2
+     v(i,3)=vz
+#endif
+  end do
+
+
+end subroutine velana_ponomarenko
