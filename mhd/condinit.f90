@@ -198,7 +198,7 @@ subroutine collapse_condinit(x,q,dx,nn)
   r0=(alpha_dense_core*2.*6.67d-8*mass_c*scale_m*mu_gas*mH/(5.*kB*T_eos))/scale_l
   ! cloud density equal to unity
   d0 = 3.0d0*mass_c/(4.0d0*pi*r0**3.)
-  
+
   ! cloud rotation
   omega0 = sqrt(beta_dense_core*4.*pi)
   ! cloud pressure
