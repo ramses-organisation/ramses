@@ -45,7 +45,7 @@ subroutine  condinit(x,u,dx,nn)
 
   case('ponomarenko')
       call ponomarenko_condinit(x, q, dx, nn)
-    
+
   ! Add here, if you wish, some user-defined initial conditions
   ! ........
 
