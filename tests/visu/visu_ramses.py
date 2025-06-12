@@ -505,28 +505,6 @@ def check_solution(data,test_name,tolerance=None,threshold=2.0e-14,norm_min=1.0e
     tex_file.write(" \n")
     tex_file.close()
 
-    # Find vectors and normalize components
-    norms = dict()
-    permutations = {"_x":["_y","_z"],"_y":["_x","_z"],"_z":["_x","_y"]}
-    for key in sorted(data.keys()):
-        norms[key] = 1.0
-        if key.endswith("_x") or key.endswith("_y") or key.endswith("_z"):
-            rawkey = key[:-2]
-            suffix = key[-2:]
-            ok = True
-            try:
-                test = len(data[rawkey+permutations[suffix][0]])
-            except KeyError:
-                ok = False
-            try:
-                test = len(data[rawkey+permutations[suffix][1]])
-            except KeyError:
-                ok = False
-            if ok:
-                norms[key] = np.sqrt(data[key]**2 + data[rawkey+permutations[suffix][0]]**2 + data[rawkey+permutations[suffix][1]]**2)
-                indices = norms[key] < norm_min
-                norms[key][indices] = norm_min
-
     # Compute solution sums
     nvar = len(data.keys())
     sol  = dict()
@@ -548,7 +526,7 @@ def check_solution(data,test_name,tolerance=None,threshold=2.0e-14,norm_min=1.0e
            key.startswith("radiative_energy"):
             solution = np.log10(np.abs(keyData))
         else:
-            solution = np.where(np.abs(keyData)<threshold*norms[key],0.0,np.abs(keyData))
+            solution = np.abs(keyData)
 
         try:
             sol[key] = math.fsum(solution)
