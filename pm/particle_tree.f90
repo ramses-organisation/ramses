@@ -1263,11 +1263,11 @@ subroutine empty_comm(ind_com,np,ilevel,icpu)
   do i=1,np
 #ifdef LIGHT_MPI_COMM
      levelp(ind_part(i))=int(emission_part(ilevel)%f8(2, offset_np+ind_com(i)-1), 4)
-     idp   (ind_part(i))=int(emission_part(ilevel)%f8(3, offset_np+ind_com(i)-1))
+     idp   (ind_part(i))=emission_part(ilevel)%f8(3, offset_np+ind_com(i)-1)
      typep(ind_part(i)) =int2part(int(emission_part(ilevel)%f8(4, offset_np+ind_com(i)-1), 4))
 #else
      levelp(ind_part(i))=int(emission(icpu,ilevel)%fp(ind_com(i),2), 4)
-     idp   (ind_part(i))=int(emission(icpu,ilevel)%fp(ind_com(i),3))
+     idp   (ind_part(i))=emission(icpu,ilevel)%fp(ind_com(i),3)
      typep(ind_part(i)) =int2part(int(emission(icpu,ilevel)%fp(ind_com(i),4), 4))
 #endif
   end do

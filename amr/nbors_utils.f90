@@ -198,6 +198,7 @@ end subroutine get3cubefather
 !##############################################################
 subroutine get3cubepos(ind_grid,ind,nbors_father_cells,nbors_father_grids,ng)
   use amr_commons
+  use amr_constants, only:lll,mmm
   implicit none
   integer::ng,ind
   integer,dimension(1:nvector)::ind_grid
@@ -217,11 +218,13 @@ subroutine get3cubepos(ind_grid,ind,nbors_father_cells,nbors_father_grids,ng)
   integer,dimension(1:8)::iii=(/1,2,1,2,1,2,1,2/)
   integer,dimension(1:8)::jjj=(/3,3,4,4,3,3,4,4/)
   integer,dimension(1:8)::kkk=(/5,5,5,5,6,6,6,6/)
-  integer,dimension(1:27,1:8,1:3)::lll,mmm
   integer,dimension(1:nvector),save::ind_grid1,ind_grid2,ind_grid3
   integer,dimension(1:nvector,1:twotondim),save::nbors_grids
+  integer,dimension(1:threetondim),save::lll_loc,mmm_loc
 
-  call getindices3cube(lll,mmm)
+  ! fetch magic indices
+  lll_loc = lll(:,ind)
+  mmm_loc = mmm(:,ind)
 
   iimin=0; iimax=0
   if(ndim>0)iimax=1
@@ -285,8 +288,8 @@ subroutine get3cubepos(ind_grid,ind,nbors_father_cells,nbors_father_grids,ng)
   end do
 
   do j=1,threetondim
-     igrid=lll(j,ind,ndim)
-     icell=mmm(j,ind,ndim)
+     igrid=lll_loc(j)
+     icell=mmm_loc(j)
      iskip=ncoarse+(icell-1)*ngridmax
      do i=1,ng
         if(nbors_grids(i,igrid)>0)then
@@ -302,98 +305,36 @@ end subroutine get3cubepos
 !##############################################################
 !##############################################################
 !##############################################################
-subroutine getindices3cube(lll,mmm)
-  implicit none
-  integer,dimension(1:27,1:8,1:3)::lll,mmm
-
-  lll=0; mmm=0
-  ! -> ndim=1
-  ! @ind =1
-  lll(1:3,1,1)=(/2,1,1/)
-  mmm(1:3,1,1)=(/2,1,2/)
-  ! @ind =2
-  lll(1:3,2,1)=(/1,1,2/)
-  mmm(1:3,2,1)=(/1,2,1/)
-
-  ! -> ndim=2
-  ! @ind =1
-  lll(1:9,1,2)=(/4,3,3,2,1,1,2,1,1/)
-  mmm(1:9,1,2)=(/4,3,4,2,1,2,4,3,4/)
-  ! @ind =2
-  lll(1:9,2,2)=(/3,3,4,1,1,2,1,1,2/)
-  mmm(1:9,2,2)=(/3,4,3,1,2,1,3,4,3/)
-  ! @ind =3
-  lll(1:9,3,2)=(/2,1,1,2,1,1,4,3,3/)
-  mmm(1:9,3,2)=(/2,1,2,4,3,4,2,1,2/)
-  ! @ind =4
-  lll(1:9,4,2)=(/1,1,2,1,1,2,3,3,4/)
-  mmm(1:9,4,2)=(/1,2,1,3,4,3,1,2,1/)
-
-  ! -> ndim= 3
-  ! @ind = 1
-  lll(1:27,1,3)=(/8,7,7,6,5,5,6,5,5,4,3,3,2,1,1,2,1,1,4,3,3,2,1,1,2,1,1/)
-  mmm(1:27,1,3)=(/8,7,8,6,5,6,8,7,8,4,3,4,2,1,2,4,3,4,8,7,8,6,5,6,8,7,8/)
-  ! @ind = 2
-  lll(1:27,2,3)=(/7,7,8,5,5,6,5,5,6,3,3,4,1,1,2,1,1,2,3,3,4,1,1,2,1,1,2/)
-  mmm(1:27,2,3)=(/7,8,7,5,6,5,7,8,7,3,4,3,1,2,1,3,4,3,7,8,7,5,6,5,7,8,7/)
-  ! @ind = 3
-  lll(1:27,3,3)=(/6,5,5,6,5,5,8,7,7,2,1,1,2,1,1,4,3,3,2,1,1,2,1,1,4,3,3/)
-  mmm(1:27,3,3)=(/6,5,6,8,7,8,6,5,6,2,1,2,4,3,4,2,1,2,6,5,6,8,7,8,6,5,6/)
-  ! @ind = 4
-  lll(1:27,4,3)=(/5,5,6,5,5,6,7,7,8,1,1,2,1,1,2,3,3,4,1,1,2,1,1,2,3,3,4/)
-  mmm(1:27,4,3)=(/5,6,5,7,8,7,5,6,5,1,2,1,3,4,3,1,2,1,5,6,5,7,8,7,5,6,5/)
-  ! @ind = 5
-  lll(1:27,5,3)=(/4,3,3,2,1,1,2,1,1,4,3,3,2,1,1,2,1,1,8,7,7,6,5,5,6,5,5/)
-  mmm(1:27,5,3)=(/4,3,4,2,1,2,4,3,4,8,7,8,6,5,6,8,7,8,4,3,4,2,1,2,4,3,4/)
-  ! @ind = 6
-  lll(1:27,6,3)=(/3,3,4,1,1,2,1,1,2,3,3,4,1,1,2,1,1,2,7,7,8,5,5,6,5,5,6/)
-  mmm(1:27,6,3)=(/3,4,3,1,2,1,3,4,3,7,8,7,5,6,5,7,8,7,3,4,3,1,2,1,3,4,3/)
-  ! @ind = 7
-  lll(1:27,7,3)=(/2,1,1,2,1,1,4,3,3,2,1,1,2,1,1,4,3,3,6,5,5,6,5,5,8,7,7/)
-  mmm(1:27,7,3)=(/2,1,2,4,3,4,2,1,2,6,5,6,8,7,8,6,5,6,2,1,2,4,3,4,2,1,2/)
-  ! @ind = 8
-  lll(1:27,8,3)=(/1,1,2,1,1,2,3,3,4,1,1,2,1,1,2,3,3,4,5,5,6,5,5,6,7,7,8/)
-  mmm(1:27,8,3)=(/1,2,1,3,4,3,1,2,1,5,6,5,7,8,7,5,6,5,1,2,1,3,4,3,1,2,1/)
-
-end subroutine getindices3cube
-!##############################################################
-!##############################################################
-!##############################################################
-!##############################################################
 subroutine getnborcells(igridn,ind,icelln,ng)
   use amr_commons
+  use amr_constants, only:iii,jjj
   implicit none
-  integer::ng,ind
-  integer,dimension(1:nvector,0:twondim)::igridn
-  integer,dimension(1:nvector,1:twondim)::icelln
+  integer,intent(in)::ng,ind
+  integer,dimension(1:nvector,0:twondim),intent(in)::igridn
+  integer,dimension(1:nvector,1:twondim),intent(out)::icelln
   !--------------------------------------------------------------
   ! This routine computes the index of 6-neighboring cells
   ! The user must provide igridn = index of the 6 neighboring
   ! grids and the cell's grid (see routine getnborgrids).
   ! ind is the cell index in the grid.
   !--------------------------------------------------------------
-  integer::i,in,ig,ih,iskip
-  integer,dimension(1:8,1:6)::ggg,hhh
-
-  ggg(1:8,1)=(/1,0,1,0,1,0,1,0/); hhh(1:8,1)=(/2,1,4,3,6,5,8,7/)
-  ggg(1:8,2)=(/0,2,0,2,0,2,0,2/); hhh(1:8,2)=(/2,1,4,3,6,5,8,7/)
-  ggg(1:8,3)=(/3,3,0,0,3,3,0,0/); hhh(1:8,3)=(/3,4,1,2,7,8,5,6/)
-  ggg(1:8,4)=(/0,0,4,4,0,0,4,4/); hhh(1:8,4)=(/3,4,1,2,7,8,5,6/)
-  ggg(1:8,5)=(/5,5,5,5,0,0,0,0/); hhh(1:8,5)=(/5,6,7,8,1,2,3,4/)
-  ggg(1:8,6)=(/0,0,0,0,6,6,6,6/); hhh(1:8,6)=(/5,6,7,8,1,2,3,4/)
+  integer::i,in,ig,ih,iskip,inbor,idim
 
   ! Reset indices
   icelln(1:ng,1:twondim)=0
   ! Compute cell numbers
-  do in=1,twondim
-     ig=ggg(ind,in)
-     ih=hhh(ind,in)
-     iskip=ncoarse+(ih-1)*ngridmax
-     do i=1,ng
-        if(igridn(i,ig)>0)then
-           icelln(i,in)=iskip+igridn(i,ig)
-        end if
-     end do
+  do inbor=1,2
+     do idim=1,ndim
+        in=(idim-1)*2 + inbor
+        ig=iii(idim,inbor,ind)
+        ih=jjj(idim,inbor,ind)
+        iskip=ncoarse+(ih-1)*ngridmax
+        do i=1,ng
+           if(igridn(i,ig)>0)then
+              icelln(i,in)=iskip+igridn(i,ig)
+           end if
+        end do
+     enddo
   end do
 
 end subroutine getnborcells

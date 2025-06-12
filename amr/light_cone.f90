@@ -427,6 +427,16 @@ subroutine perform_my_selection(justcount,z1,z2, &
      &                          pos,vel,var,npart, &
      &                          posout,velout,varout,zout,npartout,verbose)
   !===========================================================================
+  ! Lightcone selection performed in a standard matter dominated flat
+  ! cosmology, om0in+omLin=1, where om0in is the total matter density
+  ! parameter and omLin is the cosmological constant.
+  !
+  ! NOTE 1 : radiation density contribution is neglected. It should be
+  ! taken into account for more accurate results.
+  !
+  ! NOTE 2 : the "xcoord > small" test should be improved (excludes particles
+  !        too close to the observer in the non full sky case).
+  !
   ! All the quantities below are real*8 except
   !      juscount : logical
   !      npart,npartout : integer*4
@@ -765,15 +775,22 @@ end subroutine compute_replica
 !cone cosmo routines
 !===================
 
-
 !===========================================================================
 subroutine init_cosmo_cone(om0in,omLin,hubin,Omega0,OmegaL,OmegaR,coverH0)
   !===========================================================================
   ! om0in : the value of omega0
   ! omLin : the value of Lambda
-  !         We MUST have omega0+Lambda=1.0d0
   ! hubin : the value of H0/100 where H0 is the present Hubble constant
   !         in km/s/Mpc
+  !
+  ! IMPORTANT:
+  ! We MUST have omega0+Lambda=1.0d0
+  ! Contribution of radiation is neglected.
+  !
+  ! However: the routine can be modified to include contribution of radiation
+  !          or consider non standard cosmologies. Flatness OmegaR=0 probably
+  !          remains mandatory for the lightcone algorithm approach to remain
+  !          correct as implemented now.
   !===========================================================================
   implicit none
   real(kind=8) :: om0in,omLin,hubin
@@ -787,133 +804,152 @@ subroutine init_cosmo_cone(om0in,omLin,hubin,Omega0,OmegaL,OmegaR,coverH0)
      write(*,*) 'This routine works only for flat universes, omega0+Lambda=1.'
      STOP
   endif
-  coverH0=299792.5d0/(100.0d0*hubin)
+  coverH0=2.9979246d+5/(100.0d0*hubin) ! use the same value for the speed of
+                                       ! light as in constants.f90
 end subroutine init_cosmo_cone
 
-
 !===========================================================================
-function coord_distance(zz,Omega0,OmegaL,OmegaR,coverH0)
+function coord_distance(z,Omega0,OmegaL,OmegaR,coverH0)
+  !===========================================================================
+  ! Calculation, for a flat cosmology with Omega0+OmegaL=1 (OmegaR=0, no radiation),
+  ! of the observer distance
+  !
+  !   d=\int_0^t(z) c dt/a==(c/H0) \int_0^z (H0/H(Z)) dZ
+  !
+  ! where c is the speed of light, z the redshift of interest,
+  ! t the time, a the expansion factor, H(z) the Hubble parameter, H0=H(z=0)
+  ! the Hubble constant.
+  !
+  ! To improve the accuracy of the calculations, the integral is performed
+  ! after the change of variable 1+z=(2/y)^2:
+  !
+  !   d=(c/H0) \int_{2/sqrt(1+z)}^{2} funEo(y) dy
+  !
+  ! Function funcEo(y) can be modified for "custom" cosmologies.
+  !
+  ! Accuracy: for "standard" values of the cosmology (Omega0,Lambda0)=(0.3,0.7)
+  ! ---------
+  ! up to ~10th digit for z <= 10000
   !===========================================================================
   implicit none
-  real(kind=8) :: z,res,coord_distance,zz
+  real(kind=8) :: coord_distance,z
   real(kind=8) :: Omega0,OmegaL,OmegaR,coverH0
-  z=abs(zz)
-  call qromb(0d0,z,res,omega0,omegaL,OmegaR)
+
+  real(kind=8) :: res,zz,del
+  real(kind=8), parameter :: eps=1.0d-12
+  integer :: error,intgfuncEo
+
+  zz=abs(z)
+  error=intgfuncEo(2.0d0/sqrt(1.0d0+zz),2.0d0,eps,res,del,omega0,omegaL,OmegaR)
   coord_distance=coverH0*res
-  if (zz.lt.0) coord_distance=-coord_distance
+  if (z.lt.0) coord_distance=-coord_distance
 end function coord_distance
 
 !===========================================================================
-function funcE(z,Omega0,OmegaL,OmegaR)
+function funcEo(y,Omega0,OmegaL,OmegaR)
+  !===========================================================================
+  ! This function can be modified for a different cosmological model.
+  !
+  ! distance(z)=\int_t(z)^t(0) c dt/a=(c/H0) \int_0^z (H0/H(Z)) dZ
+  !                                  =(c/H0) \int_{2/sqrt(1+z)}^{2} funEo(y) dy
+  !
+  ! change of variable : 1+z=(y/2)^(-2)
+  !                      funcEo(y)=(2/y)^3 * H0/H[(y/2)^(-2)-1]
+  !
+  ! Omega0 : total matter density term
+  ! OmegaL : cosmological constant term
+  ! OmegaR : curvature term
+  ! Note : the radiation density contribution is neglected
   !===========================================================================
   implicit none
-  real(kind=8) :: funcE,z,HsurH0
+  real(kind=8) :: funcEo,y
   real(kind=8) :: omega0,omegaL,OmegaR
 
-  funcE=1d0/HsurH0(z,Omega0,OmegaL,OmegaR)
-end function funcE
+  funcEo=1d0/sqrt(Omega0+OmegaR*(y/2.0d0)**2+OmegaL*(y/2.0d0)**6)
+end function funcEo
 
-!===========================================================================
-function HsurH0(z,omega0,omegaL,OmegaR)
-  !===========================================================================
+!=======================================================================
+function intgfuncEo(a,b,eps,ans,del,omega0,omegaL,OmegaR)
+  !=======================================================================
+  ! This code is a simple adaptation of the original function intg.
+  !
+  ! Courtesy Jim Fry and Mike Seldner
+  !
+  !=======================================================================
+  ! Original function: function intg(a,b,f,eps,ans,del)
+  ! ------------------
+  ! Private communication from Jim Fry, originally from Mike Seldner
+  !
+  ! Computes \int_[a]^[b] [f](x) dx = [ans] +/- [del]
+  ! iterates until | [del]/[ans] | < [eps] .
+  !
+  ! inputs:  a, b, eps (remain unchanged)
+  ! outputs: ans, del
+  !
+  ! with i(1)=0 and [x = 3/2 y - 1/2 y^3] substitution,
+  ! this routine reproduces order by order the results
+  ! of HP-34C, HP-15C, ...
+  !=======================================================================
+  ! intgfuncEo:
+  ! -----------
+  ! we adapted the original code by replacing f with explicit function
+  ! funcEo and adding supplementary parameters Omega0, OmegaL, OmegaR in
+  ! addition to the main variable.
+  !=======================================================================
   implicit none
-  real(kind=8) :: z,omega0,omegaL,OmegaR,HsurH0
-  HsurH0=sqrt(Omega0*(1d0+z)**3+OmegaR*(1d0+z)**2+OmegaL)
-end function HsurH0
+  integer :: intgfuncEo
+  real(kind=8) :: a,b,eps,ans,del
 
+  real(kind=8) :: Omega0,OmegaL,OmegaR
+  real(kind=8) :: funcEo
 
-!===========================================================================
-SUBROUTINE qromb(a,b,ss,omega0,omegaL,OmegaR)
-  !===========================================================================
-  implicit none
-  INTEGER :: JMAX,JMAXP,K,KM
-  REAL(kind=8) :: a,b,ss,EPS,omega0,omegaL,OmegaR
-  PARAMETER (EPS=1d-6, JMAX=20, JMAXP=JMAX+1, K=5, KM=K-1)
-  !  USES polint,trapzd
-  INTEGER :: j
-  REAL(kind=8) :: dss,h(JMAXP),s(JMAXP)
-  h(1)=1.
-  do j=1,JMAX
-     call trapzd(a,b,s(j),j,omega0,omegaL,OmegaR)
-     if (j.ge.K) then
-        call polint(h(j-KM),s(j-KM),K,0d0,ss,dss)
-        if (abs(dss).le.EPS*abs(ss)) return
-     endif
-     s(j+1)=s(j)
-     h(j+1)=0.25*h(j)
-  enddo
+  real(kind=8) :: t(0:24,0:24)
+  real(kind=8) :: c,d,e,s,y,x,p
+  integer :: n,m,i,j,k
 
-  print *, 'too many steps in qromb'
-END SUBROUTINE qromb
+  c = .5d0 * (b + a)
+  d = .5d0 * (b - a)
+  n = 2
+  m = 1
+  e = 1.d0
+  t(1,1) = 0.d0
+  t(1,2) = 2.d0 * d * funcEo(c,Omega0,OmegaL,OmegaR)
+  t(2,1) = 0.75d0 * t(1,2)
 
-!===========================================================================
-SUBROUTINE polint(xa,ya,n,x,y,dy)
-  !===========================================================================
-  implicit none
-  INTEGER :: n,NMAX
-  REAL(kind=8) :: dy,x,y,xa(n),ya(n)
-  PARAMETER (NMAX=10)
-  INTEGER :: i,m,ns
-  REAL(kind=8) ::den,dif,dift,ho,hp,w,c(NMAX),d(NMAX)
-  ns=1
-  dif=abs(x-xa(1))
-  do i=1,n
-     dift=abs(x-xa(i))
-     if (dift.lt.dif) then
-        ns=i
-        dif=dift
-     endif
-     c(i)=ya(i)
-     d(i)=ya(i)
-  enddo
-  y=ya(ns)
-  ns=ns-1
-  do m=1,n-1
-     do i=1,n-m
-        ho=xa(i)-x
-        hp=xa(i+m)-x
-        w=c(i+1)-d(i)
-        den=ho-hp
-        if(den.eq.0.) print *, 'failure in polint'
-        den=w/den
-        d(i)=hp*den
-        c(i)=ho*den
+  do while (n .lt. 24)
+     n = n + 1
+     m = m * 2
+     e = e * .5d0
+     s = 0.d0
+     do j = 2, m, 2
+        y = dble(j-1) * e
+        x = .5d0*y*(3.d0 - y**2)
+        s = s + (1.d0 - y**2) * (funcEo(c-d*x,omega0,omegaL,OmegaR) &
+             &                  +funcEo(c+d*x,omega0,omegaL,OmegaR))
      enddo
-     if (2*ns.lt.n-m)then
-        dy=c(ns+1)
-     else
-        dy=d(ns)
-        ns=ns-1
-     endif
-     y=y+dy
-  enddo
-  return
-END SUBROUTINE polint
+     t(n,1) = 1.5d0*s*d*e + .5d0*t(n-1,1)
 
-!===========================================================================
-SUBROUTINE trapzd(a,b,s,n,omega0,omegaL,OmegaR)
-  !===========================================================================
-  implicit none
-  INTEGER :: n
-  REAL(kind=8) :: a,b,s,funcE,omega0,omegaL,OmegaR
-  INTEGER :: it,j
-  REAL(kind=8) :: del,sum,tnm,x
-  if (n.eq.1) then
-     s=0.5*(b-a)*(funcE(a,omega0,omegaL,OmegaR)+funcE(b,omega0,omegaL,OmegaR))
-  else
-     it=2**(n-2)
-     tnm=it
-     del=(b-a)/tnm
-     x=a+0.5*del
-     sum=0.
-     do j=1,it
-        sum=sum+funcE(x,omega0,omegaL,OmegaR)
-        x=x+del
+     p = 1.d0
+     do k = 1, n-1
+        p = p * 4.d0
+        i = n + 1 - k
+        t(i-1,k+1) = t(i,k) + (t(i,k) - t(i-1,k))/(p-1.d0)
      enddo
-     s=0.5*(s+(b-a)*sum/tnm)
-  endif
+
+     ans = t(1,n)
+     del = abs(t(1,n)-t(2,n-1))
+     if (n .ge. 9) then
+        if (abs(del) .le. eps*abs(ans)) then
+           intgfuncEo=0
+           return
+        endif
+     endif
+  enddo
+  write(*,*) 'IntgfuncEo did not converge: too many iterations'
+  intgfuncEo=1
   return
-END SUBROUTINE trapzd
+end function intgfuncEo
+
 !=======================================================================
 function myint(x)
   !=======================================================================

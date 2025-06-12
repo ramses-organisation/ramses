@@ -105,7 +105,7 @@ subroutine backup_hydro(filename, filename_desc)
                  do i = 1, ncache
                     xdp(i) = (gamma_rad(ivar-nhydro)-1d0)*uold(ind_grid(i)+iskip, ivar)
                  end do
-                 write(field_name, '("non_thermal_energy_", i0.2)') ivar-3
+                 write(field_name, '("non_thermal_pressure_", i0.2)') ivar-3
                  call generic_dump(field_name, info_var_count, xdp, unit_out, dump_info_flag, unit_info)
               end do
 #endif

@@ -114,4 +114,4 @@ subroutine read_radiation_params(file_desc)
 
   call rad_init()
 
-end subroutine
+end subroutine read_radiation_params

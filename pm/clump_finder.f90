@@ -1159,18 +1159,8 @@ subroutine rho_only(ilevel)
      do i=nlevelmax,ilevel,-1
         ! Compute mass multipole
         if(hydro)call multipole_fine(i)
-        ! Perform TSC using pseudo-particle
-#ifdef TSC
-        if (ndim==3)then
-           call tsc_from_multipole(i)
-        else
-           write(*,*)'TSC not supported for ndim neq 3'
-           call clean_stop
-        end if
-#else
-        ! Perform CIC using pseudo-particle
+        ! Perform CIC or TSC using pseudo-particle
         call cic_from_multipole(i)
-#endif
         ! Update boundaries
         call make_virtual_reverse_dp(rho(1),i)
         call make_virtual_fine_dp   (rho(1),i)

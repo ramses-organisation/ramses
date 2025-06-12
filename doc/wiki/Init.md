@@ -20,6 +20,9 @@ This sets of parameters, contained in the namelist block `&INIT_PARAMS`. This is
 | `v_region=0.0`  | `real arrays` | Y velocity. For `point` regions this is used to define velocity. |
 | `w_region=0.0`  | `real arrays` | Z velocity. For `point` regions this is used to define velocity. |
 | `p_region=0.0`  | `real arrays` | Pressure. For `point` regions this is used to define specific pressure. |
+| `A_region=0.0`  | `real arrays` | X magnetic field. |
+| `B_region=0.0`  | `real arrays` | Y magnetic field. |
+| `C_region=0.0`  | `real arrays` | Z magnetic field. |
 | `filetype=ascii`  | `20*char` | Type of initial conditions file for particles. Possible choices are `ascii` or `grafic`. |
 | `aexp_ini=10.0`  | `real` | This parameter sets the starting expansion factor for cosmology runs only. Default value is read in the IC file. |
 | `multiple=.false.` | `logical` | If `.true.`, each processors reads its own IC file. For parallel runs only. |

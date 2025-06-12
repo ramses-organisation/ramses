@@ -1159,3 +1159,107 @@ def rd_halo(nout,**kwargs):
 
 
    return cat
+
+def rd_cone(nout, icpus="all", path="./", verbose=False):
+    """
+    Returns lightcone particles positions, velocities and redshifts
+    Parameters example for how to use:
+    nout: 5 would be cone_00005
+    icpus: [1, 2] would be cone_00005.out00001 and cone_00005.out00002
+            "all" would be all cpus in the directory
+    path: "./outputs/" if cone_00005 is in the "outputs" directory
+    verbose: True to print debug information
+
+    Explanation:
+    The only logic is to navigate the file structure and handle the stride size as well as the format of the data.
+    File structure (example):
+        cone_00001/
+            cone_00001.out00043  (00001 is the nout, 00043 is the icpu)
+            cone_00001.out00043.txt
+            cone_00001.out00044
+            cone_00001.out00044.txt
+
+    The .txt have 5 lines: ncpu, nstride, nparticles, aold, anew
+
+    The binaries have the following structure:
+    1. ncpu (int)
+    2. nstride (int)
+    3. npart (int) (total number of particles in the simulation, not just in the cone file)
+
+    Then for each stride:
+    4. x-position of all particles in the stride
+    5. x-velocity of all particles in the stride
+    6. y-position of all particles in the stride
+    7. y-velocity of all particles in the stride
+    8. z-position of all particles in the stride
+    9. z-velocity of all particles in the stride
+    """
+    verbose and print(f"Entering rd_cone with nout={nout} and icpus={icpus}")
+
+    def filename(nout, icpu, txt=False):
+        nout = int(nout)
+        padded_nout = str(nout).zfill(5)
+        padded_icpu = str(icpu).zfill(5)
+        if txt:
+            return f"{path}/cone_{padded_nout}/cone_{padded_nout}.out{padded_icpu}.txt"
+        else:
+            return f"{path}/cone_{padded_nout}/cone_{padded_nout}.out{padded_icpu}"
+
+    def list_cpus(nout, path="./", sort=True):
+        cpus = [int(f.split(".")[-2][-5:]) for f in os.listdir(f"{path}/cone_{str(nout).zfill(5)}") if f.endswith(".txt")]
+        ## sort the list of cpus
+        sort and cpus.sort()
+
+        return cpus
+
+    if icpus == "all":
+        cpus = list_cpus(nout, path=path, sort=True)
+        verbose and print(f"Found {len(cpus)} CPUs")
+    else:
+        cpus = icpus
+
+    # list of number of particles and strides for each cpu in nout
+    nparts = []
+    nstrides = []
+    for icpu in cpus:
+        txtfile = filename(nout, icpu, txt=True)
+        with open(txtfile, 'r') as f:
+            _ = int(f.readline().strip())
+            nstride = int(f.readline().strip())
+            npart = int(f.readline().strip())
+
+            verbose and print(f"CPU {icpu}: nstride={nstride}, npart={npart}")
+
+            nstrides.append(nstride)
+            nparts.append(npart)
+
+    ntot = sum(nparts)
+    verbose and print(f"Found {ntot} particles in total for the lightcone")
+
+    # Initialize arrays to store particle data
+    xp = np.zeros((3, ntot), dtype=np.float32)  # Positions (3D)
+    vp = np.zeros((3, ntot), dtype=np.float32)  # Velocities (3D)
+    zp = np.zeros(ntot, dtype=np.float32)       # Redshifts
+
+    verbose and print(f"Reading particle data...")
+    global_ipart = 0  # Global particle index across all CPUs
+
+    for icpu, npart, nstride in zip(cpus, nparts, nstrides):
+        binaryfile = filename(nout, icpu)
+        with FortranFile(binaryfile, 'r') as f:
+            # Discard the 3 first reads (ncpu, nstride, npart)
+            _ = [f.read_ints(dtype) for dtype in ['i', 'i', 'i']]
+
+            ipart = 0  # Local particle index for the current CPU
+            while ipart < npart:
+                remaining_particles = min(npart - ipart, nstride)
+
+                for idim in range(3):
+                    xp[idim, global_ipart:global_ipart + remaining_particles] = f.read_reals('f4')
+                    vp[idim, global_ipart:global_ipart + remaining_particles] = f.read_reals('f4')
+                zp[global_ipart:global_ipart + remaining_particles] = f.read_reals('f4')
+
+                ipart += remaining_particles
+                global_ipart += remaining_particles
+
+    return xp, vp, zp
