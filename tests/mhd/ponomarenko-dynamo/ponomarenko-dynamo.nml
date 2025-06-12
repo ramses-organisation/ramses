@@ -1,0 +1,40 @@
+&RUN_PARAMS
+hydro=.true.
+nremap=1
+ncontrol=1
+nsubcycle=4*1,2
+/
+
+&AMR_PARAMS
+levelmin=5 !5
+levelmax=6 !7 !8
+ngridmax=2000000
+nexpand=1
+boxlen=8.055
+/
+
+&INIT_PARAMS
+condinit_kind="ponomarenko"
+nregion=2
+/
+
+&OUTPUT_PARAMS
+noutput=1
+tout=10 !200.0
+/
+
+&HYDRO_PARAMS
+gamma=1.6666667
+courant_factor=0.8
+slope_type=2
+riemann='upwind'
+riemann2d='upwind'
+scheme='induction'
+eta_mag=0.0025
+/
+
+&REFINE_PARAMS
+err_grad_u=0.1
+interpol_var=0
+interpol_type=2
+/
