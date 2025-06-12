@@ -2,7 +2,7 @@
 nrestart=0                      ! Restart from some snapshot
 hydro=.true.                    ! Baryons included? (Must be for RT)
 rt=.true.                       ! Activate radiative transfer
-static=.false.                   ! Deactivate hydrodynamics (RHD if false)
+static=.true.                   ! Deactivate hydrodynamics (RHD if false)
 /
 
 &AMR_PARAMS
@@ -16,20 +16,20 @@ boxlen=6.6                      ! Box length in units_length (1 kpc)
 err_grad_d=0.5			! Refine on density gradient
 /
 
-&INIT_PARAMS                    ! Initial conditions of the gas
-nregion=2                       ! Number of geometrical regions
-region_type(:)='square'         ! Region gemoetry
-x_center=0.5,     3.3           ! Region center, should be [0, boxlen]
-y_center=0.5,     3.3           !
-length_x=100.0,   1.6           ! Region width, in units of boxlen
-length_y=100.0,   1.6           ! (this region covers the whole box)
-d_region=2d-4,    4d-2          ! Initial density of the gas in H/cc
-p_region=1.4d-08, 1.4d-08	    ! 8000 K and 40 K
+&INIT_PARAMS            ! Initial conditions of the gas
+nregion=1               ! Number of geometrical regions
+region_type(:)='square' ! Region gemoetry
+x_center=0.5            ! Region center, should be [0, boxlen]
+y_center=0.5            !
+length_x=100.0          ! Region width, in units of boxlen
+length_y=100.0          ! (this region covers the whole box)
+d_region=2d-4           ! Initial density of the gas in H/cc
+p_region=1.4d-08	    ! 8000 K and 40 K
 /
 
 &OUTPUT_PARAMS
 noutput=1
-tout=5                           ! End-time for the simulation (in unit_time=Myr)
+tout=2.                          ! End-time for the simulation (in unit_time=Myr)
 /
 
 &HYDRO_PARAMS
@@ -69,23 +69,23 @@ rt_otsa=.true.                  ! On-the-spot approximation?
 rt_pressboost=1d0               ! Radiation momentum boost
 rt_err_grad_cn=0.4              ! Photon flux gradient refinement criterion
 rt_floor_cn=1d-3                ! Photon flux floor for refinement
-rt_nsource=1                    !--Idealized radiation sources------------
-rt_source_type=1*'square'       ! Source geometry (point or square)
-rt_src_x_center=0.05            ! Source position [0, boxlen]
-rt_src_y_center=3.3
-rt_src_length_x=0.1             ! Source size [0, boxlen]
-rt_src_length_y=100.
-rt_src_group=1                  ! Photon group emitted into
-rt_n_source=1d6                 ! Source flux (photons per cm per sec)
-rt_u_source=1.                  ! Reduced x-direction flux
-rt_v_source=0.                  ! Reduced y-direction flux
+rt_nsource=2                    !--Idealized radiation sources------------
+rt_source_type=2*'square'       ! Source geometry (point or square)
+rt_src_x_center=0.05,6.55       ! Source position [0, boxlen]
+rt_src_y_center=3.3,3.3
+rt_src_length_x=0.1,0.1         ! Source size [0, boxlen]
+rt_src_length_y=0.1,0.1
+rt_src_group=1,1                ! Photon group emitted into
+rt_n_source=1d6,1d6             ! Source flux (photons per cm per sec)
+rt_u_source=1.,-1.              ! Reduced x-direction flux
+rt_v_source=0.,0.               ! Reduced y-direction flux
 /
 
 
 &RT_GROUPS                      ! Photon group properties (BB at 10^5 K)
 kappaAbs=0d0                    ! Dust opacity (cm^2 g^-1)
-group_csn(1,:)= 1.6d-18, 0., 0. ! group 1 cross sec. -> HI, HeI, HeII [cm^2]
-group_cse(1,:)= 1.1d-18, 0., 0. ! group 1 e-weighted cs -> HI, HeI, HeII [cm^2]
+group_csn(1,:)= 1.6e-18, 0., 0. ! group 1 cross sec. -> HI, HeI, HeII [cm^2]
+group_cse(1,:)= 1.1e-18, 0., 0. ! group 1 e-weighted cs -> HI, HeI, HeII [cm^2]
 group_egy     = 29.6            ! group 1 photon energy [eV]
 spec2group    = 1,1,1           ! Groups that gas recombinations emit into (non-OTSA)
 /

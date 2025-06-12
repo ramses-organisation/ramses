@@ -59,8 +59,8 @@ bound_type= 1, 2, 2, 1          ! Boundary type (2=flowthrough, 1=mirror)
 
 &RT_PARAMS
 rt_TConst=1d4                   ! Force constant gas temperature of 10^4 K
-X=1d0                           ! Hydrogen mass fraction
-Y=0d0                           ! Helium mass fraction
+X=0.76d0                           ! Hydrogen mass fraction
+Y=0.24d0                           ! Helium mass fraction
 rt_flux_scheme='glf'            ! HLL vs GLF
 hll_evals_file='../../rt/hll_evals.list' ! HLL eigenvalues file'
 rt_courant_factor=0.8           ! Courant number for RT timesteps
@@ -71,21 +71,24 @@ rt_otsa=.true.                  ! On-the-spot approximation?
 rt_output_coolstats=.true.      ! Output thermochemistry stats in log
 rt_err_grad_cn=0.4              ! Photon density refinement criterion
 rt_floor_cn=3d-4                ! Refinement floor
-rt_nsource=1                    !--Idealized radiation sources------------
-rt_source_type=1*'point'        ! Source geometry (point or square)
+rt_nsource=3                    !--Idealized radiation sources------------
+rt_source_type=3*'point'        ! Source geometry (point or square)
 rt_src_x_center=0.              ! Source position (0 to 1)
 rt_src_y_center=0.
 rt_src_length_x=0.              ! Source size (0 to 1)
 rt_src_length_y=0
-rt_src_group=1                  ! Photon group emitted into
-rt_n_source=2d28                ! Source luminosity (photons per sec)
+rt_src_group=1,2,3              ! Photon group emitted into
+rt_n_source=0.89d28, 0.99d28, 0.12d28 ! Source luminosity (photons per sec) - total of 2d28 photons/s
 rt_u_source=0.                  ! Reduced x-direction flux
 rt_v_source=0.                  ! Reduced y-direction flux
 /
 
-
-&RT_GROUPS                      ! Photon group properties
-group_csn(1,:)= 1.6d-18, 0., 0. ! group 1 cross sec. -> HI, HeI, HeII [cm^2]
-group_cse(1,:)= 1.1d-18, 0., 0. ! group 1 e-weighted cs -> HI, HeI, HeII [cm^2]
-group_egy     = 29.6            ! group 1 photon energy [eV]
+&RT_GROUPS ! Blackbody at T=1d5 Kelvin
+group_csn(1,:)= 3.0d-18, 0., 0.
+group_cse(1,:)= 2.8d-18, 0., 0.
+group_csn(2,:)= 5.7d-19, 4.5d-18, 0.
+group_cse(2,:)= 5.0d-19, 4.1d-18, 0.
+group_csn(3,:)= 7.9d-20, 1.2d-18, 1.1d-18
+group_cse(3,:)= 7.5d-20, 1.1d-18, 1.0d-18
+group_egy = 18.8, 35.1, 65.6
 /

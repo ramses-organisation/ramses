@@ -1,20 +1,19 @@
 
 &RUN_PARAMS
 hydro=.true.
-pic=.true.
-tracer = .true.
 ncontrol=1
 nrestart=0
 nremap=0
 nsubcycle=10*2
+verbose=.false.
+nstepmax=20
 /
 
 &AMR_PARAMS
-levelmin=5
+levelmin=4
 levelmax=7
-ngridtot=50000
-nparttot=5000000
-nexpand=1
+ngridtot=40000
+nexpand=0
 boxlen=0.5
 /
 
@@ -24,36 +23,38 @@ region_type(1)='square'
 region_type(2)='point'
 x_center=0.5,0.0
 y_center=0.5,0.0
+z_center=0.5,0.0
 length_x=10.0,1.0
 length_y=10.0,1.0
+length_z=10.0,1.0
 exp_region=10.0,10.0
 d_region=1.0,0.0
 u_region=0.0,0.0
 v_region=0.0,0.0
+w_region=0.0,0.0
 p_region=1e-5,0.4
 /
 
 &OUTPUT_PARAMS
-noutput=1
-tout=1
+noutput=2
+foutput=20
 /
 
 &HYDRO_PARAMS
 gamma=1.4
 courant_factor=0.8
 scheme='muscl'
-slope_type=1
+slope_type=8
+riemann='hll'
 /
 
 &REFINE_PARAMS
-err_grad_d=0.01
+interpol_var=2
 interpol_type=1
-/
-
-
-&tracer_params
-MC_tracer = .false.
-tracer_feed_fmt = 'ascii'
-tracer_feed= 'tracers.txt'
-tracer_mass = 1e-6
+err_grad_p=0.1
+r_refine=0.125,0.0625,0.03125
+x_refine=0.0625,0.0625
+y_refine=0.0625,0.0625
+z_refine=0.0625,0.0625
+exp_refine=10,10.,10.
 /
