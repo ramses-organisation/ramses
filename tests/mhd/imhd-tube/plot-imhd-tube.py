@@ -69,8 +69,8 @@ By_ana_interp = np.interp(x_sim, x_ana, By_ana)
 tolerance = {}
 
 for var, sim, ana in zip(
-    ["density", "velocity", "pressure", "mag_field"], 
-    [rho_sim, u_sim, p_sim, By_sim], 
+    ["density", "velocity", "pressure", "mag_field"],
+    [rho_sim, u_sim, p_sim, By_sim],
     [rho_ana_interp, u_ana_interp, p_ana_interp, By_ana_interp]
 ):
     abs_error = np.abs(sim - ana)
