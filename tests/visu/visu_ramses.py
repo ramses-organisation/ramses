@@ -625,7 +625,9 @@ def check_solution(data,test_name,tolerance=None,threshold=2.0e-14,norm_min=1.0e
         except KeyError:
             this_ref = None
 
-        if this_sol is not None and this_ref is not None:
+        if  key.endswith("error"):
+            error = this_sol
+        elif this_sol is not None and this_ref is not None:
             if this_sol == this_ref == 0.0:
                 error = 0.0
             elif this_sol == 0.0 or this_ref == 0.0:
