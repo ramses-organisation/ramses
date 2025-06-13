@@ -211,7 +211,7 @@ subroutine cmp_residual_cg(ilevel,icount)
   ! Poisson solver. The residual is stored in f(i,1).
   !------------------------------------------------------------------
   integer::i,idim,inbor,igrid,ngrid,ncache,ind,iskip,nx_loc
-  integer::id1,ig1,ih1
+  integer::id1,ig1,ih1,id2,ig2,ih2
   real(dp)::dx2,fourpi,scale,oneoversix,fact
 
   integer ,dimension(1:nvector),save::ind_grid,ind_cell
@@ -332,7 +332,7 @@ subroutine cmp_Ap_cg(ilevel)
   ! Poisson Solver and store the result into f(i,3).
   !------------------------------------------------------------------
   integer::i,idim,inbor,igrid,ngrid,ncache,ind,iskip
-  integer::id1,ig1,ih1
+  integer::id1,ig1,ih1,id2,ig2,ih2
   real(dp)::oneoversix
 
   integer,dimension(1:nvector),save::ind_grid,ind_cell
