@@ -263,9 +263,7 @@ subroutine cmp_residual_cg(ilevel,icount)
      do ind=1,twotondim
         ! Gather neighboring potential
         do idim=1,ndim
-        do inbor=1,2
-           id1=jjj(idim,inbor,ind)
-           ig1=iii(idim,inbor,ind)
+           id1=jjj(idim,1,ind); ig1=iii(idim,1,ind)
            ih1=ncoarse+(id1-1)*ngridmax
            do i=1,ngrid
               if(igridn(i,ig1)>0)then
@@ -274,7 +272,15 @@ subroutine cmp_residual_cg(ilevel,icount)
                  phig(i,idim)=phi_left(i,id1,idim)
               end if
            end do
-        end do
+           id2=jjj(idim,2,ind); ig2=iii(idim,2,ind)
+           ih2=ncoarse+(id2-1)*ngridmax
+           do i=1,ngrid
+              if(igridn(i,ig2)>0)then
+                 phid(i,idim)=phi(igridn(i,ig2)+ih2)
+              else
+                 phid(i,idim)=phi_right(i,id2,idim)
+              end if
+           end do
         end do
 
         ! Compute central cell index
@@ -360,12 +366,9 @@ subroutine cmp_Ap_cg(ilevel)
 
      ! Loop over cells
      do ind=1,twotondim
-
         ! Gather neighboring potential
         do idim=1,ndim
-        do inbor=1,2
-           id1=jjj(idim,inbor,ind)
-           ig1=iii(idim,inbor,ind)
+           id1=jjj(idim,1,ind); ig1=iii(idim,1,ind)
            ih1=ncoarse+(id1-1)*ngridmax
            do i=1,ngrid
               if(igridn(i,ig1)>0)then
@@ -374,9 +377,17 @@ subroutine cmp_Ap_cg(ilevel)
                  phig(i,idim)=0
               end if
            end do
+           id2=jjj(idim,2,ind); ig2=iii(idim,2,ind)
+           ih2=ncoarse+(id2-1)*ngridmax
+           do i=1,ngrid
+              if(igridn(i,ig2)>0)then
+                 phid(i,idim)=f(igridn(i,ig2)+ih2,2)
+              else
+                 phid(i,idim)=0
+              end if
+           end do
         end do
-        end do
-
+        
         ! Compute central cell index
         iskip=ncoarse+(ind-1)*ngridmax
         do i=1,ngrid
