@@ -258,13 +258,13 @@ SUBROUTINE init_SED_table()
 ! each photon group as a function of stellar population age and
 ! metallicity.  The SED is read from a directory specified by sed_dir.
 !-------------------------------------------------------------------------
-  use amr_commons,only:myid
+  use amr_commons,only:myid,ncpu
   use rt_parameters
   use spectrum_integrator_module
   use constants,only:c_cgs, eV2erg, hplanck
   use mpi_mod
 #ifndef WITHOUTMPI
-  use amr_commons,only:IOGROUPSIZE,ncpu
+  use amr_commons,only:IOGROUPSIZE
   real(kind=8),allocatable::tbl2(:,:,:)
   integer::dummy_io,info2,ierr
 #endif
@@ -1295,12 +1295,12 @@ SUBROUTINE init_UV_background()
 ! d) wavelengths (increasing order) [Angstrom]
 ! e) fluxes per (redshift,wavelength) [photons cm-2 s-1 A-1 sr-1]
 !-------------------------------------------------------------------------
-  use amr_commons,only:myid
+  use amr_commons,only:myid,ncpu
   use rt_parameters
   use SED_module
   use mpi_mod
 #ifndef WITHOUTMPI
-  use amr_commons,only:IOGROUPSIZE,ncpu
+  use amr_commons,only:IOGROUPSIZE
   real(kind=8),allocatable  :: tbl2(:,:)
   integer::dummy_io,info2,ierr
 #endif
