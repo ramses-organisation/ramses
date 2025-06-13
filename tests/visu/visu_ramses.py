@@ -505,10 +505,15 @@ def check_solution(data,test_name,tolerance=None,threshold=2.0e-14,norm_min=1.0e
     tex_file.write(" \n")
     tex_file.close()
 
+    vars_to_correct = ["sink_lx","sink_ly","sink_lz",
+                       "sink_vx","sink_vy","sink_vz",
+                       "sink_vx_gas","sink_vy_gas","sink_vz_gas"]
     # Find vectors and normalize components
     norms = dict()
     permutations = {"_x":["_y","_z"],"_y":["_x","_z"],"_z":["_x","_y"]}
     for key in sorted(data.keys()):
+        if key not in vars_to_correct:
+            continue
         norms[key] = 1.0
         if key.endswith("_x") or key.endswith("_y") or key.endswith("_z"):
             rawkey = key[:-2]
@@ -547,8 +552,10 @@ def check_solution(data,test_name,tolerance=None,threshold=2.0e-14,norm_min=1.0e
            key == "temperature" or \
            key.startswith("radiative_energy"):
             solution = np.log10(np.abs(keyData))
-        else:
+        elif key in vars_to_correct:
             solution = np.where(np.abs(keyData)<threshold*norms[key],0.0,np.abs(keyData))
+        else:
+            solution = np.abs(keyData)
 
         try:
             sol[key] = math.fsum(solution)
