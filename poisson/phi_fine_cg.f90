@@ -387,7 +387,7 @@ subroutine cmp_Ap_cg(ilevel)
               end if
            end do
         end do
-        
+
         ! Compute central cell index
         iskip=ncoarse+(ind-1)*ngridmax
         do i=1,ngrid
