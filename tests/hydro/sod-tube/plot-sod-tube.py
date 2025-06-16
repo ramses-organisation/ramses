@@ -51,7 +51,6 @@ ax3.plot(x_ana, p_ana, color="red")
 fig.subplots_adjust(wspace=0.3)
 fig.savefig("sod-tube.pdf", bbox_inches="tight")
 
-tolerance = {}
 
 # Interpolate the analytical solution to the simulation grid
 rho_ana_interp = np.interp(x_sim, x_ana, rho_ana)
@@ -69,8 +68,6 @@ for var, sim, ana in zip(
 
     data["data"][f"{var}_med_error"] = np.median(rel_error)
     data["data"][f"{var}_avg_error"] = np.mean(rel_error)
-    tolerance[f"{var}_med_error"] = 5e-4
-    tolerance[f"{var}_avg_error"] = 5e-2
 
 # Check results against reference solution
-visu_ramses.check_solution(data["data"], "sod-tube", tolerance=tolerance)
+visu_ramses.check_solution(data["data"], "sod-tube")
