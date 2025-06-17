@@ -70,7 +70,7 @@ module amr_commons
   integer ,allocatable,dimension(:)  ::father  ! father cell
   integer ,allocatable,dimension(:)  ::next    ! next grid in list
   integer ,allocatable,dimension(:)  ::prev    ! previous grid in list
-  integer ,allocatable,dimension(:)  ::son     ! sons grids
+  integer ,allocatable,dimension(:)  ::son     ! sons grid
   integer ,allocatable,dimension(:)  ::flag1   ! flag for refine
   integer ,allocatable,dimension(:)  ::flag2   ! flag for expansion
 

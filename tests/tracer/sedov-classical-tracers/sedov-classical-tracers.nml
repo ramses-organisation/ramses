@@ -34,9 +34,8 @@ p_region=1e-5,0.4
 /
 
 &OUTPUT_PARAMS
-foutput=100000
-noutput=2
-tout=0.0,1.0
+noutput=1
+tout=1
 /
 
 &HYDRO_PARAMS

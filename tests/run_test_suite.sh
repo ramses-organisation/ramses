@@ -23,6 +23,10 @@
 #       ./run_test_suite.sh -t mhd
 #   - Run quick test suite:
 #       ./run_test_suite.sh -q
+#   - Run test suite with coverage:
+#       ./run_test_suite.sh -s
+#   - Run tests with restart:
+#       ./run_test_suite.sh -r
 #
 #######################################################################
 
@@ -40,7 +44,8 @@ DELDATA=true;
 COVERAGE=false;
 CLEAN_ALL=false;
 SELECTTEST=false;
-while getopts "cdsp:qt:v" OPTION; do
+RESTART=false;
+while getopts "cdsp:qt:vr" OPTION; do
    case $OPTION in
       c)
          CLEAN_ALL=true;
@@ -62,6 +67,9 @@ while getopts "cdsp:qt:v" OPTION; do
       ;;
       v)
          VERBOSE=true;
+      ;;
+      r)
+         RESTART=true;
       ;;
    esac
 done
@@ -305,24 +313,49 @@ for ((i=0;i<$ntests;i++)); do
    # Run test
    cd ${TEST_DIRECTORY}/${testname[n]};
    $DELETE_RESULTS;
-   RUN_TEST="${RUN_TEST_BASE}${ndim}d ${rawname[i]}.nml";
-   echo -n "Running test:" | tee -a $LOGFILE;
-   STARTTIME_TEST=$(python3 -c 'import time; print(int(time.time()*1000))');
-   # prepname="prepare-${rawname[i]}.sh";
+
    if $VERBOSE ; then
-      if [ -f ${BEFORETEST} ]; then
-         ${SHELL} ${BEFORETEST} 2>&1 | tee -a $LOGFILE;
-      fi
-      ${RUN_TEST} 2>&1 | tee -a $LOGFILE;
+      function run_before_test
+      {
+         (${SHELL} ${BEFORETEST} 2>&1 | tee -a ${LOGFILE})
+      }
+      function run_test
+      {
+         (${RUN_TEST_BASE}${ndim}d ${rawname[i]}.nml 2>&1 | tee -a ${LOGFILE})
+      }
    else
-      if [ -f ${BEFORETEST} ]; then
-         ${SHELL} ${BEFORETEST} >> $LOGFILE 2>&1;
-      fi
-      ${RUN_TEST} >> $LOGFILE 2>&1;
+      function run_before_test
+      {
+         (${SHELL} ${BEFORETEST} >> ${LOGFILE} 2>&1)
+      }
+      function run_test
+      {
+         (${RUN_TEST_BASE}${ndim}d ${rawname[i]}.nml >> ${LOGFILE} 2>&1)
+      }
    fi
+   echo "Running test:" | tee -a $LOGFILE;
+   STARTTIME_TEST=$(python3 -c 'import time; print(int(time.time()*1000))');
+
+   if [ -f ${BEFORETEST} ]; then
+         run_before_test;
+   fi
+
+   if $RESTART ; then
+      echo  "Restart: step 1 ..." | tee -a $LOGFILE;
+      python3 ../../run_with_restart.py -s 1 -t ${rawname[i]}  | tee -a $LOGFILE;
+      run_test;
+      echo  "Restart: step 2 ..." | tee -a $LOGFILE;
+      python3 ../../run_with_restart.py -s 2 -t ${rawname[i]}  | tee -a $LOGFILE;
+      run_test;
+      echo  "Restart: step 3 ..." | tee -a $LOGFILE;
+      python3 ../../run_with_restart.py -s 3 -t ${rawname[i]}  | tee -a $LOGFILE;
+   else
+      run_test;
+   fi
+
    # Record test time
    ENDTIME_TEST=$(python3 -c 'import time; print(int(time.time()*1000))');
-   milliseconds=$(($ENDTIME_TEST - $STARTTIME_TEST));
+   milliseconds=$((${ENDTIME_TEST} - ${STARTTIME_TEST}));
    seconds=$(($milliseconds / 1000));
    hours=$(($seconds / 3600));
    seconds=$(($seconds % 3600));
