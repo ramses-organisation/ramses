@@ -341,7 +341,6 @@ subroutine cic_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
   real(dp)::dx,dx_loc,scale,vol_loc
   ! Grid-based arrays
   integer ,dimension(1:nvector,1:threetondim),save::nbors_father_cells
-  integer ,dimension(1:nvector,1:twotondim),save::nbors_father_grids
   ! Particle-based arrays
   logical ,dimension(1:nvector),save::ok
   real(dp),dimension(1:nvector),save::mmm
@@ -367,7 +366,7 @@ subroutine cic_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
 
 
   ! Gather neighboring father cells (should be present anytime !)
-  call get3cubefather(ind_cell,nbors_father_cells,nbors_father_grids,ng,ilevel)
+  call get3cubefather(ind_cell,nbors_father_cells,ng,ilevel)
 
   ! Rescale particle position at level ilevel
   do idim=1,ndim
@@ -880,7 +879,6 @@ subroutine cic_cell(ind_grid,ngrid,ilevel)
   integer::i,j,idim,ind_cell_son,iskip_son,np,ind_son,nx_loc,ind
   integer ,dimension(1:nvector),save::ind_cell
   integer ,dimension(1:nvector,1:threetondim),save::nbors_father_cells
-  integer ,dimension(1:nvector,1:twotondim),save::nbors_father_grids
   ! Particle-based arrays
   logical ,dimension(1:nvector),save::ok
   real(dp),dimension(1:nvector),save::mmm
@@ -911,7 +909,7 @@ subroutine cic_cell(ind_grid,ngrid,ilevel)
   end do
 
   ! Gather 3x3x3 neighboring parent cells
-  call get3cubefather(ind_cell,nbors_father_cells,nbors_father_grids,ngrid,ilevel)
+  call get3cubefather(ind_cell,nbors_father_cells,ngrid,ilevel)
 
   ! Loop over grid cells
   do ind_son=1,twotondim
@@ -1130,7 +1128,6 @@ subroutine tsc_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
   real(dp)::dx,dx_loc,scale,vol_loc
   ! Grid-based arrays
   integer ,dimension(1:nvector,1:threetondim),save::nbors_father_cells
-  integer ,dimension(1:nvector,1:twotondim),save::nbors_father_grids
   ! Particle-based arrays
   logical ,dimension(1:nvector),save::ok,abandoned
   real(dp),dimension(1:nvector),save::mmm
@@ -1154,7 +1151,7 @@ subroutine tsc_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
   vol_loc=dx_loc**ndim
 
   ! Gather neighboring father cells (should be present at anytime!)
-  call get3cubefather(ind_cell,nbors_father_cells,nbors_father_grids,ng,ilevel)
+  call get3cubefather(ind_cell,nbors_father_cells,ng,ilevel)
 
   ! Rescale particle position at level ilevel
   do idim=1,ndim
@@ -1445,7 +1442,6 @@ subroutine tsc_cell(ind_grid,ngrid,ilevel)
   integer::i,j,idim,ind_cell_son,iskip_son,np,ind_son,nx_loc,ind
   integer ,dimension(1:nvector),save::ind_cell
   integer ,dimension(1:nvector,1:threetondim),save::nbors_father_cells
-  integer ,dimension(1:nvector,1:twotondim),save::nbors_father_grids
   ! Particle-based arrays
   logical ,dimension(1:nvector),save::ok
   real(dp),dimension(1:nvector),save::mmm
@@ -1476,7 +1472,7 @@ subroutine tsc_cell(ind_grid,ngrid,ilevel)
   end do
 
   ! Gather 3x3x3 neighboring parent cells
-  call get3cubefather(ind_cell,nbors_father_cells,nbors_father_grids,ngrid,ilevel)
+  call get3cubefather(ind_cell,nbors_father_cells,ngrid,ilevel)
 
   ! Loop over grid cells
   do ind_son=1,twotondim

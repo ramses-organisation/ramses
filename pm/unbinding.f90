@@ -1274,7 +1274,6 @@ subroutine unbinding_neighborsearch(ind_cell,np,jlevel)
   real(dp),dimension(1:3)::skip_loc
   integer ,dimension(1:nvector,1:threetondim),save::nbors_father_cells
   integer ,dimension(1:threetondim)::nbors_father_cells_pass
-  integer ,dimension(1:nvector,1:twotondim),save::nbors_father_grids
   integer::ntestpos,ntp,idim,ipos
 
   real(dp),dimension(1:3)::this_cellpos
@@ -1379,7 +1378,7 @@ subroutine unbinding_neighborsearch(ind_cell,np,jlevel)
   do j=1,np
     ind_cell_coarse(j)=father(ind_grid(j))
   enddo
-  call get3cubefather(ind_cell_coarse,nbors_father_cells,nbors_father_grids,np,jlevel)
+  call get3cubefather(ind_cell_coarse,nbors_father_cells,np,jlevel)
 
 
   do j=1,np
