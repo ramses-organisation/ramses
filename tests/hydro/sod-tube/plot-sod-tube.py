@@ -70,6 +70,19 @@ for var, sim, ana in zip(
     data["data"][f"{var}_med_error"] = np.median(rel_error)
     data["data"][f"{var}_avg_error"] = np.mean(rel_error)
     tolerance[f"{var}_med_error"] = 1e-8
+    
+    
+# 1. Read error computed with other parameters
+
+# 2. read ref 
+
+# 3. Compare
+
+# data["data"]["nb_failed_param_combinaison"] = ...
+
+# if data["data"]["nb_failed_param_combinaison"] > 0:
+#     print("Some parameter combinations failed")
+#     print the combinations that failed
 
 # Check results against reference solution
 visu_ramses.check_solution(data["data"], "sod-tube", tolerance=tolerance)
