@@ -37,6 +37,7 @@ tout=8.99e-05
 &POISSON_PARAMS
 gravity_type=0
 epsilon=1d-4
+cg_levelmin=7
 /
 
 &HYDRO_PARAMS

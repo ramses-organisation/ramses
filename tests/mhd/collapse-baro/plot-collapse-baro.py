@@ -205,4 +205,4 @@ ax6.set_ylim([ymin,ymax])
 fig.savefig('collapse-baro.pdf',bbox_inches='tight')
 
 # Check results against reference solution
-visu_ramses.check_solution(data["data"],'collapse-baro',overwrite=True)
+visu_ramses.check_solution(data["data"],'collapse-baro',overwrite=False)
