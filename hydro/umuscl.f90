@@ -270,7 +270,7 @@ subroutine trace2d(q,dq,qm,qp,dx,dy,dt,ngrid)
   integer ::i, j, k, l
   integer ::ilo,ihi,jlo,jhi,klo,khi
   integer ::ir, iu, iv, ip
-  real(dp)::dtdx, dtdy
+  real(dp)::dtdx
   real(dp)::r, u, v, p
   real(dp)::drx, dux, dvx, dpx
   real(dp)::dry, duy, dvy, dpy
@@ -285,7 +285,6 @@ subroutine trace2d(q,dq,qm,qp,dx,dy,dt,ngrid)
 #endif
 
   dtdx = dt/dx
-  dtdy = dt/dy
   ilo=MIN(1,iu1+1); ihi=MAX(1,iu2-1)
   jlo=MIN(1,ju1+1); jhi=MAX(1,ju2-1)
   klo=MIN(1,ku1+1); khi=MAX(1,ku2-1)
@@ -369,28 +368,28 @@ subroutine trace2d(q,dq,qm,qp,dx,dy,dt,ngrid)
 #endif
 
               ! Top state at bottom interface
-              qp(l,i,j,k,ir,2) = r - half*dry + sr0*dtdy*half
-              qp(l,i,j,k,iu,2) = u - half*duy + su0*dtdy*half
-              qp(l,i,j,k,iv,2) = v - half*dvy + sv0*dtdy*half
-              qp(l,i,j,k,ip,2) = p - half*dpy + sp0*dtdy*half
+              qp(l,i,j,k,ir,2) = r - half*dry + sr0*dtdx*half
+              qp(l,i,j,k,iu,2) = u - half*duy + su0*dtdx*half
+              qp(l,i,j,k,iv,2) = v - half*dvy + sv0*dtdx*half
+              qp(l,i,j,k,ip,2) = p - half*dpy + sp0*dtdx*half
 !              qp(l,i,j,k,ir,2) = max(smallr, qp(l,i,j,k,ir,2))
               if(qp(l,i,j,k,ir,2)<smallr)qp(l,i,j,k,ir,2)=r
 #if NENER>0
               do irad=1,nener
-                 qp(l,i,j,k,ip+irad,2) = e(irad) - half*dey(irad) + se0(irad)*dtdy*half
+                 qp(l,i,j,k,ip+irad,2) = e(irad) - half*dey(irad) + se0(irad)*dtdx*half
               end do
 #endif
 
               ! Bottom state at top interface
-              qm(l,i,j,k,ir,2) = r + half*dry + sr0*dtdy*half
-              qm(l,i,j,k,iu,2) = u + half*duy + su0*dtdy*half
-              qm(l,i,j,k,iv,2) = v + half*dvy + sv0*dtdy*half
-              qm(l,i,j,k,ip,2) = p + half*dpy + sp0*dtdy*half
+              qm(l,i,j,k,ir,2) = r + half*dry + sr0*dtdx*half
+              qm(l,i,j,k,iu,2) = u + half*duy + su0*dtdx*half
+              qm(l,i,j,k,iv,2) = v + half*dvy + sv0*dtdx*half
+              qm(l,i,j,k,ip,2) = p + half*dpy + sp0*dtdx*half
 !              qm(l,i,j,k,ir,2) = max(smallr, qm(l,i,j,k,ir,2))
               if(qm(l,i,j,k,ir,2)<smallr)qm(l,i,j,k,ir,2)=r
 #if NENER>0
               do irad=1,nener
-                 qm(l,i,j,k,ip+irad,2) = e(irad) + half*dey(irad) + se0(irad)*dtdy*half
+                 qm(l,i,j,k,ip+irad,2) = e(irad) + half*dey(irad) + se0(irad)*dtdx*half
               end do
 #endif
 
@@ -414,8 +413,8 @@ subroutine trace2d(q,dq,qm,qp,dx,dy,dt,ngrid)
                  sa0 = -u*dax-v*day       ! Source terms
                  qp(l,i,j,k,n,1) = a - half*dax + sa0*dtdx*half   ! Right state
                  qm(l,i,j,k,n,1) = a + half*dax + sa0*dtdx*half   ! Left state
-                 qp(l,i,j,k,n,2) = a - half*day + sa0*dtdy*half   ! Top state
-                 qm(l,i,j,k,n,2) = a + half*day + sa0*dtdy*half   ! Bottom state
+                 qp(l,i,j,k,n,2) = a - half*day + sa0*dtdx*half   ! Top state
+                 qm(l,i,j,k,n,2) = a + half*day + sa0*dtdx*half   ! Bottom state
               end do
            end do
         end do
@@ -436,20 +435,20 @@ subroutine trace3d(q,dq,qm,qp,dx,dy,dz,dt,ngrid)
   use const
   implicit none
 
-  integer ::ngrid
-  real(dp)::dx, dy, dz, dt
+  integer,intent(in)::ngrid
+  real(dp),intent(in)::dx, dy, dz, dt
 
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::dq
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qm
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qp
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar),intent(in)::q
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim),intent(in)::dq
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim),intent(out)::qm
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim),intent(out)::qp
 
   ! declare local variables
   integer ::i, j, k, l
   integer ::ilo,ihi,jlo,jhi,klo,khi
   integer ::ir, iu, iv, iw, ip
-  real(dp)::dtdx, dtdy, dtdz
-  real(dp)::r, u, v, w, p
+  real(dp)::dtdx
+  real(dp)::r, u, v, w, p, r_orig, oneoverr
   real(dp)::drx, dux, dvx, dwx, dpx
   real(dp)::dry, duy, dvy, dwy, dpy
   real(dp)::drz, duz, dvz, dwz, dpz
@@ -464,8 +463,6 @@ subroutine trace3d(q,dq,qm,qp,dx,dy,dz,dt,ngrid)
 #endif
 
   dtdx = dt/dx
-  dtdy = dt/dy
-  dtdz = dt/dz
   ilo=MIN(1,iu1+1); ihi=MAX(1,iu2-1)
   jlo=MIN(1,ju1+1); jhi=MAX(1,ju2-1)
   klo=MIN(1,ku1+1); khi=MAX(1,ku2-1)
@@ -482,143 +479,159 @@ subroutine trace3d(q,dq,qm,qp,dx,dy,dz,dt,ngrid)
               v   =  q(l,i,j,k,iv)
               w   =  q(l,i,j,k,iw)
               p   =  q(l,i,j,k,ip)
+              oneoverr = 1d0/r
 #if NENER>0
               do irad=1,nener
                  e(irad) = q(l,i,j,k,ip+irad)
               end do
 #endif
 
-              ! TVD slopes in all 3 directions
-              drx = dq(l,i,j,k,ir,1)
-              dpx = dq(l,i,j,k,ip,1)
-              dux = dq(l,i,j,k,iu,1)
-              dvx = dq(l,i,j,k,iv,1)
-              dwx = dq(l,i,j,k,iw,1)
+              ! Half TVD slopes in all 3 directions
+              drx = half*dq(l,i,j,k,ir,1)
+              dpx = half*dq(l,i,j,k,ip,1)
+              dux = half*dq(l,i,j,k,iu,1)
+              dvx = half*dq(l,i,j,k,iv,1)
+              dwx = half*dq(l,i,j,k,iw,1)
 #if NENER>0
               do irad=1,nener
-                 dex(irad) = dq(l,i,j,k,ip+irad,1)
+                 dex(irad) = half*dq(l,i,j,k,ip+irad,1)
+              end do
+#endif
+              dry = half*dq(l,i,j,k,ir,2)
+              dpy = half*dq(l,i,j,k,ip,2)
+              duy = half*dq(l,i,j,k,iu,2)
+              dvy = half*dq(l,i,j,k,iv,2)
+              dwy = half*dq(l,i,j,k,iw,2)
+#if NENER>0
+              do irad=1,nener
+                 dey(irad) = half*dq(l,i,j,k,ip+irad,2)
+              end do
+#endif
+              drz = half*dq(l,i,j,k,ir,3)
+              dpz = half*dq(l,i,j,k,ip,3)
+              duz = half*dq(l,i,j,k,iu,3)
+              dvz = half*dq(l,i,j,k,iv,3)
+              dwz = half*dq(l,i,j,k,iw,3)
+#if NENER>0
+              do irad=1,nener
+                 dez(irad) = half*dq(l,i,j,k,ip+irad,3)
               end do
 #endif
 
-              dry = dq(l,i,j,k,ir,2)
-              dpy = dq(l,i,j,k,ip,2)
-              duy = dq(l,i,j,k,iu,2)
-              dvy = dq(l,i,j,k,iv,2)
-              dwy = dq(l,i,j,k,iw,2)
-#if NENER>0
-              do irad=1,nener
-                 dey(irad) = dq(l,i,j,k,ip+irad,2)
-              end do
-#endif
+              ! dtdx x half the source terms (including transverse derivatives)
+              sr0 = dtdx * (-u*drx-v*dry-w*drz - (dux+dvy+dwz)*r)
+              sp0 = dtdx * (-u*dpx-v*dpy-w*dpz - (dux+dvy+dwz)*gamma*p)
+              su0 = dtdx * (-u*dux-v*duy-w*duz - (dpx        )*oneoverr)
+              sv0 = dtdx * (-u*dvx-v*dvy-w*dvz - (dpy        )*oneoverr)
+              sw0 = dtdx * (-u*dwx-v*dwy-w*dwz - (dpz        )*oneoverr)
 
-              drz = dq(l,i,j,k,ir,3)
-              dpz = dq(l,i,j,k,ip,3)
-              duz = dq(l,i,j,k,iu,3)
-              dvz = dq(l,i,j,k,iv,3)
-              dwz = dq(l,i,j,k,iw,3)
 #if NENER>0
               do irad=1,nener
-                 dez(irad) = dq(l,i,j,k,ip+irad,3)
-              end do
-#endif
-
-              ! Source terms (including transverse derivatives)
-              sr0 = -u*drx-v*dry-w*drz - (dux+dvy+dwz)*r
-              sp0 = -u*dpx-v*dpy-w*dpz - (dux+dvy+dwz)*gamma*p
-              su0 = -u*dux-v*duy-w*duz - (dpx        )/r
-              sv0 = -u*dvx-v*dvy-w*dvz - (dpy        )/r
-              sw0 = -u*dwx-v*dwy-w*dwz - (dpz        )/r
-#if NENER>0
-              do irad=1,nener
-                 su0 = su0 - (dex(irad))/r
-                 sv0 = sv0 - (dey(irad))/r
-                 sw0 = sw0 - (dez(irad))/r
+                 su0 = su0 - dtdx*(dex(irad))*oneoverr
+                 sv0 = sv0 - dtdx*(dey(irad))*oneoverr
+                 sw0 = sw0 - dtdx*(dez(irad))*oneoverr
                  se0(irad) = -u*dex(irad)-v*dey(irad)-w*dez(irad) &
                       & - (dux+dvy+dwz)*gamma_rad(irad)*e(irad)
+                 se0(irad) = se0(irad) * dtdx
+              end do
+#endif
+
+              ! store orginal r for smallr checks
+              r_orig = r
+
+              ! Add above term for sources to cell center values
+              r = r + sr0
+              p = p + sp0
+              u = u + su0
+              v = v + sv0
+              w = w + sw0
+#if NENER>0
+              do irad=1,nener
+                 e(irad) = e(irad) + se0(irad)
               end do
 #endif
 
               ! Right state at left interface
-              qp(l,i,j,k,ir,1) = r - half*drx + sr0*dtdx*half
-              qp(l,i,j,k,ip,1) = p - half*dpx + sp0*dtdx*half
-              qp(l,i,j,k,iu,1) = u - half*dux + su0*dtdx*half
-              qp(l,i,j,k,iv,1) = v - half*dvx + sv0*dtdx*half
-              qp(l,i,j,k,iw,1) = w - half*dwx + sw0*dtdx*half
+              qp(l,i,j,k,ir,1) = r - drx
+              qp(l,i,j,k,ip,1) = p - dpx
+              qp(l,i,j,k,iu,1) = u - dux
+              qp(l,i,j,k,iv,1) = v - dvx
+              qp(l,i,j,k,iw,1) = w - dwx
 !              qp(l,i,j,k,ir,1) = max(smallr, qp(l,i,j,k,ir,1))
-              if(qp(l,i,j,k,ir,1)<smallr)qp(l,i,j,k,ir,1)=r
+              if(qp(l,i,j,k,ir,1)<smallr)qp(l,i,j,k,ir,1)=r_orig
 #if NENER>0
               do irad=1,nener
-                 qp(l,i,j,k,ip+irad,1) = e(irad) - half*dex(irad) + se0(irad)*dtdx*half
+                 qp(l,i,j,k,ip+irad,1) = e(irad) - dex(irad)
               end do
 #endif
 
-              ! Left state at left interface
-              qm(l,i,j,k,ir,1) = r + half*drx + sr0*dtdx*half
-              qm(l,i,j,k,ip,1) = p + half*dpx + sp0*dtdx*half
-              qm(l,i,j,k,iu,1) = u + half*dux + su0*dtdx*half
-              qm(l,i,j,k,iv,1) = v + half*dvx + sv0*dtdx*half
-              qm(l,i,j,k,iw,1) = w + half*dwx + sw0*dtdx*half
+              ! Left state at right interface
+              qm(l,i,j,k,ir,1) = r + drx
+              qm(l,i,j,k,ip,1) = p + dpx
+              qm(l,i,j,k,iu,1) = u + dux
+              qm(l,i,j,k,iv,1) = v + dvx
+              qm(l,i,j,k,iw,1) = w + dwx
 !              qm(l,i,j,k,ir,1) = max(smallr, qm(l,i,j,k,ir,1))
-              if(qm(l,i,j,k,ir,1)<smallr)qm(l,i,j,k,ir,1)=r
+              if(qm(l,i,j,k,ir,1)<smallr)qm(l,i,j,k,ir,1)=r_orig
 #if NENER>0
               do irad=1,nener
-                 qm(l,i,j,k,ip+irad,1) = e(irad) + half*dex(irad) + se0(irad)*dtdx*half
+                 qm(l,i,j,k,ip+irad,1) = e(irad) + dex(irad)
               end do
 #endif
 
               ! Top state at bottom interface
-              qp(l,i,j,k,ir,2) = r - half*dry + sr0*dtdy*half
-              qp(l,i,j,k,ip,2) = p - half*dpy + sp0*dtdy*half
-              qp(l,i,j,k,iu,2) = u - half*duy + su0*dtdy*half
-              qp(l,i,j,k,iv,2) = v - half*dvy + sv0*dtdy*half
-              qp(l,i,j,k,iw,2) = w - half*dwy + sw0*dtdy*half
+              qp(l,i,j,k,ir,2) = r - dry
+              qp(l,i,j,k,ip,2) = p - dpy
+              qp(l,i,j,k,iu,2) = u - duy
+              qp(l,i,j,k,iv,2) = v - dvy
+              qp(l,i,j,k,iw,2) = w - dwy
 !              qp(l,i,j,k,ir,2) = max(smallr, qp(l,i,j,k,ir,2))
-              if(qp(l,i,j,k,ir,2)<smallr)qp(l,i,j,k,ir,2)=r
+              if(qp(l,i,j,k,ir,2)<smallr)qp(l,i,j,k,ir,2)=r_orig
 #if NENER>0
               do irad=1,nener
-                 qp(l,i,j,k,ip+irad,2) = e(irad) - half*dey(irad) + se0(irad)*dtdy*half
+                 qp(l,i,j,k,ip+irad,2) = e(irad) - dey(irad)
               end do
 #endif
 
               ! Bottom state at top interface
-              qm(l,i,j,k,ir,2) = r + half*dry + sr0*dtdy*half
-              qm(l,i,j,k,ip,2) = p + half*dpy + sp0*dtdy*half
-              qm(l,i,j,k,iu,2) = u + half*duy + su0*dtdy*half
-              qm(l,i,j,k,iv,2) = v + half*dvy + sv0*dtdy*half
-              qm(l,i,j,k,iw,2) = w + half*dwy + sw0*dtdy*half
+              qm(l,i,j,k,ir,2) = r + dry
+              qm(l,i,j,k,ip,2) = p + dpy
+              qm(l,i,j,k,iu,2) = u + duy
+              qm(l,i,j,k,iv,2) = v + dvy
+              qm(l,i,j,k,iw,2) = w + dwy
 !              qm(l,i,j,k,ir,2) = max(smallr, qm(l,i,j,k,ir,2))
-              if(qm(l,i,j,k,ir,2)<smallr)qm(l,i,j,k,ir,2)=r
+              if(qm(l,i,j,k,ir,2)<smallr)qm(l,i,j,k,ir,2)=r_orig
 #if NENER>0
               do irad=1,nener
-                 qm(l,i,j,k,ip+irad,2) = e(irad) + half*dey(irad) + se0(irad)*dtdy*half
+                 qm(l,i,j,k,ip+irad,2) = e(irad) + dey(irad)
               end do
 #endif
 
               ! Back state at front interface
-              qp(l,i,j,k,ir,3) = r - half*drz + sr0*dtdz*half
-              qp(l,i,j,k,ip,3) = p - half*dpz + sp0*dtdz*half
-              qp(l,i,j,k,iu,3) = u - half*duz + su0*dtdz*half
-              qp(l,i,j,k,iv,3) = v - half*dvz + sv0*dtdz*half
-              qp(l,i,j,k,iw,3) = w - half*dwz + sw0*dtdz*half
+              qp(l,i,j,k,ir,3) = r - drz
+              qp(l,i,j,k,ip,3) = p - dpz
+              qp(l,i,j,k,iu,3) = u - duz
+              qp(l,i,j,k,iv,3) = v - dvz
+              qp(l,i,j,k,iw,3) = w - dwz
 !              qp(l,i,j,k,ir,3) = max(smallr, qp(l,i,j,k,ir,3))
-              if(qp(l,i,j,k,ir,3)<smallr)qp(l,i,j,k,ir,3)=r
+              if(qp(l,i,j,k,ir,3)<smallr)qp(l,i,j,k,ir,3)=r_orig
 #if NENER>0
               do irad=1,nener
-                 qp(l,i,j,k,ip+irad,3) = e(irad) - half*dez(irad) + se0(irad)*dtdz*half
+                 qp(l,i,j,k,ip+irad,3) = e(irad) - dez(irad)
               end do
 #endif
 
               ! Front state at back interface
-              qm(l,i,j,k,ir,3) = r + half*drz + sr0*dtdz*half
-              qm(l,i,j,k,ip,3) = p + half*dpz + sp0*dtdz*half
-              qm(l,i,j,k,iu,3) = u + half*duz + su0*dtdz*half
-              qm(l,i,j,k,iv,3) = v + half*dvz + sv0*dtdz*half
-              qm(l,i,j,k,iw,3) = w + half*dwz + sw0*dtdz*half
+              qm(l,i,j,k,ir,3) = r + drz
+              qm(l,i,j,k,ip,3) = p + dpz
+              qm(l,i,j,k,iu,3) = u + duz
+              qm(l,i,j,k,iv,3) = v + dvz
+              qm(l,i,j,k,iw,3) = w + dwz
 !              qm(l,i,j,k,ir,3) = max(smallr, qm(l,i,j,k,ir,3))
-              if(qm(l,i,j,k,ir,3)<smallr)qm(l,i,j,k,ir,3)=r
+              if(qm(l,i,j,k,ir,3)<smallr)qm(l,i,j,k,ir,3)=r_orig
 #if NENER>0
               do irad=1,nener
-                 qm(l,i,j,k,ip+irad,3) = e(irad) + half*dez(irad) + se0(irad)*dtdz*half
+                 qm(l,i,j,k,ip+irad,3) = e(irad) + dez(irad)
               end do
 #endif
 
@@ -638,16 +651,17 @@ subroutine trace3d(q,dq,qm,qp,dx,dy,dz,dt,ngrid)
                  u   = q(l,i,j,k,iu)
                  v   = q(l,i,j,k,iv)
                  w   = q(l,i,j,k,iw)
-                 dax = dq(l,i,j,k,n,1)    ! TVD slopes
-                 day = dq(l,i,j,k,n,2)
-                 daz = dq(l,i,j,k,n,3)
-                 sa0 = -u*dax-v*day-w*daz     ! Source terms
-                 qp(l,i,j,k,n,1) = a - half*dax + sa0*dtdx*half  ! Right state
-                 qm(l,i,j,k,n,1) = a + half*dax + sa0*dtdx*half  ! Left state
-                 qp(l,i,j,k,n,2) = a - half*day + sa0*dtdy*half  ! Bottom state
-                 qm(l,i,j,k,n,2) = a + half*day + sa0*dtdy*half  ! Upper state
-                 qp(l,i,j,k,n,3) = a - half*daz + sa0*dtdz*half  ! Front state
-                 qm(l,i,j,k,n,3) = a + half*daz + sa0*dtdz*half  ! Back state
+                 dax = half*dq(l,i,j,k,n,1)    ! TVD slopes
+                 day = half*dq(l,i,j,k,n,2)
+                 daz = half*dq(l,i,j,k,n,3)
+                 sa0 = (-u*dax-v*day-w*daz) * dtdx    ! Source terms
+                 a = a + sa0
+                 qp(l,i,j,k,n,1) = a - dax  ! Right state
+                 qm(l,i,j,k,n,1) = a + dax  ! Left state
+                 qp(l,i,j,k,n,2) = a - day  ! Bottom state
+                 qm(l,i,j,k,n,2) = a + day  ! Upper state
+                 qp(l,i,j,k,n,3) = a - daz  ! Front state
+                 qm(l,i,j,k,n,3) = a + daz  ! Back state
               end do
            end do
         end do
