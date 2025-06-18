@@ -223,7 +223,6 @@ subroutine ensure_ref_rules(ilevel)
   integer::i,ind,iskip,igrid,ngrid,ncache
   integer,dimension(1:nvector),save::ind_cell,ind_grid
   integer,dimension(1:nvector,1:threetondim),save::nbors_father_cells
-  integer,dimension(1:nvector,1:twotondim),save::nbors_father_grids
   logical,dimension(1:nvector),save::ok
 
   ncache=active(ilevel)%ngrid
@@ -238,7 +237,7 @@ subroutine ensure_ref_rules(ilevel)
      do i=1,ngrid
         ind_cell(i)=father(ind_grid(i))
      end do
-     call get3cubefather(ind_cell,nbors_father_cells,nbors_father_grids,ngrid,ilevel)
+     call get3cubefather(ind_cell,nbors_father_cells,ngrid,ilevel)
 
      do i=1,ngrid
         ok(i)=.true.

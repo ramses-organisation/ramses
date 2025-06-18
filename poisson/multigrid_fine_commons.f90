@@ -456,8 +456,8 @@ subroutine build_parent_comms_mg(active_loc, ifinelevel)
          ind_cell_father(i)=father( active_loc%igrid(istart+i-1) )
       end do
 
-      ! Compute neighbouring father cells and grids
-      call get3cubefather(ind_cell_father,nbors_father_cells, &
+      ! Compute neighbouring father grids
+      call get3cubefather_grids(ind_cell_father, &
          & nbors_father_grids,nbatch,ifinelevel)
 
       ! Now process the twotondim father grids
@@ -612,7 +612,7 @@ subroutine build_parent_comms_mg(active_loc, ifinelevel)
       end do
 
       ! Compute neighbouring father cells
-      call get3cubefather(ind_cell_father,nbors_father_cells,nbors_father_grids,nbatch,icoarselevel)
+      call get3cubefather(ind_cell_father,nbors_father_cells,nbatch,icoarselevel)
 
       ! Now process the father grids
       do ind=1,threetondim

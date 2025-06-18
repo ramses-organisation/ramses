@@ -19,32 +19,32 @@ ax5 = ax1.twinx()
 data = visu_ramses.load_snapshot(2)
 
 order  = data["data"]["x"].argsort()
-x      = data["data"]["x"][order] - 1.5
+x_sim      = data["data"]["x"][order] - 1.5
 amrlev = data["data"]["level"][order]
-rho    = data["data"]["density"][order]
-u      = data["data"]["velocity_x"][order]
-p      = data["data"]["pressure"][order]
-By     = 0.5*(data["data"]["B_y_left"][order] + data["data"]["B_y_right"][order])
+rho_sim    = data["data"]["density"][order]
+u_sim      = data["data"]["velocity_x"][order]
+p_sim      = data["data"]["pressure"][order]
+By_sim     = 0.5*(data["data"]["B_y_left"][order] + data["data"]["B_y_right"][order])
 
 # Density
-ax1.plot(x,rho,'o',color='black',markerfacecolor='none')
+ax1.plot(x_sim,rho_sim,'o',color='black',markerfacecolor='none')
 ax1.set_xlabel('Distance (cm)')
 ax1.set_ylabel('Density (g/cm3)')
-ax5.plot(x,amrlev,color='black',ls='dotted')
+ax5.plot(x_sim,amrlev,color='black',ls='dotted')
 ax5.set_ylabel('AMR Level')
 
 # Velocity
-ax2.plot(x,u,'o',color='black',markerfacecolor='none')
+ax2.plot(x_sim,u_sim,'o',color='black',markerfacecolor='none')
 ax2.set_xlabel('Distance (cm)')
 ax2.set_ylabel('Velocity (cm/s)')
 
 # Pressure
-ax3.plot(x,p,'o',color='black',markerfacecolor='none')
+ax3.plot(x_sim,p_sim,'o',color='black',markerfacecolor='none')
 ax3.set_xlabel('Distance (cm)')
 ax3.set_ylabel('Pressure (g/cm/s2)')
 
 # B field
-ax4.plot(x,By,'o',color='black',markerfacecolor='none')
+ax4.plot(x_sim,By_sim,'o',color='black',markerfacecolor='none')
 ax4.set_xlabel('Distance (cm)')
 ax4.set_ylabel('By (G)')
 
@@ -59,6 +59,27 @@ ax1.plot(x_ana,rho_ana,color='red')
 ax2.plot(x_ana,u_ana,color='red')
 ax3.plot(x_ana,p_ana,color='red')
 ax4.plot(x_ana,By_ana,color='red')
+
+# Interpolate the analytical solution to the simulation grid
+rho_ana_interp = np.interp(x_sim, x_ana, rho_ana)
+u_ana_interp = np.interp(x_sim, x_ana, u_ana)
+p_ana_interp = np.interp(x_sim, x_ana, p_ana)
+By_ana_interp = np.interp(x_sim, x_ana, By_ana)
+
+# Calculate errors
+for var, sim, ana in zip(
+    ["density", "velocity", "pressure", "mag_field"],
+    [rho_sim, u_sim, p_sim, By_sim],
+    [rho_ana_interp, u_ana_interp, p_ana_interp, By_ana_interp]
+):
+    abs_error = np.abs(sim - ana)
+    rel_error = np.zeros(len(abs_error))
+    mask = ana != 0
+    rel_error[mask] = abs_error[mask] / np.abs(ana[mask])
+    rel_error[np.logical_not(mask)] = abs_error[np.logical_not(mask)]
+
+    data["data"][f"{var}_med_error"] = np.median(rel_error)
+    data["data"][f"{var}_avg_error"] = np.mean(rel_error)
 
 fig.subplots_adjust(wspace=0.3)
 fig.savefig('imhd-tube.pdf',bbox_inches='tight')

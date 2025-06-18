@@ -26,10 +26,10 @@ p_region=8.69869d-9       ! 1000 K
 
 &AMR_PARAMS
 levelmin=6
-levelmax=7
+levelmax=8
 ngridmax=350000
 npartmax=2200
-nexpand=4,4,4
+nexpand=4
 boxlen=1. ! kpc
 /
 
@@ -60,12 +60,12 @@ units_length  = 0.308567758128200E+22 ! 1 kpc
 /
 
 &REFINE_PARAMS
-m_refine=8,8,8
-jeans_refine=4,4,4
+m_refine=8
+jeans_refine=4
 mass_sph=1e8
 interpol_type=0
 interpol_var=1
-sink_refine=.true.
+sink_refine=.false.
 /
 
 &BOUNDARY_PARAMS
@@ -117,4 +117,5 @@ T2_min=0 ! always blast
 AGN_fbk_frac_ener=0.0
 AGN_fbk_frac_mom=0.0
 AGN_fbk_mode_switch_threshold=0.0
+nlevelmax_sink=7
 /
