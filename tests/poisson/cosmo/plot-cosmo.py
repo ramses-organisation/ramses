@@ -4,44 +4,11 @@ mpl.use("Agg")
 import matplotlib.pyplot as plt
 import visu_ramses
 from matplotlib.colors import LogNorm
-
-fig = plt.figure(figsize=(12, 3.75))
-axes = fig.subplots(nrows=1, ncols=3)
-
-# Load RAMSES output
-data = visu_ramses.load_snapshot(2,read_hydro=False)
-xp = data["particle"]["position_x"]
-yp = data["particle"]["position_y"]
-zp = data["particle"]["position_z"]
-mp = data["particle"]["mass"]
-
-im = axes[0].hist2d(xp,yp,weights=mp,bins=128,range=[[0, 1], [0, 1]],norm=LogNorm(vmin=8e-6,vmax=8e-4),cmap='bone',edgecolor='face')
-im = axes[1].hist2d(xp,zp,weights=mp,bins=128,range=[[0, 1], [0, 1]],norm=LogNorm(vmin=8e-6,vmax=8e-4),cmap='bone',edgecolor='face')
-im = axes[2].hist2d(yp,zp,weights=mp,bins=128,range=[[0, 1], [0, 1]],norm=LogNorm(vmin=8e-6,vmax=8e-4),cmap='bone',edgecolor='face')
-#plt.colorbar(im[3], ax=axes[2])
-for ax in axes:
-    ax.axis('equal')
-    ax.set_xlim([0,1])
-    ax.set_ylim([0,1])
-axes[0].set_xlabel('x')
-axes[0].set_ylabel('y')
-axes[1].set_xlabel('x')
-axes[1].set_ylabel('z')
-axes[2].set_xlabel('y')
-axes[2].set_ylabel('z')
-
-fig.savefig("cosmo.pdf", bbox_inches="tight")
-
-to_check = data["particle"]
-to_check['time'] = data["data"]["time"]
-
-visu_ramses.check_solution(to_check, 'cosmo')
-
-# AND NOW CHECK THE CLUMPFINDER OUTPUT
-
-# First concatenate the clumpfinder output per proc into 1 file
 import glob
 import os
+import filecmp
+import numpy as np
+
 
 def concatenate_clump_files():
     # Find all files matching the pattern
@@ -86,13 +53,6 @@ def concatenate_clump_files():
         total_lines = sum(1 for _ in f)
     print(f"Output file contains {total_lines} lines (including 1 header)")
 
-if __name__ == "__main__":
-    concatenate_clump_files()
-
-
-# Now compare the clump_all with the reference file
-
-import filecmp
 
 def simple_diff():
     file1 = "clump_all.txt"
@@ -117,27 +77,64 @@ def simple_diff():
             # Files have different lengths
             print("Files have different lengths")
 
-if __name__ == "__main__":
-    simple_diff()
 
+# Execute the map part of the test
 
-import pandas as pd
-import numpy as np
+fig = plt.figure(figsize=(12, 3.75))
+axes = fig.subplots(nrows=1, ncols=3)
 
-df = pd.read_csv("clump_all.txt", sep='\s+')
-#df_ref = pd.read_csv("clump-ref.txt", sep='\s+')
+# Load RAMSES output
+data = visu_ramses.load_snapshot(2,read_hydro=False)
+xp = data["particle"]["position_x"]
+yp = data["particle"]["position_y"]
+zp = data["particle"]["position_z"]
+mp = data["particle"]["mass"]
 
-ncell_output_array = df['ncell'].to_numpy()
-mass_cl_output_array = df['mass_cl'].to_numpy()
+im = axes[0].hist2d(xp,yp,weights=mp,bins=128,range=[[0, 1], [0, 1]],norm=LogNorm(vmin=8e-6,vmax=8e-4),cmap='bone',edgecolor='face')
+im = axes[1].hist2d(xp,zp,weights=mp,bins=128,range=[[0, 1], [0, 1]],norm=LogNorm(vmin=8e-6,vmax=8e-4),cmap='bone',edgecolor='face')
+im = axes[2].hist2d(yp,zp,weights=mp,bins=128,range=[[0, 1], [0, 1]],norm=LogNorm(vmin=8e-6,vmax=8e-4),cmap='bone',edgecolor='face')
+#plt.colorbar(im[3], ax=axes[2])
+for ax in axes:
+    ax.axis('equal')
+    ax.set_xlim([0,1])
+    ax.set_ylim([0,1])
+axes[0].set_xlabel('x')
+axes[0].set_ylabel('y')
+axes[1].set_xlabel('x')
+axes[1].set_ylabel('z')
+axes[2].set_xlabel('y')
+axes[2].set_ylabel('z')
 
-#ncell_ref_array=df_ref['ncell'].to_numpy()
-#print('ncell_output_array',ncell_output_array)
+fig.savefig("cosmo.pdf", bbox_inches="tight")
+
+to_check = data["particle"]
+to_check['time'] = data["data"]["time"]
+
+#Now  add the clumpfinder output to the solution to be checked
+# First concatenate the clumpfinder output per proc into 1 file
+# Execute concatenate:
+concatenate_clump_files()
+
+# Now as a first on-the-side test compare the clump_all with the reference file
+# execute simple_diff
+simple_diff()
+
+# Now add the clump data to the solution to be checked.
+# Read the file using numpy.loadtxt, skipping the header row
+data = np.loadtxt("clump_all.txt", skiprows=1)
+
+# Extract the columns we need
+# Based on file format:
+# Column indices: 0=index, 1=halo, 2=lev, 3=parent, 4=ncell, 5=peak_x, 6=peak_y, 7=peak_z, 8=rho-, 9=rho+, 10=rho_av, 11=mass_cl, 12=relevance
+ncell_output_array = data[:, 4]      # ncell column (5th column, index 4)
+mass_cl_output_array = data[:, 11]   # mass_cl column (12th column, index 11)
+
+print("ncell values:", ncell_output_array)
+print("mass_cl values:", mass_cl_output_array)
 
 # Add the clump ref solution to the to_check dict.
-
 to_check["ncell_clumpfinder"]=ncell_output_array
 to_check["mass_cl_clumpfinder"]=mass_cl_output_array
-
 
 # then run the check_solution method
 visu_ramses.check_solution(to_check, 'cosmo',overwrite=False) # True if you want to overwrite the ref solution
