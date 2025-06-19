@@ -141,20 +141,14 @@ subroutine trace(q,dq,qm,qp,dx,dt,ngrid)
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2)::oneoverr
   integer ::i, j, k, l, ivar, idim
   integer ::ilo,ihi,jlo,jhi,klo,khi
-  integer,parameter ::ir=1, iu=2, ip=3
+  integer,parameter ::ir=1,ip=neul
   real(dp)::dtdx
   real(dp)::r, u, p,vel
-  real(dp)::dvar, dvarx, dvary, dvarz
-  real(dp)::source
-  real(dp)::drx, dux, dpx
-  real(dp)::sr0, su0, sp0
+  real(dp)::dvar, source
+  real(dp)::sr0, sp0
 #if NENER>0
   integer::irad
-  real(dp)::e, dex, se0
-#endif
-#if NVAR > NHYDRO + NENER
-  integer::n
-  real(dp)::a, dax, sa0
+  real(dp)::e
 #endif
 
   dtdx = dt/dx
@@ -233,18 +227,18 @@ subroutine trace(q,dq,qm,qp,dx,dt,ngrid)
      do j = jlo, jhi
         do i = ilo, ihi
            do l = 1, ngrid
-              source = - dq(l,i,j,k,ip,idim)
+              source = -dq(l,i,j,k,ip,idim)
 #if NENER>0
               ! correct source vel for nener
               do irad=1,nener
-                 dvar = dq(l,i,j,k,ip+irad,1)
+                 dvar = dq(l,i,j,k,ip+irad,idim)
                  source = source - dvar
               end do
 #endif
               ! apply source
               source = source*oneoverr(l,i,j,k) * dtdx*half
-              qp(l,i,j,k,1+idim,1) = qp(l,i,j,k,1+idim,1) + source
-              qm(l,i,j,k,1+idim,1) = qm(l,i,j,k,1+idim,1) + source
+              qp(l,i,j,k,1+idim,idim) = qp(l,i,j,k,1+idim,idim) + source
+              qm(l,i,j,k,1+idim,idim) = qm(l,i,j,k,1+idim,idim) + source
 
             end do
          end do
