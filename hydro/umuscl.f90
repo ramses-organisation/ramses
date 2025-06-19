@@ -69,12 +69,12 @@ subroutine unsplit(uin,gravin,pin,flux,tmp,dx,dy,dz,dt,ngrid)
 
   ! Compute 3D traced-states in all three directions
   if(scheme=='muscl')then
-!#if NDIM==1
+#if NDIM==1
      call trace(qin,dq,qm,qp,dx      ,dt,ngrid)
-!#endif
-!#if NDIM==2
-!    call trace2d(qin,dq,qm,qp,dx,dy   ,dt,ngrid)
-!#endif
+#endif
+#if NDIM==2
+    call trace2d(qin,dq,qm,qp,dx,dy   ,dt,ngrid)
+#endif
 !#if NDIM==3
 !     call trace3d(qin,dq,qm,qp,dx,dy,dz,dt,ngrid)
 !#endif
@@ -347,6 +347,7 @@ subroutine trace2d(q,dq,qm,qp,dx,dy,dt,ngrid)
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qp
 
   ! declare local variables
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::S0
   integer ::i, j, k, l, ivar, idim
   integer ::ilo,ihi,jlo,jhi,klo,khi
   integer ::ir, iu, iv, ip
@@ -382,6 +383,22 @@ subroutine trace2d(q,dq,qm,qp,dx,dy,dt,ngrid)
                  dvar = half*dq(l,i,j,k,ivar,idim)
                  qp(l,i,j,k,ivar,idim) = q(l,i,j,k,ivar) - dvar! + source
                  qm(l,i,j,k,ivar,idim) = q(l,i,j,k,ivar) + dvar! + source
+               end do
+           end do
+        end do
+     end do
+  end do
+  end do
+
+  ! Calculate first term of source (sum over directions)
+  S0 = 0d0
+  do idim=1,ndim
+  do ivar=1,nvar
+     do k = klo, khi
+        do j = jlo, jhi
+           do i = ilo, ihi
+              do l = 1, ngrid
+                 S0(l,i,j,k,ivar) = S0(l,i,j,k,ivar) - q(l,i,j,k,1+idim)*dq(l,i,j,k,ivar,idim)
                end do
            end do
         end do
@@ -439,26 +456,22 @@ subroutine trace2d(q,dq,qm,qp,dx,dy,dt,ngrid)
                       & - (dux+dvy)*gamma_rad(irad)*e(irad)
               end do
 #endif
-              sr0_bis = -q(l,i,j,k,iu)*dq(l,i,j,k,ir,1) -q(l,i,j,k,iv)*dq(l,i,j,k,ir,2) 
-              sp0_bis = -q(l,i,j,k,iu)*dq(l,i,j,k,ip,1) -q(l,i,j,k,iv)*dq(l,i,j,k,ip,2) 
-              su0_bis = -q(l,i,j,k,iu)*dq(l,i,j,k,iu,1) -q(l,i,j,k,iv)*dq(l,i,j,k,iu,2) 
-              sv0_bis = -q(l,i,j,k,iu)*dq(l,i,j,k,iv,1) -q(l,i,j,k,iv)*dq(l,i,j,k,iv,2) 
-              
+
               do idim=1,ndim
 
               ! Right state at left interface
-              qp(l,i,j,k,ir,idim) = qp(l,i,j,k,ir,idim) + sr0_bis*dtdx*half + sr0*dtdx*half
-              qp(l,i,j,k,iu,idim) = qp(l,i,j,k,iu,idim) + su0_bis*dtdx*half + su0*dtdx*half
-              qp(l,i,j,k,iv,idim) = qp(l,i,j,k,iv,idim) + sv0_bis*dtdx*half + sv0*dtdx*half
-              qp(l,i,j,k,ip,idim) = qp(l,i,j,k,ip,idim) + sp0_bis*dtdx*half + sp0*dtdx*half
+              qp(l,i,j,k,ir,idim) = qp(l,i,j,k,ir,idim) + S0(l,i,j,k,ir)*dtdx*half + sr0*dtdx*half
+              qp(l,i,j,k,iu,idim) = qp(l,i,j,k,iu,idim) + S0(l,i,j,k,iu)*dtdx*half + su0*dtdx*half
+              qp(l,i,j,k,iv,idim) = qp(l,i,j,k,iv,idim) + S0(l,i,j,k,iv)*dtdx*half + sv0*dtdx*half
+              qp(l,i,j,k,ip,idim) = qp(l,i,j,k,ip,idim) + S0(l,i,j,k,ip)*dtdx*half + sp0*dtdx*half
 !              qp(l,i,j,k,ir,idim) = max(smallr, qp(l,i,j,k,ir,idim))
               if(qp(l,i,j,k,ir,idim)<smallr)qp(l,i,j,k,ir,idim)=r
 
               ! Left state at right interface
-              qm(l,i,j,k,ir,idim) = qm(l,i,j,k,ir,idim) + sr0_bis*dtdx*half + sr0*dtdx*half
-              qm(l,i,j,k,iu,idim) = qm(l,i,j,k,iu,idim) + su0_bis*dtdx*half + su0*dtdx*half
-              qm(l,i,j,k,iv,idim) = qm(l,i,j,k,iv,idim) + sv0_bis*dtdx*half + sv0*dtdx*half
-              qm(l,i,j,k,ip,idim) = qm(l,i,j,k,ip,idim) + sp0_bis*dtdx*half + sp0*dtdx*half
+              qm(l,i,j,k,ir,idim) = qm(l,i,j,k,ir,idim) + S0(l,i,j,k,ir)*dtdx*half + sr0*dtdx*half
+              qm(l,i,j,k,iu,idim) = qm(l,i,j,k,iu,idim) + S0(l,i,j,k,iu)*dtdx*half + su0*dtdx*half
+              qm(l,i,j,k,iv,idim) = qm(l,i,j,k,iv,idim) + S0(l,i,j,k,iv)*dtdx*half + sv0*dtdx*half
+              qm(l,i,j,k,ip,idim) = qm(l,i,j,k,ip,idim) + S0(l,i,j,k,ip)*dtdx*half + sp0*dtdx*half
 !              qm(l,i,j,k,ir,idim) = max(smallr, qm(l,i,j,k,ir,idim))
               if(qm(l,i,j,k,ir,idim)<smallr)qm(l,i,j,k,ir,idim)=r
               end do
