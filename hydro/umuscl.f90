@@ -69,15 +69,15 @@ subroutine unsplit(uin,gravin,pin,flux,tmp,dx,dy,dz,dt,ngrid)
 
   ! Compute 3D traced-states in all three directions
   if(scheme=='muscl')then
-#if NDIM==1
-     call trace1d(qin,dq,qm,qp,dx      ,dt,ngrid)
-#endif
-#if NDIM==2
-     call trace2d(qin,dq,qm,qp,dx,dy   ,dt,ngrid)
-#endif
-#if NDIM==3
-     call trace3d(qin,dq,qm,qp,dx,dy,dz,dt,ngrid)
-#endif
+!#if NDIM==1
+     call trace(qin,dq,qm,qp,dx      ,dt,ngrid)
+!#endif
+!#if NDIM==2
+!     call trace2d(qin,dq,qm,qp,dx,dy   ,dt,ngrid)
+!#endif
+!#if NDIM==3
+!     call trace3d(qin,dq,qm,qp,dx,dy,dz,dt,ngrid)
+!#endif
   endif
   if(scheme=='plmde')then
 #if NDIM==1
@@ -123,7 +123,7 @@ end subroutine unsplit
 !###########################################################
 !###########################################################
 !###########################################################
-subroutine trace1d(q,dq,qm,qp,dx,dt,ngrid)
+subroutine trace(q,dq,qm,qp,dx,dt,ngrid)
   use amr_parameters
   use hydro_parameters
   use const
@@ -321,7 +321,7 @@ subroutine trace1d(q,dq,qm,qp,dx,dt,ngrid)
   end do
   end do
 
-end subroutine trace1d
+end subroutine trace
 !###########################################################
 !###########################################################
 !###########################################################
