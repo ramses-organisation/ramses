@@ -406,6 +406,23 @@ subroutine trace2d(q,dq,qm,qp,dx,dy,dt,ngrid)
   end do
   end do
 
+  ! Apply first term of source for all variables
+  do idim=1,ndim
+  do ivar=1,nvar
+     do k = klo, khi
+        do j = jlo, jhi
+           do i = ilo, ihi
+              do l = 1, ngrid
+                 source = S0(l,i,j,k,ivar) * dtdx*half
+                 qp(l,i,j,k,ivar,idim) = qp(l,i,j,k,ivar,idim) + source
+                 qm(l,i,j,k,ivar,idim) = qm(l,i,j,k,ivar,idim) + source
+               end do
+           end do
+        end do
+     end do
+  end do
+  end do
+
   do k = klo, khi
      do j = jlo, jhi
         do i = ilo, ihi
@@ -452,42 +469,35 @@ subroutine trace2d(q,dq,qm,qp,dx,dy,dt,ngrid)
               do irad=1,nener
                  su0 = su0 - (dex(irad))/r
                  sv0 = sv0 - (dey(irad))/r
-                 se0(irad) = -u*dex(irad)-v*dey(irad) &
-                      & - (dux+dvy)*gamma_rad(irad)*e(irad)
+                 se0(irad) = - (dux+dvy)*gamma_rad(irad)*e(irad)
               end do
 #endif
 
               do idim=1,ndim
 
               ! Right state at left interface
-              qp(l,i,j,k,ir,idim) = qp(l,i,j,k,ir,idim) + S0(l,i,j,k,ir)*dtdx*half + sr0*dtdx*half
-              qp(l,i,j,k,iu,idim) = qp(l,i,j,k,iu,idim) + S0(l,i,j,k,iu)*dtdx*half + su0*dtdx*half
-              qp(l,i,j,k,iv,idim) = qp(l,i,j,k,iv,idim) + S0(l,i,j,k,iv)*dtdx*half + sv0*dtdx*half
-              qp(l,i,j,k,ip,idim) = qp(l,i,j,k,ip,idim) + S0(l,i,j,k,ip)*dtdx*half + sp0*dtdx*half
+              qp(l,i,j,k,ir,idim) = qp(l,i,j,k,ir,idim) + sr0*dtdx*half
+              qp(l,i,j,k,iu,idim) = qp(l,i,j,k,iu,idim) + su0*dtdx*half
+              qp(l,i,j,k,iv,idim) = qp(l,i,j,k,iv,idim) + sv0*dtdx*half
+              qp(l,i,j,k,ip,idim) = qp(l,i,j,k,ip,idim) + sp0*dtdx*half
 !              qp(l,i,j,k,ir,idim) = max(smallr, qp(l,i,j,k,ir,idim))
               if(qp(l,i,j,k,ir,idim)<smallr)qp(l,i,j,k,ir,idim)=r
 
               ! Left state at right interface
-              qm(l,i,j,k,ir,idim) = qm(l,i,j,k,ir,idim) + S0(l,i,j,k,ir)*dtdx*half + sr0*dtdx*half
-              qm(l,i,j,k,iu,idim) = qm(l,i,j,k,iu,idim) + S0(l,i,j,k,iu)*dtdx*half + su0*dtdx*half
-              qm(l,i,j,k,iv,idim) = qm(l,i,j,k,iv,idim) + S0(l,i,j,k,iv)*dtdx*half + sv0*dtdx*half
-              qm(l,i,j,k,ip,idim) = qm(l,i,j,k,ip,idim) + S0(l,i,j,k,ip)*dtdx*half + sp0*dtdx*half
+              qm(l,i,j,k,ir,idim) = qm(l,i,j,k,ir,idim) + sr0*dtdx*half
+              qm(l,i,j,k,iu,idim) = qm(l,i,j,k,iu,idim) + su0*dtdx*half
+              qm(l,i,j,k,iv,idim) = qm(l,i,j,k,iv,idim) + sv0*dtdx*half
+              qm(l,i,j,k,ip,idim) = qm(l,i,j,k,ip,idim) + sp0*dtdx*half
 !              qm(l,i,j,k,ir,idim) = max(smallr, qm(l,i,j,k,ir,idim))
               if(qm(l,i,j,k,ir,idim)<smallr)qm(l,i,j,k,ir,idim)=r
               end do
 
 #if NENER>0
               do irad=1,nener
-                 qp(l,i,j,k,ip+irad,1) = e(irad) - half*dex(irad) + se0(irad)*dtdx*half
-              end do
-              do irad=1,nener
-                 qm(l,i,j,k,ip+irad,1) = e(irad) + half*dex(irad) + se0(irad)*dtdx*half
-              end do
-              do irad=1,nener
-                 qp(l,i,j,k,ip+irad,2) = e(irad) - half*dey(irad) + se0(irad)*dtdx*half
-              end do
-              do irad=1,nener
-                 qm(l,i,j,k,ip+irad,2) = e(irad) + half*dey(irad) + se0(irad)*dtdx*half
+                 qp(l,i,j,k,ip+irad,1) = e(irad) + se0(irad)*dtdx*half
+                 qm(l,i,j,k,ip+irad,1) = e(irad) + se0(irad)*dtdx*half
+                 qp(l,i,j,k,ip+irad,2) = e(irad) + se0(irad)*dtdx*half
+                 qm(l,i,j,k,ip+irad,2) = e(irad)  + se0(irad)*dtdx*half
               end do
 #endif
 
@@ -495,30 +505,6 @@ subroutine trace2d(q,dq,qm,qp,dx,dy,dt,ngrid)
         end do
      end do
   end do
-
-#if NVAR > NHYDRO + NENER
-  ! passive scalars
-  do n = ndim+nener+3, nvar
-     do k = klo, khi
-        do j = jlo, jhi
-           do i = ilo, ihi
-              do l = 1, ngrid
-                 a   = q(l,i,j,k,n)       ! Cell centered values
-                 u   = q(l,i,j,k,iu)
-                 v   = q(l,i,j,k,iv)
-                 dax = dq(l,i,j,k,n,1)    ! TVD slopes
-                 day = dq(l,i,j,k,n,2)
-                 sa0 = -u*dax-v*day       ! Source terms
-                 qp(l,i,j,k,n,1) = qp(l,i,j,k,n,1) - half*dax + sa0*dtdx*half   ! Right state
-                 qm(l,i,j,k,n,1) = qm(l,i,j,k,n,1) + half*dax + sa0*dtdx*half   ! Left state
-                 qp(l,i,j,k,n,2) = qp(l,i,j,k,n,2) - half*day + sa0*dtdx*half   ! Top state
-                 qm(l,i,j,k,n,2) = qm(l,i,j,k,n,2) + half*day + sa0*dtdx*half   ! Bottom state
-              end do
-           end do
-        end do
-     end do
-  end do
-#endif
 
 end subroutine trace2d
 #endif
