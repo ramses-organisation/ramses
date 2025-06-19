@@ -1,7 +1,7 @@
 minimum_pre_commit_version: "1.15.0"
 
 ci:
-   autofix_prs: false   
+   autofix_prs: false
 
 repos:
 -   repo: https://github.com/pre-commit/pre-commit-hooks
