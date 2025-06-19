@@ -2629,7 +2629,6 @@ subroutine cic_get_cells(indp,xx,vol,ok,ind_grid,xpart,ind_grid_part,ng,np,ileve
   ! Grid-based arrays
   integer ,dimension(1:nvector)::ind_cell
   integer ,dimension(1:nvector,1:threetondim),save::nbors_father_cells
-  integer ,dimension(1:nvector,1:twotondim),save::nbors_father_grids
   ! Particle-based arrays
   real(dp),dimension(1:nvector,1:ndim),save::x,dd,dg
   integer ,dimension(1:nvector,1:ndim),save::ig,id,igg,igd,icg,icd
@@ -2670,7 +2669,7 @@ subroutine cic_get_cells(indp,xx,vol,ok,ind_grid,xpart,ind_grid_part,ng,np,ileve
   end do
 
   ! Gather neighboring father cells (should be present anytime!)
-  call get3cubefather(ind_cell,nbors_father_cells,nbors_father_grids,ng,ilevel)
+  call get3cubefather(ind_cell,nbors_father_cells,ng,ilevel)
 
   ! Rescale particle position at level ilevel
   do idim=1,ndim

@@ -158,7 +158,6 @@ SUBROUTINE rt_godfine1(ind_grid, ncache, ilevel, dt)
   real(dp)::dt
   integer ,dimension(1:nvector)::ind_grid
   integer ,dimension(1:nvector,1:threetondim),save::nbors_father_cells
-  integer ,dimension(1:nvector,1:twotondim  ),save::nbors_father_grids
   integer ,dimension(1:nvector,0:twondim    ),save::ibuffer_father
   real(dp),dimension(1:nvector,0:twondim  ,1:nrtvar),save::u1
   real(dp),dimension(1:nvector,1:twotondim,1:nrtvar),save::u2
@@ -219,15 +218,11 @@ SUBROUTINE rt_godfine1(ind_grid, ncache, ilevel, dt)
      ind_cell(i)=father(ind_grid(i))
   end do
   ! ..and father cells of neighbor grids:
-  call get3cubefather(ind_cell,nbors_father_cells,nbors_father_grids,ncache,ilevel)
+  call get3cubefather(ind_cell,nbors_father_cells,ncache,ilevel)
   ! now for the parent cell (ind_cell(i)) of each grid i in cache:
   !
   ! nbors_father_cells contains indexes of all it's neighbor cells
   ! (ilevel-1), plus itself, total 3^ndim.
-  !
-  ! nbors_father_grids contains indexes of all the neighboring
-  ! (and containing) grids of the father cell, total 2^ndim
-  ! (in case interpolation is needed I guess)
 
   !---------------------------
   ! Gather 6x6x6 cells stencil

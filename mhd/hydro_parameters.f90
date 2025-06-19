@@ -4,6 +4,7 @@ module hydro_parameters
   use grackle_parameters
 #endif
   use amr_parameters
+  use collapse_parameters
 
   ! Number of independant variables
 

@@ -210,7 +210,6 @@ SUBROUTINE sink_RT_vsweep_stellar(ind_grid,ind_part,ind_grid_part,ng,np,dt,ileve
   real(dp),dimension(1:nvector,1:ndim),save::x0
   integer ,dimension(1:nvector),save::ind_cell
   integer ,dimension(1:nvector,1:threetondim),save::nbors_father_cells
-  integer ,dimension(1:nvector,1:twotondim),save::nbors_father_grids
   ! Particle based arrays
   logical,dimension(1:nvector),save::ok
   real(dp),dimension(1:nvector,1:ndim),save::x
@@ -250,8 +249,7 @@ SUBROUTINE sink_RT_vsweep_stellar(ind_grid,ind_part,ind_grid_part,ng,np,dt,ileve
   do i=1,ng
      ind_cell(i) = father(ind_grid(i))
   end do
-  call get3cubefather(&
-          ind_cell, nbors_father_cells, nbors_father_grids, ng, ilevel)
+  call get3cubefather(ind_cell, nbors_father_cells, ng, ilevel)
 
   ! Rescale position of stars to positions within 3x3x3 cell supercube
   do idim = 1, ndim
