@@ -339,8 +339,8 @@ subroutine trace2d(q,dq,qm,qp,dx,dy,dt,ngrid)
                  !vel = q(l,i,j,k,idim+1)
                  !dvar = half*dq(l,i,j,k,ivar,idim)
                  !source = -vel*dvar * dtdx
-                 qp(l,i,j,k,ivar,idim) = q(l,i,j,k,ivar) !- dvar! + source
-                 qm(l,i,j,k,ivar,idim) = q(l,i,j,k,ivar) !+ dvar! + source
+                 qp(l,i,j,k,ivar,idim) = q(l,i,j,k,ivar) - half*dq(l,i,j,k,ivar,idim)!- dvar! + source
+                 qm(l,i,j,k,ivar,idim) = q(l,i,j,k,ivar) + half*dq(l,i,j,k,ivar,idim)!+ dvar! + source
                end do
            end do
         end do
@@ -401,18 +401,18 @@ subroutine trace2d(q,dq,qm,qp,dx,dy,dt,ngrid)
               do idim=1,ndim
 
               ! Right state at left interface
-              qp(l,i,j,k,ir,idim) = qp(l,i,j,k,ir,idim) - half*dq(l,i,j,k,ir,idim) + sr0*dtdx*half
-              qp(l,i,j,k,iu,idim) = qp(l,i,j,k,iu,idim) - half*dq(l,i,j,k,iu,idim) + su0*dtdx*half
-              qp(l,i,j,k,iv,idim) = qp(l,i,j,k,iv,idim) - half*dq(l,i,j,k,iv,idim) + sv0*dtdx*half
-              qp(l,i,j,k,ip,idim) = qp(l,i,j,k,ip,idim) - half*dq(l,i,j,k,ip,idim) + sp0*dtdx*half
+              qp(l,i,j,k,ir,idim) = qp(l,i,j,k,ir,idim) + sr0*dtdx*half
+              qp(l,i,j,k,iu,idim) = qp(l,i,j,k,iu,idim) + su0*dtdx*half
+              qp(l,i,j,k,iv,idim) = qp(l,i,j,k,iv,idim) + sv0*dtdx*half
+              qp(l,i,j,k,ip,idim) = qp(l,i,j,k,ip,idim) + sp0*dtdx*half
 !              qp(l,i,j,k,ir,idim) = max(smallr, qp(l,i,j,k,ir,idim))
               if(qp(l,i,j,k,ir,idim)<smallr)qp(l,i,j,k,ir,idim)=r
 
               ! Left state at right interface
-              qm(l,i,j,k,ir,idim) = qm(l,i,j,k,ir,idim) + half*dq(l,i,j,k,ir,idim) + sr0*dtdx*half
-              qm(l,i,j,k,iu,idim) = qm(l,i,j,k,iu,idim) + half*dq(l,i,j,k,iu,idim) + su0*dtdx*half
-              qm(l,i,j,k,iv,idim) = qm(l,i,j,k,iv,idim) + half*dq(l,i,j,k,iv,idim) + sv0*dtdx*half
-              qm(l,i,j,k,ip,idim) = qm(l,i,j,k,ip,idim) + half*dq(l,i,j,k,ip,idim) + sp0*dtdx*half
+              qm(l,i,j,k,ir,idim) = qm(l,i,j,k,ir,idim) + sr0*dtdx*half
+              qm(l,i,j,k,iu,idim) = qm(l,i,j,k,iu,idim) + su0*dtdx*half
+              qm(l,i,j,k,iv,idim) = qm(l,i,j,k,iv,idim) + sv0*dtdx*half
+              qm(l,i,j,k,ip,idim) = qm(l,i,j,k,ip,idim) + sp0*dtdx*half
 !              qm(l,i,j,k,ir,idim) = max(smallr, qm(l,i,j,k,ir,idim))
               if(qm(l,i,j,k,ir,idim)<smallr)qm(l,i,j,k,ir,idim)=r
               end do
