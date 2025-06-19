@@ -138,16 +138,19 @@ subroutine trace1d(q,dq,qm,qp,dx,dt,ngrid)
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qp
 
   ! Local variables
-  integer ::i, j, k, l
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2)::oneoverr
+  integer ::i, j, k, l, ivar, idim
   integer ::ilo,ihi,jlo,jhi,klo,khi
-  integer ::ir, iu, ip
+  integer,parameter ::ir=1, iu=2, ip=3
   real(dp)::dtdx
-  real(dp)::r, u, p
+  real(dp)::r, u, p,vel
+  real(dp)::dvar, dvarx, dvary, dvarz
+  real(dp)::source
   real(dp)::drx, dux, dpx
   real(dp)::sr0, su0, sp0
 #if NENER>0
   integer::irad
-  real(dp),dimension(1:nener)::e, dex, se0
+  real(dp)::e, dex, se0
 #endif
 #if NVAR > NHYDRO + NENER
   integer::n
@@ -155,96 +158,168 @@ subroutine trace1d(q,dq,qm,qp,dx,dt,ngrid)
 #endif
 
   dtdx = dt/dx
-
   ilo=MIN(1,iu1+1); ihi=MAX(1,iu2-1)
   jlo=MIN(1,ju1+1); jhi=MAX(1,ju2-1)
   klo=MIN(1,ku1+1); khi=MAX(1,ku2-1)
-  ir=1; iu=2; ip=3
 
+  ! Initialize qd and qm to q for all variables
+  do idim=1,ndim
+  do ivar=1,nvar
+     do k = klo, khi
+        do j = jlo, jhi
+           do i = ilo, ihi
+              do l = 1, ngrid
+                 qp(l,i,j,k,ivar,idim) = q(l,i,j,k,ivar)
+                 qm(l,i,j,k,ivar,idim) = q(l,i,j,k,ivar)
+               end do
+           end do
+        end do
+     end do
+  end do
+  end do
+
+  ! Apply TVD slopes for all variables
+  do idim=1,ndim
+  do ivar=1,nvar
+     do k = klo, khi
+        do j = jlo, jhi
+           do i = ilo, ihi
+              do l = 1, ngrid
+                 ! Half TVD slope
+                 dvar = half*dq(l,i,j,k,ivar,idim)
+                 qp(l,i,j,k,ivar,idim) = qp(l,i,j,k,ivar,idim) - dvar
+                 qm(l,i,j,k,ivar,idim) = qm(l,i,j,k,ivar,idim) + dvar
+               end do
+            end do
+         end do
+      end do
+   end do
+   end do
+
+  ! Apply universal source for all variables
+  do idim=1,ndim
+  do ivar=1,nvar
+     do k = klo, khi
+        do j = jlo, jhi
+           do i = ilo, ihi
+              do l = 1, ngrid
+                 vel = q(l,i,j,k,idim+1)
+                 dvar = dq(l,i,j,k,ivar,idim)
+                 source = -vel*dvar * dtdx * half
+                 qp(l,i,j,k,ivar,idim) = qp(l,i,j,k,ivar,idim) + source
+                 qm(l,i,j,k,ivar,idim) = qm(l,i,j,k,ivar,idim) + source
+               end do
+            end do
+         end do
+      end do
+   end do
+   end do
+
+  ! precalc 1/rho
+  do k = klo, khi
+     do j = jlo, jhi
+        do i = ilo, ihi
+           do l = 1, ngrid
+              r   =  q(l,i,j,k,ir)
+              oneoverr(l,i,j,k) = 1d0/r
+            end do
+         end do
+      end do
+   end do
+
+  ! Transverse derivatives for velocities
+  do idim=1,ndim
+  do k = klo, khi
+     do j = jlo, jhi
+        do i = ilo, ihi
+           do l = 1, ngrid
+              source = - dq(l,i,j,k,ip,idim)
+#if NENER>0
+              ! correct source vel for nener
+              do irad=1,nener
+                 dvar = dq(l,i,j,k,ip+irad,1)
+                 source = source - dvar
+              end do
+#endif
+              ! apply source
+              source = source*oneoverr(l,i,j,k) * dtdx*half
+              qp(l,i,j,k,1+idim,1) = qp(l,i,j,k,1+idim,1) + source
+              qm(l,i,j,k,1+idim,1) = qm(l,i,j,k,1+idim,1) + source
+
+            end do
+         end do
+      end do
+   end do
+   end do
+
+  ! Transverse derivatives for density and pressure
+  do idim=1,ndim
   do k = klo, khi
      do j = jlo, jhi
         do i = ilo, ihi
            do l = 1, ngrid
 
-              ! Cell centered values
+              ! Cell centered values for density and pressure
               r   =  q(l,i,j,k,ir)
-              u   =  q(l,i,j,k,iu)
               p   =  q(l,i,j,k,ip)
-#if NENER>0
-              do irad=1,nener
-                 e(irad) = q(l,i,j,k,ip+irad)
-              end do
-#endif
-              ! TVD slopes in X direction
-              drx = dq(l,i,j,k,ir,1)
-              dux = dq(l,i,j,k,iu,1)
-              dpx = dq(l,i,j,k,ip,1)
-#if NENER>0
-              do irad=1,nener
-                 dex(irad) = dq(l,i,j,k,ip+irad,1)
-              end do
-#endif
 
-              ! Source terms (including transverse derivatives)
-              sr0 = -u*drx - (dux)*r
-              sp0 = -u*dpx - (dux)*gamma*p
-              su0 = -u*dux - (dpx)/r
-#if NENER>0
-              do irad=1,nener
-                 su0 = su0 - (dex(irad))/r
-                 se0(irad) = -u*dex(irad) &
-                      & - (dux)*gamma_rad(irad)*e(irad)
-              end do
-#endif
+              ! velocity TVD slopes in direction idim
+              dvar = dq(l,i,j,k,1+idim,idim)
+
+              ! Source transverse derivatives
+              ! density:  - (dux+dvy+dwz)/r
+              ! pressure: - (dux+dvy+dwz)*gamma*p
+              sr0 = - (dvar)*r * dtdx*half
+              sp0 = - (dvar)*gamma*p * dtdx*half
 
               ! Right state
-              qp(l,i,j,k,ir,1) = r - half*drx + sr0*dtdx*half
-              qp(l,i,j,k,iu,1) = u - half*dux + su0*dtdx*half
-              qp(l,i,j,k,ip,1) = p - half*dpx + sp0*dtdx*half
-!              qp(l,i,j,k,ir,1) = max(smallr, qp(l,i,j,k,ir,1))
-              if(qp(l,i,j,k,ir,1)<smallr)qp(l,i,j,k,ir,1)=r
-#if NENER>0
-              do irad=1,nener
-                 qp(l,i,j,k,ip+irad,1) = e(irad) - half*dex(irad) + se0(irad)*dtdx*half
-              end do
-#endif
+              qp(l,i,j,k,ir,idim) = qp(l,i,j,k,ir,idim) + sr0
+              qp(l,i,j,k,ip,idim) = qp(l,i,j,k,ip,idim) + sp0
 
               ! Left state
-              qm(l,i,j,k,ir,1) = r + half*drx + sr0*dtdx*half
-              qm(l,i,j,k,iu,1) = u + half*dux + su0*dtdx*half
-              qm(l,i,j,k,ip,1) = p + half*dpx + sp0*dtdx*half
-!              qm(l,i,j,k,ir,1) = max(smallr, qm(l,i,j,k,ir,1))
-              if(qm(l,i,j,k,ir,1)<smallr)qm(l,i,j,k,ir,1)=r
-#if NENER>0
-              do irad=1,nener
-                 qm(l,i,j,k,ip+irad,1) = e(irad) + half*dex(irad) + se0(irad)*dtdx*half
-              end do
-#endif
-
+              qm(l,i,j,k,ir,idim) = qm(l,i,j,k,ir,idim) + sr0
+              qm(l,i,j,k,ip,idim) = qm(l,i,j,k,ip,idim) + sp0
            end do
         end do
      end do
   end do
+  end do
 
-#if NVAR > NHYDRO + NENER
-  ! Passive scalars
-  do n = ndim+nener+3, nvar
+  ! Transverse derivatives for nener
+#if NENER>0
+  do idim=1,ndim
+  do irad=1,nener
      do k = klo, khi
         do j = jlo, jhi
            do i = ilo, ihi
               do l = 1, ngrid
-                 a   = q(l,i,j,k,n)       ! Cell centered values
-                 u   = q(l,i,j,k,iu)
-                 dax = dq(l,i,j,k,n,1)    ! TVD slopes
-                 sa0 = -u*dax             ! Source terms
-                 qp(l,i,j,k,n,1) = a - half*dax + sa0*dtdx*half   ! Right state
-                 qm(l,i,j,k,n,1) = a + half*dax + sa0*dtdx*half   ! Left state
+                 e = q(l,i,j,k,ip+irad)
+                 dvar = dq(l,i,j,k,1+idim,idim)
+                 source = - (dvar)*gamma_rad(irad)*e * dtdx*half
+                 qp(l,i,j,k,ip+irad,idim) = qp(l,i,j,k,ip+irad,idim) + source
+                 qm(l,i,j,k,ip+irad,idim) = qm(l,i,j,k,ip+irad,idim) + source
               end do
            end do
         end do
      end do
   end do
+  end do
 #endif
+
+  ! Limit for density
+  do idim=1,ndim
+  do k = klo, khi
+     do j = jlo, jhi
+        do i = ilo, ihi
+           do l = 1, ngrid
+              r   =  q(l,i,j,k,ir)
+              if(qp(l,i,j,k,ir,idim)<smallr)qp(l,i,j,k,ir,idim)=r
+              if(qm(l,i,j,k,ir,idim)<smallr)qm(l,i,j,k,ir,idim)=r
+           end do
+        end do
+     end do
+  end do
+  end do
 
 end subroutine trace1d
 !###########################################################
@@ -508,7 +583,7 @@ subroutine trace3d(q,dq,qm,qp,dx,dy,dz,dt,ngrid)
                  dvary = dq(l,i,j,k,ivar,2)
                  dvarz = dq(l,i,j,k,ivar,3)
                  base_source = -u*dvarx-v*dvary-w*dvarz
-                 base_source = half*base_source
+                 base_source = base_source * dtdx * half
                  qp(l,i,j,k,ivar,1) = qp(l,i,j,k,ivar,1) + base_source
                  qm(l,i,j,k,ivar,1) = qm(l,i,j,k,ivar,1) + base_source
                  qp(l,i,j,k,ivar,2) = qp(l,i,j,k,ivar,2) + base_source
@@ -591,7 +666,6 @@ subroutine trace3d(q,dq,qm,qp,dx,dy,dz,dt,ngrid)
             do l = 1, ngrid
                r   =  q(l,i,j,k,ir)
                p   =  q(l,i,j,k,ip)
-               oneoverr = 1d0/r
 
                dvarx = dq(l,i,j,k,iu,1)
                dvary = dq(l,i,j,k,iv,2)
