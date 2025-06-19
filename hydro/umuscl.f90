@@ -157,38 +157,22 @@ subroutine trace(q,dq,qm,qp,dx,dt,ngrid)
   klo=MIN(1,ku1+1); khi=MAX(1,ku2-1)
 
   ! Initialize qd and qm to q for all variables
+  ! and apply TVD slopes
   do idim=1,ndim
   do ivar=1,nvar
      do k = klo, khi
         do j = jlo, jhi
            do i = ilo, ihi
               do l = 1, ngrid
-                 qp(l,i,j,k,ivar,idim) = q(l,i,j,k,ivar)
-                 qm(l,i,j,k,ivar,idim) = q(l,i,j,k,ivar)
+                 dvar = half*dq(l,i,j,k,ivar,idim)
+                 qp(l,i,j,k,ivar,idim) = q(l,i,j,k,ivar) - dvar
+                 qm(l,i,j,k,ivar,idim) = q(l,i,j,k,ivar) + dvar
                end do
            end do
         end do
      end do
   end do
   end do
-
-  ! Apply TVD slopes for all variables
-  do idim=1,ndim
-  do ivar=1,nvar
-     do k = klo, khi
-        do j = jlo, jhi
-           do i = ilo, ihi
-              do l = 1, ngrid
-                 ! Half TVD slope
-                 dvar = half*dq(l,i,j,k,ivar,idim)
-                 qp(l,i,j,k,ivar,idim) = qp(l,i,j,k,ivar,idim) - dvar
-                 qm(l,i,j,k,ivar,idim) = qm(l,i,j,k,ivar,idim) + dvar
-               end do
-            end do
-         end do
-      end do
-   end do
-   end do
 
   ! Apply universal source for all variables
   do idim=1,ndim
