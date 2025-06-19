@@ -141,7 +141,7 @@ subroutine trace(q,dq,qm,qp,dx,dt,ngrid)
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2)::oneoverr
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::S0
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2)::dvel_sum
-  integer ::i, j, k, l, ivar, idim
+  integer ::i, j, k, l, ivar, idim, ivel
   integer ::ilo,ihi,jlo,jhi,klo,khi
   integer,parameter ::ir=1,ip=neul
   real(dp)::dtdx
@@ -192,6 +192,38 @@ subroutine trace(q,dq,qm,qp,dx,dt,ngrid)
   end do
   end do
 
+  ! precalc 1/rho
+  do k = klo, khi
+     do j = jlo, jhi
+        do i = ilo, ihi
+           do l = 1, ngrid
+              r   =  q(l,i,j,k,ir)
+              oneoverr(l,i,j,k) = 1d0/r
+            end do
+         end do
+      end do
+   end do
+
+  ! add second term of source for velocities
+  do ivel=1,ndim
+  do k = klo, khi
+     do j = jlo, jhi
+        do i = ilo, ihi
+           do l = 1, ngrid
+              source = - (dq(l,i,j,k,ip,ivel))*oneoverr(l,i,j,k)
+#if NENER>0
+              do irad=1,nener
+                 source = source - dq(l,i,j,k,ip+irad,ivel)*oneoverr(l,i,j,k)
+              end do
+#endif
+
+               S0(l,i,j,k,1+ivel) = S0(l,i,j,k,1+ivel) + source
+            end do
+         end do
+      end do
+   end do
+  end do
+
   ! Apply first term of source for all variables
   do idim=1,ndim
   do ivar=1,nvar
@@ -209,19 +241,10 @@ subroutine trace(q,dq,qm,qp,dx,dt,ngrid)
   end do
   end do
 
-  ! precalc 1/rho
-  do k = klo, khi
-     do j = jlo, jhi
-        do i = ilo, ihi
-           do l = 1, ngrid
-              r   =  q(l,i,j,k,ir)
-              oneoverr(l,i,j,k) = 1d0/r
-            end do
-         end do
-      end do
-   end do
+
 
   ! Transverse derivatives for velocities
+  do ivel=1,ndim
   do idim=1,ndim
   do k = klo, khi
      do j = jlo, jhi
@@ -237,12 +260,13 @@ subroutine trace(q,dq,qm,qp,dx,dt,ngrid)
 #endif
               ! apply source
               source = source*oneoverr(l,i,j,k) * dtdx*half
-              qp(l,i,j,k,1+idim,idim) = qp(l,i,j,k,1+idim,idim) + source
-              qm(l,i,j,k,1+idim,idim) = qm(l,i,j,k,1+idim,idim) + source
+              qp(l,i,j,k,1+ivel,idim) = qp(l,i,j,k,1+ivel,idim) + source
+              qm(l,i,j,k,1+ivel,idim) = qm(l,i,j,k,1+ivel,idim) + source
 
             end do
          end do
       end do
+   end do
    end do
    end do
 
@@ -347,8 +371,9 @@ subroutine trace2d(q,dq,qm,qp,dx,dy,dt,ngrid)
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qp
 
   ! declare local variables
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2)::oneoverr
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::S0
-  integer ::i, j, k, l, ivar, idim
+  integer ::i, j, k, l, ivar, idim, ivel
   integer ::ilo,ihi,jlo,jhi,klo,khi
   integer ::ir, iu, iv, ip
   real(dp)::dtdx
@@ -406,6 +431,38 @@ subroutine trace2d(q,dq,qm,qp,dx,dy,dt,ngrid)
   end do
   end do
 
+  ! precalc 1/rho
+  do k = klo, khi
+     do j = jlo, jhi
+        do i = ilo, ihi
+           do l = 1, ngrid
+              r   =  q(l,i,j,k,ir)
+              oneoverr(l,i,j,k) = 1d0/r
+            end do
+         end do
+      end do
+   end do
+
+  ! add second term of source for velocities
+  do ivel=1,ndim
+  do k = klo, khi
+     do j = jlo, jhi
+        do i = ilo, ihi
+           do l = 1, ngrid
+              source = - (dq(l,i,j,k,ip,ivel))*oneoverr(l,i,j,k)
+#if NENER>0
+              do irad=1,nener
+                 source = source - dq(l,i,j,k,ip+irad,ivel)*oneoverr(l,i,j,k)
+              end do
+#endif
+
+               S0(l,i,j,k,1+ivel) = S0(l,i,j,k,1+ivel) + source
+            end do
+         end do
+      end do
+   end do
+  end do
+
   ! Apply first term of source for all variables
   do idim=1,ndim
   do ivar=1,nvar
@@ -428,72 +485,31 @@ subroutine trace2d(q,dq,qm,qp,dx,dy,dt,ngrid)
         do i = ilo, ihi
            do l = 1, ngrid
 
-              ! Cell centered values
-              r   =  q(l,i,j,k,ir)
-              u   =  q(l,i,j,k,iu)
-              v   =  q(l,i,j,k,iv)
-              p   =  q(l,i,j,k,ip)
-#if NENER>0
-              do irad=1,nener
-                 e(irad) = q(l,i,j,k,ip+irad)
-              end do
-#endif
-
               ! TVD slopes in all directions
-              drx = dq(l,i,j,k,ir,1)
               dux = dq(l,i,j,k,iu,1)
-              dvx = dq(l,i,j,k,iv,1)
-              dpx = dq(l,i,j,k,ip,1)
-#if NENER>0
-              do irad=1,nener
-                 dex(irad) = dq(l,i,j,k,ip+irad,1)
-              end do
-#endif
-
-              dry = dq(l,i,j,k,ir,2)
-              duy = dq(l,i,j,k,iu,2)
               dvy = dq(l,i,j,k,iv,2)
-              dpy = dq(l,i,j,k,ip,2)
-#if NENER>0
-              do irad=1,nener
-                 dey(irad) = dq(l,i,j,k,ip+irad,2)
-              end do
-#endif
-
-              ! source terms (with transverse derivatives)
+              r   =  q(l,i,j,k,ir)
+              p   =  q(l,i,j,k,ip)
               sr0 = - (dux+dvy)*r
               sp0 = - (dux+dvy)*gamma*p
-              su0 = - (dpx    )/r
-              sv0 = - (dpy    )/r
-#if NENER>0
-              do irad=1,nener
-                 su0 = su0 - (dex(irad))/r
-                 sv0 = sv0 - (dey(irad))/r
-                 se0(irad) = - (dux+dvy)*gamma_rad(irad)*e(irad)
-              end do
-#endif
 
               do idim=1,ndim
 
               ! Right state at left interface
               qp(l,i,j,k,ir,idim) = qp(l,i,j,k,ir,idim) + sr0*dtdx*half
-              qp(l,i,j,k,iu,idim) = qp(l,i,j,k,iu,idim) + su0*dtdx*half
-              qp(l,i,j,k,iv,idim) = qp(l,i,j,k,iv,idim) + sv0*dtdx*half
               qp(l,i,j,k,ip,idim) = qp(l,i,j,k,ip,idim) + sp0*dtdx*half
-!              qp(l,i,j,k,ir,idim) = max(smallr, qp(l,i,j,k,ir,idim))
               if(qp(l,i,j,k,ir,idim)<smallr)qp(l,i,j,k,ir,idim)=r
 
               ! Left state at right interface
               qm(l,i,j,k,ir,idim) = qm(l,i,j,k,ir,idim) + sr0*dtdx*half
-              qm(l,i,j,k,iu,idim) = qm(l,i,j,k,iu,idim) + su0*dtdx*half
-              qm(l,i,j,k,iv,idim) = qm(l,i,j,k,iv,idim) + sv0*dtdx*half
               qm(l,i,j,k,ip,idim) = qm(l,i,j,k,ip,idim) + sp0*dtdx*half
-!              qm(l,i,j,k,ir,idim) = max(smallr, qm(l,i,j,k,ir,idim))
               if(qm(l,i,j,k,ir,idim)<smallr)qm(l,i,j,k,ir,idim)=r
               end do
 
 #if NENER>0
               do irad=1,nener
+                 e(irad) = q(l,i,j,k,ip+irad)
+                 se0(irad) = - (dux+dvy)*gamma_rad(irad)*e(irad)
                  qp(l,i,j,k,ip+irad,1) = e(irad) + se0(irad)*dtdx*half
                  qm(l,i,j,k,ip+irad,1) = e(irad) + se0(irad)*dtdx*half
                  qp(l,i,j,k,ip+irad,2) = e(irad) + se0(irad)*dtdx*half
