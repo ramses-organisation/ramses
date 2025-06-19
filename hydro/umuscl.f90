@@ -69,15 +69,15 @@ subroutine unsplit(uin,gravin,pin,flux,tmp,dx,dy,dz,dt,ngrid)
 
   ! Compute 3D traced-states in all three directions
   if(scheme=='muscl')then
-!#if NDIM==1
+#if NDIM==1
      call trace(qin,dq,qm,qp,dx      ,dt,ngrid)
-!#endif
-!#if NDIM==2
-!     call trace2d(qin,dq,qm,qp,dx,dy   ,dt,ngrid)
-!#endif
-!#if NDIM==3
-!     call trace3d(qin,dq,qm,qp,dx,dy,dz,dt,ngrid)
-!#endif
+#endif
+#if NDIM==2
+     call trace2d(qin,dq,qm,qp,dx,dy   ,dt,ngrid)
+#endif
+#if NDIM==3
+     call trace3d(qin,dq,qm,qp,dx,dy,dz,dt,ngrid)
+#endif
   endif
   if(scheme=='plmde')then
 #if NDIM==1
@@ -304,11 +304,11 @@ subroutine trace2d(q,dq,qm,qp,dx,dy,dt,ngrid)
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qp
 
   ! declare local variables
-  integer ::i, j, k, l
+  integer ::i, j, k, l, ivar, idim
   integer ::ilo,ihi,jlo,jhi,klo,khi
   integer ::ir, iu, iv, ip
   real(dp)::dtdx
-  real(dp)::r, u, v, p
+  real(dp)::r, u, v, p, vel, dvar, source
   real(dp)::drx, dux, dvx, dpx
   real(dp)::dry, duy, dvy, dpy
   real(dp)::sr0, su0, sv0, sp0
@@ -326,6 +326,27 @@ subroutine trace2d(q,dq,qm,qp,dx,dy,dt,ngrid)
   jlo=MIN(1,ju1+1); jhi=MAX(1,ju2-1)
   klo=MIN(1,ku1+1); khi=MAX(1,ku2-1)
   ir=1; iu=2; iv=3; ip=4
+
+  ! Initialize qd and qm to q for all variables
+  ! and apply TVD slopes
+  ! and apply universal source for all variables
+  do idim=1,ndim
+  do ivar=1,nvar
+     do k = klo, khi
+        do j = jlo, jhi
+           do i = ilo, ihi
+              do l = 1, ngrid
+                 !vel = q(l,i,j,k,idim+1)
+                 !dvar = half*dq(l,i,j,k,ivar,idim)
+                 !source = -vel*dvar * dtdx
+                 qp(l,i,j,k,ivar,idim) = q(l,i,j,k,ivar) !- dvar! + source
+                 qm(l,i,j,k,ivar,idim) = q(l,i,j,k,ivar) !+ dvar! + source
+               end do
+           end do
+        end do
+     end do
+  end do
+  end do
 
   do k = klo, khi
      do j = jlo, jhi
@@ -379,10 +400,10 @@ subroutine trace2d(q,dq,qm,qp,dx,dy,dt,ngrid)
 #endif
 
               ! Right state at left interface
-              qp(l,i,j,k,ir,1) = r - half*drx + sr0*dtdx*half
-              qp(l,i,j,k,iu,1) = u - half*dux + su0*dtdx*half
-              qp(l,i,j,k,iv,1) = v - half*dvx + sv0*dtdx*half
-              qp(l,i,j,k,ip,1) = p - half*dpx + sp0*dtdx*half
+              qp(l,i,j,k,ir,1) = qp(l,i,j,k,ir,1) - half*drx + sr0*dtdx*half
+              qp(l,i,j,k,iu,1) = qp(l,i,j,k,iu,1) - half*dux + su0*dtdx*half
+              qp(l,i,j,k,iv,1) = qp(l,i,j,k,iv,1) - half*dvx + sv0*dtdx*half
+              qp(l,i,j,k,ip,1) = qp(l,i,j,k,ip,1) - half*dpx + sp0*dtdx*half
 !              qp(l,i,j,k,ir,1) = max(smallr, qp(l,i,j,k,ir,1))
               if(qp(l,i,j,k,ir,1)<smallr)qp(l,i,j,k,ir,1)=r
 #if NENER>0
@@ -392,10 +413,10 @@ subroutine trace2d(q,dq,qm,qp,dx,dy,dt,ngrid)
 #endif
 
               ! Left state at right interface
-              qm(l,i,j,k,ir,1) = r + half*drx + sr0*dtdx*half
-              qm(l,i,j,k,iu,1) = u + half*dux + su0*dtdx*half
-              qm(l,i,j,k,iv,1) = v + half*dvx + sv0*dtdx*half
-              qm(l,i,j,k,ip,1) = p + half*dpx + sp0*dtdx*half
+              qm(l,i,j,k,ir,1) = qm(l,i,j,k,ir,1) + half*drx + sr0*dtdx*half
+              qm(l,i,j,k,iu,1) = qm(l,i,j,k,iu,1) + half*dux + su0*dtdx*half
+              qm(l,i,j,k,iv,1) = qm(l,i,j,k,iv,1) + half*dvx + sv0*dtdx*half
+              qm(l,i,j,k,ip,1) = qm(l,i,j,k,ip,1) + half*dpx + sp0*dtdx*half
 !              qm(l,i,j,k,ir,1) = max(smallr, qm(l,i,j,k,ir,1))
               if(qm(l,i,j,k,ir,1)<smallr)qm(l,i,j,k,ir,1)=r
 #if NENER>0
@@ -405,10 +426,10 @@ subroutine trace2d(q,dq,qm,qp,dx,dy,dt,ngrid)
 #endif
 
               ! Top state at bottom interface
-              qp(l,i,j,k,ir,2) = r - half*dry + sr0*dtdx*half
-              qp(l,i,j,k,iu,2) = u - half*duy + su0*dtdx*half
-              qp(l,i,j,k,iv,2) = v - half*dvy + sv0*dtdx*half
-              qp(l,i,j,k,ip,2) = p - half*dpy + sp0*dtdx*half
+              qp(l,i,j,k,ir,2) = qp(l,i,j,k,ir,2) - half*dry + sr0*dtdx*half
+              qp(l,i,j,k,iu,2) = qp(l,i,j,k,iu,2) - half*duy + su0*dtdx*half
+              qp(l,i,j,k,iv,2) = qp(l,i,j,k,iv,2) - half*dvy + sv0*dtdx*half
+              qp(l,i,j,k,ip,2) = qp(l,i,j,k,ip,2) - half*dpy + sp0*dtdx*half
 !              qp(l,i,j,k,ir,2) = max(smallr, qp(l,i,j,k,ir,2))
               if(qp(l,i,j,k,ir,2)<smallr)qp(l,i,j,k,ir,2)=r
 #if NENER>0
@@ -418,10 +439,10 @@ subroutine trace2d(q,dq,qm,qp,dx,dy,dt,ngrid)
 #endif
 
               ! Bottom state at top interface
-              qm(l,i,j,k,ir,2) = r + half*dry + sr0*dtdx*half
-              qm(l,i,j,k,iu,2) = u + half*duy + su0*dtdx*half
-              qm(l,i,j,k,iv,2) = v + half*dvy + sv0*dtdx*half
-              qm(l,i,j,k,ip,2) = p + half*dpy + sp0*dtdx*half
+              qm(l,i,j,k,ir,2) = qm(l,i,j,k,ir,2) + half*dry + sr0*dtdx*half
+              qm(l,i,j,k,iu,2) = qm(l,i,j,k,iu,2) + half*duy + su0*dtdx*half
+              qm(l,i,j,k,iv,2) = qm(l,i,j,k,iv,2) + half*dvy + sv0*dtdx*half
+              qm(l,i,j,k,ip,2) = qm(l,i,j,k,ip,2) + half*dpy + sp0*dtdx*half
 !              qm(l,i,j,k,ir,2) = max(smallr, qm(l,i,j,k,ir,2))
               if(qm(l,i,j,k,ir,2)<smallr)qm(l,i,j,k,ir,2)=r
 #if NENER>0
@@ -448,10 +469,10 @@ subroutine trace2d(q,dq,qm,qp,dx,dy,dt,ngrid)
                  dax = dq(l,i,j,k,n,1)    ! TVD slopes
                  day = dq(l,i,j,k,n,2)
                  sa0 = -u*dax-v*day       ! Source terms
-                 qp(l,i,j,k,n,1) = a - half*dax + sa0*dtdx*half   ! Right state
-                 qm(l,i,j,k,n,1) = a + half*dax + sa0*dtdx*half   ! Left state
-                 qp(l,i,j,k,n,2) = a - half*day + sa0*dtdx*half   ! Top state
-                 qm(l,i,j,k,n,2) = a + half*day + sa0*dtdx*half   ! Bottom state
+                 qp(l,i,j,k,n,1) = qp(l,i,j,k,n,1) - half*dax + sa0*dtdx*half   ! Right state
+                 qm(l,i,j,k,n,1) = qm(l,i,j,k,n,1) + half*dax + sa0*dtdx*half   ! Left state
+                 qp(l,i,j,k,n,2) = qp(l,i,j,k,n,2) - half*day + sa0*dtdx*half   ! Top state
+                 qm(l,i,j,k,n,2) = qm(l,i,j,k,n,2) + half*day + sa0*dtdx*half   ! Bottom state
               end do
            end do
         end do
