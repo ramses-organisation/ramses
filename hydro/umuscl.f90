@@ -145,7 +145,7 @@ subroutine trace(q,dq,qm,qp,dx,dt,ngrid)
   integer ::ilo,ihi,jlo,jhi,klo,khi
   integer,parameter ::ir=1,ip=neul
   real(dp)::dtdx
-  real(dp)::r, u, p,vel
+  real(dp)::r, u, p,vel,var
   real(dp)::dvar, source
   real(dp)::sr0, sp0
 #if NENER>0
@@ -157,40 +157,6 @@ subroutine trace(q,dq,qm,qp,dx,dt,ngrid)
   ilo=MIN(1,iu1+1); ihi=MAX(1,iu2-1)
   jlo=MIN(1,ju1+1); jhi=MAX(1,ju2-1)
   klo=MIN(1,ku1+1); khi=MAX(1,ku2-1)
-
-  ! Initialize qd and qm to q for all variables
-  ! and apply TVD slopes
-  do idim=1,ndim
-  do ivar=1,nvar
-     do k = klo, khi
-        do j = jlo, jhi
-           do i = ilo, ihi
-              do l = 1, ngrid
-                 dvar = half*dq(l,i,j,k,ivar,idim)
-                 qp(l,i,j,k,ivar,idim) = q(l,i,j,k,ivar) - dvar
-                 qm(l,i,j,k,ivar,idim) = q(l,i,j,k,ivar) + dvar
-               end do
-           end do
-        end do
-     end do
-  end do
-  end do
-
-  ! Calculate first term of source (sum over directions)
-  S0 = 0d0
-  do idim=1,ndim
-  do ivar=1,nvar
-     do k = klo, khi
-        do j = jlo, jhi
-           do i = ilo, ihi
-              do l = 1, ngrid
-                 S0(l,i,j,k,ivar) = S0(l,i,j,k,ivar) - q(l,i,j,k,1+idim)*dq(l,i,j,k,ivar,idim)
-               end do
-           end do
-        end do
-     end do
-  end do
-  end do
 
   ! precalc 1/rho
   do k = klo, khi
@@ -204,20 +170,46 @@ subroutine trace(q,dq,qm,qp,dx,dt,ngrid)
       end do
    end do
 
-  ! add second term of source for velocities
-  do ivel=1,ndim
+  ! Initialize qd and qm to q for all variables
+  ! and apply TVD slopes
+  do ivar=1,nvar
   do k = klo, khi
      do j = jlo, jhi
         do i = ilo, ihi
            do l = 1, ngrid
-              source = - (dq(l,i,j,k,ip,ivel))*oneoverr(l,i,j,k)
+              source = 0d0
+              var = q(l,i,j,k,ivar)
+              !GCC$ unroll NDIM
+              !DIR$ UNROLL=NDIM
+              do idim=1,ndim
+                 dvar = dq(l,i,j,k,ivar,idim)
+                 vel = q(l,i,j,k,1+idim)
+                 qp(l,i,j,k,ivar,idim) = var - half*dvar
+                 qm(l,i,j,k,ivar,idim) = var + half*dvar
+                 ! Calculate first term of source (sum over directions)
+                 source= source - vel*dvar
+              end do
+              S0(l,i,j,k,ivar) = source 
+            end do
+        end do
+     end do
+  end do
+  end do
+
+  ! add second term of source for velocities
+  do idim=1,ndim
+  do k = klo, khi
+     do j = jlo, jhi
+        do i = ilo, ihi
+           do l = 1, ngrid
+              source = - (dq(l,i,j,k,ip,idim))*oneoverr(l,i,j,k)
 #if NENER>0
               do irad=1,nener
-                 source = source - dq(l,i,j,k,ip+irad,ivel)*oneoverr(l,i,j,k)
+                 source = source - dq(l,i,j,k,ip+irad,idim)*oneoverr(l,i,j,k)
               end do
 #endif
 
-               S0(l,i,j,k,1+ivel) = S0(l,i,j,k,1+ivel) + source
+               S0(l,i,j,k,1+idim) = S0(l,i,j,k,1+idim) + source
             end do
          end do
       end do
@@ -261,7 +253,6 @@ subroutine trace(q,dq,qm,qp,dx,dt,ngrid)
      do j = jlo, jhi
         do i = ilo, ihi
            do l = 1, ngrid
-
               ! Cell centered values for density and pressure
               r   =  q(l,i,j,k,ir)
               p   =  q(l,i,j,k,ip)
@@ -279,6 +270,12 @@ subroutine trace(q,dq,qm,qp,dx,dt,ngrid)
               ! Left state
               qm(l,i,j,k,ir,idim) = qm(l,i,j,k,ir,idim) + sr0
               qm(l,i,j,k,ip,idim) = qm(l,i,j,k,ip,idim) + sp0
+
+              ! If the value for density is small, set to the original rho
+              qp(l,i,j,k,ir,idim) = merge(r, qp(l,i,j,k,ir,idim), qp(l,i,j,k,ir,idim)<smallr)
+              qm(l,i,j,k,ir,idim) = merge(r, qm(l,i,j,k,ir,idim), qm(l,i,j,k,ir,idim)<smallr)
+              !if(qp(l,i,j,k,ir,idim)<smallr)qp(l,i,j,k,ir,idim)=r
+              !if(qm(l,i,j,k,ir,idim)<smallr)qm(l,i,j,k,ir,idim)=r
            end do
         end do
      end do
@@ -305,21 +302,6 @@ subroutine trace(q,dq,qm,qp,dx,dt,ngrid)
   end do
   end do
 #endif
-
-  ! Limit for density
-  do idim=1,ndim
-  do k = klo, khi
-     do j = jlo, jhi
-        do i = ilo, ihi
-           do l = 1, ngrid
-              r   =  q(l,i,j,k,ir)
-              if(qp(l,i,j,k,ir,idim)<smallr)qp(l,i,j,k,ir,idim)=r
-              if(qm(l,i,j,k,ir,idim)<smallr)qm(l,i,j,k,ir,idim)=r
-           end do
-        end do
-     end do
-  end do
-  end do
 
 end subroutine trace
 !###########################################################
