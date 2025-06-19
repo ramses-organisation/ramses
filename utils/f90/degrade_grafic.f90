@@ -112,7 +112,7 @@ program degrade_grafic
      write(*,*)'Reading input file '//TRIM(filename(i_file))
      open(10,file=filename(i_file),form='unformatted')
      rewind(10)
-     read (10)np1,np2,np3,dx,x1o,x2o,x3o,astart,omegam,omegav,h0
+     read (10)q3,dx,x1o,x2o,x3o,astart,omegam,omegav,h0
 
      write(*,*)'Writing ouput file '//TRIM(filename(7+i_file))
      open(11,file=filename(7+i_file),form='unformatted')
