@@ -73,11 +73,11 @@ subroutine unsplit(uin,gravin,pin,flux,tmp,dx,dy,dz,dt,ngrid)
      call trace(qin,dq,qm,qp,dx      ,dt,ngrid)
 #endif
 #if NDIM==2
-     call trace2d(qin,dq,qm,qp,dx,dy   ,dt,ngrid)
+    call trace2d(qin,dq,qm,qp,dx,dy   ,dt,ngrid)
 #endif
-#if NDIM==3
-     call trace3d(qin,dq,qm,qp,dx,dy,dz,dt,ngrid)
-#endif
+!#if NDIM==3
+!     call trace3d(qin,dq,qm,qp,dx,dy,dz,dt,ngrid)
+!#endif
   endif
   if(scheme=='plmde')then
 #if NDIM==1
@@ -168,8 +168,8 @@ subroutine trace(q,dq,qm,qp,dx,dt,ngrid)
                  vel = q(l,i,j,k,idim+1)
                  dvar = half*dq(l,i,j,k,ivar,idim)
                  source = -vel*dvar * dtdx
-                 qp(l,i,j,k,ivar,idim) = q(l,i,j,k,ivar) - dvar + source
-                 qm(l,i,j,k,ivar,idim) = q(l,i,j,k,ivar) + dvar + source
+                 qp(l,i,j,k,ivar,idim) = q(l,i,j,k,ivar) - dvar + ndim*source
+                 qm(l,i,j,k,ivar,idim) = q(l,i,j,k,ivar) + dvar + ndim*source
                end do
            end do
         end do
@@ -205,8 +205,8 @@ subroutine trace(q,dq,qm,qp,dx,dt,ngrid)
 #endif
               ! apply source
               source = source*oneoverr(l,i,j,k) * dtdx*half
-              qp(l,i,j,k,1+idim,idim) = qp(l,i,j,k,1+idim,idim) + source
-              qm(l,i,j,k,1+idim,idim) = qm(l,i,j,k,1+idim,idim) + source
+              qp(l,i,j,k,1+idim,idim) = qp(l,i,j,k,1+idim,idim) + ndim*source
+              qm(l,i,j,k,1+idim,idim) = qm(l,i,j,k,1+idim,idim) + ndim*source
 
             end do
          end do
@@ -231,8 +231,8 @@ subroutine trace(q,dq,qm,qp,dx,dt,ngrid)
               ! Source transverse derivatives
               ! density:  - (dux+dvy+dwz)/r
               ! pressure: - (dux+dvy+dwz)*gamma*p
-              sr0 = - (dvar)*r * dtdx*half
-              sp0 = - (dvar)*gamma*p * dtdx*half
+              sr0 = - (dvar)*r       * dtdx*half * ndim
+              sp0 = - (dvar)*gamma*p * dtdx*half * ndim
 
               ! Right state
               qp(l,i,j,k,ir,idim) = qp(l,i,j,k,ir,idim) + sr0
@@ -398,54 +398,35 @@ subroutine trace2d(q,dq,qm,qp,dx,dy,dt,ngrid)
                       & - (dux+dvy)*gamma_rad(irad)*e(irad)
               end do
 #endif
+              do idim=1,ndim
 
               ! Right state at left interface
-              qp(l,i,j,k,ir,1) = qp(l,i,j,k,ir,1) - half*drx + sr0*dtdx*half
-              qp(l,i,j,k,iu,1) = qp(l,i,j,k,iu,1) - half*dux + su0*dtdx*half
-              qp(l,i,j,k,iv,1) = qp(l,i,j,k,iv,1) - half*dvx + sv0*dtdx*half
-              qp(l,i,j,k,ip,1) = qp(l,i,j,k,ip,1) - half*dpx + sp0*dtdx*half
-!              qp(l,i,j,k,ir,1) = max(smallr, qp(l,i,j,k,ir,1))
-              if(qp(l,i,j,k,ir,1)<smallr)qp(l,i,j,k,ir,1)=r
+              qp(l,i,j,k,ir,idim) = qp(l,i,j,k,ir,idim) - half*dq(l,i,j,k,ir,idim) + sr0*dtdx*half
+              qp(l,i,j,k,iu,idim) = qp(l,i,j,k,iu,idim) - half*dq(l,i,j,k,iu,idim) + su0*dtdx*half
+              qp(l,i,j,k,iv,idim) = qp(l,i,j,k,iv,idim) - half*dq(l,i,j,k,iv,idim) + sv0*dtdx*half
+              qp(l,i,j,k,ip,idim) = qp(l,i,j,k,ip,idim) - half*dq(l,i,j,k,ip,idim) + sp0*dtdx*half
+!              qp(l,i,j,k,ir,idim) = max(smallr, qp(l,i,j,k,ir,idim))
+              if(qp(l,i,j,k,ir,idim)<smallr)qp(l,i,j,k,ir,idim)=r
+
+              ! Left state at right interface
+              qm(l,i,j,k,ir,idim) = qm(l,i,j,k,ir,idim) + half*dq(l,i,j,k,ir,idim) + sr0*dtdx*half
+              qm(l,i,j,k,iu,idim) = qm(l,i,j,k,iu,idim) + half*dq(l,i,j,k,iu,idim) + su0*dtdx*half
+              qm(l,i,j,k,iv,idim) = qm(l,i,j,k,iv,idim) + half*dq(l,i,j,k,iv,idim) + sv0*dtdx*half
+              qm(l,i,j,k,ip,idim) = qm(l,i,j,k,ip,idim) + half*dq(l,i,j,k,ip,idim) + sp0*dtdx*half
+!              qm(l,i,j,k,ir,idim) = max(smallr, qm(l,i,j,k,ir,idim))
+              if(qm(l,i,j,k,ir,idim)<smallr)qm(l,i,j,k,ir,idim)=r
+              end do
+
 #if NENER>0
               do irad=1,nener
                  qp(l,i,j,k,ip+irad,1) = e(irad) - half*dex(irad) + se0(irad)*dtdx*half
               end do
-#endif
-
-              ! Left state at right interface
-              qm(l,i,j,k,ir,1) = qm(l,i,j,k,ir,1) + half*drx + sr0*dtdx*half
-              qm(l,i,j,k,iu,1) = qm(l,i,j,k,iu,1) + half*dux + su0*dtdx*half
-              qm(l,i,j,k,iv,1) = qm(l,i,j,k,iv,1) + half*dvx + sv0*dtdx*half
-              qm(l,i,j,k,ip,1) = qm(l,i,j,k,ip,1) + half*dpx + sp0*dtdx*half
-!              qm(l,i,j,k,ir,1) = max(smallr, qm(l,i,j,k,ir,1))
-              if(qm(l,i,j,k,ir,1)<smallr)qm(l,i,j,k,ir,1)=r
-#if NENER>0
               do irad=1,nener
                  qm(l,i,j,k,ip+irad,1) = e(irad) + half*dex(irad) + se0(irad)*dtdx*half
               end do
-#endif
-
-              ! Top state at bottom interface
-              qp(l,i,j,k,ir,2) = qp(l,i,j,k,ir,2) - half*dry + sr0*dtdx*half
-              qp(l,i,j,k,iu,2) = qp(l,i,j,k,iu,2) - half*duy + su0*dtdx*half
-              qp(l,i,j,k,iv,2) = qp(l,i,j,k,iv,2) - half*dvy + sv0*dtdx*half
-              qp(l,i,j,k,ip,2) = qp(l,i,j,k,ip,2) - half*dpy + sp0*dtdx*half
-!              qp(l,i,j,k,ir,2) = max(smallr, qp(l,i,j,k,ir,2))
-              if(qp(l,i,j,k,ir,2)<smallr)qp(l,i,j,k,ir,2)=r
-#if NENER>0
               do irad=1,nener
                  qp(l,i,j,k,ip+irad,2) = e(irad) - half*dey(irad) + se0(irad)*dtdx*half
               end do
-#endif
-
-              ! Bottom state at top interface
-              qm(l,i,j,k,ir,2) = qm(l,i,j,k,ir,2) + half*dry + sr0*dtdx*half
-              qm(l,i,j,k,iu,2) = qm(l,i,j,k,iu,2) + half*duy + su0*dtdx*half
-              qm(l,i,j,k,iv,2) = qm(l,i,j,k,iv,2) + half*dvy + sv0*dtdx*half
-              qm(l,i,j,k,ip,2) = qm(l,i,j,k,ip,2) + half*dpy + sp0*dtdx*half
-!              qm(l,i,j,k,ir,2) = max(smallr, qm(l,i,j,k,ir,2))
-              if(qm(l,i,j,k,ir,2)<smallr)qm(l,i,j,k,ir,2)=r
-#if NENER>0
               do irad=1,nener
                  qm(l,i,j,k,ip+irad,2) = e(irad) + half*dey(irad) + se0(irad)*dtdx*half
               end do
