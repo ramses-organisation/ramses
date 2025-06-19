@@ -69,12 +69,12 @@ subroutine unsplit(uin,gravin,pin,flux,tmp,dx,dy,dz,dt,ngrid)
 
   ! Compute 3D traced-states in all three directions
   if(scheme=='muscl')then
-#if NDIM==1
+!#if NDIM==1
      call trace(qin,dq,qm,qp,dx      ,dt,ngrid)
-#endif
-#if NDIM==2
-    call trace2d(qin,dq,qm,qp,dx,dy   ,dt,ngrid)
-#endif
+!#endif
+!#if NDIM==2
+ !   call trace2d(qin,dq,qm,qp,dx,dy   ,dt,ngrid)
+!#endif
 !#if NDIM==3
 !     call trace3d(qin,dq,qm,qp,dx,dy,dz,dt,ngrid)
 !#endif
@@ -240,35 +240,6 @@ subroutine trace(q,dq,qm,qp,dx,dt,ngrid)
      end do
   end do
   end do
-
-
-
-  ! Transverse derivatives for velocities
-  do ivel=1,ndim
-  do idim=1,ndim
-  do k = klo, khi
-     do j = jlo, jhi
-        do i = ilo, ihi
-           do l = 1, ngrid
-              source = -dq(l,i,j,k,ip,idim)
-#if NENER>0
-              ! correct source vel for nener
-              do irad=1,nener
-                 dvar = dq(l,i,j,k,ip+irad,idim)
-                 source = source - dvar
-              end do
-#endif
-              ! apply source
-              source = source*oneoverr(l,i,j,k) * dtdx*half
-              qp(l,i,j,k,1+ivel,idim) = qp(l,i,j,k,1+ivel,idim) + source
-              qm(l,i,j,k,1+ivel,idim) = qm(l,i,j,k,1+ivel,idim) + source
-
-            end do
-         end do
-      end do
-   end do
-   end do
-   end do
 
    ! calc transverse term for rho and pressure
    dvel_sum = 0
