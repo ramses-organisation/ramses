@@ -15,7 +15,7 @@ When starting to work on a new project, we encourage the following procedure, wh
 4. Once ready, submit a pull request to the `ramses-organisation/ramses` repository that points onto `dev` (section 3.3).
 
 
-Periodically, the developments on the `dev` branch that have proven to be robust, a new realease will be issued with a comprehensive changelog.
+Periodically, when the developments on the `dev` branch that have proven to be robust, a new release will be issued with a comprehensive changelog.
 
 ## Development workflow
 
