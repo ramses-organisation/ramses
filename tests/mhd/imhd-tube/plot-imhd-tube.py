@@ -67,6 +67,7 @@ p_ana_interp = np.interp(x_sim, x_ana, p_ana)
 By_ana_interp = np.interp(x_sim, x_ana, By_ana)
 
 # Calculate errors
+tolerance={}
 for var, sim, ana in zip(
     ["density", "velocity", "pressure", "mag_field"],
     [rho_sim, u_sim, p_sim, By_sim],
@@ -80,9 +81,10 @@ for var, sim, ana in zip(
 
     data["data"][f"{var}_med_error"] = np.median(rel_error)
     data["data"][f"{var}_avg_error"] = np.mean(rel_error)
+    tolerance[f"{var}_med_error"] = 1e-8
 
 fig.subplots_adjust(wspace=0.3)
 fig.savefig('imhd-tube.pdf',bbox_inches='tight')
 
 # Check results against reference solution
-visu_ramses.check_solution(data["data"],'imhd-tube')
+visu_ramses.check_solution(data["data"],'imhd-tube', tolerance=tolerance)

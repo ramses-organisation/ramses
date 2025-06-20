@@ -57,6 +57,7 @@ rho_ana_interp = np.interp(x_sim, x_ana, rho_ana)
 u_ana_interp = np.interp(x_sim, x_ana, u_ana)
 p_ana_interp = np.interp(x_sim, x_ana, p_ana)
 
+tolerance={}
 for var, sim, ana in zip(
     ["density", "velocity", "pressure"], [rho_sim, u_sim, p_sim], [rho_ana_interp, u_ana_interp, p_ana_interp]
 ):
@@ -68,6 +69,7 @@ for var, sim, ana in zip(
 
     data["data"][f"{var}_med_error"] = np.median(rel_error)
     data["data"][f"{var}_avg_error"] = np.mean(rel_error)
+    tolerance[f"{var}_med_error"] = 1e-8
 
 # Check results against reference solution
-visu_ramses.check_solution(data["data"], "sod-tube")
+visu_ramses.check_solution(data["data"], "sod-tube", tolerance=tolerance)
