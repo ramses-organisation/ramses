@@ -69,15 +69,7 @@ subroutine unsplit(uin,gravin,pin,flux,tmp,dx,dy,dz,dt,ngrid)
 
   ! Compute 3D traced-states in all three directions
   if(scheme=='muscl')then
-!#if NDIM==1
      call trace(qin,dq,qm,qp,dx      ,dt,ngrid)
-!#endif
-!#if NDIM==2
- !   call trace2d(qin,dq,qm,qp,dx,dy   ,dt,ngrid)
-!#endif
-!#if NDIM==3
-!     call trace3d(qin,dq,qm,qp,dx,dy,dz,dt,ngrid)
-!#endif
   endif
   if(scheme=='plmde')then
 #if NDIM==1
@@ -128,180 +120,146 @@ subroutine trace(q,dq,qm,qp,dx,dt,ngrid)
   use hydro_parameters
   use const
   implicit none
-
-  integer ::ngrid
-  real(dp)::dx, dt
-
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::dq
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qm
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qp
-
-  ! Local variables
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2)::oneoverr
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::S0
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2)::dvel_sum
-  integer ::i, j, k, l, ivar, idim, ivel
+  integer,intent(in)::ngrid
+  real(dp),intent(in)::dx, dt
+  ! cell-center values of all variables (quantities)
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar),intent(in)::q
+  ! TDV-limited gradients, as calculated by uslope
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim),intent(in)::dq
+  ! states at the "plus" side of the interface (right/top/front)
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim),intent(out)::qp
+  ! state at the "minus" side of the interface (left/bottom/back)
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim),intent(out)::qm
+  ! ---------------------------------------------------------------------
+  ! "Trace" the evolution of the cell-centered state to the cell interfaces
+  ! over half a time step.
+  ! Predicts the "plus" and "minus" interface states (qp and qm) from the
+  ! cell-centered primitive variables (q) and the TVD-limited slopes (dp),
+  ! including transverse derivatives (MUSCL-Hancock scheme).  !
+  ! The output of this routine will be given to the Riemann solver.
+  ! --------------------------------------------------------------------
+  real(dp),dimension(1:nvar)::S0,var
+  real(dp),dimension(1:nvar,1:ndim)::dvar
+  real(dp)::oneoverr,dvel_diag,corr,result_m,result_p
+  integer ::i,j,k,l,ivar,idim
   integer ::ilo,ihi,jlo,jhi,klo,khi
   integer,parameter ::ir=1,ip=neul
   real(dp)::dtdx
-  real(dp)::r, u, p,vel,var
-  real(dp)::dvar, source
-  real(dp)::sr0, sp0
-#if NENER>0
-  integer::irad
-  real(dp)::e
-#endif
 
   dtdx = dt/dx
   ilo=MIN(1,iu1+1); ihi=MAX(1,iu2-1)
   jlo=MIN(1,ju1+1); jhi=MAX(1,ju2-1)
   klo=MIN(1,ku1+1); khi=MAX(1,ku2-1)
 
-  ! precalc 1/rho
-  do k = klo, khi
-     do j = jlo, jhi
-        do i = ilo, ihi
-           do l = 1, ngrid
-              r   =  q(l,i,j,k,ir)
-              oneoverr(l,i,j,k) = 1d0/r
+   do k = klo, khi
+      do j = jlo, jhi
+         do i = ilo, ihi
+            do l = 1, ngrid
+
+               ! Retrieve data for cell l
+
+               ! Cell centered values
+               !GCC$ unroll NVAR
+               do ivar=1,nvar
+                  var(ivar) = q(l,i,j,k,ivar)
+               end do
+               oneoverr = 1d0/var(ir)
+
+               ! Limited gradients in all 3 directions
+               !GCC$ unroll NVAR
+               do ivar=1,nvar
+                  !GCC$ unroll NDIM
+                  do idim=1,ndim
+                     dvar(ivar,idim) = dq(l,i,j,k,ivar,idim)
+                  end do
+               end do
+
+               ! Compute source terms
+
+               S0 = 0
+
+               ! Advection for each variable q
+               ! - u*dq/dx - v*dq/dy - w*dq/z
+               !GCC$ unroll NVAR
+               do ivar=1,nvar
+                  !GCC$ unroll NDIM
+                  do idim=1,ndim
+                     S0(ivar) = S0(ivar) - var(1+idim)*dvar(ivar,idim)
+                  end do
+               end do
+
+               ! Pressure gradient acceleration for velocities
+               ! vx: -1/rho * dp/dx
+               ! vy: -1/rho * dp/dy
+               ! vz: -1/rho * dp/dz
+               !GCC$ unroll NDIM
+               do idim=1,ndim
+                  S0(1+idim) = S0(1+idim) - dvar(ip,idim)*oneoverr
+#if NENER>0
+                  do ivar=1,nener
+                     S0(1+idim) = S0(1+idim) - dvar(ip+ivar,idim)*oneoverr
+                  end do
+#endif
+               end do
+
+               ! Calculate the velocity divergence
+               ! div_vel = du/dx + dv/dy + dw/dz
+               dvel_diag = 0
+               !GCC$ unroll NDIM
+               do idim=1,ndim
+                  dvel_diag = dvel_diag +  dvar(1+idim,idim)
+               end do
+
+               ! Fluid compression/expansion for density
+               ! -div_vel*rho
+               S0(ir) = S0(ir) - dvel_diag*var(ir)
+
+               ! Compression heating / expansion cooling for pressure
+               ! -div_vel*gamma*P
+               S0(ip) = S0(ip) - dvel_diag*gamma*var(ip)
+
+#if NENER>0
+               ! Compression heating / expansion cooling for extra energies
+               ! -div_vel*gamma_rad*e_rad
+               !GCC$ unroll NENER
+               do ivar=1,nener
+                  S0(ip+ivar) = S0(ip+ivar) - dvel_diag*gamma_rad(ivar)*var(ip+ivar)
+               end do
+#endif
+
+               ! Calculate and store result: 
+               ! q+(t+0.5dt) = q(t) + 0.5*dq(t)/dx - S*0.5*dt/dx
+               ! q-(t+0.5dt) = q(t) - 0.5*dq(t)/dx - S*0.5*dt/dx
+
+               ! Check result for density. If too small, use
+               ! rho+(t+0.5dt) = rho(t)
+               ! rho-(t+0.5dt) = rho(t)
+               ! Prevents negative densities
+               corr = S0(ir) * dtdx !convert S0 to spatial slope correction
+               !GCC$ unroll NDIM
+               do idim=1,ndim
+                  result_p = var(ir) + half*(-dvar(ir,idim) + corr)
+                  result_m = var(ir) + half*( dvar(ir,idim) + corr)
+                  qp(l,i,j,k,ir,idim) = merge(var(ir), result_p, result_p<smallr)
+                  qm(l,i,j,k,ir,idim) = merge(var(ir), result_m, result_m<smallr)
+               end do
+
+               !GCC$ unroll NVAR
+               do ivar=2,nvar
+                  corr = S0(ivar) * dtdx
+                  !GCC$ unroll NDIM
+                  do idim=1,ndim
+                     result_p = var(ivar) + half*(-dvar(ivar,idim) + corr)
+                     result_m = var(ivar) + half*( dvar(ivar,idim) + corr)
+                     qp(l,i,j,k,ivar,idim) = result_p
+                     qm(l,i,j,k,ivar,idim) = result_m
+                  end do
+               end do
+
             end do
          end do
       end do
    end do
-
-  ! Initialize qd and qm to q for all variables
-  ! and apply TVD slopes
-  do ivar=1,nvar
-  do k = klo, khi
-     do j = jlo, jhi
-        do i = ilo, ihi
-           do l = 1, ngrid
-              source = 0d0
-              var = q(l,i,j,k,ivar)
-              !GCC$ unroll NDIM
-              !DIR$ UNROLL=NDIM
-              do idim=1,ndim
-                 dvar = dq(l,i,j,k,ivar,idim)
-                 vel = q(l,i,j,k,1+idim)
-                 qp(l,i,j,k,ivar,idim) = var - half*dvar
-                 qm(l,i,j,k,ivar,idim) = var + half*dvar
-                 ! Calculate first term of source (sum over directions)
-                 source= source - vel*dvar
-              end do
-              S0(l,i,j,k,ivar) = source 
-            end do
-        end do
-     end do
-  end do
-  end do
-
-  ! add second term of source for velocities
-  do idim=1,ndim
-  do k = klo, khi
-     do j = jlo, jhi
-        do i = ilo, ihi
-           do l = 1, ngrid
-              source = - (dq(l,i,j,k,ip,idim))*oneoverr(l,i,j,k)
-#if NENER>0
-              do irad=1,nener
-                 source = source - dq(l,i,j,k,ip+irad,idim)*oneoverr(l,i,j,k)
-              end do
-#endif
-
-               S0(l,i,j,k,1+idim) = S0(l,i,j,k,1+idim) + source
-            end do
-         end do
-      end do
-   end do
-  end do
-
-  ! Apply first term of source for all variables
-  do idim=1,ndim
-  do ivar=1,nvar
-     do k = klo, khi
-        do j = jlo, jhi
-           do i = ilo, ihi
-              do l = 1, ngrid
-                 source = S0(l,i,j,k,ivar) * dtdx*half
-                 qp(l,i,j,k,ivar,idim) = qp(l,i,j,k,ivar,idim) + source
-                 qm(l,i,j,k,ivar,idim) = qm(l,i,j,k,ivar,idim) + source
-               end do
-           end do
-        end do
-     end do
-  end do
-  end do
-
-   ! calc transverse term for rho and pressure
-   dvel_sum = 0
-  do idim=1,ndim
-     do k = klo, khi
-        do j = jlo, jhi
-           do i = ilo, ihi
-              do l = 1, ngrid
-                 dvel_sum(l,i,j,k) = dvel_sum(l,i,j,k) + dq(l,i,j,k,1+idim,idim)
-               end do
-           end do
-        end do
-     end do
-  end do
-
-  ! Transverse derivatives for density and pressure
-  do idim=1,ndim
-  do k = klo, khi
-     do j = jlo, jhi
-        do i = ilo, ihi
-           do l = 1, ngrid
-              ! Cell centered values for density and pressure
-              r   =  q(l,i,j,k,ir)
-              p   =  q(l,i,j,k,ip)
-
-              ! Source transverse derivatives
-              ! density:  - (dux+dvy+dwz)/r
-              ! pressure: - (dux+dvy+dwz)*gamma*p
-              sr0 = - ( dvel_sum(l,i,j,k))*r       * dtdx*half
-              sp0 = - ( dvel_sum(l,i,j,k))*gamma*p * dtdx*half
-
-              ! Right state
-              qp(l,i,j,k,ir,idim) = qp(l,i,j,k,ir,idim) + sr0
-              qp(l,i,j,k,ip,idim) = qp(l,i,j,k,ip,idim) + sp0
-
-              ! Left state
-              qm(l,i,j,k,ir,idim) = qm(l,i,j,k,ir,idim) + sr0
-              qm(l,i,j,k,ip,idim) = qm(l,i,j,k,ip,idim) + sp0
-
-              ! If the value for density is small, set to the original rho
-              qp(l,i,j,k,ir,idim) = merge(r, qp(l,i,j,k,ir,idim), qp(l,i,j,k,ir,idim)<smallr)
-              qm(l,i,j,k,ir,idim) = merge(r, qm(l,i,j,k,ir,idim), qm(l,i,j,k,ir,idim)<smallr)
-              !if(qp(l,i,j,k,ir,idim)<smallr)qp(l,i,j,k,ir,idim)=r
-              !if(qm(l,i,j,k,ir,idim)<smallr)qm(l,i,j,k,ir,idim)=r
-           end do
-        end do
-     end do
-  end do
-  end do
-
-  ! Transverse derivatives for nener
-#if NENER>0
-  do idim=1,ndim
-  do irad=1,nener
-     do k = klo, khi
-        do j = jlo, jhi
-           do i = ilo, ihi
-              do l = 1, ngrid
-                 e = q(l,i,j,k,ip+irad)
-                 dvar = dq(l,i,j,k,1+idim,idim)
-                 source = - (dvar)*gamma_rad(irad)*e * dtdx*half
-                 qp(l,i,j,k,ip+irad,idim) = qp(l,i,j,k,ip+irad,idim) + source
-                 qm(l,i,j,k,ip+irad,idim) = qm(l,i,j,k,ip+irad,idim) + source
-              end do
-           end do
-        end do
-     end do
-  end do
-  end do
-#endif
 
 end subroutine trace
 !###########################################################
@@ -706,51 +664,6 @@ subroutine trace3d(q,dq,qm,qp,dx,dy,dz,dt,ngrid)
    end do
 
 end subroutine trace3d
-
-!###########################################################
-
-!subroutine update_qd_qm_dvar(qp,qm,ivar,dvarx,dvary,dvarz)
-!   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim),intent(inout)::qp
-!   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim),intent(inout)::qm
-!   integer,intent(in)::ivar
-!   real(dp),intent(in)::dvarx,dvary,dvarz
-   ! Right state at left interface
-!   qp(l,i,j,k,ivar,1) = qp(l,i,j,k,ivar,1) - dvarx
-   ! Left state at right interface
-!   qm(l,i,j,k,ivar,1) = qp(l,i,j,k,ivar,1) + dvarx
-   ! Top state at bottom interface
-!   qp(l,i,j,k,ivar,2) = qp(l,i,j,k,ivar,2) - dvary
-   ! Bottom state at top interface
-!   qm(l,i,j,k,ivar,2) = qp(l,i,j,k,ivar,2) + dvary
-   ! Back state at front interface
-!   qp(l,i,j,k,ivar,3) = qp(l,i,j,k,ivar,3) - dvarz
-   ! Front state at back interface
-!   qm(l,i,j,k,ivar,3) = qp(l,i,j,k,ivar,3) + dvarz
-!end subroutine update_qd_qm_dvar
-
-!###########################################################
-
-!subroutine update_qd_qm_source(qp,qm,ivar,source)
-!   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim),intent(inout)::qp
-!   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim),intent(inout)::qm
-!   integer,intent(in)::ivar
-!   real(dp),intent(in)::source
-   ! Right state at left interface
-!   qp(l,i,j,k,ivar,1) = qp(l,i,j,k,ivar,1) + source
-   ! Left state at right interface
-!   qm(l,i,j,k,ivar,1) = qp(l,i,j,k,ivar,1) + source
-
-   ! Top state at bottom interface
-!   qp(l,i,j,k,ivar,2) = qp(l,i,j,k,ivar,2) + source
-   ! Bottom state at top interface
-!   qm(l,i,j,k,ivar,2) = qp(l,i,j,k,ivar,2) + source
-
-   ! Back state at front interface
-!   qp(l,i,j,k,ivar,3) = qp(l,i,j,k,ivar,3) + source
-   ! Front state at back interface
-!   qm(l,i,j,k,ivar,3) = qp(l,i,j,k,ivar,3) + source
-!end subroutine update_qd_qm_dvar
-
 #endif
 !###########################################################
 !###########################################################
