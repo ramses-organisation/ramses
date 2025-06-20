@@ -483,7 +483,6 @@ subroutine godfine1(ind_grid,ncache,ilevel)
   ! coarser level if necessary.
   !-------------------------------------------------------------------
   integer ,dimension(1:nvector,1:threetondim     ),save::nbors_father_cells
-  integer ,dimension(1:nvector,1:twotondim       ),save::nbors_father_grids
   integer ,dimension(1:nvector,0:twondim         ),save::ibuffer_father
   real(dp),dimension(1:nvector,0:twondim  ,1:nvar),save::u1
   real(dp),dimension(1:nvector,1:twotondim,1:nvar),save::u2
@@ -535,7 +534,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
   do i=1,ncache
      ind_cell(i)=father(ind_grid(i))
   end do
-  call get3cubefather(ind_cell,nbors_father_cells,nbors_father_grids,ncache,ilevel)
+  call get3cubefather(ind_cell,nbors_father_cells,ncache,ilevel)
 
   !---------------------------
   ! Gather 6x6x6 cells stencil

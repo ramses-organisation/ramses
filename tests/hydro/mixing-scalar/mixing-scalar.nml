@@ -1,7 +1,7 @@
 This is the RAMSES parameter file for the 2D passive scalar mixing test.
 A diamond shape is placed in a lower density medium which is moving to the left.
 The passive scalar is set to be 1 in the diamond shape and -1 in the background medium.
-Turbulance is generated in the wake at the corners of the diamond,
+Turbulence is generated in the wake at the corners of the diamond,
 causing the passive scalar to mix.
 
 &RUN_PARAMS
