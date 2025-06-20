@@ -83,7 +83,7 @@ BIN_DIRECTORY="${BASE_DIRECTORY}/bin";    # The bin directory
 VISU_DIR="${TEST_DIRECTORY}/visu";        # The visualization directory
 
 export PYTHONPATH=${VISU_DIR}:$PYTHONPATH;
-DELETE_RESULTS="rm -rf output_* *.tex data*.dat *.pdf *.pyc *.gc* coverage_stats.txt";
+DELETE_RESULTS="rm -rf output_* *.tex data*.dat *.pdf *.pyc *.gc* coverage_stats.txt movie1";
 RETURN_TO_BIN="cd ${BIN_DIRECTORY}";
 EXECNAME="test_exe_";
 LOGFILE="${TEST_DIRECTORY}/test_suite.log";
