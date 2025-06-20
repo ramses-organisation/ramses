@@ -5,6 +5,7 @@ poisson=.true.
 hydro=.false.
 nremap=0
 nsubcycle=1,1,30*2
+clumpfind=.true.
 /
 
 &OUTPUT_PARAMS
@@ -33,4 +34,14 @@ interpol_type=0
 
 &POISSON_PARAMS
 epsilon=1d-4
+/
+
+
+&CLUMPFIND_PARAMS
+relevance_threshold=3
+density_threshold=80
+saddle_threshold=100
+mass_threshold=10
+ivar_clump=0
+clinfo=.true.
 /

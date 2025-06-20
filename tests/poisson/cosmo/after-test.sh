@@ -1,0 +1,1 @@
+rm clump-all.txt

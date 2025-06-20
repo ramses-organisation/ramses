@@ -6,7 +6,6 @@ nrestart=0
 nremap=0
 nsubcycle=10*2
 verbose=.false.
-nstepmax=20
 /
 
 &AMR_PARAMS
@@ -36,8 +35,8 @@ p_region=1e-5,0.4
 /
 
 &OUTPUT_PARAMS
-noutput=2
-foutput=20
+noutput=1
+tout=9.91d-3
 /
 
 &HYDRO_PARAMS
