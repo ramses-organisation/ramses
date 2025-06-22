@@ -980,7 +980,10 @@ subroutine uslope(q,dq,dx,dt,ngrid)
 
   ! local arrays
   integer::i, j, k, l, n
-  real(dp)::dsgn, dlim, dcen, dlft, drgt, slop
+  real(dp)::dsgn, dlim, dcen, dlft, drgt, q_center
+  real(dp),dimension(1:2*ndim)::q_neighbors
+  ! indices of left/right, bottom/top, back/front cells in q_neighbors array (min and plus)
+  integer,parameter::im=1,ip=2,jm=3,jp=4,km=5,kp=6
 #if NDIM==2
   real(dp)::dfll,dflm,dflr,dfml,dfmm,dfmr,dfrl,dfrm,dfrr
 #endif
@@ -1011,41 +1014,50 @@ subroutine uslope(q,dq,dx,dt,ngrid)
            do i = ilo, ihi
               if(slope_type==1.or.slope_type==2.or.slope_type==3)then  ! minmod or average
                  do l = 1, ngrid
-                    dlft = MIN(slope_type,2)*(q(l,i  ,j,k,n) - q(l,i-1,j,k,n))
-                    drgt = MIN(slope_type,2)*(q(l,i+1,j,k,n) - q(l,i  ,j,k,n))
+                    ! Gather values at center cell and its neighbors
+                    q_center = q(l,i,j,k,n)
+                    q_neighbors(im) = q(l,i-1,j,k,n)
+                    q_neighbors(ip) = q(l,i+1,j,k,n)
+                    dlft = MIN(slope_type,2)*(q_center - q_neighbors(im))
+                    drgt = MIN(slope_type,2)*(q_neighbors(ip) - q_center)
                     dcen = half*(dlft+drgt)/MIN(slope_type,2)
                     dsgn = sign(one, dcen)
-                    slop = min(abs(dlft),abs(drgt))
-                    dlim = slop
+                    dlim = min(abs(dlft),abs(drgt))
                     if((dlft*drgt)<=zero)dlim=zero
                     dq(l,i,j,k,n,1) = dsgn*min(dlim,abs(dcen))
                  end do
               else if(slope_type==4)then ! superbee
                  do l = 1, ngrid
+                    ! Gather values at center cell and its neighbors
+                    q_center = q(l,i,j,k,n)
+                    q_neighbors(im) = q(l,i-1,j,k,n)
+                    q_neighbors(ip) = q(l,i+1,j,k,n)
                     dcen = q(l,i,j,k,2)*dt/dx
-                    dlft = two/(one+dcen)*(q(l,i,j,k,n)-q(l,i-1,j,k,n))
-                    drgt = two/(one-dcen)*(q(l,i+1,j,k,n)-q(l,i,j,k,n))
+                    dlft = two/(one+dcen)*(q_center-q_neighbors(im))
+                    drgt = two/(one-dcen)*(q_neighbors(ip)-q_center)
                     dcen = half*(q(l,i+1,j,k,n)-q(l,i-1,j,k,n))
                     dsgn = sign(one, dlft)
-                    slop = min(abs(dlft),abs(drgt))
-                    dlim = slop
+                    dlim = min(abs(dlft),abs(drgt))
                     if((dlft*drgt)<=zero)dlim=zero
                     dq(l,i,j,k,n,1) = dsgn*dlim !min(dlim,abs(dcen))
                  end do
               else if(slope_type==5)then ! ultrabee
                  if(n==1)then
                     do l = 1, ngrid
+                    ! Gather values at center cell and its neighbors
+                    q_center = q(l,i,j,k,n)
+                    q_neighbors(im) = q(l,i-1,j,k,n)
+                    q_neighbors(ip) = q(l,i+1,j,k,n)
                        dcen = q(l,i,j,k,2)*dt/dx
                        if(dcen>=0)then
-                          dlft = two/(zero+dcen+1d-10)*(q(l,i,j,k,n)-q(l,i-1,j,k,n))
-                          drgt = two/(one -dcen      )*(q(l,i+1,j,k,n)-q(l,i,j,k,n))
+                          dlft = two/(zero+dcen+1d-10)*(q_center-q_neighbors(im))
+                          drgt = two/(one -dcen      )*(q_neighbors(ip)-q_center)
                        else
-                          dlft = two/(one +dcen      )*(q(l,i,j,k,n)-q(l,i-1,j,k,n))
-                          drgt = two/(zero-dcen+1d-10)*(q(l,i+1,j,k,n)-q(l,i,j,k,n))
+                          dlft = two/(one +dcen      )*(q_center-q_neighbors(im))
+                          drgt = two/(zero-dcen+1d-10)*(q_neighbors(ip)-q_center)
                        endif
                        dsgn = sign(one, dlft)
-                       slop = min(abs(dlft),abs(drgt))
-                       dlim = slop
+                       dlim = min(abs(dlft),abs(drgt))
                        dcen = half*(q(l,i+1,j,k,n)-q(l,i-1,j,k,n))
                        if((dlft*drgt)<=zero)dlim=zero
                        dq(l,i,j,k,n,1) = dsgn*dlim !min(dlim,abs(dcen))
@@ -1058,10 +1070,13 @@ subroutine uslope(q,dq,dx,dt,ngrid)
               else if(slope_type==6)then ! unstable
                  if(n==1)then
                     do l = 1, ngrid
-                       dlft = (q(l,i,j,k,n)-q(l,i-1,j,k,n))
-                       drgt = (q(l,i+1,j,k,n)-q(l,i,j,k,n))
-                       slop = 0.5d0*(dlft+drgt)
-                       dlim = slop
+                       ! Gather values at center cell and its neighbors
+                       q_center = q(l,i,j,k,n)
+                       q_neighbors(im) = q(l,i-1,j,k,n)
+                       q_neighbors(ip) = q(l,i+1,j,k,n)
+                       dlft = q_center        - q_neighbors(im)
+                       drgt = q_neighbors(ip) - q_center
+                       dlim = 0.5d0*(dlft+drgt)
                        dq(l,i,j,k,n,1) = dlim
                     end do
                  else
@@ -1071,8 +1086,12 @@ subroutine uslope(q,dq,dx,dt,ngrid)
                  end if
               else if(slope_type==7)then ! van Leer
                  do l = 1, ngrid
-                    dlft = (q(l,i  ,j,k,n) - q(l,i-1,j,k,n))
-                    drgt = (q(l,i+1,j,k,n) - q(l,i  ,j,k,n))
+                    ! Gather values at center cell and its neighbors
+                    q_center = q(l,i,j,k,n)
+                    q_neighbors(im) = q(l,i-1,j,k,n)
+                    q_neighbors(ip) = q(l,i+1,j,k,n)
+                    dlft = q_center        - q_neighbors(im)
+                    drgt = q_neighbors(ip) - q_center
                     if((dlft*drgt)<=zero) then
                        dq(l,i,j,k,n,1)=zero
                     else
@@ -1081,12 +1100,15 @@ subroutine uslope(q,dq,dx,dt,ngrid)
                  end do
               else if(slope_type==8)then ! generalized moncen/minmod parameterisation (van Leer 1979)
                  do l = 1, ngrid
-                    dlft = (q(l,i  ,j,k,n) - q(l,i-1,j,k,n))
-                    drgt = (q(l,i+1,j,k,n) - q(l,i  ,j,k,n))
+                    ! Gather values at center cell and its neighbors
+                    q_center = q(l,i,j,k,n)
+                    q_neighbors(im) = q(l,i-1,j,k,n)
+                    q_neighbors(ip) = q(l,i+1,j,k,n)
+                    dlft = q_center        - q_neighbors(im)
+                    drgt = q_neighbors(ip) - q_center
                     dcen = half*(dlft+drgt)
                     dsgn = sign(one, dcen)
-                    slop = min(slope_theta*abs(dlft),slope_theta*abs(drgt))
-                    dlim = slop
+                    dlim = min(slope_theta*abs(dlft),slope_theta*abs(drgt))
                     if((dlft*drgt)<=zero)dlim=zero
                     dq(l,i,j,k,n,1) = dsgn*min(dlim,abs(dcen))
                  end do
@@ -1106,25 +1128,29 @@ subroutine uslope(q,dq,dx,dt,ngrid)
         do k = klo, khi
            do j = jlo, jhi
               do i = ilo, ihi
-                 ! slopes in first coordinate direction
                  do l = 1, ngrid
-                    dlft = slope_type*(q(l,i  ,j,k,n) - q(l,i-1,j,k,n))
-                    drgt = slope_type*(q(l,i+1,j,k,n) - q(l,i  ,j,k,n))
+                    ! Gather values at center cell and its neighbors
+                    q_center = q(l,i,j,k,n)
+                    q_neighbors(im) = q(l,i-1,j,k,n)
+                    q_neighbors(ip) = q(l,i+1,j,k,n)
+                    q_neighbors(jm) = q(l,i,j-1,k,n)
+                    q_neighbors(jp) = q(l,i,j+1,k,n)
+
+                    ! slopes in first coordinate direction
+                    dlft = slope_type*(q_center - q_neighbors(im))
+                    drgt = slope_type*(q_neighbors(ip) - q_center)
                     dcen = half*(dlft+drgt)/slope_type
                     dsgn = sign(one, dcen)
-                    slop = min(abs(dlft),abs(drgt))
-                    dlim = slop
+                    dlim = min(abs(dlft),abs(drgt))
                     if((dlft*drgt)<=zero)dlim=zero
                     dq(l,i,j,k,n,1) = dsgn*min(dlim,abs(dcen))
-                 end do
-                 ! slopes in second coordinate direction
-                 do l = 1, ngrid
-                    dlft = slope_type*(q(l,i,j  ,k,n) - q(l,i,j-1,k,n))
-                    drgt = slope_type*(q(l,i,j+1,k,n) - q(l,i,j  ,k,n))
+
+                    ! slopes in second coordinate direction
+                    dlft = slope_type*(q_center - q_neighbors(jm))
+                    drgt = slope_type*(q_neighbors(jp) - q_center)
                     dcen = half*(dlft+drgt)/slope_type
                     dsgn = sign(one,dcen)
-                    slop = min(abs(dlft),abs(drgt))
-                    dlim = slop
+                    dlim = min(abs(dlft),abs(drgt))
                     if((dlft*drgt)<=zero)dlim=zero
                     dq(l,i,j,k,n,2) = dsgn*min(dlim,abs(dcen))
                  end do
@@ -1138,15 +1164,21 @@ subroutine uslope(q,dq,dx,dt,ngrid)
            do j = jlo, jhi
               do i = ilo, ihi
                  do l = 1, ngrid
-                    dfll = q(l,i-1,j-1,k,n)-q(l,i,j,k,n)
-                    dflm = q(l,i-1,j  ,k,n)-q(l,i,j,k,n)
-                    dflr = q(l,i-1,j+1,k,n)-q(l,i,j,k,n)
-                    dfml = q(l,i  ,j-1,k,n)-q(l,i,j,k,n)
-                    dfmm = q(l,i  ,j  ,k,n)-q(l,i,j,k,n)
-                    dfmr = q(l,i  ,j+1,k,n)-q(l,i,j,k,n)
-                    dfrl = q(l,i+1,j-1,k,n)-q(l,i,j,k,n)
-                    dfrm = q(l,i+1,j  ,k,n)-q(l,i,j,k,n)
-                    dfrr = q(l,i+1,j+1,k,n)-q(l,i,j,k,n)
+                    q_center = q(l,i,j,k,n)
+                    q_neighbors(im) = q(l,i-1,j,k,n)
+                    q_neighbors(ip) = q(l,i+1,j,k,n)
+                    q_neighbors(jm) = q(l,i,j-1,k,n)
+                    q_neighbors(jp) = q(l,i,j+1,k,n)
+
+                    dfll = q(l,i-1,j-1,k,n)-q_center
+                    dflm = q(l,i-1,j,k,n)-q_center
+                    dflr = q(l,i-1,j+1,k,n)-q_center
+                    dfml = q(l,i,j-1,k,n)-q_center
+                    dfmm = q(l,i,j,k,n)-q_center
+                    dfmr = q(l,i,j+1,k,n)-q_center
+                    dfrl = q(l,i+1,j-1,k,n)-q_center
+                    dfrm = q(l,i+1,j,k,n)-q_center
+                    dfrr = q(l,i+1,j+1,k,n)-q_center
 
                     vmin = min(dfll,dflm,dflr,dfml,dfmm,dfmr,dfrl,dfrm,dfrr)
                     vmax = max(dfll,dflm,dflr,dfml,dfmm,dfmr,dfrl,dfrm,dfrr)
@@ -1156,12 +1188,10 @@ subroutine uslope(q,dq,dx,dt,ngrid)
                     dff  = half*(abs(dfx)+abs(dfy))
 
                     if(dff>zero)then
-                       slop = min(one,min(abs(vmin),abs(vmax))/dff)
+                       dlim = min(one,min(abs(vmin),abs(vmax))/dff)
                     else
-                       slop = one
+                       dlim = one
                     endif
-
-                    dlim = slop
 
                     dq(l,i,j,k,n,1) = dlim*dfx
                     dq(l,i,j,k,n,2) = dlim*dfy
@@ -1176,20 +1206,21 @@ subroutine uslope(q,dq,dx,dt,ngrid)
         do k = klo, khi
            do j = jlo, jhi
               do i = ilo, ihi
-                 ! slopes in first coordinate direction
                  do l = 1, ngrid
-                    dlft = (q(l,i  ,j,k,n) - q(l,i-1,j,k,n))
-                    drgt = (q(l,i+1,j,k,n) - q(l,i  ,j,k,n))
+                    q_center = q(l,i,j,k,n)
+
+                    ! slopes in first coordinate direction
+                    dlft = (q_center - q(l,i-1,j,k,n))
+                    drgt = (q(l,i+1,j,k,n) - q_center)
                     if((dlft*drgt)<=zero) then
                        dq(l,i,j,k,n,1)=zero
                     else
                        dq(l,i,j,k,n,1)=(2*dlft*drgt/(dlft+drgt))
                        end if
-                 end do
-                 ! slopes in second coordinate direction
-                 do l = 1, ngrid
-                    dlft = (q(l,i,j  ,k,n) - q(l,i,j-1,k,n))
-                    drgt = (q(l,i,j+1,k,n) - q(l,i,j  ,k,n))
+
+                    ! slopes in second coordinate direction
+                    dlft = (q_center - q(l,i,j-1,k,n))
+                    drgt = (q(l,i,j+1,k,n) - q_center)
                     if((dlft*drgt)<=zero) then
                        dq(l,i,j,k,n,2)=zero
                     else
@@ -1205,25 +1236,24 @@ subroutine uslope(q,dq,dx,dt,ngrid)
         do k = klo, khi
            do j = jlo, jhi
               do i = ilo, ihi
-                 ! slopes in first coordinate direction
                  do l = 1, ngrid
-                    dlft = (q(l,i  ,j,k,n) - q(l,i-1,j,k,n))
-                    drgt = (q(l,i+1,j,k,n) - q(l,i  ,j,k,n))
+                    q_center = q(l,i,j,k,n)
+
+                    ! slopes in first coordinate direction
+                    dlft = (q_center - q(l,i-1,j,k,n))
+                    drgt = (q(l,i+1,j,k,n) - q_center)
                     dcen = half*(dlft+drgt)
                     dsgn = sign(one, dcen)
-                    slop = min(slope_theta*abs(dlft),slope_theta*abs(drgt))
-                    dlim = slop
+                    dlim = min(slope_theta*abs(dlft),slope_theta*abs(drgt))
                     if((dlft*drgt)<=zero)dlim=zero
                     dq(l,i,j,k,n,1) = dsgn*min(dlim,abs(dcen))
-                 end do
-                 ! slopes in second coordinate direction
-                 do l = 1, ngrid
-                    dlft = (q(l,i,j  ,k,n) - q(l,i,j-1,k,n))
-                    drgt = (q(l,i,j+1,k,n) - q(l,i,j  ,k,n))
+
+                    ! slopes in second coordinate direction
+                    dlft = (q_center - q(l,i,j-1,k,n))
+                    drgt = (q(l,i,j+1,k,n) - q_center)
                     dcen = half*(dlft+drgt)
                     dsgn = sign(one,dcen)
-                    slop = min(slope_theta*abs(dlft),slope_theta*abs(drgt))
-                    dlim = slop
+                    dlim = min(slope_theta*abs(dlft),slope_theta*abs(drgt))
                     if((dlft*drgt)<=zero)dlim=zero
                     dq(l,i,j,k,n,2) = dsgn*min(dlim,abs(dcen))
                  end do
@@ -1243,10 +1273,12 @@ subroutine uslope(q,dq,dx,dt,ngrid)
         do k = klo, khi
            do j = jlo, jhi
               do i = ilo, ihi
-                 ! slopes in first coordinate direction
                  do l = 1, ngrid
-                    dlft = q(l,i  ,j,k,n) - q(l,i-1,j,k,n)
-                    drgt = q(l,i+1,j,k,n) - q(l,i  ,j,k,n)
+                    q_center = q(l,i,j,k,n)
+
+                    ! slopes in first coordinate direction
+                    dlft = q_center - q(l,i-1,j,k,n)
+                    drgt = q(l,i+1,j,k,n) - q_center
                     if((dlft*drgt)<=zero) then
                        dq(l,i,j,k,n,1) = zero
                     else if(dlft>0) then
@@ -1254,11 +1286,10 @@ subroutine uslope(q,dq,dx,dt,ngrid)
                     else
                        dq(l,i,j,k,n,1) = max(dlft,drgt)
                     end if
-                 end do
-                 ! slopes in second coordinate direction
-                 do l = 1, ngrid
-                    dlft = q(l,i,j  ,k,n) - q(l,i,j-1,k,n)
-                    drgt = q(l,i,j+1,k,n) - q(l,i,j  ,k,n)
+
+                    ! slopes in second coordinate direction
+                    dlft = q_center - q(l,i,j-1,k,n)
+                    drgt = q(l,i,j+1,k,n) - q_center
                     if((dlft*drgt)<=zero) then
                        dq(l,i,j,k,n,2) = zero
                     else if(dlft>0) then
@@ -1266,11 +1297,10 @@ subroutine uslope(q,dq,dx,dt,ngrid)
                     else
                        dq(l,i,j,k,n,2) = max(dlft,drgt)
                     end if
-                 end do
-                 ! slopes in third coordinate direction
-                 do l = 1, ngrid
-                    dlft = q(l,i,j,k  ,n) - q(l,i,j,k-1,n)
-                    drgt = q(l,i,j,k+1,n) - q(l,i,j,k  ,n)
+
+                    ! slopes in third coordinate direction
+                    dlft = q_center - q(l,i,j,k-1,n)
+                    drgt = q(l,i,j,k+1,n) - q_center
                     if((dlft*drgt)<=zero) then
                        dq(l,i,j,k,n,3) = zero
                     else if(dlft>0) then
@@ -1288,36 +1318,33 @@ subroutine uslope(q,dq,dx,dt,ngrid)
         do k = klo, khi
            do j = jlo, jhi
               do i = ilo, ihi
-                 ! slopes in first coordinate direction
                  do l = 1, ngrid
-                    dlft = slope_type*(q(l,i  ,j,k,n) - q(l,i-1,j,k,n))
-                    drgt = slope_type*(q(l,i+1,j,k,n) - q(l,i  ,j,k,n))
+                    q_center = q(l,i,j,k,n)
+
+                    ! slopes in first coordinate direction
+                    dlft = slope_type*(q_center - q(l,i-1,j,k,n))
+                    drgt = slope_type*(q(l,i+1,j,k,n) -q_center)
                     dcen = half*(dlft+drgt)/slope_type
                     dsgn = sign(one, dcen)
-                    slop = min(abs(dlft),abs(drgt))
-                    dlim = slop
+                    dlim = min(abs(dlft),abs(drgt))
                     if((dlft*drgt)<=zero)dlim=zero
                     dq(l,i,j,k,n,1) = dsgn*min(dlim,abs(dcen))
-                 end do
-                 ! slopes in second coordinate direction
-                 do l = 1, ngrid
-                    dlft = slope_type*(q(l,i,j  ,k,n) - q(l,i,j-1,k,n))
-                    drgt = slope_type*(q(l,i,j+1,k,n) - q(l,i,j  ,k,n))
+
+                    ! slopes in second coordinate direction
+                    dlft = slope_type*(q_center - q(l,i,j-1,k,n))
+                    drgt = slope_type*(q(l,i,j+1,k,n) - q_center)
                     dcen = half*(dlft+drgt)/slope_type
                     dsgn = sign(one,dcen)
-                    slop = min(abs(dlft),abs(drgt))
-                    dlim = slop
+                    dlim = min(abs(dlft),abs(drgt))
                     if((dlft*drgt)<=zero)dlim=zero
                     dq(l,i,j,k,n,2) = dsgn*min(dlim,abs(dcen))
-                 end do
-                 ! slopes in third coordinate direction
-                 do l = 1, ngrid
-                    dlft = slope_type*(q(l,i,j,k  ,n) - q(l,i,j,k-1,n))
-                    drgt = slope_type*(q(l,i,j,k+1,n) - q(l,i,j,k  ,n))
+
+                    ! slopes in third coordinate direction
+                    dlft = slope_type*(q_center - q(l,i,j,k-1,n))
+                    drgt = slope_type*(q(l,i,j,k+1,n) - q_center)
                     dcen = half*(dlft+drgt)/slope_type
                     dsgn = sign(one,dcen)
-                    slop = min(abs(dlft),abs(drgt))
-                    dlim = slop
+                    dlim = min(abs(dlft),abs(drgt))
                     if((dlft*drgt)<=zero)dlim=zero
                     dq(l,i,j,k,n,3) = dsgn*min(dlim,abs(dcen))
                  end do
@@ -1331,35 +1358,36 @@ subroutine uslope(q,dq,dx,dt,ngrid)
            do j = jlo, jhi
               do i = ilo, ihi
                  do l = 1, ngrid
-                    dflll = q(l,i-1,j-1,k-1,n)-q(l,i,j,k,n)
-                    dflml = q(l,i-1,j  ,k-1,n)-q(l,i,j,k,n)
-                    dflrl = q(l,i-1,j+1,k-1,n)-q(l,i,j,k,n)
-                    dfmll = q(l,i  ,j-1,k-1,n)-q(l,i,j,k,n)
-                    dfmml = q(l,i  ,j  ,k-1,n)-q(l,i,j,k,n)
-                    dfmrl = q(l,i  ,j+1,k-1,n)-q(l,i,j,k,n)
-                    dfrll = q(l,i+1,j-1,k-1,n)-q(l,i,j,k,n)
-                    dfrml = q(l,i+1,j  ,k-1,n)-q(l,i,j,k,n)
-                    dfrrl = q(l,i+1,j+1,k-1,n)-q(l,i,j,k,n)
+                    q_center = q(l,i,j,k,n)
+                    dflll = q(l,i-1,j-1,k-1,n)-q_center
+                    dflml = q(l,i-1,j  ,k-1,n)-q_center
+                    dflrl = q(l,i-1,j+1,k-1,n)-q_center
+                    dfmll = q(l,i  ,j-1,k-1,n)-q_center
+                    dfmml = q(l,i  ,j  ,k-1,n)-q_center
+                    dfmrl = q(l,i  ,j+1,k-1,n)-q_center
+                    dfrll = q(l,i+1,j-1,k-1,n)-q_center
+                    dfrml = q(l,i+1,j  ,k-1,n)-q_center
+                    dfrrl = q(l,i+1,j+1,k-1,n)-q_center
 
-                    dfllm = q(l,i-1,j-1,k  ,n)-q(l,i,j,k,n)
-                    dflmm = q(l,i-1,j  ,k  ,n)-q(l,i,j,k,n)
-                    dflrm = q(l,i-1,j+1,k  ,n)-q(l,i,j,k,n)
-                    dfmlm = q(l,i  ,j-1,k  ,n)-q(l,i,j,k,n)
-                    dfmmm = q(l,i  ,j  ,k  ,n)-q(l,i,j,k,n)
-                    dfmrm = q(l,i  ,j+1,k  ,n)-q(l,i,j,k,n)
-                    dfrlm = q(l,i+1,j-1,k  ,n)-q(l,i,j,k,n)
-                    dfrmm = q(l,i+1,j  ,k  ,n)-q(l,i,j,k,n)
-                    dfrrm = q(l,i+1,j+1,k  ,n)-q(l,i,j,k,n)
+                    dfllm = q(l,i-1,j-1,k  ,n)-q_center
+                    dflmm = q(l,i-1,j  ,k  ,n)-q_center
+                    dflrm = q(l,i-1,j+1,k  ,n)-q_center
+                    dfmlm = q(l,i  ,j-1,k  ,n)-q_center
+                    dfmmm = q(l,i  ,j  ,k  ,n)-q_center
+                    dfmrm = q(l,i  ,j+1,k  ,n)-q_center
+                    dfrlm = q(l,i+1,j-1,k  ,n)-q_center
+                    dfrmm = q(l,i+1,j  ,k  ,n)-q_center
+                    dfrrm = q(l,i+1,j+1,k  ,n)-q_center
 
-                    dfllr = q(l,i-1,j-1,k+1,n)-q(l,i,j,k,n)
-                    dflmr = q(l,i-1,j  ,k+1,n)-q(l,i,j,k,n)
-                    dflrr = q(l,i-1,j+1,k+1,n)-q(l,i,j,k,n)
-                    dfmlr = q(l,i  ,j-1,k+1,n)-q(l,i,j,k,n)
-                    dfmmr = q(l,i  ,j  ,k+1,n)-q(l,i,j,k,n)
-                    dfmrr = q(l,i  ,j+1,k+1,n)-q(l,i,j,k,n)
-                    dfrlr = q(l,i+1,j-1,k+1,n)-q(l,i,j,k,n)
-                    dfrmr = q(l,i+1,j  ,k+1,n)-q(l,i,j,k,n)
-                    dfrrr = q(l,i+1,j+1,k+1,n)-q(l,i,j,k,n)
+                    dfllr = q(l,i-1,j-1,k+1,n)-q_center
+                    dflmr = q(l,i-1,j  ,k+1,n)-q_center
+                    dflrr = q(l,i-1,j+1,k+1,n)-q_center
+                    dfmlr = q(l,i  ,j-1,k+1,n)-q_center
+                    dfmmr = q(l,i  ,j  ,k+1,n)-q_center
+                    dfmrr = q(l,i  ,j+1,k+1,n)-q_center
+                    dfrlr = q(l,i+1,j-1,k+1,n)-q_center
+                    dfrmr = q(l,i+1,j  ,k+1,n)-q_center
+                    dfrrr = q(l,i+1,j+1,k+1,n)-q_center
 
                     vmin = min(dflll,dflml,dflrl,dfmll,dfmml,dfmrl,dfrll,dfrml,dfrrl, &
                          &     dfllm,dflmm,dflrm,dfmlm,dfmmm,dfmrm,dfrlm,dfrmm,dfrrm, &
@@ -1374,12 +1402,10 @@ subroutine uslope(q,dq,dx,dt,ngrid)
                     dff  = half*(abs(dfx)+abs(dfy)+abs(dfz))
 
                     if(dff>zero)then
-                       slop = min(one,min(abs(vmin),abs(vmax))/dff)
+                       dlim = min(one,min(abs(vmin),abs(vmax))/dff)
                     else
-                       slop = one
+                       dlim = one
                     endif
-
-                    dlim = slop
 
                     dq(l,i,j,k,n,1) = dlim*dfx
                     dq(l,i,j,k,n,2) = dlim*dfy
@@ -1395,30 +1421,30 @@ subroutine uslope(q,dq,dx,dt,ngrid)
         do k = klo, khi
            do j = jlo, jhi
               do i = ilo, ihi
-                 ! slopes in first coordinate direction
                  do l = 1, ngrid
-                    dlft = (q(l,i  ,j,k,n) - q(l,i-1,j,k,n))
-                    drgt = (q(l,i+1,j,k,n) - q(l,i  ,j,k,n))
+                    q_center = q(l,i,j,k,n)
+
+                    ! slopes in first coordinate direction
+                    dlft = q_center - q(l,i-1,j,k,n)
+                    drgt = q(l,i+1,j,k,n) - q_center
                     if((dlft*drgt)<=zero) then
                        dq(l,i,j,k,n,1)=zero
                     else
                        dq(l,i,j,k,n,1)=(2*dlft*drgt/(dlft+drgt))
                     end if
-                 end do
-                 ! slopes in second coordinate direction
-                 do l = 1, ngrid
-                    dlft = (q(l,i,j  ,k,n) - q(l,i,j-1,k,n))
-                    drgt = (q(l,i,j+1,k,n) - q(l,i,j  ,k,n))
+
+                    ! slopes in second coordinate direction
+                    dlft = q_center - q(l,i,j-1,k,n)
+                    drgt = q(l,i,j+1,k,n) - q_center
                     if((dlft*drgt)<=zero) then
                        dq(l,i,j,k,n,2)=zero
                     else
                        dq(l,i,j,k,n,2)=(2*dlft*drgt/(dlft+drgt))
                     end if
-                 end do
-                 ! slopes in third coordinate direction
-                 do l = 1, ngrid
-                    dlft = (q(l,i,j,k  ,n) - q(l,i,j,k-1,n))
-                    drgt = (q(l,i,j,k+1,n) - q(l,i,j,k  ,n))
+
+                    ! slopes in third coordinate direction
+                    dlft = q_center - q(l,i,j,k-1,n)
+                    drgt = q(l,i,j,k+1,n) - q_center
                     if((dlft*drgt)<=zero) then
                        dq(l,i,j,k,n,3)=zero
                     else
@@ -1434,36 +1460,40 @@ subroutine uslope(q,dq,dx,dt,ngrid)
         do k = klo, khi
            do j = jlo, jhi
               do i = ilo, ihi
-                 ! slopes in first coordinate direction
                  do l = 1, ngrid
-                    dlft = (q(l,i  ,j,k,n) - q(l,i-1,j,k,n))
-                    drgt = (q(l,i+1,j,k,n) - q(l,i  ,j,k,n))
+                    ! Gather values at center cell and its neighbors
+                    q_center = q(l,i,j,k,n)
+                    q_neighbors(im) = q(l,i-1,j,k,n)
+                    q_neighbors(ip) = q(l,i+1,j,k,n)
+                    q_neighbors(jm) = q(l,i,j-1,k,n)
+                    q_neighbors(jp) = q(l,i,j+1,k,n)
+                    q_neighbors(km) = q(l,i,j,k-1,n)
+                    q_neighbors(kp) = q(l,i,j,k+1,n) 
+
+                    ! slopes in first coordinate direction
+                    dlft = q_center - q_neighbors(im)
+                    drgt = q_neighbors(ip) - q_center
                     dcen = half*(dlft+drgt)
                     dsgn = sign(one, dcen)
-                    slop = min(slope_theta*abs(dlft),slope_theta*abs(drgt))
-                    dlim = slop
+                    dlim = min(slope_theta*abs(dlft),slope_theta*abs(drgt))
                     if((dlft*drgt)<=zero)dlim=zero
                     dq(l,i,j,k,n,1) = dsgn*min(dlim,abs(dcen))
-                 end do
-                 ! slopes in second coordinate direction
-                 do l = 1, ngrid
-                    dlft = (q(l,i,j  ,k,n) - q(l,i,j-1,k,n))
-                    drgt = (q(l,i,j+1,k,n) - q(l,i,j  ,k,n))
+
+                    ! slopes in second coordinate direction
+                    dlft = q_center - q_neighbors(jm)
+                    drgt = q_neighbors(jp) - q_center
                     dcen = half*(dlft+drgt)
                     dsgn = sign(one,dcen)
-                    slop = min(slope_theta*abs(dlft),slope_theta*abs(drgt))
-                    dlim = slop
+                    dlim = min(slope_theta*abs(dlft),slope_theta*abs(drgt))
                     if((dlft*drgt)<=zero)dlim=zero
                     dq(l,i,j,k,n,2) = dsgn*min(dlim,abs(dcen))
-                 end do
-                 ! slopes in third coordinate direction
-                 do l = 1, ngrid
-                    dlft = (q(l,i,j,k  ,n) - q(l,i,j,k-1,n))
-                    drgt = (q(l,i,j,k+1,n) - q(l,i,j,k  ,n))
+
+                    ! slopes in third coordinate direction
+                    dlft = q_center - q_neighbors(km)
+                    drgt = q_neighbors(kp)- q_center
                     dcen = half*(dlft+drgt)
                     dsgn = sign(one,dcen)
-                    slop = min(slope_theta*abs(dlft),slope_theta*abs(drgt))
-                    dlim = slop
+                    dlim = min(slope_theta*abs(dlft),slope_theta*abs(drgt))
                     if((dlft*drgt)<=zero)dlim=zero
                     dq(l,i,j,k,n,3) = dsgn*min(dlim,abs(dcen))
                  end do
