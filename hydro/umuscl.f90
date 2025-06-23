@@ -1288,6 +1288,11 @@ subroutine uslope3d(q,dq,dx,dt,ngrid)
   real(dp)::dfz
   real(dp)::vmin,vmax,dfx,dfy,dff
   integer::ilo,ihi,jlo,jhi,klo,khi
+  real(dp),dimension(0:2*ndim)::qloc
+  ! store the center value at index 0 in qloc
+  integer,parameter::icen=0
+  ! indices of left/right, bottom/top, back/front cells in q_neighbors array (min and plus)
+  integer,parameter::im=1,ip=2,jm=3,jp=4,km=5,kp=6
 
   ilo=MIN(1,iu1+1); ihi=MAX(1,iu2-1)
   jlo=MIN(1,ju1+1); jhi=MAX(1,ju2-1)
@@ -1303,23 +1308,25 @@ subroutine uslope3d(q,dq,dx,dt,ngrid)
         do k = klo, khi
            do j = jlo, jhi
               do i = ilo, ihi
-                 ! slopes in first coordinate direction
                  do l = 1, ngrid
-                    dlft = q(l,i  ,j,k,n) - q(l,i-1,j,k,n)
-                    drgt = q(l,i+1,j,k,n) - q(l,i  ,j,k,n)
+                    ! Gather values at center cell and its neighbors
+                    qloc = gather_local_values(q,l,i,j,k,n)
+
+                    ! slopes in first coordinate direction
+                    dlft = qloc(icen) - qloc(im)
+                    drgt = qloc(ip)   - qloc(icen)
                     dq(l,i,j,k,n,1) = slope_minmod(dlft,drgt)
-                 end do
-                 ! slopes in second coordinate direction
-                 do l = 1, ngrid
-                    dlft = q(l,i,j  ,k,n) - q(l,i,j-1,k,n)
-                    drgt = q(l,i,j+1,k,n) - q(l,i,j  ,k,n)
+
+                    ! slopes in second coordinate direction
+                    dlft = qloc(icen) - qloc(jm)
+                    drgt = qloc(jp)   - qloc(icen)
                     dq(l,i,j,k,n,2) = slope_minmod(dlft,drgt)
-                 end do
-                 ! slopes in third coordinate direction
-                 do l = 1, ngrid
-                    dlft = q(l,i,j,k  ,n) - q(l,i,j,k-1,n)
-                    drgt = q(l,i,j,k+1,n) - q(l,i,j,k  ,n)
+
+                    ! slopes in third coordinate direction
+                    dlft = qloc(icen) - qloc(km)
+                    drgt = qloc(kp)   - qloc(icen)
                     dq(l,i,j,k,n,3) = slope_minmod(dlft,drgt)
+
                  end do
               end do
            end do
@@ -1330,22 +1337,23 @@ subroutine uslope3d(q,dq,dx,dt,ngrid)
         do k = klo, khi
            do j = jlo, jhi
               do i = ilo, ihi
-                 ! slopes in first coordinate direction
                  do l = 1, ngrid
-                    dlft = slope_type*(q(l,i  ,j,k,n) - q(l,i-1,j,k,n))
-                    drgt = slope_type*(q(l,i+1,j,k,n) - q(l,i  ,j,k,n))
+                    ! Gather values at center cell and its neighbors
+                    qloc = gather_local_values(q,l,i,j,k,n)
+
+                    ! slopes in first coordinate direction
+                    dlft = slope_type*(qloc(icen) - qloc(im))
+                    drgt = slope_type*(qloc(ip)   - qloc(icen))
                     dq(l,i,j,k,n,1) = slope_moncen(dlft,drgt)
-                 end do
-                 ! slopes in second coordinate direction
-                 do l = 1, ngrid
-                    dlft = slope_type*(q(l,i,j  ,k,n) - q(l,i,j-1,k,n))
-                    drgt = slope_type*(q(l,i,j+1,k,n) - q(l,i,j  ,k,n))
+
+                    ! slopes in second coordinate direction
+                    dlft = slope_type*(qloc(icen) - qloc(jm))
+                    drgt = slope_type*(qloc(jp)   - qloc(icen))
                     dq(l,i,j,k,n,2) = slope_moncen(dlft,drgt)
-                 end do
-                 ! slopes in third coordinate direction
-                 do l = 1, ngrid
-                    dlft = slope_type*(q(l,i,j,k  ,n) - q(l,i,j,k-1,n))
-                    drgt = slope_type*(q(l,i,j,k+1,n) - q(l,i,j,k  ,n))
+
+                    ! slopes in third coordinate direction
+                    dlft = slope_type*(qloc(icen) - qloc(km))
+                    drgt = slope_type*(qloc(kp)   - qloc(icen))
                     dq(l,i,j,k,n,3) = slope_moncen(dlft,drgt)
                  end do
               end do
@@ -1420,22 +1428,23 @@ subroutine uslope3d(q,dq,dx,dt,ngrid)
         do k = klo, khi
            do j = jlo, jhi
               do i = ilo, ihi
-                 ! slopes in first coordinate direction
                  do l = 1, ngrid
-                    dlft = (q(l,i  ,j,k,n) - q(l,i-1,j,k,n))
-                    drgt = (q(l,i+1,j,k,n) - q(l,i  ,j,k,n))
+                    ! Gather values at center cell and its neighbors
+                    qloc = gather_local_values(q,l,i,j,k,n)
+
+                    ! slopes in first coordinate direction
+                    dlft = qloc(icen) - qloc(im)
+                    drgt = qloc(ip)   - qloc(icen)
                     dq(l,i,j,k,n,1) = slope_vanLeer(dlft,drgt)
-                 end do
-                 ! slopes in second coordinate direction
-                 do l = 1, ngrid
-                    dlft = (q(l,i,j  ,k,n) - q(l,i,j-1,k,n))
-                    drgt = (q(l,i,j+1,k,n) - q(l,i,j  ,k,n))
+
+                    ! slopes in second coordinate direction
+                    dlft = qloc(icen) - qloc(jm)
+                    drgt = qloc(jp)   - qloc(icen)
                     dq(l,i,j,k,n,2) = slope_vanLeer(dlft,drgt)
-                 end do
-                 ! slopes in third coordinate direction
-                 do l = 1, ngrid
-                    dlft = (q(l,i,j,k  ,n) - q(l,i,j,k-1,n))
-                    drgt = (q(l,i,j,k+1,n) - q(l,i,j,k  ,n))
+
+                    ! slopes in third coordinate direction
+                    dlft = qloc(icen) - qloc(km)
+                    drgt = qloc(kp)   - qloc(icen)
                     dq(l,i,j,k,n,3) = slope_vanLeer(dlft,drgt)
                  end do
               end do
@@ -1447,22 +1456,23 @@ subroutine uslope3d(q,dq,dx,dt,ngrid)
         do k = klo, khi
            do j = jlo, jhi
               do i = ilo, ihi
-                 ! slopes in first coordinate direction
                  do l = 1, ngrid
-                    dlft = (q(l,i  ,j,k,n) - q(l,i-1,j,k,n))
-                    drgt = (q(l,i+1,j,k,n) - q(l,i  ,j,k,n))
+                    ! Gather values at center cell and its neighbors
+                    qloc = gather_local_values(q,l,i,j,k,n)
+
+                    ! slopes in first coordinate direction
+                    dlft = qloc(icen) - qloc(im)
+                    drgt = qloc(ip)   - qloc(icen)
                     dq(l,i,j,k,n,1) = slope_vanLeer_bis(dlft,drgt)
-                 end do
-                 ! slopes in second coordinate direction
-                 do l = 1, ngrid
-                    dlft = (q(l,i,j  ,k,n) - q(l,i,j-1,k,n))
-                    drgt = (q(l,i,j+1,k,n) - q(l,i,j  ,k,n))
+
+                    ! slopes in second coordinate direction
+                    dlft = qloc(icen) - qloc(jm)
+                    drgt = qloc(jp)   - qloc(icen)
                     dq(l,i,j,k,n,2) = slope_vanLeer_bis(dlft,drgt)
-                 end do
-                 ! slopes in third coordinate direction
-                 do l = 1, ngrid
-                    dlft = (q(l,i,j,k  ,n) - q(l,i,j,k-1,n))
-                    drgt = (q(l,i,j,k+1,n) - q(l,i,j,k  ,n))
+
+                    ! slopes in third coordinate direction
+                    dlft = qloc(icen) - qloc(km)
+                    drgt = qloc(kp)   - qloc(icen)
                     dq(l,i,j,k,n,3) = slope_vanLeer_bis(dlft,drgt)
                  end do
               end do
@@ -1475,5 +1485,5 @@ subroutine uslope3d(q,dq,dx,dt,ngrid)
   endif
 
 end subroutine uslope3d
+!#######################################################
 #endif
-

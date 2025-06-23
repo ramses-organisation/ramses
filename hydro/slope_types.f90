@@ -5,6 +5,36 @@ module slope_types
 
 contains
 
+   ! HELPER FUNCTIONS
+
+   !#######################################################
+#if NDIM==3
+   pure function gather_local_values(q,l,i,j,k,n) result(qloc)
+      use amr_parameters,   only:dp,nvector,ndim
+      use hydro_parameters, only:iu1,iu2,ju1,ju2,ku1,ku2,nvar
+      implicit none
+      real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar),intent(in)::q
+      integer,intent(in)::l,i,j,k,n
+      real(dp),dimension(0:2*ndim)::qloc
+      ! store the center value at index 0
+      integer,parameter::icen=0
+      ! indices of left/right, bottom/top, back/front cells in q_neighbors array (min and plus)
+      integer,parameter::im=1,ip=2,jm=3,jp=4,km=5,kp=6
+
+      ! Gather values at center cell and its neighbors
+      qloc(icen) = q(l,i,j,k,n)
+      qloc(im)   = q(l,i-1,j,k,n)
+      qloc(ip)   = q(l,i+1,j,k,n)
+      qloc(jm)   = q(l,i,j-1,k,n)
+      qloc(jp)   = q(l,i,j+1,k,n)
+      qloc(km)   = q(l,i,j,k-1,n)
+      qloc(kp)   = q(l,i,j,k+1,n) 
+   end function gather_local_values
+#endif
+   !#######################################################
+
+   ! SLOPE TYPES
+
    !#######################################################
    pure function slope_minmod(dlft,drgt) result(slope)
       real(dp),intent(in)::dlft,drgt
