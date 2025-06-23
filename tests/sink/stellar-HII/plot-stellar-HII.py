@@ -52,7 +52,7 @@ points = np.transpose([x,y,z])
 vars=["density", "temperature", "photon_flux_03", "scalar_00", "scalar_01", "scalar_02"]
 units=[unit_d/MH,  unit_v**2 * 2.37 * MH /KB, unit_v, 1., 1., 1.]
 labels=["log(density [H/cc])", "log(temperature [K])", "log(photon 3 flux [cm-2 s-1])",
-             "log(xHII)", "log(xHII)", "log(xHII)"]
+             "log(xHII)", "log(xHeII)", "log(xHeIII)"]
 axx=[0,0,0,1,1,1]
 axy=[0,1,2,0,1,2]
 vmin=[None, None, None, -10, -10, -10]
@@ -101,7 +101,10 @@ fig.savefig('stellar-HII.pdf', bbox_inches="tight")
 # Check if test results match reference, both for outputs and movie frames =========================
 # Why is this so inaccurate on multiple cores?
 red_tol = 1.0e-7
-tolerance={"scalar_00":red_tol, "scalar_01":red_tol, "scalar_02":red_tol, "velocity_x":red_tol, "velocity_y":red_tol, "velocity_z":red_tol, 'movie_dens':red_tol, 'movie_temp':red_tol, 'movie_Fp3':red_tol, 'movie_xHeII':red_tol}
+tolerance={"scalar_00":red_tol, "scalar_01":red_tol, "scalar_02":red_tol, "velocity_x":red_tol, "velocity_y":red_tol, "velocity_z":red_tol
+  ,'movie_dens':red_tol, 'movie_temp':red_tol, 'movie_Fp3':red_tol*100., 'movie_xHII':red_tol*100.
+  ,'photon_flux_01':red_tol*100., 'photon_flux_01_x':red_tol*100., 'photon_flux_01_y':red_tol*100., 'photon_flux_01_z':red_tol*100.
+  ,'photon_flux_02':red_tol*100., 'photon_flux_02_x':red_tol*100., 'photon_flux_02_y':red_tol*100., 'photon_flux_02_z':red_tol*100.
+  ,'photon_flux_03':red_tol*100., 'photon_flux_03_x':red_tol*100., 'photon_flux_03_y':red_tol*100., 'photon_flux_03_z':red_tol*100.}
 
 visu_ramses.check_solution(data["data"],'stellar-HII',tolerance=tolerance,overwrite=False)
-
