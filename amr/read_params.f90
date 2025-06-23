@@ -430,7 +430,7 @@ subroutine read_amr_params(namelist_unit,nml_ok)
 
    if(pic .and. npartmax==0) then
       npartmax=int(nparttot/int(ncpu,kind=8),kind=4)
-   else if (.not. pic) then 
+   else if (.not. pic) then
       npartmax=0
    end if
 
