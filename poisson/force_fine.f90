@@ -125,6 +125,7 @@ subroutine force_fine(ilevel,icount)
                     f(ind_cell(i),idim)=ff(i,idim) + f(ind_cell(i),idim)
                  else
                     f(ind_cell(i),idim)=ff(i,idim)
+                 endif
               end do
            end do
 
