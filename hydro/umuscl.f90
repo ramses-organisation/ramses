@@ -1014,12 +1014,20 @@ subroutine uslope(q,dq,dx,dt,ngrid)
                     ! slopes in first coordinate direction
                     dlft = qcen - q(l,i-1,j,k,n)
                     drgt = q(l,i+1,j,k,n) - qcen
+#if NDIM==1 || NDIM==2
+                    dq(l,i,j,k,n,1) = slope_minmod1d(dlft,drgt)
+#else
                     dq(l,i,j,k,n,1) = slope_minmod(dlft,drgt)
+#endif
 #if NDIM>1
                     ! slopes in second coordinate direction
                     dlft = qcen - q(l,i,j-1,k,n)
                     drgt = q(l,i,j+1,k,n) - qcen
+#if NDIM==2
+                    dq(l,i,j,k,n,2) = slope_minmod1d(dlft,drgt)
+#else
                     dq(l,i,j,k,n,2) = slope_minmod(dlft,drgt)
+#endif
 #endif
 #if NDIM>2
                     ! slopes in third coordinate direction

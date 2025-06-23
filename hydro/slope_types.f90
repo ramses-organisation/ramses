@@ -21,6 +21,20 @@ contains
  
    end function slope_minmod
    !#######################################################
+   pure function slope_minmod1d(dlft,drgt) result(slope)
+      real(dp),intent(in)::dlft,drgt
+      real(dp)::slope
+      ! slope_type==1 when NDIM=1
+      real(dp)::dcen,dsgn,dlim
+ 
+      dcen = half*(dlft+drgt)
+      dsgn = sign(one, dcen)
+      dlim = min(abs(dlft),abs(drgt))
+      if((dlft*drgt)<=zero)dlim=zero
+      slope = dsgn*min(dlim,abs(dcen))
+ 
+   end function slope_minmod1d
+   !#######################################################
    pure function slope_moncen(dlft,drgt) result(slope)
       real(dp),intent(in)::dlft,drgt
       real(dp)::slope
