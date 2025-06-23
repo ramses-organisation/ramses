@@ -24,7 +24,7 @@ subroutine gravana(x,f,dx,ncell)
   real(dp)::scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2
 
   ! Constant vector
-  if(gravity_type==1)then
+  if(ABS(gravity_type)==1)then
      do idim=1,ndim
         do i=1,ncell
            f(i,idim)=gravity_params(idim)
@@ -33,7 +33,7 @@ subroutine gravana(x,f,dx,ncell)
   end if
 
   ! Point mass
-  if(gravity_type==2)then
+  if(ABS(gravity_type)==2)then
      gmass=gravity_params(1) ! GM
      emass=dx
      emass=gravity_params(2) ! Softening length
@@ -60,7 +60,7 @@ subroutine gravana(x,f,dx,ncell)
      end do
   end if
 
-  if(gravity_type==3)then
+  if(ABS(gravity_type)==3)then
      ! vertical galactic gravitational field
      ! Kuijken & Gilmore 1989 taken from Joung & MacLow (2006)
      ! g = -a1 z / sqrt(z^2+z0^2) - a2 z
