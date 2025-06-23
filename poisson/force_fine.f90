@@ -83,8 +83,8 @@ subroutine force_fine(ilevel,icount)
      if(simple_boundary)call make_boundary_force(ilevel)
 
   endif
-  
-  
+
+
   !-------------------------------------
   ! Compute analytical gravity force
   !-------------------------------------
@@ -136,7 +136,7 @@ subroutine force_fine(ilevel,icount)
         call make_virtual_fine_dp(f(1,idim),ilevel)
      end do
      if(simple_boundary)call make_boundary_force(ilevel)
-     
+
   endif
 
 
