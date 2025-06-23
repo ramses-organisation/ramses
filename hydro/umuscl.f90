@@ -971,6 +971,7 @@ subroutine uslope(q,dq,dx,dt,ngrid)
   use amr_parameters
   use hydro_parameters
   use const
+  use slope_types
   implicit none
 
   integer::ngrid
@@ -980,8 +981,10 @@ subroutine uslope(q,dq,dx,dt,ngrid)
 
   ! local arrays
   integer::i, j, k, l, n
-  real(dp)::dsgn, dlim, dcen, dlft, drgt, q_center
-  real(dp),dimension(1:2*ndim)::q_neighbors
+  real(dp)::dsgn, dlim, dcen, dlft, drgt
+  real(dp),dimension(0:2*ndim)::qloc
+  ! store the center value at index 0 in qloc
+  integer,parameter::icen=0
   ! indices of left/right, bottom/top, back/front cells in q_neighbors array (min and plus)
   integer,parameter::im=1,ip=2,jm=3,jp=4,km=5,kp=6
 #if NDIM==2
@@ -1015,11 +1018,10 @@ subroutine uslope(q,dq,dx,dt,ngrid)
               if(slope_type==1.or.slope_type==2.or.slope_type==3)then  ! minmod or average
                  do l = 1, ngrid
                     ! Gather values at center cell and its neighbors
-                    q_center = q(l,i,j,k,n)
-                    q_neighbors(im) = q(l,i-1,j,k,n)
-                    q_neighbors(ip) = q(l,i+1,j,k,n)
-                    dlft = MIN(slope_type,2)*(q_center - q_neighbors(im))
-                    drgt = MIN(slope_type,2)*(q_neighbors(ip) - q_center)
+                    qloc = gather_local_values(q,l,i,j,k,n)
+                    ! slopes in first coordinate direction
+                    dlft = MIN(slope_type,2)*(qloc(icen) - qloc(im))
+                    drgt = MIN(slope_type,2)*(qloc(ip)   - qloc(icen))
                     dcen = half*(dlft+drgt)/MIN(slope_type,2)
                     dsgn = sign(one, dcen)
                     dlim = min(abs(dlft),abs(drgt))
@@ -1029,13 +1031,12 @@ subroutine uslope(q,dq,dx,dt,ngrid)
               else if(slope_type==4)then ! superbee
                  do l = 1, ngrid
                     ! Gather values at center cell and its neighbors
-                    q_center = q(l,i,j,k,n)
-                    q_neighbors(im) = q(l,i-1,j,k,n)
-                    q_neighbors(ip) = q(l,i+1,j,k,n)
+                    qloc = gather_local_values(q,l,i,j,k,n)
                     dcen = q(l,i,j,k,2)*dt/dx
-                    dlft = two/(one+dcen)*(q_center-q_neighbors(im))
-                    drgt = two/(one-dcen)*(q_neighbors(ip)-q_center)
-                    dcen = half*(q(l,i+1,j,k,n)-q(l,i-1,j,k,n))
+                    ! slopes in first coordinate direction
+                    dlft = two/(one+dcen)*(qloc(icen) - qloc(im))
+                    drgt = two/(one+dcen)*(qloc(ip)   - qloc(icen))
+                    dcen = half*(qloc(ip)-qloc(im))
                     dsgn = sign(one, dlft)
                     dlim = min(abs(dlft),abs(drgt))
                     if((dlft*drgt)<=zero)dlim=zero
@@ -1044,21 +1045,19 @@ subroutine uslope(q,dq,dx,dt,ngrid)
               else if(slope_type==5)then ! ultrabee
                  if(n==1)then
                     do l = 1, ngrid
-                    ! Gather values at center cell and its neighbors
-                    q_center = q(l,i,j,k,n)
-                    q_neighbors(im) = q(l,i-1,j,k,n)
-                    q_neighbors(ip) = q(l,i+1,j,k,n)
+                       ! Gather values at center cell and its neighbors
+                       qloc = gather_local_values(q,l,i,j,k,n)
                        dcen = q(l,i,j,k,2)*dt/dx
                        if(dcen>=0)then
-                          dlft = two/(zero+dcen+1d-10)*(q_center-q_neighbors(im))
-                          drgt = two/(one -dcen      )*(q_neighbors(ip)-q_center)
+                          dlft = two/(zero+dcen+1d-10)*(qloc(icen) - qloc(im))
+                          drgt = two/(one -dcen      )*(qloc(ip)   - qloc(icen))
                        else
-                          dlft = two/(one +dcen      )*(q_center-q_neighbors(im))
-                          drgt = two/(zero-dcen+1d-10)*(q_neighbors(ip)-q_center)
+                          dlft = two/(one +dcen      )*(qloc(icen) - qloc(im))
+                          drgt = two/(zero-dcen+1d-10)*(qloc(ip)   - qloc(icen))
                        endif
                        dsgn = sign(one, dlft)
                        dlim = min(abs(dlft),abs(drgt))
-                       dcen = half*(q(l,i+1,j,k,n)-q(l,i-1,j,k,n))
+                       dcen = half*(qloc(ip)-qloc(im))
                        if((dlft*drgt)<=zero)dlim=zero
                        dq(l,i,j,k,n,1) = dsgn*dlim !min(dlim,abs(dcen))
                     end do
@@ -1071,11 +1070,10 @@ subroutine uslope(q,dq,dx,dt,ngrid)
                  if(n==1)then
                     do l = 1, ngrid
                        ! Gather values at center cell and its neighbors
-                       q_center = q(l,i,j,k,n)
-                       q_neighbors(im) = q(l,i-1,j,k,n)
-                       q_neighbors(ip) = q(l,i+1,j,k,n)
-                       dlft = q_center        - q_neighbors(im)
-                       drgt = q_neighbors(ip) - q_center
+                       qloc = gather_local_values(q,l,i,j,k,n)
+                       ! slopes in first coordinate direction
+                       dlft = qloc(icen) - qloc(im)
+                       drgt = qloc(ip)   - qloc(icen)
                        dlim = 0.5d0*(dlft+drgt)
                        dq(l,i,j,k,n,1) = dlim
                     end do
@@ -1086,31 +1084,17 @@ subroutine uslope(q,dq,dx,dt,ngrid)
                  end if
               else if(slope_type==7)then ! van Leer
                  do l = 1, ngrid
-                    ! Gather values at center cell and its neighbors
-                    q_center = q(l,i,j,k,n)
-                    q_neighbors(im) = q(l,i-1,j,k,n)
-                    q_neighbors(ip) = q(l,i+1,j,k,n)
-                    dlft = q_center        - q_neighbors(im)
-                    drgt = q_neighbors(ip) - q_center
-                    if((dlft*drgt)<=zero) then
-                       dq(l,i,j,k,n,1)=zero
-                    else
-                       dq(l,i,j,k,n,1)=(2*dlft*drgt/(dlft+drgt))
-                    end if
+                    qloc = gather_local_values(q,l,i,j,k,n)
+                    dlft = qloc(icen) - qloc(im)
+                    drgt = qloc(ip)   - qloc(icen)
+                    dq(l,i,j,k,n,1)=slope_vanLeer(dlft,drgt)
                  end do
               else if(slope_type==8)then ! generalized moncen/minmod parameterisation (van Leer 1979)
                  do l = 1, ngrid
-                    ! Gather values at center cell and its neighbors
-                    q_center = q(l,i,j,k,n)
-                    q_neighbors(im) = q(l,i-1,j,k,n)
-                    q_neighbors(ip) = q(l,i+1,j,k,n)
-                    dlft = q_center        - q_neighbors(im)
-                    drgt = q_neighbors(ip) - q_center
-                    dcen = half*(dlft+drgt)
-                    dsgn = sign(one, dcen)
-                    dlim = min(slope_theta*abs(dlft),slope_theta*abs(drgt))
-                    if((dlft*drgt)<=zero)dlim=zero
-                    dq(l,i,j,k,n,1) = dsgn*min(dlim,abs(dcen))
+                    qloc = gather_local_values(q,l,i,j,k,n)
+                    dlft = qloc(icen) - qloc(im)
+                    drgt = qloc(ip)   - qloc(icen)
+                    dq(l,i,j,k,n,1) = slope_vanLeer_bis(dlft,drgt)
                  end do
               else
                  write(*,*)'Unknown slope type',dx,dt
@@ -1123,36 +1107,47 @@ subroutine uslope(q,dq,dx,dt,ngrid)
 #endif
 
 #if NDIM==2
-  if(slope_type==1.or.slope_type==2)then  ! minmod or average
+  if(slope_type==1)then  ! minmod
      do n = 1, nvar
         do k = klo, khi
            do j = jlo, jhi
               do i = ilo, ihi
                  do l = 1, ngrid
                     ! Gather values at center cell and its neighbors
-                    q_center = q(l,i,j,k,n)
-                    q_neighbors(im) = q(l,i-1,j,k,n)
-                    q_neighbors(ip) = q(l,i+1,j,k,n)
-                    q_neighbors(jm) = q(l,i,j-1,k,n)
-                    q_neighbors(jp) = q(l,i,j+1,k,n)
+                    qloc = gather_local_values(q,l,i,j,k,n)
 
                     ! slopes in first coordinate direction
-                    dlft = slope_type*(q_center - q_neighbors(im))
-                    drgt = slope_type*(q_neighbors(ip) - q_center)
-                    dcen = half*(dlft+drgt)/slope_type
-                    dsgn = sign(one, dcen)
-                    dlim = min(abs(dlft),abs(drgt))
-                    if((dlft*drgt)<=zero)dlim=zero
-                    dq(l,i,j,k,n,1) = dsgn*min(dlim,abs(dcen))
+                    dlft = qloc(icen) - qloc(im)
+                    drgt = qloc(ip)   - qloc(icen)
+                    dq(l,i,j,k,n,1) = slope_minmod(dlft,drgt)
 
                     ! slopes in second coordinate direction
-                    dlft = slope_type*(q_center - q_neighbors(jm))
-                    drgt = slope_type*(q_neighbors(jp) - q_center)
-                    dcen = half*(dlft+drgt)/slope_type
-                    dsgn = sign(one,dcen)
-                    dlim = min(abs(dlft),abs(drgt))
-                    if((dlft*drgt)<=zero)dlim=zero
-                    dq(l,i,j,k,n,2) = dsgn*min(dlim,abs(dcen))
+                    dlft = qloc(icen) - qloc(jm)
+                    drgt = qloc(jp)   - qloc(icen)
+                    dq(l,i,j,k,n,2) = slope_minmod(dlft,drgt)
+                 end do
+              end do
+           end do
+        end do
+     end do
+  else if(slope_type==2)then  ! average
+     do n = 1, nvar
+        do k = klo, khi
+           do j = jlo, jhi
+              do i = ilo, ihi
+                 do l = 1, ngrid
+                    ! Gather values at center cell and its neighbors
+                    qloc = gather_local_values(q,l,i,j,k,n)
+
+                    ! slopes in first coordinate direction
+                    dlft = slope_type*(qloc(icen) - qloc(im))
+                    drgt = slope_type*(qloc(ip)   - qloc(icen))
+                    dq(l,i,j,k,n,1) = slope_moncen(dlft,drgt)
+
+                    ! slopes in second coordinate direction
+                    dlft = slope_type*(qloc(icen) - qloc(jm))
+                    drgt = slope_type*(qloc(jp)   - qloc(icen))
+                    dq(l,i,j,k,n,2) = slope_moncen(dlft,drgt)
                  end do
               end do
            end do
@@ -1207,25 +1202,18 @@ subroutine uslope(q,dq,dx,dt,ngrid)
            do j = jlo, jhi
               do i = ilo, ihi
                  do l = 1, ngrid
-                    q_center = q(l,i,j,k,n)
+                    ! Gather values at center cell and its neighbors
+                    qloc = gather_local_values(q,l,i,j,k,n)
 
                     ! slopes in first coordinate direction
-                    dlft = (q_center - q(l,i-1,j,k,n))
-                    drgt = (q(l,i+1,j,k,n) - q_center)
-                    if((dlft*drgt)<=zero) then
-                       dq(l,i,j,k,n,1)=zero
-                    else
-                       dq(l,i,j,k,n,1)=(2*dlft*drgt/(dlft+drgt))
-                       end if
+                    dlft = qloc(icen) - qloc(im)
+                    drgt = qloc(ip)   - qloc(icen)
+                    dq(l,i,j,k,n,1) = slope_vanLeer(dlft,drgt)
 
                     ! slopes in second coordinate direction
-                    dlft = (q_center - q(l,i,j-1,k,n))
-                    drgt = (q(l,i,j+1,k,n) - q_center)
-                    if((dlft*drgt)<=zero) then
-                       dq(l,i,j,k,n,2)=zero
-                    else
-                       dq(l,i,j,k,n,2)=(2*dlft*drgt/(dlft+drgt))
-                    end if
+                    dlft = qloc(icen) - qloc(jm)
+                    drgt = qloc(jp)   - qloc(icen)
+                    dq(l,i,j,k,n,2) = slope_vanLeer(dlft,drgt)
                  end do
               end do
            end do
@@ -1237,25 +1225,19 @@ subroutine uslope(q,dq,dx,dt,ngrid)
            do j = jlo, jhi
               do i = ilo, ihi
                  do l = 1, ngrid
-                    q_center = q(l,i,j,k,n)
+                    ! Gather values at center cell and its neighbors
+                    qloc = gather_local_values(q,l,i,j,k,n)
 
                     ! slopes in first coordinate direction
-                    dlft = (q_center - q(l,i-1,j,k,n))
-                    drgt = (q(l,i+1,j,k,n) - q_center)
-                    dcen = half*(dlft+drgt)
-                    dsgn = sign(one, dcen)
-                    dlim = min(slope_theta*abs(dlft),slope_theta*abs(drgt))
-                    if((dlft*drgt)<=zero)dlim=zero
-                    dq(l,i,j,k,n,1) = dsgn*min(dlim,abs(dcen))
+                    dlft = qloc(icen) - qloc(im)
+                    drgt = qloc(ip)   - qloc(icen)
+                    dq(l,i,j,k,n,1) = slope_vanLeer_bis(dlft,drgt)
 
                     ! slopes in second coordinate direction
-                    dlft = (q_center - q(l,i,j-1,k,n))
-                    drgt = (q(l,i,j+1,k,n) - q_center)
-                    dcen = half*(dlft+drgt)
-                    dsgn = sign(one,dcen)
-                    dlim = min(slope_theta*abs(dlft),slope_theta*abs(drgt))
-                    if((dlft*drgt)<=zero)dlim=zero
-                    dq(l,i,j,k,n,2) = dsgn*min(dlim,abs(dcen))
+                    dlft = qloc(icen) - qloc(jm)
+                    drgt = qloc(jp)   - qloc(icen)
+                    dq(l,i,j,k,n,2) = slope_vanLeer_bis(dlft,drgt)
+
                  end do
               end do
            end do
@@ -1274,40 +1256,24 @@ subroutine uslope(q,dq,dx,dt,ngrid)
            do j = jlo, jhi
               do i = ilo, ihi
                  do l = 1, ngrid
-                    q_center = q(l,i,j,k,n)
+                    ! Gather values at center cell and its neighbors
+                    qloc = gather_local_values(q,l,i,j,k,n)
 
                     ! slopes in first coordinate direction
-                    dlft = q_center - q(l,i-1,j,k,n)
-                    drgt = q(l,i+1,j,k,n) - q_center
-                    if((dlft*drgt)<=zero) then
-                       dq(l,i,j,k,n,1) = zero
-                    else if(dlft>0) then
-                       dq(l,i,j,k,n,1) = min(dlft,drgt)
-                    else
-                       dq(l,i,j,k,n,1) = max(dlft,drgt)
-                    end if
+                    dlft = qloc(icen) - qloc(im)
+                    drgt = qloc(ip)   - qloc(icen)
+                    dq(l,i,j,k,n,1) = slope_minmod(dlft,drgt)
 
                     ! slopes in second coordinate direction
-                    dlft = q_center - q(l,i,j-1,k,n)
-                    drgt = q(l,i,j+1,k,n) - q_center
-                    if((dlft*drgt)<=zero) then
-                       dq(l,i,j,k,n,2) = zero
-                    else if(dlft>0) then
-                       dq(l,i,j,k,n,2) = min(dlft,drgt)
-                    else
-                       dq(l,i,j,k,n,2) = max(dlft,drgt)
-                    end if
+                    dlft = qloc(icen) - qloc(jm)
+                    drgt = qloc(jp)   - qloc(icen)
+                    dq(l,i,j,k,n,2) = slope_minmod(dlft,drgt)
 
                     ! slopes in third coordinate direction
-                    dlft = q_center - q(l,i,j,k-1,n)
-                    drgt = q(l,i,j,k+1,n) - q_center
-                    if((dlft*drgt)<=zero) then
-                       dq(l,i,j,k,n,3) = zero
-                    else if(dlft>0) then
-                       dq(l,i,j,k,n,3) = min(dlft,drgt)
-                    else
-                       dq(l,i,j,k,n,3) = max(dlft,drgt)
-                    end if
+                    dlft = qloc(icen) - qloc(km)
+                    drgt = qloc(kp)   - qloc(icen)
+                    dq(l,i,j,k,n,3) = slope_minmod(dlft,drgt)
+
                  end do
               end do
            end do
@@ -1319,34 +1285,23 @@ subroutine uslope(q,dq,dx,dt,ngrid)
            do j = jlo, jhi
               do i = ilo, ihi
                  do l = 1, ngrid
-                    q_center = q(l,i,j,k,n)
+                    ! Gather values at center cell and its neighbors
+                    qloc = gather_local_values(q,l,i,j,k,n)
 
                     ! slopes in first coordinate direction
-                    dlft = slope_type*(q_center - q(l,i-1,j,k,n))
-                    drgt = slope_type*(q(l,i+1,j,k,n) -q_center)
-                    dcen = half*(dlft+drgt)/slope_type
-                    dsgn = sign(one, dcen)
-                    dlim = min(abs(dlft),abs(drgt))
-                    if((dlft*drgt)<=zero)dlim=zero
-                    dq(l,i,j,k,n,1) = dsgn*min(dlim,abs(dcen))
+                    dlft = slope_type*(qloc(icen) - qloc(im))
+                    drgt = slope_type*(qloc(ip)   - qloc(icen))
+                    dq(l,i,j,k,n,1) = slope_moncen(dlft,drgt)
 
                     ! slopes in second coordinate direction
-                    dlft = slope_type*(q_center - q(l,i,j-1,k,n))
-                    drgt = slope_type*(q(l,i,j+1,k,n) - q_center)
-                    dcen = half*(dlft+drgt)/slope_type
-                    dsgn = sign(one,dcen)
-                    dlim = min(abs(dlft),abs(drgt))
-                    if((dlft*drgt)<=zero)dlim=zero
-                    dq(l,i,j,k,n,2) = dsgn*min(dlim,abs(dcen))
+                    dlft = slope_type*(qloc(icen) - qloc(jm))
+                    drgt = slope_type*(qloc(jp)   - qloc(icen))
+                    dq(l,i,j,k,n,2) = slope_moncen(dlft,drgt)
 
                     ! slopes in third coordinate direction
-                    dlft = slope_type*(q_center - q(l,i,j,k-1,n))
-                    drgt = slope_type*(q(l,i,j,k+1,n) - q_center)
-                    dcen = half*(dlft+drgt)/slope_type
-                    dsgn = sign(one,dcen)
-                    dlim = min(abs(dlft),abs(drgt))
-                    if((dlft*drgt)<=zero)dlim=zero
-                    dq(l,i,j,k,n,3) = dsgn*min(dlim,abs(dcen))
+                    dlft = slope_type*(qloc(icen) - qloc(km))
+                    drgt = slope_type*(qloc(kp)   - qloc(icen))
+                    dq(l,i,j,k,n,3) = slope_moncen(dlft,drgt)
                  end do
               end do
            end do
@@ -1422,34 +1377,23 @@ subroutine uslope(q,dq,dx,dt,ngrid)
            do j = jlo, jhi
               do i = ilo, ihi
                  do l = 1, ngrid
-                    q_center = q(l,i,j,k,n)
+                    ! Gather values at center cell and its neighbors
+                    qloc = gather_local_values(q,l,i,j,k,n)
 
                     ! slopes in first coordinate direction
-                    dlft = q_center - q(l,i-1,j,k,n)
-                    drgt = q(l,i+1,j,k,n) - q_center
-                    if((dlft*drgt)<=zero) then
-                       dq(l,i,j,k,n,1)=zero
-                    else
-                       dq(l,i,j,k,n,1)=(2*dlft*drgt/(dlft+drgt))
-                    end if
+                    dlft = qloc(icen) - qloc(im)
+                    drgt = qloc(ip)   - qloc(icen)
+                    dq(l,i,j,k,n,1) = slope_vanLeer(dlft,drgt)
 
                     ! slopes in second coordinate direction
-                    dlft = q_center - q(l,i,j-1,k,n)
-                    drgt = q(l,i,j+1,k,n) - q_center
-                    if((dlft*drgt)<=zero) then
-                       dq(l,i,j,k,n,2)=zero
-                    else
-                       dq(l,i,j,k,n,2)=(2*dlft*drgt/(dlft+drgt))
-                    end if
+                    dlft = qloc(icen) - qloc(jm)
+                    drgt = qloc(jp)   - qloc(icen)
+                    dq(l,i,j,k,n,2) = slope_vanLeer(dlft,drgt)
 
                     ! slopes in third coordinate direction
-                    dlft = q_center - q(l,i,j,k-1,n)
-                    drgt = q(l,i,j,k+1,n) - q_center
-                    if((dlft*drgt)<=zero) then
-                       dq(l,i,j,k,n,3)=zero
-                    else
-                       dq(l,i,j,k,n,3)=(2*dlft*drgt/(dlft+drgt))
-                    end if
+                    dlft = qloc(icen) - qloc(km)
+                    drgt = qloc(kp)   - qloc(icen)
+                    dq(l,i,j,k,n,3) = slope_vanLeer(dlft,drgt)
                  end do
               end do
            end do
@@ -1462,40 +1406,22 @@ subroutine uslope(q,dq,dx,dt,ngrid)
               do i = ilo, ihi
                  do l = 1, ngrid
                     ! Gather values at center cell and its neighbors
-                    q_center = q(l,i,j,k,n)
-                    q_neighbors(im) = q(l,i-1,j,k,n)
-                    q_neighbors(ip) = q(l,i+1,j,k,n)
-                    q_neighbors(jm) = q(l,i,j-1,k,n)
-                    q_neighbors(jp) = q(l,i,j+1,k,n)
-                    q_neighbors(km) = q(l,i,j,k-1,n)
-                    q_neighbors(kp) = q(l,i,j,k+1,n) 
+                    qloc = gather_local_values(q,l,i,j,k,n)
 
                     ! slopes in first coordinate direction
-                    dlft = q_center - q_neighbors(im)
-                    drgt = q_neighbors(ip) - q_center
-                    dcen = half*(dlft+drgt)
-                    dsgn = sign(one, dcen)
-                    dlim = min(slope_theta*abs(dlft),slope_theta*abs(drgt))
-                    if((dlft*drgt)<=zero)dlim=zero
-                    dq(l,i,j,k,n,1) = dsgn*min(dlim,abs(dcen))
+                    dlft = qloc(icen) - qloc(im)
+                    drgt = qloc(ip)   - qloc(icen)
+                    dq(l,i,j,k,n,1) = slope_vanLeer_bis(dlft,drgt)
 
                     ! slopes in second coordinate direction
-                    dlft = q_center - q_neighbors(jm)
-                    drgt = q_neighbors(jp) - q_center
-                    dcen = half*(dlft+drgt)
-                    dsgn = sign(one,dcen)
-                    dlim = min(slope_theta*abs(dlft),slope_theta*abs(drgt))
-                    if((dlft*drgt)<=zero)dlim=zero
-                    dq(l,i,j,k,n,2) = dsgn*min(dlim,abs(dcen))
+                    dlft = qloc(icen) - qloc(jm)
+                    drgt = qloc(jp)   - qloc(icen)
+                    dq(l,i,j,k,n,2) = slope_vanLeer_bis(dlft,drgt)
 
                     ! slopes in third coordinate direction
-                    dlft = q_center - q_neighbors(km)
-                    drgt = q_neighbors(kp)- q_center
-                    dcen = half*(dlft+drgt)
-                    dsgn = sign(one,dcen)
-                    dlim = min(slope_theta*abs(dlft),slope_theta*abs(drgt))
-                    if((dlft*drgt)<=zero)dlim=zero
-                    dq(l,i,j,k,n,3) = dsgn*min(dlim,abs(dcen))
+                    dlft = qloc(icen) - qloc(km)
+                    drgt = qloc(kp)   - qloc(icen)
+                    dq(l,i,j,k,n,3) = slope_vanLeer_bis(dlft,drgt)
                  end do
               end do
            end do

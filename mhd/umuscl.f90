@@ -2199,7 +2199,7 @@ subroutine uslope(q,dq,bf,dbf,dx,dt,ngrid)
 
   ! local arrays
   integer::i, j, k, l, n
-  real(dp)::dsgn, dlim, dcen, dlft, drgt, slop
+  real(dp)::dsgn, dlim, dcen, dlft, drgt
   real(dp)::vmin,vmax,dff
   integer::ilo,ihi,jlo,jhi,klo,khi
 
@@ -2232,12 +2232,11 @@ subroutine uslope(q,dq,bf,dbf,dx,dt,ngrid)
           do j = jlo, jhi
              do i = ilo, ihi
                 do l = 1, ngrid
-                   dlft = slope_type*(q(l,i  ,j,k,n) - q(l,i-1,j,k,n))
-                   drgt = slope_type*(q(l,i+1,j,k,n) - q(l,i  ,j,k,n))
-                   dcen = half*(dlft+drgt)/slope_type
+                   dlft = (q(l,i  ,j,k,n) - q(l,i-1,j,k,n))
+                   drgt = (q(l,i+1,j,k,n) - q(l,i  ,j,k,n))
+                   dcen = half*(dlft+drgt)
                    dsgn = sign(one, dcen)
-                   slop = min(abs(dlft),abs(drgt))
-                   dlim = slop
+                   dlim = slope_type*min(abs(dlft),abs(drgt))
                    if((dlft*drgt)<=zero)dlim=zero
                    dq(l,i,j,k,n,1) = dsgn*min(dlim,abs(dcen))
                 end do
@@ -2265,8 +2264,7 @@ subroutine uslope(q,dq,bf,dbf,dx,dt,ngrid)
                     drgt = slope_type*(q(l,i+1,j,k,n) - q(l,i  ,j,k,n))
                     dcen = half*(dlft+drgt)/slope_type
                     dsgn = sign(one, dcen)
-                    slop = min(abs(dlft),abs(drgt))
-                    dlim = slop
+                    dlim = min(abs(dlft),abs(drgt))
                     if((dlft*drgt)<=zero)dlim=zero
                     dq(l,i,j,k,n,1) = dsgn*min(dlim,abs(dcen))
                  end do
@@ -2276,8 +2274,7 @@ subroutine uslope(q,dq,bf,dbf,dx,dt,ngrid)
                     drgt = slope_type*(q(l,i,j+1,k,n) - q(l,i,j  ,k,n))
                     dcen = half*(dlft+drgt)/slope_type
                     dsgn = sign(one,dcen)
-                    slop = min(abs(dlft),abs(drgt))
-                    dlim = slop
+                    dlim = min(abs(dlft),abs(drgt))
                     if((dlft*drgt)<=zero)dlim=zero
                     dq(l,i,j,k,n,2) = dsgn*min(dlim,abs(dcen))
                  end do
@@ -2309,12 +2306,10 @@ subroutine uslope(q,dq,bf,dbf,dx,dt,ngrid)
                     dff  = half*(abs(dfx)+abs(dfy))
 
                     if(dff>zero)then
-                       slop = min(one,min(abs(vmin),abs(vmax))/dff)
+                       dlim = min(one,min(abs(vmin),abs(vmax))/dff)
                     else
-                       slop = one
+                       dlim = one
                     endif
-
-                    dlim = slop
 
                     dq(l,i,j,k,n,1) = dlim*dfx
                     dq(l,i,j,k,n,2) = dlim*dfy
@@ -2341,8 +2336,7 @@ subroutine uslope(q,dq,bf,dbf,dx,dt,ngrid)
                 drgt = slope_mag_type*(bf(l,i,j+1,k,1) - bf(l,i,j  ,k,1))
                 dcen = half*(dlft+drgt)/slope_mag_type
                 dsgn = sign(one, dcen)
-                slop = min(abs(dlft),abs(drgt))
-                dlim = slop
+                dlim = min(abs(dlft),abs(drgt))
                 if((dlft*drgt)<=zero)dlim=zero
                 dbf(l,i,j,k,1,1) = dsgn*min(dlim,abs(dcen))
              end do
@@ -2358,8 +2352,7 @@ subroutine uslope(q,dq,bf,dbf,dx,dt,ngrid)
                 drgt = slope_mag_type*(bf(l,i+1,j,k,2) - bf(l,i  ,j,k,2))
                 dcen = half*(dlft+drgt)/slope_mag_type
                 dsgn = sign(one, dcen)
-                slop = min(abs(dlft),abs(drgt))
-                dlim = slop
+                dlim = min(abs(dlft),abs(drgt))
                 if((dlft*drgt)<=zero)dlim=zero
                 dbf(l,i,j,k,2,1) = dsgn*min(dlim,abs(dcen))
              end do
@@ -2386,8 +2379,7 @@ subroutine uslope(q,dq,bf,dbf,dx,dt,ngrid)
                     drgt = slope_type*(q(l,i+1,j,k,n) - q(l,i  ,j,k,n))
                     dcen = half*(dlft+drgt)/slope_type
                     dsgn = sign(one, dcen)
-                    slop = min(abs(dlft),abs(drgt))
-                    dlim = slop
+                    dlim = min(abs(dlft),abs(drgt))
                     if((dlft*drgt)<=zero)dlim=zero
                     dq(l,i,j,k,n,1) = dsgn*min(dlim,abs(dcen))
                  end do
@@ -2397,8 +2389,7 @@ subroutine uslope(q,dq,bf,dbf,dx,dt,ngrid)
                     drgt = slope_type*(q(l,i,j+1,k,n) - q(l,i,j  ,k,n))
                     dcen = half*(dlft+drgt)/slope_type
                     dsgn = sign(one,dcen)
-                    slop = min(abs(dlft),abs(drgt))
-                    dlim = slop
+                    dlim = min(abs(dlft),abs(drgt))
                     if((dlft*drgt)<=zero)dlim=zero
                     dq(l,i,j,k,n,2) = dsgn*min(dlim,abs(dcen))
                  end do
@@ -2408,8 +2399,7 @@ subroutine uslope(q,dq,bf,dbf,dx,dt,ngrid)
                     drgt = slope_type*(q(l,i,j,k+1,n) - q(l,i,j,k  ,n))
                     dcen = half*(dlft+drgt)/slope_type
                     dsgn = sign(one,dcen)
-                    slop = min(abs(dlft),abs(drgt))
-                    dlim = slop
+                    dlim = min(abs(dlft),abs(drgt))
                     if((dlft*drgt)<=zero)dlim=zero
                     dq(l,i,j,k,n,3) = dsgn*min(dlim,abs(dcen))
                  end do
@@ -2466,12 +2456,10 @@ subroutine uslope(q,dq,bf,dbf,dx,dt,ngrid)
                     dff  = half*(abs(dfx)+abs(dfy)+abs(dfz))
 
                     if(dff>zero)then
-                       slop = min(one,min(abs(vmin),abs(vmax))/dff)
+                       dlim = min(one,min(abs(vmin),abs(vmax))/dff)
                     else
-                       slop = one
+                       dlim = one
                     endif
-
-                    dlim = slop
 
                     dq(l,i,j,k,n,1) = dlim*dfx
                     dq(l,i,j,k,n,2) = dlim*dfy
@@ -2532,8 +2520,7 @@ subroutine uslope(q,dq,bf,dbf,dx,dt,ngrid)
                     drgt = (q(l,i+1,j,k,n) - q(l,i  ,j,k,n))
                     dcen = half*(dlft+drgt)
                     dsgn = sign(one, dcen)
-                    slop = min(slope_theta*abs(dlft),slope_theta*abs(drgt))
-                    dlim = slop
+                    dlim = min(slope_theta*abs(dlft),slope_theta*abs(drgt))
                     if((dlft*drgt)<=zero)dlim=zero
                     dq(l,i,j,k,n,1) = dsgn*min(dlim,abs(dcen))
                  end do
@@ -2543,8 +2530,7 @@ subroutine uslope(q,dq,bf,dbf,dx,dt,ngrid)
                     drgt = (q(l,i,j+1,k,n) - q(l,i,j  ,k,n))
                     dcen = half*(dlft+drgt)
                     dsgn = sign(one,dcen)
-                    slop = min(slope_theta*abs(dlft),slope_theta*abs(drgt))
-                    dlim = slop
+                    dlim = min(slope_theta*abs(dlft),slope_theta*abs(drgt))
                     if((dlft*drgt)<=zero)dlim=zero
                     dq(l,i,j,k,n,2) = dsgn*min(dlim,abs(dcen))
                  end do
@@ -2554,8 +2540,7 @@ subroutine uslope(q,dq,bf,dbf,dx,dt,ngrid)
                     drgt = (q(l,i,j,k+1,n) - q(l,i,j,k  ,n))
                     dcen = half*(dlft+drgt)
                     dsgn = sign(one,dcen)
-                    slop = min(slope_theta*abs(dlft),slope_theta*abs(drgt))
-                    dlim = slop
+                    dlim = min(slope_theta*abs(dlft),slope_theta*abs(drgt))
                     if((dlft*drgt)<=zero)dlim=zero
                     dq(l,i,j,k,n,3) = dsgn*min(dlim,abs(dcen))
                  end do
@@ -2582,8 +2567,7 @@ subroutine uslope(q,dq,bf,dbf,dx,dt,ngrid)
                  drgt = slope_mag_type*(bf(l,i,j+1,k,1) - bf(l,i,j  ,k,1))
                  dcen = half*(dlft+drgt)/slope_mag_type
                  dsgn = sign(one, dcen)
-                 slop = min(abs(dlft),abs(drgt))
-                 dlim = slop
+                 dlim = min(abs(dlft),abs(drgt))
                  if((dlft*drgt)<=zero)dlim=zero
                  dbf(l,i,j,k,1,1) = dsgn*min(dlim,abs(dcen))
               end do
@@ -2593,8 +2577,7 @@ subroutine uslope(q,dq,bf,dbf,dx,dt,ngrid)
                  drgt = slope_mag_type*(bf(l,i,j,k+1,1) - bf(l,i,j,k  ,1))
                  dcen = half*(dlft+drgt)/slope_mag_type
                  dsgn = sign(one,dcen)
-                 slop = min(abs(dlft),abs(drgt))
-                 dlim = slop
+                 dlim = min(abs(dlft),abs(drgt))
                  if((dlft*drgt)<=zero)dlim=zero
                  dbf(l,i,j,k,1,2) = dsgn*min(dlim,abs(dcen))
               end do
@@ -2612,8 +2595,7 @@ subroutine uslope(q,dq,bf,dbf,dx,dt,ngrid)
                  drgt = slope_mag_type*(bf(l,i+1,j,k,2) - bf(l,i  ,j,k,2))
                  dcen = half*(dlft+drgt)/slope_mag_type
                  dsgn = sign(one, dcen)
-                 slop = min(abs(dlft),abs(drgt))
-                 dlim = slop
+                 dlim = min(abs(dlft),abs(drgt))
                  if((dlft*drgt)<=zero)dlim=zero
                  dbf(l,i,j,k,2,1) = dsgn*min(dlim,abs(dcen))
               end do
@@ -2623,8 +2605,7 @@ subroutine uslope(q,dq,bf,dbf,dx,dt,ngrid)
                  drgt = slope_mag_type*(bf(l,i,j,k+1,2) - bf(l,i,j,k  ,2))
                  dcen = half*(dlft+drgt)/slope_mag_type
                  dsgn = sign(one,dcen)
-                 slop = min(abs(dlft),abs(drgt))
-                 dlim = slop
+                 dlim = min(abs(dlft),abs(drgt))
                  if((dlft*drgt)<=zero)dlim=zero
                  dbf(l,i,j,k,2,2) = dsgn*min(dlim,abs(dcen))
               end do
@@ -2642,8 +2623,7 @@ subroutine uslope(q,dq,bf,dbf,dx,dt,ngrid)
                  drgt = slope_mag_type*(bf(l,i+1,j,k,3) - bf(l,i  ,j,k,3))
                  dcen = half*(dlft+drgt)/slope_mag_type
                  dsgn = sign(one, dcen)
-                 slop = min(abs(dlft),abs(drgt))
-                 dlim = slop
+                 dlim = min(abs(dlft),abs(drgt))
                  if((dlft*drgt)<=zero)dlim=zero
                  dbf(l,i,j,k,3,1) = dsgn*min(dlim,abs(dcen))
               end do
@@ -2653,8 +2633,7 @@ subroutine uslope(q,dq,bf,dbf,dx,dt,ngrid)
                  drgt = slope_mag_type*(bf(l,i,j+1,k,3) - bf(l,i,j  ,k,3))
                  dcen = half*(dlft+drgt)/slope_mag_type
                  dsgn = sign(one,dcen)
-                 slop = min(abs(dlft),abs(drgt))
-                 dlim = slop
+                 dlim = min(abs(dlft),abs(drgt))
                  if((dlft*drgt)<=zero)dlim=zero
                  dbf(l,i,j,k,3,2) = dsgn*min(dlim,abs(dcen))
               end do
@@ -2756,8 +2735,7 @@ subroutine uslope(q,dq,bf,dbf,dx,dt,ngrid)
                  drgt = bf(l,i,j+1,k,1) - bf(l,i,j  ,k,1)
                  dcen = half*(dlft+drgt)
                  dsgn = sign(one, dcen)
-                 slop = min(slope_theta*abs(dlft),slope_theta*abs(drgt))
-                 dlim = slop
+                 dlim = min(slope_theta*abs(dlft),slope_theta*abs(drgt))
                  if((dlft*drgt)<=zero)dlim=zero
                  dbf(l,i,j,k,1,1) = dsgn*min(dlim,abs(dcen))
               end do
@@ -2767,8 +2745,7 @@ subroutine uslope(q,dq,bf,dbf,dx,dt,ngrid)
                  drgt = bf(l,i,j,k+1,1) - bf(l,i,j,k  ,1)
                  dcen = half*(dlft+drgt)
                  dsgn = sign(one, dcen)
-                 slop = min(slope_theta*abs(dlft),slope_theta*abs(drgt))
-                 dlim = slop
+                 dlim = min(slope_theta*abs(dlft),slope_theta*abs(drgt))
                  if((dlft*drgt)<=zero)dlim=zero
                  dbf(l,i,j,k,1,2) = dsgn*min(dlim,abs(dcen))
               end do
@@ -2786,8 +2763,7 @@ subroutine uslope(q,dq,bf,dbf,dx,dt,ngrid)
                  drgt = bf(l,i+1,j,k,2) - bf(l,i  ,j,k,2)
                  dcen = half*(dlft+drgt)
                  dsgn = sign(one, dcen)
-                 slop = min(slope_theta*abs(dlft),slope_theta*abs(drgt))
-                 dlim = slop
+                 dlim = min(slope_theta*abs(dlft),slope_theta*abs(drgt))
                  if((dlft*drgt)<=zero)dlim=zero
                  dbf(l,i,j,k,2,1) = dsgn*min(dlim,abs(dcen))
               end do
@@ -2797,8 +2773,7 @@ subroutine uslope(q,dq,bf,dbf,dx,dt,ngrid)
                  drgt = bf(l,i,j,k+1,2) - bf(l,i,j,k  ,2)
                  dcen = half*(dlft+drgt)
                  dsgn = sign(one, dcen)
-                 slop = min(slope_theta*abs(dlft),slope_theta*abs(drgt))
-                 dlim = slop
+                 dlim = min(slope_theta*abs(dlft),slope_theta*abs(drgt))
                  if((dlft*drgt)<=zero)dlim=zero
                  dbf(l,i,j,k,2,2) = dsgn*min(dlim,abs(dcen))
               end do
@@ -2816,8 +2791,7 @@ subroutine uslope(q,dq,bf,dbf,dx,dt,ngrid)
                  drgt = bf(l,i+1,j,k,3) - bf(l,i  ,j,k,3)
                  dcen = half*(dlft+drgt)
                  dsgn = sign(one, dcen)
-                 slop = min(slope_theta*abs(dlft),slope_theta*abs(drgt))
-                 dlim = slop
+                 dlim = min(slope_theta*abs(dlft),slope_theta*abs(drgt))
                  if((dlft*drgt)<=zero)dlim=zero
                  dbf(l,i,j,k,3,1) = dsgn*min(dlim,abs(dcen))
               end do
@@ -2827,8 +2801,7 @@ subroutine uslope(q,dq,bf,dbf,dx,dt,ngrid)
                  drgt = bf(l,i,j+1,k,3) - bf(l,i,j  ,k,3)
                  dcen = half*(dlft+drgt)
                  dsgn = sign(one, dcen)
-                 slop = min(slope_theta*abs(dlft),slope_theta*abs(drgt))
-                 dlim = slop
+                 dlim = min(slope_theta*abs(dlft),slope_theta*abs(drgt))
                  if((dlft*drgt)<=zero)dlim=zero
                  dbf(l,i,j,k,3,2) = dsgn*min(dlim,abs(dcen))
               end do
