@@ -121,7 +121,10 @@ subroutine force_fine(ilevel,icount)
            ! Scatter variables
            do idim=1,ndim
               do i=1,ngrid
-                 f(ind_cell(i),idim)=ff(i,idim) + f(ind_cell(i),idim)
+                 if ((always_use_gravana) .and. (gravity_type<0))then
+                    f(ind_cell(i),idim)=ff(i,idim) + f(ind_cell(i),idim)
+                 else
+                    f(ind_cell(i),idim)=ff(i,idim)
               end do
            end do
 
