@@ -8,7 +8,6 @@ contains
    ! HELPER FUNCTIONS
 
    !#######################################################
-#if NDIM==3
    pure function gather_local_values(q,l,i,j,k,n) result(qloc)
       use amr_parameters,   only:dp,nvector,ndim
       use hydro_parameters, only:iu1,iu2,ju1,ju2,ku1,ku2,nvar
@@ -25,12 +24,15 @@ contains
       qloc(icen) = q(l,i,j,k,n)
       qloc(im)   = q(l,i-1,j,k,n)
       qloc(ip)   = q(l,i+1,j,k,n)
+#if NDIM>1
       qloc(jm)   = q(l,i,j-1,k,n)
       qloc(jp)   = q(l,i,j+1,k,n)
-      qloc(km)   = q(l,i,j,k-1,n)
-      qloc(kp)   = q(l,i,j,k+1,n) 
-   end function gather_local_values
 #endif
+#if NDIM>2
+      qloc(km)   = q(l,i,j,k-1,n)
+      qloc(kp)   = q(l,i,j,k+1,n)
+#endif
+   end function gather_local_values
    !#######################################################
 
    ! SLOPE TYPES
