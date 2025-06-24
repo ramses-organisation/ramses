@@ -135,7 +135,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
 
   ! Polytropic constant for Jeans length related polytropic EOS
   if(jeans_ncells>0)then
-     polytropic_constant=factG_in_cgs*(boxlen*jeans_ncells*0.5d0**dble(nlevelmax)*scale_l)**2/ pi / gamma
+     polytropic_constant=factG_in_cgs*(boxlen*jeans_ncells*0.5d0**dble(nlevelmax)*scale_l/aexp)**2/ pi / gamma
   endif
 
 #ifdef RT
