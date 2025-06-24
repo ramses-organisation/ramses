@@ -242,7 +242,6 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   real(dp),dimension(1:nvector,1:ndim),save::x0
   integer ,dimension(1:nvector),save::ind_cell
   integer ,dimension(1:nvector,1:threetondim),save::nbors_father_cells
-  integer ,dimension(1:nvector,1:twotondim),save::nbors_father_grids
   ! Particle-based arrays
   logical ,dimension(1:nvector),save::ok
   real(dp),dimension(1:nvector),save::dteff
@@ -252,7 +251,7 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   integer ,dimension(1:nvector,1:twotondim),save::igrid,icell,indp,kg
   real(dp),dimension(1:3)::skip_loc
 
-!$omp threadprivate(x0,ind_cell,nbors_father_cells,nbors_father_grids)
+!$omp threadprivate(x0,ind_cell,nbors_father_cells)
 !$omp threadprivate(ok,dteff,x,ff,new_vp,dd,dg,ig,id,igg,igd,icg,icd,vol,igrid,icell,indp,kg)
 
   ! Mesh spacing in that level
@@ -275,7 +274,7 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   do i=1,ng
      ind_cell(i)=father(ind_grid(i))
   end do
-  call get3cubefather(ind_cell,nbors_father_cells,nbors_father_grids,ng,ilevel)
+  call get3cubefather(ind_cell,nbors_father_cells,ng,ilevel)
 
   ! Rescale position at level ilevel
   do idim=1,ndim

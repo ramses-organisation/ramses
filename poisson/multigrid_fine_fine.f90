@@ -420,10 +420,9 @@ subroutine interpolate_and_correct_fine(ifinelevel)
 
    integer,  dimension(1:nvector), save               :: igrid_f_amr, icell_amr
    integer,  dimension(1:nvector,1:threetondim), save :: nbors_father_cells
-   integer,  dimension(1:nvector,1:twotondim), save   :: nbors_father_grids
    real(dp), dimension(1:nvector), save               :: corr
 
-!$omp threadprivate(igrid_f_amr, icell_amr,nbors_father_cells,nbors_father_grids,corr)
+!$omp threadprivate(igrid_f_amr, icell_amr,nbors_father_cells,corr)
 
    ! Local constants
    a = 1d0/4d0**ndim
@@ -459,7 +458,7 @@ subroutine interpolate_and_correct_fine(ifinelevel)
       end do
 
       ! Gather 3x3x3 neighboring parent cells
-      call get3cubefather(icell_amr,nbors_father_cells,nbors_father_grids, &
+      call get3cubefather(icell_amr,nbors_father_cells, &
               nbatch,ifinelevel)
 
       ! Update solution for fine grid cells

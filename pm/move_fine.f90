@@ -215,7 +215,6 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   integer ,dimension(1:nvector),save::father_cell
   real(dp),dimension(1:nvector,1:ndim),save::x0
   integer ,dimension(1:nvector,1:threetondim),save::nbors_father_cells
-  integer ,dimension(1:nvector,1:twotondim),save::nbors_father_grids
   ! Particle-based arrays
   logical ,dimension(1:nvector),save::ok
   real(dp),dimension(1:nvector,1:ndim),save::x,ff,new_xp,new_vp,dd,dg
@@ -226,7 +225,7 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   ! Family
   logical,dimension(1:nvector),save :: classical_tracer
 
-!$omp threadprivate(father_cell,x0,nbors_father_cells,nbors_father_grids)
+!$omp threadprivate(father_cell,x0,nbors_father_cells)
 !$omp threadprivate(ok,x,ff,new_xp,new_vp,dd,dg)
 !$omp threadprivate(ig,id,igg,igd,icg,icd,vol)
 !$omp threadprivate(igrid,icell,indp,kg)
@@ -252,7 +251,7 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   do i=1,ng
      father_cell(i)=father(ind_grid(i))
   end do
-  call get3cubefather(father_cell,nbors_father_cells,nbors_father_grids,&
+  call get3cubefather(father_cell,nbors_father_cells,&
        & ng,ilevel)
 
   ! Rescale particle position at level ilevel
