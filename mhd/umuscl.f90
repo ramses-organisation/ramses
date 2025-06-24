@@ -2234,6 +2234,7 @@ subroutine uslope(q,dq,bf,dbf,dx,dt,ngrid)
           do j = jlo, jhi
              do i = ilo, ihi
                 do l = 1, ngrid
+                    qcen = q(l,i,j,k,n)
                     ! slopes in first coordinate direction
                     dlft = qcen - q(l,i-1,j,k,n)
                     drgt = q(l,i+1,j,k,n) - qcen
