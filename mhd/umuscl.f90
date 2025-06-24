@@ -2577,7 +2577,7 @@ subroutine uslope(q,dq,bf,dbf,dx,dt,ngrid)
                  dbf(l,i,j,k,2,1) = slope_vanLeer_bis(dlft,drgt)
                  ! By along direction Z (second coordinate direction)
                  dlft = bcen - bf(l,i,j,k-1,2)
-                 drgt = bf(l,i,j,k+1,2) - bbcen
+                 drgt = bf(l,i,j,k+1,2) - bcen
                  dbf(l,i,j,k,2,2) = slope_vanLeer_bis(dlft,drgt)
               end do
            end do
