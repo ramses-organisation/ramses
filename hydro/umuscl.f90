@@ -982,6 +982,7 @@ subroutine uslope(q,dq,dx,dt,ngrid)
   ! local arrays
   integer::i, j, k, l, n
   real(dp)::dsgn, dlim, dcen, dlft, drgt, qcen
+  real(dp)::slope_type_real
 #if NDIM==2
   real(dp)::dfll,dflm,dflr,dfml,dfmm,dfmr,dfrl,dfrm,dfrr
 #endif
@@ -1000,10 +1001,16 @@ subroutine uslope(q,dq,dx,dt,ngrid)
   jlo=MIN(1,ju1+1); jhi=MAX(1,ju2-1)
   klo=MIN(1,ku1+1); khi=MAX(1,ku2-1)
 
-  select case(slope_type)
-  case(0)
+  if(slope_type==0)then
      dq=zero
-  case(1) ! minmod
+#if NDIM==1
+  else if(slope_type==1.or.slope_type==2.or.slope_type==3)then  ! minmod or average
+#elif NDIM==2
+  else if(slope_type==1.or.slope_type==2)then  ! minmod or average
+#else
+  else if(slope_type==1)then  ! minmod
+#endif
+     slope_type_real = REAL(slope_type, kind=dp)
      do n = 1, nvar
         do k = klo, khi
            do j = jlo, jhi
@@ -1015,7 +1022,7 @@ subroutine uslope(q,dq,dx,dt,ngrid)
                     dlft = qcen - q(l,i-1,j,k,n)
                     drgt = q(l,i+1,j,k,n) - qcen
 #if NDIM==1 || NDIM==2
-                    dq(l,i,j,k,n,1) = slope_minmod1d(dlft,drgt)
+                    dq(l,i,j,k,n,1) = slope_minmod_or_average(dlft,drgt,slope_type_real)
 #else
                     dq(l,i,j,k,n,1) = slope_minmod(dlft,drgt)
 #endif
@@ -1024,7 +1031,7 @@ subroutine uslope(q,dq,dx,dt,ngrid)
                     dlft = qcen - q(l,i,j-1,k,n)
                     drgt = q(l,i,j+1,k,n) - qcen
 #if NDIM==2
-                    dq(l,i,j,k,n,2) = slope_minmod1d(dlft,drgt)
+                    dq(l,i,j,k,n,2) = slope_minmod_or_average(dlft,drgt,slope_type_real)
 #else
                     dq(l,i,j,k,n,2) = slope_minmod(dlft,drgt)
 #endif
@@ -1040,7 +1047,8 @@ subroutine uslope(q,dq,dx,dt,ngrid)
            end do
         end do
      end do
-  case(2) ! moncen
+#if NDIM==3
+  else if(slope_type==2)then ! moncen
      do n = 1, nvar
         do k = klo, khi
            do j = jlo, jhi
@@ -1050,28 +1058,27 @@ subroutine uslope(q,dq,dx,dt,ngrid)
                     qcen = q(l,i,j,k,n)
 
                     ! slopes in first coordinate direction
-                    dlft = slope_type*(qcen - q(l,i-1,j,k,n))
-                    drgt = slope_type*(q(l,i+1,j,k,n) - qcen)
+                    dlft = qcen - q(l,i-1,j,k,n)
+                    drgt = q(l,i+1,j,k,n) - qcen
                     dq(l,i,j,k,n,1) = slope_moncen(dlft,drgt)
-#if NDIM>1
+
                     ! slopes in second coordinate direction
-                    dlft = slope_type*(qcen - q(l,i,j-1,k,n))
-                    drgt = slope_type*(q(l,i,j+1,k,n) - qcen)
+                    dlft = qcen - q(l,i,j-1,k,n)
+                    drgt = q(l,i,j+1,k,n) - qcen
                     dq(l,i,j,k,n,2) = slope_moncen(dlft,drgt)
-#endif
-#if NDIM>2
+
                     ! slopes in third coordinate direction
-                    dlft = slope_type*(qcen - q(l,i,j,k-1,n))
-                    drgt = slope_type*(q(l,i,j,k+1,n) - qcen)
+                    dlft = qcen - q(l,i,j,k-1,n)
+                    drgt = q(l,i,j,k+1,n) - qcen
                     dq(l,i,j,k,n,3) = slope_moncen(dlft,drgt)
-#endif
                  end do
               end do
            end do
         end do
      end do
+#endif
 #if NDIM==2
-  case(3) ! positivity preserving 2d unsplit slope
+  else if(slope_type==3)then ! positivity preserving 2d unsplit slope
      do n = 1, nvar
         do k = klo, khi
            do j = jlo, jhi
@@ -1112,13 +1119,12 @@ subroutine uslope(q,dq,dx,dt,ngrid)
      end do
 #endif
 #if NDIM==3
-  case(3) ! positivity preserving 3d unsplit slope
+  else if(slope_type==3)then ! positivity preserving 3d unsplit slope
      do n = 1, nvar
         do k = klo, khi
            do j = jlo, jhi
               do i = ilo, ihi
                  do l = 1, ngrid
-                    ! Gather values at center cell and its neighbors
                     qcen = q(l,i,j,k,n)
 
                     dflll = q(l,i-1,j-1,k-1,n) - qcen
@@ -1179,7 +1185,7 @@ subroutine uslope(q,dq,dx,dt,ngrid)
      end do
 #endif
 #if NDIM==1
-  case(4) ! superbee
+  else if(slope_type==4)then ! superbee
      do n = 1, nvar
         do k = klo, khi
            do j = jlo, jhi
@@ -1201,7 +1207,7 @@ subroutine uslope(q,dq,dx,dt,ngrid)
            end do
         end do
      end do
-  case(5) ! ultrabee
+  else if(slope_type==5)then ! ultrabee
         dq = 0
         n=1
         do k = klo, khi
@@ -1227,7 +1233,7 @@ subroutine uslope(q,dq,dx,dt,ngrid)
               end do
            end do
         end do
-  case(6) ! unstable
+  else if(slope_type==6)then ! unstable
         dq = 0
         n=1
         do k = klo, khi
@@ -1246,7 +1252,7 @@ subroutine uslope(q,dq,dx,dt,ngrid)
            end do
         end do
 #endif
-  case(7) ! van Leer
+  else if(slope_type==7)then ! van Leer
      do n = 1, nvar
         do k = klo, khi
            do j = jlo, jhi
@@ -1276,7 +1282,7 @@ subroutine uslope(q,dq,dx,dt,ngrid)
            end do
         end do
      end do
-  case(8) ! generalized moncen/minmod parameterisation (van Leer 1979)
+  else if(slope_type==8)then ! generalized moncen/minmod parameterisation (van Leer 1979)
      do n = 1, nvar
         do k = klo, khi
            do j = jlo, jhi
@@ -1306,10 +1312,9 @@ subroutine uslope(q,dq,dx,dt,ngrid)
            end do
         end do
      end do
-  case default
+  else
      write(*,*)'Unknown slope type',dx,dt
      call clean_stop
-  end select
-
+  endif
 
 end subroutine uslope

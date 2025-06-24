@@ -21,33 +21,31 @@ contains
  
    end function slope_minmod
    !#######################################################
-   pure function slope_minmod1d(dlft,drgt) result(slope)
-      real(dp),intent(in)::dlft,drgt
+   pure function slope_minmod_or_average(dlft,drgt,slope_type) result(slope)
+      real(dp),intent(in)::dlft,drgt,slope_type
       real(dp)::slope
-      ! slope_type==1 when NDIM=1
       real(dp)::dcen,dsgn,dlim
  
       dcen = half*(dlft+drgt)
       dsgn = sign(one, dcen)
-      dlim = min(abs(dlft),abs(drgt))
+      dlim = min(slope_type,two)*min(abs(dlft),abs(drgt))
       if((dlft*drgt)<=zero)dlim=zero
       slope = dsgn*min(dlim,abs(dcen))
  
-   end function slope_minmod1d
+   end function slope_minmod_or_average
    !#######################################################
    pure function slope_moncen(dlft,drgt) result(slope)
       real(dp),intent(in)::dlft,drgt
       real(dp)::slope
       ! slope_type==2
       real(dp)::dcen,dsgn,dlim
-      integer,parameter::slope_type=2
  
-      dcen = half*(dlft+drgt)/slope_type
+      dcen = half*(dlft+drgt)
       ! TC: what's the point of this? 
       !     half and slopetype=2 are just going to cancel each other
       !     even if slopetype is an int
       dsgn = sign(one, dcen)
-      dlim = min(abs(dlft),abs(drgt))
+      dlim = 2*min(abs(dlft),abs(drgt))
       if((dlft*drgt)<=zero)dlim=zero
       slope = dsgn*min(dlim,abs(dcen))
  
