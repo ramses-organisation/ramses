@@ -7,19 +7,15 @@ The scope of this guide is technical, and it does not cover the scientific aspec
 
 ## Branching model summary
 
-RAMSES uses two main branches: `dev` and `stable`. `dev` is the development branch where new features are added before being put into production on the `stable` branch.
-The `dev` branch is meant for developers, while the `stable` version is meant for users.
-
 **All** new features, bug fixes, and improvements should stem from and be merged into the `dev` version.
 When starting to work on a new project, we encourage the following procedure, which will be detailed further in the next sections:
 1. Create a private fork of the `ramses-organisation/ramses` repository  (section 3.1).
-2. Create a new branch of `dev` with a descriptive name  (section 3.1).
+2. Create a new branch out of `dev` with a descriptive name  (section 3.1).
 3. Make your changes and push them to your fork (section 3.2).
 4. Once ready, submit a pull request to the `ramses-organisation/ramses` repository that points onto `dev` (section 3.3).
 
 
-Periodically, the developments on the `dev` branch that have proven to be robust, will be merged into the `stable` branch (see section 3.4). What is merged and what not, is decided through collegial discussions.
-At any point, any commit in `stable` should be a subset of the commits in `dev`.
+Periodically, when the developments on the `dev` branch that have proven to be robust, a new release will be issued with a comprehensive changelog.
 
 ## Development workflow
 
@@ -35,8 +31,6 @@ git clone https://github.com/ramses-organisation/ramses.git
 cd ramses
 # Assuming you have already forked the repository, add it as a remote
 git remote add fork git@github.com:your_username/ramses.git
-# Switch to the dev branch
-git checkout dev
 # Create a new branch
 git checkout -b my-new-feature
 ```
@@ -86,20 +80,6 @@ In order to be merged, a PR
 - should be in sync with the current state of the `dev` branch (either va `git pull --rebase --autostash origin dev` or using the appropriate button in the Github interface).
 
 It is the responsibility of the reviewer to ensure these conditions are met before merging the PR.
-
-We encourage the use of the GitHub interface to tag the PR with the appropriate labels (e.g., `enhancement`, `bug`, `on-merge: backport-to-stable`). The tag `on-merge: backport-to-stable` will automatically trigger backporting of this PR onto the `stable` branch once merged. We discourage manual backporting of bugfixes.
-
-### Updates to `stable`
-
-No pull-request nor commit should be pushed onto the `stable` branch, with the exception of:
-- (automated) backported commits,
-- regular updates of the `stable` version.
-In order to enforce this, the branch is protected (no one should commit directly onto it).
-
-**Backported commits** include *small* bugfixes and modification that should be included in the stable version (e.g., update of the contributor list). It excludes any breaking change, new feature, or experimental code.
-
-**Updates of the stable version** happen on regular occasions (e.g., every Ramses User Meeting). The `stable` branch will be updated with the latest changes from `dev`. Collegial discussions will be held to decide which features are ready to be included in the `stable` version and which ones should be left out.
-
 
 ## GitHub Management
 
