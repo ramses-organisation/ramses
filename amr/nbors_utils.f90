@@ -365,10 +365,6 @@ subroutine get_grids_of_nbor_cells(ind_grid,ind,nbors_grids,ng)
 
   !$omp threadprivate(ind_grid1,ind_grid2,ind_grid3)
 
-  ! fetch magic indices
-  lll_loc = lll(:,ind)
-  mmm_loc = mmm(:,ind)
-
   iimin=0; iimax=1
   jjmin=0; jjmax=0
   if(ndim>1)jjmax=1
