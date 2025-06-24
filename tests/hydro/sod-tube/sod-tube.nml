@@ -9,6 +9,7 @@ nsubcycle=3*1,2
 levelmin=3
 levelmax=10
 ngridmax=2000
+nparttot=1 ! This parameter is useless because pic is false but the test should pass anyway.
 nexpand=1
 boxlen=1.0
 /

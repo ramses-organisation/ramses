@@ -33,7 +33,7 @@ subroutine read_hydro_params(nml_ok)
 #if NENER>0
        & ,prad_region &
 #endif
-       & ,omega_b
+       & ,omega_b,alpha_dense_core,beta_dense_core,crit_dense_core,delta_rho
 
   ! Hydro parameters
   namelist/hydro_params/gamma,courant_factor,smallr,smallc &

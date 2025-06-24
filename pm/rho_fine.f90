@@ -339,6 +339,7 @@ end subroutine rho_from_current_level
 subroutine cic_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel,multipole_loc)
   use amr_commons
   use pm_commons
+  use pm_parameters, only:nlevelmax_sink
   use poisson_commons
   use hydro_commons, ONLY: mass_sph
   implicit none
@@ -355,7 +356,6 @@ subroutine cic_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel,multipole_loc
   real(dp)::dx,dx_loc,scale,vol_loc
   ! Grid-based arrays
   integer ,dimension(1:nvector,1:threetondim),save::nbors_father_cells
-  integer ,dimension(1:nvector,1:twotondim),save::nbors_father_grids
   ! Particle-based arrays
   logical ,dimension(1:nvector),save::ok
   real(dp),dimension(1:nvector),save::mmm
@@ -369,7 +369,7 @@ subroutine cic_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel,multipole_loc
   integer ,dimension(1:nvector,1:twotondim),save::igrid,icell,indp,kg
   real(dp),dimension(1:3)::skip_loc
 
-!$omp threadprivate(nbors_father_cells,nbors_father_grids,ok,mmm)
+!$omp threadprivate(nbors_father_cells,ok,mmm)
 !$omp threadprivate(fam,vol2,x,dd,dg,ig,id,igg,igd,icg,icd,vol,igrid,icell,indp,kg)
 
   ! Mesh spacing in that level
@@ -384,7 +384,7 @@ subroutine cic_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel,multipole_loc
   vol_loc=dx_loc**ndim
 
   ! Gather neighboring father cells (should be present anytime !)
-  call get3cubefather(ind_cell,nbors_father_cells,nbors_father_grids,ng,ilevel)
+  call get3cubefather(ind_cell,nbors_father_cells,ng,ilevel)
 
   ! Rescale particle position at level ilevel
   do idim=1,ndim
@@ -640,7 +640,7 @@ subroutine cic_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel,multipole_loc
 
      ! Always refine sinks to the maximum level
      ! by setting particle number density above m_refine(ilevel)
-     if(sink_refine)then
+     if(sink_refine.and.(ilevel<=nlevelmax_sink))then
         do j=1,np
            if ( is_cloud(fam(j)) ) then
               ! if (direct_force_sink(-1*idp(ind_part(j))))then
@@ -907,7 +907,6 @@ subroutine cic_cell(ind_grid,ngrid,ilevel)
   integer::i,j,idim,ind_cell_son,iskip_son,np,ind_son,nx_loc,ind
   integer ,dimension(1:nvector),save::ind_cell
   integer ,dimension(1:nvector,1:threetondim),save::nbors_father_cells
-  integer ,dimension(1:nvector,1:twotondim),save::nbors_father_grids
   ! Particle-based arrays
   logical ,dimension(1:nvector),save::ok
   real(dp),dimension(1:nvector),save::mmm
@@ -921,7 +920,7 @@ subroutine cic_cell(ind_grid,ngrid,ilevel)
   logical::error
 
 
-!$omp threadprivate(ind_cell,nbors_father_cells,nbors_father_grids,ok,mmm)
+!$omp threadprivate(ind_cell,nbors_father_cells,ok,mmm)
 !$omp threadprivate(vol2,x,dd,dg,ig,id,igg,igd,icg,icd,vol,igrid,icell,indp,kg)
 
 
@@ -943,7 +942,7 @@ subroutine cic_cell(ind_grid,ngrid,ilevel)
   end do
 
   ! Gather 3x3x3 neighboring parent cells
-  call get3cubefather(ind_cell,nbors_father_cells,nbors_father_grids,ngrid,ilevel)
+  call get3cubefather(ind_cell,nbors_father_cells,ngrid,ilevel)
 
   ! Loop over grid cells
   do ind_son=1,twotondim
@@ -1162,7 +1161,6 @@ subroutine tsc_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
   real(dp)::dx,dx_loc,scale,vol_loc
   ! Grid-based arrays
   integer ,dimension(1:nvector,1:threetondim),save::nbors_father_cells
-  integer ,dimension(1:nvector,1:twotondim),save::nbors_father_grids
   ! Particle-based arrays
   logical ,dimension(1:nvector),save::ok,abandoned
   real(dp),dimension(1:nvector),save::mmm
@@ -1174,7 +1172,7 @@ subroutine tsc_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
   integer ,dimension(1:nvector,1:threetondim),save::igrid,icell,indp,kg
   real(dp),dimension(1:3)::skip_loc
 
-!$omp threadprivate(nbors_father_cells,nbors_father_grids,ok,abandoned,mmm)
+!$omp threadprivate(nbors_father_cells,ok,abandoned,mmm)
 !$omp threadprivate(fam,vol2,x,cl,cr,cc,wl,wr,wc,igl,igr,igc,icl,icr,icc,vol,igrid,icell,indp,kg)
 
   ! Mesh spacing in that level
@@ -1189,7 +1187,7 @@ subroutine tsc_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
   vol_loc=dx_loc**ndim
 
   ! Gather neighboring father cells (should be present at anytime!)
-  call get3cubefather(ind_cell,nbors_father_cells,nbors_father_grids,ng,ilevel)
+  call get3cubefather(ind_cell,nbors_father_cells,ng,ilevel)
 
   ! Rescale particle position at level ilevel
   do idim=1,ndim
@@ -1480,7 +1478,6 @@ subroutine tsc_cell(ind_grid,ngrid,ilevel)
   integer::i,j,idim,ind_cell_son,iskip_son,np,ind_son,nx_loc,ind
   integer ,dimension(1:nvector),save::ind_cell
   integer ,dimension(1:nvector,1:threetondim),save::nbors_father_cells
-  integer ,dimension(1:nvector,1:twotondim),save::nbors_father_grids
   ! Particle-based arrays
   logical ,dimension(1:nvector),save::ok
   real(dp),dimension(1:nvector),save::mmm
@@ -1493,7 +1490,7 @@ subroutine tsc_cell(ind_grid,ngrid,ilevel)
   real(kind=8)::dx,dx_loc,scale,vol_loc
   logical::error
 
-!$omp threadprivate(ind_cell,nbors_father_cells,nbors_father_grids,ok,mmm)
+!$omp threadprivate(ind_cell,nbors_father_cells,ok,mmm)
 !$omp threadprivate(vol2,x,cl,cr,cc,wl,wr,wc,igl,igr,igc,icl,icr,icc,vol,igrid,icell,indp,kg)
 
   ! Mesh spacing in that level
@@ -1514,7 +1511,7 @@ subroutine tsc_cell(ind_grid,ngrid,ilevel)
   end do
 
   ! Gather 3x3x3 neighboring parent cells
-  call get3cubefather(ind_cell,nbors_father_cells,nbors_father_grids,ngrid,ilevel)
+  call get3cubefather(ind_cell,nbors_father_cells,ngrid,ilevel)
 
   ! Loop over grid cells
   do ind_son=1,twotondim

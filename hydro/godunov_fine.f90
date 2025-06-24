@@ -24,6 +24,7 @@ subroutine godunov_fine(ilevel)
 
   ! Loop over active grids by vector sweeps
   ncache=active(ilevel)%ngrid
+!$omp parallel do private(ngrid,i)
   do igrid=1,ncache,nvector
      ngrid=MIN(nvector,ncache-igrid+1)
      do i=1,ngrid
@@ -58,6 +59,7 @@ subroutine set_unew(ilevel)
   if(verbose)write(*,111)ilevel
 
   ! Set unew to uold for myid cells
+!$omp parallel do private(iskip,ivar,i,d,u,v,w,e)
   do ind=1,twotondim
      iskip=ncoarse+(ind-1)*ngridmax
      do ivar=1,nvar
@@ -92,6 +94,7 @@ subroutine set_unew(ilevel)
   end do
 
   ! Set unew to 0 for virtual boundary cells
+!$omp parallel do private(ind,iskip,ivar,i)
   do icpu=1,ncpu
   do ind=1,twotondim
      iskip=ncoarse+(ind-1)*ngridmax
@@ -159,6 +162,7 @@ subroutine set_uold(ilevel)
   dx=0.5d0**ilevel*scale
 
   ! Set uold to unew for myid cells
+!$omp parallel do private(iskip,ivar,i,d,u,v,w,e_kin,e_cons,e_prim,e_trunc,div)
   do ind=1,twotondim
      iskip=ncoarse+(ind-1)*ngridmax
 
@@ -487,7 +491,6 @@ subroutine godfine1(ind_grid,ncache,ilevel)
   ! coarser level if necessary.
   !-------------------------------------------------------------------
   integer ,dimension(1:nvector,1:threetondim     ),save::nbors_father_cells
-  integer ,dimension(1:nvector,1:twotondim       ),save::nbors_father_grids
   integer ,dimension(1:nvector,0:twondim         ),save::ibuffer_father
   real(dp),dimension(1:nvector,0:twondim  ,1:nvar),save::u1
   real(dp),dimension(1:nvector,1:twotondim,1:nvar),save::u2
@@ -512,7 +515,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
   integer::i3min,i3max,j3min,j3max,k3min,k3max
   real(dp)::dx,scale,oneontwotondim,d
 
-!$omp threadprivate(nbors_father_cells,nbors_father_grids,ibuffer_father,u1,u2,req2,peq2)
+!$omp threadprivate(nbors_father_cells,ibuffer_father,u1,u2,req2,peq2)
 !$omp threadprivate(uloc,gloc,ploc,req_loc,peq_loc,flux,tmp,ok)
 !$omp threadprivate(igrid_nbor,ind_cell,ind_buffer,ind_exist,ind_nexist)
 
@@ -543,7 +546,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
   do i=1,ncache
      ind_cell(i)=father(ind_grid(i))
   end do
-  call get3cubefather(ind_cell,nbors_father_cells,nbors_father_grids,ncache,ilevel)
+  call get3cubefather(ind_cell,nbors_father_cells,ncache,ilevel)
 
   !---------------------------
   ! Gather 6x6x6 cells stencil
@@ -784,6 +787,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
   !--------------------------------------
   ! Conservative update at level ilevel-1
   !--------------------------------------
+  if(levelmin.ne.nlevelmax)then
   ! Loop over dimensions
   do idim=1,ndim
      i0=0; j0=0; k0=0
@@ -811,6 +815,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
         do j3=j3min,j3max-j0
         do i3=i3min,i3max-i0
            do i=1,nb_noneigh
+!$omp atomic update
               unew(ind_buffer(i),ivar)=unew(ind_buffer(i),ivar) &
                    & -flux(ind_cell(i),i3,j3,k3,ivar,idim)*oneontwotondim
            end do
@@ -835,6 +840,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
      do j3=j3min,j3max-j0
      do i3=i3min,i3max-i0
         do i=1,nb_noneigh
+!$omp atomic update
            enew(ind_buffer(i))=enew(ind_buffer(i)) &
                 & -tmp(ind_cell(i),i3,j3,k3,2,idim)*oneontwotondim
         end do
@@ -863,6 +869,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
         do j3=j3min+j0,j3max
         do i3=i3min+i0,i3max
            do i=1,nb_noneigh
+!$omp atomic update
               unew(ind_buffer(i),ivar)=unew(ind_buffer(i),ivar) &
                    & +flux(ind_cell(i),i3+i0,j3+j0,k3+k0,ivar,idim)*oneontwotondim
            end do
@@ -876,6 +883,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
      do j3=j3min+j0,j3max
      do i3=i3min+i0,i3max
         do i=1,nb_noneigh
+!$omp atomic update
            divu(ind_buffer(i))=divu(ind_buffer(i)) &
                 & +tmp(ind_cell(i),i3+i0,j3+j0,k3+k0,1,idim)*oneontwotondim
         end do
@@ -887,6 +895,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
      do j3=j3min+j0,j3max
      do i3=i3min+i0,i3max
         do i=1,nb_noneigh
+!$omp atomic update
            enew(ind_buffer(i))=enew(ind_buffer(i)) &
                 & +tmp(ind_cell(i),i3+i0,j3+j0,k3+k0,2,idim)*oneontwotondim
         end do
@@ -897,5 +906,6 @@ subroutine godfine1(ind_grid,ncache,ilevel)
 
   end do
   ! End loop over dimensions
+  endif
 
 end subroutine godfine1

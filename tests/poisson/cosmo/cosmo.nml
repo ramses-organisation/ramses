@@ -5,12 +5,12 @@ poisson=.true.
 hydro=.false.
 nremap=0
 nsubcycle=1,1,30*2
-nstepmax=100
+clumpfind=.true.
 /
 
 &OUTPUT_PARAMS
-noutput=3
-foutput=100
+noutput=1
+aout=1.355E-01
 /
 
 &INIT_PARAMS
@@ -34,4 +34,14 @@ interpol_type=0
 
 &POISSON_PARAMS
 epsilon=1d-4
+/
+
+
+&CLUMPFIND_PARAMS
+relevance_threshold=3
+density_threshold=80
+saddle_threshold=100
+mass_threshold=10
+ivar_clump=0
+clinfo=.true.
 /
