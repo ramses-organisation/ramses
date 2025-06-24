@@ -108,7 +108,7 @@ ifeq ($(COMPILER),GNU)
          F90 += -g -O0 -fbacktrace -fbounds-check -Wuninitialized -Wall
          FFLAGS += -ffpe-trap=zero,underflow,overflow,invalid -finit-real=nan
       else
-         F90 += -O3
+         F90 += -O3 -flto -fwhole-program
       endif
    endif
 endif
