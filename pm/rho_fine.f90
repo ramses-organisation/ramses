@@ -325,6 +325,7 @@ end subroutine rho_from_current_level
 subroutine cic_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
   use amr_commons
   use pm_commons
+  use pm_parameters, only:nlevelmax_sink
   use poisson_commons
   use hydro_commons, ONLY: mass_sph
   implicit none
@@ -617,7 +618,7 @@ subroutine cic_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
 
      ! Always refine sinks to the maximum level
      ! by setting particle number density above m_refine(ilevel)
-     if(sink_refine)then
+     if(sink_refine.and.(ilevel<=nlevelmax_sink))then
         do j=1,np
            if ( is_cloud(fam(j)) ) then
               ! if (direct_force_sink(-1*idp(ind_part(j))))then
