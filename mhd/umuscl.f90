@@ -2497,12 +2497,12 @@ subroutine uslope(q,dq,bf,dbf,dx,dt,ngrid)
               do l = 1, ngrid
                  bcen = bf(l,i,j,k,1)
                 ! Bx along direction Y (first coordinate direction)
-                 dlft = bf(l,i,j  ,k,1) - bf(l,i,j-1,k,1)
-                 drgt = bf(l,i,j+1,k,1) - bf(l,i,j  ,k,1)
+                 dlft = bcen - bf(l,i,j-1,k,1)
+                 drgt = bf(l,i,j+1,k,1) - bcen
                  dbf(l,i,j,k,1,1) = slope_vanLeer(dlft,drgt)
                 ! Bx along direction Z (second coordinate direction)
-                 dlft = bf(l,i,j,k  ,1) - bf(l,i,j,k-1,1)
-                 drgt = bf(l,i,j,k+1,1) - bf(l,i,j,k  ,1)
+                 dlft = bcen - bf(l,i,j,k-1,1)
+                 drgt = bf(l,i,j,k+1,1) - bcen
                  dbf(l,i,j,k,1,2) = slope_vanLeer(dlft,drgt)
               end do
            end do
@@ -2513,14 +2513,14 @@ subroutine uslope(q,dq,bf,dbf,dx,dt,ngrid)
         do j = jlo, jhi+1 ! WARNING: different loop bounds
            do i = ilo, ihi
               do l = 1, ngrid
-                bcen = bf(l,i,j,k,2)
+                 bcen = bf(l,i,j,k,2)
                 ! By along direction X (first coordinate direction)
-                 dlft = bf(l,i  ,j,k,2) - bf(l,i-1,j,k,2)
-                 drgt = bf(l,i+1,j,k,2) - bf(l,i  ,j,k,2)
+                 dlft = bcen - bf(l,i-1,j,k,2)
+                 drgt = bf(l,i+1,j,k,2) - bcen
                  dbf(l,i,j,k,2,1) = slope_vanLeer(dlft,drgt)
                 ! By along direction Z (second coordinate direction)
-                 dlft = bf(l,i,j,k  ,2) - bf(l,i,j,k-1,2)
-                 drgt = bf(l,i,j,k+1,2) - bf(l,i,j,k  ,2)
+                 dlft = bcen - bf(l,i,j,k-1,2)
+                 drgt = bf(l,i,j,k+1,2) - bcen
                  dbf(l,i,j,k,2,2) = slope_vanLeer(dlft,drgt)
               end do
            end do
@@ -2531,13 +2531,14 @@ subroutine uslope(q,dq,bf,dbf,dx,dt,ngrid)
         do j = jlo, jhi
            do i = ilo, ihi
               do l = 1, ngrid
+                 bcen = bf(l,i,j,k,3)
                 ! Bz along direction X (first coordinate direction)
-                 dlft = bf(l,i  ,j,k,3) - bf(l,i-1,j,k,3)
-                 drgt = bf(l,i+1,j,k,3) - bf(l,i  ,j,k,3)
+                 dlft = bcen - bf(l,i-1,j,k,3)
+                 drgt = bf(l,i+1,j,k,3) - bcen
                  dbf(l,i,j,k,3,1) = slope_vanLeer(dlft,drgt)
                 ! Bz along direction Y (second coordinate direction)
-                 dlft = bf(l,i,j  ,k,3) - bf(l,i,j-1,k,3)
-                 drgt = bf(l,i,j+1,k,3) - bf(l,i,j  ,k,3)
+                 dlft = bcen - bf(l,i,j-1,k,3)
+                 drgt = bf(l,i,j+1,k,3) - bcen
                  dbf(l,i,j,k,3,2) = slope_vanLeer(dlft,drgt)
               end do
            end do
@@ -2552,12 +2553,12 @@ subroutine uslope(q,dq,bf,dbf,dx,dt,ngrid)
               do l = 1, ngrid
                  bcen = bf(l,i,j,k,1)
                 ! Bx along direction Y (first coordinate direction)
-                 dlft = bf(l,i,j  ,k,1) - bf(l,i,j-1,k,1)
-                 drgt = bf(l,i,j+1,k,1) - bf(l,i,j  ,k,1)
+                 dlft = bcen - bf(l,i,j-1,k,1)
+                 drgt = bf(l,i,j+1,k,1) - bcen
                  dbf(l,i,j,k,1,1) = slope_vanLeer_bis(dlft,drgt)
                 ! Bx along direction Z (second coordinate direction)
-                 dlft = bf(l,i,j,k  ,1) - bf(l,i,j,k-1,1)
-                 drgt = bf(l,i,j,k+1,1) - bf(l,i,j,k  ,1)
+                 dlft = bcen - bf(l,i,j,k-1,1)
+                 drgt = bf(l,i,j,k+1,1) - bcen
                  dbf(l,i,j,k,1,2) = slope_vanLeer_bis(dlft,drgt)
               end do
            end do
@@ -2570,12 +2571,12 @@ subroutine uslope(q,dq,bf,dbf,dx,dt,ngrid)
               do l = 1, ngrid
                  bcen = bf(l,i,j,k,2)
                  ! By along direction X (first coordinate direction)
-                 dlft = bf(l,i  ,j,k,2) - bf(l,i-1,j,k,2)
-                 drgt = bf(l,i+1,j,k,2) - bf(l,i  ,j,k,2)
+                 dlft = bcen - bf(l,i-1,j,k,2)
+                 drgt = bf(l,i+1,j,k,2) - bcen
                  dbf(l,i,j,k,2,1) = slope_vanLeer_bis(dlft,drgt)
                  ! By along direction Z (second coordinate direction)
-                 dlft = bf(l,i,j,k  ,2) - bf(l,i,j,k-1,2)
-                 drgt = bf(l,i,j,k+1,2) - bf(l,i,j,k  ,2)
+                 dlft = bcen - bf(l,i,j,k-1,2)
+                 drgt = bf(l,i,j,k+1,2) - bbcen
                  dbf(l,i,j,k,2,2) = slope_vanLeer_bis(dlft,drgt)
               end do
            end do
@@ -2586,13 +2587,14 @@ subroutine uslope(q,dq,bf,dbf,dx,dt,ngrid)
         do j = jlo, jhi
            do i = ilo, ihi
               do l = 1, ngrid
+                 bcen = bf(l,i,j,k,3)
                 ! Bz along direction X (first coordinate direction)
-                 dlft = bf(l,i  ,j,k,3) - bf(l,i-1,j,k,3)
-                 drgt = bf(l,i+1,j,k,3) - bf(l,i  ,j,k,3)
+                 dlft = bcen - bf(l,i-1,j,k,3)
+                 drgt = bf(l,i+1,j,k,3) - bcen
                  dbf(l,i,j,k,3,1) = slope_vanLeer_bis(dlft,drgt)
                  ! Bz along direction Y (second coordinate direction)
-                 dlft = bf(l,i,j  ,k,3) - bf(l,i,j-1,k,3)
-                 drgt = bf(l,i,j+1,k,3) - bf(l,i,j  ,k,3)
+                 dlft = bcen - bf(l,i,j-1,k,3)
+                 drgt = bf(l,i,j+1,k,3) - bcen
                  dbf(l,i,j,k,3,2) = slope_vanLeer_bis(dlft,drgt)
               end do
            end do
