@@ -891,7 +891,7 @@ subroutine ctoprim(uin,q,gravin,dt,ngrid)
            do l = 1, ngrid
 
               ! Compute density
-              ! We keep it in a local scalar to avoid store-load dependencies of q(l,i,j,k,1) 
+              ! We keep it in a local scalar to avoid store-load dependencies of q(l,i,j,k,1)
               rho_grid = max(uin(l,i,j,k,1),smallr)
 
               ! Compute velocities
