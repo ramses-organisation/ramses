@@ -698,6 +698,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
   !------------------------------------------------
   ! Reset flux along direction at refined interface
   !------------------------------------------------
+  if(levelmin.lt.nlevelmax)then
   do idim=1,ndim
      i0=0; j0=0; k0=0
      if(idim==1)i0=1
@@ -726,6 +727,8 @@ subroutine godfine1(ind_grid,ncache,ilevel)
      end do
      end do
   end do
+  end if
+
   !--------------------------------------
   ! Conservative update at level ilevel
   !--------------------------------------
@@ -775,6 +778,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
   !--------------------------------------
   ! Conservative update at level ilevel-1
   !--------------------------------------
+  if(levelmin.ne.nlevelmax)then
   ! Loop over dimensions
   do idim=1,ndim
      i0=0; j0=0; k0=0
@@ -888,5 +892,6 @@ subroutine godfine1(ind_grid,ncache,ilevel)
 
   end do
   ! End loop over dimensions
+  endif
 
 end subroutine godfine1
