@@ -87,6 +87,7 @@ subroutine authorize_fine(ilevel)
   ! Authorize all myid grids (needed for uploads)
   ncache=active(ilevel)%ngrid
   ! Loop over grids by vector sweeps
+!$omp parallel do private(igrid,ngrid,i,ind,iskip)
   do igrid=1,ncache,nvector
      ! Gather nvector grids
      ngrid=MIN(nvector,ncache-igrid+1)
@@ -109,9 +110,11 @@ subroutine authorize_fine(ilevel)
   ! End loop over grids
 
   ! Authorize virtual cells that contains myid children cells
+!$omp parallel private(icpu,ncache,igrid,i,ngrid,ind,iskip,idim,isub,test,xmin,xmax)
   do icpu=1,ncpu
      ncache=reception(icpu,ilevel)%ngrid
      ! Loop over grids by vector sweeps
+!$omp do
      do igrid=1,ncache,nvector
         ! Gather nvector grids
         ngrid=MIN(nvector,ncache-igrid+1)
@@ -209,8 +212,10 @@ subroutine authorize_fine(ilevel)
         end do
         ! End loop over cells
      end do
+!$omp end do nowait
      ! End loop over grids
   end do
+!$omp end parallel
   ! End loop over cpus
 
   ! Apply dilatation operator over flag2 cells on virtual cells only
@@ -227,12 +232,14 @@ subroutine authorize_fine(ilevel)
   end do
 
   ! Loop over steps
-  do ibound=1,nexpand_bound
   n_nbor(1:3)=(/1,2,3/)
+!$omp parallel private(ibound,ismooth,icpu,ncache,igrid,i,ngrid,ind,iskip)
+  do ibound=1,nexpand_bound
   do ismooth=1,ndim
      ! Initialize flag1 to 0 in virtual cells
      do icpu=1,ncpu
         ncache=reception(icpu,ilevel)%ngrid
+!$omp do
         do igrid=1,ncache,nvector
            ngrid=MIN(nvector,ncache-igrid+1)
            do i=1,ngrid
@@ -252,11 +259,14 @@ subroutine authorize_fine(ilevel)
               end do
            end do
         end do
+!$omp end do nowait
      end do
+!$omp barrier
 
      ! Count neighbors and set flag2 accordingly
      do icpu=1,ncpu
         ncache=reception(icpu,ilevel)%ngrid
+!$omp do
         do igrid=1,ncache,nvector
            ngrid=MIN(nvector,ncache-igrid+1)
            do i=1,ngrid
@@ -271,11 +281,14 @@ subroutine authorize_fine(ilevel)
               call count_nbors2(igridn,ind,n_nbor(ismooth),ngrid)
            end do
         end do
+!$omp end do nowait
      end do
+!$omp barrier
 
      ! Set flag2=1 for cells with flag1=1
      do icpu=1,ncpu
         ncache=reception(icpu,ilevel)%ngrid
+!$omp do
         do igrid=1,ncache,nvector
            ngrid=MIN(nvector,ncache-igrid+1)
            do i=1,ngrid
@@ -295,11 +308,13 @@ subroutine authorize_fine(ilevel)
               end do
            end do
         end do
+!$omp end do nowait
      end do
-
+!$omp barrier
   end do
   ! End loop over steps
   end do
+!$omp end parallel
 
   ! Compute authorization map for physical boundaries
   if(simple_boundary)call init_boundary_fine(ilevel)

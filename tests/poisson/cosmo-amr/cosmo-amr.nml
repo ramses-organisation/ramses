@@ -3,7 +3,7 @@ cosmo=.true.
 pic=.true.
 poisson=.true.
 hydro=.false.
-nremap=0
+nremap=5
 nsubcycle=2,2
 nstepmax=25
 /
