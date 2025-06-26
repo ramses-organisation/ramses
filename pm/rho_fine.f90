@@ -58,6 +58,7 @@ subroutine rho_fine(ilevel,icount)
   !--------------------------
   ! Initialize fields to zero
   !--------------------------
+!$omp parallel do private(ind,iskip,i)
   do ind=1,twotondim
      iskip=ncoarse+(ind-1)*ngridmax
      do i=1,active(ilevel)%ngrid
@@ -70,6 +71,7 @@ subroutine rho_fine(ilevel,icount)
      endif
   end do
   if(cic_levelmax>0.and.ilevel>cic_levelmax)then
+!$omp parallel do private(ind,iskip,i,ind_cell)
      do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
         do i=1,active(ilevel)%ngrid
@@ -85,6 +87,7 @@ subroutine rho_fine(ilevel,icount)
   !-------------------------------------------------------------------------
   if(m_refine(ilevel)>-1.0d0)then
      d_scale=max(mass_sph/dx_loc**ndim,smallr)
+!$omp parallel do private(ind,iskip,i,ind_cell,scalar)
      do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
         if(hydro)then
@@ -109,7 +112,9 @@ subroutine rho_fine(ilevel,icount)
   !-------------------------------------------------------
   ! Initialize rho and phi to zero in virtual boundaries
   !-------------------------------------------------------
+!$omp parallel private(icpu,ind,iskip,i)
   do icpu=1,ncpu
+!$omp do
      do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
         do i=1,reception(icpu,ilevel)%ngrid
@@ -131,7 +136,9 @@ subroutine rho_fine(ilevel,icount)
            end do
         endif
      end do
+!$omp end do nowait
   end do
+!$omp end parallel
 
   !---------------------------------------------------------
   ! Compute particle contribution to density field
@@ -188,6 +195,7 @@ subroutine rho_fine(ilevel,icount)
   ! Compute quasi Lagrangian refinement map
   !-----------------------------------------
   if(m_refine(ilevel)>-1.0d0)then
+!$omp parallel do private(ind,iskip,i,ind_cell)
      do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
         do i=1,active(ilevel)%ngrid
