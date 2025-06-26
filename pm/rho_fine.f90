@@ -250,12 +250,14 @@ subroutine rho_from_current_level(ilevel)
   multipole_loc = 0
 
   ! Loop over cpus
-!!!$omp parallel do private(i,ig,ip,npart1,igrid,jgrid,ipart,jpart,idim,counter) &
-!!!$omp & reduction(+:multipole_loc)
+!$omp parallel private(icpu,ig,ip,jgrid,igrid,npart1,ipart,counter) &
+!$omp          private(jpart,idim,i) &
+!$omp & reduction(+:multipole_loc)
   do icpu=1,ncpu
      ! Loop over grids
      ig=0
      ip=0
+!$omp do
      do jgrid=1,numbl(icpu,ilevel)
         if(icpu==myid)then
            igrid=active(ilevel)%igrid(jgrid)
@@ -294,13 +296,11 @@ subroutine rho_from_current_level(ilevel)
                  do i=1,ig
                     ind_cell(i)=father(ind_grid(i))
                  end do
-!!!$omp critical
 #ifdef TSC
-                 call tsc_amr(ind_cell,ind_part,ind_grid_part,x0,ig,ip,ilevel)
+                 call tsc_amr(ind_cell,ind_part,ind_grid_part,x0,ig,ip,ilevel,multipole_loc)
 #else
                  call cic_amr(ind_cell,ind_part,ind_grid_part,x0,ig,ip,ilevel,multipole_loc)
 #endif
-!!!$omp end critical
                  ip=0
                  ig=0
                  counter=0
@@ -315,6 +315,7 @@ subroutine rho_from_current_level(ilevel)
            end if
         end if
      end do
+!$omp end do nowait
      ! End loop over grids
 
      if(ip>0)then
@@ -327,16 +328,15 @@ subroutine rho_from_current_level(ilevel)
         do i=1,ig
            ind_cell(i)=father(ind_grid(i))
         end do
-!!!$omp critical
 #ifdef TSC
-        call tsc_amr(ind_cell,ind_part,ind_grid_part,x0,ig,ip,ilevel)
+        call tsc_amr(ind_cell,ind_part,ind_grid_part,x0,ig,ip,ilevel,multipole_loc)
 #else
         call cic_amr(ind_cell,ind_part,ind_grid_part,x0,ig,ip,ilevel,multipole_loc)
 #endif
-!!!$omp end critical
      end if
 
   end do
+!$omp end parallel
   ! End loop over cpus
 
   multipole = multipole + multipole_loc
@@ -356,6 +356,7 @@ subroutine cic_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel,multipole_loc
   integer::ng,np,ilevel
   integer ,dimension(1:nvector)::ind_cell,ind_grid_part,ind_part
   real(dp),dimension(1:nvector,1:ndim)::x0
+  real(dp),dimension(1:ndim+1)::multipole_loc
   !------------------------------------------------------------------
   ! This routine computes the density field at level ilevel using
   ! the CIC scheme. Only cells that are in level ilevel
@@ -369,7 +370,6 @@ subroutine cic_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel,multipole_loc
   ! Particle-based arrays
   logical ,dimension(1:nvector),save::ok
   real(dp),dimension(1:nvector),save::mmm
-  real(dp),dimension(1:ndim+1)::multipole_loc
   ! Save type
   type(part_t),dimension(1:nvector),save::fam
   real(dp),dimension(1:nvector),save::vol2
@@ -579,7 +579,7 @@ subroutine cic_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel,multipole_loc
      if(cic_levelmax==0.or.ilevel<=cic_levelmax)then
         do j=1,np
            if(ok(j))then
-!!!$omp atomic update
+!$omp atomic update
               rho(indp(j,ind))=rho(indp(j,ind))+vol2(j)
            end if
         end do
@@ -587,7 +587,7 @@ subroutine cic_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel,multipole_loc
         do j=1,np
            ! check for non-DM (and non-tracer)
            if ( ok(j) .and. is_not_DM(fam(j)) ) then
-!!!$omp atomic update
+!$omp atomic update
               rho(indp(j,ind))=rho(indp(j,ind))+vol2(j)
            end if
         end do
@@ -597,7 +597,7 @@ subroutine cic_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel,multipole_loc
         do j=1,np
            ! check for DM
            if ( ok(j) .and. is_DM(fam(j)) ) then
-!!!$omp atomic update
+!$omp atomic update
               rho_top(indp(j,ind))=rho_top(indp(j,ind))+vol2(j)
            end if
         end do
@@ -635,14 +635,14 @@ subroutine cic_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel,multipole_loc
      if(cic_levelmax==0.or.ilevel<cic_levelmax)then
         do j=1,np
            if(ok(j))then
-!!!$omp atomic update
+!$omp atomic update
               phi(indp(j,ind))=phi(indp(j,ind))+vol2(j)
            end if
         end do
      else if(ilevel>=cic_levelmax)then
         do j=1,np
            if ( ok(j) .and. is_not_DM(fam(j)) ) then
-!!!$omp atomic update
+!$omp atomic update
               phi(indp(j,ind))=phi(indp(j,ind))+vol2(j)
            end if
         end do
@@ -654,7 +654,7 @@ subroutine cic_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel,multipole_loc
         do j=1,np
            if ( is_cloud(fam(j)) ) then
               ! if (direct_force_sink(-1*idp(ind_part(j))))then
-!!!$omp atomic update
+!$omp atomic update
               phi(indp(j,ind))=phi(indp(j,ind))+m_refine(ilevel)
               ! endif
            end if
@@ -1151,7 +1151,7 @@ end subroutine cic_cell
 !##############################################################################
 !##############################################################################
 #if NDIM==3
-subroutine tsc_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
+subroutine tsc_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel,multipole_loc)
   use amr_commons
   use amr_parameters
   use pm_commons
@@ -1161,6 +1161,7 @@ subroutine tsc_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
   integer::ng,np,ilevel
   integer ,dimension(1:nvector)::ind_cell,ind_grid_part,ind_part
   real(dp),dimension(1:nvector,1:ndim)::x0
+  real(dp),dimension(1:ndim+1)::multipole_loc
   !------------------------------------------------------------------
   ! This routine computes the density field at level ilevel using
   ! the TSC scheme. Only cells that are in level ilevel
@@ -1220,11 +1221,11 @@ subroutine tsc_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
 
   if(ilevel==levelmin)then
      do j=1,np
-        multipole(1)=multipole(1)+mmm(j)
+        multipole_loc(1)=multipole_loc(1)+mmm(j)
      end do
      do idim=1,ndim
         do j=1,np
-           multipole(idim+1)=multipole(idim+1)+mmm(j)*xp(ind_part(j),idim)
+           multipole_loc(idim+1)=multipole_loc(idim+1)+mmm(j)*xp(ind_part(j),idim)
         end do
      end do
   end if
@@ -1402,12 +1403,14 @@ subroutine tsc_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
      if(cic_levelmax==0.or.ilevel<=cic_levelmax) then
         do j=1,np
            if(ok(j).and.(.not.abandoned(j))) then
+!$omp atomic update
               rho(indp(j,ind))=rho(indp(j,ind))+vol2(j)
            end if
         end do
      else if(ilevel>cic_levelmax) then
         do j=1,np
            if ( ok(j) .and. is_not_DM(fam(j)) .and. (.not.abandoned(j)) ) then
+!$omp atomic update
               rho(indp(j,ind))=rho(indp(j,ind))+vol2(j)
            end if
         end do
@@ -1416,6 +1419,7 @@ subroutine tsc_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
      if(ilevel==cic_levelmax)then
         do j=1,np
            if ( ok(j) .and. is_DM(fam(j)) .and. (.not.abandoned(j)) ) then
+!$omp atomic update
               rho_top(indp(j,ind))=rho_top(indp(j,ind))+vol2(j)
            end if
         end do
@@ -1457,12 +1461,14 @@ subroutine tsc_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
      if(cic_levelmax==0.or.ilevel<cic_levelmax) then
         do j=1,np
            if(ok(j).and.(.not.abandoned(j))) then
+!$omp atomic update
               phi(indp(j,ind))=phi(indp(j,ind))+vol2(j)
            end if
         end do
      else if(ilevel>=cic_levelmax) then
         do j=1,np
            if ( ok(j) .and. is_not_DM(fam(j)) .and. (.not.abandoned(j)) ) then
+!$omp atomic update
               phi(indp(j,ind))=phi(indp(j,ind))+vol2(j)
            end if
         end do
