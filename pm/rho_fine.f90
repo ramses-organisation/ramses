@@ -254,10 +254,14 @@ subroutine rho_from_current_level(ilevel)
 !!!$omp & reduction(+:multipole_loc)
   do icpu=1,ncpu
      ! Loop over grids
-     igrid=headl(icpu,ilevel)
      ig=0
      ip=0
      do jgrid=1,numbl(icpu,ilevel)
+        if(icpu==myid)then
+           igrid=active(ilevel)%igrid(jgrid)
+        else
+           igrid=reception(icpu,ilevel)%igrid(jgrid)
+        end if
         npart1=numbp(igrid)  ! Number of particles in the grid
         if(npart1>0)then
            ig=ig+1
@@ -310,8 +314,6 @@ subroutine rho_from_current_level(ilevel)
               ig = ig - 1
            end if
         end if
-
-        igrid=next(igrid)   ! Go to next grid
      end do
      ! End loop over grids
 
