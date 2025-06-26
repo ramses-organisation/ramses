@@ -200,7 +200,6 @@ subroutine make_boundary_phi(ilevel)
 
      ! Loop over grids by vector sweeps
      ncache=boundary(ibound,ilevel)%ngrid
-!!!$omp parallel do
      do igrid=1,ncache,nvector
         ngrid=MIN(nvector,ncache-igrid+1)
         do i=1,ngrid
@@ -280,7 +279,6 @@ subroutine make_boundary_mask(ilevel)
 
      ! Loop over grids by vector sweeps
      ncache=boundary(ibound,ilevel)%ngrid
-!!!$omp parallel do
      do igrid=1,ncache,nvector
         ngrid=MIN(nvector,ncache-igrid+1)
         do i=1,ngrid
