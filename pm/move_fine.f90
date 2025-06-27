@@ -18,9 +18,11 @@ subroutine move_fine(ilevel)
   if(verbose)write(*,111)ilevel
 
   ! Update particles position and velocity
+!$omp parallel private(ig,ip,jgrid,igrid,npart1,ipart,local_counter,jpart,next_part)
   ig=0
   ip=0
   ! Loop over particles that are not tracers
+!$omp do
   do jgrid=1,active(ilevel)%ngrid
      igrid=active(ilevel)%igrid(jgrid)
      npart1=numbp(igrid)  ! Number of particles in the grid
@@ -61,9 +63,10 @@ subroutine move_fine(ilevel)
         end if
      end if
   end do
+!$omp end do nowait
   ! End loop over grids
   if(ip>0)call move1(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
-
+!$omp end parallel
 
   !---------------
   ! Moving tracers
