@@ -717,6 +717,7 @@ subroutine multipole_fine(ilevel)
   end do
 
   ! Initialize fields to zero
+!$omp parallel do private(ind,iskip,i,idim)
   do ind=1,twotondim
      iskip=ncoarse+(ind-1)*ngridmax
      do i=1,active(ilevel)%ngrid
@@ -731,6 +732,7 @@ subroutine multipole_fine(ilevel)
 
   ! Compute mass multipoles in each cell
   ncache=active(ilevel)%ngrid
+!$omp parallel do private(igrid,ngrid,i,ind,iskip,nleaf,idim,mm,nsplit,ind_son,iskip_son,ind_grid_son,ind_cell_son)
   do igrid=1,ncache,nvector
      ngrid=MIN(nvector,ncache-igrid+1)
      do i=1,ngrid
@@ -846,6 +848,7 @@ subroutine cic_from_multipole(ilevel)
   !-------------------------------------------------------------------
   integer::ind,i,icpu,ncache,ngrid,iskip,ibound,igrid
   integer,dimension(1:nvector),save::ind_grid
+  real(dp),dimension(1:ndim+1)::multipole_loc
 
 !$omp threadprivate(ind_grid)
 
@@ -853,7 +856,9 @@ subroutine cic_from_multipole(ilevel)
   if(verbose)write(*,111)ilevel
 
   ! Initialize density field to zero
+!$omp parallel private(icpu,ind,iskip,i,ibound)
   do icpu=1,ncpu
+!$omp do
      do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
         do i=1,reception(icpu,ilevel)%ngrid
@@ -864,26 +869,39 @@ subroutine cic_from_multipole(ilevel)
 #endif
         end do
      end do
+!$omp end do nowait 
   end do
+!$omp do
   do ind=1,twotondim
      iskip=ncoarse+(ind-1)*ngridmax
      do i=1,active(ilevel)%ngrid
         rho(active(ilevel)%igrid(i)+iskip)=0.0D0
      end do
   end do
+!$omp end do nowait
   ! Reset rho in physical boundaries
   do ibound=1,nboundary
+!$omp do
      do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
         do i=1,boundary(ibound,ilevel)%ngrid
            rho(boundary(ibound,ilevel)%igrid(i)+iskip)=0
         end do
      end do
+!$omp end do nowait
   end do
+!$omp end parallel
 
   if(hydro)then
+
+     ! multipole is updated in cic_cell, so we first calculate all contributions from omp processes
+     ! then reduce them and update the global multipole variable.
+     multipole_loc = 0
+
      ! Perform a restriction over split cells (ilevel+1)
      ncache=active(ilevel)%ngrid
+!$omp parallel do private(igrid,ngrid,i) &
+!$omp & reduction(+:multipole_loc)
      do igrid=1,ncache,nvector
         ! Gather nvector grids
         ngrid=MIN(nvector,ncache-igrid+1)
@@ -891,11 +909,13 @@ subroutine cic_from_multipole(ilevel)
            ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
         end do
 #ifdef TSC
-        call tsc_cell(ind_grid,ngrid,ilevel)
+        call tsc_cell(ind_grid,ngrid,ilevel,multipole_loc)
 #else
-        call cic_cell(ind_grid,ngrid,ilevel)
+        call cic_cell(ind_grid,ngrid,ilevel,multipole_loc)
 #endif
      end do
+
+     multipole = multipole + multipole_loc
   end if
 
 111 format('   Entering cic_from_multipole for level',i2)
@@ -905,13 +925,15 @@ end subroutine cic_from_multipole
 !###########################################################
 !###########################################################
 !###########################################################
-subroutine cic_cell(ind_grid,ngrid,ilevel)
+subroutine cic_cell(ind_grid,ngrid,ilevel,multipole_loc)
   use amr_commons
   use poisson_commons
   use hydro_commons, ONLY: unew
   implicit none
   integer::ngrid,ilevel
   integer,dimension(1:nvector)::ind_grid
+  real(dp),dimension(1:ndim+1)::multipole_loc
+
   !
   !
   integer::i,j,idim,ind_cell_son,iskip_son,np,ind_son,nx_loc,ind
@@ -971,7 +993,7 @@ subroutine cic_cell(ind_grid,ngrid,ilevel)
         do idim=1,ndim+1
            do j=1,np
               ind_cell_son=iskip_son+ind_grid(j)
-              multipole(idim)=multipole(idim)+unew(ind_cell_son,idim)
+              multipole_loc(idim)=multipole_loc(idim)+unew(ind_cell_son,idim)
            end do
         end do
      endif
@@ -1137,6 +1159,7 @@ subroutine cic_cell(ind_grid,ngrid,ilevel)
         end do
         do j=1,np
            if(ok(j))then
+!$omp atomic update
               rho(indp(j,ind))=rho(indp(j,ind))+vol2(j)
            end if
         end do
@@ -1482,13 +1505,14 @@ end subroutine tsc_amr
 !###########################################################
 !###########################################################
 #if NDIM==3
-subroutine tsc_cell(ind_grid,ngrid,ilevel)
+subroutine tsc_cell(ind_grid,ngrid,ilevel,multipole_loc)
   use amr_commons
   use poisson_commons
   use hydro_commons, ONLY: unew
   implicit none
   integer::ngrid,ilevel
   integer,dimension(1:nvector)::ind_grid
+  real(dp),dimension(1:ndim+1)::multipole_loc
   !
   !
   integer::i,j,idim,ind_cell_son,iskip_son,np,ind_son,nx_loc,ind
@@ -1546,7 +1570,7 @@ subroutine tsc_cell(ind_grid,ngrid,ilevel)
         do idim=1,ndim+1
            do j=1,np
               ind_cell_son=iskip_son+ind_grid(j)
-              multipole(idim)=multipole(idim)+unew(ind_cell_son,idim)
+              multipole_loc(idim)=multipole_loc(idim)+unew(ind_cell_son,idim)
            end do
         end do
      endif
@@ -1731,6 +1755,7 @@ subroutine tsc_cell(ind_grid,ngrid,ilevel)
         end do
         do j=1,np
            if(ok(j))then
+!$omp atomic update
               rho(indp(j,ind))=rho(indp(j,ind))+vol2(j)
            end if
         end do
