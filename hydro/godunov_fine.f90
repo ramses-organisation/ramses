@@ -786,28 +786,20 @@ subroutine gather_stencil_unigrid(nbors_father_cells,uloc,gloc,req_loc,peq_loc,o
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),intent(inout)::peq_loc
   logical ,dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),intent(inout)::ok
   integer,intent(in)::ilevel,ncache
-
-  integer ,dimension(1:nvector,0:twondim         ),save::ibuffer_father
-  real(dp),dimension(1:nvector,0:twondim  ,1:nvar),save::u1
-  real(dp),dimension(1:nvector,1:twotondim,1:nvar),save::u2
-  real(dp),dimension(1:nvector,1:twotondim       ),save::req2=0.0d0
-  real(dp),dimension(1:nvector,1:twotondim       ),save::peq2=0.0d0
-
-  integer,dimension(1:nvector),save::igrid_nbor,ind_cell,ind_buffer
-  integer,dimension(1:nvector),save::ind_exist,ind_nexist
-  integer::nexist,nbuffer
-  integer::i,j,ivar,idim,iskip
+  !-------------------------------------------------------------------------
+  ! Gather 6x6x6 cells stencil, in the case of a uniform grid, meaning the 
+  ! neighboring grids on this level are guaranteed to exist.
+  !-------------------------------------------------------------------------
+  integer,dimension(1:nvector),save::igrid_nbor,ind_cell
+  integer::i,ivar,idim,iskip
   integer::i1,j1,k1,i2,j2,k2,i3,j3,k3,ind_son,ind_father
 
-  !---------------------------
-  ! Gather 6x6x6 cells stencil
-  !---------------------------
   ! Loop over 3x3x3 neighboring father cells
   do k1=k1min,k1max
   do j1=j1min,j1max
   do i1=i1min,i1max
 
-     ! Check if neighboring grid exists
+     ! Get neighbor grid index
      ind_father=1+i1+3*j1+9*k1
      do i=1,ncache
         igrid_nbor(i)=son(nbors_father_cells(i,ind_father))
@@ -818,6 +810,7 @@ subroutine gather_stencil_unigrid(nbors_father_cells,uloc,gloc,req_loc,peq_loc,o
      do j2=j2min,j2max
      do i2=i2min,i2max
 
+        ! Get cell index
         ind_son=1+i2+2*j2+4*k2
         iskip=ncoarse+(ind_son-1)*ngridmax
         do i=1,ncache
@@ -890,7 +883,10 @@ subroutine gather_stencil_amr(nbors_father_cells,uloc,gloc,req_loc,peq_loc,ok,nc
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),intent(inout)::peq_loc
   logical ,dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),intent(inout)::ok
   integer,intent(in)::ilevel,ncache
-
+  !-------------------------------------------------------------------------
+  ! Gather 6x6x6 cells stencil, in the general case of AMR. Interpolate from
+  ! coarser level missing grid variables.
+  !-------------------------------------------------------------------------
   integer ,dimension(1:nvector,0:twondim         ),save::ibuffer_father
   real(dp),dimension(1:nvector,0:twondim  ,1:nvar),save::u1
   real(dp),dimension(1:nvector,1:twotondim,1:nvar),save::u2
@@ -903,9 +899,6 @@ subroutine gather_stencil_amr(nbors_father_cells,uloc,gloc,req_loc,peq_loc,ok,nc
   integer::i,j,ivar,idim,iskip
   integer::i1,j1,k1,i2,j2,k2,i3,j3,k3,ind_son,ind_father
 
-  !---------------------------
-  ! Gather 6x6x6 cells stencil
-  !---------------------------
   ! Loop over 3x3x3 neighboring father cells
   do k1=k1min,k1max
   do j1=j1min,j1max
