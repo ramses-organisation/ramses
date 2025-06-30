@@ -488,7 +488,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
   integer ,dimension(1:nvector,1:threetondim     ),save::nbors_father_cells
 
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar),save::uloc
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:ndim),save::gloc=0.0d0
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:ndim),save::gloc
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),save::ploc=0.0d0
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),save::req_loc=0.0d0
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),save::peq_loc=0.0d0
@@ -508,6 +508,8 @@ subroutine godfine1(ind_grid,ncache,ilevel)
   nx_loc=icoarse_max-icoarse_min+1
   scale=boxlen/dble(nx_loc)
   dx=0.5d0**ilevel*scale
+
+  gloc=0
 
   !------------------------------------------
   ! Gather 3^ndim neighboring father cells
@@ -837,7 +839,7 @@ subroutine gather_stencil_unigrid(nbors_father_cells,uloc,gloc,req_loc,peq_loc,o
         ! Gather equilibrium model
         if(strict_equilibrium>0)then
            do idim=1,ndim
-              do i=1,nexist
+              do i=1,ncache
                  req_loc(i,i3,j3,k3)=rho_eq(ind_cell(i))
                  peq_loc(i,i3,j3,k3)=p_eq(ind_cell(i))
               end do
@@ -847,7 +849,7 @@ subroutine gather_stencil_unigrid(nbors_father_cells,uloc,gloc,req_loc,peq_loc,o
         ! Gather gravitational acceleration
         if(poisson)then
            do idim=1,ndim
-              do i=1,nexist
+              do i=1,ncache
                  gloc(i,i3,j3,k3,idim)=f(ind_cell(i),idim)
               end do
            end do
