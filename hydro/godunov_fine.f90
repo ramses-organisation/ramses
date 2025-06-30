@@ -787,7 +787,7 @@ subroutine gather_stencil_unigrid(nbors_father_cells,uloc,gloc,req_loc,peq_loc,o
   logical ,dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),intent(inout)::ok
   integer,intent(in)::ilevel,ncache
   !-------------------------------------------------------------------------
-  ! Gather 6x6x6 cells stencil, in the case of a uniform grid, meaning the 
+  ! Gather 6x6x6 cells stencil, in the case of a uniform grid, meaning the
   ! neighboring grids on this level are guaranteed to exist.
   !-------------------------------------------------------------------------
   integer,dimension(1:nvector),save::igrid_nbor,ind_cell
