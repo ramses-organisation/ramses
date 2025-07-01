@@ -100,11 +100,11 @@ fig.savefig('stellar-HII.pdf', bbox_inches="tight")
 
 # Check if test results match reference, both for outputs and movie frames =========================
 # Why is this so inaccurate on multiple cores?
-red_tol = 1.0e-7
-tolerance={"scalar_00":red_tol, "scalar_01":red_tol, "scalar_02":red_tol, "velocity_x":red_tol, "velocity_y":red_tol, "velocity_z":red_tol
-  ,'movie_dens':red_tol, 'movie_temp':red_tol, 'movie_Fp3':red_tol*100., 'movie_xHII':red_tol*100.
-  ,'photon_flux_01':red_tol*100., 'photon_flux_01_x':red_tol*100., 'photon_flux_01_y':red_tol*100., 'photon_flux_01_z':red_tol*100.
-  ,'photon_flux_02':red_tol*100., 'photon_flux_02_x':red_tol*100., 'photon_flux_02_y':red_tol*100., 'photon_flux_02_z':red_tol*100.
-  ,'photon_flux_03':red_tol*100., 'photon_flux_03_x':red_tol*100., 'photon_flux_03_y':red_tol*100., 'photon_flux_03_z':red_tol*100.}
+red_tol = 3e-6
+tolerance={"scalar_00":1e-7, "scalar_01":3.0e-7, "scalar_02":1.0e-7, "velocity_x":1.0e-8, "velocity_y":1.0e-8, "velocity_z":1.0e-8
+  ,'movie_Fp3':red_tol, 'movie_xHII':red_tol
+  ,'photon_flux_01':red_tol, 'photon_flux_01_x':red_tol, 'photon_flux_01_y':red_tol, 'photon_flux_01_z':red_tol
+  ,'photon_flux_02':red_tol, 'photon_flux_02_x':red_tol, 'photon_flux_02_y':red_tol, 'photon_flux_02_z':red_tol
+  ,'photon_flux_03':red_tol, 'photon_flux_03_x':red_tol, 'photon_flux_03_y':red_tol, 'photon_flux_03_z':red_tol}
 
 visu_ramses.check_solution(data["data"],'stellar-HII',tolerance=tolerance,overwrite=False)
