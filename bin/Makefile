@@ -131,7 +131,7 @@ ifeq ($(COMPILER),INTEL)
       F90 += -warn all -O0 -g -traceback -check bounds
       FFLAGS += -fpe0 -ftrapuv -init=zero -init=snan -init=arrays
    else
-      F90 += -O3 -ipo
+      F90 += -O3 -ipo -inline-forceinline
    endif
 endif
 

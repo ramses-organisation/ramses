@@ -6,6 +6,7 @@ module slope_types
 contains
 
    !#######################################################
+   !DIR$ ATTRIBUTES FORCEINLINE :: slope_minmod
    pure function slope_minmod(dlft,drgt) result(slope)
       real(dp),intent(in)::dlft,drgt
       real(dp)::slope
@@ -21,6 +22,7 @@ contains
 
    end function slope_minmod
    !#######################################################
+   !DIR$ ATTRIBUTES FORCEINLINE :: slope_minmod_or_average
    pure function slope_minmod_or_average(dlft,drgt,slope_type) result(slope)
       real(dp),intent(in)::dlft,drgt,slope_type
       real(dp)::slope
@@ -34,6 +36,7 @@ contains
 
    end function slope_minmod_or_average
    !#######################################################
+   !DIR$ ATTRIBUTES FORCEINLINE :: slope_moncen
    pure function slope_moncen(dlft,drgt) result(slope)
       real(dp),intent(in)::dlft,drgt
       real(dp)::slope
@@ -51,6 +54,7 @@ contains
 
    end function slope_moncen
    !#######################################################
+   !DIR$ ATTRIBUTES FORCEINLINE :: slope_vanLeer
    pure function slope_vanLeer(dlft,drgt) result(slope)
       real(dp),intent(in)::dlft,drgt
       real(dp)::slope
@@ -64,6 +68,7 @@ contains
 
    end function slope_vanLeer
    !#######################################################
+   !DIR$ ATTRIBUTES FORCEINLINE :: slope_vanLeer_bis
    pure function slope_vanLeer_bis(dlft,drgt) result(slope)
       real(dp),intent(in)::dlft,drgt
       real(dp)::slope
