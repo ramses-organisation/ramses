@@ -72,15 +72,15 @@ for var, sim, ana in zip(
     data["data"][f"{var}_med_error"] = np.median(rel_error)
     data["data"][f"{var}_avg_error"] = np.mean(rel_error)
     tolerance[f"{var}_med_error"] = 1e-8
-    
-    
-## Parameter study 
-    
+
+
+## Parameter study
+
 # 1. Read error computed with other parameters
 
 parameter_study_errors =  np.load("sod-tube-parameter-study.npz")
 
-# 2. Read ref 
+# 2. Read ref
 
 parameter_study_ref =  np.load("sod-tube-parameter-study-ref.npz")
 
@@ -90,7 +90,7 @@ tolerance_param_study = 1e-8
 num_wrong = 0
 
 for key in parameter_study_errors:
-    
+
     if key not in parameter_study_ref:
         print(f"Error, {key} not in parameter study reference.\n")
         num_wrong += 1

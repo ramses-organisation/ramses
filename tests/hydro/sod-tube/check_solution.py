@@ -19,7 +19,7 @@ def check_solution():
     rho_ana = data_ana[:, 3]
     u_ana = data_ana[:, 2]
     p_ana = data_ana[:, 4]
-    
+
     errors = {}
 
     # Interpolate the analytical solution to the simulation grid
@@ -40,5 +40,3 @@ def check_solution():
         errors[f"{var}_avg_error"] = np.mean(rel_error)
 
     return errors["velocity_avg_error"]
-
-        

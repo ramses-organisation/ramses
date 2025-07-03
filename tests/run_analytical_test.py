@@ -33,7 +33,7 @@ class NamelistRecursive:
             else:
                 raise KeyError(key)
         return res
-    
+
     def set_nml_value(self, nml_key, value):
         res = self.data
         nml_keys = nml_key.split("/")
@@ -42,11 +42,11 @@ class NamelistRecursive:
                 res = res[key]
             else:
                 raise KeyError(key)
-        res[nml_keys[-1]] = value 
+        res[nml_keys[-1]] = value
 
     def __getitem__(self, key):
         return self.get_nml_value(key)
-    
+
     def __setitem__(self, key, value):
         return self.set_nml_value(key, value)
 
@@ -55,7 +55,7 @@ class NamelistRecursive:
 
     def __str__(self):
         return self.data.__str__()
-    
+
 def load_namelist(path):
     return NamelistRecursive(f90nml.read(path))
 
@@ -81,12 +81,12 @@ def backup_namelist(test_name):
     else:
         print(f"Warning: {nml_path} does not exist")
         return
-    
+
 def restore_namelist(test_name):
 
     nml_path = f"{test_name}.nml"
     os.rename(nml_path + "_backup", nml_path)
-    
+
 
 def set_params(test_name, params):
     """
@@ -97,10 +97,10 @@ def set_params(test_name, params):
     nml_path = f"{test_name}.nml"
     nml = load_namelist(nml_path)
 
-    
+
     for key in params:
         nml[key] = params[key]
-       
+
 
     f90nml.write(nml=nml.data, nml_path=nml_path, force=True)
 
@@ -117,14 +117,14 @@ if __name__ == "__main__":
     results = {}
     errors = {}
     for param_set in param_grid:
-        
+
         if "refine_params/interpol_var" in param_set and \
             "refine_params/interpol_type" in param_set and \
             param_set["refine_params/interpol_var"] == 4 and \
             param_set["refine_params/interpol_type"] != 2:
             # Skip this combination
             continue
-        
+
         # Create a unique test name based on the parameters
         test_name_combi = "_".join(f"{k.split('/')[1]}_{v}" for k, v in param_set.items())
         print(f"Running test: {test_name_combi}")
@@ -138,13 +138,13 @@ if __name__ == "__main__":
 
             # Run the analytical test (assuming a script or command exists)
             os.system(args.command)
-            
+
             errors[test_name_combi] = check_solution()
-            
+
         finally:
             # Restore the original namelist file
             restore_namelist(test_name)
-            
-            
+
+
     # Store results
     np.savez(f"{test_name}-parameter-study.npz", **errors)
