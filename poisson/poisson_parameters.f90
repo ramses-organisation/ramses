@@ -9,7 +9,7 @@ module poisson_parameters
 
   ! Gravity parameters
   real(dp),dimension(1:10)::gravity_params=0
-  
+
   ! Use gravana even if gravity_type < 0 instead of rho_ana
   logical ::always_use_gravana=.false.
 

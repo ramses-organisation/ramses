@@ -22,9 +22,9 @@ subroutine rho_ana(x,d,dx,ncell)
   real(dp)::gmass,dmass,emass,xmass,ymass,zmass,rr,rx,ry,rz,dd
   real(dp):: a1,a2,z0,a1_rho,a2_rho
   real(dp)::scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2
-  
-  if (always_use_gravana) return 
-  
+
+  if (always_use_gravana) return
+
   select case(gravity_type)
   ! Remark: no obvious equivalent for gravana's gravity_type==1
   case(-2)
