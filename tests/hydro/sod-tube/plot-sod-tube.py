@@ -5,6 +5,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import visu_ramses
 
+## Default params
+
 fig = plt.figure(figsize=(8, 12))
 ax1 = plt.subplot(311)
 ax2 = plt.subplot(312)
@@ -72,17 +74,36 @@ for var, sim, ana in zip(
     tolerance[f"{var}_med_error"] = 1e-8
     
     
+## Parameter study 
+    
 # 1. Read error computed with other parameters
 
-# 2. read ref 
+parameter_study_errors =  np.load("sod-tube-parameter-study.npz")
+
+# 2. Read ref 
+
+parameter_study_ref =  np.load("sod-tube-parameter-study-ref.npz")
+
 
 # 3. Compare
+tolerance_param_study = 1e-8
+num_wrong = 0
 
-# data["data"]["nb_failed_param_combinaison"] = ...
+for key in parameter_study_errors:
+    
+    if key not in parameter_study_ref:
+        print(f"Error, {key} not in parameter study reference.\n")
+        num_wrong += 1
+    else:
+        rel_diff = (parameter_study_errors[key] - parameter_study_ref[key]) / parameter_study_ref[key]
+        ok_key = np.all(rel_diff < tolerance_param_study)
+        if not ok_key:
+            print(f"Error in parameter combinaison {key}.\n")
+            print(f"Now {parameter_study_errors[key]} | Ref {parameter_study_ref[key]}.\n")
+            num_wrong += 1
 
-# if data["data"]["nb_failed_param_combinaison"] > 0:
-#     print("Some parameter combinations failed")
-#     print the combinations that failed
+data["data"]["nb_failed_param_combinaison"] = num_wrong
 
-# Check results against reference solution
+## Check results against reference solution
+
 visu_ramses.check_solution(data["data"], "sod-tube", tolerance=tolerance)

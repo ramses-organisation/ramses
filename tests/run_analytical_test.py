@@ -2,6 +2,7 @@ import os
 import argparse
 import shutil
 import glob
+import numpy as np
 
 try:
     from sklearn.model_selection import ParameterGrid
@@ -146,4 +147,4 @@ if __name__ == "__main__":
             
             
     # Store results
-    np.savez(f"{test_name}_parameter_study.npz", **errors)
+    np.savez(f"{test_name}-parameter-study.npz", **errors)

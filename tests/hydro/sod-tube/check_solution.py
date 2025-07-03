@@ -36,7 +36,7 @@ def check_solution():
         rel_error[mask] = abs_error[mask] / np.abs(ana[mask])
         rel_error[np.logical_not(mask)] = abs_error[np.logical_not(mask)]
 
-        errors[f"{var}_med_error"] = np.median(rel_error)
+        #errors[f"{var}_med_error"] = np.median(rel_error)
         errors[f"{var}_avg_error"] = np.mean(rel_error)
 
     return errors["velocity_avg_error"]
