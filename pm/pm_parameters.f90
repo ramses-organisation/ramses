@@ -1,5 +1,5 @@
 module pm_parameters
-  use amr_parameters, ONLY: dp
+  use amr_parameters, ONLY: dp, huge_num
   integer::nsinkmax=2000            ! Maximum number of sinks
   integer::npartmax=0               ! Maximum number of particles
   integer::npart=0                  ! Actual number of particles
@@ -34,7 +34,7 @@ module pm_parameters
                                              ! gives fraction of available gas that can be accreted in one timestep
   real(dp)::mass_sink_seed=0                 ! Initial sink mass
   real(dp)::mass_smbh_seed=0                 ! Initial SMBH mass
-  real(dp)::mass_merger_vel_check=1d100      ! Threshold for velocity check in merging in M_sun; default: don't check
+  real(dp)::mass_merger_vel_check=huge_num      ! Threshold for velocity check in merging in M_sun; default: don't check
 
   logical::eddington_limit=.false.           ! Switch for Eddington limit for the smbh case
   logical::clump_core=.false.                ! Trims the clump (for star formation)

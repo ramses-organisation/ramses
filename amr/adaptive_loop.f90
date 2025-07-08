@@ -10,6 +10,9 @@ subroutine adaptive_loop
 #if USE_TURB==1
   use turb_commons
 #endif
+#ifdef RTZ
+  use rtz_module
+#endif
   use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
@@ -32,6 +35,7 @@ subroutine adaptive_loop
   call init_amr                      ! Initialize AMR variables
   call init_time                     ! Initialize time variables
   if(hydro)call init_hydro           ! Initialize hydro variables
+
 #ifdef RT
   if(rt.or.neq_chem) call rt_init_hydro ! Initialize radiation variables
 #endif
@@ -45,12 +49,14 @@ subroutine adaptive_loop
   if(nrestart==0)call init_refine    ! Build initial AMR grid
 
   ! Initialize cooling look up table
+#ifndef RTZ
 #ifdef grackle
   if(use_grackle==0)then
      if(cooling.and..not.neq_chem.and..not.cooling_ism) call set_table(dble(aexp))
   endif
 #else
   if(cooling.and..not.neq_chem.and..not.cooling_ism) call set_table(dble(aexp))
+#endif
 #endif
 
   if(pic)call init_part              ! Initialize particle variables

@@ -28,7 +28,9 @@ end subroutine rt_init_flow
 subroutine rt_init_flow_fine(ilevel)
   use amr_commons
   use rt_hydro_commons
+#ifndef RTZ
   use rt_cooling_module
+#endif
   use mpi_mod
   implicit none
 #ifndef WITHOUTMPI

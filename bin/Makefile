@@ -10,9 +10,9 @@ GCOV = 0
 # Compiler flavor: GNU or INTEL
 COMPILER = GNU
 # Size of vector cache
-NVECTOR = 32
+NVECTOR = 1
 # Number of dimensions
-NDIM = 1
+NDIM = 3
 # Float precision size
 NPRE = 8
 # hydro/mhd/rhd solver
@@ -21,10 +21,12 @@ SOLVER = hydro
 PATCH =
 # Use RT? 1=Yes, 0=No
 RT = 0
+# Use RTZ? 1=Yes, 0=No (note, do not set both RT and RTZ to 1!)
+RTZ = 1
 # Use turbulence? 1=Yes, 0=No (requires fftw3)
 USE_TURB = 0
 # Use MPI? 1=Yes, 0=No
-MPI = 0
+MPI = 1
 MPIF90 = mpif90
 # Root name of executable
 EXEC = ramses
@@ -33,18 +35,41 @@ NENER = 0
 # Use Grackle cooling? 1=Yes, 0=No
 GRACKLE = 0
 # Number of metal species
-NMETALS = 0
+NMETALS = 10
 # Use ATON? 1=Yes, 0=No
 ATON = 0
-# Number of ions for RT
-# use 1 for HI+HII, +1 for added H2, +2 for added HeI, HeII, HeIII
-NIONS = 0
 # Number of photon groups for RT
-NGROUPS = 0
+NGROUPS = 1
 # Number of passive scalars
 NPSCAL = 0
 # Light MPI communicator structure (for > 10k MPI processes)
 LIGHT_MPI_COMM = 0
+
+# Scalar quantities for RTZ ions
+N_HYDROGEN_IONS = 2
+N_H2 = 1
+N_HELIUM_IONS = 3
+N_CARBON_IONS = 7
+N_NITROGEN_IONS = 8
+N_OXYGEN_IONS = 9
+N_NEON_IONS = 11
+N_MAGNESIUM_IONS = 13
+N_SILICON_IONS = 15
+N_SULFUR_IONS = 17
+N_IRON_IONS = 27
+CO = 1
+
+# Number of ions for RT
+ifeq ($(RTZ),1)
+NIONS := $(N_HYDROGEN_IONS)+$(N_H2)+$(N_HELIUM_IONS)
+NIONS := $(NIONS)+$(N_CARBON_IONS)+$(N_NITROGEN_IONS)+$(N_OXYGEN_IONS)
+NIONS := $(NIONS)+$(N_NEON_IONS)+$(N_MAGNESIUM_IONS)+$(N_SILICON_IONS)
+NIONS := $(NIONS)+$(N_SULFUR_IONS)+$(N_IRON_IONS)
+else
+# For normal ramses RT, we set this by hand
+# use 1 for HI+HII, +1 for added H2, +2 for added HeI, HeII, HeIII
+NIONS = 0
+endif
 
 # Compute NVAR
 NHYDRO = 2+$(NDIM)
@@ -54,6 +79,12 @@ endif
 NVAR := $(NHYDRO)+$(NENER)+$(NPSCAL)+$(NMETALS)
 ifeq ($(RT),1)
    NVAR := $(NVAR)+$(NIONS)
+endif
+ifeq ($(RTZ),1)
+   NVAR := $(NVAR)+$(NIONS)
+endif
+ifeq ($(CO),1)
+   NVAR := $(NVAR)+1
 endif
 
 # Set to one to use 'include "mpif.h"' instead of more recent "use mpi"
@@ -79,6 +110,24 @@ endif
 ifeq ($(RT),1)
    DEFINES += -DRT -DNIONS=$(NIONS) -DNGROUPS=$(NGROUPS)
 endif
+ifeq ($(RTZ),1)
+   DEFINES += -DRT -DRTZ -DNIONS=$(NIONS) -DNGROUPS=$(NGROUPS)
+   DEFINES += -DN_HYDROGEN_IONS=$(N_HYDROGEN_IONS)
+   DEFINES += -DN_HELIUM_IONS=$(N_HELIUM_IONS)
+   DEFINES += -DN_CARBON_IONS=$(N_CARBON_IONS)
+   DEFINES += -DN_NITROGEN_IONS=$(N_NITROGEN_IONS)
+   DEFINES += -DN_OXYGEN_IONS=$(N_OXYGEN_IONS)
+   DEFINES += -DN_NEON_IONS=$(N_NEON_IONS)
+   DEFINES += -DN_MAGNESIUM_IONS=$(N_MAGNESIUM_IONS)
+   DEFINES += -DN_SILICON_IONS=$(N_SILICON_IONS)
+   DEFINES += -DN_SULFUR_IONS=$(N_SULFUR_IONS)
+   DEFINES += -DN_IRON_IONS=$(N_IRON_IONS)
+   DEFINES += -DN_H2=$(N_H2)
+   DEFINES += -DNMETALS=$(NMETALS)
+ifeq ($(CO),1)
+   DEFINES += -DCO
+endif
+endif
 ifeq ($(USE_TURB),1)
    DEFINES += -DUSE_TURB
 endif
@@ -99,8 +148,8 @@ ifeq ($(COMPILER),GNU)
       FC = gfortran
       FFLAGS += -DWITHOUTMPI
    endif
-   F90 += -ffree-line-length-none -fimplicit-none
-   FC += -ffree-line-length-none -fimplicit-none
+   F90 += -ffree-line-length-none -fimplicit-none 
+   FC += -ffree-line-length-none -fimplicit-none 
    ifeq ($(GCOV),1)
          F90 += -O0 -fprofile-arcs -ftest-coverage
    else
@@ -164,6 +213,10 @@ endif
 ifeq ($(USE_TURB),1)
    VPATH += ../turb:
 endif
+ifeq ($(RTZ),1)
+   VPATH += ../rt:
+   VPATH += ../rtz:
+endif
 VPATH += ../hydro:../pm:../poisson:../amr:../io
 #############################################################################
 # All objects
@@ -175,10 +228,18 @@ endif
 MODOBJ += poisson_commons.o hydro_parameters.o hydro_commons.o \
           cooling_module.o bisection.o sparse_mat.o clfind_commons.o \
           gadgetreadfile.o write_makefile.o write_patch.o write_gitinfo.o \
-          sink_sn_feedback.o
+          metal_yields_module.o sink_sn_feedback.o
 ifeq ($(RT),1)
    MODOBJ += rt_parameters.o rt_hydro_commons.o coolrates_module.o \
              rt_spectra.o rt_cooling_module.o rt_flux_module.o
+endif
+ifeq ($(RTZ),1)
+   MODOBJ += rtz_module.o rt_parameters.o rt_hydro_commons.o cross_sections_module.o \
+             rt_spectra.o rt_flux_module.o \
+             collisional_ionization_module.o recombination_module.o \
+             cosmic_ray_ionization_module.o photoionization_UVB_module.o \
+             dust_recombination_module.o molecules_module.o charge_exchange_module.o \
+             rtz_coolrates_module.o rtz_cooling_module.o
 endif
 ifeq ($(USE_TURB),1)
    MODOBJ += turb_parameters.o turb_commons.o
@@ -222,6 +283,8 @@ sinclude $(PATCH)/Makefile
 # All objects
 AMRLIB = $(AMROBJ) $(HYDROOBJ) $(PMOBJ) $(POISSONOBJ)
 ifeq ($(RT),1)
+   AMRLIB += $(RTOBJ)
+else ifeq ($(RTZ),1)
    AMRLIB += $(RTOBJ)
 endif
 ifeq ($(USE_TURB),1)

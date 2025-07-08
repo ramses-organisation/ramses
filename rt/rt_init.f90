@@ -9,10 +9,14 @@ SUBROUTINE rt_init
   use hydro_commons
   use rt_hydro_commons
   use rt_flux_module
+#ifndef RTZ
   use rt_cooling_module,only:rt_isIRtrap,iIRtrapVar
+#endif
   use rt_parameters
   use SED_module
+#ifndef RTZ
   use UV_module
+#endif
   implicit none
   integer:: i, nvar_count
 !-------------------------------------------------------------------------
@@ -110,24 +114,44 @@ SUBROUTINE read_rt_params(nml_ok)
   use amr_commons
   use rt_parameters
   use cooling_module, only:X, Y
+#ifndef RTZ
   use rt_cooling_module
   use UV_module
+#endif
   use SED_module
+#ifdef RTZ
+  use rtz_module
+#endif
   implicit none
   logical::nml_ok, rt_vsla=.false.
   integer::iCount,ilevel
+#ifdef RTZ
+  integer::i_Element,i_Iion
+#endif
 !-------------------------------------------------------------------------
   namelist/rt_params/rt_star, rt_esc_frac, rt_flux_scheme, rt_smooth     &
        & ,rt_is_outflow_bound, rt_TConst, rt_courant_factor              &
        & ,rt_c_fraction, rt_nsubcycle, rt_otsa, sedprops_update          &
-       & ,sed_dir, uv_file, rt_UVsrc_nHmax, nUVgroups, nSEDgroups        &
+       & ,sed_dir, uv_file, rt_UVsrc_nHmax, nSEDgroups                   &
+#ifndef RTZ
+       & ,nUVgroups, is_mu_H2, iPEH_group                                &
+#endif
        & ,SED_isEgy, rt_output_coolstats, hll_evals_file                 &
        & ,upload_equilibrium_x, X, Y, rt_is_init_xion                    &
        & ,rt_err_grad_cn, rt_floor_cn, rt_err_grad_xHII, rt_floor_xHII   &
-       & ,rt_err_grad_xHI, rt_floor_xHI, rt_refine_aexp, is_mu_H2,isHe   &
+       & ,rt_err_grad_xHI, rt_floor_xHI, rt_refine_aexp, isHe            &
        & ,isH2, rt_isIR, is_kIR_T, rt_T_rad, rt_vc, rt_pressBoost        &
-       & ,rt_isoPress, rt_isIRtrap, iPEH_group, heat_unresolved_HII      &
+       & ,rt_isoPress, rt_isIRtrap, heat_unresolved_HII                  &
        & ,cosmic_rays                                                    &
+#ifdef RTZ
+       & ,rtz_cooling, rtz_equilibrium_test                              &
+       & ,rtz_include_collisional_ionization, rtz_include_photoionization&
+       & ,rtz_include_cosmic_ray_ionization, rtz_include_charge_exchange &
+       & ,rtz_include_dust_recombination, rtz_include_HM12_UVB           &
+       & ,isH2_rtz, isCO_rtz, rtz_UV_background_G0                       &
+       & ,rtz_primary_cosmic_ray_ionization_rate, rtz_max_cool_timestep  &
+       & ,rtz_eqm_min_its                                                &
+#endif
        ! RT regions (for initialization)                                 &
        & ,rt_nregion, rt_region_type                                     &
        & ,rt_reg_x_center, rt_reg_y_center, rt_reg_z_center              &
@@ -142,7 +166,8 @@ SUBROUTINE read_rt_params(nml_ok)
        & ,rt_n_source, rt_u_source, rt_v_source, rt_w_source             &
        ! RT boundary (for boundary conditions)                           &
        & ,rt_n_bound,rt_u_bound,rt_v_bound,rt_w_bound                    &
-       & ,rt_AGN, rt_sink
+       & ,rt_AGN, rt_sink                                                
+
 
 
   ! Set default initialisation of ionisation states:
@@ -209,6 +234,20 @@ SUBROUTINE read_rt_params(nml_ok)
   ! ionization variables (NIONS)
   if(rt .or. neq_chem) then
      iCount=0
+#ifdef RTZ
+     do i_Element=1,n_elements ! loop over elements
+        if (elements(i_Element)%atomic_number.gt.0) then 
+           do i_Iion=1,elements(i_Element)%n_ions ! loop over ions
+              iCount = iCount + 1
+           end do ! end loop over ions
+        end if
+     end do ! end loop over elements
+
+     ! Deal with molecules separately
+     if (elements(1)%atomic_number.gt.0 .and. isH2_rtz) then 
+        iCount = iCount + 1
+     end if
+#else
      if(isH2) then
         iCount=iCount+1
         ixHI=iCount    ; ionEvs(ixHI)=ionEv_HI
@@ -218,6 +257,7 @@ SUBROUTINE read_rt_params(nml_ok)
         iCount=iCount+1 ; ixHeII=iCount  ; ionEvs(ixHeII)=ionEv_HeII
         iCount=iCount+1 ; ixHeIII=iCount ; ionEvs(ixHeIII)=ionEv_HeIII
      endif
+#endif
      nIonsUsed = iCount
      if(nIonsUsed .gt. NIONS) then
         if(myid==1) then
@@ -235,11 +275,13 @@ SUBROUTINE read_rt_params(nml_ok)
            write(*,*) 'Probably no harm, so still continuing...'
         endif
      endif
+#ifndef RTZ
      if(myid==1) then
         write(*,*) 'Number of ionization fractions is:',nIonsUsed
         write(*,*) 'The indexes are iHI, iHII, iHeII, iHeIII ='              &
              , ixHI, ixHII, ixHeII, ixHeIII
      endif
+#endif
   endif
 
   if(rt_sink.and.(.not.stellar))then
@@ -259,7 +301,13 @@ SUBROUTINE read_rt_groups()
 !-------------------------------------------------------------------------
   use amr_commons
   use rt_parameters
+#ifndef RTZ
   use rt_cooling_module
+#endif
+#ifdef RTZ
+  use rtz_cooling_module
+  use cross_sections_module
+#endif
   use SED_module
   implicit none
   integer::i,igroup_HI=0, igroup_HII=0, igroup_HeII=0, igroup_HeIII=0
@@ -268,7 +316,7 @@ SUBROUTINE read_rt_groups()
        & , groupL0, groupL1, kappaAbs, kappaSc, group_egy_AGNfrac
   if(myid==1) then
      write(*,'(" Working with ",I2," photon groups and  "                &
-          & ,I2, " ion species")') nGroups, nIons
+          & ,I3, " ion species")') nGroups, nIons
      write(*,*) ''
   endif
 
@@ -277,11 +325,19 @@ SUBROUTINE read_rt_groups()
      return
   endif
 #if NGROUPS>0
+#ifdef RTZ
+  groupL0 = 13.6d0 ! Default everything to H-ionizing
+  groupL1 = 0.d0   ! Default to infinity
+#else
   !  Use H2, HI, HeI, HeII ionization energies  as default group intervals
   groupL0(1:min(nGroups,nIons))=ionEvs(1:min(nGroups,nIons))! Lower bounds
   groupL1(1:min(nGroups,nIons-1))=ionEvs(2:min(nGroups+1,nIons)) !   Upper
   groupL1(min(nGroups,nIons))=0.                    ! Upper bound=infinity
+#endif
 
+#ifdef RTZ
+
+#else
   i=0
   if(isH2) then ! Set index for H2 dissociating group
      i=i+1 ; igroup_HI=i
@@ -349,11 +405,27 @@ SUBROUTINE read_rt_groups()
   do i=1,min(nIons,nGroups)
      spec2group(i)=i                   ! Species contributions to groups
   end do
+#endif
 
   ! Read namelist file
   rewind(1)
   read(1,NML=rt_groups,END=101)
 101 continue              ! no harm if no rt namelist
+
+#ifdef RTZ
+  ! in the case of RTZ, perform initialization after reading in group
+  ! energies
+
+  ! Frist initialize the cross sections data
+  call initialize_cross_sections()
+
+  ! Initialize cross sections to be a blackbody at 1e5 K
+  call initialize_cross_sections_from_blackbody(1.d5, groupL0, groupL1, group_csn, group_cse, .true.)
+
+  ! Initialize group energies for the same black body
+  call initialize_group_energies_from_blackbody(1.d5, groupL0, groupL1, group_egy)
+
+#endif
 
   if(minval(group_egy) .le. 0d0 .and. myid==1) then
      print*,'========================================================='
@@ -373,7 +445,11 @@ SUBROUTINE read_rt_groups()
   endif
 
   do i=nlevelmax,levelmin,-1
+#ifdef RTZ
+     call rtz_updateRTGroups_CoolConstants(i)
+#else
      call updateRTGroups_CoolConstants(i)
+#endif
   enddo
   call write_group_props(.false.,6)
 END SUBROUTINE read_rt_groups
@@ -404,7 +480,9 @@ SUBROUTINE add_rt_sources(ilevel,dt)
   real(dp),dimension(1:nvector,1:ndim),save::xx
   real(dp),dimension(1:nvector,1:nrtvar),save::uu
 !------------------------------------------------------------------------
+#ifndef RTZ
   call add_UV_background(ilevel)
+#endif
   if(numbtot(1,ilevel)==0)return    ! no grids at this level
   if(rt_nsource .le. 0) return      ! no rt sources
   if(verbose)write(*,111)ilevel
@@ -479,6 +557,7 @@ SUBROUTINE add_rt_sources(ilevel,dt)
 
 END SUBROUTINE add_rt_sources
 
+#ifndef RTZ
 !************************************************************************
 SUBROUTINE add_UV_background(ilevel)
 
@@ -537,7 +616,7 @@ SUBROUTINE add_UV_background(ilevel)
 111 format('   Entering add_UV_background for level ',I2)
 
 END SUBROUTINE add_UV_background
-
+#endif
 !************************************************************************
 SUBROUTINE rt_sources_vsweep(x,uu,dx,dt,nn,ilevel)
 

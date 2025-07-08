@@ -24,6 +24,7 @@ module constants
   real(dp),parameter ::M_sun        = 1.9891000d+33 ! Solar Mass [g]; IAU
   real(dp),parameter ::L_sun        = 3.8280000d+33 ! Solar Lum [erg s-1]; IAU
   real(dp),parameter ::rhoc         = 1.8800000d-29 ! Crit. density [g cm-3]
+  real(dp),parameter ::one_over_clight=3.335640484668562d-11 ! Save some computation
 
   ! Conversion factors - distance
   ! IAU 2012 convention:

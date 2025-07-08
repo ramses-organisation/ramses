@@ -23,6 +23,12 @@ module hydro_parameters
 #else
   integer,parameter::nener=NENER
 #endif
+  ! metals
+#if NMETALS > 0
+  integer,parameter::nmetals=NMETALS          
+#else
+   integer,parameter::nmetals=0 
+#endif
   ! total amount of variables
 #ifndef NVAR
   integer,parameter::nvar=nhydro+nener
@@ -134,6 +140,7 @@ module hydro_parameters
 
   ! Passive variables index
   integer::imetal=nhydro+1
+  integer::iCO=nhydro+1
   integer::idelay=nhydro+1
   integer::ixion=nhydro+1
   integer::ichem=nhydro+1

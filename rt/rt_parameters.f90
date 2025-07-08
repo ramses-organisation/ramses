@@ -1,6 +1,9 @@
 module rt_parameters
   use hydro_parameters
   use constants
+#ifdef RTZ
+  use rtz_module
+#endif
 
 #ifdef NGROUPS
   integer,parameter::nGroups=NGROUPS          ! # of photon groups (set in Makefile)
@@ -31,7 +34,11 @@ module rt_parameters
   integer::nIonsUsed=0                              ! # species used (as opposed to alloc)
   integer::iIons=6                                  !    Starting index of ion states in U
   ! Ionization energies
+#ifdef RTZ
+  real(dp),dimension(1:27,1:27)::ionEvs             !                       Set in rt_init
+#else
   real(dp),dimension(nIons)::ionEvs                 !                       Set in rt_init
+#endif
   real(dp),parameter::ionEv_HI    = 11.20d0
   real(dp),parameter::ionEv_HII   = 13.60d0
   real(dp),parameter::ionEv_HeII  = 24.59d0
@@ -86,7 +93,11 @@ module rt_parameters
   ! Grop props: avg and energy weigthed photoionization c-section (cm2), avg. energy (ev).
   ! Indexes nGroups, nIons stand for photon group vs species (e.g. 1=H, 2=He).
   integer,dimension(nGroups)::iGroups=1                          ! Start indices of groups
+#ifdef RTZ
+  real(dp),dimension(nGroups,1:27,1:27)::group_csn=0, group_cse=0! Cross sections (cm2)
+#else
   real(dp),dimension(nGroups,nIons)::group_csn=0, group_cse=0    !    Cross sections (cm2)
+#endif
   real(dp),dimension(nGroups)::group_egy=0                       !  Avg photon energy (ev)
   real(dp),dimension(nGroups)::group_egy_AGNfrac=0               !  Fraction of AGN energy
   real(dp),dimension(nGroups)::groupL0=13.60                     ! Wavelength lower limits
@@ -150,4 +161,35 @@ module rt_parameters
   ! Self-shielding factor, see Nickerson, Teyssier, & Rosdahl (2018)
   ! Array to track which groups are in the Lyman-Werner band, 11.2 eV to 13.6 eV
   real(dp),dimension(1:NGROUPS)::ssh2 = 1d0, isLW = 0d0
+
+#ifdef RTZ
+  ! RTZ parameters -----------------------------------------------------------------------
+  logical::rtz_cooling=.false. ! RTZ Non-equilibrium cooling ------------
+  integer::rtz_equilibrium_test=-1 ! RTZ EQM test ------------------
+  logical::rtz_include_collisional_ionization=.true.
+  logical::rtz_include_photoionization=.true.
+  logical::rtz_include_cosmic_ray_ionization=.true.
+  logical::rtz_include_charge_exchange=.true.
+  logical::rtz_include_dust_recombination=.true.
+  logical::rtz_include_HM12_UVB=.true.
+  logical::isH2_rtz=.false.
+  logical::isCO_rtz=.false.
+  real(dp)::rtz_UV_background_G0=0.d0
+  real(dp)::rtz_primary_cosmic_ray_ionization_rate=0.d0
+  real(dp)::rtz_max_cool_timestep=1.d11
+  integer::rtz_eqm_min_its
+  real(dp),dimension(nGroups,1:27,1:27)::signc,sigec,PHrate
+  logical::rt_isoPress=.false.         ! Use cE, not F, for rad. pressure
+  real(dp)::rt_pressBoost=1d0          ! Boost on RT pressure
+  logical::rt_isIR=.false.             ! Using IR scattering on dust?
+  logical::rt_isIRtrap=.false.         ! IR trapping in NENER variable?
+  logical::is_kIR_T=.false.            ! k_IR propto T^2?
+  logical::rt_T_rad=.false.            ! Use T_gas = T_rad
+  real(dp),dimension(nGroups)::kappaAbs=0! Dust absorption opacity
+  real(dp),dimension(nGroups)::kappaSc=0 ! Dust scattering opacity
+  logical::rt_vc=.false.               ! (semi-) relativistic RT
+  integer::iIRtrapVar=1                !  Trapped IR energy variable index
+  integer,parameter::iIR=1             !                    IR group index
+#endif
+
 end module rt_parameters

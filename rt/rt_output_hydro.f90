@@ -141,7 +141,9 @@ SUBROUTINE output_rtInfo(filename)
   use amr_commons
   use rt_hydro_commons
   use rt_parameters
+#ifndef RTZ
   use rt_cooling_module
+#endif
   implicit none
   character(LEN = 80) :: filename
   integer :: ilun
@@ -166,10 +168,12 @@ SUBROUTINE output_rtInfo(filename)
   write(ilun,'("iIons        = ", I11)') iIons
   write(ilun,*)
 
+#ifndef RTZ
   ! Write cooling parameters
   write(ilun,'("X_fraction   = ", E23.15)') X
   write(ilun,'("Y_fraction   = ", E23.15)') Y
   write(ilun,*)
+#endif
 
   ! Write physical parameters
   write(ilun,'("unit_np      = ",E23.15)') scale_np
@@ -197,9 +201,15 @@ SUBROUTINE write_group_props(update, lun)
 !------------------------------------------------------------------------
   use rt_parameters
   use amr_commons, only:myid
+#ifdef RTZ
+  use rtz_module
+#endif
   implicit none
   logical :: update
   integer :: ip, lun
+#ifdef RTZ
+  integer :: iE
+#endif
 !------------------------------------------------------------------------
   if (myid .ne. 1) RETURN
   if (.not. update) then
@@ -209,21 +219,39 @@ SUBROUTINE write_group_props(update, lun)
   end if
   write(lun, 901) groupL0(:)
   write(lun, 902) groupL1(:)
+#ifndef RTZ
   write(lun, 903) spec2group(:)
+#endif
   do ip = 1, nGroups
      write(lun, 907) ip
      write(lun, 904) group_egy(ip)
+#ifdef RTZ
+     do iE=1,n_elements
+        if (elements(iE)%atomic_number.gt.0) then
+           write(lun, 905) elements(iE)%element_name, group_csn(ip,iE,1:elements(iE)%n_ions+elements(iE)%n_mol-1)
+           write(lun, 906) elements(iE)%element_name, group_cse(ip,iE,1:elements(iE)%n_ions+elements(iE)%n_mol-1)
+        end if
+     end do
+#else
      write(lun, 905) group_csn(ip,:)
      write(lun, 906) group_cse(ip,:)
+#endif
   end do
   write (lun,*) '-------------------------------------------------------'
 
 901 format ('  groupL0  [eV]  = ', 20f12.3)
 902 format ('  groupL1  [eV]  = ', 20f12.3)
+#ifndef RTZ
 903 format ('  spec2group     = ', 20I12)
+#endif
 904 format ('  egy      [eV]  = ', 1pe12.3)
+#ifdef RTZ
+905 format ('  csn    [cm^2]  = ', A20, 27(1pe12.3))
+906 format ('  cse    [cm^2]  = ', A20, 27(1pe12.3))
+#else
 905 format ('  csn    [cm^2]  = ', 20(1pe12.3))
 906 format ('  cse    [cm^2]  = ', 20(1pe12.3))
+#endif
 907 format ('  ---Group', I2)
 
 END SUBROUTINE write_group_props

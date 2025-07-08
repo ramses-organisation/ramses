@@ -18,6 +18,9 @@
 MODULE spectrum_integrator_module
 !_________________________________________________________________________
   use amr_parameters,only:dp
+#ifdef RTZ
+  use cross_sections_module, only: getCrosssection_rtz
+#endif
   implicit none
 
   PUBLIC integrateSpectrum, f1, fLambda, fdivLambda, fSig, fSigLambda,   &
@@ -28,7 +31,7 @@ MODULE spectrum_integrator_module
 CONTAINS
 
 !*************************************************************************
-FUNCTION integrateSpectrum(X, Y, N, e0, e1, species, func)
+FUNCTION integrateSpectrum(X, Y, N, e0, e1, species, ion, func)
 
 ! Integrate spectral weighted function in energy interval [e0,e1]
 ! X      => Wavelengths [angstrom]
@@ -41,12 +44,12 @@ FUNCTION integrateSpectrum(X, Y, N, e0, e1, species, func)
   use amr_commons,only:myid
   use constants,only:c_cgs, eV2erg, hplanck
   real(kind=8):: integrateSpectrum, X(N), Y(N), e0, e1
-  integer :: N, species
+  integer :: N, species, ion
   interface
-     real(kind=8) function func(wavelength,intensity,species)
+     real(kind=8) function func(wavelength,intensity,species,ion)
        use amr_parameters,only:dp
        real(kind=8)::wavelength,intensity
-       integer::species
+       integer::species, ion
      end function func
   end interface!----------------------------------------------------------
   real(kind=8),dimension(:),allocatable:: xx, yy, f
@@ -73,14 +76,14 @@ FUNCTION integrateSpectrum(X, Y, N, e0, e1, species, func)
   enddo                           !   X(i) is now the first entry .gt. la0
   ! Interpolate to value at la0
   yy(i-1) = Y(i-1) + (xx(i-1)-X(i-1))*(Y(i)-Y(i-1))/(X(i)-X(i-1))
-  f(i-1)  = func(xx(i-1), yy(i-1), species)
+  f(i-1)  = func(xx(i-1), yy(i-1), species, ion)
   do while ( i.lt.N .and. X(i).le.la1 )              ! Now within interval
-     xx(i) = X(i) ; yy(i) = Y(i) ; f(i) = func(xx(i),yy(i),species)
+     xx(i) = X(i) ; yy(i) = Y(i) ; f(i) = func(xx(i),yy(i),species,ion)
      i = i+1
   enddo                          ! i=N or X(i) is the first entry .gt. la1
   xx(i:) = la1                   !             Interpolate to value at la1
   yy(i) = Y(i-1) + (xx(i)-X(i-1))*(Y(i)-Y(i-1))/(X(i)-X(i-1))
-  f(i)  = func(xx(i),yy(i),species)
+  f(i)  = func(xx(i),yy(i),species,ion)
 
   !if(present(doPrint)) then
   !   if(doprint) then
@@ -104,40 +107,52 @@ END FUNCTION integrateSpectrum
 ! f       => function of wavelength (a spectrum in some units)
 ! species => 1=HI, 2=HeI or 3=HeII
 !_________________________________________________________________________
-FUNCTION f1(lambda, f, species)
-  real(kind=8):: f1, lambda, f
-  integer :: species
+FUNCTION f1(lambda, f, species, ion)
+  real(kind=8) :: f1, lambda, f
+  integer :: species, ion
   f1 = f
 END FUNCTION f1
 
-FUNCTION fLambda(lambda, f, species)
+FUNCTION fLambda(lambda, f, species, ion)
   real(kind=8):: fLambda, lambda, f
-  integer :: species
+  integer :: species, ion
   fLambda = f * lambda
 END FUNCTION fLambda
 
-FUNCTION fdivLambda(lambda, f, species)
+FUNCTION fdivLambda(lambda, f, species, ion)
   real(kind=8):: fdivlambda, lambda, f
-  integer :: species
+  integer :: species, ion
   fdivLambda = f / lambda
 END FUNCTION fdivLambda
 
-FUNCTION fSig(lambda, f, species)
+FUNCTION fSig(lambda, f, species, ion)
   real(kind=8):: fSig, lambda, f
-  integer :: species
-  fSig = f * getCrosssection(lambda,species)
+  integer :: species, ion
+#ifdef RTZ
+  fSig = f * getCrosssection_rtz(lambda, species, ion)
+#else
+  fSig = f * getCrosssection(lambda, species)
+#endif
 END FUNCTION fSig
 
-FUNCTION fSigLambda(lambda, f, species)
+FUNCTION fSigLambda(lambda, f, species, ion)
   real(kind=8):: fSigLambda, lambda, f
-  integer :: species
-  fSigLambda = f * lambda * getCrosssection(lambda,species)
+  integer :: species, ion
+#ifdef RTZ
+  fSigLambda = f * lambda * getCrosssection_rtz(lambda, species, ion)
+#else
+  fSigLambda = f * lambda * getCrosssection(lambda, species)
+#endif
 END FUNCTION fSigLambda
 
-FUNCTION fSigdivLambda(lambda, f, species)
+FUNCTION fSigdivLambda(lambda, f, species, ion)
   real(kind=8):: fSigdivLambda, lambda, f
-  integer :: species
-  fSigdivLambda = f / lambda * getCrosssection(lambda,species)
+  integer :: species, ion
+#ifdef RTZ
+  fSigdivLambda = f / lambda * getCrosssection_rtz(lambda, species, ion)
+#else
+  fSigdivLambda = f / lambda * getCrosssection(lambda, species)
+#endif
 END FUNCTION fSigdivLambda
 !_________________________________________________________________________
 
@@ -167,6 +182,7 @@ FUNCTION trapz1(X,Y,N,cum)
 END FUNCTION trapz1
 
 !*************************************************************************
+#ifndef RTZ
 FUNCTION getCrosssection(lambda, species)
 
 ! Gives an atom-photon cross-section of given species at given wavelength,
@@ -213,6 +229,7 @@ FUNCTION getCrosssection(lambda, species)
   getCrosssection = &
        cs0 * ((x-1.)**2 + yw**2) * y**(0.5*P-5.5)/(1.+sqrt(y/ya))**P
 END FUNCTION getCrosssection
+#endif
 
 
 END MODULE spectrum_integrator_module
@@ -230,7 +247,10 @@ MODULE SED_module
   PUBLIC nSEDgroups                                                      &
       , init_SED_table, inp_SED_table, update_SED_group_props            &
       , update_star_RT_feedback, star_RT_feedback
-
+#ifdef RTZ
+  PUBLIC initialize_cross_sections_from_blackbody &
+        ,initialize_group_energies_from_blackbody
+#endif
   PRIVATE   ! default
 
   ! Light properties for different spectral energy distributions----------
@@ -261,6 +281,9 @@ SUBROUTINE init_SED_table()
   use amr_commons,only:myid,ncpu
   use rt_parameters
   use spectrum_integrator_module
+#ifdef RTZ
+  use rtz_module
+#endif
   use constants,only:c_cgs, eV2erg, hplanck
   use mpi_mod
 #ifndef WITHOUTMPI
@@ -279,6 +302,20 @@ SUBROUTINE init_SED_table()
   real(kind=8)::dlgA, pL0, pL1, tmp
   integer::nv=3+2*nIons  ! # vars in SED table: L,Lacc,egy,nions*(csn,egy)
   integer,parameter::tag=1132
+#ifdef RTZ
+  integer::counter, jj
+#endif
+#ifdef RTZ
+  nv=3+2
+  do i=1,n_elements
+     if (elements(i)%atomic_number.gt.0) then 
+        nv = nv + (2 * elements(i)%n_ions)
+     end if
+     if (isH2_rtz) then
+        nv = nv + 2
+     end if
+  end do
+#endif
 !-------------------------------------------------------------------------
   if(myid==1) &
         write(*,*) 'Stars are photon emitting, so initializing SED table'
@@ -379,10 +416,34 @@ SUBROUTINE init_SED_table()
      do ia = myid,nAges,ncpu                                ! Loop age
         tbl(ia,iz,1) = getSEDLuminosity(Ls,SEDs(:,ia,iz),nLs,pL0,pL1)
         tbl(ia,iz,3) = getSEDEgy(Ls,SEDs(:,ia,iz),nLs,pL0,pL1)
+#ifdef RTZ
+        counter = 1
+        do ii=1, n_elements ! Loop over elements
+           ! Cross sections for atomic species
+           if (elements(ii)%atomic_number.gt.0) then 
+              do jj=1,elements(ii)%n_ions-1 !loop over ionization states
+                 tbl(ia,iz,3+counter) = getSEDcsn(Ls,SEDs(:,ia,iz),nLs,pL0,pL1,ii,jj)
+                 counter = counter + 1
+                 tbl(ia,iz,3+counter) = getSEDcse(Ls,SEDs(:,ia,iz),nLs,pL0,pL1,ii,jj)
+                 counter = counter + 1
+              end do
+           end if
+        end do
+
+        ! Deal with molecules separately
+        if (elements(1)%atomic_number.gt.0 .and. isH2_rtz) then
+           tbl(ia,iz,2+counter) = getSEDcsn(Ls,SEDs(:,ia,iz),nLs,pL0,pL1,1,3)
+           counter = counter + 1
+           tbl(ia,iz,2+counter) = getSEDcse(Ls,SEDs(:,ia,iz),nLs,pL0,pL1,1,3)
+           counter = counter + 1
+        end if
+#else
         do ii = 1,nIonsUsed                                ! Loop species
-           tbl(ia,iz,2+ii*2) = getSEDcsn(Ls,SEDs(:,ia,iz),nLs,pL0,pL1,ii)
-           tbl(ia,iz,3+ii*2) = getSEDcse(Ls,SEDs(:,ia,iz),nLs,pL0,pL1,ii)
+           tbl(ia,iz,2+ii*2) = getSEDcsn(Ls,SEDs(:,ia,iz),nLs,pL0,pL1,ii,1)
+           tbl(ia,iz,3+ii*2) = getSEDcse(Ls,SEDs(:,ia,iz),nLs,pL0,pL1,ii,1)
         end do ! End species loop
+#endif
+
      end do ! End age loop
      end do ! End Z loop
 
@@ -446,32 +507,56 @@ SUBROUTINE update_SED_group_props()
   use pm_commons
   use rt_parameters
   use mpi_mod
+#ifdef RTZ
+  use rtz_module, only: elements, n_elements
+#endif
 #ifndef WITHOUTMPI
   integer::info
 #endif
   integer :: i, ip, ii
   real(dp),save,allocatable,dimension(:)::  L_star
-  real(dp),save,allocatable,dimension(:,:)::csn_star, cse_star
+#ifdef RTZ
+  real(dp),save,allocatable,dimension(:,:,:) :: csn_star, cse_star
+  real(dp),save,allocatable,dimension(:,:,:) :: sum_csn_cpu, sum_csn_all
+  real(dp),save,allocatable,dimension(:,:,:) :: sum_cse_cpu, sum_cse_all
+#else
+  real(dp),save,allocatable,dimension(:,:) :: csn_star, cse_star
+  real(dp),save,allocatable,dimension(:,:) :: sum_csn_cpu, sum_csn_all
+  real(dp),save,allocatable,dimension(:,:) :: sum_cse_cpu, sum_cse_all
+#endif
   real(dp),save,allocatable,dimension(:)::  egy_star
   real(dp),save,allocatable,dimension(:)::  sum_L_cpu,sum_L_all
-  real(dp),save,allocatable,dimension(:,:)::sum_csn_cpu,sum_csn_all
-  real(dp),save,allocatable,dimension(:,:)::sum_cse_cpu,sum_cse_all
   real(dp),save,allocatable,dimension(:)::sum_egy_cpu,sum_egy_all
   real(dp):: mass, age, Z, t_sne_Gyr
+#ifdef RTZ
+  integer::counter, jj
+#endif
 !-------------------------------------------------------------------------
   if(.not. allocated(L_star)) then
      allocate(L_star(nSEDgroups))
      allocate(egy_star(nSEDgroups))
+#ifdef RTZ
+     allocate(csn_star(nSEDgroups,27,27))
+     allocate(cse_star(nSEDgroups,27,27))
+#else
      allocate(csn_star(nSEDgroups,nIons))
      allocate(cse_star(nSEDgroups,nIons))
+#endif
      allocate(sum_L_cpu(nSEDgroups))
      allocate(sum_L_all(nSEDgroups))
      allocate(sum_egy_cpu(nSEDgroups))
      allocate(sum_egy_all(nSEDgroups))
+#ifdef RTZ
+     allocate(sum_csn_cpu(nSEDgroups,27,27))
+     allocate(sum_csn_all(nSEDgroups,27,27))
+     allocate(sum_cse_cpu(nSEDgroups,27,27))
+     allocate(sum_cse_all(nSEDgroups,27,27))
+#else
      allocate(sum_csn_cpu(nSEDgroups,nIons))
      allocate(sum_csn_all(nSEDgroups,nIons))
      allocate(sum_cse_cpu(nSEDgroups,nIons))
      allocate(sum_cse_all(nSEDgroups,nIons))
+#endif
   endif
   sum_L_cpu   = 0d0 ! Accumulated luminosity, avg cross sections and
   sum_egy_cpu = 0d0 ! photon energies for all stars belonging to
@@ -496,17 +581,46 @@ SUBROUTINE update_SED_group_props()
      endif
      call inp_SED_table(age, Z, 1, .false., L_star)     !  [# s-1 M_sun-1]
      call inp_SED_table(age, Z, 3, .true., egy_star(:)) !             [eV]
+
+#ifdef RTZ
+     counter = 1
+     do ii=1, n_elements ! Loop over elements
+     ! Cross sections for atomic species
+        if (elements(ii)%atomic_number.gt.0) then 
+           do jj=1,elements(ii)%n_ions-1 !loop over ionization states
+              call inp_SED_table(age, Z, 3+counter, .true., csn_star(1:nGroups,ii,jj))! [cm^2]
+              counter = counter + 1
+              call inp_SED_table(age, Z, 3+counter, .true., cse_star(1:nGroups,ii,jj))! [cm^2]
+              counter = counter + 1
+           end do
+        end if
+     end do
+
+     ! Deal with molecules separately
+     if (elements(1)%atomic_number.gt.0 .and. isH2_rtz) then
+        call inp_SED_table(age, Z, 3+counter, .true., csn_star(1:nGroups,1,3))! [cm^2]
+        counter = counter + 1
+        call inp_SED_table(age, Z, 3+counter, .true., cse_star(1:nGroups,1,3))! [cm^2]
+        counter = counter + 1
+     end if
+#else
      do ii=1,nIons
         call inp_SED_table(age, Z, 2+2*ii, .true., csn_star(:,ii))! [cm^2]
         call inp_SED_table(age, Z, 3+2*ii, .true., cse_star(:,ii))! [cm^2]
      end do
+#endif
 
      do ip=1,nSEDgroups
         L_star(ip) = L_star(ip) * mass             !       [# photons s-1]
         sum_L_cpu(ip)    =   sum_L_cpu(ip)   + L_star(ip)
         sum_egy_cpu(ip) =  sum_egy_cpu(ip)   + L_star(ip) * egy_star(ip)
+#ifdef RTZ
+        sum_csn_cpu(ip,1:27,1:27) = sum_csn_cpu(ip,1:27,1:27) + L_star(ip) * csn_star(ip,1:27,1:27)
+        sum_cse_cpu(ip,1:27,1:27) = sum_cse_cpu(ip,1:27,1:27) + L_star(ip) * cse_star(ip,1:27,1:27)
+#else
         sum_csn_cpu(ip,:)= sum_csn_cpu(ip,:) + L_star(ip) * csn_star(ip,:)
         sum_cse_cpu(ip,:)= sum_cse_cpu(ip,:) + L_star(ip) * cse_star(ip,:)
+#endif
      end do
 
   end do
@@ -522,10 +636,17 @@ SUBROUTINE update_SED_group_props()
                      MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD, info)
   call MPI_ALLREDUCE(sum_egy_cpu, sum_egy_all, nSEDgroups,               &
                      MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD, info)
+#ifdef RTZ
+  call MPI_ALLREDUCE(sum_csn_cpu, sum_csn_all, nSEDgroups*27*27,         &
+                     MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD, info)
+  call MPI_ALLREDUCE(sum_cse_cpu, sum_cse_all, nSEDgroups*27*27,         &
+                     MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD, info)
+#else
   call MPI_ALLREDUCE(sum_csn_cpu, sum_csn_all, nSEDgroups*nIons,         &
                      MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD, info)
   call MPI_ALLREDUCE(sum_cse_cpu, sum_cse_all, nSEDgroups*nIons,         &
                      MPI_DOUBLE_PRECISION, MPI_SUM, MPI_COMM_WORLD, info)
+#endif
 #endif
 
   ! ...and take averages weighted by luminosities
@@ -535,18 +656,50 @@ SUBROUTINE update_SED_group_props()
           (groupL0(ip) .ge. groupL1(ip)) ) cycle
      if(sum_L_all(ip) .gt. 0.) then
         group_egy(ip)   = sum_egy_all(ip)   / sum_L_all(ip)
+#ifdef RTZ
+        group_csn(ip,1:27,1:27) = sum_csn_all(ip,1:27,1:27) / sum_L_all(ip)
+        group_cse(ip,1:27,1:27) = sum_cse_all(ip,1:27,1:27) / sum_L_all(ip)
+#else
         group_csn(ip,:) = sum_csn_all(ip,:) / sum_L_all(ip)
         group_cse(ip,:) = sum_cse_all(ip,:) / sum_L_all(ip)
+#endif
      else ! no stars -> assign zero-age zero-metallicity props
         group_egy(ip)       = SED_table(1,1,ip,3)
-        do ii=1,nIonsUsed
-           group_csn(ip,ii) = SED_table(1,1,ip,2+2*ii)
-           group_cse(ip,ii) = SED_table(1,1,ip,3+2*ii)
-        enddo
+#ifdef RTZ
+     counter = 1
+     do ii=1, n_elements ! Loop over elements
+     ! Cross sections for atomic species
+        if (elements(ii)%atomic_number.gt.0) then 
+           do jj=1,elements(ii)%n_ions-1 !loop over ionization states
+              group_csn(ip,ii,jj) = SED_table(1,1,ip,3+counter)
+              counter = counter + 1
+              group_cse(ip,ii,jj) = SED_table(1,1,ip,3+counter)
+              counter = counter + 1
+           end do
+        end if
+     end do
+
+     ! Deal with molecules separately
+     if (elements(1)%atomic_number.gt.0 .and. isH2_rtz) then
+        group_csn(ip,1,3) = SED_table(1,1,ip,3+counter)
+        counter = counter + 1
+        group_cse(ip,1,3) = SED_table(1,1,ip,3+counter)
+        counter = counter + 1
+     end if
+#else
+     do ii=1,nIonsUsed
+        group_csn(ip,ii) = SED_table(1,1,ip,2+2*ii)
+        group_cse(ip,ii) = SED_table(1,1,ip,3+2*ii)
+     enddo
+#endif
      endif
   end do
   do i=levelmin,nlevelmax
+#ifdef RTZ
+     call rtz_updateRTgroups_CoolConstants(i)
+#else
      call updateRTgroups_CoolConstants(i)
+#endif
   enddo
   if(myid==1) write(*,*) &
                     'SED Photon groups updated through stellar polling'
@@ -673,8 +826,10 @@ SUBROUTINE star_RT_feedback(ilevel, dt)
   end do
   ! End loop over cpus
 
+#ifndef RTZ
   if(heat_unresolved_HII.gt.0) &
        call heat_unresolved_HII_regions(ilevel,dtnew(ilevel))
+#endif
 
 111 format('   Entering star_rt_feedback for level ',I2)
 #endif
@@ -699,6 +854,7 @@ FUNCTION getSEDLuminosity(X, Y, N, e0, e1)
   use constants,only:L_sun, c_cgs, hplanck, eV2erg
   real(kind=8):: getSEDLuminosity, X(n), Y(n), e0, e1
   integer :: N, species
+  integer :: ion = 1                 ! irrelevant but must be included
   real(kind=8),parameter :: const=1.0e-8/hplanck/c_cgs
   ! const is a div by ph energy => ph count.  1e-8 is a conversion into
   ! cgs, since wly=[angstrom] h=[erg s-1], c=[cm s-1]
@@ -706,10 +862,10 @@ FUNCTION getSEDLuminosity(X, Y, N, e0, e1)
   species          = 1                   ! irrelevant but must be included
   if(.not. SED_isEgy) then               !  Photon number per sec per Msun
      getSEDLuminosity = const &
-          * integrateSpectrum(X, Y, N, e0, e1, species, fLambda)
+          * integrateSpectrum(X, Y, N, e0, e1, species, ion, fLambda)
      getSEDLuminosity = getSEDLuminosity*L_sun ! Scale by solar luminosity
   else                             ! SED_isEgy=true -> eV per sec per Msun
-     getSEDLuminosity = integrateSpectrum(X, Y, N, e0, e1, species, f1)
+     getSEDLuminosity = integrateSpectrum(X, Y, N, e0, e1, species, ion, f1)
      ! Scale by solar lum and convert to eV (bc group energies are in eV)
      getSEDLuminosity = getSEDLuminosity/eV2erg*L_sun
   endif
@@ -726,16 +882,17 @@ FUNCTION getSEDEgy(X, Y, N, e0, e1)
   use spectrum_integrator_module
   real(dp):: getSEDEgy, X(N), Y(N), e0, e1, norm
   integer :: N,species
+  integer :: ion = 1                 ! irrelevant but must be included
   real(dp),parameter :: const=1d8*hplanck*c_cgs/eV2erg! energy conversion
 !-------------------------------------------------------------------------
   species      = 1                       ! irrelevant but must be included
-  norm         = integrateSpectrum(X, Y, N, e0, e1, species, fLambda)
+  norm         = integrateSpectrum(X, Y, N, e0, e1, species, ion, fLambda)
   getSEDEgy    = const * &
-                 integrateSpectrum(X, Y, N, e0, e1, species, f1) / norm
+                 integrateSpectrum(X, Y, N, e0, e1, species, ion, f1) / norm
 END FUNCTION getSEDEgy
 
 !*************************************************************************
-FUNCTION getSEDcsn(X, Y, N, e0, e1, species)
+FUNCTION getSEDcsn(X, Y, N, e0, e1, species, ion)
 
 ! Compute and return average photoionization
 ! cross-section, in cm^2, for a given energy interval (e0,e1) [eV] in
@@ -746,17 +903,21 @@ FUNCTION getSEDcsn(X, Y, N, e0, e1, species)
   use spectrum_integrator_module
   use rt_parameters,only:ionEVs
   real(kind=8):: getSEDcsn, X(N), Y(N), e0, e1, norm
-  integer :: N, species
+  integer :: N, species, ion
 !-------------------------------------------------------------------------
+#ifdef RTZ
+  if(e1 .gt. 0. .and. e1 .le. ionEvs(species, ion)) then
+#else
   if(e1 .gt. 0. .and. e1 .le. ionEvs(species)) then
+#endif
      getSEDcsn=0. ; RETURN    ! [e0,e1] below ionization energy of species
   endif
-  norm     = integrateSpectrum(X, Y, N, e0, e1, species, fLambda)
-  getSEDcsn= integrateSpectrum(X, Y, N, e0, e1, species, fSigLambda)/norm
+  norm     = integrateSpectrum(X, Y, N, e0, e1, species, ion, fLambda)
+  getSEDcsn= integrateSpectrum(X, Y, N, e0, e1, species, ion, fSigLambda)/norm
 END FUNCTION getSEDcsn
 
 !************************************************************************
-FUNCTION getSEDcse(X, Y, N, e0, e1, species)
+FUNCTION getSEDcse(X, Y, N, e0, e1, species, ion)
 
 ! Compute and return average energy weighted photoionization
 ! cross-section, in cm^2, for a given energy interval (e0,e1) [eV] in
@@ -767,13 +928,17 @@ FUNCTION getSEDcse(X, Y, N, e0, e1, species)
   use spectrum_integrator_module
   use rt_parameters,only:ionEVs
   real(dp):: getSEDcse, X(N), Y(N), e0, e1, norm
-  integer :: N, species
+  integer :: N, species, ion
 !-------------------------------------------------------------------------
+#ifdef RTZ
+  if(e1 .gt. 0. .and. e1 .le. ionEvs(species, ion)) then
+#else
   if(e1 .gt. 0. .and. e1 .le. ionEvs(species)) then
+#endif
      getSEDcse=0. ; RETURN    ! [e0,e1] below ionization energy of species
   endif
-  norm      = integrateSpectrum(X, Y, N, e0, e1, species, f1)
-  getSEDcse = integrateSpectrum(X, Y, N, e0, e1, species, fSig) / norm
+  norm      = integrateSpectrum(X, Y, N, e0, e1, species, ion, f1)
+  getSEDcse = integrateSpectrum(X, Y, N, e0, e1, species, ion, fSig) / norm
 END FUNCTION getSEDcse
 
 !*************************************************************************
@@ -895,9 +1060,25 @@ SUBROUTINE write_SEDtable()
 ! and HeII; H2 and He are optional
 !-------------------------------------------------------------------------
   use rt_parameters,only: nIons
+#ifdef RTZ
+  use rtz_module, only: n_elements, elements
+#endif
   character(len=128)::filename
-  integer::ip, i, j, k
+  integer::ip, i, j, k, nv
 !-------------------------------------------------------------------------
+
+#ifdef RTZ
+  nv = 0
+  do i=1,n_elements
+     if (elements(i)%atomic_number.gt.0) then 
+        nv = nv + (2 * elements(i)%n_ions)
+     end if
+#if N_H2 > 0
+     nv = nv + 2
+#endif
+  end do
+#endif
+
   do ip=1,nSEDgroups
      write(filename,'(A, I1, A)') 'SEDtable', ip, '.list'
      open(10, file=filename, status='unknown')
@@ -909,6 +1090,13 @@ SUBROUTINE write_SEDtable()
                  SED_ages(i)        ,    SED_zeds(j)        ,            &
                  SED_table(i,j,ip,1),    SED_table(i,j,ip,2),            &
                  SED_table(i,j,ip,3)
+
+#ifdef RTZ
+           do k=1,(nv/2)-1
+              write(10,901,advance='no') SED_table(i,j,ip,2+2*k), SED_table(i,j,ip,3+2*k)
+           end do
+           write(10,901) SED_table(i,j,ip,2+2*(nv/2)), SED_table(i,j,ip,3+2*(nv/2))
+#else
            if(nIons .gt. 1) then
              do k = 1,nIons-1
                  write(10,901,advance='no')                              &
@@ -917,6 +1105,7 @@ SUBROUTINE write_SEDtable()
            endif
            write(10,901)                                                 &
                  SED_table(i,j,ip,2+2*nIons), SED_table(i,j,ip,3+2*nIons)
+#endif
         end do
      end do
      close(10)
@@ -1017,6 +1206,126 @@ SUBROUTINE getNPhotonsEmitted(age1_Gyr, dt_Gyr, Z, ret)
      ret = ret / group_egy(1:nSEDgroups)
   endif
 END SUBROUTINE getNPhotonsEmitted
+
+#ifdef RTZ
+FUNCTION blackbody(T, lambda) result(B_lam)
+  ! Blackbody function B_lam
+  ! Harley addition so that it is easier to make default
+  ! cross sections 
+  ! T --> temeprature [K]
+  ! lambda --> wavelengths [A] 
+  use constants, only: c_cgs, hplanck, kB
+  implicit none
+  real(kind=8), intent(in):: T, lambda
+  real(kind=8):: B_lam
+  real(kind=8):: lambda_cm
+
+  ! convert lambda in A to cm
+  lambda_cm = 1.d-8 * lambda
+
+  ! now compute B_lam
+  B_lam = 2.d0 * hplanck * c_cgs * c_cgs / (lambda_cm**5.d0)
+  B_lam = B_lam * (1.d0 / (exp(hplanck * c_cgs / (lambda_cm * kB * T)) - 1.d0))
+
+END FUNCTION blackbody
+
+SUBROUTINE initialize_cross_sections_from_blackbody(T, group_L0, group_L1, group_csn, group_cse, isH2_rtz)
+  ! This subroutine initializes the cross sections of 
+  ! each species to be consistent with a blackbody of
+  ! a given temperature
+  use constants, only: c_cgs, hplanck, eV2erg
+  use rt_parameters, only: nGroups
+  use rtz_module, only: elements, n_elements
+  implicit none
+  real(kind=8), intent(in):: T
+  logical, intent(in):: isH2_rtz
+  real(kind=8), intent(inout):: group_csn(nGroups,1:27,1:27), group_cse(nGroups,1:27,1:27)
+  real(kind=8), intent(in):: group_L0(nGroups), group_L1(nGroups)
+  real(kind=8):: lambda_min, lambda_max, delta_lambda, tmp
+  real(kind=8):: X(1000), Y(1000)
+  integer:: ip, ii, jj
+
+  ! Loop over groups
+  do ip = 1, nGroups
+     ! No update for non-SED groups (L0>L1):
+     if(group_L0(ip).ne. 0d0 .and. group_L1(ip) .ne. 0d0 .and. &
+          &  (group_L0(ip) .ge. group_L1(ip)) ) cycle
+
+     ! Fill out the X and Y arrays for integration
+     lambda_max = (hplanck * c_cgs / (group_L0(ip)*eV2erg)) * 1d8 ! [A]
+     lambda_min = (hplanck * c_cgs / (group_L1(ip)*eV2erg)) * 1d8 ! [A]
+     delta_lambda = (lambda_max - lambda_min) / 999.d0
+
+     ! Initialize X and Y arrays and fill them out
+     X = 0.d0
+     Y = 0.d0
+     do ii=1, 1000
+        X(ii) = lambda_min + (delta_lambda * (real(ii,kind=8)-1.d0))
+        Y(ii) = blackbody(T, X(ii))
+     end do
+
+     ! Loop over elements
+     do ii=1, n_elements 
+        ! Check if we actually use the element
+        if (elements(ii)%atomic_number.gt.0) then 
+           ! Loop over ionization states
+           do jj=1,elements(ii)%n_ions-1 !loop over ionization states
+              group_csn(ip,ii,jj) = getSEDcsn(X, Y, 1000, group_L0(ip), group_L1(ip), ii, jj)
+              group_cse(ip,ii,jj) = getSEDcse(X, Y, 1000, group_L0(ip), group_L1(ip), ii, jj)
+           end do ! End loop over ionization states
+        end if
+     end do ! End loop over elements
+
+     ! Deal with molecules separately
+     if (elements(1)%atomic_number.gt.0 .and. isH2_rtz) then
+        group_csn(ip,1,3) = getSEDcsn(X, Y, 1000, group_L0(ip), group_L1(ip), 1, 3)
+        group_cse(ip,1,3) = getSEDcse(X, Y, 1000, group_L0(ip), group_L1(ip), 1, 3)
+     end if
+  end do ! End loop over groups
+
+END SUBROUTINE initialize_cross_sections_from_blackbody
+
+SUBROUTINE initialize_group_energies_from_blackbody(T, group_L0, group_L1, group_egy)
+  ! This subroutine initializes the cross sections of 
+  ! each species to be consistent with a blackbody of
+  ! a given temperature
+  use constants, only: c_cgs, hplanck, eV2erg
+  use rt_parameters, only: nGroups
+  use rtz_module, only: elements, n_elements
+  implicit none
+  real(kind=8), intent(in):: T
+  real(kind=8), intent(in):: group_L0(nGroups), group_L1(nGroups)
+  real(kind=8), intent(inout):: group_egy(nGroups)
+  real(kind=8):: lambda_min, lambda_max, delta_lambda
+  real(kind=8):: X(1000), Y(1000)
+  integer:: ip, ii
+
+  ! Loop over groups
+  do ip = 1, nGroups
+     ! No update for non-SED groups (L0>L1):
+     if(group_L0(ip).ne. 0d0 .and. group_L1(ip) .ne. 0d0 .and. &
+          &  (group_L0(ip) .ge. group_L1(ip)) ) cycle
+
+     ! Fill out the X and Y arrays for integration
+     lambda_max = (hplanck * c_cgs / (group_L0(ip)*eV2erg)) * 1d8 ! [A]
+     lambda_min = (hplanck * c_cgs / (group_L1(ip)*eV2erg)) * 1d8 ! [A]
+     delta_lambda = (lambda_max - lambda_min) / 1000.0
+
+     ! Initialize X and Y arrays and fill them out
+     X = 0.d0
+     Y = 0.d0
+     do ii=1, 1000
+        X(ii) = lambda_min + (delta_lambda * (real(ii,kind=8)-1.d0))
+        Y(ii) = blackbody(T, X(ii))
+     end do
+
+     group_egy(ip) = getSEDEgy(X, Y, 1000, group_L0(ip), group_L1(ip))
+
+  end do
+
+END SUBROUTINE initialize_group_energies_from_blackbody
+
+#endif
 
 #if NGROUPS > 0
 !*************************************************************************
@@ -1226,7 +1535,7 @@ END SUBROUTINE star_RT_vsweep
 #endif
 END MODULE SED_module
 
-
+#ifndef RTZ
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 ! Module for UV table of redshift dependent photon fluxes, cross sections
 ! and photon energies, per photon group. This is mainly useful for
@@ -1578,7 +1887,7 @@ FUNCTION getUV_Irate(X, Y, N, species)
   integer :: N, species
 !-------------------------------------------------------------------------
   getUV_Irate = 4*pi *  &
-           integrateSpectrum(X,Y,N,dble(ionEvs(species)),X(N),species,fsig)
+           integrateSpectrum(X,Y,N,dble(ionEvs(species)),X(N),species,1,fsig)
 END FUNCTION getUV_Irate
 
 !*************************************************************************
@@ -1594,9 +1903,9 @@ FUNCTION getUV_Hrate(X, Y, N, species)
 !-------------------------------------------------------------------------
   e0=ionEvs(species)
   getUV_Hrate = &
-        const1*integrateSpectrum(X,Y,N, e0, X(N), species, fsigDivLambda)&
+        const1*integrateSpectrum(X,Y,N, e0, X(N), species, 1, fsigDivLambda)&
        -const2*ionEvs(species) *                                         &
-               integrateSpectrum(X,Y,N, e0, X(N), species, fsig)
+               integrateSpectrum(X,Y,N, e0, X(N), species, 1, fsig)
 END FUNCTION getUV_Hrate
 
 !*************************************************************************
@@ -1609,7 +1918,7 @@ FUNCTION getUVFlux(X, Y, N, e0, e1)
   integer :: N, species
 !-------------------------------------------------------------------------
   species          = 1                   ! irrelevant but must be included
-  getUVflux = 4*pi*integrateSpectrum(X, Y, N, e0, e1, species, f1)
+  getUVflux = 4*pi*integrateSpectrum(X, Y, N, e0, e1, species, 1, f1)
 END FUNCTION getUVflux
 
 !*************************************************************************
@@ -1622,9 +1931,9 @@ FUNCTION getUVEgy(X, Y, N, e0, e1)
   real(dp),parameter :: const=1d8*hplanck*c_cgs/eV2erg    ! unit conversion
 !-------------------------------------------------------------------------
   species      = 1                       ! irrelevant but must be included
-  norm         = integrateSpectrum(X, Y, N, e0, e1, species, f1)
+  norm         = integrateSpectrum(X, Y, N, e0, e1, species, 1, f1)
   getUVEgy  = const * &
-            integrateSpectrum(X, Y, N, e0, e1, species, fdivLambda) / norm
+            integrateSpectrum(X, Y, N, e0, e1, species, 1, fdivLambda) / norm
 END FUNCTION getUVEgy
 
 !*************************************************************************
@@ -1640,8 +1949,8 @@ FUNCTION getUVcsn(X, Y, N, e0, e1, species)
   if(e1 .gt. 0. .and. e1 .le. ionEvs(species)) then
      getUVcsn=0. ; RETURN    ! [e0,e1] below ionization energy of species
   endif
-  norm     = integrateSpectrum(X, Y, N, e0, e1, species, f1)
-  getUVcsn = integrateSpectrum(X, Y, N, e0, e1, species, fSig)/norm
+  norm     = integrateSpectrum(X, Y, N, e0, e1, species, 1, f1)
+  getUVcsn = integrateSpectrum(X, Y, N, e0, e1, species, 1, fSig)/norm
 END FUNCTION getUVcsn
 
 !************************************************************************
@@ -1657,8 +1966,8 @@ FUNCTION getUVcse(X, Y, N, e0, e1, species)
   if(e1 .gt. 0. .and. e1 .le. ionEvs(species)) then
      getUVcse=0. ; RETURN    ! [e0,e1] below ionization energy of species
   endif
-  norm     = integrateSpectrum(X, Y, N, e0, e1, species, fdivLambda)
-  getUVcse = integrateSpectrum(X, Y, N, e0, e1, species, fSigdivLambda)  &
+  norm     = integrateSpectrum(X, Y, N, e0, e1, species, 1, fdivLambda)
+  getUVcse = integrateSpectrum(X, Y, N, e0, e1, species, 1, fSigdivLambda)  &
            / norm
 END FUNCTION getUVcse
 
@@ -1710,6 +2019,7 @@ SUBROUTINE write_UVgroups_tables()
 END SUBROUTINE write_UVgroups_tables
 
 END MODULE UV_module
+#endif
 
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX

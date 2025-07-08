@@ -2,7 +2,9 @@ subroutine units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
   use amr_commons
   use hydro_commons
   use constants, only: Mpc2cm, mH, kB, rhoc
+#ifndef RTZ
   use cooling_module, only: X
+#endif
   implicit none
 
   real(dp)::scale_nH,scale_T2,scale_t,scale_v,scale_d,scale_l
@@ -30,6 +32,10 @@ subroutine units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
   scale_T2 = mH/kB * scale_v**2
 
   ! scale_nH converts rho in user units into nH in H/cc
+#ifdef RTZ
+  scale_nH = scale_d/mH 
+#else
   scale_nH = X/mH * scale_d
+#endif
 
 end subroutine units

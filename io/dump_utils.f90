@@ -129,7 +129,7 @@ contains
     integer, intent(in) :: unit_info
     integer, intent(in) :: ivar
 
-    write(unit_info, '(I2,", ", a, ", ", a)') ivar, trim(varname), trim(kind)
+    write(unit_info, '(I3,", ", a, ", ", a)') ivar, trim(varname), trim(kind)
   end subroutine dump_var_info
 
   subroutine dump_header_info(unit_info)

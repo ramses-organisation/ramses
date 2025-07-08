@@ -294,9 +294,13 @@ subroutine compute_clump_properties_round2
   use pm_commons, ONLY:cont_speed
   use pm_parameters
 #ifdef RT
-  use rt_parameters, only: nGroups,iGroups,group_egy
   use rt_hydro_commons, only:rtuold
+#ifdef RTZ
+  use rt_parameters, only: nGroups,iGroups,group_egy,kappaSc
+#else
+  use rt_parameters, only: nGroups,iGroups,group_egy
   use rt_cooling_module, only:kappaSc
+#endif
   use constants, only: pi, c_cgs, ev2erg
 #endif
 

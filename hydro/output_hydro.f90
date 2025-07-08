@@ -2,6 +2,10 @@ subroutine backup_hydro(filename, filename_desc)
   use amr_commons
   use hydro_commons
   use dump_utils, only : dump_header_info, generic_dump, dim_keys
+#ifdef RTZ
+  use rtz_module
+  use rt_parameters, only:iIons, nIons
+#endif
   use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
@@ -24,6 +28,9 @@ subroutine backup_hydro(filename, filename_desc)
   logical :: dump_info_flag
   integer :: info_var_count
   character(len=100) :: field_name
+#ifdef RTZ
+  integer :: counter, i_elements, i_ions
+#endif
 
   if (verbose) write(*,*)'Entering backup_hydro'
 
@@ -135,10 +142,46 @@ subroutine backup_hydro(filename, filename_desc)
                  do i = 1, ncache
                     xdp(i) = uold(ind_grid(i)+iskip, ivar)/max(uold(ind_grid(i)+iskip, 1), smallr)
                  end do
+#if NMETALS > 1
+                 if (metal .and. ivar.ge.imetal .and. ivar.lt.iIons) then
+#ifdef RTZ
+                    counter = -1
+                    field_name = 'metallicity'
+                    do i_elements = 1,n_elements
+                       if (elements(i_elements)%atomic_number.gt.0) then 
+                          counter = counter + 1
+                          if (counter.eq.ivar - imetal) then 
+                             write(field_name, '(A20)') elements(i_elements)%element_name  
+                          end if
+                       end if
+                    end do
+#else
+                    write(field_name, '("metallicity_", i0.2)') ivar - imetal    
+#endif  
+#else
                  if (metal .and. imetal == ivar) then
                     field_name = 'metallicity'
+#endif
+                 else
+#ifdef RTZ
+                 if (ivar.ge.iIons .and. ivar.lt.iIons+nIons) then
+                    counter = -1
+                    do i_elements = 1,n_elements
+                       if (elements(i_elements)%atomic_number.gt.0) then
+                          do i_ions=1,elements(i_elements)%n_ions
+                             counter = counter + 1
+                             if (counter.eq.ivar-iIons) then 
+                                write(field_name, '(A,"_", i0.2)') trim(elements(i_elements)%symbol), i_ions
+                             end if
+                          end do
+                       end if
+                    end do
                  else
                     write(field_name, '("scalar_", i0.2)') ivar - nhydro - 1 - nener
+                 endif
+#else
+                    write(field_name, '("scalar_", i0.2)') ivar - nhydro - 1 - nener
+#endif
                  end if
                  call generic_dump(field_name, info_var_count, xdp, unit_out, dump_info_flag, unit_info)
               end do

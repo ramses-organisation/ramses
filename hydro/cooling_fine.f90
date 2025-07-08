@@ -28,6 +28,7 @@ subroutine cooling_fine(ilevel)
      call coolfine1(ind_grid,ngrid,ilevel)
   end do
 
+#ifndef RTZ
   if((cooling.and..not.neq_chem.and..not.cooling_ism).and.ilevel==levelmin.and.cosmo)then
 #ifdef grackle
      if(use_grackle==0)then
@@ -39,6 +40,7 @@ subroutine cooling_fine(ilevel)
      call set_table(dble(aexp))
 #endif
   endif
+#endif
 
 111 format('   Entering cooling_fine for level',i2)
 
@@ -50,7 +52,6 @@ end subroutine cooling_fine
 subroutine coolfine1(ind_grid,ngrid,ilevel)
   use amr_commons
   use hydro_commons
-  use cooling_module
 #ifdef grackle
   use grackle_parameters
 #endif
@@ -58,10 +59,20 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
   use radiation_commons, ONLY: Erad
 #endif
 #ifdef RT
+#ifdef RTZ
+  use rt_parameters, only: nGroups, iGroups, rt_vc, iIR &
+                          ,iIRtrapVar
+  use rtz_cooling_module, only: rtz_solve_cooling, T2_min_fix
+  use rtz_module, only: n_elements, elements
+#else
   use rt_parameters, only: nGroups, iGroups
+#endif
   use rt_hydro_commons
+#ifndef RTZ
+  use cooling_module
   use rt_cooling_module, only: rt_solve_cooling,iIR,rt_isIRtrap &
        ,rt_pressBoost,iIRtrapVar,kappaSc,kappaAbs,is_kIR_T,rt_vc
+#endif
   use constants, only: a_r, Myr2sec
 #endif
   use mpi_mod
@@ -88,7 +99,11 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
   logical,dimension(1:nvector),save::cooling_on=.true.
   real(dp)::scale_Np,scale_Fp,work,Npc,Npnew,fred,kIR,E_rad,TR
   real(dp),dimension(1:ndim)::Fpnew
+#ifdef RTZ
+  real(dp),dimension(1:n_elements, 1:n_elements, 1:nvector),save:: xion
+#else
   real(dp),dimension(nIons, 1:nvector),save:: xion
+#endif
   real(dp),dimension(nGroups, 1:nvector),save:: Np, Np_boost=0d0, dNpdt=0d0
   real(dp),dimension(ndim, nGroups, 1:nvector),save:: Fp, Fp_boost=0, dFpdt=0
   real(dp),dimension(ndim, 1:nvector),save:: p_gas, u_gas
@@ -102,6 +117,12 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
 #endif
 #if NENER>0
   integer::irad
+#endif
+#ifdef RTZ
+  real(dp), dimension(n_elements, 1:nvector):: nElement
+  real(dp), dimension(1:nvector):: nCO
+  real(dp):: dx_SS_H2
+  integer:: counter, e_counter, jj
 #endif
 
   ! Mesh spacing in that level
@@ -127,7 +148,11 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
 #ifdef grackle
      nCOM = del_star*omega_b*rhoc*(h0/100)**2/aexp**3*grackle_HydrogenFractionByMass/mH
 #else
+#ifdef RTZ
+     nCOM = del_star*omega_b*rhoc*(h0/100)**2/aexp**3*0.76/mH !TODO(code) update this
+#else
      nCOM = del_star*omega_b*rhoc*(h0/100)**2/aexp**3*X/mH
+#endif
 #endif
   endif
   nISM = MAX(nCOM,nISM)
@@ -176,6 +201,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
      end do
 
      ! Compute metallicity in solar units
+#ifndef RTZ
      if(metal)then
 #ifdef grackle
         do i=1,nleaf
@@ -191,6 +217,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
            Zsolar(i)=z_ave
         end do
      endif
+#endif
 
 #ifdef RT
      ! Floor density (prone to go negative with strong rad. pressure):
@@ -361,11 +388,45 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
 #ifdef RT
      if(neq_chem) then
         ! Get the ionization fractions
+#ifdef RTZ
+        counter = 0
+        e_counter = 0
+        do ii=1,n_elements ! loop over elements
+           if (elements(ii)%atomic_number.gt.0) then
+              do jj=1,elements(ii)%n_ions ! loop over ions
+                 do i=1,nleaf !loop over leaf cells
+                    xion(ii,jj,i) = uold(ind_leaf(i),iIons+counter)/uold(ind_leaf(i),1)
+                    if (jj.eq.1) then
+                       ! This gives us a number density [Atoms/cm^3]
+                       nElement(ii,i) = uold(ind_leaf(i),imetal+e_counter) * scale_nH / elements(ii)%atomic_mass
+                    end if
+                 end do ! end loop over leaf cells
+                 counter = counter + 1 ! increment ionization counter
+              end do ! end loop over ions
+              e_counter = e_counter + 1 ! increment element counter
+           end if
+        end do ! end loop over elements
+
+        ! deal with molecules separately
+        if (elements(1)%atomic_number.gt.0 .and. isH2_rtz) then
+           do i=1,nleaf !loop over leaf cells
+              xion(1,3,i) = uold(ind_leaf(i),iIons+counter)/uold(ind_leaf(i),1)
+           end do ! end loop over leaf cells
+           counter = counter + 1
+        endif
+
+#ifdef CO
+        if (isCO_rtz) then
+           nCO(i) = uold(ind_leaf(i),iCO) * scale_nH / (elements(6)%atomic_mass+elements(8)%atomic_mass)
+        endif
+#endif
+#else
         do ii=0,nIons-1
            do i=1,nleaf
               xion(1+ii,i) = uold(ind_leaf(i),iIons+ii)/uold(ind_leaf(i),1)
            end do
         end do
+#endif
 
         ! Get photon densities and flux magnitudes
         do ig=1,nGroups
@@ -417,6 +478,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
 #endif
 
      ! grackle tabular cooling
+#ifndef RTZ
 #ifdef grackle
      if(use_grackle==1)then
         gr_rank = 3
@@ -490,12 +552,42 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
         endif
      endif
 #endif
+#endif
+
+
 #ifdef RT
      if(neq_chem) then
         T2_new(1:nleaf) = T2(1:nleaf)
+#ifdef RTZ
+        if (rtz_equilibrium_test.eq.2) then 
+           nElement(1:n_elements,1:nleaf)  = 0.d0  ! Initialize to zero
+           nElement(1,1:nleaf)  = 1.d-1                          ! Hydrogen      
+           nElement(2,1:nleaf)  = nElement(1,1:nleaf) * 8.51d-02 ! Helium
+           nElement(6,1:nleaf)  = nElement(1,1:nleaf) * 2.69d-04 ! Carbon
+           nElement(7,1:nleaf)  = nElement(1,1:nleaf) * 6.76d-05 ! Nitrogen
+           nElement(8,1:nleaf)  = nElement(1,1:nleaf) * 4.90d-04 ! Oxygen
+           nElement(10,1:nleaf) = nElement(1,1:nleaf) * 8.51d-05 ! Neon
+           nElement(12,1:nleaf) = nElement(1,1:nleaf) * 3.98d-05 ! Magnesium
+           nElement(14,1:nleaf) = nElement(1,1:nleaf) * 3.24d-05 ! Silicon
+           nElement(16,1:nleaf) = nElement(1,1:nleaf) * 1.32d-05 ! Sulfur
+           nElement(26,1:nleaf) = nElement(1,1:nleaf) * 3.16d-05 ! Iron
+        end if
+
+        ! Compute the cell length in cm if needed
+        dx_SS_H2 = 0.d0
+        if (isH2_rtz) then
+           dx_SS_H2 = (boxlen/(2.d0**ilevel)) * scale_l
+        endif
+
+        ! Solve cooling
+        call rtz_solve_cooling(T2_new, aexp_loc, xion, nElement, nCO, Np, Fp   &
+                              ,p_gas, dNpdt, dFpdt, ilevel, dtcool, nleaf &
+                              ,dx_SS_H2)
+#else
         call rt_solve_cooling(T2_new, xion, Np, Fp, p_gas, dNpdt, dFpdt  &
                              ,nH, cooling_on, Zsolar, dtcool, aexp_loc   &
                              ,nleaf, ilevel)
+#endif
         delta_T2(1:nleaf) = T2_new(1:nleaf) - T2(1:nleaf)
      endif
 #endif
@@ -597,11 +689,53 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
 #ifdef RT
      if(neq_chem) then
         ! Update ionization fraction
+#ifdef RTZ
+        counter = 0
+        do ii=1,n_elements ! loop over elements
+           if (elements(ii)%atomic_number.gt.0) then
+              do jj=1,elements(ii)%n_ions ! loop over ions
+                 do i=1,nleaf !loop over leaf cells
+                    uold(ind_leaf(i),iIons+counter) = xion(ii,jj,i)*nH(i)
+                 end do ! end loop over leaf cells
+                 counter = counter + 1
+              end do ! end loop over ions
+           end if
+        end do ! end loop over elements
+
+        ! deal with molecules separately
+        if (elements(1)%atomic_number.gt.0 .and. isH2_rtz) then
+           do i=1,nleaf !loop over leaf cells
+              uold(ind_leaf(i),iIons+counter) = xion(1,3,i)*nH(i)
+           end do ! end loop over leaf cells
+           counter = counter + 1
+        endif
+#ifdef CO
+        ! In the case of CO, we have to update mass densities
+        uold(ind_leaf(i),iCO) = nCO(i) * (elements(6)%atomic_mass+elements(8)%atomic_mass) / scale_nH
+
+        e_counter = 0
+        do ii=1,n_elements ! loop over elements
+           if (elements(ii)%atomic_number.gt.0) then
+              ! Check if it's carbon or exygen species
+              if (elements(ii)%atomic_number.eq.6.or.elements(ii)%atomic_number.eq.8) then
+                 do i=1,nleaf !loop over leaf cells
+                    if (jj.eq.1) then
+                       ! This gives us a number density [Atoms/cm^3]
+                       uold(ind_leaf(i),imetal+e_counter) = nElement(ii,i) * elements(ii)%atomic_mass / scale_nH
+                    end if
+                 end do ! end loop over leaf cells
+              end if
+              e_counter = e_counter + 1 ! increment element counter
+           end if
+        end do ! end loop over elements
+#endif
+#else
         do ii=0,nIons-1
            do i=1,nleaf
               uold(ind_leaf(i),iIons+ii) = xion(1+ii,i)*nH(i)
            end do
         end do
+#endif
      endif
 #if NGROUPS>0
      if(rt) then
@@ -645,7 +779,11 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
               ! Set the IR opacity according to the rad. temperature:
               kIR  = kappaSc(iIR)  * (TR/10d0)**2 * exp(-TR/1d3)
            endif
+#ifdef RTZ
+           f_dust = 1d0-xion(1,2,i)                ! No dust in ionised gas
+#else
            f_dust = 1d0-xion(ixHII,i)              ! No dust in ionised gas
+#endif
            tau = nH(i) * Zsolar(i) * f_dust * unit_tau * kIR
            f_trap = 0d0             ! Fraction IR photons that are trapped
            if(tau .gt. 0d0) f_trap = min(max(exp(-1d0/tau), 0d0), 1d0)

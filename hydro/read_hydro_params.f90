@@ -462,7 +462,15 @@ subroutine read_hydro_params(nml_ok)
   inener=nhydro+1
   imetal=inener+nener
   idelay=imetal
+#if NMETALS > 1
+  idelay=imetal+nmetals
+#else
   if(metal)idelay=imetal+1
+#endif
+  iCO = idelay
+#ifdef CO
+  idelay = idelay + 1
+#endif
   ivirial1=idelay
   ivirial2=idelay
   if(delayed_cooling)then

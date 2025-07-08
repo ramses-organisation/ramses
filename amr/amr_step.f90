@@ -7,9 +7,11 @@ recursive subroutine amr_step(ilevel,icount)
 #ifdef RT
   use rt_hydro_commons
   use SED_module
+#ifndef RTZ
   use UV_module
   use coolrates_module, only: update_coolrates_tables
   use rt_cooling_module, only: update_UVrates
+#endif
 #endif
   use sink_feedback_parameters, only: sn_feedback_sink
 #if USE_TURB==1
@@ -447,10 +449,12 @@ recursive subroutine amr_step(ilevel,icount)
   if(ilevel==levelmin) then
                                call timer('radiative transfer','start')
      if(cosmo) call update_rt_c
+#ifndef RTZ
      if(cosmo .and. haardt_madau) call update_UVrates(aexp)
      if(cosmo .and. rt_isDiffuseUVsrc) call update_UVsrc
                                call timer('cooling','start')
      if(cosmo) call update_coolrates_tables(dble(aexp))
+#endif
                                call timer('radiative transfer','start')
      if(ilevel==levelmin) call output_rt_stats
   endif
@@ -574,9 +578,11 @@ end subroutine amr_step
 subroutine rt_step(ilevel)
   use amr_parameters, only: dp
   use amr_commons,    only: t, dtnew, myid
-  use rt_cooling_module, only: update_UVrates
   use rt_hydro_commons
+#ifndef RTZ
+  use rt_cooling_module, only: update_UVrates
   use UV_module
+#endif
   use SED_module,     only: star_RT_feedback
   use mpi_mod
   implicit none

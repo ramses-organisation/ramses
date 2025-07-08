@@ -1,8 +1,15 @@
 program ramses
+#ifdef RTZ 
+  use rtz_module
+#endif
   implicit none
 
   ! Set myid, ncpu and initialize MPI
   call initialize_mpi
+
+#ifdef RTZ
+  call initialize_elements()
+#endif
 
   ! Read run parameters
   call read_params

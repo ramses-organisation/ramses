@@ -959,7 +959,9 @@ subroutine kill_grid(ind_cell,ilevel,nn,ibound,boundary_region)
   real(dp),dimension(nIons)::xion
 #endif
 
+
 #ifdef RT
+#ifndef RTZ
   if(upload_equilibrium_x) then
      ! Enforce equilibrium on ionization states when merging, to
      ! prevent unnatural values (e.g when merging hot and cold cells).
@@ -970,6 +972,7 @@ subroutine kill_grid(ind_cell,ilevel,nn,ibound,boundary_region)
         uold(ind_cell(i),iIons:iIons+nIons-1)=xion*uold(ind_cell(i),1)
      enddo
   endif
+#endif
   do ivar=1,nrtvar
      do i=1,nn
         ! Rescale according to speed of light difference

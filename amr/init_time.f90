@@ -7,7 +7,16 @@ subroutine init_time
   use grackle_parameters
 #endif
 #ifdef RT
+#ifdef RTZ
+  use rtz_cooling_module
+  use cosmic_ray_ionization_module, only: initialize_cr_rates
+  use photoionization_UVB_module, only: load_UVB_data, update_UVB
+  use charge_exchange_module, only: load_ct_rates
+  use rtz_coolrates_module, only: initialize_high_temperature_metal_cooling, initialize_fine_structure_tables
+  use metal_yields_module, only: initialize_portinari_yields
+#else
   use rt_cooling_module
+#endif
 #endif
   use mpi_mod
   implicit none
@@ -285,17 +294,57 @@ subroutine init_time
      if(cosmo)then
         ! Reonization redshift has to be later than starting redshift
         z_reion=min(1d0/(1.1d0*aexp_ini)-1d0,z_reion)
+#ifdef RTZ
+        call rtz_set_model(dble(h0/100.),dble(omega_b),dble(omega_m),dble(omega_l), &
+             & dble(aexp_ini),T2_sim)
+#else
         call rt_set_model(dble(h0/100.),dble(omega_b),dble(omega_m),dble(omega_l), &
              & dble(aexp_ini),T2_sim)
+#endif
         T2_start=T2_sim
         if(nrestart==0)then
            if(myid==1)write(*,*)'Starting with T/mu (K) = ',T2_start
         end if
      else
+#ifdef RTZ
+        call rtz_set_model(dble(70./100.),dble(0.04),dble(0.3),dble(0.7), &
+             & dble(aexp_ini),T2_sim)
+#else
         call rt_set_model(dble(70./100.),dble(0.04),dble(0.3),dble(0.7), &
              & dble(aexp_ini),T2_sim)
+#endif
      endif
   end if
+
+#ifdef RTZ
+  ! If we are running with RTZ than we have numerous other initializations
+
+  ! Initialize cosmic ray data
+  call initialize_cr_rates()
+
+  ! Initialize the UV background data
+  call load_UVB_data() 
+
+  if(cosmo)then
+     call update_UVB((1.d0/dble(aexp_ini))-1.d0)
+  else
+     call update_UVB((1.d0/dble(aexp_ini))-1.d0)
+  end if
+
+  !Initialize the charge transfer rates
+  call load_ct_rates()
+
+  ! Initialize high temperature cooling tables
+  call initialize_high_temperature_metal_cooling()
+
+  ! Initialize the low temperature cooling tables
+  call initialize_fine_structure_tables()
+
+  ! Initialize the metal yields
+  call initialize_portinari_yields()
+
+#endif
+
 #endif
 
 end subroutine init_time

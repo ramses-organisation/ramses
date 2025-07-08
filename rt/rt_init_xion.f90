@@ -39,6 +39,9 @@ SUBROUTINE rt_init_xion_vsweep(ind_grid, ngrid)
   use hydro_commons
   use rt_parameters,only:nIons,iIons,isH2,isHe,ixHI,ixHII,ixHeII,ixHeIII
   use cooling_module,only:Y
+#ifdef RTZ
+  use rtz_module
+#endif
   implicit none
   integer::ngrid
   integer,dimension(1:nvector)::ind_grid
@@ -50,6 +53,9 @@ SUBROUTINE rt_init_xion_vsweep(ind_grid, ngrid)
   real(dp),dimension(7)::nSpec               !          Species abundances
 #if NENER>0
   integer::irad
+#endif
+#ifdef RTZ
+  integer::iE, iI, counter
 #endif
 !-------------------------------------------------------------------------
   ! Conversion factor from user units to cgs units
@@ -102,6 +108,23 @@ SUBROUTINE rt_init_xion_vsweep(ind_grid, ngrid)
         ! Compute nH in H/cc (number of H nuclei per cubic centimeter)
         nH = nH*scale_nH
 
+#ifdef RTZ
+        ! In the case of RTZ, set everything to fully neutral
+        ! In the case of RTZ, we set everything to neutral to start
+         counter = 1
+         do iE=1,n_elements ! loop over elements
+            if (elements(iE)%atomic_number.gt.0) then 
+               do iI=1,elements(iE)%n_ions + elements(iE)%n_mol ! loop over ions + molecules
+                  x = 0.d0
+                  if (iI.eq.1) then 
+                     x = 1.d0
+                  end if
+                  uold(ind_leaf(i),iIons-1+counter) = x*uold(ind_leaf(i),1)
+                  counter = counter + 1
+               end do  ! end loop over ions + molecules
+            end if
+         end do ! end loop over elements
+#else
         call cmp_Equilibrium_Abundances(T2,nH,pHI_rates,mu,nSpec,Zsolar)
 
         ! UPDATE IONIZATION STATES
@@ -121,12 +144,14 @@ SUBROUTINE rt_init_xion_vsweep(ind_grid, ngrid)
            x = nSpec(7)/(nSpec(5)+nSpec(6)+nSpec(7))      ! HeIII fraction
            uold(ind_leaf(i),iIons-1+ixHeIII) = x*uold(ind_leaf(i),1)
         endif
+#endif
       end do
 
   end do
   ! End loop over cells
 END SUBROUTINE rt_init_xion_vsweep
 
+#ifndef RTZ
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 SUBROUTINE calc_equilibrium_xion(vars, rtvars, xion)
 
@@ -232,7 +257,7 @@ SUBROUTINE cmp_Equilibrium_Abundances(T2,nH,phI_rates,mu,nSpec,Zsolar)
   mu_left=0.5                                ! n_HII   = n_spec(4) ! H+
   mu_right=2.3                               ! n_HEI   = n_spec(5) ! He
   niter=0                                    ! n_HEII  = n_spec(6) ! He+
-  do while (err_mu > 1d-4 .and. niter <= 50)! n_HEIII = n_spec(7) ! He++
+  do while (err_mu > 1d-4 .and. niter <= 50) ! n_HEIII = n_spec(7) ! He++
      mu_old=0.5*(mu_left+mu_right)
      T = T2*mu_old
      call cmp_chem_eq(T, nH, phI_rates, nSpec, nTot, mu, Zsolar)
@@ -253,3 +278,4 @@ SUBROUTINE cmp_Equilibrium_Abundances(T2,nH,phI_rates,mu,nSpec,Zsolar)
   endif
 
 END SUBROUTINE cmp_Equilibrium_Abundances
+#endif
