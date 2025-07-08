@@ -4,11 +4,6 @@ import shutil
 import glob
 import numpy as np
 
-try:
-    from sklearn.model_selection import ParameterGrid
-except ImportError:
-    print("Please install scikit-learn to use this script.")
-    exit(1)
 
 try:
     import f90nml
@@ -18,6 +13,12 @@ except ImportError:
 
 from ana_parameters import params
 from check_solution import check_solution
+
+from itertools import product
+
+def build_param_grid(d):
+    for value in product(*d.values()):
+        yield dict(zip(d.keys(), value))
 
 class NamelistRecursive:
     def __init__(self, namelist):
@@ -113,7 +114,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     test_name = args.test_name
 
-    param_grid = ParameterGrid(params)
+    param_grid = build_param_grid(params)
     results = {}
     errors = {}
     for param_set in param_grid:
