@@ -36,6 +36,7 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
 
   integer ::ngrid
   real(dp)::dx,dy,dz,dt
+  real(dp)::dtdx
 
   ! Input states
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar+3)::uin
@@ -71,8 +72,6 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
   REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:3),save::qLB
 
   ! Intermediate fluxes
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar),save::fx
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:2   ),save::tx
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2)       ,save::emf
 
   ! Local scalar variables
@@ -82,6 +81,7 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
   ilo=MIN(1,iu1+2); ihi=MAX(1,iu2-2)
   jlo=MIN(1,ju1+2); jhi=MAX(1,ju2-2)
   klo=MIN(1,ku1+2); khi=MAX(1,ku2-2)
+  dtdx = dt/dx
 
   ! Translate to primative variables, compute sound speeds
   call ctoprim(uin,qin,bf,gravin,dt,ngrid)
@@ -103,71 +103,23 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
   ! Solve for 1D flux in X direction
   call cmpflxm(qm,iu1+1,iu2+1,ju1  ,ju2  ,ku1  ,ku2  , &
        &       qp,iu1  ,iu2  ,ju1  ,ju2  ,ku1  ,ku2  , &
-       &          if1  ,if2  ,jlo  ,jhi  ,klo  ,khi  , 2,3,4,6,7,8,fx,tx,ngrid)
-  ! Save flux in output array
-  do k=klo,khi
-  do j=jlo,jhi
-  do i=if1,if2
-     do ivar=1,nvar
-        do l=1,ngrid
-           flux(l,i,j,k,ivar,1)=fx(l,i,j,k,ivar)*dt/dx
-        end do
-     end do
-     do ivar=1,2
-        do l=1,ngrid
-           tmp (l,i,j,k,ivar,1)=tx(l,i,j,k,ivar)*dt/dx
-        end do
-     end do
-  end do
-  end do
-  end do
+       &          if1  ,if2  ,jlo  ,jhi  ,klo  ,khi  , &
+       &       2,3,4,6,7,8,flux,tmp,1,dtdx,ngrid)
 
   ! Solve for 1D flux in Y direction
 #if NDIM>1
   call cmpflxm(qm,iu1  ,iu2  ,ju1+1,ju2+1,ku1  ,ku2  , &
        &       qp,iu1  ,iu2  ,ju1  ,ju2  ,ku1  ,ku2  , &
-       &          ilo  ,ihi  ,jf1  ,jf2  ,klo  ,khi  , 3,2,4,7,6,8,fx,tx,ngrid)
-  ! Save flux in output array
-  do k=klo,khi
-  do j=jf1,jf2
-  do i=ilo,ihi
-     do ivar=1,nvar
-        do l=1,ngrid
-           flux(l,i,j,k,ivar,2)=fx(l,i,j,k,ivar)*dt/dy
-        end do
-     end do
-     do ivar=1,2
-        do l=1,ngrid
-           tmp (l,i,j,k,ivar,2)=tx(l,i,j,k,ivar)*dt/dy
-        end do
-     end do
-  end do
-  end do
-  end do
+       &          ilo  ,ihi  ,jf1  ,jf2  ,klo  ,khi  , &
+       &       3,2,4,7,6,8,flux,tmp,2,dtdx,ngrid)
 #endif
 
   ! Solve for 1D flux in Z direction
 #if NDIM==3
   call cmpflxm(qm,iu1  ,iu2  ,ju1  ,ju2  ,ku1+1,ku2+1, &
        &       qp,iu1  ,iu2  ,ju1  ,ju2  ,ku1  ,ku2  , &
-       &          ilo  ,ihi  ,jlo  ,jhi  ,kf1  ,kf2  , 4,2,3,8,6,7,fx,tx,ngrid)
-  ! Save flux in output array
-  do k=kf1,kf2
-  do j=jlo,jhi
-  do i=ilo,ihi
-     do ivar=1,nvar
-        do l=1,ngrid
-           flux(l,i,j,k,ivar,3)=fx(l,i,j,k,ivar)*dt/dz
-        end do
-     end do
-     do ivar=1,2
-        do l=1,ngrid
-           tmp (l,i,j,k,ivar,3)=tx(l,i,j,k,ivar)*dt/dz
-        end do
-     end do
-  end do
-  end do
-  end do
+       &          ilo  ,ihi  ,jlo  ,jhi  ,kf1  ,kf2  , &
+       &       4,2,3,8,6,7,flux,tmp,3,dtdx,ngrid)
 #endif
 
 #if NDIM>1
@@ -1308,21 +1260,23 @@ END SUBROUTINE trace3d
 subroutine cmpflxm(qm,im1,im2,jm1,jm2,km1,km2, &
      &             qp,ip1,ip2,jp1,jp2,kp1,kp2, &
      &                ilo,ihi,jlo,jhi,klo,khi, &
-     &                ln ,lt1,lt2,bn ,bt1,bt2, flx,tmp,ngrid)
+     &                ln ,lt1,lt2,bn ,bt1,bt2, &
+     &             flux,tmp,idim,dtdx,ngrid)
   use amr_parameters
   use hydro_parameters
   use const
   implicit none
 
-  integer ::ngrid
+  real(dp)::dtdx
+  integer ::idim,ngrid
   integer ::ln,lt1,lt2,bn,bt1,bt2
   integer ::im1,im2,jm1,jm2,km1,km2
   integer ::ip1,ip2,jp1,jp2,kp1,kp2
   integer ::ilo,ihi,jlo,jhi,klo,khi
   real(dp),dimension(1:nvector,im1:im2,jm1:jm2,km1:km2,1:nvar,1:ndim)::qm
   real(dp),dimension(1:nvector,ip1:ip2,jp1:jp2,kp1:kp2,1:nvar,1:ndim)::qp
-  real(dp),dimension(1:nvector,ip1:ip2,jp1:jp2,kp1:kp2,1:nvar)::flx
-  real(dp),dimension(1:nvector,ip1:ip2,jp1:jp2,kp1:kp2,1:2)::tmp
+  real(dp),dimension(1:nvector,if1:if2,jf1:jf2,kf1:kf2,1:nvar,1:ndim)::flux
+  real(dp),dimension(1:nvector,if1:if2,jf1:jf2,kf1:kf2,1:2,   1:ndim)::tmp
 
   ! local variables
   integer ::i, j, k, l, xdim
@@ -1420,25 +1374,25 @@ subroutine cmpflxm(qm,im1,im2,jm1,jm2,km1,km2, &
               ENDIF
 
               ! Output fluxes
-              flx(l,i,j,k,1  ) = fgdnv(1)  ! Mass density
-              flx(l,i,j,k,5  ) = fgdnv(2)  ! Total energy
-              flx(l,i,j,k,ln ) = fgdnv(3)  ! Normal momentum
-              flx(l,i,j,k,bn ) = fgdnv(4)  ! Normal magnetic field
-              flx(l,i,j,k,lt1) = fgdnv(5)  ! Transverse momentum 1
-              flx(l,i,j,k,bt1) = fgdnv(6)  ! Transverse magnetic field 1
-              flx(l,i,j,k,lt2) = fgdnv(7)  ! Transverse momentum 2
-              flx(l,i,j,k,bt2) = fgdnv(8)  ! Transverse magnetic field 2
+              flux(l,i,j,k,1  ,idim) = fgdnv(1) * dtdx  ! Mass density
+              flux(l,i,j,k,5  ,idim) = fgdnv(2) * dtdx  ! Total energy
+              flux(l,i,j,k,ln ,idim) = fgdnv(3) * dtdx  ! Normal momentum
+              flux(l,i,j,k,bn ,idim) = fgdnv(4) * dtdx  ! Normal magnetic field
+              flux(l,i,j,k,lt1,idim) = fgdnv(5) * dtdx  ! Transverse momentum 1
+              flux(l,i,j,k,bt1,idim) = fgdnv(6) * dtdx  ! Transverse magnetic field 1
+              flux(l,i,j,k,lt2,idim) = fgdnv(7) * dtdx  ! Transverse momentum 2
+              flux(l,i,j,k,bt2,idim) = fgdnv(8) * dtdx  ! Transverse magnetic field 2
 
               ! Other advected quantities
 #if NVAR>NHYDRO
               do n = 9, nvar
-                 flx(l,i,j,k,n) = fgdnv(n)
+                 flux(l,i,j,k,n,idim) = fgdnv(n) * dtdx
               end do
 #endif
               ! Normal velocity estimate
-              tmp(l,i,j,k,1) = half*(qleft(3)+qright(3))
+              tmp(l,i,j,k,1,idim) = half*(qleft(3)+qright(3)) * dtdx
               ! Internal energy flux
-              tmp(l,i,j,k,2) = fgdnv(nvar+1)
+              tmp(l,i,j,k,2,idim) = fgdnv(nvar+1) * dtdx
 
            end do
         end do
