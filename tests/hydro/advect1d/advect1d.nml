@@ -1,5 +1,5 @@
 This namelist contains input parameters for a simple 1D advection test.
-A tophat function is traveling through the box from left to right, and 
+A tophat function is traveling through the box from left to right, and
 through the periodic boundaries. It returns to the starting point after
 a time of 1. This setup illustrates how slope_type can affect the results.
 
@@ -8,7 +8,7 @@ hydro=.true.
 ncontrol=10000
 /
 
-&AMR_PARAMS 
+&AMR_PARAMS
 levelmin=4
 levelmax=10
 ngridmax=1000
@@ -39,10 +39,7 @@ slope_type=5
 riemann='hllc'
 /
 
-&REFINE_PARAMS 
+&REFINE_PARAMS
 err_grad_d=0.05
 interpol_type=1
 /
-
-
-
