@@ -3,6 +3,7 @@ import argparse
 import shutil
 import glob
 import numpy as np
+import csv
 
 
 try:
@@ -146,6 +147,10 @@ if __name__ == "__main__":
             # Restore the original namelist file
             restore_namelist(test_name)
 
-
-    # Store results
-    np.savez(f"{test_name}-parameter-study.npz", **errors)
+    # Store results as plain text
+    out_file = f"{test_name}-parameter-study.csv"
+    with open(out_file, "w", newline="", encoding="utf‑8") as csvfile:
+        writer = csv.writer(csvfile)
+        writer.writerow(["test_name_combi", "error"])      # header row
+        for combo, err in errors.items():
+            writer.writerow([combo, "%.16e"%err])
