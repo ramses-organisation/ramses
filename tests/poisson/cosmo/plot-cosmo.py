@@ -116,7 +116,7 @@ else:
 # Based on file format:
 # Column indices: 0=lev,  1=ncell, 2=peak_x, 3=peak_y, 4=peak_z, 5=rho-, 6=rho+, 7=rho_av, 8=mass_cl, 9=relevance
 ncell_output_array = clumps[:, 1]      # ncell column
-mass_cl_output_array = clumps[:, 8]   # mass_cl column 
+mass_cl_output_array = clumps[:, 8]   # mass_cl column
 
 print("ncell values:", ncell_output_array)
 print("mass_cl values:", mass_cl_output_array)
