@@ -1052,7 +1052,7 @@ subroutine uslope(q,dq,dx,dt,ngrid)
                     vmax = max(dfll,dflm,dflr,dfml,dfmm,dfmr,dfrl,dfrm,dfrr)
 
                     dfx  = half*(q(l,i+1,j,k,n)-q(l,i-1,j,k,n))
-                    dfy  = half*(q(l,i,j-1,k,n)-q(l,i,j-1,k,n))
+                    dfy  = half*(q(l,i,j+1,k,n)-q(l,i,j-1,k,n))
                     dff  = half*(abs(dfx)+abs(dfy))
 
                     if(dff>zero)then
