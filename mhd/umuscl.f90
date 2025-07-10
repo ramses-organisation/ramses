@@ -2379,7 +2379,7 @@ subroutine uslope(q,dq,bf,dbf,dx,dt,ngrid)
   endif
 
   ! 1D/2D transverse TVD slopes for face-centered magnetic fields
-
+#if NDIM>1
   if (slope_mag_type==0) then
     dbf=zero
   else if (slope_mag_type==1 .or. slope_mag_type==2) then
@@ -2560,5 +2560,6 @@ subroutine uslope(q,dq,bf,dbf,dx,dt,ngrid)
      write(*,*)'Unknown slope_mag_type'
      call clean_stop
   endif
+#endif
 
 end subroutine uslope
