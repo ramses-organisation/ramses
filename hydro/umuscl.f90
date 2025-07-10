@@ -1147,7 +1147,7 @@ subroutine uslope(q,dq,dx,dt,ngrid)
                     dcen = q(l,i,j,k,2)*dt/dx
                     ! slopes in first coordinate direction
                     dlft = two/(one+dcen)*(qcen - q(l,i-1,j,k,n))
-                    drgt = two/(one+dcen)*(q(l,i+1,j,k,n) - qcen)
+                    drgt = two/(one-dcen)*(q(l,i+1,j,k,n) - qcen)
                     !dcen = half*(q(l,i+1,j,k,n)-q(l,i-1,j,k,n))
                     dsgn = sign(one, dlft)
                     dlim = min(abs(dlft),abs(drgt))
