@@ -30,7 +30,7 @@ def apply_output_factor(nml, factor, add_extra_output_time=False):
     """
     Apply a factor to the output time in the namelist.
     This function modifies the namelist in place.
-    
+
     Parameters
     ---------
     nml: namelist
@@ -38,7 +38,7 @@ def apply_output_factor(nml, factor, add_extra_output_time=False):
     factor: float
         Factor to apply to the existing output
     add_extra_output_time: bool
-        Add the modified output time after the existing one instead of 
+        Add the modified output time after the existing one instead of
         modifying it.
     """
     if "tout" in nml["output_params"]:
