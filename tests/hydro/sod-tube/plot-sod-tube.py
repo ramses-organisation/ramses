@@ -3,6 +3,8 @@ import matplotlib as mpl
 mpl.use("Agg")
 import numpy as np
 import matplotlib.pyplot as plt
+import csv
+import shutil
 import visu_ramses
 
 ## Default params
@@ -77,12 +79,27 @@ for var, sim, ana in zip(
 ## Parameter study
 
 # 1. Read error computed with other parameters
+parameter_study_errors = {}
+with open("sod-tube-parameter-study.csv", "r", encoding="utf-8") as csvfile:
+    reader = csv.DictReader(csvfile)          # reads the header row automatically
+    for row in reader:
+        combo = row["test_name_combi"]
+        err   = float(row["error"])           # cast if numeric
+        parameter_study_errors[combo] = err
 
-parameter_study_errors =  np.load("sod-tube-parameter-study.npz")
+# Overwrite reference solution
+overwrite=False
+if overwrite:
+    shutil.copyfile("sod-tube-parameter-study.csv", "sod-tube-parameter-study-ref.csv")
 
 # 2. Read ref
-
-parameter_study_ref =  np.load("sod-tube-parameter-study-ref.npz")
+parameter_study_ref = {}
+with open("sod-tube-parameter-study-ref.csv", "r", encoding="utf-8") as csvfile:
+    reader = csv.DictReader(csvfile)          # reads the header row automatically
+    for row in reader:
+        combo = row["test_name_combi"]
+        err   = float(row["error"])           # cast if numeric
+        parameter_study_ref[combo] = err
 
 
 # 3. Compare
