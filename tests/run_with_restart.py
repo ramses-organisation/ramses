@@ -1,4 +1,9 @@
-import f90nml
+try:
+    import f90nml
+except ImportError:
+    print("Please install f90nml to use this script.")
+    exit(1)
+
 import os
 import argparse
 import shutil
@@ -21,20 +26,23 @@ Where:
 The script uses the f90nml library to read and write Fortran namelist files.
 """
 
-def apply_output_factor(nml, factor, keep_tout=False):
+def apply_output_factor(nml, factor, keep_last_output=False):
     """
     Apply a factor to the output time in the namelist.
     This function modifies the namelist in place.
     """
     if "tout" in nml["output_params"]:
         tout = nml["output_params"]["tout"]
-        if keep_tout:
+        if keep_last_output:
             nml["output_params"]["tout"] = [tout, tout * factor]
         else:
             nml["output_params"]["tout"] = tout * factor
     elif "aout" in nml["output_params"]:
         aout = nml["output_params"]["aout"]
-        nml["output_params"]["aout"] = aout * factor
+        if keep_last_output:
+            nml["output_params"]["aout"] = [aout, aout * factor]
+        else:
+            nml["output_params"]["aout"] = aout * factor
     else:
         print("ERROR: noutput found but tout or aout not found in output_params")
 
@@ -83,7 +91,7 @@ def step_2(test_name):
     if "noutput" in nml["output_params"]:
         nml["run_params"]["nrestart"] = 2
         nml["output_params"]["noutput"] = 2
-        nml = apply_output_factor(nml, 2, keep_tout=True)
+        nml = apply_output_factor(nml, 2, keep_last_output=True)
     else:
         # Find the last output time
         last_output = int(glob.glob("output_*")[-1].split("_")[-1])
