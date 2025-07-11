@@ -139,7 +139,7 @@ subroutine trace(q,dq,qm,qp,dx,dt,ngrid)
   ! The output of this routine will be given to the Riemann solver.
   ! --------------------------------------------------------------------
   real(dp),dimension(1:nvar)::S0,var
-  real(dp),dimension(1:nvar,1:ndim)::dvar
+  real(dp),dimension(1:ndim,1:nvar)::dvar
   real(dp)::oneoverr,dvel_diag,corr,result_m,result_p
   integer ::i,j,k,l,ivar,idim
   integer ::ilo,ihi,jlo,jhi,klo,khi
@@ -172,7 +172,7 @@ subroutine trace(q,dq,qm,qp,dx,dt,ngrid)
                do ivar=1,nvar
                   !DIR$ UNROLL
                   do idim=1,ndim
-                     dvar(ivar,idim) = dq(l,i,j,k,ivar,idim)
+                     dvar(idim,ivar) = dq(l,i,j,k,ivar,idim)
                   end do
                end do
 
@@ -186,7 +186,7 @@ subroutine trace(q,dq,qm,qp,dx,dt,ngrid)
                do ivar=1,nvar
                   !DIR$ UNROLL
                   do idim=1,ndim
-                     S0(ivar) = S0(ivar) - var(1+idim)*dvar(ivar,idim)
+                     S0(ivar) = S0(ivar) - var(1+idim)*dvar(idim,ivar)
                   end do
                end do
 
@@ -196,11 +196,11 @@ subroutine trace(q,dq,qm,qp,dx,dt,ngrid)
                ! vz: -1/rho * dp/dz
                !DIR$ UNROLL
                do idim=1,ndim
-                  S0(1+idim) = S0(1+idim) - dvar(ip,idim)*oneoverr
+                  S0(1+idim) = S0(1+idim) - dvar(idim,ip)*oneoverr
 #if NENER>0
                   !DIR$ UNROLL
                   do ivar=1,nener
-                     S0(1+idim) = S0(1+idim) - dvar(ip+ivar,idim)*oneoverr
+                     S0(1+idim) = S0(1+idim) - dvar(idim,ip+ivar)*oneoverr
                   end do
 #endif
                end do
@@ -210,7 +210,7 @@ subroutine trace(q,dq,qm,qp,dx,dt,ngrid)
                dvel_diag = 0
                !DIR$ UNROLL
                do idim=1,ndim
-                  dvel_diag = dvel_diag +  dvar(1+idim,idim)
+                  dvel_diag = dvel_diag +  dvar(idim,1+idim)
                end do
 
                ! Fluid compression/expansion for density
@@ -241,8 +241,8 @@ subroutine trace(q,dq,qm,qp,dx,dt,ngrid)
                corr = S0(ir) * dtdx !convert S0 to spatial slope correction
                !DIR$ UNROLL
                do idim=1,ndim
-                  result_p = var(ir) + half*(corr - dvar(ir,idim))
-                  result_m = var(ir) + half*(corr + dvar(ir,idim))
+                  result_p = var(ir) + half*(corr - dvar(idim,ir))
+                  result_m = var(ir) + half*(corr + dvar(idim,ir))
                   qp(l,i,j,k,ir,idim) = merge(var(ir), result_p, result_p<smallr)
                   qm(l,i,j,k,ir,idim) = merge(var(ir), result_m, result_m<smallr)
                end do
@@ -252,8 +252,8 @@ subroutine trace(q,dq,qm,qp,dx,dt,ngrid)
                   corr = S0(ivar) * dtdx
                   !DIR$ UNROLL
                   do idim=1,ndim
-                     result_p = var(ivar) + half*(corr - dvar(ivar,idim))
-                     result_m = var(ivar) + half*(corr + dvar(ivar,idim))
+                     result_p = var(ivar) + half*(corr - dvar(idim,ivar))
+                     result_m = var(ivar) + half*(corr + dvar(idim,ivar))
                      qp(l,i,j,k,ivar,idim) = result_p
                      qm(l,i,j,k,ivar,idim) = result_m
                   end do
