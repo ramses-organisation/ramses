@@ -154,18 +154,23 @@ subroutine trace(q,dq,qm,qp,dx,dt,ngrid)
    do k = klo, khi
       do j = jlo, jhi
          do i = ilo, ihi
+            !DIR$ IVDEP
+            !DIR$ SIMD
             do l = 1, ngrid
 
                ! Retrieve data for cell l
 
                ! Cell centered values
+               !DIR$ UNROLL
                do ivar=1,nvar
                   var(ivar) = q(l,i,j,k,ivar)
                end do
                oneoverr = 1d0/var(ir)
 
                ! Limited gradients in all 3 directions
+               !DIR$ UNROLL
                do ivar=1,nvar
+                  !DIR$ UNROLL
                   do idim=1,ndim
                      dvar(ivar,idim) = dq(l,i,j,k,ivar,idim)
                   end do
@@ -177,7 +182,9 @@ subroutine trace(q,dq,qm,qp,dx,dt,ngrid)
 
                ! Advection for each variable q
                ! - u*dq/dx - v*dq/dy - w*dq/z
+               !DIR$ UNROLL
                do ivar=1,nvar
+                  !DIR$ UNROLL
                   do idim=1,ndim
                      S0(ivar) = S0(ivar) - var(1+idim)*dvar(ivar,idim)
                   end do
@@ -187,9 +194,11 @@ subroutine trace(q,dq,qm,qp,dx,dt,ngrid)
                ! vx: -1/rho * dp/dx
                ! vy: -1/rho * dp/dy
                ! vz: -1/rho * dp/dz
+               !DIR$ UNROLL
                do idim=1,ndim
                   S0(1+idim) = S0(1+idim) - dvar(ip,idim)*oneoverr
 #if NENER>0
+                  !DIR$ UNROLL
                   do ivar=1,nener
                      S0(1+idim) = S0(1+idim) - dvar(ip+ivar,idim)*oneoverr
                   end do
@@ -199,6 +208,7 @@ subroutine trace(q,dq,qm,qp,dx,dt,ngrid)
                ! Calculate the velocity divergence
                ! div_vel = du/dx + dv/dy + dw/dz
                dvel_diag = 0
+               !DIR$ UNROLL
                do idim=1,ndim
                   dvel_diag = dvel_diag +  dvar(1+idim,idim)
                end do
@@ -214,6 +224,7 @@ subroutine trace(q,dq,qm,qp,dx,dt,ngrid)
 #if NENER>0
                ! Compression heating / expansion cooling for extra energies
                ! -div_vel*gamma_rad*e_rad
+               !DIR$ UNROLL
                do ivar=1,nener
                   S0(ip+ivar) = S0(ip+ivar) - dvel_diag*gamma_rad(ivar)*var(ip+ivar)
                end do
@@ -228,6 +239,7 @@ subroutine trace(q,dq,qm,qp,dx,dt,ngrid)
                ! rho-(t+0.5dt) = rho(t)
                ! Prevents negative densities
                corr = S0(ir) * dtdx !convert S0 to spatial slope correction
+               !DIR$ UNROLL
                do idim=1,ndim
                   result_p = var(ir) + half*(corr - dvar(ir,idim))
                   result_m = var(ir) + half*(corr + dvar(ir,idim))
@@ -235,8 +247,10 @@ subroutine trace(q,dq,qm,qp,dx,dt,ngrid)
                   qm(l,i,j,k,ir,idim) = merge(var(ir), result_m, result_m<smallr)
                end do
 
+               !DIR$ UNROLL
                do ivar=2,nvar
                   corr = S0(ivar) * dtdx
+                  !DIR$ UNROLL
                   do idim=1,ndim
                      result_p = var(ivar) + half*(corr - dvar(ivar,idim))
                      result_m = var(ivar) + half*(corr + dvar(ivar,idim))
