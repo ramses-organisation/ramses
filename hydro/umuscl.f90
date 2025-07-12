@@ -230,7 +230,7 @@ subroutine trace(q,dq,qm,qp,dx,dt,ngrid)
                end do
 #endif
 
-               ! Calculate and store result: 
+               ! Calculate and store result:
                ! q+(t+0.5dt) = q(t) + 0.5*dq(t)/dx - S*0.5*dt/dx
                ! q-(t+0.5dt) = q(t) - 0.5*dq(t)/dx - S*0.5*dt/dx
 
