@@ -53,31 +53,6 @@ def concatenate_clump_files():
         total_lines = sum(1 for _ in f)
     print(f"Output file contains {total_lines} lines (including 1 header)")
 
-
-def simple_diff():
-    file1 = "clump_all.txt"
-    file2 = "clump-ref.txt"
-
-    # Quick check if files are identical
-    if filecmp.cmp(file1, file2):
-        print("OK! Clump Files are identical => Passed")
-        return
-
-    print("ERROR clump Files differ from reference clump-ref.dat")
-
-    # Show first differing line
-    with open(file1) as f1, open(file2) as f2:
-        for i, (line1, line2) in enumerate(zip(f1, f2), 1):
-            if line1 != line2:
-                print(f"First difference at line {i}:")
-                print(f"  {file1}: {line1.rstrip()}")
-                print(f"  {file2}: {line2.rstrip()}")
-                break
-        else:
-            # Files have different lengths
-            print("Files have different lengths")
-
-
 # Execute the map part of the test
 
 fig = plt.figure(figsize=(12, 3.75))
@@ -115,19 +90,33 @@ to_check['time'] = data["data"]["time"]
 # Execute concatenate:
 concatenate_clump_files()
 
-# Now as a first on-the-side test compare the clump_all with the reference file
-# execute simple_diff
-simple_diff()
-
 # Now add the clump data to the solution to be checked.
 # Read the file using numpy.loadtxt, skipping the header row
-data = np.loadtxt("clump_all.txt", skiprows=1)
+# Also skip indexes since they may not be consistent
+clumps = np.loadtxt("clump_all.txt", skiprows=1, usecols=[2,4,5,6,7,8,9,10,11,12])
 
-# Extract the columns we need
+clumps_ref = np.loadtxt("clump-ref.txt", skiprows=1, usecols=[2,4,5,6,7,8,9,10,11,12])
+
+print(clumps)
+
+# Sort by ncell
+sort = np.argsort(clumps[:,2])
+clump_sorted = clumps[sort,:]
+sort_ref = np.argsort(clumps_ref[:,2])
+clumps_ref = clumps_ref[sort_ref,:]
+
+# Compare all properties
+all_same = np.all(clump_sorted - clumps_ref == 0)
+
+if not(all_same):
+    print("ERROR: Clumps are differents. Check them manually")
+else:
+    print("Cosmo tests: Clumps are the same!")
+# Extract the columns we need for the overall test
 # Based on file format:
-# Column indices: 0=index, 1=halo, 2=lev, 3=parent, 4=ncell, 5=peak_x, 6=peak_y, 7=peak_z, 8=rho-, 9=rho+, 10=rho_av, 11=mass_cl, 12=relevance
-ncell_output_array = data[:, 4]      # ncell column (5th column, index 4)
-mass_cl_output_array = data[:, 11]   # mass_cl column (12th column, index 11)
+# Column indices: 0=lev,  1=ncell, 2=peak_x, 3=peak_y, 4=peak_z, 5=rho-, 6=rho+, 7=rho_av, 8=mass_cl, 9=relevance
+ncell_output_array = clumps[:, 1]      # ncell column
+mass_cl_output_array = clumps[:, 8]   # mass_cl column
 
 print("ncell values:", ncell_output_array)
 print("mass_cl values:", mass_cl_output_array)
