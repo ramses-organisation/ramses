@@ -470,21 +470,18 @@ subroutine make_virtual_fine_dp(xx,ilevel)
     offset=offset+emission(ilevel)%ngrids(idx)
   end do
 #else
-!$omp parallel private(icpu,j,step,iskip,i)
-  do icpu=1,ncpu
-     if (emission(icpu,ilevel)%ngrid>0) then
-!$omp do
-       do j=1,twotondim
-         step=(j-1)*emission(icpu,ilevel)%ngrid
-         iskip=ncoarse+(j-1)*ngridmax
-         do i=1,emission(icpu,ilevel)%ngrid
-           emission(icpu,ilevel)%u(i+step,1)=xx(emission(icpu,ilevel)%igrid(i)+iskip)
-         end do
-       end do
-!$omp end do nowait
-     end if
+!$omp parallel do private(j,icpu,step,iskip,i)
+  do j=1,twotondim
+    do icpu=1,ncpu
+      if (emission(icpu,ilevel)%ngrid>0) then
+        step=(j-1)*emission(icpu,ilevel)%ngrid
+        iskip=ncoarse+(j-1)*ngridmax
+        do i=1,emission(icpu,ilevel)%ngrid
+          emission(icpu,ilevel)%u(i+step,1)=xx(emission(icpu,ilevel)%igrid(i)+iskip)
+        end do
+      end if
+    end do
   end do
-!$omp end parallel
 #endif
 
   ! Send all messages
@@ -512,25 +509,23 @@ subroutine make_virtual_fine_dp(xx,ilevel)
   call MPI_WAITALL(countrecv,reqrecv,statuses,info)
 
   ! Scatter reception array
-!$omp parallel private(icpu,j,step,iskip,i)
-  do icpu=1,ncpu
-    if (reception(icpu,ilevel)%ngrid>0) then
-!$omp do
-      do j=1,twotondim
+!$omp parallel do private(j,icpu,step,iskip,i)
+  do j=1,twotondim
+    do icpu=1,ncpu
+      if (reception(icpu,ilevel)%ngrid>0) then
         step=(j-1)*reception(icpu,ilevel)%ngrid
         iskip=ncoarse+(j-1)*ngridmax
         do i=1,reception(icpu,ilevel)%ngrid
 #ifdef LIGHT_MPI_COMM
           xx(reception(icpu,ilevel)%pcomm%igrid(i)+iskip)=reception(icpu,ilevel)%pcomm%u(i+step,1)
 #else
-         xx(reception(icpu,ilevel)%igrid(i)+iskip)=reception(icpu,ilevel)%u(i+step,1)
+          xx(reception(icpu,ilevel)%igrid(i)+iskip)=reception(icpu,ilevel)%u(i+step,1)
 #endif
         end do
-      end do
-!$omp end do nowait
-    end if
+      end if
+    end do
   end do
-!$omp end parallel
+
 
   ! Wait for full completion of sends
 #ifdef LIGHT_MPI_COMM
@@ -638,21 +633,18 @@ subroutine make_virtual_fine_int(xx,ilevel)
     offset=offset+emission(ilevel)%ngrids(idx)
   end do
 #else
-!$omp parallel private(icpu,j,step,iskip,i)
-  do icpu=1,ncpu
-     if (emission(icpu,ilevel)%ngrid>0) then
-!$omp do
-       do j=1,twotondim
-         step=(j-1)*emission(icpu,ilevel)%ngrid
-         iskip=ncoarse+(j-1)*ngridmax
-         do i=1,emission(icpu,ilevel)%ngrid
-           emission(icpu,ilevel)%f(i+step,1)=xx(emission(icpu,ilevel)%igrid(i)+iskip)
-         end do
-       end do
-!$omp end do nowait
-     end if
+!$omp parallel do private(j,icpu,step,iskip,i)
+  do j=1,twotondim
+    do icpu=1,ncpu
+      if (emission(icpu,ilevel)%ngrid>0) then
+        step=(j-1)*emission(icpu,ilevel)%ngrid
+        iskip=ncoarse+(j-1)*ngridmax
+        do i=1,emission(icpu,ilevel)%ngrid
+          emission(icpu,ilevel)%f(i+step,1)=xx(emission(icpu,ilevel)%igrid(i)+iskip)
+        end do
+      end if
+    end do
   end do
-!$omp end parallel
 #endif
 
   ! Send all messages
@@ -680,11 +672,10 @@ subroutine make_virtual_fine_int(xx,ilevel)
   call MPI_WAITALL(countrecv,reqrecv,statuses,info)
 
   ! Scatter reception array
-!$omp parallel private(icpu,j,step,iskip,i)
-  do icpu=1,ncpu
-    if (reception(icpu,ilevel)%ngrid>0) then
-!$omp do
-      do j=1,twotondim
+!$omp parallel do private(j,icpu,step,iskip,i)
+  do j=1,twotondim
+    do icpu=1,ncpu
+      if (reception(icpu,ilevel)%ngrid>0) then
         step=(j-1)*reception(icpu,ilevel)%ngrid
         iskip=ncoarse+(j-1)*ngridmax
         do i=1,reception(icpu,ilevel)%ngrid
@@ -694,11 +685,9 @@ subroutine make_virtual_fine_int(xx,ilevel)
           xx(reception(icpu,ilevel)%igrid(i)+iskip)=reception(icpu,ilevel)%f(i+step,1)
 #endif
         end do
-      end do
-!$omp end do nowait
-    end if
+      end if
+    end do
   end do
-!$omp end parallel
 
   ! Wait for full completion of sends
 #ifdef LIGHT_MPI_COMM
@@ -774,11 +763,10 @@ subroutine make_virtual_reverse_dp(xx,ilevel)
   if(ilevel.LE.switchlevel)then
 
  ! Gather emission array
-!$omp parallel private(icpu,j,step,iskip,i,ibuf,icell)
-  do icpu=1,ncpu
-    if (reception(icpu,ilevel)%ngrid>0) then
-!$omp do
-      do j=1,twotondim
+!$omp parallel do private(j,icpu,step,iskip,i,ibuf,icell)
+  do j=1,twotondim
+    do icpu=1,ncpu
+      if (reception(icpu,ilevel)%ngrid>0) then
         step=(j-1)*reception(icpu,ilevel)%ngrid
         iskip=ncoarse+(j-1)*ngridmax
         do i=1,reception(icpu,ilevel)%ngrid
@@ -791,11 +779,9 @@ subroutine make_virtual_reverse_dp(xx,ilevel)
            reception(icpu,ilevel)%u(ibuf,1)=xx(icell)
 #endif
         end do
-      end do
-!$omp end do nowait
-   end if
+      end if
+    end do
   end do
-!$omp end parallel
 
 
   ! Receive all messages
@@ -889,22 +875,19 @@ subroutine make_virtual_reverse_dp(xx,ilevel)
     offset=offset+emission(ilevel)%ngrids(idx)
   end do
 #else
-!$omp parallel private(icpu,j,step,iskip,i)
-  do icpu=1,ncpu
-     if (emission(icpu,ilevel)%ngrid>0) then
-!$omp do
-        do j=1,twotondim
-           step=(j-1)*emission(icpu,ilevel)%ngrid
-           iskip=ncoarse+(j-1)*ngridmax
-           do i=1,emission(icpu,ilevel)%ngrid
-              xx(emission(icpu,ilevel)%igrid(i)+iskip)= &
-                   & xx(emission(icpu,ilevel)%igrid(i)+iskip) + emission(icpu,ilevel)%u(i+step,1)
-           end do
+!$omp parallel do private(j,icpu,step,iskip,i)
+  do j=1,twotondim
+    do icpu=1,ncpu
+      if (emission(icpu,ilevel)%ngrid>0) then
+        step=(j-1)*emission(icpu,ilevel)%ngrid
+        iskip=ncoarse+(j-1)*ngridmax
+        do i=1,emission(icpu,ilevel)%ngrid
+          xx(emission(icpu,ilevel)%igrid(i)+iskip)= &
+               & xx(emission(icpu,ilevel)%igrid(i)+iskip) + emission(icpu,ilevel)%u(i+step,1)
         end do
-!$omp end do nowait
-     end if
+      end if
+    end do
   end do
-!$omp end parallel
 #endif
 
   else
@@ -934,11 +917,10 @@ subroutine make_virtual_reverse_dp(xx,ilevel)
 #endif
 
   ! Gather emission array
-!$omp parallel private(icpu,j,step,iskip,i)
-  do icpu=1,ncpu
-    if (reception(icpu,ilevel)%ngrid>0) then
-!$omp do
-      do j=1,twotondim
+!$omp parallel do private(j,icpu,step,iskip,i)
+  do j=1,twotondim
+    do icpu=1,ncpu
+      if (reception(icpu,ilevel)%ngrid>0) then
         step=(j-1)*reception(icpu,ilevel)%ngrid
         iskip=ncoarse+(j-1)*ngridmax
         do i=1,reception(icpu,ilevel)%ngrid
@@ -948,11 +930,9 @@ subroutine make_virtual_reverse_dp(xx,ilevel)
           reception(icpu,ilevel)%u(i+step,1)=xx(reception(icpu,ilevel)%igrid(i)+iskip)
 #endif
         end do
-      end do
-!$omp end do nowait
-   end if
+      end if
+    end do
   end do
-!$omp end parallel
 
   ! Send all messages
   countsend=0
@@ -992,22 +972,19 @@ subroutine make_virtual_reverse_dp(xx,ilevel)
     offset=offset+emission(ilevel)%ngrids(idx)
   end do
 #else
-!$omp parallel private(icpu,j,step,iskip,i)
-  do icpu=1,ncpu
-     if (emission(icpu,ilevel)%ngrid>0) then
-!$omp do
-       do j=1,twotondim
-         step=(j-1)*emission(icpu,ilevel)%ngrid
-         iskip=ncoarse+(j-1)*ngridmax
-         do i=1,emission(icpu,ilevel)%ngrid
-            xx(emission(icpu,ilevel)%igrid(i)+iskip)= &
-               & xx(emission(icpu,ilevel)%igrid(i)+iskip) + emission(icpu,ilevel)%u(i+step,1)
-         end do
-       end do
-!$omp end do nowait
-     end if
-   end do
-!$omp end parallel
+!$omp parallel do private(j,icpu,step,iskip,i)
+  do j=1,twotondim
+    do icpu=1,ncpu
+      if (emission(icpu,ilevel)%ngrid>0) then
+        step=(j-1)*emission(icpu,ilevel)%ngrid
+        iskip=ncoarse+(j-1)*ngridmax
+        do i=1,emission(icpu,ilevel)%ngrid
+          xx(emission(icpu,ilevel)%igrid(i)+iskip)= &
+              & xx(emission(icpu,ilevel)%igrid(i)+iskip) + emission(icpu,ilevel)%u(i+step,1)
+        end do
+      end if
+    end do
+  end do
 #endif
 
   ! Wait for full completion of sends
@@ -1088,28 +1065,25 @@ subroutine make_virtual_reverse_int(xx,ilevel)
   if(ilevel.le.switchlevel) then
 
   ! Gather emission array
-!$omp parallel private(icpu,j,step,iskip,i,ibuf,icell)
-  do icpu=1,ncpu
-     if (reception(icpu,ilevel)%ngrid>0) then
-!$omp do
-        do j=1,twotondim
-           step=(j-1)*reception(icpu,ilevel)%ngrid
-           iskip=ncoarse+(j-1)*ngridmax
-           do i=1,reception(icpu,ilevel)%ngrid
-              ibuf=i+step
+!$omp parallel do private(j,icpu,step,iskip,i,ibuf,icell)
+  do j=1,twotondim
+    do icpu=1,ncpu
+      if (reception(icpu,ilevel)%ngrid>0) then
+        step=(j-1)*reception(icpu,ilevel)%ngrid
+        iskip=ncoarse+(j-1)*ngridmax
+        do i=1,reception(icpu,ilevel)%ngrid
+          ibuf=i+step
 #ifdef LIGHT_MPI_COMM
-              icell=reception(icpu,ilevel)%pcomm%igrid(i)+iskip
-              reception(icpu,ilevel)%pcomm%f(ibuf,1)=xx(icell)
+          icell=reception(icpu,ilevel)%pcomm%igrid(i)+iskip
+          reception(icpu,ilevel)%pcomm%f(ibuf,1)=xx(icell)
 #else
-              icell=reception(icpu,ilevel)%igrid(i)+iskip
-              reception(icpu,ilevel)%f(ibuf,1)=xx(icell)
+          icell=reception(icpu,ilevel)%igrid(i)+iskip
+          reception(icpu,ilevel)%f(ibuf,1)=xx(icell)
 #endif
-           end do
         end do
-!$omp end do nowait
-     end if
+      end if
+    end do
   end do
-!$omp end parallel
 
   ! Receive all messages
 #ifdef LIGHT_MPI_COMM
@@ -1202,22 +1176,19 @@ subroutine make_virtual_reverse_int(xx,ilevel)
      offset=offset+emission(ilevel)%ngrids(idx)
   end do
 #else
-!$omp parallel private(icpu,j,step,iskip,i)
-  do icpu=1,ncpu
-     if (emission(icpu,ilevel)%ngrid>0) then
-!$omp do
-        do j=1,twotondim
-           step=(j-1)*emission(icpu,ilevel)%ngrid
-           iskip=ncoarse+(j-1)*ngridmax
-           do i=1,emission(icpu,ilevel)%ngrid
-              xx(emission(icpu,ilevel)%igrid(i)+iskip)= xx(emission(icpu,ilevel)%igrid(i)+iskip) &
-                                                        & + emission(icpu,ilevel)%f(i+step,1)
-           end do
+!$omp parallel do private(j,icpu,step,iskip,i)
+  do j=1,twotondim
+    do icpu=1,ncpu
+      if (emission(icpu,ilevel)%ngrid>0) then
+        step=(j-1)*emission(icpu,ilevel)%ngrid
+        iskip=ncoarse+(j-1)*ngridmax
+        do i=1,emission(icpu,ilevel)%ngrid
+          xx(emission(icpu,ilevel)%igrid(i)+iskip)= xx(emission(icpu,ilevel)%igrid(i)+iskip) &
+                                                & + emission(icpu,ilevel)%f(i+step,1)
         end do
-!$omp end do nowait
-     end if
+      end if
+    end do
   end do
-!$omp end parallel
 #endif
 
   else
@@ -1247,25 +1218,22 @@ subroutine make_virtual_reverse_int(xx,ilevel)
 #endif
 
   ! Gather emission array
-!$omp parallel private(icpu,j,step,iskip,i)
-  do icpu=1,ncpu
-     if (reception(icpu,ilevel)%ngrid>0) then
-!$omp do
-        do j=1,twotondim
-           step=(j-1)*reception(icpu,ilevel)%ngrid
-           iskip=ncoarse+(j-1)*ngridmax
-           do i=1,reception(icpu,ilevel)%ngrid
+!$omp parallel do private(j,icpu,step,iskip,i)
+  do j=1,twotondim
+    do icpu=1,ncpu
+      if (reception(icpu,ilevel)%ngrid>0) then
+        step=(j-1)*reception(icpu,ilevel)%ngrid
+        iskip=ncoarse+(j-1)*ngridmax
+        do i=1,reception(icpu,ilevel)%ngrid
 #ifdef LIGHT_MPI_COMM
-              reception(icpu,ilevel)%pcomm%f(i+step,1)=xx(reception(icpu,ilevel)%pcomm%igrid(i)+iskip)
+          reception(icpu,ilevel)%pcomm%f(i+step,1)=xx(reception(icpu,ilevel)%pcomm%igrid(i)+iskip)
 #else
-              reception(icpu,ilevel)%f(i+step,1)=xx(reception(icpu,ilevel)%igrid(i)+iskip)
+          reception(icpu,ilevel)%f(i+step,1)=xx(reception(icpu,ilevel)%igrid(i)+iskip)
 #endif
-           end do
         end do
-!$omp end do nowait
-     end if
+      end if
+    end do
   end do
-!$omp end parallel
 
   ! Send all messages
   countsend=0
@@ -1305,22 +1273,19 @@ subroutine make_virtual_reverse_int(xx,ilevel)
     offset=offset+emission(ilevel)%ngrids(idx)
   end do
 #else
-!$omp parallel private(icpu,j,step,iskip,i)
-  do icpu=1,ncpu
-     if (emission(icpu,ilevel)%ngrid>0) then
-!$omp do
-        do j=1,twotondim
-           step=(j-1)*emission(icpu,ilevel)%ngrid
-           iskip=ncoarse+(j-1)*ngridmax
-           do i=1,emission(icpu,ilevel)%ngrid
-              xx(emission(icpu,ilevel)%igrid(i)+iskip)= xx(emission(icpu,ilevel)%igrid(i)+iskip) &
-                                                        & + emission(icpu,ilevel)%f(i+step,1)
-           end do
+!$omp parallel do private(j,icpu,step,iskip,i)
+  do j=1,twotondim
+    do icpu=1,ncpu
+      if (emission(icpu,ilevel)%ngrid>0) then
+        step=(j-1)*emission(icpu,ilevel)%ngrid
+        iskip=ncoarse+(j-1)*ngridmax
+        do i=1,emission(icpu,ilevel)%ngrid
+          xx(emission(icpu,ilevel)%igrid(i)+iskip)= xx(emission(icpu,ilevel)%igrid(i)+iskip) &
+                                                & + emission(icpu,ilevel)%f(i+step,1)
         end do
-!$omp end do nowait
-     end if
+      end if
+    end do
   end do
-!$omp end parallel
 #endif
 
   ! Wait for full completion of sends
