@@ -29,7 +29,7 @@ contains
          ! slopes in first coordinate direction
          dlft = qcen - q(l,i-1,j,k,n)
          drgt = q(l,i+1,j,k,n) - qcen
-#if NDIM==1 || NDIM==2
+#if NDIM==1 || NDIM==2 || defined(SOLVERmhd)
          dq(l,i,j,k,n,1) = slope_minmod_or_average(dlft,drgt,slope_type_real)
 #else
          dq(l,i,j,k,n,1) = slope_minmod(dlft,drgt)
@@ -38,7 +38,7 @@ contains
          ! slopes in second coordinate direction
          dlft = qcen - q(l,i,j-1,k,n)
          drgt = q(l,i,j+1,k,n) - qcen
-#if NDIM==2
+#if NDIM==2 || defined(SOLVERmhd)
          dq(l,i,j,k,n,2) = slope_minmod_or_average(dlft,drgt,slope_type_real)
 #else
          dq(l,i,j,k,n,2) = slope_minmod(dlft,drgt)
@@ -48,13 +48,17 @@ contains
          ! slopes in third coordinate direction
          dlft = qcen - q(l,i,j,k-1,n)
          drgt = q(l,i,j,k+1,n) - qcen
+#if defined(SOLVERmhd)
+         dq(l,i,j,k,n,3) = slope_minmod_or_average(dlft,drgt,slope_type_real)
+#else
          dq(l,i,j,k,n,3) = slope_minmod(dlft,drgt)
+#endif
 #endif
       end do
 
    end subroutine calc_uslope_minmod_average
    !#######################################################
-#if NDIM==3
+#if NDIM==3 || defined(SOLVERhydro)
    pure subroutine calc_uslope_moncen(q,dq,i,j,k,n,ngrid)
       implicit none
       real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar),intent(in)::q
