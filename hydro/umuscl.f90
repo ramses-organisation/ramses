@@ -919,8 +919,8 @@ end subroutine ctoprim
 !###########################################################
 !###########################################################
 subroutine uslope(q,dq,dx,dt,ngrid)
-  use amr_parameters, only:dp,nvector,ndim,iu1,iu2,ju1,ju2,ku1,ku2
-  use hydro_parameters, only:nvar,slope_type
+  use amr_parameters, only:dp,nvector,ndim
+  use hydro_parameters, only:nvar,slope_type,iu1,iu2,ju1,ju2,ku1,ku2
   use const
   use slope_types
   implicit none
@@ -955,7 +955,7 @@ subroutine uslope(q,dq,dx,dt,ngrid)
 #else
               else if(slope_type==1)then ! minmod
 #endif
-                 call calc_uslope_minmod_average(q(:,:,:,:,n),dq(:,i,j,k,n,:),i,j,k,ngrid,slope_type_real)
+                 call calc_uslope_minmod_average(q,dq,i,j,k,n,ngrid,slope_type_real)
 #if NDIM==3
               else if(slope_type==2)then
                  ! moncen

@@ -1,5 +1,6 @@
 module slope_types
    use amr_parameters, only:dp,nvector,ndim
+   use hydro_parameters, only:nvar,iu1,iu2,ju1,ju2,ku1,ku2
    use const
    implicit none
 
@@ -10,13 +11,12 @@ contains
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
    !DIR$ FORCEINLINE :: calc_uslope_minmod_average
-   pure subroutine calc_uslope_minmod_average(q,dq,i,j,k,ngrid,slope_type_real)
-      use hydro_parameters
+   pure subroutine calc_uslope_minmod_average(q,dq,i,j,k,n,ngrid,slope_type_real)
       implicit none
-      real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),intent(in)::q
-      real(dp),dimension(1:nvector,1:ndim),intent(out)::dq
+      real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar),intent(in)::q
+      real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim),intent(out)::dq
       integer,intent(in)::ngrid
-      integer,intent(in)::i, j, k
+      integer,intent(in)::i, j, k, n
       real(dp),intent(in)::slope_type_real
       !-----------------------------------------------------
       ! Calculate minmod or average slope for each direction
@@ -25,31 +25,31 @@ contains
       real(dp)::dlft, drgt, qcen
 
       do l = 1, ngrid
-         qcen = q(l,i,j,k)
+         qcen = q(l,i,j,k,n)
 
          ! slopes in first coordinate direction
-         dlft = qcen - q(l,i-1,j,k)
-         drgt = q(l,i+1,j,k) - qcen
+         dlft = qcen - q(l,i-1,j,k,n)
+         drgt = q(l,i+1,j,k,n) - qcen
 #if NDIM==1 || NDIM==2
-         dq(l,1) = slope_minmod_or_average(dlft,drgt,slope_type_real)
+         dq(l,i,j,k,n,1) = slope_minmod_or_average(dlft,drgt,slope_type_real)
 #else
-         dq(l,1) = slope_minmod(dlft,drgt)
+         dq(l,i,j,k,n,1) = slope_minmod(dlft,drgt)
 #endif
 #if NDIM>1
          ! slopes in second coordinate direction
-         dlft = qcen - q(l,i,j-1,k)
-         drgt = q(l,i,j+1,k) - qcen
+         dlft = qcen - q(l,i,j-1,k,n)
+         drgt = q(l,i,j+1,k,n) - qcen
 #if NDIM==2
-         dq(l,2) = slope_minmod_or_average(dlft,drgt,slope_type_real)
+         dq(l,i,j,k,n,2) = slope_minmod_or_average(dlft,drgt,slope_type_real)
 #else
-         dq(l,2) = slope_minmod(dlft,drgt)
+         dq(l,i,j,k,n,2) = slope_minmod(dlft,drgt)
 #endif
 #endif
 #if NDIM>2
          ! slopes in third coordinate direction
-         dlft = qcen - q(l,i,j,k-1)
-         drgt = q(l,i,j,k+1) - qcen
-         dq(l,3) = slope_minmod(dlft,drgt)
+         dlft = qcen - q(l,i,j,k-1,n)
+         drgt = q(l,i,j,k+1,n) - qcen
+         dq(l,i,j,k,n,3) = slope_minmod(dlft,drgt)
 #endif
       end do
 
@@ -57,7 +57,6 @@ contains
    !#######################################################
 #if NDIM==3
    pure subroutine calc_uslope_moncen(q,dq,i,j,k,ngrid)
-      use hydro_parameters
       implicit none
       real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),intent(in)::q
       real(dp),dimension(1:nvector,1:ndim),intent(out)::dq
@@ -94,7 +93,6 @@ contains
    !#######################################################
 #if NDIM==2
    pure subroutine calc_uslope_positivity_preserving(q,dq,i,j,k,ngrid)
-      use hydro_parameters
       implicit none
       real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),intent(in)::q
       real(dp),dimension(1:nvector,1:ndim),intent(out)::dq
@@ -142,7 +140,6 @@ contains
    end subroutine calc_uslope_positivity_preserving
 #elif NDIM==3
    pure subroutine calc_uslope_positivity_preserving(q,dq,i,j,k,ngrid)
-      use hydro_parameters
       implicit none
       real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),intent(in)::q
       real(dp),dimension(1:nvector,1:ndim),intent(out)::dq
@@ -219,7 +216,6 @@ contains
    !#######################################################
 #if NDIM==1
    pure subroutine calc_uslope_superbee(q,dq,i,j,k,n,ngrid,dtdx)
-      use hydro_parameters
       implicit none
       real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar),intent(in)::q
       real(dp),dimension(1:nvector,1:ndim),intent(out)::dq
@@ -249,7 +245,6 @@ contains
    end subroutine calc_uslope_superbee
    !#######################################################
    pure subroutine calc_uslope_ultrabee(q,dq,i,j,k,n,ngrid,dtdx)
-      use hydro_parameters
       implicit none
       real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar),intent(in)::q
       real(dp),dimension(1:nvector,1:ndim),intent(out)::dq
@@ -283,7 +278,6 @@ contains
    end subroutine calc_uslope_ultrabee
    !#######################################################
    pure subroutine calc_uslope_unstable(q,dq,i,j,k,ngrid)
-      use hydro_parameters
       implicit none
       real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),intent(in)::q
       real(dp),dimension(1:nvector,1:ndim),intent(out)::dq
@@ -308,7 +302,6 @@ contains
 #endif
    !#######################################################
    pure subroutine calc_uslope_vanLeer(q,dq,i,j,k,ngrid)
-      use hydro_parameters
       implicit none
       real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),intent(in)::q
       real(dp),dimension(1:nvector,1:ndim),intent(out)::dq
@@ -345,7 +338,6 @@ contains
    end subroutine calc_uslope_vanLeer
    !#######################################################
    pure subroutine calc_uslope_vanLeer_bis(q,dq,i,j,k,ngrid)
-      use hydro_parameters
       implicit none
       real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),intent(in)::q
       real(dp),dimension(1:nvector,1:ndim),intent(out)::dq
