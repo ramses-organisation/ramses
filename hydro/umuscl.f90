@@ -154,17 +154,18 @@ subroutine trace(q,dq,qm,qp,dx,dt,ngrid)
    do k = klo, khi
       do j = jlo, jhi
          do i = ilo, ihi
+            ! Cell centered values
+            do ivar=1,nvar
+               !DIR$ IVDEP
+               !DIR$ SIMD
+               do l = 1, ngrid
+                  var(l,ivar) = q(l,i,j,k,ivar)
+               end do
+            end do
+
             !DIR$ IVDEP
             !DIR$ SIMD
             do l = 1, ngrid
-
-               ! Retrieve data for cell l
-
-               ! Cell centered values
-               !DIR$ UNROLL
-               do ivar=1,nvar
-                  var(l,ivar) = q(l,i,j,k,ivar)
-               end do
                oneoverr = 1d0/var(l,ir)
 
                ! Limited gradients in all 3 directions
