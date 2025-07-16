@@ -9,7 +9,7 @@ contains
    !!! USLOPE SUBROUTINE FOR EACH SLOPE TYPE !!!
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-   !DIR$ ATTRIBUTES FORCEINLINE :: calc_uslope_minmod_average
+   !DIR$ FORCEINLINE :: calc_uslope_minmod_average
    pure subroutine calc_uslope_minmod_average(q,dq,i,j,k,ngrid,slope_type_real)
       use hydro_parameters
       implicit none
@@ -24,8 +24,6 @@ contains
       integer::l
       real(dp)::dlft, drgt, qcen
 
-      !DIR$ IVDEP
-      !DIR$ SIMD
       do l = 1, ngrid
          qcen = q(l,i,j,k)
 
@@ -71,8 +69,6 @@ contains
       integer::l
       real(dp)::dlft, drgt, qcen
 
-      !DIR$ IVDEP
-      !DIR$ SIMD
       do l = 1, ngrid
          ! Gather values at center cell and its neighbors
          qcen = q(l,i,j,k)
@@ -112,8 +108,6 @@ contains
       real(dp)::dfll,dflm,dflr,dfml,dfmm,dfmr,dfrl,dfrm,dfrr
       real(dp)::vmin,vmax,dfx,dfy,dff
 
-      !DIR$ IVDEP
-      !DIR$ SIMD
       do l = 1, ngrid
          ! Gather values at center cell and its neighbors
          qcen = q(l,i,j,k)
@@ -164,8 +158,6 @@ contains
       real(dp)::dfllr,dflmr,dflrr,dfmlr,dfmmr,dfmrr,dfrlr,dfrmr,dfrrr
       real(dp)::vmin,vmax,dfx,dfy,dfz,dff
 
-      !DIR$ IVDEP
-      !DIR$ SIMD
       do l = 1, ngrid
          qcen = q(l,i,j,k)
 
@@ -239,8 +231,7 @@ contains
       !--------------------------------------------
       integer::l
       real(dp)::dlft, drgt, qcen,dcen,dsgn,dlim
-      !DIR$ IVDEP
-      !DIR$ SIMD
+
       do l = 1, ngrid
          ! Gather values at center cell and its neighbors
          qcen = q(l,i,j,k,n)
@@ -254,6 +245,7 @@ contains
          if((dlft*drgt)<=zero)dlim=zero
          dq(l,1) = dsgn*dlim !min(dlim,abs(dcen))
       end do
+
    end subroutine calc_uslope_superbee
    !#######################################################
    pure subroutine calc_uslope_ultrabee(q,dq,i,j,k,n,ngrid,dtdx)
@@ -269,8 +261,7 @@ contains
       !--------------------------------------------
       integer::l
       real(dp)::dlft, drgt, qcen,dcen,dsgn,dlim
-      !DIR$ IVDEP
-      !DIR$ SIMD
+
       do l = 1, ngrid
          ! Gather values at center cell and its neighbors
          qcen = q(l,i,j,k,n)
@@ -288,6 +279,7 @@ contains
          if((dlft*drgt)<=zero)dlim=zero
          dq(l,1) = dsgn*dlim !min(dlim,abs(dcen))
       end do
+   
    end subroutine calc_uslope_ultrabee
    !#######################################################
    pure subroutine calc_uslope_unstable(q,dq,i,j,k,ngrid)
@@ -302,8 +294,7 @@ contains
       !--------------------------------------------
       integer::l
       real(dp)::dlft, drgt, qcen
-      !DIR$ IVDEP
-      !DIR$ SIMD
+
       do l = 1, ngrid
          ! Gather values at center cell and its neighbors
          qcen = q(l,i,j,k)
@@ -312,6 +303,7 @@ contains
          drgt = q(l,i+1,j,k) - qcen
          dq(l,1) = 0.5d0*(dlft+drgt)
       end do
+
    end subroutine calc_uslope_unstable
 #endif
    !#######################################################
@@ -328,8 +320,6 @@ contains
       integer::l
       real(dp)::dlft, drgt, qcen
 
-      !DIR$ IVDEP
-      !DIR$ SIMD
       do l = 1, ngrid
          ! Gather values at center cell and its neighbors
          qcen = q(l,i,j,k)
@@ -367,8 +357,6 @@ contains
       integer::l
       real(dp)::dlft, drgt, qcen
 
-      !DIR$ IVDEP
-      !DIR$ SIMD
       do l = 1, ngrid
          ! Gather values at center cell and its neighbors
          qcen = q(l,i,j,k)
