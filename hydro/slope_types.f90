@@ -9,7 +9,7 @@ contains
    !!! USLOPE SUBROUTINE FOR EACH SLOPE TYPE !!!
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-   subroutine calc_uslope_minmod_average(q,dq,i,j,k,ngrid,slope_type_real)
+   pure subroutine calc_uslope_minmod_average(q,dq,i,j,k,ngrid,slope_type_real)
       use hydro_parameters
       implicit none
       real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),intent(in)::q
@@ -17,9 +17,9 @@ contains
       integer,intent(in)::ngrid
       integer,intent(in)::i, j, k
       real(dp),intent(in)::slope_type_real
-      !-----------------------------------------
-      ! 
-      !-----------------------------------------
+      !-----------------------------------------------------
+      ! Calculate minmod or average slope for each direction
+      !-----------------------------------------------------
       integer::l
       real(dp)::dlft, drgt, qcen
 
@@ -56,6 +56,217 @@ contains
 
    end subroutine calc_uslope_minmod_average
    !#######################################################
+#if NDIM==3
+   subroutine calc_uslope_moncen(q,dq,i,j,k,ngrid)
+      use hydro_parameters
+      implicit none
+      real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),intent(in)::q
+      real(dp),dimension(1:nvector,1:ndim),intent(out)::dq
+      integer,intent(in)::ngrid
+      integer,intent(in)::i, j, k
+      !--------------------------------------------------
+      ! Calculate moncen slope for each direction
+      !--------------------------------------------------
+      integer::l
+      real(dp)::dlft, drgt, qcen
+
+      !DIR$ IVDEP
+      !DIR$ SIMD
+      do l = 1, ngrid
+         ! Gather values at center cell and its neighbors
+         qcen = q(l,i,j,k)
+
+         ! slopes in first coordinate direction
+         dlft = qcen - q(l,i-1,j,k)
+         drgt = q(l,i+1,j,k) - qcen
+         dq(l,1) = slope_moncen(dlft,drgt)
+
+         ! slopes in second coordinate direction
+         dlft = qcen - q(l,i,j-1,k)
+         drgt = q(l,i,j+1,k) - qcen
+         dq(l,2) = slope_moncen(dlft,drgt)
+
+         ! slopes in third coordinate direction
+         dlft = qcen - q(l,i,j,k-1)
+         drgt = q(l,i,j,k+1) - qcen
+         dq(l,3) = slope_moncen(dlft,drgt)
+      end do
+
+   end subroutine calc_uslope_moncen
+#endif
+   !#######################################################
+#if NDIM==2
+   subroutine calc_uslope_positivity_preserving(q,dq,i,j,k,ngrid)
+      use hydro_parameters
+      implicit none
+      real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),intent(in)::q
+      real(dp),dimension(1:nvector,1:ndim),intent(out)::dq
+      integer,intent(in)::ngrid
+      integer,intent(in)::i, j, k
+      !--------------------------------------------------
+      ! Calculate positivity preserving 2D unsplit slope slope for each direction
+      !--------------------------------------------------
+      integer::l
+      real(dp)::dlft,drgt,qcen,dlim
+      real(dp)::dfll,dflm,dflr,dfml,dfmm,dfmr,dfrl,dfrm,dfrr
+      real(dp)::vmin,vmax,dfx,dfy,dff
+
+      !DIR$ IVDEP
+      !DIR$ SIMD
+      do l = 1, ngrid
+         ! Gather values at center cell and its neighbors
+         qcen = q(l,i,j,k)
+
+         dfll = q(l,i-1,j-1,k) - qcen
+         dflm = q(l,i-1,j  ,k) - qcen
+         dflr = q(l,i-1,j+1,k) - qcen
+         dfml = q(l,i  ,j-1,k) - qcen
+         dfmm = 0
+         dfmr = q(l,i  ,j+1,k) - qcen
+         dfrl = q(l,i+1,j-1,k) - qcen
+         dfrm = q(l,i+1,j  ,k) - qcen
+         dfrr = q(l,i+1,j+1,k) - qcen
+
+         vmin = min(dfll,dflm,dflr,dfml,dfmm,dfmr,dfrl,dfrm,dfrr)
+         vmax = max(dfll,dflm,dflr,dfml,dfmm,dfmr,dfrl,dfrm,dfrr)
+
+         dfx  = half*(q(l,i+1,j,k)-q(l,i-1,j,k))
+         dfy  = half*(q(l,i,j+1,k)-q(l,i,j-1,k))
+         dff  = half*(abs(dfx)+abs(dfy))
+
+         if(dff>zero)then
+            dlim = min(one,min(abs(vmin),abs(vmax))/dff)
+         else
+            dlim = one
+         endif
+
+         dq(l,1) = dlim*dfx
+         dq(l,2) = dlim*dfy
+      end do
+
+   end subroutine calc_uslope_positivity_preserving
+#elif NDIM==3
+   subroutine calc_uslope_positivity_preserving(q,dq,i,j,k,ngrid)
+      use hydro_parameters
+      implicit none
+      real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),intent(in)::q
+      real(dp),dimension(1:nvector,1:ndim),intent(out)::dq
+      integer,intent(in)::ngrid
+      integer,intent(in)::i, j, k
+      !--------------------------------------------------------------------------
+      ! Calculate positivity preserving 3D unsplit slope slope for each direction
+      !--------------------------------------------------------------------------
+      integer::l
+      real(dp)::dlft,drgt,qcen,dlim
+      real(dp)::dflll,dflml,dflrl,dfmll,dfmml,dfmrl,dfrll,dfrml,dfrrl
+      real(dp)::dfllm,dflmm,dflrm,dfmlm,dfmmm,dfmrm,dfrlm,dfrmm,dfrrm
+      real(dp)::dfllr,dflmr,dflrr,dfmlr,dfmmr,dfmrr,dfrlr,dfrmr,dfrrr
+      real(dp)::vmin,vmax,dfx,dfy,dfz,dff
+
+      !DIR$ IVDEP
+      !DIR$ SIMD
+      do l = 1, ngrid
+         qcen = q(l,i,j,k)
+
+         dflll = q(l,i-1,j-1,k-1) - qcen
+         dflml = q(l,i-1,j  ,k-1) - qcen
+         dflrl = q(l,i-1,j+1,k-1) - qcen
+         dfmll = q(l,i  ,j-1,k-1) - qcen
+         dfmml = q(l,i  ,j  ,k-1) - qcen
+         dfmrl = q(l,i  ,j+1,k-1) - qcen
+         dfrll = q(l,i+1,j-1,k-1) - qcen
+         dfrml = q(l,i+1,j  ,k-1) - qcen
+         dfrrl = q(l,i+1,j+1,k-1) - qcen
+
+         dfllm = q(l,i-1,j-1,k  ) - qcen
+         dflmm = q(l,i-1,j  ,k  ) - qcen
+         dflrm = q(l,i-1,j+1,k  ) - qcen
+         dfmlm = q(l,i  ,j-1,k  ) - qcen
+         dfmmm = 0
+         dfmrm = q(l,i  ,j+1,k  ) - qcen
+         dfrlm = q(l,i+1,j-1,k  ) - qcen
+         dfrmm = q(l,i+1,j  ,k  ) - qcen
+         dfrrm = q(l,i+1,j+1,k  ) - qcen
+
+         dfllr = q(l,i-1,j-1,k+1) - qcen
+         dflmr = q(l,i-1,j  ,k+1) - qcen
+         dflrr = q(l,i-1,j+1,k+1) - qcen
+         dfmlr = q(l,i  ,j-1,k+1) - qcen
+         dfmmr = q(l,i  ,j  ,k+1) - qcen
+         dfmrr = q(l,i  ,j+1,k+1) - qcen
+         dfrlr = q(l,i+1,j-1,k+1) - qcen
+         dfrmr = q(l,i+1,j  ,k+1) - qcen
+         dfrrr = q(l,i+1,j+1,k+1) - qcen
+
+         vmin = min(dflll,dflml,dflrl,dfmll,dfmml,dfmrl,dfrll,dfrml,dfrrl, &
+               &     dfllm,dflmm,dflrm,dfmlm,dfmmm,dfmrm,dfrlm,dfrmm,dfrrm, &
+               &     dfllr,dflmr,dflrr,dfmlr,dfmmr,dfmrr,dfrlr,dfrmr,dfrrr)
+         vmax = max(dflll,dflml,dflrl,dfmll,dfmml,dfmrl,dfrll,dfrml,dfrrl, &
+               &     dfllm,dflmm,dflrm,dfmlm,dfmmm,dfmrm,dfrlm,dfrmm,dfrrm, &
+               &     dfllr,dflmr,dflrr,dfmlr,dfmmr,dfmrr,dfrlr,dfrmr,dfrrr)
+
+         dfx  = half*(q(l,i+1,j,k) - q(l,i-1,j,k))
+         dfy  = half*(q(l,i,j+1,k) - q(l,i,j-1,k))
+         dfz  = half*(q(l,i,j,k+1) - q(l,i,j,k-1))
+         dff  = half*(abs(dfx)+abs(dfy)+abs(dfz))
+
+         if(dff>zero)then
+            dlim = min(one,min(abs(vmin),abs(vmax))/dff)
+         else
+            dlim = one
+         endif
+
+         dq(l,1) = dlim*dfx
+         dq(l,2) = dlim*dfy
+         dq(l,3) = dlim*dfz
+      end do
+
+   end subroutine calc_uslope_positivity_preserving
+#endif
+   !#######################################################
+#if NDIM==1
+
+#endif
+   !#######################################################
+   subroutine calc_uslope_vanLeer(q,dq,i,j,k,ngrid)
+      use hydro_parameters
+      implicit none
+      real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),intent(in)::q
+      real(dp),dimension(1:nvector,1:ndim),intent(out)::dq
+      integer,intent(in)::ngrid
+      integer,intent(in)::i, j, k
+      !--------------------------------------------------
+      ! Calculate van Leer slope for each direction
+      !--------------------------------------------------
+      integer::l
+      real(dp)::dlft, drgt, qcen
+
+      !DIR$ IVDEP
+      !DIR$ SIMD
+      do l = 1, ngrid
+         ! Gather values at center cell and its neighbors
+         qcen = q(l,i,j,k)
+
+         ! slopes in first coordinate direction
+         dlft = qcen - q(l,i-1,j,k)
+         drgt = q(l,i+1,j,k) - qcen
+         dq(l,1) = slope_vanLeer(dlft,drgt)
+#if NDIM>1
+         ! slopes in second coordinate direction
+         dlft = qcen - q(l,i,j-1,k)
+         drgt = q(l,i,j+1,k) - qcen
+         dq(l,2) = slope_vanLeer(dlft,drgt)
+#endif
+#if NDIM>2
+         ! slopes in third coordinate direction
+         dlft = qcen - q(l,i,j,k-1)
+         drgt = q(l,i,j,k+1) - qcen
+         dq(l,3) = slope_vanLeer(dlft,drgt)
+#endif
+      end do
+
+   end subroutine calc_uslope_vanLeer
+   !#######################################################
    subroutine calc_uslope_vanLeer_bis(q,dq,i,j,k,ngrid)
       use hydro_parameters
       implicit none
@@ -63,9 +274,9 @@ contains
       real(dp),dimension(1:nvector,1:ndim),intent(out)::dq
       integer,intent(in)::ngrid
       integer,intent(in)::i, j, k
-      !-----------------------------------------
-      ! Apply van Leer (bis) slope
-      !-----------------------------------------
+      !--------------------------------------------------
+      ! Calculate van Leer (bis) slope for each direction
+      !--------------------------------------------------
       integer::l
       real(dp)::dlft, drgt, qcen
 
