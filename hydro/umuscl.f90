@@ -967,36 +967,7 @@ subroutine uslope(q,dq,dx,dt,ngrid)
 #else
               else if(slope_type==1)then  ! minmod
 #endif
-                 !DIR$ IVDEP
-                 !DIR$ SIMD
-                 do l = 1, ngrid
-                    qcen = q(l,i,j,k,n)
-
-                    ! slopes in first coordinate direction
-                    dlft = qcen - q(l,i-1,j,k,n)
-                    drgt = q(l,i+1,j,k,n) - qcen
-#if NDIM==1 || NDIM==2
-                    dq(l,i,j,k,n,1) = slope_minmod_or_average(dlft,drgt,slope_type_real)
-#else
-                    dq(l,i,j,k,n,1) = slope_minmod(dlft,drgt)
-#endif
-#if NDIM>1
-                    ! slopes in second coordinate direction
-                    dlft = qcen - q(l,i,j-1,k,n)
-                    drgt = q(l,i,j+1,k,n) - qcen
-#if NDIM==2
-                    dq(l,i,j,k,n,2) = slope_minmod_or_average(dlft,drgt,slope_type_real)
-#else
-                    dq(l,i,j,k,n,2) = slope_minmod(dlft,drgt)
-#endif
-#endif
-#if NDIM>2
-                    ! slopes in third coordinate direction
-                    dlft = qcen - q(l,i,j,k-1,n)
-                    drgt = q(l,i,j,k+1,n) - qcen
-                    dq(l,i,j,k,n,3) = slope_minmod(dlft,drgt)
-#endif
-                 end do
+                 call calc_uslope_minmod_average(q(:,:,:,:,n),dq(:,i,j,k,n,:),i,j,k,ngrid,slope_type_real)
 #if NDIM==3
               else if(slope_type==2)then ! moncen
                  !DIR$ IVDEP
@@ -1202,29 +1173,7 @@ subroutine uslope(q,dq,dx,dt,ngrid)
                  end do
 
               else if(slope_type==8)then ! generalized moncen/minmod parameterisation (van Leer 1979)
-                 !DIR$ IVDEP
-                 !DIR$ SIMD
-                 do l = 1, ngrid
-                    ! Gather values at center cell and its neighbors
-                    qcen = q(l,i,j,k,n)
-
-                    ! slopes in first coordinate direction
-                    dlft = qcen - q(l,i-1,j,k,n)
-                    drgt = q(l,i+1,j,k,n) - qcen
-                    dq(l,i,j,k,n,1) = slope_vanLeer_bis(dlft,drgt)
-#if NDIM>1
-                    ! slopes in second coordinate direction
-                    dlft = qcen - q(l,i,j-1,k,n)
-                    drgt = q(l,i,j+1,k,n) - qcen
-                    dq(l,i,j,k,n,2) = slope_vanLeer_bis(dlft,drgt)
-#endif
-#if NDIM>2
-                    ! slopes in third coordinate direction
-                    dlft = qcen - q(l,i,j,k-1,n)
-                    drgt = q(l,i,j,k+1,n) - qcen
-                    dq(l,i,j,k,n,3) = slope_vanLeer_bis(dlft,drgt)
-#endif
-                 end do
+                 call calc_uslope_vanLeer_bis(q(:,:,:,:,n),dq(:,i,j,k,n,:),i,j,k,ngrid)
 
               else
                  write(*,*)'Unknown slope type',dx,dt
