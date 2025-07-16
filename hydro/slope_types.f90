@@ -55,12 +55,12 @@ contains
    end subroutine calc_uslope_minmod_average
    !#######################################################
 #if NDIM==3
-   pure subroutine calc_uslope_moncen(q,dq,i,j,k,ngrid)
+   pure subroutine calc_uslope_moncen(q,dq,i,j,k,n,ngrid)
       implicit none
-      real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),intent(in)::q
-      real(dp),dimension(1:nvector,1:ndim),intent(out)::dq
+      real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar),intent(in)::q
+      real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim),intent(out)::dq
       integer,intent(in)::ngrid
-      integer,intent(in)::i, j, k
+      integer,intent(in)::i, j, k, n
       !------------------------------------------
       ! Calculate moncen slope for each direction
       !------------------------------------------
@@ -69,34 +69,34 @@ contains
 
       do l = 1, ngrid
          ! Gather values at center cell and its neighbors
-         qcen = q(l,i,j,k)
+         qcen = q(l,i,j,k,n)
 
          ! slopes in first coordinate direction
-         dlft = qcen - q(l,i-1,j,k)
-         drgt = q(l,i+1,j,k) - qcen
-         dq(l,1) = slope_moncen(dlft,drgt)
+         dlft = qcen - q(l,i-1,j,k,n)
+         drgt = q(l,i+1,j,k,n) - qcen
+         dq(l,i,j,k,n,1) = slope_moncen(dlft,drgt)
 
          ! slopes in second coordinate direction
-         dlft = qcen - q(l,i,j-1,k)
-         drgt = q(l,i,j+1,k) - qcen
-         dq(l,2) = slope_moncen(dlft,drgt)
+         dlft = qcen - q(l,i,j-1,k,n)
+         drgt = q(l,i,j+1,k,n) - qcen
+         dq(l,i,j,k,n,2) = slope_moncen(dlft,drgt)
 
          ! slopes in third coordinate direction
-         dlft = qcen - q(l,i,j,k-1)
-         drgt = q(l,i,j,k+1) - qcen
-         dq(l,3) = slope_moncen(dlft,drgt)
+         dlft = qcen - q(l,i,j,k-1,n)
+         drgt = q(l,i,j,k+1,n) - qcen
+         dq(l,i,j,k,n,3) = slope_moncen(dlft,drgt)
       end do
 
    end subroutine calc_uslope_moncen
 #endif
    !#######################################################
 #if NDIM==2
-   pure subroutine calc_uslope_positivity_preserving(q,dq,i,j,k,ngrid)
+   pure subroutine calc_uslope_positivity_preserving(q,dq,i,j,k,n,ngrid)
       implicit none
-      real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),intent(in)::q
-      real(dp),dimension(1:nvector,1:ndim),intent(out)::dq
+      real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar),intent(in)::q
+      real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim),intent(out)::dq
       integer,intent(in)::ngrid
-      integer,intent(in)::i, j, k
+      integer,intent(in)::i, j, k, n
       !--------------------------------------------------------------------------
       ! Calculate positivity preserving 2D unsplit slope slope for each direction
       !--------------------------------------------------------------------------
@@ -107,23 +107,23 @@ contains
 
       do l = 1, ngrid
          ! Gather values at center cell and its neighbors
-         qcen = q(l,i,j,k)
+         qcen = q(l,i,j,k,n)
 
-         dfll = q(l,i-1,j-1,k) - qcen
-         dflm = q(l,i-1,j  ,k) - qcen
-         dflr = q(l,i-1,j+1,k) - qcen
-         dfml = q(l,i  ,j-1,k) - qcen
+         dfll = q(l,i-1,j-1,k,n) - qcen
+         dflm = q(l,i-1,j  ,k,n) - qcen
+         dflr = q(l,i-1,j+1,k,n) - qcen
+         dfml = q(l,i  ,j-1,k,n) - qcen
          dfmm = 0
-         dfmr = q(l,i  ,j+1,k) - qcen
-         dfrl = q(l,i+1,j-1,k) - qcen
-         dfrm = q(l,i+1,j  ,k) - qcen
-         dfrr = q(l,i+1,j+1,k) - qcen
+         dfmr = q(l,i  ,j+1,k,n) - qcen
+         dfrl = q(l,i+1,j-1,k,n) - qcen
+         dfrm = q(l,i+1,j  ,k,n) - qcen
+         dfrr = q(l,i+1,j+1,k,n) - qcen
 
          vmin = min(dfll,dflm,dflr,dfml,dfmm,dfmr,dfrl,dfrm,dfrr)
          vmax = max(dfll,dflm,dflr,dfml,dfmm,dfmr,dfrl,dfrm,dfrr)
 
-         dfx  = half*(q(l,i+1,j,k)-q(l,i-1,j,k))
-         dfy  = half*(q(l,i,j+1,k)-q(l,i,j-1,k))
+         dfx  = half*(q(l,i+1,j,k,n)-q(l,i-1,j,k,n))
+         dfy  = half*(q(l,i,j+1,k,n)-q(l,i,j-1,k,n))
          dff  = half*(abs(dfx)+abs(dfy))
 
          if(dff>zero)then
@@ -132,18 +132,18 @@ contains
             dlim = one
          endif
 
-         dq(l,1) = dlim*dfx
-         dq(l,2) = dlim*dfy
+         dq(l,i,j,k,n,1) = dlim*dfx
+         dq(l,i,j,k,n,2) = dlim*dfy
       end do
 
    end subroutine calc_uslope_positivity_preserving
 #elif NDIM==3
-   pure subroutine calc_uslope_positivity_preserving(q,dq,i,j,k,ngrid)
+   pure subroutine calc_uslope_positivity_preserving(q,dq,i,j,k,n,ngrid)
       implicit none
-      real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),intent(in)::q
-      real(dp),dimension(1:nvector,1:ndim),intent(out)::dq
+      real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar),intent(in)::q
+      real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim),intent(out)::dq
       integer,intent(in)::ngrid
-      integer,intent(in)::i, j, k
+      integer,intent(in)::i, j, k, n
       !--------------------------------------------------------------------------
       ! Calculate positivity preserving 3D unsplit slope slope for each direction
       !--------------------------------------------------------------------------
@@ -155,37 +155,37 @@ contains
       real(dp)::vmin,vmax,dfx,dfy,dfz,dff
 
       do l = 1, ngrid
-         qcen = q(l,i,j,k)
+         qcen = q(l,i,j,k,n)
 
-         dflll = q(l,i-1,j-1,k-1) - qcen
-         dflml = q(l,i-1,j  ,k-1) - qcen
-         dflrl = q(l,i-1,j+1,k-1) - qcen
-         dfmll = q(l,i  ,j-1,k-1) - qcen
-         dfmml = q(l,i  ,j  ,k-1) - qcen
-         dfmrl = q(l,i  ,j+1,k-1) - qcen
-         dfrll = q(l,i+1,j-1,k-1) - qcen
-         dfrml = q(l,i+1,j  ,k-1) - qcen
-         dfrrl = q(l,i+1,j+1,k-1) - qcen
+         dflll = q(l,i-1,j-1,k-1,n) - qcen
+         dflml = q(l,i-1,j  ,k-1,n) - qcen
+         dflrl = q(l,i-1,j+1,k-1,n) - qcen
+         dfmll = q(l,i  ,j-1,k-1,n) - qcen
+         dfmml = q(l,i  ,j  ,k-1,n) - qcen
+         dfmrl = q(l,i  ,j+1,k-1,n) - qcen
+         dfrll = q(l,i+1,j-1,k-1,n) - qcen
+         dfrml = q(l,i+1,j  ,k-1,n) - qcen
+         dfrrl = q(l,i+1,j+1,k-1,n) - qcen
 
-         dfllm = q(l,i-1,j-1,k  ) - qcen
-         dflmm = q(l,i-1,j  ,k  ) - qcen
-         dflrm = q(l,i-1,j+1,k  ) - qcen
-         dfmlm = q(l,i  ,j-1,k  ) - qcen
+         dfllm = q(l,i-1,j-1,k  ,n) - qcen
+         dflmm = q(l,i-1,j  ,k  ,n) - qcen
+         dflrm = q(l,i-1,j+1,k  ,n) - qcen
+         dfmlm = q(l,i  ,j-1,k  ,n) - qcen
          dfmmm = 0
-         dfmrm = q(l,i  ,j+1,k  ) - qcen
-         dfrlm = q(l,i+1,j-1,k  ) - qcen
-         dfrmm = q(l,i+1,j  ,k  ) - qcen
-         dfrrm = q(l,i+1,j+1,k  ) - qcen
+         dfmrm = q(l,i  ,j+1,k  ,n) - qcen
+         dfrlm = q(l,i+1,j-1,k  ,n) - qcen
+         dfrmm = q(l,i+1,j  ,k  ,n) - qcen
+         dfrrm = q(l,i+1,j+1,k  ,n) - qcen
 
-         dfllr = q(l,i-1,j-1,k+1) - qcen
-         dflmr = q(l,i-1,j  ,k+1) - qcen
-         dflrr = q(l,i-1,j+1,k+1) - qcen
-         dfmlr = q(l,i  ,j-1,k+1) - qcen
-         dfmmr = q(l,i  ,j  ,k+1) - qcen
-         dfmrr = q(l,i  ,j+1,k+1) - qcen
-         dfrlr = q(l,i+1,j-1,k+1) - qcen
-         dfrmr = q(l,i+1,j  ,k+1) - qcen
-         dfrrr = q(l,i+1,j+1,k+1) - qcen
+         dfllr = q(l,i-1,j-1,k+1,n) - qcen
+         dflmr = q(l,i-1,j  ,k+1,n) - qcen
+         dflrr = q(l,i-1,j+1,k+1,n) - qcen
+         dfmlr = q(l,i  ,j-1,k+1,n) - qcen
+         dfmmr = q(l,i  ,j  ,k+1,n) - qcen
+         dfmrr = q(l,i  ,j+1,k+1,n) - qcen
+         dfrlr = q(l,i+1,j-1,k+1,n) - qcen
+         dfrmr = q(l,i+1,j  ,k+1,n) - qcen
+         dfrrr = q(l,i+1,j+1,k+1,n) - qcen
 
          vmin = min(dflll,dflml,dflrl,dfmll,dfmml,dfmrl,dfrll,dfrml,dfrrl, &
                &     dfllm,dflmm,dflrm,dfmlm,dfmmm,dfmrm,dfrlm,dfrmm,dfrrm, &
@@ -194,9 +194,9 @@ contains
                &     dfllm,dflmm,dflrm,dfmlm,dfmmm,dfmrm,dfrlm,dfrmm,dfrrm, &
                &     dfllr,dflmr,dflrr,dfmlr,dfmmr,dfmrr,dfrlr,dfrmr,dfrrr)
 
-         dfx  = half*(q(l,i+1,j,k) - q(l,i-1,j,k))
-         dfy  = half*(q(l,i,j+1,k) - q(l,i,j-1,k))
-         dfz  = half*(q(l,i,j,k+1) - q(l,i,j,k-1))
+         dfx  = half*(q(l,i+1,j,k,n) - q(l,i-1,j,k,n))
+         dfy  = half*(q(l,i,j+1,k,n) - q(l,i,j-1,k,n))
+         dfz  = half*(q(l,i,j,k+1,n) - q(l,i,j,k-1,n))
          dff  = half*(abs(dfx)+abs(dfy)+abs(dfz))
 
          if(dff>zero)then
@@ -205,9 +205,9 @@ contains
             dlim = one
          endif
 
-         dq(l,1) = dlim*dfx
-         dq(l,2) = dlim*dfy
-         dq(l,3) = dlim*dfz
+         dq(l,i,j,k,n,1) = dlim*dfx
+         dq(l,i,j,k,n,2) = dlim*dfy
+         dq(l,i,j,k,n,3) = dlim*dfz
       end do
 
    end subroutine calc_uslope_positivity_preserving
@@ -217,7 +217,7 @@ contains
    pure subroutine calc_uslope_superbee(q,dq,i,j,k,n,ngrid,dtdx)
       implicit none
       real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar),intent(in)::q
-      real(dp),dimension(1:nvector,1:ndim),intent(out)::dq
+      real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim),intent(out)::dq
       integer,intent(in)::ngrid
       integer,intent(in)::i, j, k, n
       real(dp),intent(in)::dtdx
@@ -238,7 +238,7 @@ contains
          dsgn = sign(one, dlft)
          dlim = min(abs(dlft),abs(drgt))
          if((dlft*drgt)<=zero)dlim=zero
-         dq(l,1) = dsgn*dlim !min(dlim,abs(dcen))
+         dq(l,i,j,k,n,1) = dsgn*dlim !min(dlim,abs(dcen))
       end do
 
    end subroutine calc_uslope_superbee
@@ -246,7 +246,7 @@ contains
    pure subroutine calc_uslope_ultrabee(q,dq,i,j,k,n,ngrid,dtdx)
       implicit none
       real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar),intent(in)::q
-      real(dp),dimension(1:nvector,1:ndim),intent(out)::dq
+      real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim),intent(out)::dq
       integer,intent(in)::ngrid
       integer,intent(in)::i, j, k, n
       real(dp),intent(in)::dtdx
@@ -271,17 +271,17 @@ contains
          dlim = min(abs(dlft),abs(drgt))
          !dcen = half*(q(l,i+1,j,k,n)-q(l,i-1,j,k,n))
          if((dlft*drgt)<=zero)dlim=zero
-         dq(l,1) = dsgn*dlim !min(dlim,abs(dcen))
+         dq(l,i,j,k,n,1) = dsgn*dlim !min(dlim,abs(dcen))
       end do
    
    end subroutine calc_uslope_ultrabee
    !#######################################################
-   pure subroutine calc_uslope_unstable(q,dq,i,j,k,ngrid)
+   pure subroutine calc_uslope_unstable(q,dq,i,j,k,n,ngrid)
       implicit none
-      real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),intent(in)::q
-      real(dp),dimension(1:nvector,1:ndim),intent(out)::dq
+      real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar),intent(in)::q
+      real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim),intent(out)::dq
       integer,intent(in)::ngrid
-      integer,intent(in)::i, j, k
+      integer,intent(in)::i, j, k, n
       !--------------------------------------------
       ! Calculate unstable slope for each direction
       !--------------------------------------------
@@ -290,22 +290,22 @@ contains
 
       do l = 1, ngrid
          ! Gather values at center cell and its neighbors
-         qcen = q(l,i,j,k)
+         qcen = q(l,i,j,k,n)
          ! slopes in first coordinate direction
-         dlft = qcen - q(l,i-1,j,k)
-         drgt = q(l,i+1,j,k) - qcen
-         dq(l,1) = 0.5d0*(dlft+drgt)
+         dlft = qcen - q(l,i-1,j,k,n)
+         drgt = q(l,i+1,j,k,n) - qcen
+         dq(l,i,j,k,n,1) = 0.5d0*(dlft+drgt)
       end do
 
    end subroutine calc_uslope_unstable
 #endif
    !#######################################################
-   pure subroutine calc_uslope_vanLeer(q,dq,i,j,k,ngrid)
+   pure subroutine calc_uslope_vanLeer(q,dq,i,j,k,n,ngrid)
       implicit none
-      real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),intent(in)::q
-      real(dp),dimension(1:nvector,1:ndim),intent(out)::dq
+      real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar),intent(in)::q
+      real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim),intent(out)::dq
       integer,intent(in)::ngrid
-      integer,intent(in)::i, j, k
+      integer,intent(in)::i, j, k, n
       !--------------------------------------------
       ! Calculate van Leer slope for each direction
       !--------------------------------------------
@@ -314,34 +314,34 @@ contains
 
       do l = 1, ngrid
          ! Gather values at center cell and its neighbors
-         qcen = q(l,i,j,k)
+         qcen = q(l,i,j,k,n)
 
          ! slopes in first coordinate direction
-         dlft = qcen - q(l,i-1,j,k)
-         drgt = q(l,i+1,j,k) - qcen
-         dq(l,1) = slope_vanLeer(dlft,drgt)
+         dlft = qcen - q(l,i-1,j,k,n)
+         drgt = q(l,i+1,j,k,n) - qcen
+         dq(l,i,j,k,n,1) = slope_vanLeer(dlft,drgt)
 #if NDIM>1
          ! slopes in second coordinate direction
-         dlft = qcen - q(l,i,j-1,k)
-         drgt = q(l,i,j+1,k) - qcen
-         dq(l,2) = slope_vanLeer(dlft,drgt)
+         dlft = qcen - q(l,i,j-1,k,n)
+         drgt = q(l,i,j+1,k,n) - qcen
+         dq(l,i,j,k,n,2) = slope_vanLeer(dlft,drgt)
 #endif
 #if NDIM>2
          ! slopes in third coordinate direction
-         dlft = qcen - q(l,i,j,k-1)
-         drgt = q(l,i,j,k+1) - qcen
-         dq(l,3) = slope_vanLeer(dlft,drgt)
+         dlft = qcen - q(l,i,j,k-1,n)
+         drgt = q(l,i,j,k+1,n) - qcen
+         dq(l,i,j,k,n,3) = slope_vanLeer(dlft,drgt)
 #endif
       end do
 
    end subroutine calc_uslope_vanLeer
    !#######################################################
-   pure subroutine calc_uslope_vanLeer_bis(q,dq,i,j,k,ngrid)
+   pure subroutine calc_uslope_vanLeer_bis(q,dq,i,j,k,n,ngrid)
       implicit none
-      real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),intent(in)::q
-      real(dp),dimension(1:nvector,1:ndim),intent(out)::dq
+      real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar),intent(in)::q
+      real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim),intent(out)::dq
       integer,intent(in)::ngrid
-      integer,intent(in)::i, j, k
+      integer,intent(in)::i, j, k, n
       !--------------------------------------------------
       ! Calculate van Leer (bis) slope for each direction
       !--------------------------------------------------
@@ -350,23 +350,23 @@ contains
 
       do l = 1, ngrid
          ! Gather values at center cell and its neighbors
-         qcen = q(l,i,j,k)
+         qcen = q(l,i,j,k,n)
 
          ! slopes in first coordinate direction
-         dlft = qcen - q(l,i-1,j,k)
-         drgt = q(l,i+1,j,k) - qcen
-         dq(l,1) = slope_vanLeer_bis(dlft,drgt)
+         dlft = qcen - q(l,i-1,j,k,n)
+         drgt = q(l,i+1,j,k,n) - qcen
+         dq(l,i,j,k,n,1) = slope_vanLeer_bis(dlft,drgt)
 #if NDIM>1
          ! slopes in second coordinate direction
-         dlft = qcen - q(l,i,j-1,k)
-         drgt = q(l,i,j+1,k) - qcen
-         dq(l,2) = slope_vanLeer_bis(dlft,drgt)
+         dlft = qcen - q(l,i,j-1,k,n)
+         drgt = q(l,i,j+1,k,n) - qcen
+         dq(l,i,j,k,n,2) = slope_vanLeer_bis(dlft,drgt)
 #endif
 #if NDIM>2
          ! slopes in third coordinate direction
-         dlft = qcen - q(l,i,j,k-1)
-         drgt = q(l,i,j,k+1) - qcen
-         dq(l,3) = slope_vanLeer_bis(dlft,drgt)
+         dlft = qcen - q(l,i,j,k-1,n)
+         drgt = q(l,i,j,k+1,n) - qcen
+         dq(l,i,j,k,n,3) = slope_vanLeer_bis(dlft,drgt)
 #endif
       end do
 

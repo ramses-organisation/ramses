@@ -959,22 +959,22 @@ subroutine uslope(q,dq,dx,dt,ngrid)
 #if NDIM==3
               else if(slope_type==2)then
                  ! moncen
-                 call calc_uslope_moncen(q(:,:,:,:,n),dq(:,i,j,k,n,:),i,j,k,ngrid)
+                 call calc_uslope_moncen(q,dq,i,j,k,n,ngrid)
 #endif
 #if NDIM>1
               else if(slope_type==3)then 
                  ! positivity preserving unsplit slope (2D or 3D)
-                 call calc_uslope_positivity_preserving(q(:,:,:,:,n),dq(:,i,j,k,n,:),i,j,k,ngrid)
+                 call calc_uslope_positivity_preserving(q,dq,i,j,k,n,ngrid)
 #endif
 #if NDIM==1
               else if(slope_type==4)then
                  ! superbee (only 1D)
-                 call calc_uslope_superbee(q,dq(:,i,j,k,n,:),i,j,k,n,ngrid,dtdx)
+                 call calc_uslope_superbee(q,dq,i,j,k,n,ngrid,dtdx)
 
               else if(slope_type==5)then
                  ! ultrabee (only 1D)
                  if(n==1)then
-                    call calc_uslope_ultrabee(q,dq(:,i,j,k,n,:),i,j,k,n,ngrid,dtdx)
+                    call calc_uslope_ultrabee(q,dq,i,j,k,n,ngrid,dtdx)
                  else
                     dq(:,i,j,k,n,:) = zero
                  endif
@@ -982,18 +982,18 @@ subroutine uslope(q,dq,dx,dt,ngrid)
               else if(slope_type==6)then
                  ! unstable (only 1D)
                  if(n==1)then
-                    call calc_uslope_unstable(q(:,:,:,:,n),dq(:,i,j,k,n,:),i,j,k,ngrid)
+                    call calc_uslope_unstable(q,dq,i,j,k,n,ngrid)
                  else
                     dq(:,i,j,k,n,:) = zero
                  endif
 #endif
               else if(slope_type==7)then
                  ! van Leer
-                 call calc_uslope_vanLeer(q(:,:,:,:,n),dq(:,i,j,k,n,:),i,j,k,ngrid)
+                 call calc_uslope_vanLeer(q,dq,i,j,k,n,ngrid)
 
               else if(slope_type==8)then
                  ! generalized moncen/minmod parameterisation (van Leer 1979)
-                 call calc_uslope_vanLeer_bis(q(:,:,:,:,n),dq(:,i,j,k,n,:),i,j,k,ngrid)
+                 call calc_uslope_vanLeer_bis(q,dq,i,j,k,n,ngrid)
 
               else
                  write(*,*)'Unknown slope type',dx,dt
