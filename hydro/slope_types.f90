@@ -9,6 +9,7 @@ contains
    !!! USLOPE SUBROUTINE FOR EACH SLOPE TYPE !!!
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
+   !DIR$ ATTRIBUTES FORCEINLINE :: calc_uslope_minmod_average
    pure subroutine calc_uslope_minmod_average(q,dq,i,j,k,ngrid,slope_type_real)
       use hydro_parameters
       implicit none
