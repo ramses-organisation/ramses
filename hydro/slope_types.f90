@@ -277,7 +277,7 @@ contains
          if((dlft*drgt)<=zero)dlim=zero
          dq(l,i,j,k,n,1) = dsgn*dlim !min(dlim,abs(dcen))
       end do
-   
+
    end subroutine calc_uslope_ultrabee
    !#######################################################
    pure subroutine calc_uslope_unstable(q,dq,i,j,k,n,ngrid)

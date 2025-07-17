@@ -962,7 +962,7 @@ subroutine uslope(q,dq,dx,dt,ngrid)
                  call calc_uslope_moncen(q,dq,i,j,k,n,ngrid)
 #endif
 #if NDIM>1
-              else if(slope_type==3)then 
+              else if(slope_type==3)then
                  ! positivity preserving unsplit slope (2D or 3D)
                  call calc_uslope_positivity_preserving(q,dq,i,j,k,n,ngrid)
 #endif
