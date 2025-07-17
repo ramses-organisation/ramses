@@ -43,7 +43,7 @@ subroutine unsplit(uin,gravin,pin,flux,tmp,dx,dy,dz,dt,ngrid)
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2       ),save::cin
 
   ! Slopes
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim),save::dq
+  !real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim),save::dq
 
   ! Left and right state arrays
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim),save::qm
@@ -65,23 +65,23 @@ subroutine unsplit(uin,gravin,pin,flux,tmp,dx,dy,dz,dt,ngrid)
   call ctoprim(uin,qin,cin,gravin,dt,ngrid)
 
   ! Compute TVD slopes
-  call uslope(qin,dq,dx,dt,ngrid)
+  !call uslope(qin,dq,dx,dt,ngrid)
 
   ! Compute 3D traced-states in all three directions
   if(scheme=='muscl')then
-     call trace(qin,dq,qm,qp,dx      ,dt,ngrid)
+     call trace(qin,qm,qp,dx      ,dt,ngrid)
   endif
-  if(scheme=='plmde')then
-#if NDIM==1
-     call tracex  (qin,dq,cin,qm,qp,dx      ,dt,ngrid)
-#endif
-#if NDIM==2
-     call tracexy (qin,dq,cin,qm,qp,dx,dy   ,dt,ngrid)
-#endif
-#if NDIM==3
-     call tracexyz(qin,dq,cin,qm,qp,dx,dy,dz,dt,ngrid)
-#endif
-  endif
+!  if(scheme=='plmde')then
+!#if NDIM==1
+!     call tracex  (qin,dq,cin,qm,qp,dx      ,dt,ngrid)
+!#endif
+!#if NDIM==2
+!     call tracexy (qin,dq,cin,qm,qp,dx,dy   ,dt,ngrid)
+!#endif
+!#if NDIM==3
+!     call tracexyz(qin,dq,cin,qm,qp,dx,dy,dz,dt,ngrid)
+!#endif
+!  endif
 
   ! Solve for 1D flux in X direction
   call cmpflxm(qm,iu1+1,iu2+1,ju1  ,ju2  ,ku1  ,ku2  , &
@@ -115,7 +115,7 @@ end subroutine unsplit
 !###########################################################
 !###########################################################
 !###########################################################
-subroutine trace(q,dq,qm,qp,dx,dt,ngrid)
+subroutine trace(q,qm,qp,dx,dt,ngrid)
   use amr_parameters
   use hydro_parameters
   use const
@@ -124,8 +124,6 @@ subroutine trace(q,dq,qm,qp,dx,dt,ngrid)
   real(dp),intent(in)::dx, dt
   ! cell-center values of all variables (quantities)
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar),intent(in)::q
-  ! TDV-limited gradients, as calculated by uslope
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim),intent(in)::dq
   ! states at the "plus" side of the interface (right/top/front)
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim),intent(out)::qp
   ! state at the "minus" side of the interface (left/bottom/back)
@@ -154,6 +152,9 @@ subroutine trace(q,dq,qm,qp,dx,dt,ngrid)
    do k = klo, khi
       do j = jlo, jhi
          do i = ilo, ihi
+            call uslope(q,dvar,dtdx,i,j,k,ngrid)
+
+
             !DIR$ IVDEP
             !DIR$ SIMD
             do l = 1, ngrid
@@ -169,12 +170,12 @@ subroutine trace(q,dq,qm,qp,dx,dt,ngrid)
 
                ! Limited gradients in all 3 directions
                !DIR$ UNROLL
-               do ivar=1,nvar
-                  !DIR$ UNROLL
-                  do idim=1,ndim
-                     dvar(l,ivar,idim) = dq(l,i,j,k,ivar,idim)
-                  end do
-               end do
+               !do ivar=1,nvar
+               !   !DIR$ UNROLL
+               !   do idim=1,ndim
+               !      dvar(l,ivar,idim) = dq(l,i,j,k,ivar,idim)
+               !   end do
+               !end do
 
                ! Compute source terms
 
@@ -526,7 +527,7 @@ end subroutine ctoprim
 !###########################################################
 !###########################################################
 !###########################################################
-subroutine uslope(q,dq,dx,dt,ngrid)
+subroutine uslope(q,dq,dtdx,i,j,k,ngrid)
   use amr_parameters, only:dp,nvector,ndim
   use hydro_parameters, only:nvar,slope_type,iu1,iu2,ju1,ju2,ku1,ku2
   use const
@@ -534,28 +535,20 @@ subroutine uslope(q,dq,dx,dt,ngrid)
   implicit none
 
   integer,intent(in)::ngrid
-  real(dp),intent(in)::dx,dt
+  integer,intent(in)::i, j, k
+  real(dp),intent(in)::dtdx
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar),intent(in)::q
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim),intent(out)::dq
+  real(dp),dimension(1:nvector,1:nvar,1:ndim),intent(out)::dq
 
   ! local arrays
-  integer::i, j, k, l, n
-  real(dp)::slope_type_real,dtdx
-  integer::ilo,ihi,jlo,jhi,klo,khi
-
-  ilo=MIN(1,iu1+1); ihi=MAX(1,iu2-1)
-  jlo=MIN(1,ju1+1); jhi=MAX(1,ju2-1)
-  klo=MIN(1,ku1+1); khi=MAX(1,ku2-1)
+  integer::l, n
+  real(dp)::slope_type_real
 
   slope_type_real = REAL(slope_type, kind=dp)
-  dtdx=dt/dx
 
   do n = 1, nvar
-     do k = klo, khi
-        do j = jlo, jhi
-           do i = ilo, ihi
               if(slope_type==0)then
-                 dq(:,i,j,k,n,:) = zero
+                 dq(:,n,:) = zero
 #if NDIM==1
               else if(slope_type==1.or.slope_type==2.or.slope_type==3)then  ! minmod or average
 #elif NDIM==2
@@ -584,7 +577,7 @@ subroutine uslope(q,dq,dx,dt,ngrid)
                  if(n==1)then
                     call calc_uslope_ultrabee(q,dq,i,j,k,n,ngrid,dtdx)
                  else
-                    dq(:,i,j,k,n,:) = zero
+                    dq(:,n,:) = zero
                  endif
 
               else if(slope_type==6)then
@@ -592,7 +585,7 @@ subroutine uslope(q,dq,dx,dt,ngrid)
                  if(n==1)then
                     call calc_uslope_unstable(q,dq,i,j,k,n,ngrid)
                  else
-                    dq(:,i,j,k,n,:) = zero
+                    dq(:,n,:) = zero
                  endif
 #endif
               else if(slope_type==7)then
@@ -604,13 +597,9 @@ subroutine uslope(q,dq,dx,dt,ngrid)
                  call calc_uslope_vanLeer_bis(q,dq,i,j,k,n,ngrid)
 
               else
-                 write(*,*)'Unknown slope type',dx,dt
+                 write(*,*)'Unknown slope type'
                  call clean_stop
               endif
-
-           end do
-        end do
-     end do
   end do
 
 
