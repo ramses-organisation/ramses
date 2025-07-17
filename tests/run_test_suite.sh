@@ -31,7 +31,7 @@
 #######################################################################
 
 # List of directories to scan
-testlist="hydro,mhd,poisson,rt,sink,turb,tracer,star-formation-and-feedback";
+testlist="hydro,mhd,poisson,rt,sink,turb,tracer,star";
 
 #######################################################################
 # Determine the parameters for running the test suite
