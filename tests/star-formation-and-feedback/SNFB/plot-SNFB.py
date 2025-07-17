@@ -113,8 +113,7 @@ to_check={}
 to_check["pressure"]=z5.flatten()  # data["data"]["pressure"]
 to_check["density"]=z1.flatten()
 to_check["temperature"]=temp.flatten()
-to_check["metallicity"]=Z.flatten() 
-
+to_check["metallicity"]=Z.flatten()
 
 # tweak tolerance to allow for 2p vs 4p/8p/12p deviations:
 tolerance={"density":1.0e-4,\
