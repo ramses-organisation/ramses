@@ -2139,659 +2139,245 @@ end subroutine ctoprim
 !###########################################################
 !###########################################################
 subroutine uslope(q,dq,bf,dbf,dx,dt,ngrid)
-  use amr_parameters
-  use hydro_parameters
+  use amr_parameters, only:dp,nvector,ndim
+  use hydro_parameters, only:nvar,slope_type,slope_mag_type,iu1,iu2,ju1,ju2,ku1,ku2
   use const
+  use slope_types
   implicit none
 
-  integer::ngrid
-  real(dp)::dx,dt
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::dq
-  real(dp),dimension(1:nvector,iu1:iu2+1,ju1:ju2+1,ku1:ku2+1,1:3)::bf
-  real(dp),dimension(1:nvector,iu1:iu2+1,ju1:ju2+1,ku1:ku2+1,1:3,1:ndim)::dbf
+  integer,intent(in)::ngrid
+  real(dp),intent(in)::dx,dt
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar),intent(in)::q
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim),intent(out)::dq
+  real(dp),dimension(1:nvector,iu1:iu2+1,ju1:ju2+1,ku1:ku2+1,1:3),intent(in)::bf
+  real(dp),dimension(1:nvector,iu1:iu2+1,ju1:ju2+1,ku1:ku2+1,1:3,1:ndim),intent(out)::dbf
 
   ! local arrays
   integer::i, j, k, l, n
-  real(dp)::dsgn, dlim, dcen, dlft, drgt, slop
-  real(dp)::vmin,vmax,dff
+  real(dp):: dlft, drgt, bcen
+  real(dp)::slope_type_real,dtdx
   integer::ilo,ihi,jlo,jhi,klo,khi
-
-#if NDIM==1
-  real(dp)::dfx
-#endif
-
-#if NDIM==2
-  real(dp)::dfx,dfy
-  real(dp)::dfll,dflm,dflr,dfml,dfmm,dfmr,dfrl,dfrm,dfrr
-#endif
-
-#if NDIM==3
-  real(dp)::dfx,dfy,dfz
-  real(dp)::dflll,dflml,dflrl,dfmll,dfmml,dfmrl,dfrll,dfrml,dfrrl
-  real(dp)::dfllm,dflmm,dflrm,dfmlm,dfmmm,dfmrm,dfrlm,dfrmm,dfrrm
-  real(dp)::dfllr,dflmr,dflrr,dfmlr,dfmmr,dfmrr,dfrlr,dfrmr,dfrrr
-#endif
 
   ilo=MIN(1,iu1+1); ihi=MAX(1,iu2-1)
   jlo=MIN(1,ju1+1); jhi=MAX(1,ju2-1)
   klo=MIN(1,ku1+1); khi=MAX(1,ku2-1)
 
-#if NDIM==1
-  if(slope_type==0)then
-    dq=zero
-  else if(slope_type==1.or.slope_type==2)then  ! minmod or average
-    do n = 1, nvar
-       do k = klo, khi
-          do j = jlo, jhi
-             do i = ilo, ihi
-                do l = 1, ngrid
-                   dlft = slope_type*(q(l,i  ,j,k,n) - q(l,i-1,j,k,n))
-                   drgt = slope_type*(q(l,i+1,j,k,n) - q(l,i  ,j,k,n))
-                   dcen = half*(dlft+drgt)/slope_type
-                   dsgn = sign(one, dcen)
-                   slop = min(abs(dlft),abs(drgt))
-                   dlim = slop
-                   if((dlft*drgt)<=zero)dlim=zero
-                   dq(l,i,j,k,n,1) = dsgn*min(dlim,abs(dcen))
-                end do
-             end do
-          end do
-       end do
-    end do
-  else
-     write(*,*)'Unknown slope type',dx,dt
-     stop
-  end if
+  slope_type_real = REAL(slope_type, kind=dp)
+  dtdx=dt/dx
+
+  do n = 1, nvar
+     do k = klo, khi
+        do j = jlo, jhi
+           do i = ilo, ihi
+              if(slope_type==0)then
+                 dq(:,i,j,k,n,:) = zero
+              else if(slope_type==1.or.slope_type==2)then  ! minmod or average
+                 call calc_uslope_minmod_average(q,dq,i,j,k,n,ngrid,slope_type_real)
+#if NDIM>1
+              else if(slope_type==3)then 
+                 ! positivity preserving unsplit slope (2D or 3D)
+                 call calc_uslope_positivity_preserving(q,dq,i,j,k,n,ngrid)
 #endif
+#if NDIM==3
+              else if(slope_type==7)then
+                 ! van Leer
+                 call calc_uslope_vanLeer(q,dq,i,j,k,n,ngrid)
 
-#if NDIM==2
-  if(slope_type==0)then
-    dq=zero
-  else if(slope_type==1.or.slope_type==2)then  ! minmod or average
-     do n = 1, nvar
-        do k = klo, khi
-           do j = jlo, jhi
-              do i = ilo, ihi
-                 ! slopes in first coordinate direction
-                 do l = 1, ngrid
-                    dlft = slope_type*(q(l,i  ,j,k,n) - q(l,i-1,j,k,n))
-                    drgt = slope_type*(q(l,i+1,j,k,n) - q(l,i  ,j,k,n))
-                    dcen = half*(dlft+drgt)/slope_type
-                    dsgn = sign(one, dcen)
-                    slop = min(abs(dlft),abs(drgt))
-                    dlim = slop
-                    if((dlft*drgt)<=zero)dlim=zero
-                    dq(l,i,j,k,n,1) = dsgn*min(dlim,abs(dcen))
-                 end do
-                 ! slopes in second coordinate direction
-                 do l = 1, ngrid
-                    dlft = slope_type*(q(l,i,j  ,k,n) - q(l,i,j-1,k,n))
-                    drgt = slope_type*(q(l,i,j+1,k,n) - q(l,i,j  ,k,n))
-                    dcen = half*(dlft+drgt)/slope_type
-                    dsgn = sign(one,dcen)
-                    slop = min(abs(dlft),abs(drgt))
-                    dlim = slop
-                    if((dlft*drgt)<=zero)dlim=zero
-                    dq(l,i,j,k,n,2) = dsgn*min(dlim,abs(dcen))
-                 end do
-              end do
+              else if(slope_type==8)then
+                 ! generalized moncen/minmod parameterisation (van Leer 1979)
+                 call calc_uslope_vanLeer_bis(q,dq,i,j,k,n,ngrid)
+#endif
+              else
+                 write(*,*)'Unknown slope type',dx,dt
+                 call clean_stop
+              endif
            end do
         end do
      end do
-  else if(slope_type==3)then ! positivity preserving 2d unsplit slope
-     do n = 1, nvar
-        do k = klo, khi
-           do j = jlo, jhi
-              do i = ilo, ihi
-                 do l = 1, ngrid
-                    dfll = q(l,i-1,j-1,k,n)-q(l,i,j,k,n)
-                    dflm = q(l,i-1,j  ,k,n)-q(l,i,j,k,n)
-                    dflr = q(l,i-1,j+1,k,n)-q(l,i,j,k,n)
-                    dfml = q(l,i  ,j-1,k,n)-q(l,i,j,k,n)
-                    dfmm = q(l,i  ,j  ,k,n)-q(l,i,j,k,n)
-                    dfmr = q(l,i  ,j+1,k,n)-q(l,i,j,k,n)
-                    dfrl = q(l,i+1,j-1,k,n)-q(l,i,j,k,n)
-                    dfrm = q(l,i+1,j  ,k,n)-q(l,i,j,k,n)
-                    dfrr = q(l,i+1,j+1,k,n)-q(l,i,j,k,n)
+  end do
 
-                    vmin = min(dfll,dflm,dflr,dfml,dfmm,dfmr,dfrl,dfrm,dfrr)
-                    vmax = max(dfll,dflm,dflr,dfml,dfmm,dfmr,dfrl,dfrm,dfrr)
 
-                    dfx  = half*(q(l,i+1,j,k,n)-q(l,i-1,j,k,n))
-                    dfy  = half*(q(l,i,j+1,k,n)-q(l,i,j-1,k,n))
-                    dff  = half*(abs(dfx)+abs(dfy))
-
-                    if(dff>zero)then
-                       slop = min(one,min(abs(vmin),abs(vmax))/dff)
-                    else
-                       slop = one
-                    endif
-
-                    dlim = slop
-
-                    dq(l,i,j,k,n,1) = dlim*dfx
-                    dq(l,i,j,k,n,2) = dlim*dfy
-
-                 end do
-              end do
-           end do
-        end do
-     end do
-  else
-     write(*,*)'Unknown slope type',dx,dt
-     stop
-  endif
-  ! 1D transverse TVD slopes for face-centered magnetic fields
-  ! Bx along direction Y
+  ! 1D/2D transverse TVD slopes for face-centered magnetic fields
+#if NDIM>1
   if (slope_mag_type==0) then
     dbf=zero
   else if (slope_mag_type==1 .or. slope_mag_type==2) then
+    slope_type_real = REAL(slope_mag_type, kind=dp)
+    ! Bx
     do k = klo, khi
        do j = jlo, jhi
-          do i = ilo, ihi+1 ! WARNING HERE
+          do i = ilo, ihi+1 ! WARNING: different loop bounds
              do l = 1, ngrid
-                dlft = slope_mag_type*(bf(l,i,j  ,k,1) - bf(l,i,j-1,k,1))
-                drgt = slope_mag_type*(bf(l,i,j+1,k,1) - bf(l,i,j  ,k,1))
-                dcen = half*(dlft+drgt)/slope_mag_type
-                dsgn = sign(one, dcen)
-                slop = min(abs(dlft),abs(drgt))
-                dlim = slop
-                if((dlft*drgt)<=zero)dlim=zero
-                dbf(l,i,j,k,1,1) = dsgn*min(dlim,abs(dcen))
-             end do
+                bcen = bf(l,i,j,k,1)
+                ! Bx along direction Y (first coordinate direction)
+                dlft = bcen - bf(l,i,j-1,k,1)
+                drgt = bf(l,i,j+1,k,1) - bcen
+                dbf(l,i,j,k,1,1) = slope_minmod_or_average(dlft,drgt,slope_type_real)
+#if NDIM==3
+                ! Bx along direction Z (second coordinate direction)
+                 dlft = bcen - bf(l,i,j,k-1,1)
+                 drgt = bf(l,i,j,k+1,1) - bcen
+                 dbf(l,i,j,k,1,2) = slope_minmod_or_average(dlft,drgt,slope_type_real)
+#endif
+              end do
           enddo
        end do
     end do
-    ! By along direction X
+    ! By
     do k = klo, khi
-       do j = jlo, jhi+1 ! WARNING HERE
+       do j = jlo, jhi+1 ! WARNING: different loop bounds
           do i = ilo, ihi
              do l = 1, ngrid
-                dlft = slope_mag_type*(bf(l,i  ,j,k,2) - bf(l,i-1,j,k,2))
-                drgt = slope_mag_type*(bf(l,i+1,j,k,2) - bf(l,i  ,j,k,2))
-                dcen = half*(dlft+drgt)/slope_mag_type
-                dsgn = sign(one, dcen)
-                slop = min(abs(dlft),abs(drgt))
-                dlim = slop
-                if((dlft*drgt)<=zero)dlim=zero
-                dbf(l,i,j,k,2,1) = dsgn*min(dlim,abs(dcen))
+                bcen = bf(l,i,j,k,2)
+                ! By along direction X (first coordinate direction)
+                dlft = bcen - bf(l,i-1,j,k,2)
+                drgt = bf(l,i+1,j,k,2) - bcen
+                dbf(l,i,j,k,2,1) = slope_minmod_or_average(dlft,drgt,slope_type_real)
+#if NDIM==3
+                ! By along direction Z (second coordinate direction)
+                 dlft = bcen - bf(l,i,j,k-1,2)
+                 drgt = bf(l,i,j,k+1,2) - bcen
+                 dbf(l,i,j,k,2,2) = slope_minmod_or_average(dlft,drgt,slope_type_real)
+#endif
              end do
           enddo
        end do
     end do
-  else
-     write(*,*)'Unknown mag. slope type',dx,dt
-     stop
-  endif
-#endif
-
 #if NDIM==3
-  if(slope_type==0)then
-    dq=zero
-  else if(slope_type==1.or.slope_type==2)then  ! minmod or average
-     do n = 1, nvar
-        do k = klo, khi
-           do j = jlo, jhi
-              do i = ilo, ihi
-                 ! slopes in first coordinate direction
-                 do l = 1, ngrid
-                    dlft = slope_type*(q(l,i  ,j,k,n) - q(l,i-1,j,k,n))
-                    drgt = slope_type*(q(l,i+1,j,k,n) - q(l,i  ,j,k,n))
-                    dcen = half*(dlft+drgt)/slope_type
-                    dsgn = sign(one, dcen)
-                    slop = min(abs(dlft),abs(drgt))
-                    dlim = slop
-                    if((dlft*drgt)<=zero)dlim=zero
-                    dq(l,i,j,k,n,1) = dsgn*min(dlim,abs(dcen))
-                 end do
-                 ! slopes in second coordinate direction
-                 do l = 1, ngrid
-                    dlft = slope_type*(q(l,i,j  ,k,n) - q(l,i,j-1,k,n))
-                    drgt = slope_type*(q(l,i,j+1,k,n) - q(l,i,j  ,k,n))
-                    dcen = half*(dlft+drgt)/slope_type
-                    dsgn = sign(one,dcen)
-                    slop = min(abs(dlft),abs(drgt))
-                    dlim = slop
-                    if((dlft*drgt)<=zero)dlim=zero
-                    dq(l,i,j,k,n,2) = dsgn*min(dlim,abs(dcen))
-                 end do
-                 ! slopes in third coordinate direction
-                 do l = 1, ngrid
-                    dlft = slope_type*(q(l,i,j,k  ,n) - q(l,i,j,k-1,n))
-                    drgt = slope_type*(q(l,i,j,k+1,n) - q(l,i,j,k  ,n))
-                    dcen = half*(dlft+drgt)/slope_type
-                    dsgn = sign(one,dcen)
-                    slop = min(abs(dlft),abs(drgt))
-                    dlim = slop
-                    if((dlft*drgt)<=zero)dlim=zero
-                    dq(l,i,j,k,n,3) = dsgn*min(dlim,abs(dcen))
-                 end do
-              end do
-           end do
-        end do
-     end do
-  else if(slope_type==3)then ! positivity preserving 3d unsplit slope
-     do n = 1, nvar
-        do k = klo, khi
-           do j = jlo, jhi
-              do i = ilo, ihi
-                 do l = 1, ngrid
-                    dflll = q(l,i-1,j-1,k-1,n)-q(l,i,j,k,n)
-                    dflml = q(l,i-1,j  ,k-1,n)-q(l,i,j,k,n)
-                    dflrl = q(l,i-1,j+1,k-1,n)-q(l,i,j,k,n)
-                    dfmll = q(l,i  ,j-1,k-1,n)-q(l,i,j,k,n)
-                    dfmml = q(l,i  ,j  ,k-1,n)-q(l,i,j,k,n)
-                    dfmrl = q(l,i  ,j+1,k-1,n)-q(l,i,j,k,n)
-                    dfrll = q(l,i+1,j-1,k-1,n)-q(l,i,j,k,n)
-                    dfrml = q(l,i+1,j  ,k-1,n)-q(l,i,j,k,n)
-                    dfrrl = q(l,i+1,j+1,k-1,n)-q(l,i,j,k,n)
-
-                    dfllm = q(l,i-1,j-1,k  ,n)-q(l,i,j,k,n)
-                    dflmm = q(l,i-1,j  ,k  ,n)-q(l,i,j,k,n)
-                    dflrm = q(l,i-1,j+1,k  ,n)-q(l,i,j,k,n)
-                    dfmlm = q(l,i  ,j-1,k  ,n)-q(l,i,j,k,n)
-                    dfmmm = q(l,i  ,j  ,k  ,n)-q(l,i,j,k,n)
-                    dfmrm = q(l,i  ,j+1,k  ,n)-q(l,i,j,k,n)
-                    dfrlm = q(l,i+1,j-1,k  ,n)-q(l,i,j,k,n)
-                    dfrmm = q(l,i+1,j  ,k  ,n)-q(l,i,j,k,n)
-                    dfrrm = q(l,i+1,j+1,k  ,n)-q(l,i,j,k,n)
-
-                    dfllr = q(l,i-1,j-1,k+1,n)-q(l,i,j,k,n)
-                    dflmr = q(l,i-1,j  ,k+1,n)-q(l,i,j,k,n)
-                    dflrr = q(l,i-1,j+1,k+1,n)-q(l,i,j,k,n)
-                    dfmlr = q(l,i  ,j-1,k+1,n)-q(l,i,j,k,n)
-                    dfmmr = q(l,i  ,j  ,k+1,n)-q(l,i,j,k,n)
-                    dfmrr = q(l,i  ,j+1,k+1,n)-q(l,i,j,k,n)
-                    dfrlr = q(l,i+1,j-1,k+1,n)-q(l,i,j,k,n)
-                    dfrmr = q(l,i+1,j  ,k+1,n)-q(l,i,j,k,n)
-                    dfrrr = q(l,i+1,j+1,k+1,n)-q(l,i,j,k,n)
-
-                    vmin = min(dflll,dflml,dflrl,dfmll,dfmml,dfmrl,dfrll,dfrml,dfrrl, &
-                         &     dfllm,dflmm,dflrm,dfmlm,dfmmm,dfmrm,dfrlm,dfrmm,dfrrm, &
-                         &     dfllr,dflmr,dflrr,dfmlr,dfmmr,dfmrr,dfrlr,dfrmr,dfrrr)
-                    vmax = max(dflll,dflml,dflrl,dfmll,dfmml,dfmrl,dfrll,dfrml,dfrrl, &
-                         &     dfllm,dflmm,dflrm,dfmlm,dfmmm,dfmrm,dfrlm,dfrmm,dfrrm, &
-                         &     dfllr,dflmr,dflrr,dfmlr,dfmmr,dfmrr,dfrlr,dfrmr,dfrrr)
-
-                    dfx  = half*(q(l,i+1,j,k,n)-q(l,i-1,j,k,n))
-                    dfy  = half*(q(l,i,j+1,k,n)-q(l,i,j-1,k,n))
-                    dfz  = half*(q(l,i,j,k+1,n)-q(l,i,j,k-1,n))
-                    dff  = half*(abs(dfx)+abs(dfy)+abs(dfz))
-
-                    if(dff>zero)then
-                       slop = min(one,min(abs(vmin),abs(vmax))/dff)
-                    else
-                       slop = one
-                    endif
-
-                    dlim = slop
-
-                    dq(l,i,j,k,n,1) = dlim*dfx
-                    dq(l,i,j,k,n,2) = dlim*dfy
-                    dq(l,i,j,k,n,3) = dlim*dfz
-
-                 end do
-              end do
-           end do
-        end do
-     end do
-  else if(slope_type==7)then ! van Leer
-     do n = 1, nvar
-        do k = klo, khi
-           do j = jlo, jhi
-              do i = ilo, ihi
-                 ! slopes in first coordinate direction
-                 do l = 1, ngrid
-                    dlft = (q(l,i  ,j,k,n) - q(l,i-1,j,k,n))
-                    drgt = (q(l,i+1,j,k,n) - q(l,i  ,j,k,n))
-                    if((dlft*drgt)<=zero) then
-                       dq(l,i,j,k,n,1)=zero
-                    else
-                       dq(l,i,j,k,n,1)=(2*dlft*drgt/(dlft+drgt))
-                    end if
-                 end do
-                 ! slopes in second coordinate direction
-                 do l = 1, ngrid
-                    dlft = (q(l,i,j  ,k,n) - q(l,i,j-1,k,n))
-                    drgt = (q(l,i,j+1,k,n) - q(l,i,j  ,k,n))
-                    if((dlft*drgt)<=zero) then
-                       dq(l,i,j,k,n,2)=zero
-                    else
-                       dq(l,i,j,k,n,2)=(2*dlft*drgt/(dlft+drgt))
-                    end if
-                 end do
-                 ! slopes in third coordinate direction
-                 do l = 1, ngrid
-                    dlft = (q(l,i,j,k  ,n) - q(l,i,j,k-1,n))
-                    drgt = (q(l,i,j,k+1,n) - q(l,i,j,k  ,n))
-                    if((dlft*drgt)<=zero) then
-                       dq(l,i,j,k,n,3)=zero
-                    else
-                       dq(l,i,j,k,n,3)=(2*dlft*drgt/(dlft+drgt))
-                    end if
-                 end do
-              end do
-           end do
-        end do
-     end do
-  else if(slope_type==8)then ! generalized moncen/minmod parameterisation (van Leer 1979)
-     do n = 1, nvar
-        do k = klo, khi
-           do j = jlo, jhi
-              do i = ilo, ihi
-                 ! slopes in first coordinate direction
-                 do l = 1, ngrid
-                    dlft = (q(l,i  ,j,k,n) - q(l,i-1,j,k,n))
-                    drgt = (q(l,i+1,j,k,n) - q(l,i  ,j,k,n))
-                    dcen = half*(dlft+drgt)
-                    dsgn = sign(one, dcen)
-                    slop = min(slope_theta*abs(dlft),slope_theta*abs(drgt))
-                    dlim = slop
-                    if((dlft*drgt)<=zero)dlim=zero
-                    dq(l,i,j,k,n,1) = dsgn*min(dlim,abs(dcen))
-                 end do
-                 ! slopes in second coordinate direction
-                 do l = 1, ngrid
-                    dlft = (q(l,i,j  ,k,n) - q(l,i,j-1,k,n))
-                    drgt = (q(l,i,j+1,k,n) - q(l,i,j  ,k,n))
-                    dcen = half*(dlft+drgt)
-                    dsgn = sign(one,dcen)
-                    slop = min(slope_theta*abs(dlft),slope_theta*abs(drgt))
-                    dlim = slop
-                    if((dlft*drgt)<=zero)dlim=zero
-                    dq(l,i,j,k,n,2) = dsgn*min(dlim,abs(dcen))
-                 end do
-                 ! slopes in third coordinate direction
-                 do l = 1, ngrid
-                    dlft = (q(l,i,j,k  ,n) - q(l,i,j,k-1,n))
-                    drgt = (q(l,i,j,k+1,n) - q(l,i,j,k  ,n))
-                    dcen = half*(dlft+drgt)
-                    dsgn = sign(one,dcen)
-                    slop = min(slope_theta*abs(dlft),slope_theta*abs(drgt))
-                    dlim = slop
-                    if((dlft*drgt)<=zero)dlim=zero
-                    dq(l,i,j,k,n,3) = dsgn*min(dlim,abs(dcen))
-                 end do
-              end do
-           end do
-        end do
-     end do
-  else
-     write(*,*)'Unknown slope type',dx,dt
-     stop
-  endif
-
-  ! 2D transverse TVD slopes for face-centered magnetic fields
-  if(slope_mag_type==0)then
-    dbf=zero
-  else if(slope_mag_type==1 .or. slope_mag_type==2)then  ! minmod or average
-     ! Bx along direction Y and Z
-     do k = klo, khi
-        do j = jlo, jhi
-           do i = ilo, ihi+1 ! WARNING HERE
-              ! slopes in first coordinate direction
-              do l = 1, ngrid
-                 dlft = slope_mag_type*(bf(l,i,j  ,k,1) - bf(l,i,j-1,k,1))
-                 drgt = slope_mag_type*(bf(l,i,j+1,k,1) - bf(l,i,j  ,k,1))
-                 dcen = half*(dlft+drgt)/slope_mag_type
-                 dsgn = sign(one, dcen)
-                 slop = min(abs(dlft),abs(drgt))
-                 dlim = slop
-                 if((dlft*drgt)<=zero)dlim=zero
-                 dbf(l,i,j,k,1,1) = dsgn*min(dlim,abs(dcen))
-              end do
-              ! slopes in second coordinate direction
-              do l = 1, ngrid
-                 dlft = slope_mag_type*(bf(l,i,j,k  ,1) - bf(l,i,j,k-1,1))
-                 drgt = slope_mag_type*(bf(l,i,j,k+1,1) - bf(l,i,j,k  ,1))
-                 dcen = half*(dlft+drgt)/slope_mag_type
-                 dsgn = sign(one,dcen)
-                 slop = min(abs(dlft),abs(drgt))
-                 dlim = slop
-                 if((dlft*drgt)<=zero)dlim=zero
-                 dbf(l,i,j,k,1,2) = dsgn*min(dlim,abs(dcen))
-              end do
-           end do
-        end do
-     end do
-
-     ! By along direction X and Z
-     do k = klo, khi
-        do j = jlo, jhi+1 ! WARNING HERE
-           do i = ilo, ihi
-              ! slopes in first coordinate direction
-              do l = 1, ngrid
-                 dlft = slope_mag_type*(bf(l,i  ,j,k,2) - bf(l,i-1,j,k,2))
-                 drgt = slope_mag_type*(bf(l,i+1,j,k,2) - bf(l,i  ,j,k,2))
-                 dcen = half*(dlft+drgt)/slope_mag_type
-                 dsgn = sign(one, dcen)
-                 slop = min(abs(dlft),abs(drgt))
-                 dlim = slop
-                 if((dlft*drgt)<=zero)dlim=zero
-                 dbf(l,i,j,k,2,1) = dsgn*min(dlim,abs(dcen))
-              end do
-              ! slopes in second coordinate direction
-              do l = 1, ngrid
-                 dlft = slope_mag_type*(bf(l,i,j,k  ,2) - bf(l,i,j,k-1,2))
-                 drgt = slope_mag_type*(bf(l,i,j,k+1,2) - bf(l,i,j,k  ,2))
-                 dcen = half*(dlft+drgt)/slope_mag_type
-                 dsgn = sign(one,dcen)
-                 slop = min(abs(dlft),abs(drgt))
-                 dlim = slop
-                 if((dlft*drgt)<=zero)dlim=zero
-                 dbf(l,i,j,k,2,2) = dsgn*min(dlim,abs(dcen))
-              end do
-           end do
-        end do
-     end do
-
-     ! Bz along direction X and Y
-     do k = klo, khi+1 ! WARNING HERE
+     do k = klo, khi+1 ! WARNING: different loop bounds
         do j = jlo, jhi
            do i = ilo, ihi
-              ! slopes in first coordinate direction
               do l = 1, ngrid
-                 dlft = slope_mag_type*(bf(l,i  ,j,k,3) - bf(l,i-1,j,k,3))
-                 drgt = slope_mag_type*(bf(l,i+1,j,k,3) - bf(l,i  ,j,k,3))
-                 dcen = half*(dlft+drgt)/slope_mag_type
-                 dsgn = sign(one, dcen)
-                 slop = min(abs(dlft),abs(drgt))
-                 dlim = slop
-                 if((dlft*drgt)<=zero)dlim=zero
-                 dbf(l,i,j,k,3,1) = dsgn*min(dlim,abs(dcen))
-              end do
-              ! slopes in second coordinate direction
-              do l = 1, ngrid
-                 dlft = slope_mag_type*(bf(l,i,j  ,k,3) - bf(l,i,j-1,k,3))
-                 drgt = slope_mag_type*(bf(l,i,j+1,k,3) - bf(l,i,j  ,k,3))
-                 dcen = half*(dlft+drgt)/slope_mag_type
-                 dsgn = sign(one,dcen)
-                 slop = min(abs(dlft),abs(drgt))
-                 dlim = slop
-                 if((dlft*drgt)<=zero)dlim=zero
-                 dbf(l,i,j,k,3,2) = dsgn*min(dlim,abs(dcen))
+                 bcen = bf(l,i,j,k,3)
+                 ! Bz along direction X (first coordinate direction)
+                 dlft = bcen - bf(l,i-1,j,k,3)
+                 drgt = bf(l,i+1,j,k,3) - bcen
+                 dbf(l,i,j,k,3,1) = slope_minmod_or_average(dlft,drgt,slope_type_real)
+                 ! Bz along direction Y (second coordinate direction)
+                 dlft = bcen - bf(l,i,j-1,k,3)
+                 drgt = bf(l,i,j+1,k,3) - bcen
+                 dbf(l,i,j,k,3,2) = slope_minmod_or_average(dlft,drgt,slope_type_real)
               end do
            end do
         end do
      end do
+#endif
+#if NDIM==3
   else if(slope_mag_type==7)then
-     ! Bx along direction Y and Z
+     ! Bx
      do k = klo, khi
         do j = jlo, jhi
-           do i = ilo, ihi+1 ! WARNING HERE
-              ! slopes in first coordinate direction
+           do i = ilo, ihi+1 ! WARNING: different loop bounds
               do l = 1, ngrid
-                 dlft = bf(l,i,j  ,k,1) - bf(l,i,j-1,k,1)
-                 drgt = bf(l,i,j+1,k,1) - bf(l,i,j  ,k,1)
-                 if((dlft*drgt)<=zero) then
-                    dbf(l,i,j,k,1,1) = zero
-                 else
-                    dbf(l,i,j,k,1,1) = 2*dlft*drgt/(dlft+drgt)
-                 end if
+                 bcen = bf(l,i,j,k,1)
+                ! Bx along direction Y (first coordinate direction)
+                 dlft = bcen - bf(l,i,j-1,k,1)
+                 drgt = bf(l,i,j+1,k,1) - bcen
+                 dbf(l,i,j,k,1,1) = slope_vanLeer(dlft,drgt)
+                ! Bx along direction Z (second coordinate direction)
+                 dlft = bcen - bf(l,i,j,k-1,1)
+                 drgt = bf(l,i,j,k+1,1) - bcen
+                 dbf(l,i,j,k,1,2) = slope_vanLeer(dlft,drgt)
               end do
-              ! slopes in second coordinate direction
+           end do
+        end do
+     end do
+     ! By
+     do k = klo, khi
+        do j = jlo, jhi+1 ! WARNING: different loop bounds
+           do i = ilo, ihi
               do l = 1, ngrid
-                 dlft = bf(l,i,j,k  ,1) - bf(l,i,j,k-1,1)
-                 drgt = bf(l,i,j,k+1,1) - bf(l,i,j,k  ,1)
-                 if((dlft*drgt)<=zero) then
-                    dbf(l,i,j,k,1,2) = zero
-                 else
-                    dbf(l,i,j,k,1,2) = 2*dlft*drgt/(dlft+drgt)
-                 end if
+                 bcen = bf(l,i,j,k,2)
+                ! By along direction X (first coordinate direction)
+                 dlft = bcen - bf(l,i-1,j,k,2)
+                 drgt = bf(l,i+1,j,k,2) - bcen
+                 dbf(l,i,j,k,2,1) = slope_vanLeer(dlft,drgt)
+                ! By along direction Z (second coordinate direction)
+                 dlft = bcen - bf(l,i,j,k-1,2)
+                 drgt = bf(l,i,j,k+1,2) - bcen
+                 dbf(l,i,j,k,2,2) = slope_vanLeer(dlft,drgt)
+              end do
+           end do
+        end do
+     end do
+     ! Bz
+     do k = klo, khi+1 ! WARNING: different loop bounds
+        do j = jlo, jhi
+           do i = ilo, ihi
+              do l = 1, ngrid
+                 bcen = bf(l,i,j,k,3)
+                ! Bz along direction X (first coordinate direction)
+                 dlft = bcen - bf(l,i-1,j,k,3)
+                 drgt = bf(l,i+1,j,k,3) - bcen
+                 dbf(l,i,j,k,3,1) = slope_vanLeer(dlft,drgt)
+                ! Bz along direction Y (second coordinate direction)
+                 dlft = bcen - bf(l,i,j-1,k,3)
+                 drgt = bf(l,i,j+1,k,3) - bcen
+                 dbf(l,i,j,k,3,2) = slope_vanLeer(dlft,drgt)
               end do
            end do
         end do
      end do
 
-     ! By along direction X and Z
-     do k = klo, khi
-        do j = jlo, jhi+1 ! WARNING HERE
-           do i = ilo, ihi
-              ! slopes in first coordinate direction
-              do l = 1, ngrid
-                 dlft = bf(l,i  ,j,k,2) - bf(l,i-1,j,k,2)
-                 drgt = bf(l,i+1,j,k,2) - bf(l,i  ,j,k,2)
-                 if((dlft*drgt)<=zero) then
-                    dbf(l,i,j,k,2,1) = zero
-                 else
-                    dbf(l,i,j,k,2,1) = 2*dlft*drgt/(dlft+drgt)
-                 end if
-              end do
-              ! slopes in second coordinate direction
-              do l = 1, ngrid
-                 dlft = bf(l,i,j,k  ,2) - bf(l,i,j,k-1,2)
-                 drgt = bf(l,i,j,k+1,2) - bf(l,i,j,k  ,2)
-                 if((dlft*drgt)<=zero) then
-                    dbf(l,i,j,k,2,2) = zero
-                 else
-                    dbf(l,i,j,k,2,2) = 2*dlft*drgt/(dlft+drgt)
-                 end if
-              end do
-           end do
-        end do
-     end do
-
-     ! Bz along direction X and Y
-     do k = klo, khi+1 ! WARNING HERE
-        do j = jlo, jhi
-           do i = ilo, ihi
-              ! slopes in first coordinate direction
-              do l = 1, ngrid
-                 dlft = bf(l,i  ,j,k,3) - bf(l,i-1,j,k,3)
-                 drgt = bf(l,i+1,j,k,3) - bf(l,i  ,j,k,3)
-                 if((dlft*drgt)<=zero) then
-                    dbf(l,i,j,k,3,1) = zero
-                 else
-                    dbf(l,i,j,k,3,1) = 2*dlft*drgt/(dlft+drgt)
-                 end if
-              end do
-              ! slopes in second coordinate direction
-              do l = 1, ngrid
-                 dlft = bf(l,i,j  ,k,3) - bf(l,i,j-1,k,3)
-                 drgt = bf(l,i,j+1,k,3) - bf(l,i,j  ,k,3)
-                 if((dlft*drgt)<=zero) then
-                    dbf(l,i,j,k,3,2) = zero
-                 else
-                    dbf(l,i,j,k,3,2) = 2*dlft*drgt/(dlft+drgt)
-                 end if
-              end do
-           end do
-        end do
-     end do
   else if(slope_mag_type==8)then
-     ! Bx along direction Y and Z
+     ! Bx
      do k = klo, khi
         do j = jlo, jhi
-           do i = ilo, ihi+1 ! WARNING HERE
-              ! slopes in first coordinate direction
+           do i = ilo, ihi+1 ! WARNING: different loop bounds
               do l = 1, ngrid
-                 dlft = bf(l,i,j  ,k,1) - bf(l,i,j-1,k,1)
-                 drgt = bf(l,i,j+1,k,1) - bf(l,i,j  ,k,1)
-                 dcen = half*(dlft+drgt)
-                 dsgn = sign(one, dcen)
-                 slop = min(slope_theta*abs(dlft),slope_theta*abs(drgt))
-                 dlim = slop
-                 if((dlft*drgt)<=zero)dlim=zero
-                 dbf(l,i,j,k,1,1) = dsgn*min(dlim,abs(dcen))
-              end do
-              ! slopes in second coordinate direction
-              do l = 1, ngrid
-                 dlft = bf(l,i,j,k  ,1) - bf(l,i,j,k-1,1)
-                 drgt = bf(l,i,j,k+1,1) - bf(l,i,j,k  ,1)
-                 dcen = half*(dlft+drgt)
-                 dsgn = sign(one, dcen)
-                 slop = min(slope_theta*abs(dlft),slope_theta*abs(drgt))
-                 dlim = slop
-                 if((dlft*drgt)<=zero)dlim=zero
-                 dbf(l,i,j,k,1,2) = dsgn*min(dlim,abs(dcen))
+                 bcen = bf(l,i,j,k,1)
+                ! Bx along direction Y (first coordinate direction)
+                 dlft = bcen - bf(l,i,j-1,k,1)
+                 drgt = bf(l,i,j+1,k,1) - bcen
+                 dbf(l,i,j,k,1,1) = slope_vanLeer_bis(dlft,drgt)
+                ! Bx along direction Z (second coordinate direction)
+                 dlft = bcen - bf(l,i,j,k-1,1)
+                 drgt = bf(l,i,j,k+1,1) - bcen
+                 dbf(l,i,j,k,1,2) = slope_vanLeer_bis(dlft,drgt)
               end do
            end do
         end do
      end do
-
-     ! By along direction X and Z
+     ! By
      do k = klo, khi
-        do j = jlo, jhi+1 ! WARNING HERE
+        do j = jlo, jhi+1 ! WARNING: different loop bounds
            do i = ilo, ihi
-              ! slopes in first coordinate direction
               do l = 1, ngrid
-                 dlft = bf(l,i  ,j,k,2) - bf(l,i-1,j,k,2)
-                 drgt = bf(l,i+1,j,k,2) - bf(l,i  ,j,k,2)
-                 dcen = half*(dlft+drgt)
-                 dsgn = sign(one, dcen)
-                 slop = min(slope_theta*abs(dlft),slope_theta*abs(drgt))
-                 dlim = slop
-                 if((dlft*drgt)<=zero)dlim=zero
-                 dbf(l,i,j,k,2,1) = dsgn*min(dlim,abs(dcen))
-              end do
-              ! slopes in second coordinate direction
-              do l = 1, ngrid
-                 dlft = bf(l,i,j,k  ,2) - bf(l,i,j,k-1,2)
-                 drgt = bf(l,i,j,k+1,2) - bf(l,i,j,k  ,2)
-                 dcen = half*(dlft+drgt)
-                 dsgn = sign(one, dcen)
-                 slop = min(slope_theta*abs(dlft),slope_theta*abs(drgt))
-                 dlim = slop
-                 if((dlft*drgt)<=zero)dlim=zero
-                 dbf(l,i,j,k,2,2) = dsgn*min(dlim,abs(dcen))
+                 bcen = bf(l,i,j,k,2)
+                 ! By along direction X (first coordinate direction)
+                 dlft = bcen - bf(l,i-1,j,k,2)
+                 drgt = bf(l,i+1,j,k,2) - bcen
+                 dbf(l,i,j,k,2,1) = slope_vanLeer_bis(dlft,drgt)
+                 ! By along direction Z (second coordinate direction)
+                 dlft = bcen - bf(l,i,j,k-1,2)
+                 drgt = bf(l,i,j,k+1,2) - bcen
+                 dbf(l,i,j,k,2,2) = slope_vanLeer_bis(dlft,drgt)
               end do
            end do
         end do
      end do
-
-     ! Bz along direction X and Y
-     do k = klo, khi+1 ! WARNING HERE
+     ! Bz
+     do k = klo, khi+1 ! WARNING: different loop bounds
         do j = jlo, jhi
            do i = ilo, ihi
-              ! slopes in first coordinate direction
               do l = 1, ngrid
-                 dlft = bf(l,i  ,j,k,3) - bf(l,i-1,j,k,3)
-                 drgt = bf(l,i+1,j,k,3) - bf(l,i  ,j,k,3)
-                 dcen = half*(dlft+drgt)
-                 dsgn = sign(one, dcen)
-                 slop = min(slope_theta*abs(dlft),slope_theta*abs(drgt))
-                 dlim = slop
-                 if((dlft*drgt)<=zero)dlim=zero
-                 dbf(l,i,j,k,3,1) = dsgn*min(dlim,abs(dcen))
-              end do
-              ! slopes in second coordinate direction
-              do l = 1, ngrid
-                 dlft = bf(l,i,j  ,k,3) - bf(l,i,j-1,k,3)
-                 drgt = bf(l,i,j+1,k,3) - bf(l,i,j  ,k,3)
-                 dcen = half*(dlft+drgt)
-                 dsgn = sign(one, dcen)
-                 slop = min(slope_theta*abs(dlft),slope_theta*abs(drgt))
-                 dlim = slop
-                 if((dlft*drgt)<=zero)dlim=zero
-                 dbf(l,i,j,k,3,2) = dsgn*min(dlim,abs(dcen))
+                 bcen = bf(l,i,j,k,3)
+                ! Bz along direction X (first coordinate direction)
+                 dlft = bcen - bf(l,i-1,j,k,3)
+                 drgt = bf(l,i+1,j,k,3) - bcen
+                 dbf(l,i,j,k,3,1) = slope_vanLeer_bis(dlft,drgt)
+                 ! Bz along direction Y (second coordinate direction)
+                 dlft = bcen - bf(l,i,j-1,k,3)
+                 drgt = bf(l,i,j+1,k,3) - bcen
+                 dbf(l,i,j,k,3,2) = slope_vanLeer_bis(dlft,drgt)
               end do
            end do
         end do
      end do
+#endif
   else
      write(*,*)'Unknown slope_mag_type'
-     stop
+     call clean_stop
   endif
 #endif
 
