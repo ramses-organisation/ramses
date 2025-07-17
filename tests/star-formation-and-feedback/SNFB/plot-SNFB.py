@@ -124,5 +124,3 @@ tolerance={"density":1.0e-4,\
           }
 
 visu_ramses.check_solution(to_check, 'SNFB',tolerance=tolerance)#,overwrite=True)
-
-
