@@ -34,3 +34,4 @@ __pycache__
 *.log
 # IDEs files
 .vscode
+tests/star/SNFB_old/
