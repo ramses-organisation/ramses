@@ -2,6 +2,7 @@
 
 ## Variables on the grid
 
+### Number of variables `nvar`
 The total amount of independent variables stored on the AMR grid is set at compile time by the parameter `nvar`.
 It includes
 * the Euler variables: density, velocity and pressure
@@ -17,6 +18,7 @@ NVAR := $(NHYDRO)+$(NENER)+$(NPSCAL)+$(NMETALS)
 `NMETALS` and `NPSCAL` are not passed to the source code. For the hydro-solver there is no distinction between these types of variables and both are treated as passive scalars.
 :::
 
+### Hydro data structures `uold` and `unew`
 In RAMSES, all variables are stored together in the two-dimensional arrays `uold` and `unew`, which contain the value of each variable in each cell of the AMR grid.
 They are defined in `hydro_commons` and allocated in `init_hydro`:
 ```
@@ -26,6 +28,7 @@ allocate(uold(1:ncell,1:nvar))
 allocate(unew(1:ncell,1:nvar))
 ```
 
+### Accessing variables in `uold` and `unew`
 Several parameters are used to keep track of the number of different types of variables and their indices in the arrays `uold` and `unew`.
 
 The number of Euler variables is indicated by `neul` in the code.
@@ -58,7 +61,7 @@ In the hydro-solver, these are evolved as regular passive scalars.
 
 :::{admonition} Indices
 :class: info
-To access the Euler variables in uold and unew, use the indices:
+To access the Euler variables in `uold` and `unew`, use the indices:
 - density: `1`
 - pressure: `neul`
 - velocities (HYDRO case): `2` up to `1+ndim`
