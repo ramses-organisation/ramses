@@ -476,7 +476,7 @@ subroutine read_hydro_params(nml_ok)
   endif
   ichem=ixion
   if(aton)ichem=ixion+1
-  
+
   if(myid==1.and.hydro.and.(nvar>nhydro)) then
      write(*,'(A50)')"__________________________________________________"
      write(*,*) 'Hydro var indices:'
