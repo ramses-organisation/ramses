@@ -37,6 +37,11 @@ and whether the code is compile with the HYDRO or MHD solver.
 For HYDRO, we have `neul = ndim+2` with `ndim` the amount of spatial dimensions of the simulation.
 For MHD simulations, we always need to keep track of the three velocities and so `neul = 5`.
 
+:::{admonition}
+:class: Caution
+Remark that `uold` and `unew` actually contain the **conservative** Euler variables $\mathbb{U}$: density, momentum and total energy.
+:::
+
 When using the MHD solver, we need additional variables to keep track of the magnetic field in the three dimensions.
 The magnetic field (on the left cell face) for the three spatial directions is added after the Euler variables.
 The number of Euler variables with addition of the magnetic field is indicated by `nhydro` in the code.
@@ -63,9 +68,9 @@ In the hydro-solver, these are evolved as regular passive scalars.
 :class: info
 To access the Euler variables in `uold` and `unew`, use the indices:
 - density: `1`
-- pressure: `neul`
-- velocities (HYDRO case): `2` up to `1+ndim`
-- velocities (MHD case): `2, 3, 4`
+- total energy or pressure: `neul`
+- momentum or velocities (HYDRO case): `2` up to `1+ndim`
+- momentum or velocities (MHD case): `2, 3, 4`
 
 To access the magnetic field:
 - on the left side of the cells: `neul + 1`, `neul+2`, `neul+3`
