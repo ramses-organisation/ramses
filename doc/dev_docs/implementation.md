@@ -37,8 +37,8 @@ and whether the code is compile with the HYDRO or MHD solver.
 For HYDRO, we have `neul = ndim+2` with `ndim` the amount of spatial dimensions of the simulation.
 For MHD simulations, we always need to keep track of the three velocities and so `neul = 5`.
 
-:::{admonition}
-:class: Caution
+:::{admonition} Conservative versus primitive variables
+:class: attention
 Remark that `uold` and `unew` actually contain the **conservative** Euler variables $\mathbb{U}$: density, momentum and total energy.
 :::
 
