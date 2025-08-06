@@ -190,7 +190,7 @@ subroutine collapse_condinit(x,q,dx,nn)
   real(dp),save:: ind,seed1,seed2,seed3,xi,yi,zi,vx,vy,vz
   real(dp),save:: C_s,v_rms
   integer, save :: count_vrms
-  
+
   id=1; iu=2; iv=3; iw=4; ip=5
   x0=0.5*boxlen
   y0=0.5*boxlen
@@ -205,7 +205,7 @@ subroutine collapse_condinit(x,q,dx,nn)
   ! mass_c    is in solar mass
   ! mass_c_cu is in code units
   mass_c_cu = mass_c * (M_sun / scale_m )
-  
+
   ! cloud radius
   r0=(alpha_dense_core*2.*6.67d-8*mass_c_cu*scale_m*mu_gas*mH/(5.*kB*T_eos))/scale_l
   ! cloud density
@@ -271,7 +271,7 @@ subroutine collapse_condinit(x,q,dx,nn)
             rs=sqrt(xi**2+yi**2+zi**2)
 
             IF(rs .le. r0) THEN
-              !print*, vx_tot,vy_tot,vz_tot,vx2_tot,vy2_tot,vz2_tot                                                                                                                    
+              !print*, vx_tot,vy_tot,vz_tot,vx2_tot,vy2_tot,vz2_tot
               vx_tot = vx_tot + vx
               vy_tot = vy_tot + vy
               vz_tot = vz_tot + vz
@@ -288,7 +288,7 @@ subroutine collapse_condinit(x,q,dx,nn)
       close(20)
       v_rms=sqrt((vx2_tot+vy2_tot+vz2_tot)/dble(count_vrms)-((vx_tot+vy_tot+vz_tot)/dble(count_vrms))**2)
       if (myid == 1) print *, 'v_rms for given seed =',v_rms
-      ! correction factor to have the expected Mach number stored in v_rms                                                                                                                                     
+      ! correction factor to have the expected Mach number stored in v_rms
       v_rms = Mach*C_s/v_rms
       if (myid == 1) print *, 'correction factor for turbulent field =',v_rms
    end if
@@ -330,12 +330,12 @@ subroutine collapse_condinit(x,q,dx,nn)
      q(i,iv) = 0.
      q(i,iw) = 0.
      if(Mach .ne. 0)then
-      !initialise the turbulent velocity field                                                                                                                                                                  
-      !make a zero order interpolation (should be improved)                                                                                                                                                     
+      !initialise the turbulent velocity field
+      !make a zero order interpolation (should be improved)
       ind_i = int((x(i,1)/boxlen)*n_size)+1
       ind_j = int((x(i,2)/boxlen)*n_size)+1
       ind_k = int((x(i,3)/boxlen)*n_size)+1
-      ! safe check                                                                                                                                                                                              
+      ! safe check
       if( ind_i .lt. 1 .or. ind_i .gt. n_size) write(*,*) 'ind_i ',ind_i,(x(i,1)/boxlen)*n_size+1,n_size
       if( ind_j .lt. 1 .or. ind_j .gt. n_size) write(*,*) 'ind_j ',ind_j
       if( ind_k .lt. 1 .or. ind_k .gt. n_size) write(*,*) 'ind_k ',ind_k
@@ -365,8 +365,8 @@ subroutine collapse_condinit(x,q,dx,nn)
        yy = r0 * yy / rc
 
        if(Mach .ne. 0)then
-        q(i,iu) = v_rms*(q_idl(1,ind_i,ind_j,ind_k)-vx_tot/dble(count_vrms))! omega0 * yy                                                                                                                      
-        q(i,iv) = v_rms*(q_idl(2,ind_i,ind_j,ind_k)-vy_tot/dble(count_vrms))!-omega0 * xx                                                                                                                      
+        q(i,iu) = v_rms*(q_idl(1,ind_i,ind_j,ind_k)-vx_tot/dble(count_vrms))! omega0 * yy
+        q(i,iv) = v_rms*(q_idl(2,ind_i,ind_j,ind_k)-vy_tot/dble(count_vrms))!-omega0 * xx
         q(i,iw) = v_rms*(q_idl(3,ind_i,ind_j,ind_k)-vz_tot/dble(count_vrms))
        end if
 
