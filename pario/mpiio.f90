@@ -1,7 +1,7 @@
 ! Copyright (c) 2007-2011 IDRIS/CNRS
 ! Author: Philippe Wautelet (IDRIS/CNRS), wautelet@idris.fr
 ! Distributed under the CeCILL 2.0 license. For full terms see the file LICENSE.
-
+$code
 #ifdef MPIIO
 module ramses_mpiio
   use amr_commons,only:MPI_COMM_COMP
