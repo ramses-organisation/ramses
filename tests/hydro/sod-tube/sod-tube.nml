@@ -3,12 +3,14 @@ This is the RAMSES parameter file for Sod's shock tube test.
 &RUN_PARAMS
 hydro=.true.
 nsubcycle=3*1,2
+ncontrol=100
 /
 
 &AMR_PARAMS
 levelmin=3
 levelmax=10
 ngridmax=2000
+nparttot=1 ! This parameter is useless because pic is false but the test should pass anyway.
 nexpand=1
 boxlen=1.0
 /
@@ -34,6 +36,7 @@ p_region=1.0,0.1
 &OUTPUT_PARAMS
 noutput=1
 tout=0.245
+output_to_log=.false.
 /
 
 &HYDRO_PARAMS

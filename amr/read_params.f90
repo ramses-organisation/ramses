@@ -427,9 +427,12 @@ subroutine read_amr_params(namelist_unit,nml_ok)
          ngridmax=int(ngridtot/int(ncpu,kind=8),kind=4)
       endif
    end if
-   if(npartmax==0)then
+
+   if(pic .and. npartmax==0) then
       npartmax=int(nparttot/int(ncpu,kind=8),kind=4)
-   endif
+   else if (.not. pic) then
+      npartmax=0
+   end if
 
    if(nlevelmax>MAXLEVEL)then
       write(*,*) 'Error: nlevelmax>MAXLEVEL'
@@ -463,7 +466,7 @@ subroutine read_output_params(namelist_unit,nml_ok)
 
    ! Parameters to specify when to write an output
    namelist/output_params/noutput,foutput,aout,tout &
-   & ,tend,delta_tout,aend,delta_aout,gadget_output,walltime_hrs,minutes_dump
+   & ,tend,delta_tout,aend,delta_aout,gadget_output,walltime_hrs,minutes_dump,output_to_log
 
    ! Go to the beginning of the file
    rewind(namelist_unit)
