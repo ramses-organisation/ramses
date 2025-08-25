@@ -21,6 +21,7 @@ module hydro_parameters
 #else
   integer,parameter::nener=NENER
 #endif
+  integer,parameter::inener=nhydro+1
   ! total amount of variables
 #ifndef NVAR
   integer,parameter::nvar=nhydro+nener
@@ -103,13 +104,13 @@ module hydro_parameters
   integer ::interpol_var=0
   integer ::interpol_type=1
 
-  ! Passive variables index
-  integer::imetal=nhydro+1
-  integer::idelay=nhydro+1
-  integer::ixion=nhydro+1
-  integer::ichem=nhydro+1
-  integer::ivirial1=nhydro+1
-  integer::ivirial2=nhydro+1
-  integer::inener=nhydro+1
+  ! Passive variables index indices for star formation recipes etc, in order of access in uold/unew
+  ! (updated in read_hydro_params)
+  integer,parameter::imetal=inener+nener
+  integer::idelay=imetal
+  integer::ivirial1=imetal
+  integer::ivirial2=imetal
+  integer::ixion=imetal
+  integer::ichem=imetal
 
 end module hydro_parameters

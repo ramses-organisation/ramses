@@ -27,6 +27,7 @@ subroutine unsplit(uin,gravin,pin,flux,tmp,dx,dy,dz,dt,ngrid)
 
   integer ::ngrid
   real(dp)::dx,dy,dz,dt
+  real(dp)::dtdx
 
   ! Input states
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2)::pin
@@ -48,10 +49,6 @@ subroutine unsplit(uin,gravin,pin,flux,tmp,dx,dy,dz,dt,ngrid)
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim),save::qm
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim),save::qp
 
-  ! Intermediate fluxes
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar),save::fx
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:2   ),save::tx
-
   ! Velocity divergence
   real(dp),dimension(1:nvector,if1:if2,jf1:jf2,kf1:kf2)::divu
 
@@ -62,6 +59,7 @@ subroutine unsplit(uin,gravin,pin,flux,tmp,dx,dy,dz,dt,ngrid)
   ilo=MIN(1,iu1+2); ihi=MAX(1,iu2-2)
   jlo=MIN(1,ju1+2); jhi=MAX(1,ju2-2)
   klo=MIN(1,ku1+2); khi=MAX(1,ku2-2)
+  dtdx = dt/dx
 
   ! Translate to primitive variables, compute sound speeds
   call ctoprim(uin,qin,cin,gravin,dt,ngrid)
@@ -96,71 +94,23 @@ subroutine unsplit(uin,gravin,pin,flux,tmp,dx,dy,dz,dt,ngrid)
   ! Solve for 1D flux in X direction
   call cmpflxm(qm,iu1+1,iu2+1,ju1  ,ju2  ,ku1  ,ku2  , &
        &       qp,iu1  ,iu2  ,ju1  ,ju2  ,ku1  ,ku2  , &
-       &          if1  ,if2  ,jlo  ,jhi  ,klo  ,khi  , 2,3,4,fx,tx,ngrid)
-  ! Save flux in output array
-  do i=if1,if2
-  do j=jlo,jhi
-  do k=klo,khi
-     do ivar=1,nvar
-        do l=1,ngrid
-           flux(l,i,j,k,ivar,1)=fx(l,i,j,k,ivar)*dt/dx
-        end do
-     end do
-     do ivar=1,2
-        do l=1,ngrid
-           tmp (l,i,j,k,ivar,1)=tx(l,i,j,k,ivar)*dt/dx
-        end do
-     end do
-  end do
-  end do
-  end do
+       &          if1  ,if2  ,jlo  ,jhi  ,klo  ,khi  , &
+       &       2,3,4,flux,tmp,1,dtdx,ngrid)
 
   ! Solve for 1D flux in Y direction
 #if NDIM>1
   call cmpflxm(qm,iu1  ,iu2  ,ju1+1,ju2+1,ku1  ,ku2  , &
        &       qp,iu1  ,iu2  ,ju1  ,ju2  ,ku1  ,ku2  , &
-       &          ilo  ,ihi  ,jf1  ,jf2  ,klo  ,khi  , 3,2,4,fx,tx,ngrid)
-  ! Save flux in output array
-  do i=ilo,ihi
-  do j=jf1,jf2
-  do k=klo,khi
-     do ivar=1,nvar
-        do l=1,ngrid
-           flux(l,i,j,k,ivar,2)=fx(l,i,j,k,ivar)*dt/dy
-        end do
-     end do
-     do ivar=1,2
-        do l=1,ngrid
-           tmp (l,i,j,k,ivar,2)=tx(l,i,j,k,ivar)*dt/dy
-        end do
-     end do
-  end do
-  end do
-  end do
+       &          ilo  ,ihi  ,jf1  ,jf2  ,klo  ,khi  , &
+       &       3,2,4,flux,tmp,2,dtdx,ngrid)
 #endif
 
   ! Solve for 1D flux in Z direction
 #if NDIM>2
   call cmpflxm(qm,iu1  ,iu2  ,ju1  ,ju2  ,ku1+1,ku2+1, &
        &       qp,iu1  ,iu2  ,ju1  ,ju2  ,ku1  ,ku2  , &
-       &          ilo  ,ihi  ,jlo  ,jhi  ,kf1  ,kf2  , 4,2,3,fx,tx,ngrid)
-  ! Save flux in output array
-  do i=ilo,ihi
-  do j=jlo,jhi
-  do k=kf1,kf2
-     do ivar=1,nvar
-        do l=1,ngrid
-           flux(l,i,j,k,ivar,3)=fx(l,i,j,k,ivar)*dt/dz
-        end do
-     end do
-     do ivar=1,2
-        do l=1,ngrid
-           tmp (l,i,j,k,ivar,3)=tx(l,i,j,k,ivar)*dt/dz
-        end do
-     end do
-  end do
-  end do
-  end do
+       &          ilo  ,ihi  ,jlo  ,jhi  ,kf1  ,kf2  , &
+       &       4,2,3,flux,tmp,3,dtdx,ngrid)
 #endif
 
   if(difmag>0.0)then
@@ -714,21 +664,22 @@ end subroutine trace3d
 subroutine cmpflxm(qm,im1,im2,jm1,jm2,km1,km2, &
      &             qp,ip1,ip2,jp1,jp2,kp1,kp2, &
      &                ilo,ihi,jlo,jhi,klo,khi, ln,lt1,lt2, &
-     &            flx,tmp,ngrid)
+     &             flux,tmp,idim,dtdx,ngrid)
   use amr_parameters
   use hydro_parameters
   use const
   implicit none
 
-  integer ::ngrid
+  real(dp)::dtdx
+  integer ::idim,ngrid
   integer ::ln,lt1,lt2
   integer ::im1,im2,jm1,jm2,km1,km2
   integer ::ip1,ip2,jp1,jp2,kp1,kp2
   integer ::ilo,ihi,jlo,jhi,klo,khi
   real(dp),dimension(1:nvector,im1:im2,jm1:jm2,km1:km2,1:nvar,1:ndim)::qm
   real(dp),dimension(1:nvector,ip1:ip2,jp1:jp2,kp1:kp2,1:nvar,1:ndim)::qp
-  real(dp),dimension(1:nvector,ip1:ip2,jp1:jp2,kp1:kp2,1:nvar)::flx
-  real(dp),dimension(1:nvector,ip1:ip2,jp1:jp2,kp1:kp2,1:2)::tmp
+  real(dp),dimension(1:nvector,if1:if2,jf1:jf2,kf1:kf2,1:nvar,1:ndim)::flux
+  real(dp),dimension(1:nvector,if1:if2,jf1:jf2,kf1:kf2,1:2,   1:ndim)::tmp
 
   ! local variables
   integer ::i, j, k, l, xdim
@@ -807,46 +758,46 @@ subroutine cmpflxm(qm,im1,im2,jm1,jm2,km1,km2, &
 
            ! Mass density
            do l = 1, ngrid
-              flx(l,i,j,k,1) = fgdnv(l,1)
+              flux(l,i,j,k,1,idim) = fgdnv(l,1) * dtdx
            end do
 
            ! Normal momentum
            do l = 1, ngrid
-              flx(l,i,j,k,ln) = fgdnv(l,2)
+              flux(l,i,j,k,ln,idim) = fgdnv(l,2) * dtdx
            end do
 
            ! Transverse momentum 1
 #if NDIM>1
            do l = 1, ngrid
-              flx(l,i,j,k,lt1) = fgdnv(l,4)
+              flux(l,i,j,k,lt1,idim) = fgdnv(l,4) * dtdx
            end do
 #endif
            ! Transverse momentum 2
 #if NDIM>2
            do l = 1, ngrid
-              flx(l,i,j,k,lt2) = fgdnv(l,5)
+              flux(l,i,j,k,lt2,idim) = fgdnv(l,5) * dtdx
            end do
 #endif
            ! Total energy
            do l = 1, ngrid
-              flx(l,i,j,k,neul) = fgdnv(l,3)
+              flux(l,i,j,k,neul,idim) = fgdnv(l,3) * dtdx
            end do
 
 #if NVAR > NHYDRO
            ! Other advected quantities
            do n = nhydro+1, nvar
               do l = 1, ngrid
-                 flx(l,i,j,k,n) = fgdnv(l,n)
+                 flux(l,i,j,k,n,idim) = fgdnv(l,n) * dtdx
               end do
            end do
 #endif
            ! Normal velocity
            do l = 1, ngrid
-              tmp(l,i,j,k,1) = half*(qleft(l,2)+qright(l,2))
+              tmp(l,i,j,k,1,idim) = half*(qleft(l,2)+qright(l,2)) * dtdx
            end do
            ! Internal energy flux
            do l = 1,ngrid
-              tmp(l,i,j,k,2) = fgdnv(l,nvar+1)
+              tmp(l,i,j,k,2,idim) = fgdnv(l,nvar+1) * dtdx
            end do
 
         end do
