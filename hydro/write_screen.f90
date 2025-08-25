@@ -25,6 +25,7 @@ subroutine write_screen
   integer,dimension(1:ncpu)::iskip,ncell_loc,ncell_all
 
   if(ndim>1)return
+  if(.not.output_to_log)return
 
 #ifndef WITHOUTMPI
   call MPI_BARRIER(MPI_COMM_WORLD,info)
