@@ -96,6 +96,9 @@ module hydro_parameters
   real(dp)::floor_C=1d-10     ! Bz floor
   real(dp)::floor_b2=1d-10    ! B L2 norm floor
 #endif
+#ifdef SOLVERrhd
+  real(dp)::err_grad_lor=-1.0  ! Lorentz factor gradient
+#endif
   real(dp)::mass_sph=0.0d0     ! mass_sph
   ! TODO allow for discontinuity-based refine on non-standard hydro vars:
 #if NENER>0
@@ -147,6 +150,9 @@ module hydro_parameters
   integer ::ischeme=0
   integer ::iriemann=0
   integer ::iriemann2d=0
+#endif
+#ifdef SOLVERrhd
+  character(LEN=10)::eos_rhd='constant'
 #endif
 
   ! Interpolation parameters
