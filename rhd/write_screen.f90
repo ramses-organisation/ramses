@@ -161,7 +161,7 @@ subroutine write_screen
                        qq(icell,2) = 0d0
                        qq(icell,3) = 0d0
                        qq(icell,4) = 0d0
-                       if (eos .eq. 'TM') then
+                       if (eos_rhd .eq. 'TM') then
                           qq(icell,5) =(E**2-D**2)/3d0/E
                        else
                           qq(icell,5)=(E-D)*(gamma-1d0)
@@ -185,7 +185,7 @@ subroutine write_screen
 
                        ! Compute pressure
                        Xsi=((R-D)-u2/(lor+1d0)*D)/lor**2
-                       if (eos .eq. 'TM') then
+                       if (eos_rhd .eq. 'TM') then
                           rho=qq(icell,1)
                           qq(icell,5)=(2d0*xsi*(xsi+2d0*rho))/(5d0*(xsi+rho)+sqrt(9d0*xsi**2+18d0*rho*xsi+25d0*rho**2))
                        else
