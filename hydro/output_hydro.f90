@@ -13,6 +13,9 @@ subroutine backup_hydro(filename, filename_desc)
   integer :: i, ivar, ncache, ind, ilevel, igrid, iskip, istart, ibound
   integer :: unit_out, unit_info
   real(dp) :: d
+#ifdef SOLVERmhd
+  real(dp) :: A, B, C
+#endif
   integer, allocatable, dimension(:) :: ind_grid
   real(dp), allocatable, dimension(:) :: xdp
   character(LEN = 5) :: nchar
@@ -53,9 +56,9 @@ subroutine backup_hydro(filename, filename_desc)
 
   write(unit_out) ncpu
   if(strict_equilibrium>0)then
-     write(unit_out) nvar+2
+     write(unit_out) nvar_all+2
   else
-     write(unit_out) nvar
+     write(unit_out) nvar_all
   endif
   write(unit_out) ndim
   write(unit_out) nlevelmax
@@ -99,6 +102,22 @@ subroutine backup_hydro(filename, filename_desc)
                  end if
                  call generic_dump(field_name, info_var_count, xdp, unit_out, dump_info_flag, unit_info)
               end do
+#ifdef SOLVERmhd
+              do ivar = 6, 8 ! Write left B field
+                 do i = 1, ncache
+                    xdp(i) = uold(ind_grid(i)+iskip, ivar)
+                 end do
+                 field_name = 'B_' // dim_keys(ivar - 6 + 1) // '_left'
+                 call generic_dump(field_name, info_var_count, xdp, unit_out, dump_info_flag, unit_info)
+              end do
+              do ivar = nvar+1, nvar+3 ! Write right B field
+                 do i = 1, ncache
+                    xdp(i) = uold(ind_grid(i)+iskip, ivar)
+                 end do
+                 field_name = 'B_' // dim_keys(ivar - (nvar+1) + 1) // '_right'
+                 call generic_dump(field_name, info_var_count, xdp, unit_out, dump_info_flag, unit_info)
+              end do
+#endif
 #if NENER > 0
               ! Write non-thermal pressures
               do ivar = nhydro+1, nhydro+nener
@@ -114,11 +133,17 @@ subroutine backup_hydro(filename, filename_desc)
                  d = max(uold(ind_grid(i)+iskip, 1), smallr)
                  xdp(i) = uold(ind_grid(i)+iskip, neul)
                  xdp(i) = xdp(i)-0.5d0*uold(ind_grid(i)+iskip, 2)**2/d
-#if NDIM > 1
+#if NDIM > 1 || SOLVERmhd
                  xdp(i) = xdp(i)-0.5d0*uold(ind_grid(i)+iskip, 3)**2/d
 #endif
-#if NDIM > 2
+#if NDIM > 2 || SOLVERmhd
                  xdp(i) = xdp(i)-0.5d0*uold(ind_grid(i)+iskip, 4)**2/d
+#endif
+#ifdef SOLVERmhd
+                 A = 0.5d0*(uold(ind_grid(i)+iskip, 6)+uold(ind_grid(i)+iskip, nvar+1))
+                 B = 0.5d0*(uold(ind_grid(i)+iskip, 7)+uold(ind_grid(i)+iskip, nvar+2))
+                 C = 0.5d0*(uold(ind_grid(i)+iskip, 8)+uold(ind_grid(i)+iskip, nvar+3))
+                 xdp(i) = xdp(i) - 0.5*(A**2+B**2+C**2)
 #endif
 #if NENER > 0
                  do irad = 1, nener
