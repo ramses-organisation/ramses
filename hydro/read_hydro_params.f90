@@ -456,26 +456,27 @@ subroutine read_hydro_params(nml_ok)
      jeans_refine(i)=-1
   end do
 
-  !-----------------------------------
-  ! Sort out passive variable indices
-  !-----------------------------------
-  inener=nhydro+1
-  imetal=inener+nener
-  idelay=imetal
-  if(metal)idelay=imetal+1
+  !-------------------------------------------------------------
+  ! Shift passive variable indices depending on namelist params
+  !-------------------------------------------------------------
+  if(metal)then
+     idelay=imetal+1
+  endif
   ivirial1=idelay
-  ivirial2=idelay
   if(delayed_cooling)then
      ivirial1=idelay+1
-     ivirial2=idelay+1
   endif
+  ivirial2=ivirial1
+  if(sf_virial.and.sf_compressive)then
+     ivirial2=ivirial1+1
+  endif
+  ixion = ivirial2
   if(sf_virial)then
-     if(sf_compressive) ivirial2=ivirial1+1
+     ixion=ivirial2+1
   endif
-  ixion=ivirial2
-  if(sf_virial)ixion=ivirial2+1
   ichem=ixion
   if(aton)ichem=ixion+1
+
   if(myid==1.and.hydro.and.(nvar>nhydro)) then
      write(*,'(A50)')"__________________________________________________"
      write(*,*) 'Hydro var indices:'
