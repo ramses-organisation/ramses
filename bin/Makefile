@@ -86,52 +86,72 @@ ifeq ($(LIGHT_MPI_COMM), 1)
    DEFINES += -DLIGHT_MPI_COMM
 endif
 #############################################################################
-# Fortran compiler options and directives
+# Compiler command for regular compilation (mpi or serial)
+F90 =
+# Serial compiler command and flags for helper files
+FC =
+# Base compiler flags for compilation
+FFLAGS_BASE =
+# Compiler flags for optimization
+FFLAGS_OPT = -O3 -flto -fwhole-program
+# Compiler flags for linking
+LDFLAGS = -flto -fwhole-program
+# Load presets for MPIF90 and FFLAGS_OPT for specified machine
+-include Makefile.machines
 
 # GNU compiler (gfortran)
 ifeq ($(COMPILER),GNU)
-   FFLAGS = -cpp $(DEFINES)
+   # set compiler commands
    ifeq ($(MPI),1)
       F90 = $(MPIF90)
-      FC = gfortran
    else
       F90 = gfortran
-      FC = gfortran
-      FFLAGS += -DWITHOUTMPI
    endif
-   F90 += -ffree-line-length-none -fimplicit-none
-   FC += -ffree-line-length-none -fimplicit-none
+   FC = gfortran -ffree-line-length-none -fimplicit-none
+   FFLAGS_BASE += -ffree-line-length-none -fimplicit-none
+   # add preprocessor macro definitions to compilation flags
+   FFLAGS_BASE += -cpp $(DEFINES)
+   ifeq ($(MPI),0)
+      FFLAGS_BASE += -DWITHOUTMPI
+   endif
+   # Flags for coverage calculation (resets optimization flags) 
    ifeq ($(GCOV),1)
-         F90 += -O0 -fprofile-arcs -ftest-coverage
-   else
-      ifeq ($(DEBUG),1)
-         F90 += -g -O0 -fbacktrace -fbounds-check -Wuninitialized -Wall
-         FFLAGS += -ffpe-trap=zero,underflow,overflow,invalid -finit-real=nan
-      else
-         F90 += -O3 -flto -fwhole-program
-      endif
+      FFLAGS_BASE += -fprofile-arcs -ftest-coverage
+      LDFLAGS += -fprofile-arcs -ftest-coverage
+      FFLAGS_OPT = -O0
+   else ifeq ($(DEBUG),1)
+      # Flags for debugging (resets optimization flags) 
+      FFLAGS_BASE += -g -fbacktrace -fbounds-check -Wuninitialized -Wall
+      FFLAGS_BASE += -ffpe-trap=zero,underflow,overflow,invalid -finit-real=nan
+      LDFLAGS += -g
+      FFLAGS_OPT = -O0
    endif
 endif
 
 # Intel compiler
 ifeq ($(COMPILER),INTEL)
-   FFLAGS = -cpp $(DEFINES)
+   # set compiler commands
    ifeq ($(MPI),1)
       F90 = $(MPIF90)
-      FC = ifort
-      FFLAGS += -DNOSYSTEM
    else
       F90 = ifort
-      FC = ifort
-      FFLAGS += -DWITHOUTMPI
    endif
-   F90 += -fp-model source
-   FC += -fp-model source
-   ifeq ($(DEBUG),1)
-      F90 += -warn all -O0 -g -traceback -check bounds
-      FFLAGS += -fpe0 -ftrapuv -init=zero -init=snan -init=arrays
+   FC = ifort -fp-model source
+   FFLAGS_BASE += -fp-model source
+   FFLAGS_OPT += -O3 -ipo -inline-forceinline
+   # add preprocessor macro definitions to compilation flags
+   FFLAGS_BASE += -cpp $(DEFINES)
+   ifeq ($(MPI),1)
+      FFLAGS_BASE += -DNOSYSTEM
    else
-      F90 += -O3 -ipo -inline-forceinline
+      FFLAGS_BASE += -DWITHOUTMPI
+   endif
+   # Flags for debugging (resets optimization flags) 
+   ifeq ($(DEBUG),1)
+      FFLAGS_BASE += -g -traceback -check bounds -warn all
+      FFLAGS_BASE += -fpe0 -ftrapuv -init=zero -init=snan -init=arrays
+      LDFLAGS += -g -traceback
+      FFLAGS_OPT = -O0
    endif
 endif
 
@@ -233,11 +253,11 @@ ATON_OBJ = observe.o init_radiation.o rad_init.o rad_boundary.o rad_stars.o \
            rad_backup.o ../aton/atonlib/libaton.a
 #############################################################################
 ramses:	$(MODOBJ) $(AMRLIB) ramses.o
-	$(F90) $(MODOBJ) $(AMRLIB) ramses.o -o $(EXEC)$(NDIM)d $(LIBS)
+	$(F90) $(LDFLAGS) $(MODOBJ) $(AMRLIB) ramses.o -o $(EXEC)$(NDIM)d $(LIBS)
 	rm write_makefile.f90
 	rm write_patch.f90
 ramses_aton: $(MODOBJ) $(ATON_MODOBJ) $(AMRLIB) $(ATON_OBJ) ramses.o
-	$(F90) $(MODOBJ) $(ATON_MODOBJ) $(AMRLIB) $(ATON_OBJ) ramses.o \
+	$(F90) $(LDFLAGS) $(MODOBJ) $(ATON_MODOBJ) $(AMRLIB) $(ATON_OBJ) ramses.o \
 		-o $(EXEC)$(NDIM)d $(LIBS) $(LIBCUDA)
 	rm write_makefile.f90
 	rm write_patch.f90
@@ -253,9 +273,9 @@ write_patch.o: FORCE
 	../utils/scripts/cr_write_patch.sh $(PATCH)
 	$(FC) -O0 -c write_patch.f90 -o $@
 %.o:%.F
-	$(F90) $(FFLAGS) -c $^ -o $@ $(LIBS_OBJ) $(LIBS_OBJ_TURB)
+	$(F90) $(FFLAGS_BASE) $(FFLAGS_OPT) -c $^ -o $@ $(LIBS_OBJ) $(LIBS_OBJ_TURB)
 %.o:%.f90
-	$(F90) $(FFLAGS) -c $^ -o $@ $(LIBS_OBJ) $(LIBS_OBJ_TURB)
+	$(F90) $(FFLAGS_BASE) $(FFLAGS_OPT) -c $^ -o $@ $(LIBS_OBJ) $(LIBS_OBJ_TURB)
 FORCE:
 #############################################################################
 clean:
