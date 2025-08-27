@@ -40,7 +40,7 @@ endif
 ifeq ($(MACHINE),meluxina)
    MPIF90 = mpif90
    ifeq ($(COMPILER),GNU)
-      FFLAGS_OPT += -march=znver3 -qopt-zmm-usage=high
+      FFLAGS_OPT += -march=native
    endif
 endif
 
