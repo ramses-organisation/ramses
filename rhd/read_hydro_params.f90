@@ -18,7 +18,7 @@ subroutine read_hydro_params(nml_ok)
        & ,x_center,y_center,z_center,aexp_ini &
        & ,length_x,length_y,length_z,exp_region &
        & ,d_region,u_region,v_region,w_region,p_region
-  namelist/hydro_params/gamma,eos,courant_factor,smallr,smallc &
+  namelist/hydro_params/gamma,eos_rhd,courant_factor,smallr,smallc &
        & ,niter_riemann,slope_type &
        & ,pressure_fix,beta_fix,scheme,riemann
   namelist/refine_params/x_refine,y_refine,z_refine,r_refine &
@@ -60,14 +60,14 @@ subroutine read_hydro_params(nml_ok)
 
   !!! check for inconsitencies in namelist
   if (nlevelmax .gt. levelmin) then
-     if (eos .eq. 'TM') then
+     if (eos_rhd .eq. 'TM') then
         if (interpol_var .eq. 1) then
            write(*,*),'TM does only works with interpol_var=0'
            stop
         endif
      else
         if (interpol_var .ne. 1) then
-           write(*,*),'ID EOS does only works with interpol_var=1'
+           write(*,*),'ID eos_rhd does only works with interpol_var=1'
            stop
         endif
      endif
@@ -203,7 +203,7 @@ subroutine read_hydro_params(nml_ok)
      lor=(1d0-u_bound(i)**2-v_bound(i)**2-w_bound(i)**2)**(-1./2.)
      boundary_var(i,1)=MAX(lor*d_bound(i),smallr)
      h=1d0+p_bound(i)/d_bound(i)*gamma/(gamma-1)
-     if (eos.eq.'TM') h=5d0/2d0*p_bound(i)/d_bound(i)+sqrt(9d0/4d0*(p_bound(i)/d_bound(i))**2+1)
+     if (eos_rhd.eq.'TM') h=5d0/2d0*p_bound(i)/d_bound(i)+sqrt(9d0/4d0*(p_bound(i)/d_bound(i))**2+1)
      boundary_var(i,2)=lor**2*d_bound(i)*u_bound(i)*h
      boundary_var(i,3)=lor**2*d_bound(i)*v_bound(i)*h
      boundary_var(i,4)=lor**2*d_bound(i)*w_bound(i)*h
