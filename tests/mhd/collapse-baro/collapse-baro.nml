@@ -25,13 +25,13 @@ boxlen=0.191405298315250E-01 ! to be changed is alpha_dense_core changes in orde
 condinit_kind ='collapse'
 alpha_dense_core=0.1
 beta_dense_core=0.01d0
-crit_dense_core=0.02
+crit_dense_core=0.08
 delta_rho=0.1d0
 /
 
 &OUTPUT_PARAMS
 noutput=1
-tout=8.99e-05
+tout=9.2e-05
 /
 
 &POISSON_PARAMS

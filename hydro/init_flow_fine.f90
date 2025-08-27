@@ -47,11 +47,14 @@ subroutine init_flow_fine(ilevel)
 
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   real(dp)::dx,rr,vx,vy,vz,ek,ei,pp,xx1,xx2,xx3,dx_loc,scale,xval
+#ifdef SOLVERmhd
+  real(dp)::bx,by,bz,em
+#endif
   real(dp),dimension(1:3)::skip_loc
   real(dp),dimension(1:twotondim,1:3)::xc
   real(dp),dimension(1:nvector)       ,save::vv
   real(dp),dimension(1:nvector,1:ndim),save::xx
-  real(dp),dimension(1:nvector,1:nvar),save::uu
+  real(dp),dimension(1:nvector,1:nvar_all),save::uu
 
   real(dp),allocatable,dimension(:,:,:)::init_array
   real(kind=4),allocatable,dimension(:,:)  ::init_plane
@@ -155,7 +158,7 @@ subroutine init_flow_fine(ilevel)
      if(ncache>0)allocate(init_array(i1_min:i1_max,i2_min:i2_max,i3_min:i3_max))
      allocate(init_plane(1:n1(ilevel),1:n2(ilevel)))
      ! Loop over input variables
-     do ivar=1,nvar
+     do ivar=1,nvar_all
         if(cosmo)then
            ! Read baryons initial overdensity and displacement at a=aexp
            if(multiple)then
@@ -186,8 +189,16 @@ subroutine init_flow_fine(ilevel)
            if(ivar==4)filename=TRIM(initfile(ilevel))//'/ic_w'
            if(ivar==5)filename=TRIM(initfile(ilevel))//'/ic_p'
         endif
+#ifdef SOLVERmhd
+        if(ivar==6)filename=TRIM(initfile(ilevel))//'/ic_bxleft'
+        if(ivar==7)filename=TRIM(initfile(ilevel))//'/ic_byleft'
+        if(ivar==8)filename=TRIM(initfile(ilevel))//'/ic_bzleft'
+        if(ivar==nvar+1)filename=TRIM(initfile(ilevel))//'/ic_bxright'
+        if(ivar==nvar+2)filename=TRIM(initfile(ilevel))//'/ic_byright'
+        if(ivar==nvar+3)filename=TRIM(initfile(ilevel))//'/ic_bzright'
+#endif
         call title(ivar,ncharvar)
-        if(ivar>nhydro)then
+        if(ivar>nhydro.and.ivar<=nvar)then
            call title(ivar-nhydro,ncharvar)
            filename=TRIM(initfile(ilevel))//'/ic_pvar_'//TRIM(ncharvar)
         endif
@@ -266,6 +277,11 @@ subroutine init_flow_fine(ilevel)
               init_array=0d0
               ! Default value for metals
               if(cosmo.and.ivar==imetal.and.metal)init_array=z_ave*0.02d0 ! from solar units
+#ifdef SOLVERmhd
+              ! Default value for Bz
+              if(cosmo.and.ivar==nhydro)init_array=B_ave
+              if(cosmo.and.ivar==nvar+3)init_array=B_ave
+#endif
               ! Default value for ionization fraction
               if(cosmo)xval=sqrt(omega_m)/(h0/100*omega_b) ! From the book of Peebles p. 173
               if(cosmo.and.ivar==ixion.and.aton)init_array=1.2d-5*xval
@@ -369,16 +385,24 @@ subroutine init_flow_fine(ilevel)
            do i=1,ngrid
               rr=uold(ind_cell(i),1)
               vx=uold(ind_cell(i),2)
-#if NDIM>1
+#if NDIM>1 || SOLVERmhd
               vy=uold(ind_cell(i),3)
 #endif
-#if NDIM>2
+#if NDIM>2 || SOLVERmhd
               vz=uold(ind_cell(i),4)
 #endif
               pp=uold(ind_cell(i),neul)
               ek=0.5d0*(vx**2+vy**2+vz**2)
               ei=pp/(gamma-1.0d0)
+#ifdef SOLVERmhd
+              bx=0.5d0*(uold(ind_cell(i),6)+uold(ind_cell(i),nvar+1))
+              by=0.5d0*(uold(ind_cell(i),7)+uold(ind_cell(i),nvar+2))
+              bz=0.5d0*(uold(ind_cell(i),8)+uold(ind_cell(i),nvar+3))
+              em=0.5d0*(bx**2+by**2+bz**2)
+              vv(i)=ei+rr*ek+em
+#else
               vv(i)=ei+rr*ek
+#endif
            end do
            ! Scatter to corresponding conservative variable
            do i=1,ngrid
@@ -444,7 +468,7 @@ subroutine init_flow_fine(ilevel)
            ! Call initial condition routine
            call condinit(xx,uu,dx_loc,ngrid)
            ! Scatter variables
-           do ivar=1,nvar
+           do ivar=1,nvar_all
               do i=1,ngrid
                  uold(ind_cell(i),ivar)=uu(i,ivar)
               end do
@@ -477,7 +501,7 @@ subroutine region_condinit(x,q,dx,nn)
   implicit none
   integer ::nn
   real(dp)::dx
-  real(dp),dimension(1:nvector,1:nvar)::q
+  real(dp),dimension(1:nvector,1:nvar_all)::q
   real(dp),dimension(1:nvector,1:ndim)::x
 
   integer::i,k
@@ -489,13 +513,21 @@ subroutine region_condinit(x,q,dx,nn)
   ! Set some (tiny) default values in case n_region=0
   q(1:nn,1)=smallr
   q(1:nn,2)=0.0d0
-#if NDIM>1
+#if NDIM>1 || SOLVERmhd
   q(1:nn,3)=0.0d0
 #endif
-#if NDIM>2
+#if NDIM>2 || SOLVERmhd
   q(1:nn,4)=0.0d0
 #endif
   q(1:nn,neul)=smallr*smallc**2/gamma
+#ifdef SOLVERmhd
+  q(1:nn,6)=0.0d0
+  q(1:nn,7)=0.0d0
+  q(1:nn,8)=0.0d0
+  q(1:nn,nvar+1)=0.0d0
+  q(1:nn,nvar+2)=0.0d0
+  q(1:nn,nvar+3)=0.0d0
+#endif
 #if NVAR > NHYDRO
   do ivar=nhydro+1,nvar
      q(1:nn,ivar)=0.0d0
@@ -530,13 +562,21 @@ subroutine region_condinit(x,q,dx,nn)
            if(r<1.0)then
               q(i,1)=d_region(k)
               q(i,2)=u_region(k)
-#if NDIM>1
+#if NDIM>1 || SOLVERmhd
               q(i,3)=v_region(k)
 #endif
-#if NDIM>2
+#if NDIM>2 || SOLVERmhd
               q(i,4)=w_region(k)
 #endif
               q(i,neul)=p_region(k)
+#ifdef SOLVERmhd
+              q(i,6)=A_region(k)
+              q(i,7)=B_region(k)
+              q(i,8)=C_region(k)
+              q(i,nvar+1)=A_region(k)
+              q(i,nvar+2)=B_region(k)
+              q(i,nvar+3)=C_region(k)
+#endif
 #if NENER>0
               do ivar=1,nener
                  q(i,nhydro+ivar)=prad_region(k,ivar)
@@ -570,10 +610,10 @@ subroutine region_condinit(x,q,dx,nn)
            ! ADD to primitive variables the region values
            q(i,1)=q(i,1)+d_region(k)*r/vol
            q(i,2)=q(i,2)+u_region(k)*r
-#if NDIM>1
+#if NDIM>1 || SOLVERmhd
            q(i,3)=q(i,3)+v_region(k)*r
 #endif
-#if NDIM>2
+#if NDIM>2 || SOLVERmhd
            q(i,4)=q(i,4)+w_region(k)*r
 #endif
            q(i,neul)=q(i,neul)+p_region(k)*r/vol
