@@ -40,7 +40,6 @@ subroutine unsplit(uin,gravin,pin,flux,tmp,dx,dy,dz,dt,ngrid)
 
   ! Primitive variables
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar),save::qin
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2       ),save::cin
 
   ! Slopes
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim),save::dq
@@ -62,7 +61,7 @@ subroutine unsplit(uin,gravin,pin,flux,tmp,dx,dy,dz,dt,ngrid)
   dtdx = dt/dx
 
   ! Translate to primitive variables, compute sound speeds
-  call ctoprim(uin,qin,cin,gravin,dt,ngrid)
+  call ctoprim(uin,qin,gravin,dt,ngrid)
 
   ! Compute TVD slopes
   call uslope(qin,dq,dx,dt,ngrid)
@@ -81,13 +80,13 @@ subroutine unsplit(uin,gravin,pin,flux,tmp,dx,dy,dz,dt,ngrid)
   endif
   if(scheme=='plmde')then
 #if NDIM==1
-     call tracex  (qin,dq,cin,qm,qp,dx      ,dt,ngrid)
+     call tracex  (qin,dq,qm,qp,dx      ,dt,ngrid)
 #endif
 #if NDIM==2
-     call tracexy (qin,dq,cin,qm,qp,dx,dy   ,dt,ngrid)
+     call tracexy (qin,dq,qm,qp,dx,dy   ,dt,ngrid)
 #endif
 #if NDIM==3
-     call tracexyz(qin,dq,cin,qm,qp,dx,dy,dz,dt,ngrid)
+     call tracexyz(qin,dq,qm,qp,dx,dy,dz,dt,ngrid)
 #endif
   endif
 
@@ -809,20 +808,21 @@ end subroutine cmpflxm
 !###########################################################
 !###########################################################
 !###########################################################
-subroutine ctoprim(uin,q,c,gravin,dt,ngrid)
+subroutine ctoprim(uin,q,gravin,dt,ngrid)
   use amr_parameters
   use hydro_parameters
   use const
   implicit none
-
-  integer ::ngrid
-  real(dp)::dt
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::uin
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:ndim)::gravin
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2)::c
-
+  integer, intent(in)::ngrid
+  real(dp),intent(in)::dt
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar),intent(in)::uin
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:ndim),intent(in)::gravin
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar),intent(out)::q
+  !---------------------------------------------------------
+  ! Translate Conservative variables uin to PRIMitive variables q.
+  !---------------------------------------------------------
   integer ::i, j, k, l
+  real(dp) ::rho_grid,vx_grid,vy_grid,vz_grid
   real(dp)::eint, smalle, dtxhalf, oneoverrho
   real(dp)::eken, erad
 #if NVAR > NHYDRO + NENER
@@ -842,25 +842,26 @@ subroutine ctoprim(uin,q,c,gravin,dt,ngrid)
            do l = 1, ngrid
 
               ! Compute density
-              q(l,i,j,k,1) = max(uin(l,i,j,k,1),smallr)
+              ! We keep it in a local scalar to avoid store-load dependencies of q(l,i,j,k,1)
+              rho_grid = max(uin(l,i,j,k,1),smallr)
 
               ! Compute velocities
-              oneoverrho = one/q(l,i,j,k,1)
-              q(l,i,j,k,2) = uin(l,i,j,k,2)*oneoverrho
+              oneoverrho = one/rho_grid
+              vx_grid = uin(l,i,j,k,2)*oneoverrho
 #if NDIM>1
-              q(l,i,j,k,3) = uin(l,i,j,k,3)*oneoverrho
+              vy_grid = uin(l,i,j,k,3)*oneoverrho
 #endif
 #if NDIM>2
-              q(l,i,j,k,4) = uin(l,i,j,k,4)*oneoverrho
+              vz_grid = uin(l,i,j,k,4)*oneoverrho
 #endif
 
               ! Compute specific kinetic energy
-              eken = half*q(l,i,j,k,2)*q(l,i,j,k,2)
+              eken = half*vx_grid*vx_grid
 #if NDIM>1
-              eken = eken + half*q(l,i,j,k,3)*q(l,i,j,k,3)
+              eken = eken + half*vy_grid*vy_grid
 #endif
 #if NDIM>2
-              eken = eken + half*q(l,i,j,k,4)*q(l,i,j,k,4)
+              eken = eken + half*vz_grid*vz_grid
 #endif
               ! Compute non-thermal pressure
               erad = zero
@@ -872,24 +873,18 @@ subroutine ctoprim(uin,q,c,gravin,dt,ngrid)
 #endif
               ! Compute thermal pressure
               eint = MAX(uin(l,i,j,k,neul)*oneoverrho-eken-erad,smalle)
-              q(l,i,j,k,neul) = (gamma-one)*q(l,i,j,k,1)*eint
+              q(l,i,j,k,neul) = (gamma-one)*rho_grid*eint
 
-              ! Compute sound speed
-              c(l,i,j,k)=gamma*q(l,i,j,k,neul)
-#if NENER>0
-              do irad=1,nener
-                 c(l,i,j,k)=c(l,i,j,k)+gamma_rad(irad)*q(l,i,j,k,nhydro+irad)
-              enddo
-#endif
-              c(l,i,j,k)=sqrt(c(l,i,j,k)*oneoverrho)
+              ! Now, we store the density
+              q(l,i,j,k,1) = rho_grid
 
-              ! Gravity predictor step
-              q(l,i,j,k,2) = q(l,i,j,k,2) + gravin(l,i,j,k,1)*dtxhalf
+              ! Store velocity and apply gravity predictor step
+              q(l,i,j,k,2) = vx_grid + gravin(l,i,j,k,1)*dtxhalf
 #if NDIM>1
-              q(l,i,j,k,3) = q(l,i,j,k,3) + gravin(l,i,j,k,2)*dtxhalf
+              q(l,i,j,k,3) = vy_grid + gravin(l,i,j,k,2)*dtxhalf
 #endif
 #if NDIM>2
-              q(l,i,j,k,4) = q(l,i,j,k,4) + gravin(l,i,j,k,3)*dtxhalf
+              q(l,i,j,k,4) = vz_grid + gravin(l,i,j,k,3)*dtxhalf
 #endif
 
            end do
