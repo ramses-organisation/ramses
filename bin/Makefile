@@ -9,6 +9,8 @@ DEBUG = 0
 GCOV = 0
 # Compiler flavor: GNU or INTEL
 COMPILER = GNU
+# Target cluster, to set cluster specific optimisation flags (see Makefile.machines)
+MACHINE = generic
 # Size of vector cache
 NVECTOR = 32
 # Number of dimensions
@@ -25,7 +27,6 @@ RT = 0
 USE_TURB = 0
 # Use MPI? 1=Yes, 0=No
 MPI = 0
-MPIF90 = mpif90
 # Root name of executable
 EXEC = ramses
 # Number of additional energies
@@ -97,7 +98,7 @@ FFLAGS_OPT = -O3 -flto -fwhole-program
 # Compiler flags for linking
 LDFLAGS = -flto -fwhole-program
 # Load presets for MPIF90 and FFLAGS_OPT for specified machine
--include Makefile.machines
+-include clusters.mk
 
 # GNU compiler (gfortran)
 ifeq ($(COMPILER),GNU)
