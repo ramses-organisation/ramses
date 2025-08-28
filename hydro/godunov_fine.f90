@@ -520,9 +520,9 @@ subroutine godfine1(ind_grid,ncache,ilevel)
   ! Gather 6x6x6 cells stencil
   !---------------------------
   if(levelmin==nlevelmax)then
-     call gather_stencil_unigrid(nbors_father_cells,uloc,gloc,req_loc,peq_loc,ok,ncache,ilevel)
+     call gather_stencil_unigrid(nbors_father_cells,uloc,gloc,ok,ncache,ilevel)
   else
-     call gather_stencil_amr(nbors_father_cells,uloc,gloc,req_loc,peq_loc,ok,ncache,ilevel)
+     call gather_stencil_amr(nbors_father_cells,uloc,gloc,ok,ncache,ilevel)
   end if
 
   !-----------------------------------------------
@@ -768,7 +768,7 @@ end subroutine godfine1
 !###########################################################
 !###########################################################
 !###########################################################
-subroutine gather_stencil_unigrid(nbors_father_cells,uloc,gloc,req_loc,peq_loc,ok,ncache,ilevel)
+subroutine gather_stencil_unigrid(nbors_father_cells,uloc,gloc,ok,ncache,ilevel)
   use amr_commons
   use hydro_commons
   use poisson_commons
@@ -779,8 +779,6 @@ subroutine gather_stencil_unigrid(nbors_father_cells,uloc,gloc,req_loc,peq_loc,o
   integer ,dimension(1:nvector,1:threetondim     ),intent(in)::nbors_father_cells
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar),intent(inout)::uloc
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:ndim),intent(inout)::gloc
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),intent(inout)::req_loc
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),intent(inout)::peq_loc
   logical ,dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),intent(inout)::ok
   integer,intent(in)::ilevel,ncache
   !-------------------------------------------------------------------------
@@ -826,16 +824,6 @@ subroutine gather_stencil_unigrid(nbors_father_cells,uloc,gloc,req_loc,peq_loc,o
            end do
         end do
 
-        ! Gather equilibrium model
-        if(strict_equilibrium>0)then
-           do idim=1,ndim
-              do i=1,ncache
-                 req_loc(i,i3,j3,k3)=rho_eq(ind_cell(i))
-                 peq_loc(i,i3,j3,k3)=p_eq(ind_cell(i))
-              end do
-           end do
-        end if
-
         ! Gather gravitational acceleration
         if(poisson)then
            do idim=1,ndim
@@ -865,7 +853,7 @@ end subroutine gather_stencil_unigrid
 !###########################################################
 !###########################################################
 !###########################################################
-subroutine gather_stencil_amr(nbors_father_cells,uloc,gloc,req_loc,peq_loc,ok,ncache,ilevel)
+subroutine gather_stencil_amr(nbors_father_cells,uloc,gloc,ok,ncache,ilevel)
   use amr_commons
   use hydro_commons
   use poisson_commons
@@ -876,8 +864,6 @@ subroutine gather_stencil_amr(nbors_father_cells,uloc,gloc,req_loc,peq_loc,ok,nc
   integer ,dimension(1:nvector,1:threetondim     ),intent(in)::nbors_father_cells
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar),intent(inout)::uloc
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:ndim),intent(inout)::gloc
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),intent(inout)::req_loc
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),intent(inout)::peq_loc
   logical ,dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),intent(inout)::ok
   integer,intent(in)::ilevel,ncache
   !-------------------------------------------------------------------------
@@ -887,8 +873,6 @@ subroutine gather_stencil_amr(nbors_father_cells,uloc,gloc,req_loc,peq_loc,ok,nc
   integer ,dimension(1:nvector,0:twondim         ),save::ibuffer_father
   real(dp),dimension(1:nvector,0:twondim  ,1:nvar),save::u1
   real(dp),dimension(1:nvector,1:twotondim,1:nvar),save::u2
-  real(dp),dimension(1:nvector,1:twotondim       ),save::req2=0.0d0
-  real(dp),dimension(1:nvector,1:twotondim       ),save::peq2=0.0d0
 
   integer,dimension(1:nvector),save::igrid_nbor,ind_cell,ind_buffer
   integer,dimension(1:nvector),save::ind_exist,ind_nexist
@@ -955,21 +939,6 @@ subroutine gather_stencil_amr(nbors_father_cells,uloc,gloc,req_loc,peq_loc,ok,nc
               uloc(ind_nexist(i),i3,j3,k3,ivar)=u2(i,ind_son,ivar)
            end do
         end do
-
-        ! Gather equilibrium model
-        if(strict_equilibrium>0)then
-           do idim=1,ndim
-              do i=1,nexist
-                 req_loc(ind_exist(i),i3,j3,k3)=rho_eq(ind_cell(i))
-                 peq_loc(ind_exist(i),i3,j3,k3)=p_eq(ind_cell(i))
-              end do
-              ! Use straight injection for buffer cells
-              do i=1,nbuffer
-                 req_loc(ind_nexist(i),i3,j3,k3)=req2(i,ind_son)
-                 peq_loc(ind_nexist(i),i3,j3,k3)=peq2(i,ind_son)
-              end do
-           end do
-        end if
 
         ! Gather gravitational acceleration
         if(poisson)then
