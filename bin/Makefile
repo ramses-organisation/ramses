@@ -117,14 +117,14 @@ ifeq ($(COMPILER),GNU)
    endif
    # link-time optimization accross files
    LDFLAGS += -flto -fwhole-program
-   FFLAGS_OPT += -flto -fwhole-program 
-   # Flags for coverage calculation (resets optimization flags) 
+   FFLAGS_OPT += -flto -fwhole-program
+   # Flags for coverage calculation (resets optimization flags)
    ifeq ($(GCOV),1)
       FFLAGS_BASE += -fprofile-arcs -ftest-coverage
       LDFLAGS = -fprofile-arcs -ftest-coverage
       FFLAGS_OPT = -O0
    else ifeq ($(DEBUG),1)
-      # Flags for debugging (resets optimization flags) 
+      # Flags for debugging (resets optimization flags)
       FFLAGS_BASE += -g -fbacktrace -fbounds-check -Wuninitialized -Wall
       FFLAGS_BASE += -ffpe-trap=zero,underflow,overflow,invalid -finit-real=nan
       LDFLAGS = -g
@@ -152,7 +152,7 @@ ifeq ($(COMPILER),INTEL)
    # link-time optimization and inlining accross files
    LDFLAGS += -ipo -inline-forceinline
    FFLAGS_OPT += -ipo -inline-forceinline
-   # Flags for debugging (resets optimization flags) 
+   # Flags for debugging (resets optimization flags)
    ifeq ($(DEBUG),1)
       FFLAGS_BASE += -g -traceback -check bounds -warn all
       FFLAGS_BASE += -fpe0 -ftrapuv -init=zero -init=snan -init=arrays
