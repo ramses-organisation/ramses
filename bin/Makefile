@@ -94,9 +94,9 @@ FC =
 # Base compiler flags for compilation
 FFLAGS_BASE =
 # Compiler flags for optimization
-FFLAGS_OPT = -O3 -flto -fwhole-program
+FFLAGS_OPT = -O3
 # Compiler flags for linking
-LDFLAGS = -flto -fwhole-program
+LDFLAGS =
 # Load presets for MPIF90 and FFLAGS_OPT for specified machine
 -include clusters.mk
 
@@ -142,7 +142,6 @@ ifeq ($(COMPILER),INTEL)
    endif
    FC = ifort -fp-model source
    FFLAGS_BASE += -fp-model source
-   FFLAGS_OPT += -O3 -ipo -inline-forceinline
    # add preprocessor macro definitions to compilation flags
    FFLAGS_BASE += -cpp $(DEFINES)
    ifeq ($(MPI),1)
@@ -151,8 +150,8 @@ ifeq ($(COMPILER),INTEL)
       FFLAGS_BASE += -DWITHOUTMPI
    endif
    # link-time optimization and inlining accross files
-   LDFLAGS += -ipo -inline-level=3
-   FFLAGS_OPT += -ipo -inline-level=3
+   LDFLAGS += -ipo -inline-forceinline
+   FFLAGS_OPT += -ipo -inline-forceinline
    # Flags for debugging (resets optimization flags) 
    ifeq ($(DEBUG),1)
       FFLAGS_BASE += -g -traceback -check bounds -warn all
