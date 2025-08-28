@@ -1,8 +1,43 @@
+subroutine cmp_sound_speed(q,c,ngrid)
+  use amr_parameters
+  use hydro_parameters
+  use const
+  implicit none
+  integer, intent(in)::ngrid
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar),intent(in)::q
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),intent(out)::c
+  !--------------------------------------------------------------
+  ! Calculates the sound speed c from the primitive variables q
+  !-------------------------------------------------------------
+  integer ::i, j, k, l
+#if NENER>0
+  integer ::irad
+#endif
+
+  ! Convert to primitive variable
+  do k = ku1, ku2
+     do j = ju1, ju2
+        do i = iu1, iu2
+           do l = 1, ngrid
+              ! Compute sound speed
+              c(l,i,j,k)=gamma*q(l,i,j,k,neul)
+#if NENER>0
+              do irad=1,nener
+                 c(l,i,j,k)=c(l,i,j,k)+gamma_rad(irad)*q(l,i,j,k,nhydro+irad)
+              enddo
+#endif
+              c(l,i,j,k)=sqrt(c(l,i,j,k)/q(l,i,j,k,1))
+           end do
+        end do
+     end do
+  end do
+
+end subroutine cmp_sound_speed
 !###########################################################
 !###########################################################
 !###########################################################
 !###########################################################
-subroutine tracex(q,dq,c,qm,qp,dx,dt,ngrid)
+subroutine tracex(q,dq,qm,qp,dx,dt,ngrid)
   use amr_parameters
   use hydro_parameters
   use const
@@ -15,7 +50,7 @@ subroutine tracex(q,dq,c,qm,qp,dx,dt,ngrid)
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::dq
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qm
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qp
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2)::c
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),save::c
 
   ! Local variables
   integer ::ilo,ihi,jlo,jhi,klo,khi
@@ -34,6 +69,9 @@ subroutine tracex(q,dq,c,qm,qp,dx,dt,ngrid)
   real(dp)::dax
   real(dp)::azaright, azaleft
 #endif
+
+  ! compute sound speed
+  call cmp_sound_speed(q,c,ngrid)
 
   dtdx = dt/dx
   ilo=MIN(1,iu1+1); ihi=MAX(1,iu2-1)
@@ -141,7 +179,7 @@ end subroutine tracex
 !###########################################################
 !###########################################################
 #if NDIM>1
-subroutine tracexy(q,dq,c,qm,qp,dx,dy,dt,ngrid)
+subroutine tracexy(q,dq,qm,qp,dx,dy,dt,ngrid)
   use amr_parameters
   use hydro_parameters
   use const
@@ -175,6 +213,9 @@ subroutine tracexy(q,dq,c,qm,qp,dx,dy,dt,ngrid)
   real(dp)::a, dax, day, sax, say
   real(dp)::azaright, azaleft
 #endif
+
+  ! compute sound speed
+  call cmp_sound_speed(q,c,ngrid)
 
   dtdx = dt/dx; dtdy = dt/dy
   ilo=MIN(1,iu1+1); ihi=MAX(1,iu2-1)
@@ -372,7 +413,7 @@ end subroutine tracexy
 !###########################################################
 !###########################################################
 #if NDIM>2
-subroutine tracexyz(q,dq,c,qm,qp,dx,dy,dz,dt,ngrid)
+subroutine tracexyz(q,dq,qm,qp,dx,dy,dz,dt,ngrid)
   use amr_parameters
   use hydro_parameters
   use const
@@ -408,6 +449,9 @@ subroutine tracexyz(q,dq,c,qm,qp,dx,dy,dz,dt,ngrid)
   real(dp)::a, dax, day, daz, sax, say, saz
   real(dp)::azaright, azaleft
 #endif
+
+  ! compute sound speed
+  call cmp_sound_speed(q,c,ngrid)
 
   dtdx = dt/dx; dtdy = dt/dy; dtdz = dt/dz
   ilo=MIN(1,iu1+1); ihi=MAX(1,iu2-1)
