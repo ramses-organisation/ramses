@@ -94,7 +94,7 @@ FC =
 # Base compiler flags for compilation
 FFLAGS_BASE =
 # Compiler flags for optimization
-FFLAGS_OPT = -O3 -funroll-loops
+FFLAGS_OPT = -O3
 # Compiler flags for linking
 LDFLAGS =
 # Load presets for MPIF90 and FFLAGS_OPT for specified machine
