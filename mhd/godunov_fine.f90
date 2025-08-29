@@ -520,6 +520,9 @@ subroutine godfine1(ind_grid,ncache,ilevel)
   use amr_commons
   use hydro_commons
   use poisson_commons
+  use amr_constants, only:i1min,i1max,j1min,j1max,k1min,k1max, &
+                       &  i2min,i2max,j2min,j2max,k2min,k2max, &
+                       &  i3min,i3max,j3min,j3max,k3min,k3max
   implicit none
   integer::ilevel,ncache
   integer,dimension(1:nvector)::ind_grid
@@ -552,9 +555,6 @@ subroutine godfine1(ind_grid,ncache,ilevel)
   integer::ind_father1,ind_father2,ind_father3
   integer::i,j,ivar,idim,ind_son,ind_father,iskip,nbuffer
   integer::i0,j0,k0,i1,j1,k1,i2,j2,k2,i3,j3,k3,nx_loc,nb_noneigh,nexist
-  integer::i1min,i1max,j1min,j1max,k1min,k1max
-  integer::i2min,i2max,j2min,j2max,k2min,k2max
-  integer::i3min,i3max,j3min,j3max,k3min,k3max
   real(dp)::dflux_x,dflux_y,dflux_z
   real(dp)::dx,scale,oneontwotondim,d
   real(dp)::dflux,weight
@@ -565,20 +565,6 @@ subroutine godfine1(ind_grid,ncache,ilevel)
   nx_loc=icoarse_max-icoarse_min+1
   scale=boxlen/dble(nx_loc)
   dx=0.5d0**ilevel*scale
-
-  ! Integer constants
-  i1min=0; i1max=0; i2min=0; i2max=0; i3min=1; i3max=1
-  j1min=0; j1max=0; j2min=0; j2max=0; j3min=1; j3max=1
-  k1min=0; k1max=0; k2min=0; k2max=0; k3min=1; k3max=1
-  if(ndim>0)then
-     i1max=2; i2max=1; i3max=2
-  end if
-  if(ndim>1)then
-     j1max=2; j2max=1; j3max=2
-  end if
-  if(ndim>2)then
-     k1max=2; k2max=1; k3max=2
-  end if
 
   !------------------------------------------
   ! Gather 3^ndim neighboring father cells

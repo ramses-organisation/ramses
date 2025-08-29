@@ -469,6 +469,9 @@ subroutine godfine1(ind_grid,ncache,ilevel)
   use amr_commons
   use hydro_commons
   use poisson_commons
+  use amr_constants, only:i1min,i1max,j1min,j1max,k1min,k1max, &
+                       &  i2min,i2max,j2min,j2max,k2min,k2max, &
+                       &  i3min,i3max,j3min,j3max,k3min,k3max
   implicit none
   integer::ilevel,ncache
   integer,dimension(1:nvector)::ind_grid
@@ -483,14 +486,9 @@ subroutine godfine1(ind_grid,ncache,ilevel)
   ! coarser level if necessary.
   !-------------------------------------------------------------------
   integer ,dimension(1:nvector,1:threetondim     ),save::nbors_father_cells
-  integer ,dimension(1:nvector,0:twondim         ),save::ibuffer_father
-  real(dp),dimension(1:nvector,0:twondim  ,1:nvar),save::u1
-  real(dp),dimension(1:nvector,1:twotondim,1:nvar),save::u2
-  real(dp),dimension(1:nvector,1:twotondim       ),save::req2=0.0d0
-  real(dp),dimension(1:nvector,1:twotondim       ),save::peq2=0.0d0
 
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar),save::uloc
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:ndim),save::gloc=0.0d0
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:ndim),save::gloc
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),save::ploc=0.0d0
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),save::req_loc=0.0d0
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),save::peq_loc=0.0d0
@@ -498,13 +496,10 @@ subroutine godfine1(ind_grid,ncache,ilevel)
   real(dp),dimension(1:nvector,if1:if2,jf1:jf2,kf1:kf2,1:2,1:ndim),save::tmp
   logical ,dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),save::ok
 
-  integer,dimension(1:nvector),save::igrid_nbor,ind_cell,ind_buffer,ind_exist,ind_nexist
+  integer,dimension(1:nvector),save::ind_cell,ind_buffer
 
-  integer::i,j,ivar,idim,ind_son,ind_father,iskip,nbuffer
-  integer::i0,j0,k0,i1,j1,k1,i2,j2,k2,i3,j3,k3,nx_loc,nb_noneigh,nexist
-  integer::i1min,i1max,j1min,j1max,k1min,k1max
-  integer::i2min,i2max,j2min,j2max,k2min,k2max
-  integer::i3min,i3max,j3min,j3max,k3min,k3max
+  integer::i,j,ivar,idim,ind_son,iskip
+  integer::i0,j0,k0,i1,j1,k1,i2,j2,k2,i3,j3,k3,nx_loc,nb_noneigh
   real(dp)::dx,scale,oneontwotondim,d
 
   oneontwotondim = 1d0/dble(twotondim)
@@ -514,19 +509,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
   scale=boxlen/dble(nx_loc)
   dx=0.5d0**ilevel*scale
 
-  ! Integer constants
-  i1min=0; i1max=0; i2min=0; i2max=0; i3min=1; i3max=1
-  j1min=0; j1max=0; j2min=0; j2max=0; j3min=1; j3max=1
-  k1min=0; k1max=0; k2min=0; k2max=0; k3min=1; k3max=1
-  if(ndim>0)then
-     i1max=2; i2max=1; i3max=2
-  end if
-  if(ndim>1)then
-     j1max=2; j2max=1; j3max=2
-  end if
-  if(ndim>2)then
-     k1max=2; k2max=1; k3max=2
-  end if
+  gloc=0
 
   !------------------------------------------
   ! Gather 3^ndim neighboring father cells
@@ -539,122 +522,11 @@ subroutine godfine1(ind_grid,ncache,ilevel)
   !---------------------------
   ! Gather 6x6x6 cells stencil
   !---------------------------
-  ! Loop over 3x3x3 neighboring father cells
-  do k1=k1min,k1max
-  do j1=j1min,j1max
-  do i1=i1min,i1max
-
-     ! Check if neighboring grid exists
-     nbuffer=0
-     nexist=0
-     ind_father=1+i1+3*j1+9*k1
-     do i=1,ncache
-        igrid_nbor(i)=son(nbors_father_cells(i,ind_father))
-        if(igrid_nbor(i)>0) then
-           nexist=nexist+1
-           ind_exist(nexist)=i
-        else
-          nbuffer=nbuffer+1
-          ind_nexist(nbuffer)=i
-          ind_buffer(nbuffer)=nbors_father_cells(i,ind_father)
-        end if
-     end do
-
-     ! If not, interpolate hydro variables from parent cells
-     if(nbuffer>0)then
-        call getnborfather(ind_buffer,ibuffer_father,nbuffer,ilevel)
-        do j=0,twondim
-           do ivar=1,nvar
-              do i=1,nbuffer
-                 u1(i,j,ivar)=uold(ibuffer_father(i,j),ivar)
-              end do
-           end do
-        end do
-        call interpol_hydro(u1,u2,nbuffer)
-     endif
-
-     ! Loop over 2x2x2 cells
-     do k2=k2min,k2max
-     do j2=j2min,j2max
-     do i2=i2min,i2max
-
-        ind_son=1+i2+2*j2+4*k2
-        iskip=ncoarse+(ind_son-1)*ngridmax
-        do i=1,nexist
-           ind_cell(i)=iskip+igrid_nbor(ind_exist(i))
-        end do
-
-        i3=1; j3=1; k3=1
-        if(ndim>0)i3=1+2*(i1-1)+i2
-        if(ndim>1)j3=1+2*(j1-1)+j2
-        if(ndim>2)k3=1+2*(k1-1)+k2
-
-        ! Gather hydro variables
-        do ivar=1,nvar
-           do i=1,nexist
-              uloc(ind_exist(i),i3,j3,k3,ivar)=uold(ind_cell(i),ivar)
-           end do
-           do i=1,nbuffer
-              uloc(ind_nexist(i),i3,j3,k3,ivar)=u2(i,ind_son,ivar)
-           end do
-        end do
-
-        ! Gather equilibrium model
-        if(strict_equilibrium>0)then
-           do idim=1,ndim
-              do i=1,nexist
-                 req_loc(ind_exist(i),i3,j3,k3)=rho_eq(ind_cell(i))
-                 peq_loc(ind_exist(i),i3,j3,k3)=p_eq(ind_cell(i))
-              end do
-              ! Use straight injection for buffer cells
-              do i=1,nbuffer
-                 req_loc(ind_nexist(i),i3,j3,k3)=req2(i,ind_son)
-                 peq_loc(ind_nexist(i),i3,j3,k3)=peq2(i,ind_son)
-              end do
-           end do
-        end if
-
-        ! Gather gravitational acceleration
-        if(poisson)then
-           do idim=1,ndim
-              do i=1,nexist
-                 gloc(ind_exist(i),i3,j3,k3,idim)=f(ind_cell(i),idim)
-              end do
-              ! Use straight injection for buffer cells
-              do i=1,nbuffer
-                 gloc(ind_nexist(i),i3,j3,k3,idim)=f(ibuffer_father(i,0),idim)
-              end do
-           end do
-        end if
-
-        ! Gather stellar momentum
-        if(momentum_feedback>0)then
-           do i=1,nexist
-              ploc(ind_exist(i),i3,j3,k3)=pstarold(ind_cell(i))
-           end do
-           ! Use straight injection for buffer cells
-           do i=1,nbuffer
-              ploc(ind_nexist(i),i3,j3,k3)=pstarold(ibuffer_father(i,0))
-           end do
-        end if
-
-        ! Gather refinement flag
-        do i=1,nexist
-           ok(ind_exist(i),i3,j3,k3)=son(ind_cell(i))>0
-        end do
-        do i=1,nbuffer
-           ok(ind_nexist(i),i3,j3,k3)=.false.
-        end do
-
-     end do
-     end do
-     end do
-     ! End loop over cells
-
-  end do
-  end do
-  end do
-  ! End loop over neighboring grids
+  if(levelmin==nlevelmax)then
+     call gather_stencil_unigrid(nbors_father_cells,uloc,gloc,req_loc,peq_loc,ok,ncache,ilevel)
+  else
+     call gather_stencil_amr(nbors_father_cells,uloc,gloc,req_loc,peq_loc,ok,ncache,ilevel)
+  end if
 
   !-----------------------------------------------
   ! Compute flux using second-order Godunov method
@@ -698,6 +570,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
   !------------------------------------------------
   ! Reset flux along direction at refined interface
   !------------------------------------------------
+  if(levelmin.lt.nlevelmax)then
   do idim=1,ndim
      i0=0; j0=0; k0=0
      if(idim==1)i0=1
@@ -726,6 +599,8 @@ subroutine godfine1(ind_grid,ncache,ilevel)
      end do
      end do
   end do
+  end if
+
   !--------------------------------------
   ! Conservative update at level ilevel
   !--------------------------------------
@@ -775,6 +650,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
   !--------------------------------------
   ! Conservative update at level ilevel-1
   !--------------------------------------
+  if(levelmin.ne.nlevelmax)then
   ! Loop over dimensions
   do idim=1,ndim
      i0=0; j0=0; k0=0
@@ -888,5 +764,245 @@ subroutine godfine1(ind_grid,ncache,ilevel)
 
   end do
   ! End loop over dimensions
+  endif
 
 end subroutine godfine1
+!###########################################################
+!###########################################################
+!###########################################################
+!###########################################################
+subroutine gather_stencil_unigrid(nbors_father_cells,uloc,gloc,req_loc,peq_loc,ok,ncache,ilevel)
+  use amr_commons
+  use hydro_commons
+  use poisson_commons
+  use amr_constants, only:i1min,i1max,j1min,j1max,k1min,k1max, &
+                       &  i2min,i2max,j2min,j2max,k2min,k2max, &
+                       &  i3min,i3max,j3min,j3max,k3min,k3max
+  implicit none
+  integer ,dimension(1:nvector,1:threetondim     ),intent(in)::nbors_father_cells
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar),intent(inout)::uloc
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:ndim),intent(inout)::gloc
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),intent(inout)::req_loc
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),intent(inout)::peq_loc
+  logical ,dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),intent(inout)::ok
+  integer,intent(in)::ilevel,ncache
+  !-------------------------------------------------------------------------
+  ! Gather 6x6x6 cells stencil, in the case of a uniform grid, meaning the
+  ! neighboring grids on this level are guaranteed to exist.
+  !-------------------------------------------------------------------------
+  integer,dimension(1:nvector),save::igrid_nbor,ind_cell
+  integer::i,ivar,idim,iskip
+  integer::i1,j1,k1,i2,j2,k2,i3,j3,k3,ind_son,ind_father
+
+  ! Loop over 3x3x3 neighboring father cells
+  do k1=k1min,k1max
+  do j1=j1min,j1max
+  do i1=i1min,i1max
+
+     ! Get neighbor grid index
+     ind_father=1+i1+3*j1+9*k1
+     do i=1,ncache
+        igrid_nbor(i)=son(nbors_father_cells(i,ind_father))
+     end do
+
+     ! Loop over 2x2x2 cells
+     do k2=k2min,k2max
+     do j2=j2min,j2max
+     do i2=i2min,i2max
+
+        ! Get cell index
+        ind_son=1+i2+2*j2+4*k2
+        iskip=ncoarse+(ind_son-1)*ngridmax
+        do i=1,ncache
+           ind_cell(i)=iskip+igrid_nbor(i)
+        end do
+
+        i3=1; j3=1; k3=1
+        if(ndim>0)i3=1+2*(i1-1)+i2
+        if(ndim>1)j3=1+2*(j1-1)+j2
+        if(ndim>2)k3=1+2*(k1-1)+k2
+
+        ! Gather hydro variables
+        do ivar=1,nvar
+           do i=1,ncache
+              uloc(i,i3,j3,k3,ivar)=uold(ind_cell(i),ivar)
+           end do
+        end do
+
+        ! Gather equilibrium model
+        if(strict_equilibrium>0)then
+           do idim=1,ndim
+              do i=1,ncache
+                 req_loc(i,i3,j3,k3)=rho_eq(ind_cell(i))
+                 peq_loc(i,i3,j3,k3)=p_eq(ind_cell(i))
+              end do
+           end do
+        end if
+
+        ! Gather gravitational acceleration
+        if(poisson)then
+           do idim=1,ndim
+              do i=1,ncache
+                 gloc(i,i3,j3,k3,idim)=f(ind_cell(i),idim)
+              end do
+           end do
+        end if
+
+        ! Gather refinement flag
+        do i=1,ncache
+           ok(i,i3,j3,k3)=son(ind_cell(i))>0
+        end do
+
+     end do
+     end do
+     end do
+     ! End loop over cells
+
+  end do
+  end do
+  end do
+  ! End loop over neighboring grids
+
+end subroutine gather_stencil_unigrid
+!###########################################################
+!###########################################################
+!###########################################################
+!###########################################################
+subroutine gather_stencil_amr(nbors_father_cells,uloc,gloc,req_loc,peq_loc,ok,ncache,ilevel)
+  use amr_commons
+  use hydro_commons
+  use poisson_commons
+  use amr_constants, only:i1min,i1max,j1min,j1max,k1min,k1max, &
+                       &  i2min,i2max,j2min,j2max,k2min,k2max, &
+                       &  i3min,i3max,j3min,j3max,k3min,k3max
+  implicit none
+  integer ,dimension(1:nvector,1:threetondim     ),intent(in)::nbors_father_cells
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar),intent(inout)::uloc
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:ndim),intent(inout)::gloc
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),intent(inout)::req_loc
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),intent(inout)::peq_loc
+  logical ,dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),intent(inout)::ok
+  integer,intent(in)::ilevel,ncache
+  !-------------------------------------------------------------------------
+  ! Gather 6x6x6 cells stencil, in the general case of AMR. Interpolate from
+  ! coarser level missing grid variables.
+  !-------------------------------------------------------------------------
+  integer ,dimension(1:nvector,0:twondim         ),save::ibuffer_father
+  real(dp),dimension(1:nvector,0:twondim  ,1:nvar),save::u1
+  real(dp),dimension(1:nvector,1:twotondim,1:nvar),save::u2
+  real(dp),dimension(1:nvector,1:twotondim       ),save::req2=0.0d0
+  real(dp),dimension(1:nvector,1:twotondim       ),save::peq2=0.0d0
+
+  integer,dimension(1:nvector),save::igrid_nbor,ind_cell,ind_buffer
+  integer,dimension(1:nvector),save::ind_exist,ind_nexist
+  integer::nexist,nbuffer
+  integer::i,j,ivar,idim,iskip
+  integer::i1,j1,k1,i2,j2,k2,i3,j3,k3,ind_son,ind_father
+
+  ! Loop over 3x3x3 neighboring father cells
+  do k1=k1min,k1max
+  do j1=j1min,j1max
+  do i1=i1min,i1max
+
+     ! Check if neighboring grid exists
+     nbuffer=0
+     nexist=0
+     ind_father=1+i1+3*j1+9*k1
+     do i=1,ncache
+        igrid_nbor(i)=son(nbors_father_cells(i,ind_father))
+        if(igrid_nbor(i)>0) then
+           nexist=nexist+1
+           ind_exist(nexist)=i
+        else
+          nbuffer=nbuffer+1
+          ind_nexist(nbuffer)=i
+          ind_buffer(nbuffer)=nbors_father_cells(i,ind_father)
+        end if
+     end do
+
+     ! If not, interpolate hydro variables from parent cells
+     if(nbuffer>0)then
+        call getnborfather(ind_buffer,ibuffer_father,nbuffer,ilevel)
+        do j=0,twondim
+           do ivar=1,nvar
+              do i=1,nbuffer
+                 u1(i,j,ivar)=uold(ibuffer_father(i,j),ivar)
+              end do
+           end do
+        end do
+        call interpol_hydro(u1,u2,nbuffer)
+     endif
+
+     ! Loop over 2x2x2 cells
+     do k2=k2min,k2max
+     do j2=j2min,j2max
+     do i2=i2min,i2max
+
+        ind_son=1+i2+2*j2+4*k2
+        iskip=ncoarse+(ind_son-1)*ngridmax
+        do i=1,nexist
+           ind_cell(i)=iskip+igrid_nbor(ind_exist(i))
+        end do
+
+        i3=1; j3=1; k3=1
+        if(ndim>0)i3=1+2*(i1-1)+i2
+        if(ndim>1)j3=1+2*(j1-1)+j2
+        if(ndim>2)k3=1+2*(k1-1)+k2
+
+        ! Gather hydro variables
+        do ivar=1,nvar
+           do i=1,nexist
+              uloc(ind_exist(i),i3,j3,k3,ivar)=uold(ind_cell(i),ivar)
+           end do
+           do i=1,nbuffer
+              uloc(ind_nexist(i),i3,j3,k3,ivar)=u2(i,ind_son,ivar)
+           end do
+        end do
+
+        ! Gather equilibrium model
+        if(strict_equilibrium>0)then
+           do idim=1,ndim
+              do i=1,nexist
+                 req_loc(ind_exist(i),i3,j3,k3)=rho_eq(ind_cell(i))
+                 peq_loc(ind_exist(i),i3,j3,k3)=p_eq(ind_cell(i))
+              end do
+              ! Use straight injection for buffer cells
+              do i=1,nbuffer
+                 req_loc(ind_nexist(i),i3,j3,k3)=req2(i,ind_son)
+                 peq_loc(ind_nexist(i),i3,j3,k3)=peq2(i,ind_son)
+              end do
+           end do
+        end if
+
+        ! Gather gravitational acceleration
+        if(poisson)then
+           do idim=1,ndim
+              do i=1,nexist
+                 gloc(ind_exist(i),i3,j3,k3,idim)=f(ind_cell(i),idim)
+              end do
+              ! Use straight injection for buffer cells
+              do i=1,nbuffer
+                 gloc(ind_nexist(i),i3,j3,k3,idim)=f(ibuffer_father(i,0),idim)
+              end do
+           end do
+        end if
+
+        ! Gather refinement flag
+        do i=1,nexist
+           ok(ind_exist(i),i3,j3,k3)=son(ind_cell(i))>0
+        end do
+        do i=1,nbuffer
+           ok(ind_nexist(i),i3,j3,k3)=.false.
+        end do
+
+     end do
+     end do
+     end do
+     ! End loop over cells
+
+  end do
+  end do
+  end do
+  ! End loop over neighboring grids
+
+end subroutine gather_stencil_amr

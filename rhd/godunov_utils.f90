@@ -379,7 +379,7 @@ SUBROUTINE find_speed_info(qvar,vel_info)
   velsq=u*u+v*v+w*w ; vperpsq=v*v+w*w
   lor=sqrt(one/(one-velsq))
   !modification for special relativity
-  if (eos .eq.'TM') then
+  if (eos_rhd .eq.'TM') then
      tau=p/d
      enth=5d0/2d0*tau+3d0/2d0*sqrt(tau**2+4d0/9d0)
      cs=sqrt(tau/3d0/enth*(5d0*enth-8d0*tau)/(enth-tau))
@@ -425,7 +425,7 @@ subroutine find_mhd_flux(qvar,cvar,ff)
   lor  = (1-(u**2+v**2+w**2))**(-1./2.)
   entho = one/(gamma-one)
 
-  if (eos .eq. 'TM') then
+  if (eos_rhd .eq. 'TM') then
      tau=p/d
      enth=d*(5d0/2d0*tau+3d0/2d0*sqrt(tau**2+4d0/9d0))
   else
@@ -479,7 +479,7 @@ subroutine find_speed_fast(qvar,vel_info)
   real(dp)                    :: d,p,u,v,w,enth,lor,ein,tau
 
   d=qvar(1); p=qvar(2); u=qvar(3); v=qvar(4); w=qvar(5)
-  if (eos .eq. 'TM') then
+  if (eos_rhd .eq. 'TM') then
      tau=p/d
      enth=5d0/2d0*tau+3d0/2d0*sqrt(tau**2+4d0/9d0)
      cs=sqrt(tau/3d0/enth*(5d0*enth-8d0*tau)/(enth-tau))
@@ -546,7 +546,7 @@ implicit none
         q(k,2) = 0d0
         q(k,3) = 0d0
         q(k,4) = 0d0
-        if (eos .eq. 'TM') then
+        if (eos_rhd .eq. 'TM') then
            q(k,5) =(E**2-D**2)/3d0/E
         else
            q(k,5)=(E-D)*(gamma-1d0)
@@ -570,7 +570,7 @@ implicit none
 
         ! Compute pressure
         Xsi=((R-D)-u2/(lor+1d0)*D)/lor**2
-        if (eos .eq. 'TM') then
+        if (eos_rhd .eq. 'TM') then
            rho=q(k,1)
            q(k,5)=(2d0*xsi*(xsi+2d0*rho))/(5d0*(xsi+rho)+sqrt(9d0*xsi**2+18d0*rho*xsi+25d0*rho**2))
         else
