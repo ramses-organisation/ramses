@@ -144,6 +144,7 @@ subroutine trace(q,dq,qm,qp,dx,dt,ngrid)
   integer ::ilo,ihi,jlo,jhi,klo,khi
   integer,parameter ::ir=1,ip=neul
   real(dp)::dtdx
+  real(dp)::term_advect,term_pgrad
 
   dtdx = dt/dx
   ilo=MIN(1,iu1+1); ihi=MAX(1,iu2-1)
@@ -176,17 +177,19 @@ subroutine trace(q,dq,qm,qp,dx,dt,ngrid)
                end do
 
                ! Compute source terms
-
-               S0 = 0
+               ! Advancement of cell interface states by half a time step
+               ! Include transverse corrections when NDIM>1
 
                ! Advection for each variable q
                ! - u*dq/dx - v*dq/dy - w*dq/z
                !DIR$ UNROLL
                do ivar=1,nvar
+                  term_advect=0
                   !DIR$ UNROLL
                   do idim=1,ndim
-                     S0(ivar) = S0(ivar) - var(1+idim)*dvar(ivar,idim)
+                     term_advect = term_advect - var(1+idim)*dvar(ivar,idim)
                   end do
+                  S0(ivar) = term_advect
                end do
 
                ! Pressure gradient acceleration for velocities
@@ -195,12 +198,13 @@ subroutine trace(q,dq,qm,qp,dx,dt,ngrid)
                ! vz: -1/rho * dp/dz
                !DIR$ UNROLL
                do idim=1,ndim
-                  S0(1+idim) = S0(1+idim) - dvar(ip,idim)*oneoverr
+                  term_pgrad = - dvar(ip,idim)*oneoverr
 #if NENER>0
                   !DIR$ UNROLL
                   do ivar=1,nener
-                     S0(1+idim) = S0(1+idim) - dvar(ip+ivar,idim)*oneoverr
+                     term_pgrad = term_pgrad - dvar(ip+ivar,idim)*oneoverr
                   end do
+                  S0(1+idim) = S0(1+idim) + term_pgrad
 #endif
                end do
 
