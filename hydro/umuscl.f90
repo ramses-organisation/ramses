@@ -137,8 +137,8 @@ subroutine trace(q,dq,qm,qp,dx,dt,ngrid)
   ! including transverse derivatives (MUSCL-Hancock scheme).  !
   ! The output of this routine will be given to the Riemann solver.
   ! --------------------------------------------------------------------
-  real(dp),dimension(1:nvector,1:nvar)::S0,var
-  real(dp),dimension(1:nvector,1:nvar,1:ndim)::dvar
+  real(dp),dimension(1:nvar)::S0,var
+  real(dp),dimension(1:nvar,1:ndim)::dvar
   real(dp)::oneoverr,dvel_diag,corr,result_m,result_p
   integer ::i,j,k,l,ivar,idim
   integer ::ilo,ihi,jlo,jhi,klo,khi
@@ -162,22 +162,22 @@ subroutine trace(q,dq,qm,qp,dx,dt,ngrid)
                ! Cell centered values
                !DIR$ UNROLL
                do ivar=1,nvar
-                  var(l,ivar) = q(l,i,j,k,ivar)
+                  var(ivar) = q(l,i,j,k,ivar)
                end do
-               oneoverr = 1d0/var(l,ir)
+               oneoverr = 1d0/var(ir)
 
                ! Limited gradients in all 3 directions
                !DIR$ UNROLL
                do ivar=1,nvar
                   !DIR$ UNROLL
                   do idim=1,ndim
-                     dvar(l,ivar,idim) = dq(l,i,j,k,ivar,idim)
+                     dvar(ivar,idim) = dq(l,i,j,k,ivar,idim)
                   end do
                end do
 
                ! Compute source terms
 
-               S0(l,:) = 0
+               S0 = 0
 
                ! Advection for each variable q
                ! - u*dq/dx - v*dq/dy - w*dq/z
@@ -185,7 +185,7 @@ subroutine trace(q,dq,qm,qp,dx,dt,ngrid)
                do ivar=1,nvar
                   !DIR$ UNROLL
                   do idim=1,ndim
-                     S0(l,ivar) = S0(l,ivar) - var(l,1+idim)*dvar(l,ivar,idim)
+                     S0(ivar) = S0(ivar) - var(1+idim)*dvar(ivar,idim)
                   end do
                end do
 
@@ -195,11 +195,11 @@ subroutine trace(q,dq,qm,qp,dx,dt,ngrid)
                ! vz: -1/rho * dp/dz
                !DIR$ UNROLL
                do idim=1,ndim
-                  S0(l,1+idim) = S0(l,1+idim) - dvar(l,ip,idim)*oneoverr
+                  S0(1+idim) = S0(1+idim) - dvar(ip,idim)*oneoverr
 #if NENER>0
                   !DIR$ UNROLL
                   do ivar=1,nener
-                     S0(l,1+idim) = S0(l,1+idim) - dvar(l,ip+ivar,idim)*oneoverr
+                     S0(1+idim) = S0(1+idim) - dvar(ip+ivar,idim)*oneoverr
                   end do
 #endif
                end do
@@ -209,23 +209,23 @@ subroutine trace(q,dq,qm,qp,dx,dt,ngrid)
                dvel_diag = 0
                !DIR$ UNROLL
                do idim=1,ndim
-                  dvel_diag = dvel_diag +  dvar(l,1+idim,idim)
+                  dvel_diag = dvel_diag +  dvar(1+idim,idim)
                end do
 
                ! Fluid compression/expansion for density
                ! -div_vel*rho
-               S0(l,ir) = S0(l,ir) - dvel_diag*var(l,ir)
+               S0(ir) = S0(ir) - dvel_diag*var(ir)
 
                ! Compression heating / expansion cooling for pressure
                ! -div_vel*gamma*P
-               S0(l,ip) = S0(l,ip) - dvel_diag*gamma*var(l,ip)
+               S0(ip) = S0(ip) - dvel_diag*gamma*var(ip)
 
 #if NENER>0
                ! Compression heating / expansion cooling for extra energies
                ! -div_vel*gamma_rad*e_rad
                !DIR$ UNROLL
                do ivar=1,nener
-                  S0(l,ip+ivar) = S0(l,ip+ivar) - dvel_diag*gamma_rad(ivar)*var(l,ip+ivar)
+                  S0(ip+ivar) = S0(ip+ivar) - dvel_diag*gamma_rad(ivar)*var(ip+ivar)
                end do
 #endif
 
@@ -237,22 +237,22 @@ subroutine trace(q,dq,qm,qp,dx,dt,ngrid)
                ! rho+(t+0.5dt) = rho(t)
                ! rho-(t+0.5dt) = rho(t)
                ! Prevents negative densities
-               corr = S0(l,ir) * dtdx !convert S0 to spatial slope correction
+               corr = S0(ir) * dtdx !convert S0 to spatial slope correction
                !DIR$ UNROLL
                do idim=1,ndim
-                  result_p = var(l,ir) + half*(corr - dvar(l,ir,idim))
-                  result_m = var(l,ir) + half*(corr + dvar(l,ir,idim))
-                  qp(l,i,j,k,ir,idim) = merge(var(l,ir), result_p, result_p<smallr)
-                  qm(l,i,j,k,ir,idim) = merge(var(l,ir), result_m, result_m<smallr)
+                  result_p = var(ir) + half*(corr - dvar(ir,idim))
+                  result_m = var(ir) + half*(corr + dvar(ir,idim))
+                  qp(l,i,j,k,ir,idim) = merge(var(ir), result_p, result_p<smallr)
+                  qm(l,i,j,k,ir,idim) = merge(var(ir), result_m, result_m<smallr)
                end do
 
                !DIR$ UNROLL
                do ivar=2,nvar
-                  corr = S0(l,ivar) * dtdx
+                  corr = S0(ivar) * dtdx
                   !DIR$ UNROLL
                   do idim=1,ndim
-                     result_p = var(l,ivar) + half*(corr - dvar(l,ivar,idim))
-                     result_m = var(l,ivar) + half*(corr + dvar(l,ivar,idim))
+                     result_p = var(ivar) + half*(corr - dvar(ivar,idim))
+                     result_m = var(ivar) + half*(corr + dvar(ivar,idim))
                      qp(l,i,j,k,ivar,idim) = result_p
                      qm(l,i,j,k,ivar,idim) = result_m
                   end do
