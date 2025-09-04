@@ -3,59 +3,42 @@ mpl.use('Agg')
 import numpy as np
 import matplotlib.pyplot as plt
 import visu_ramses
-from scipy.interpolate import griddata
-
-fig, ax = plt.subplots(nrows=1, ncols=3, figsize=(12, 4),constrained_layout=True)
+import pyvista
 
 # Load RAMSES output
 data = visu_ramses.load_snapshot(2)
-x      = data["data"]["x"]
-y      = data["data"]["y"]
-z      = data["data"]["z"]
-dx     = data["data"]["dx"]
-b2     = 0.25*(data["data"]["B_x_left"]+data["data"]["B_x_right"])**2 + \
-         0.25*(data["data"]["B_y_left"]+data["data"]["B_y_right"])**2 + \
-         0.25*(data["data"]["B_z_left"]+data["data"]["B_z_right"])**2
+x = data["data"]["x"]
+y = data["data"]["y"]
+z = data["data"]["z"]
+lvl = data["data"]["level"]
+dx = data["data"]["dx"]
+b2 = 0.25*(data["data"]["B_x_left"]+data["data"]["B_x_right"])**2 + \
+0.25*(data["data"]["B_y_left"]+data["data"]["B_y_right"])**2 + \
+0.25*(data["data"]["B_z_left"]+data["data"]["B_z_right"])**2
+b2 = 0.5*b2
+lvlmax = max(lvl)
 
-xmin = np.amin(x-0.5*dx)
-xmax = np.amax(x+0.5*dx)
-ymin = np.amin(y-0.5*dx)
-ymax = np.amax(y+0.5*dx)
-zmin = np.amin(z-0.5*dx)
-zmax = np.amax(z+0.5*dx)
+#fig, ax = plt.subplots(nrows=1, ncols=1, figsize=(4.5,5), sharey=True, sharex=True)
+#ax.hist(np.log10(b2),bins=np.linspace(-8,-1,30))
+#plt.show()
 
-nx  = 64 #128
-dpx = (xmax-xmin)/float(nx)
-dpy = (ymax-ymin)/float(nx)
-dpz = (zmax-zmin)/float(nx)
-xpx = np.linspace(xmin+0.5*dpx,xmax-0.5*dpx,nx)
-ypx = np.linspace(ymin+0.5*dpy,ymax-0.5*dpy,nx)
-zpx = np.linspace(zmin+0.5*dpz,zmax-0.5*dpz,nx)
-grid_x, grid_y, grid_z = np.meshgrid(xpx,ypx,zpx)
-points = np.transpose([x,y,z])
-z1 = griddata(points,b2,(grid_x,grid_y, grid_z),method='nearest')
-
-b2_proj2 = np.sum(z1, axis=0) #proj along y-axis
-b2_proj1 = np.sum(z1, axis=1) #proj along x-axis
-b2_proj3 = np.sum(z1, axis=2) #proj along z-axis
-
-im1 = ax[0].imshow(np.log10(b2_proj1), origin="lower", aspect='equal', extent=[xmin, xmax, ymin, ymax],vmin=6.5,vmax=11.5)
-im2 = ax[1].imshow(np.log10(b2_proj2), origin="lower", aspect='equal', extent=[xmin, xmax, ymin, ymax],vmin=6.5,vmax=11.5)
-im3 = ax[2].imshow(np.log10(b2_proj3), origin="lower", aspect='equal', extent=[xmin, xmax, ymin, ymax],vmin=6.5,vmax=11.5)
-
-cb = []
-cb.append(plt.colorbar(im1, ax=ax[0], label='log10(B^2)'))
-cb.append(plt.colorbar(im2, ax=ax[1], label='log10(B^2)'))
-cb.append(plt.colorbar(im3, ax=ax[2], label='log10(B^2)'))
-
-ax[0].set_xlabel('y')
-ax[0].set_ylabel('z')
-ax[1].set_xlabel('x')
-ax[1].set_ylabel('z')
-ax[2].set_xlabel('x')
-ax[2].set_ylabel('y')
-
-fig.savefig('ponomarenko-dynamo.pdf',bbox_inches='tight')
+logb2 = np.log10(b2)
+filt=((logb2>-5.5)&(logb2<-3.4)&(lvl==lvlmax))
+#At time t=200, one should rather use: 
+#filt=((logb2>1.7)&(logb2<2.3)&(lvl==lvlmax))
+plotter = pyvista.Plotter(shape=(1,1))
+points = np.transpose([x[filt],y[filt],z[filt]])
+cloud = pyvista.PolyData(points)
+cloud['B2/2'] = logb2[filt]
+print(cloud)
+p = plotter.add_mesh(cloud, cmap="magma", point_size=7,
+opacity='linear')
+plotter.camera.roll += 90
+#plotter.camera.elevation += 45
+#plotter.camera.azimuth += 180
+plotter.show_grid()
+#plotter.show()
+plotter.save_graphic('ponomarenko-dynamo.pdf')
 
 # Check results against reference solution
 visu_ramses.check_solution(data["data"], 'ponomarenko-dynamo') #, tolerance={"all":3.0e-06},overwrite=False)

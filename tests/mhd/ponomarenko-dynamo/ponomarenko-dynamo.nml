@@ -6,8 +6,8 @@ nsubcycle=4*1,2
 /
 
 &AMR_PARAMS
-levelmin=5 !5
-levelmax=6 !7 !8
+levelmin=5
+levelmax=7 !8
 ngridmax=2000000
 nexpand=1
 boxlen=8.055
@@ -21,6 +21,7 @@ nregion=2
 &OUTPUT_PARAMS
 noutput=1
 tout=10 !200.0
+!delta_tout=2.
 /
 
 &HYDRO_PARAMS
