@@ -249,7 +249,7 @@ subroutine trace1d(q,dq,qm,qp,dx,dt,ngrid)
 
               ! Source terms (including transverse derivatives)
               tau=p/r
-              if (eos .eq. 'TM') then
+              if (eos_rhd .eq. 'TM') then
                  ka=9d0/4d0*tau**2+1
                  h=5d0/2d0*tau+sqrt(ka)
                  chi=-5d0/2d0*tau/r-9d0/4d0/sqrt(ka)*tau**2/r
@@ -429,7 +429,7 @@ subroutine trace2d(q,dq,qm,qp,dx,dy,dt,ngrid)
 
               ! Source terms (including transverse derivatives)
 
-              if (eos .eq. 'TM') then
+              if (eos_rhd .eq. 'TM') then
                  tau=p/r
                  ka=9d0/4d0*tau**2+1
                  h=5d0/2d0*tau+sqrt(ka)
@@ -688,7 +688,7 @@ subroutine  trace3d(q,dq,qm,qp,dx,dy,dz,dt,ngrid)
               velsq=u**2+v**2+w**2 ; lorsq=1d0/(1d0-velsq) ; lor=sqrt(lorsq)
               vtot=sqrt(u**2+v**2+w**2)
 
-              if (eos .eq. 'TM') then
+              if (eos_rhd .eq. 'TM') then
                  tau=p/r
                  ka=9d0/4d0*tau**2+1
                  h=5d0/2d0*tau+sqrt(ka)
@@ -1047,7 +1047,7 @@ end subroutine cmpflxm
 !
 !> Converts conservative variables to primitive in rhd
 ! Modified to include special relativity. The equation of state is an extension of
-!classical EOS , and may fail for adiabatic indexes >2.
+!classical eos_rhd , and may fail for adiabatic indexes >2.
 
 
 subroutine ctoprim(uin,q,gravin,dt,ngrid)
@@ -1112,7 +1112,7 @@ subroutine ctoprim(uin,q,gravin,dt,ngrid)
                 q(l,i,j,k,2) = 0d0
                 q(l,i,j,k,3) = 0d0
                 q(l,i,j,k,4) = 0d0
-                if (eos .eq. 'TM') then
+                if (eos_rhd .eq. 'TM') then
                    q(l,i,j,k,5) =(E**2-D**2)/3d0/E
                 else
                    q(l,i,j,k,5)=(E-D)*(gamma-1d0)
@@ -1136,7 +1136,7 @@ subroutine ctoprim(uin,q,gravin,dt,ngrid)
 
                 ! Compute pressure
                 Xsi=((R-D)-u2/(lor+1d0)*D)/lor**2
-                if (eos .eq. 'TM') then
+                if (eos_rhd .eq. 'TM') then
                    rho=q(l,i,j,k,1)
                    q(l,i,j,k,5)=(2d0*xsi*(xsi+2d0*rho))/(5d0*(xsi+rho)+sqrt(9d0*xsi**2+18d0*rho*xsi+25d0*rho**2))
                 else
@@ -1556,14 +1556,14 @@ end subroutine Newton_Raphson_Mignone
 !###########################################################
 function f_Mignone(R,D,M,Eprim,gamma)
   use amr_parameters
-  use hydro_parameters,only:eos
+  use hydro_parameters,only:eos_rhd
   implicit none
   real(dp)::R,D,M,Eprim,gamma
   real(dp)::f_Mignone
   real(dp)::u2,lor,Xsi,P,rho
   u2=M**2/((R+D)**2-M**2) ; lor=(1+u2)**(0.5)
   Xsi=(R-u2/(lor+1)*D)/lor**2
-  if (eos .eq. 'TM') then
+  if (eos_rhd .eq. 'TM') then
      rho=D/lor
      P=(2d0*xsi*(xsi+2d0*rho))/(5d0*(xsi+rho)+sqrt(9d0*xsi**2+18d0*rho*xsi+25d0*rho**2))
   else
@@ -1578,14 +1578,14 @@ end function f_Mignone
 !###########################################################
 function f_prim_Mignone(R,D,M,Eprim,gamma)
   use amr_parameters
-  use hydro_parameters,only:eos
+  use hydro_parameters,only:eos_rhd
   implicit none
   real(dp)::R,D,M,Eprim,gamma
   real(dp)::f_prim_Mignone
   real(dp)::u2,lor,dpdR,dpdxsi,rho,xsi,dpdrho,dv2dR,dxsidR,drhodR,P
   u2=M**2/((R+D)**2-M**2) ; lor=(1+u2)**(0.5)
 
-  if (eos .eq. 'TM') then
+  if (eos_rhd .eq. 'TM') then
      Xsi=(R-u2/(lor+1)*D)/lor**2
      rho=D/lor
      P=(2d0*xsi*(xsi+2d0*rho))/(5d0*(xsi+rho)+sqrt(9d0*xsi**2+18d0*rho*xsi+25d0*rho**2))
