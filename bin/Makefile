@@ -115,9 +115,6 @@ ifeq ($(COMPILER),GNU)
    ifeq ($(MPI),0)
       FFLAGS_BASE += -DWITHOUTMPI
    endif
-   # link-time optimization accross files
-   LDFLAGS += -flto -fwhole-program
-   FFLAGS_OPT += -flto -fwhole-program
    # Flags for coverage calculation (resets optimization flags)
    ifeq ($(GCOV),1)
       FFLAGS_BASE += -fprofile-arcs -ftest-coverage
@@ -149,9 +146,6 @@ ifeq ($(COMPILER),INTEL)
    else
       FFLAGS_BASE += -DWITHOUTMPI
    endif
-   # link-time optimization and inlining accross files
-   LDFLAGS += -ipo -inline-forceinline
-   FFLAGS_OPT += -ipo -inline-forceinline
    # Flags for debugging (resets optimization flags)
    ifeq ($(DEBUG),1)
       FFLAGS_BASE += -g -traceback -check bounds -warn all
