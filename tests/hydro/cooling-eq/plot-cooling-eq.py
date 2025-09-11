@@ -28,7 +28,7 @@ def show_maps(ax, isnap, icol):
 
     nhmin=3e-2 ; nhmax=3e0
     Tmin=1e2 ; Tmax=1e7
-    im_nH = ax[0,icol].imshow(np.array(rho).reshape((nx,nx)), origin="lower", aspect='equal', norm=colors.LogNorm(vmin=nhmin, vmax=nhmax), cmap='viridis' )
+    im_nH = ax[0,icol].imshow(np.array(rho).reshape((nx,nx)), origin="lower", aspect='equal', norm=colors.LogNorm(vmin=nhmin, vmax=nhmax), cmap='viridis')
     im_T = ax[1,icol].imshow(np.array(Tmu).reshape((nx,nx)), origin="lower", aspect='equal', norm=colors.LogNorm(vmin=Tmin, vmax=Tmax), cmap='coolwarm')
     for i in range(2):
       ax[i,icol].text(0.02, 0.98, '%d Myr'%(time), transform=ax[i,icol].transAxes, ha='left', va='top', fontsize=9, color='white')
@@ -36,7 +36,7 @@ def show_maps(ax, isnap, icol):
       a.set_xticks([])
       a.set_yticks([])
       for spine in a.spines.values():
-        spine.set_visible(True)  
+        spine.set_visible(True)
     plt.colorbar(im_nH, ax=ax[0,icol], label=r'$n_{\rm H} \, {\rm [cm^{-3}]}$', orientation='horizontal', pad=0.05)
     plt.colorbar(im_T, ax=ax[1,icol], label=r'$T/\mu \, {\rm [K]}$', orientation='horizontal', pad=0.05)
 # End of show_maps routine

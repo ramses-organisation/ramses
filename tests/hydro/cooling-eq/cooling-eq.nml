@@ -1,7 +1,7 @@
 This is the RAMSES parameter file for the equilibrium cooling module test.
-It is a 2D run with 2*2 (i.e. four) cells, hydro-static, and with a z=0 HM UV backgound, 
-so there is no flow between the cells and the only evolution is therefore the radiative 
-cooling (and heating due to the UVB) in each cell.  
+It is a 2D run with 2*2 (i.e. four) cells, hydro-static, and with a z=0 HM UV backgound,
+so there is no flow between the cells and the only evolution is therefore the radiative
+cooling (and heating due to the UVB) in each cell.
 
 &RUN_PARAMS
 hydro=.true.
