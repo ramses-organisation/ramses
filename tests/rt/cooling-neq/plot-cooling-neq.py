@@ -36,17 +36,6 @@ for isnap in range(nSnaps):
     xHeIIs[:,isnap]  = data["data"]["scalar_02"]
     xHeIIIs[:,isnap] = data["data"]["scalar_03"]
 
-# Plot the data for the four cells in the simulation
-#ax.plot(times, Ts[0,:], ls='--', label=r'$n_{\rm H} = 3\times10^{-2} \, {\rm cm^{-3}}$', color='black')
-#ax.plot(times, Ts[1,:], ls='-', label=r'$n_{\rm H} = 3 \, {\rm cm^{-3}}$', color='black')
-#ax.plot(times, Ts[2,:], ls='--', color='black')
-#ax.plot(times, Ts[3,:], ls='-', color='black')
-#ax.set_yscale('log')
-#ax.set_xscale('log')
-#ax.set_xlabel('time [Myr]')
-#ax.set_ylabel(r'$T/\mu \, {\rm [K]}$')
-#ax.legend(loc='center left')
-
 TK_label = r'$T/\mu \, {\rm [K]}$'
 xion_label = r'$x_{\rm ion}$'
 TK_color = 'blue'
@@ -56,8 +45,6 @@ titles = [r'$n_{\rm H} = 3\times10^{-2} \, {\rm cm^{-3}}$',
               r'$n_{\rm H} = 3 \, {\rm cm^{-3}}$', 
               r'$n_{\rm H} = 3\times10^{-2} \, {\rm cm^{-3}}$', 
               r'$n_{\rm H} = 3 \, {\rm cm^{-3}}$']
-
-#nhmin=3e-2 ; nhmax=3e0
 Tmin=1e0 ; Tmax=1e8
 
 # Create 4 subplots in one column, sharing the x-axis
@@ -71,7 +58,6 @@ for i in range(4):
     ax.set_xscale('log')
     ax.set_ylim((Tmin,Tmax))
     ax_right.set_ylim((-0.05,1.05))
-
 
     # Left y-axis is temperature
     ax.plot(times, TKs[i,:], color=TK_color)
@@ -88,18 +74,15 @@ for i in range(4):
     ax_right.set_ylabel(xion_label, color=xh_color)
     ax_right.tick_params(axis='y', labelcolor=xh_color)
 
-    # Title
     ax.set_title(titles[i], fontsize=8)
 
 lines = [line_xhi, line_xhii, line_xhei, line_xheii]
 labels = [line.get_label() for line in lines]
 axes[3].legend(lines, labels, loc='center left',ncol=2)
 
-# Set shared x-axis label only on the bottom plot
 axes[-1].set_xlabel('time [Myr]')
 
 plt.tight_layout(pad=0.1)
 plt.savefig("cooling-neq.pdf", bbox_inches='tight')
-#plt.close(fig)
 
 visu_ramses.check_solution(data["data"],'cooling-neq',overwrite=False)
