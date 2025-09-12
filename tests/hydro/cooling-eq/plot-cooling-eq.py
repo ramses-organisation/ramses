@@ -55,8 +55,8 @@ with PdfPages('cooling-eq.pdf') as pdf:
     ax_maps = np.array([[fig.add_subplot(gs[0, i]) for i in range(4)],
                         [fig.add_subplot(gs[1, i]) for i in range(4)]])
     show_maps(ax_maps, 1,0)
-    show_maps(ax_maps, 115,1)
-    show_maps(ax_maps, 147,2)
+    show_maps(ax_maps, 59,1)
+    show_maps(ax_maps, 74,2)
     show_maps(ax_maps, nSnaps,3)
 
     # 2) Plot the time-evolution of the temperature -----------------------------------------------------------------------------
