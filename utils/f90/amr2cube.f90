@@ -19,7 +19,7 @@ program amr2cube
   real::omega_m,omega_l,omega_k,omega_b
   real::scale_l,scale_d,scale_t
   real::omega_m2,omega_l2,omega_k2,omega_b2
-  
+
 
   integer::nx_sample=0,ny_sample=0,nz_sample=0
   integer::ngrid,imin,imax,jmin,jmax,kmin,kmax
