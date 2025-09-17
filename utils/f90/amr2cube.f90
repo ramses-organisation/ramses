@@ -19,6 +19,7 @@ program amr2cube
   real::omega_m,omega_l,omega_k,omega_b
   real::scale_l,scale_d,scale_t
   real::omega_m2,omega_l2,omega_k2,omega_b2
+  
 
   integer::nx_sample=0,ny_sample=0,nz_sample=0
   integer::ngrid,imin,imax,jmin,jmax,kmin,kmax
@@ -28,8 +29,9 @@ program amr2cube
   integer::ix,iy,iz,ixp1,iyp1,izp1,ndom,impi,bit_length,maxdom
   integer,dimension(1:8)::idom,jdom,kdom,cpu_min,cpu_max
   real(KIND=8),dimension(1:8)::bounding_min,bounding_max
+  real(KIND=8),dimension(1:1)::order_min
   real(KIND=4)::dummy
-  real(KIND=8)::dkey,order_min,dmax
+  real(KIND=8)::dkey,dmax
   real(KIND=8)::xmin=0,xmax=1,ymin=0,ymax=1,zmin=0,zmax=1
   real(KIND=8)::xxmin,xxmax,yymin,yymax,zzmin,zzmax,dx
   real(KIND=8)::ddx,ddy,ddz,dex,dey,dez,xx,yy,zz
@@ -53,6 +55,8 @@ program amr2cube
   logical,dimension(:),allocatable::cpu_read
   integer,dimension(:),allocatable::cpu_list
   character(LEN=1)::proj='z'
+  character(LEN=80)::GMGM
+
 
   type level
      integer::ilevel
@@ -113,30 +117,38 @@ program amr2cube
   endif
 
   nomfich=TRIM(repository)//'/info_'//TRIM(nchar)//'.txt'
+  inquire(file=nomfich, exist=ok) ! verify input file
+  if ( .not. ok ) then
+     print *,TRIM(nomfich)//' not found.'
+     stop
+  endif
   open(unit=10,file=nomfich,form='formatted',status='old')
   read(10,*)
   read(10,*)
-  read(10,'("levelmin    =",I11)')levelmin
+!  read(10,*) ! Comment out for Sphinx
+  read(10,'(A13,I11)')GMGM,levelmin
   read(10,*)
   read(10,*)
   read(10,*)
   read(10,*)
 
   read(10,*)
-  read(10,'("time        =",E23.15)')t
+  read(10,'(A13,E23.15)')GMGM,t
+  read(10,'(A13,E23.15)')GMGM,aexp
   read(10,*)
   read(10,*)
   read(10,*)
   read(10,*)
   read(10,*)
-  read(10,*)
-  read(10,*)
-  read(10,*)
-  read(10,*)
+  read(10,'(A13,E23.15)')GMGM,scale_l
+  read(10,'(A13,E23.15)')GMGM,scale_d
+  read(10,'(A13,E23.15)')GMGM,scale_t
   read(10,*)
 
-  read(10,'("ordering type=",A80)'),ordering
-  write(*,'(" ordering type=",A20)'),TRIM(ordering)
+  write(*,*)scale_d,scale_l,scale_t
+
+  read(10,'(A14,A80)')GMGM,ordering
+  write(*,'(" ordering type=",A20)')TRIM(ordering)
   read(10,*)
   allocate(cpu_list(1:ncpu))
   if(TRIM(ordering).eq.'hilbert')then
@@ -148,6 +160,7 @@ program amr2cube
      end do
   endif
   close(10)
+
 
   !-----------------------
   ! Map parameters
@@ -203,8 +216,8 @@ program amr2cube
         else
            order_min=0.0d0
         endif
-        bounding_min(i)=(order_min)*dkey
-        bounding_max(i)=(order_min+1.0D0)*dkey
+        bounding_min(i)=(order_min(1))*dkey
+        bounding_max(i)=(order_min(1)+1.0D0)*dkey
      end do
 
      cpu_min=0; cpu_max=0
