@@ -1,20 +1,27 @@
-subroutine write_gitinfo
-  use amr_commons, ONLY:builddate,buildcommand,patchdir,gitrepo,gitbranch,githash
+module buildinfo
+  implicit none
 
-  builddate = BUILDDATE
-  buildcommand = BUILDCOMMAND
-  patchdir  = PATCH
-  gitrepo   = GITREPO
-  gitbranch = GITBRANCH
-  githash   = GITHASH
+  ! Variables for executable identification
+  ! Set at compile time (via -D flags)
+  character(len=300),parameter::builddate    = BUILDDATE
+  character(len=300),parameter::buildcommand = BUILDCOMMAND
+  character(len=300),parameter::patchdir     = PATCH
+  character(len=300),parameter::gitrepo      = GITREPO
+  character(len=300),parameter::gitbranch    = GITBRANCH
+  character(len=300),parameter::githash      = GITHASH
 
-  write(*,*)' '
-  write(*,'(" compile date    = ",A)')TRIM(builddate)
-  write(*,'(" compile command = ",A)')TRIM(buildcommand)
-  write(*,'(" patch dir       = ",A)')TRIM(patchdir)
-  write(*,'(" remote repo     = ",A)')TRIM(gitrepo)
-  write(*,'(" local branch    = ",A)')TRIM(gitbranch)
-  write(*,'(" last commit     = ",A)')TRIM(githash)
-  write(*,*)' '
+contains
 
-end subroutine write_gitinfo
+  subroutine write_gitinfo(unit)
+    integer,intent(in)::unit
+
+    write(unit,'(" compile date    = ",A)')TRIM(builddate)
+    write(unit,'(" compile command = ",A)')TRIM(buildcommand)
+    write(unit,'(" patch dir       = ",A)')TRIM(patchdir)
+    write(unit,'(" remote repo     = ",A)')TRIM(gitrepo)
+    write(unit,'(" local branch    = ",A)')TRIM(gitbranch)
+    write(unit,'(" last commit     = ",A)')TRIM(githash)
+
+  end subroutine write_gitinfo
+
+end module buildinfo
