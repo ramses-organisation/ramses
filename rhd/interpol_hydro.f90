@@ -161,7 +161,7 @@ subroutine upl(ind_cell,ncell)
                  ! Compute pressure
                  Xsi=((R-D)-v2/(lor+1d0)*D)/lor**2
 
-                 if (eos .eq. 'TM') then
+                 if (eos_rhd .eq. 'TM') then
                     qp=(2d0*xsi*(xsi+2d0*qd))/(5d0*(xsi+qd)+sqrt(9d0*xsi**2+18d0*qd*xsi+25d0*qd**2))
                     ! Compute child internal energy (eint)
                     tau=qp/qd
@@ -189,12 +189,12 @@ subroutine upl(ind_cell,ncell)
            ! compute the updated total energy for father cells
            do i=1,ncell
               getx(i)=getx(i)/dble(twotondim)
-              if (eos .eq. 'TM') then
+              if (eos_rhd .eq. 'TM') then
                  tau=getx(i)*(getx(i)+2d0)/(3d0*(getx(i)+1d0))
               else
                  tau=getx(i)*(gamma-1d0)
               endif
-              ! for any EOS
+              ! for any eos_rhd
               h=1d0+getx(i)+tau
               m2=uold(ind_cell(i),2)**2+uold(ind_cell(i),3)**2+uold(ind_cell(i),4)**2
               lor=sqrt(m2/uold(ind_cell(i),1)**2/h**2+1.0d0)
@@ -325,7 +325,7 @@ subroutine interpol_hydro(u1,g1,u2,g2,nn)
            ! Compute pressure
            Xsi=((R-D)-v2/(lor+1d0)*D)/lor**2
 
-           if (eos .eq. 'TM') then
+           if (eos_rhd .eq. 'TM') then
               qp=(2d0*xsi*(xsi+2d0*qd))/(5d0*(xsi+qd)+sqrt(9d0*xsi**2+18d0*qd*xsi+25d0*qd**2))
               ! Compute child internal energy (eint)
               tau=qp/qd
@@ -396,7 +396,7 @@ subroutine interpol_hydro(u1,g1,u2,g2,nn)
   if(interpol_var==1)then
      do ind=1,twotondim
         do i=1,nn
-           if (eos .eq. 'TM') then
+           if (eos_rhd .eq. 'TM') then
               tau=u2(i,ind,5)*(u2(i,ind,5)+2d0)/(3d0*u2(i,ind,5)+1d0)
            else
               tau=u2(i,ind,5)*(gamma-1d0)

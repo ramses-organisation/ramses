@@ -319,7 +319,7 @@ subroutine init_flow_fine(ilevel)
               pp=uold(ind_cell(i),5)
               lor=(1.0d0-vx**2-vy**2-vz**2)**(-1./2.)
               tau=pp/rr
-              if (eos .eq. 'TM') then
+              if (eos_rhd .eq. 'TM') then
                  h=5d0/2d0*tau+3d0/2d0*sqrt(tau**2+4d0/9d0)
               else
                  h=1d0+tau*gamma/(gamma-1)
