@@ -510,9 +510,9 @@ subroutine godfine1(ind_grid,ncache,ilevel)
   integer::i0,j0,k0,i1,j1,k1,i2,j2,k2,i3,j3,k3,nx_loc,nb_noneigh
   real(dp)::dx,scale,oneontwotondim,d
 
-!$omp threadprivate(nbors_father_cells,ibuffer_father,u1,u2,req2,peq2)
+!$omp threadprivate(nbors_father_cells)
 !$omp threadprivate(uloc,gloc,ploc,req_loc,peq_loc,flux,tmp,ok)
-!$omp threadprivate(igrid_nbor,ind_cell,ind_buffer,ind_exist,ind_nexist)
+!$omp threadprivate(ind_cell,ind_buffer)
 
   oneontwotondim = 1d0/dble(twotondim)
 
@@ -811,6 +811,8 @@ subroutine gather_stencil_unigrid(nbors_father_cells,uloc,gloc,req_loc,peq_loc,o
   integer::i,ivar,idim,iskip
   integer::i1,j1,k1,i2,j2,k2,i3,j3,k3,ind_son,ind_father
 
+!$omp threadprivate(igrid_nbor,ind_cell)
+
   ! Loop over 3x3x3 neighboring father cells
   do k1=k1min,k1max
   do j1=j1min,j1max
@@ -915,6 +917,9 @@ subroutine gather_stencil_amr(nbors_father_cells,uloc,gloc,req_loc,peq_loc,ok,nc
   integer::nexist,nbuffer
   integer::i,j,ivar,idim,iskip
   integer::i1,j1,k1,i2,j2,k2,i3,j3,k3,ind_son,ind_father
+
+!$omp threadprivate(ibuffer_father,u1,u2,req2,peq2)
+!$omp threadprivate(igrid_nbor,ind_cell,ind_buffer,ind_exist,ind_nexist)
 
   ! Loop over 3x3x3 neighboring father cells
   do k1=k1min,k1max
