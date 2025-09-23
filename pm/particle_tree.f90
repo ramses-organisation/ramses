@@ -681,9 +681,9 @@ subroutine virtual_tree_fine(ilevel)
   ! MC tracer
   real(dp) :: dx, d2min, d2, x1(1:ndim), x2(1:ndim)
   integer :: ipart2, jpart2
-#endif
 
 !$omp threadprivate(ind_part,ind_com,ind_list)
+#endif
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
