@@ -272,7 +272,7 @@ subroutine init_part
         ilevel = 1
         do while(.true.)
            mm1 = 0.5d0**(3*ilevel)*(1.0d0-omega_b/omega_m)
-           if((mm1 > 0.90d0*min_mdm_all).AND.(mm1 < 1.10d0*min_mdm_all))then
+           if((mm1 > 0.80d0*min_mdm_all).AND.(mm1 < 1.20d0*min_mdm_all))then
               nlevelmax_part = ilevel
               exit
            endif
@@ -311,7 +311,7 @@ subroutine init_part
      end select
 
      ! Initialize tracer particles
-     if(MC_tracer) call init_tracer
+     if(tracer) call init_tracer
 
   end if
 
@@ -1073,7 +1073,7 @@ contains
        end if
     end do
 
-    write(*,*)'npart=',ipart,'/',npartmax,' for PE=',myid
+    if(debug)write(*,*)'npart=',ipart,'/',npartmax,' for PE=',myid
 #endif
 
     ! Compute particle initial level
