@@ -285,7 +285,7 @@ subroutine get3cubepos(ind_grid,ind,nbors_cells,ng)
   integer,dimension(1:twotondim),save::lll_loc,mmm_loc
 
   !$omp threadprivate(nbors_grids,lll_loc,mmm_loc)
-  
+
   ! Get the grids that contain all neighbor cells
   call get_grids_of_nbor_cells(ind_grid,ind,nbors_grids,ng)
 
