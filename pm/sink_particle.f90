@@ -154,11 +154,14 @@ subroutine create_cloud_from_sink
   logical ,dimension(1:ndim)::period
   logical ::in_box
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
+  integer :: particle_cpu , j
+  integer , dimension (nsink,5**ndim) :: cpu_list_per_sink
+  integer :: nb_distinct_cpu ,total_particles_not_in_list
+  logical :: already_present, found
 #ifndef WITHOUTMPI
   integer ::info
   integer ::nsink_min,nsink_max
 #endif
-
   ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
 
@@ -198,7 +201,178 @@ subroutine create_cloud_from_sink
   rmax=dble(ir_cloud)*dx_min
   rmass=dble(ir_cloud_massive)*dx_min
 
-  do kk=-2*ir_cloud,2*ir_cloud
+
+if (cloud_pts_check) then
+   ! for each sink, find the correspondant cpu for 5**ndim pts (125 in 3d) surrounding it
+   ! stock these ranks in a list
+   do isink = 1, nsink
+      cpu_list_per_sink(isink,:) = 0
+      particle_cpu = 0
+      nb_distinct_cpu = 0
+
+      do kk = -2*ir_cloud, 2*ir_cloud, 1*ir_cloud
+         xrel(3) = dble(kk) * dx_min / 2
+         do jj = -2*ir_cloud, 2*ir_cloud, 1*ir_cloud
+            xrel(2) = dble(jj) * dx_min / 2
+            do ii = -2*ir_cloud, 2*ir_cloud, 1*ir_cloud
+               xrel(1) = dble(ii) * dx_min / 2
+               rr=sqrt(sum(xrel**2))
+
+                  xtest(1,1:ndim) = xsink(isink,1:ndim) + xrel(1:ndim)
+                  in_box=.true.
+                  do idim=1,ndim
+                     if (period(idim) .and. xtest(1,idim)>boxlen)xtest(1,idim)=xtest(1,idim)-boxlen
+                     if (period(idim) .and. xtest(1,idim)<0.)    xtest(1,idim)=xtest(1,idim)+boxlen
+                     if (xtest(1,idim)<0.0 .or. xtest(1,idim)>boxlen)in_box=.false.
+                  end do
+                  cc(1)=0
+
+                  call cmp_cpumap_modified(xtest, cc, 1, particle_cpu, cpu_list_per_sink(isink,:) )
+                  particle_cpu = cc(1)
+
+                  already_present = .false.
+                  do j = 1, nb_distinct_cpu
+                     if (cpu_list_per_sink(isink,j) == cc(1)) then
+                        already_present = .true.
+                        exit
+                     end if
+                  end do
+                  if (.not. already_present) then
+                     nb_distinct_cpu = nb_distinct_cpu + 1
+                     cpu_list_per_sink(isink, nb_distinct_cpu) = cc(1)
+                  end if
+               end do
+            end do
+         end do
+      end do
+
+   ! A test to verify that the mpi domains found for the 125 cloud points associated to a given sink
+   ! are actually the same mpi domains for the whole cloud points associated to a given sink.
+   ! The test is applied every 'cloud_check_validity_frequency' coarse time steps
+   ! Note: it can really slow down the code, a high frequency is recommended
+
+   if (cloud_check_validity_frequency > 0) then
+      if (MOD(nstep_coarse,cloud_check_validity_frequency)==0) then
+         total_particles_not_in_list = 0
+         do isink=1,nsink
+
+            particle_cpu = 0
+
+            do kk=-2*ir_cloud,2*ir_cloud
+              xrel(3)=dble(kk)*dx_min/2
+              do jj=-2*ir_cloud,2*ir_cloud
+                 xrel(2)=dble(jj)*dx_min/2
+                 do ii=-2*ir_cloud,2*ir_cloud
+                    xrel(1)=dble(ii)*dx_min/2
+                    rr=sqrt(sum(xrel**2))
+                    if(rr<=rmax)then
+
+                          xtest(1,1:ndim)=xsink(isink,1:ndim)+xrel(1:ndim)
+                          in_box=.true.
+                          do idim=1,ndim
+                             if (period(idim) .and. xtest(1,idim)>boxlen)xtest(1,idim)=xtest(1,idim)-boxlen
+                             if (period(idim) .and. xtest(1,idim)<0.)    xtest(1,idim)=xtest(1,idim)+boxlen
+                             if (xtest(1,idim)<0.0 .or. xtest(1,idim)>boxlen)in_box=.false.
+                          end do
+                          cc(1)=0
+
+                          if(in_box)call cmp_cpumap_modified(xtest,cc,1,particle_cpu, cpu_list_per_sink(isink,:))
+
+                           particle_cpu = cc(1)
+                           if (myid == 1) then
+                               if (.not. any(particle_cpu == cpu_list_per_sink(isink, :))) then
+
+                                   print *, 'For sink', isink, 'found a particle not in the cpu list.'
+                                   total_particles_not_in_list = total_particles_not_in_list+1
+                                   print *, 'Total particles not in the cpu list is:', total_particles_not_in_list
+                               end if
+                           end if
+
+                      end if
+                 end do
+               end do
+              end do
+        end do
+        if (myid == 1) then
+               print *, 'Check has finished, Total particles not in the cpu list : ', total_particles_not_in_list
+         end if
+      end if
+    end if
+
+
+   ! we suppose that the ranks in the obtained list for a given sink, are the same for all the particles of that sink
+   ! if the rank of the cpu is not in the list ---> cycle
+
+    do isink=1,nsink
+     found = .false.
+      do j = 1, 5**ndim
+         if ( cpu_list_per_sink(isink,j) == myid ) then
+            found = .true.
+            exit
+         end if
+      end do
+      if (.not. found) cycle  ! Skip this sink if myid is not present
+
+         particle_cpu = 0
+
+         do kk=-2*ir_cloud,2*ir_cloud
+           xrel(3)=dble(kk)*dx_min/2
+           do jj=-2*ir_cloud,2*ir_cloud
+              xrel(2)=dble(jj)*dx_min/2
+              do ii=-2*ir_cloud,2*ir_cloud
+                 xrel(1)=dble(ii)*dx_min/2
+                 rr=sqrt(sum(xrel**2))
+                 if(rr<=rmax)then
+
+                       xtest(1,1:ndim)=xsink(isink,1:ndim)+xrel(1:ndim)
+                       in_box=.true.
+                       do idim=1,ndim
+                          if (period(idim) .and. xtest(1,idim)>boxlen)xtest(1,idim)=xtest(1,idim)-boxlen
+                          if (period(idim) .and. xtest(1,idim)<0.)    xtest(1,idim)=xtest(1,idim)+boxlen
+                          if (xtest(1,idim)<0.0 .or. xtest(1,idim)>boxlen)in_box=.false.
+                       end do
+                       cc(1)=0
+
+
+                       if(in_box)call cmp_cpumap_modified(xtest,cc,1,particle_cpu, cpu_list_per_sink(isink,:))
+
+                        particle_cpu = cc(1)
+
+
+                       if(cc(1).eq.myid)then
+                          call remove_free(ind_cloud,1)
+                          call add_list(ind_cloud,ind_grid,ok_true,1)
+                          indp               = ind_cloud(1)
+                          idp(indp)          = -isink
+                          typep(indp)%family = FAM_CLOUD
+                          typep(indp)%tag    = 0
+                          levelp(indp)       = levelmin
+                          if (rr<=rmass)then
+                             ! check if direct_force is turned on
+                             if(mass_sink_direct_force .ge. 0.0)then
+                                if(msink(isink)<mass_sink_direct_force*M_sun/(scale_d*scale_l**ndim))then
+                                   mp(indp)=msink(isink)/dble(ncloud_sink_massive)
+                                else
+                                   mp(indp)=0
+                                endif
+                             else
+                                mp(indp)=msink(isink)/dble(ncloud_sink_massive)
+                             endif
+                          else
+                             mp(indp)        = 0
+                          end if
+                          xp(indp,1:ndim)       = xtest(1,1:ndim)
+                          vp(indp,1:ndim)       = vsink(isink,1:ndim)
+                          tp(indp)              = tsink(isink)     ! Birth epoch
+                  end if
+                 end if
+              end do
+            end do
+           end do
+
+     end do
+else !perform the code the traditional way
+   do kk=-2*ir_cloud,2*ir_cloud
      xrel(3)=dble(kk)*dx_min/2
      do jj=-2*ir_cloud,2*ir_cloud
         xrel(2)=dble(jj)*dx_min/2
@@ -248,6 +422,7 @@ subroutine create_cloud_from_sink
      end do
   end do
 
+end if
   sink_jump(1:nsink,1:ndim,levelmin:nlevelmax)=0d0
   if(mass_sink_direct_force .ge. 0.0)then
      do isink=1,nsink
@@ -260,6 +435,7 @@ subroutine create_cloud_from_sink
   endif
 
 end subroutine create_cloud_from_sink
+!#################################################
 !##############################################################################
 !##############################################################################
 !##############################################################################

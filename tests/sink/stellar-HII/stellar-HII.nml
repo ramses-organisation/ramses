@@ -123,3 +123,29 @@ group_cse(3,:)= 1.0448E-19, 1.4969E-18, 1.3173E-18
 group_egy     = 16.970, 28.161, 57.638
 spec2group    = 1, 2, 3
 /
+
+&MOVIE_PARAMS
+movie=.true.
+imov=1
+imovout=2
+tstartmov=0.
+tendmov=0.18
+nw_frame=128
+nh_frame=128
+levelmax_frame=7
+proj_axis='z'
+xcentre_frame= 125.,0.,0.,0.
+ycentre_frame= 125.,0.,0.,0.
+zcentre_frame= 125.,0.,0.,0.
+deltax_frame= 250, 0.
+deltay_frame= 250, 0.
+deltaz_frame= 250, 0.
+movie_vars_txt = 'temp', 'xHII', 'Fp3'
+perspective_camera = .false.
+shader_frame =       'cube'
+dtheta_camera=       100       ! The camera rotates around the box with time
+phi_camera=          80.       ! The camera is at a fixed latitudal angle
+focal_camera=        250.
+dist_camera=         250.
+method_frame='max'
+/

@@ -25,7 +25,7 @@ def read_descriptor(fname):
 # =======================================================================
 # Load RAMSES data a la OSIRIS
 # =======================================================================
-def load_snapshot(nout, read_hydro=True, read_grav=False):
+def load_snapshot(nout, read_hydro=True, read_grav=False, read_rt=False):
 
     infile = generate_fname(nout)
 
@@ -56,12 +56,23 @@ def load_snapshot(nout, read_hydro=True, read_grav=False):
     info["nvar"] = len(list_vars)
 
     # Add variables from gravity files
+    info["ngravvar"] = 0
     if read_grav:
+        info["ngravvar"] = 2
         list_vars.extend(("phi","a_x"))
         if info["ndim"]>1:
             list_vars.append(("a_y"))
+            info["ngravvar"] += 1
         if info["ndim"]>2:
             list_vars.append(("a_z"))
+            info["ngravvar"] += 1
+
+    # Add photon flux variables
+    if read_rt:
+        rtfile = infile+"/rt_file_descriptor.txt"
+        list_vars_rt, _ = read_descriptor(rtfile)
+        info["nrtvar"] = len(list_vars_rt)
+        list_vars.extend(list_vars_rt[:])
 
     # Make sure we always read the coordinates
     list_vars.extend(("level","x","y","z","dx"))
@@ -137,6 +148,12 @@ def load_snapshot(nout, read_hydro=True, read_grav=False):
             grav_fname = generate_fname(nout,ftype="grav",cpuid=k+1)
             with open(grav_fname, mode='rb') as grav_file: # b is important -> binary
                 gravContent = grav_file.read()
+
+        # Read binary RT file
+        if read_rt:
+            rt_fname = generate_fname(nout,ftype="rt",cpuid=k+1)
+            with open(rt_fname, mode='rb') as rt_file: # b is important -> binary
+                rtContent = rt_file.read()
 
         # Need to extract info from the file header on the first loop
         if k == 0:
@@ -235,6 +252,12 @@ def load_snapshot(nout, read_hydro=True, read_grav=False):
         nlines3 = 4
         nstrin3 = 0
 
+        # Offset for RT
+        ninteg4 = 5
+        nfloat4 = 1
+        nlines4 = 6
+        nstrin4 = 0
+
         # Loop over levels
         for ilevel in range(info["levelmax"]):
 
@@ -267,6 +290,12 @@ def load_snapshot(nout, read_hydro=True, read_grav=False):
             nlines_grav = nlines3
             nstrin_grav = nstrin3
 
+            # Cumulative offsets in RT file
+            ninteg_rt = ninteg4
+            nfloat_rt = nfloat4
+            nlines_rt = nlines4
+            nstrin_rt = nstrin4
+
             # Loop over domains
             for j in range(nboundary+info["ncpu"]):
 
@@ -277,6 +306,8 @@ def load_snapshot(nout, read_hydro=True, read_grav=False):
                 ninteg_hydro += 2
                 nlines_grav += 2
                 ninteg_grav += 2
+                nlines_rt += 2
+                ninteg_rt += 2
 
                 if ncache > 0:
 
@@ -308,6 +339,11 @@ def load_snapshot(nout, read_hydro=True, read_grav=False):
                                 for ivar in range(info["ndim"]+1):
                                     offset = 4*ninteg_grav + 8*(nlines_grav+nfloat_grav+(ind*(info["ndim"]+1)+ivar)*(ncache+1)) + nstrin_grav + 4
                                     var[:ncache,ind,info["nvar"]+ivar] = struct.unpack("%id"%(ncache), gravContent[offset:offset+8*ncache])
+                            # rtvar: rt variables
+                            if read_rt:
+                                for ivar in range(info["nrtvar"]):
+                                    offset = 4*ninteg_rt + 8*(nlines_rt+nfloat_rt+(ind*info["nrtvar"]+ivar)*(ncache+1)) + nstrin_rt + 4
+                                    var[:ncache,ind,info["nvar"]+info["ngravvar"]+ivar] = struct.unpack("%id"%(ncache), rtContent[offset:offset+8*ncache])
                             # refinement lvl
                             var[:ncache,ind,-5] = float(ilevel+1)
                             for n in range(info["ndim"]):
@@ -334,6 +370,10 @@ def load_snapshot(nout, read_hydro=True, read_grav=False):
                     nfloat_hydro += ncache*twotondim*info["nvar"]
                     nlines_hydro += twotondim*info["nvar"]
 
+                    if read_rt:
+                        nfloat_rt += ncache*twotondim*info["nrtvar"]
+                        nlines_rt += twotondim*info["nrtvar"]
+
                     nfloat_grav += ncache*twotondim*(info["ndim"]+1)
                     nlines_grav += twotondim*(info["ndim"]+1)
 
@@ -352,6 +392,11 @@ def load_snapshot(nout, read_hydro=True, read_grav=False):
             nfloat3 = nfloat_grav
             nlines3 = nlines_grav
             nstrin3 = nstrin_grav
+
+            ninteg4 = ninteg_rt
+            nfloat4 = nfloat_rt
+            nlines4 = nlines_rt
+            nstrin4 = nstrin_rt
 
         # Read binary particle file
         if info["particle_count"]["total"] > 0:

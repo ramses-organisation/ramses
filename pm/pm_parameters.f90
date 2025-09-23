@@ -15,6 +15,10 @@ module pm_parameters
 
   integer::ir_cloud=4                        ! Radius of cloud region in unit of grid spacing (i.e. the ACCRETION RADIUS)
   integer::ir_cloud_massive=4                ! Radius of massive cloud region in unit of grid spacing for PM sinks
+  logical:: cloud_pts_check = .false.        ! If true, build a list of ranks (5^3 cloud points) per sink;
+                                             !ranks not in the list skip all cloud particle checks for that sink
+  integer:: cloud_check_validity_frequency=0 ! Frequency (in main time steps) to test if 5^3 cloud point ranks cover all relevant particle ranks
+
   real(dp)::sink_soft=2                      ! Sink grav softening length in dx at levelmax for "direct force" sinks
   real(dp)::mass_sink_direct_force=-1        ! mass above which sinks are treated as "direct force" objects
   integer::nlevelmax_sink=0                  ! HACK to put sinks at coarser level (for sims which are not fully refined)

@@ -358,6 +358,8 @@ SUBROUTINE cmp_rt_faces(uin,iFlx,dx,dy,dz,dt,iP0,ngrid,ilevel)
   do i=if1,if2                                 !
   do j=jf1,jf2                                 !        each cell in grid
   do k=kf1,kf2                                 !
+     if(ndim.gt.1 .and. j.eq.jf2) cycle
+     if(ndim.gt.2 .and. k.eq.kf2) cycle
      do n=1,ngrid                              ! <- buffer of grids
            fdn = cFlx(n,  i-1, j, k, :, 1    )    !
            fup = cFlx(n,  i,   j, k, :, 1    )   !  upwards and downwards
@@ -376,9 +378,10 @@ SUBROUTINE cmp_rt_faces(uin,iFlx,dx,dy,dz,dt,iP0,ngrid,ilevel)
   !----------------------------------------------------------------------
 #if NDIM>1
   dtdx=dt/dy
-  do i=if1,if2
+  do i=if1,if2-1
   do j=jf1,jf2
   do k=kf1,kf2
+     if(ndim.gt.2 .and. k.eq.kf2) cycle
      do n=1,ngrid
            fdn = cFlx(n,  i, j-1, k, :, 2    )
            fup = cFlx(n,  i, j,   k, :, 2    )
@@ -398,8 +401,8 @@ SUBROUTINE cmp_rt_faces(uin,iFlx,dx,dy,dz,dt,iP0,ngrid,ilevel)
   !----------------------------------------------------------------------
 #if NDIM>2
   dtdx=dt/dz
-  do i=if1,if2
-  do j=jf1,jf2
+  do i=if1,if2-1
+  do j=jf1,jf2-1
   do k=kf1,kf2
      do n=1,ngrid
            fdn = cFlx(n,  i, j, k-1, :, 3    )
