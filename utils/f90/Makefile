@@ -16,13 +16,16 @@ MODOBJ=random.o utils.o io_ramses.o
 # Make all targets
 all: amr2prof amr2cylprof ramses2tipsy amr2map part2map part2prof \
      part2cube part2list partcenter part2birth part2sfr getstarlist \
-     part2cylprof
+     part2cylprof amr2cube
 
 amr2prof: $(MODOBJ) amr2prof.o
 	$(F90) $(LFLAGS) $^ -o $(BINDIR)/$@
 amr2cylprof: $(MODOBJ) amr2cylprof.o
 	$(F90) $(LFLAGS) $^ -o $(BINDIR)/$@
 amr2map: $(MODOBJ) amr2map.o
+	$(F90) $(LFLAGS) $^ -o $(BINDIR)/$@
+
+amr2cube: $(MODOBJ) amr2cube.o
 	$(F90) $(LFLAGS) $^ -o $(BINDIR)/$@
 
 ramses2tipsy: $(MODOBJ) ramses2tipsy.o
