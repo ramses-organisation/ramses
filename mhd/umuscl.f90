@@ -2174,7 +2174,7 @@ subroutine uslope(q,dq,bf,dbf,dx,dt,ngrid)
               else if(slope_type==1.or.slope_type==2)then  ! minmod or average
                  call calc_uslope_minmod_average(q,dq,i,j,k,n,ngrid,slope_type_real)
 #if NDIM>1
-              else if(slope_type==3)then 
+              else if(slope_type==3)then
                  ! positivity preserving unsplit slope (2D or 3D)
                  call calc_uslope_positivity_preserving(q,dq,i,j,k,n,ngrid)
 #endif

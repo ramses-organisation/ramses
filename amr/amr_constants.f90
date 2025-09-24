@@ -69,4 +69,28 @@ module amr_constants
                                                /), shape=(/threetondim,twotondim/))
 #endif
 
+  ! ---- Stencil constants ----
+  ! in 3D:
+  !            min      max    tot
+  ! -----------------------------------------
+  ! i,j,k1      0        2      3
+  ! i,j,k2      0        1      2
+  ! i,j,k3      1        2      2
+
+  integer,parameter::i1min=0,i2min=0,i3min=1
+  integer,parameter::j1min=0,j2min=0,j3min=1
+  integer,parameter::k1min=0,k2min=0,k3min=1
+
+  integer,parameter::i1max=2,i2max=1,i3max=2
+#if NDIM==1
+  integer,parameter::j1max=0,j2max=0,j3max=1
+#else
+  integer,parameter::j1max=2,j2max=1,j3max=2
+#endif
+#if NDIM==1 || NDIM==2
+  integer,parameter::k1max=0,k2max=0,k3max=1
+#else
+  integer,parameter::k1max=2,k2max=1,k3max=2
+#endif
+
 end module amr_constants

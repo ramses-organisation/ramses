@@ -43,7 +43,7 @@ subroutine condinit(x,u,dx,nn)
      ! specific enthalpy
 
      h=1.0d0+gamma/(gamma-1.0d0)*q(i,5)/q(i,1)
-     if (eos.eq. 'TM') then
+     if (eos_rhd.eq. 'TM') then
         tau=q(i,5)/q(i,1)
         h=5d0/2d0*tau+3d0/2d0*sqrt(tau**2+4d0/9d0)
      endif
