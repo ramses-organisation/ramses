@@ -85,4 +85,6 @@ axes[-1].set_xlabel('time [Myr]')
 plt.tight_layout(pad=0.1)
 plt.savefig("cooling-neq.pdf", bbox_inches='tight')
 
-visu_ramses.check_solution(data["data"],'cooling-neq',overwrite=False)
+scal_tol =  6.0e-12
+tolerance={"scalar_01":scal_tol, "scalar_02":scal_tol, "scalar_03":scal_tol}
+visu_ramses.check_solution(data["data"],'cooling-neq',tolerance=tolerance, overwrite=False)
