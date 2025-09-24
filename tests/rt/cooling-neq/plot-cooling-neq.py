@@ -41,9 +41,9 @@ xion_label = r'$x_{\rm ion}$'
 TK_color = 'blue'
 xh_color = 'red'
 xhe_color = 'orange'
-titles = [r'$n_{\rm H} = 3\times10^{-2} \, {\rm cm^{-3}}$', 
-              r'$n_{\rm H} = 3 \, {\rm cm^{-3}}$', 
-              r'$n_{\rm H} = 3\times10^{-2} \, {\rm cm^{-3}}$', 
+titles = [r'$n_{\rm H} = 3\times10^{-2} \, {\rm cm^{-3}}$',
+              r'$n_{\rm H} = 3 \, {\rm cm^{-3}}$',
+              r'$n_{\rm H} = 3\times10^{-2} \, {\rm cm^{-3}}$',
               r'$n_{\rm H} = 3 \, {\rm cm^{-3}}$']
 Tmin=1e0 ; Tmax=1e8
 
