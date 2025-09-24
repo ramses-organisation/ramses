@@ -12,7 +12,7 @@ COMPILER = GNU
 # Target cluster, to set cluster specific optimisation flags (see Makefile.machines)
 MACHINE = generic
 # Size of vector cache
-NVECTOR = 16
+NVECTOR = 32
 # Number of dimensions
 NDIM = 1
 # Float precision size

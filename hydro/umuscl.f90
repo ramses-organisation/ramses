@@ -63,24 +63,21 @@ subroutine unsplit(uin,gravin,pin,flux,tmp,dx,dy,dz,dt,ngrid)
   ! Translate to primitive variables, compute sound speeds
   call ctoprim(uin,qin,gravin,dt,ngrid)
 
-  ! Compute TVD slopes
-  !call uslope(qin,dq,dx,dt,ngrid)
-
   ! Compute 3D traced-states in all three directions
   if(scheme=='muscl')then
      call trace(qin,qm,qp,dx      ,dt,ngrid)
   endif
-!  if(scheme=='plmde')then
-!#if NDIM==1
-!     call tracex  (qin,dq,cin,qm,qp,dx      ,dt,ngrid)
-!#endif
-!#if NDIM==2
-!     call tracexy (qin,dq,cin,qm,qp,dx,dy   ,dt,ngrid)
-!#endif
-!#if NDIM==3
-!     call tracexyz(qin,dq,cin,qm,qp,dx,dy,dz,dt,ngrid)
-!#endif
-!  endif
+  if(scheme=='plmde')then
+#if NDIM==1
+     call tracex  (qin,qm,qp,dx      ,dt,ngrid)
+#endif
+#if NDIM==2
+     call tracexy (qin,qm,qp,dx,dy   ,dt,ngrid)
+#endif
+#if NDIM==3
+     call tracexyz(qin,qm,qp,dx,dy,dz,dt,ngrid)
+#endif
+  endif
 
   ! Solve for 1D flux in X direction
   call cmpflxm(qm,iu1+1,iu2+1,ju1  ,ju2  ,ku1  ,ku2  , &
@@ -558,7 +555,7 @@ subroutine uslope(q,dq,dtdx,i,j,k,ngrid)
                  call calc_uslope_moncen(q,dq,i,j,k,n,ngrid)
 #endif
 #if NDIM>1
-              else if(slope_type==3)then 
+              else if(slope_type==3)then
                  ! positivity preserving unsplit slope (2D or 3D)
                  call calc_uslope_positivity_preserving(q,dq,i,j,k,n,ngrid)
 #endif
