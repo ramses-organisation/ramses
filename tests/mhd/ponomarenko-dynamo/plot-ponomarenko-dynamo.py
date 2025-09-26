@@ -39,6 +39,7 @@ plotter.camera.roll += 90
 plotter.show_grid()
 #plotter.show()
 plotter.save_graphic('ponomarenko-dynamo.pdf')
+plotter.close()
 
 # Check results against reference solution
 visu_ramses.check_solution(data["data"], 'ponomarenko-dynamo') #, tolerance={"all":3.0e-06},overwrite=False)
