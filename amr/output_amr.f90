@@ -14,6 +14,7 @@ subroutine dump_all
   use turb_commons
 #endif
   use mpi_mod
+  use buildinfo
   implicit none
 #if ! defined (WITHOUTMPI) || defined (NOSYSTEM)
   integer::info
@@ -96,12 +97,7 @@ subroutine dump_all
      ! Copy compilation details to output directory
      filename=TRIM(filedir)//'compilation.txt'
      OPEN(UNIT=11, FILE=filename, FORM='formatted')
-     write(11,'(" compile date    = ",A)')TRIM(builddate)
-     write(11,'(" compile command = ",A)')TRIM(buildcommand)
-     write(11,'(" patch dir       = ",A)')TRIM(patchdir)
-     write(11,'(" remote repo     = ",A)')TRIM(gitrepo)
-     write(11,'(" local branch    = ",A)')TRIM(gitbranch)
-     write(11,'(" last commit     = ",A)')TRIM(githash)
+     call write_gitinfo(11)
      CLOSE(11)
   endif
 #ifndef WITHOUTMPI

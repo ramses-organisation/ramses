@@ -456,7 +456,7 @@ recursive subroutine amr_step(ilevel,icount)
   endif
 #else
                                call timer('cooling','start')
-  if((hydro).and.(.not.static_gas)) then
+  if(hydro) then
     if(neq_chem.or.cooling.or.T2_star>0.0.or.barotropic_eos)call cooling_fine(ilevel)
   endif
 #endif
