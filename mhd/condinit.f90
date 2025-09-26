@@ -45,7 +45,7 @@ subroutine  condinit(x,u,dx,nn)
 
   case('ponomarenko')
       call ponomarenko_condinit(x, q, dx, nn)
-      
+
   case('collapse')
      call collapse_condinit(x, q, dx, nn)
 

@@ -24,7 +24,7 @@ lvlmax = max(lvl)
 
 logb2 = np.log10(b2)
 filt=((logb2>-5.5)&(logb2<-3.4)&(lvl==lvlmax))
-#At time t=200, one should rather use: 
+#At time t=200, one should rather use:
 #filt=((logb2>1.7)&(logb2<2.3)&(lvl==lvlmax))
 plotter = pyvista.Plotter(shape=(1,1), off_screen=True)
 points = np.transpose([x[filt],y[filt],z[filt]])
