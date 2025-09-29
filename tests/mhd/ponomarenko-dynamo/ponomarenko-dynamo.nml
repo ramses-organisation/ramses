@@ -1,3 +1,6 @@
+This is the Ponomarenko test performed in Teyssier, Fromang and Dormy (2006).
+Originally levelmax=8 and tout=200
+
 &RUN_PARAMS
 hydro=.true.
 nremap=1
@@ -7,7 +10,7 @@ nsubcycle=4*1,2
 
 &AMR_PARAMS
 levelmin=5
-levelmax=7 !8
+levelmax=7
 ngridmax=2000000
 nexpand=1
 boxlen=8.055
@@ -20,7 +23,7 @@ nregion=2
 
 &OUTPUT_PARAMS
 noutput=1
-tout=10 !200.0
+tout=10
 !delta_tout=2.
 /
 
