@@ -35,6 +35,8 @@ jobs:
           uses: wtfjoke/setup-tectonic@v3
           with:
             tectonic-version: 0.15.0
+        - name: Setup headless display for pyvista
+          uses: pyvista/setup-headless-display-action@v3
         - name: "Run tests ${{ matrix.test-family }}"
           run: |
             cd tests
