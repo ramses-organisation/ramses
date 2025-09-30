@@ -290,10 +290,7 @@ subroutine make_boundary_mask(ilevel)
            iskip=ncoarse+(ind-1)*ngridmax
            do i=1,ngrid
               ind_cell(i)=iskip+ind_grid(i)
-           end do
-
-           ! Set mask to -1d0
-           do i=1,ngrid
+              ! Set mask to -1d0
               f(ind_cell(i),3)=-1
            end do
 

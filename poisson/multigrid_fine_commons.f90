@@ -453,6 +453,7 @@ subroutine build_parent_comms_mg(active_loc, ifinelevel)
 
    ! Loop over the AMR active communicator first
    ngrids = active_loc%ngrid
+!!!$omp parallel do private(nbatch,i,ind,cur_grid,cur_cpu,)
    do istart=1,ngrids,nvector
       nbatch=min(nvector,ngrids-istart+1)
       ! Gather grid indices and retrieve parent cells
@@ -476,6 +477,7 @@ subroutine build_parent_comms_mg(active_loc, ifinelevel)
             if(cur_cpu==myid) then
                ! Stack grid for local activation
                ! We own the grid: fill lookup_mg with its final value
+               !TC problematic for openmp
                nact_tot=nact_tot+1
                flag2(nact_tot)=cur_grid
                lookup_mg(cur_grid)=nact_tot
@@ -919,7 +921,9 @@ subroutine cleanup_mg_level(ilevel)
    ! ---------------------------------------------------------------------
    ! Cleanup lookup table
    ! ---------------------------------------------------------------------
+!$omp parallel private(icpu,igrid,cur_grid,cur_cpu)
    do icpu=1,ncpu
+!$omp do
       do igrid=1,active_mg(icpu,ilevel)%ngrid
 #ifdef LIGHT_MPI_COMM
          cur_grid=active_mg(icpu,ilevel)%pcomm%igrid(igrid)
@@ -933,8 +937,9 @@ subroutine cleanup_mg_level(ilevel)
             lookup_mg(cur_grid)=-mod(flag2(cur_grid),ngridmax)
          end if
       end do
+!$omp end do nowait
    end do
-
+!$omp end parallel
    ! ---------------------------------------------------------------------
    ! Deallocate communicators
    ! ---------------------------------------------------------------------
@@ -995,9 +1000,11 @@ subroutine make_fine_mask(ilevel)
    integer  :: ind, igrid_mg, icpu, ibound
    integer  :: igrid_amr, icell_amr, iskip_amr
 
+!$omp parallel private(ngrid,ind,iskip_amr,igrid_mg,igrid_amr,icell_amr,icpu,ibound)
    ngrid=active(ilevel)%ngrid
    do ind=1,twotondim
       iskip_amr = ncoarse+(ind-1)*ngridmax
+!$omp do
       do igrid_mg=1,ngrid
          igrid_amr = active(ilevel)%igrid(igrid_mg)
          icell_amr = iskip_amr + igrid_amr
@@ -1010,6 +1017,7 @@ subroutine make_fine_mask(ilevel)
       ngrid=reception(icpu,ilevel)%ngrid
       do ind=1,twotondim
          iskip_amr = ncoarse+(ind-1)*ngridmax
+!$omp do
          do igrid_mg=1,ngrid
 #ifdef LIGHT_MPI_COMM
             igrid_amr = reception(icpu,ilevel)%pcomm%igrid(igrid_mg)
@@ -1027,6 +1035,7 @@ subroutine make_fine_mask(ilevel)
       ngrid=boundary(ibound,ilevel)%ngrid
       do ind=1,twotondim
          iskip_amr=ncoarse+(ind-1)*ngridmax
+!$omp do
          do igrid_mg=1,ngrid
             igrid_amr = boundary(ibound,ilevel)%igrid(igrid_mg)
             icell_amr = iskip_amr + igrid_amr
@@ -1035,7 +1044,7 @@ subroutine make_fine_mask(ilevel)
          end do
       end do
    end do
-
+!$omp end parallel
 end subroutine make_fine_mask
 
 ! ########################################################################
@@ -1096,10 +1105,12 @@ subroutine make_fine_bc_rhs(ilevel,icount)
    ngrid=active(ilevel)%ngrid
 
    ! Loop over cells
+!$omp parallel private(iskip_amr,igrid_amr,icell_amr,igshift,igrid_nbor_amr,ifathercell_nbor_amr,nb_mask,ind_cell,phi_int,nb_phi,icell_nbor_amr,w,phi_b)
    do ind=1,twotondim
       iskip_amr = ncoarse+(ind-1)*ngridmax
 
       ! Loop over active grids
+!$omp do
       do igrid_mg=1,ngrid
          igrid_amr = active(ilevel)%igrid(igrid_mg)
          icell_amr = iskip_amr + igrid_amr
@@ -1150,8 +1161,9 @@ subroutine make_fine_bc_rhs(ilevel,icount)
             end do
          end do
       end do
+!$omp end do nowait
    end do
-
+!$omp end parallel
 end subroutine make_fine_bc_rhs
 
 
@@ -1202,6 +1214,7 @@ subroutine make_virtual_mg_dp(ivar,ilevel)
   ! Gather emission array
 #ifdef LIGHT_MPI_COMM
   offset=0
+  ! TODO openMP here
   do idx=1,emission_mg(ilevel)%nactive
     do j=1,twotondim
       step=(j-1)*emission_mg(ilevel)%ngrids(idx)
@@ -1214,18 +1227,22 @@ subroutine make_virtual_mg_dp(ivar,ilevel)
     offset=offset+emission_mg(ilevel)%ngrids(idx)
   end do
 #else
+!$omp parallel private(step,iskip,icell)
   do icpu=1,ncpu
      if (emission_mg(icpu,ilevel)%ngrid>0) then
         do j=1,twotondim
            step=(j-1)*emission_mg(icpu,ilevel)%ngrid
            iskip=(j-1)*active_mg(myid,ilevel)%ngrid
+!$omp do
            do i=1,emission_mg(icpu,ilevel)%ngrid
               icell=emission_mg(icpu,ilevel)%igrid(i)+iskip
               emission_mg(icpu,ilevel)%u(i+step,1)=active_mg(myid,ilevel)%u(icell,ivar)
            end do
+!$omp end do nowait
         end do
      end if
   end do
+!$omp end parallel
 #endif
 
   ! Send all messages
@@ -1326,6 +1343,7 @@ subroutine make_reverse_mg_dp(ivar,ilevel)
 
   ! Gather emission array
 #ifdef LIGHT_MPI_COMM
+   ! TODO openMP here
    offset=0
    do idx=1,emission_mg(ilevel)%nactive
       do j=1,twotondim
@@ -1340,19 +1358,23 @@ subroutine make_reverse_mg_dp(ivar,ilevel)
       offset=offset+emission_mg(ilevel)%ngrids(idx)
    end do
 #else
+!$omp parallel private(step,iskip,icell)
   do icpu=1,ncpu
      if (emission_mg(icpu,ilevel)%ngrid>0) then
         do j=1,twotondim
            step=(j-1)*emission_mg(icpu,ilevel)%ngrid
            iskip=(j-1)*active_mg(myid,ilevel)%ngrid
+!$omp do
            do i=1,emission_mg(icpu,ilevel)%ngrid
               icell=emission_mg(icpu,ilevel)%igrid(i)+iskip
               active_mg(myid,ilevel)%u(icell,ivar)=active_mg(myid,ilevel)%u(icell,ivar)+ &
                    & emission_mg(icpu,ilevel)%u(i+step,1)
            end do
+!$omp end do
         end do
      end if
   end do
+!$omp end parallel
 #endif
 
   ! Wait for full completion of sends

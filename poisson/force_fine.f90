@@ -61,6 +61,7 @@ subroutine force_fine(ilevel,icount)
 
      ! Loop over myid grids by vector sweeps
      ncache=active(ilevel)%ngrid
+!$omp parallel do private(ngrid,i,ind,iskip,idim)
      do igrid=1,ncache,nvector
         ngrid=MIN(nvector,ncache-igrid+1)
         do i=1,ngrid
@@ -115,6 +116,7 @@ subroutine force_fine(ilevel,icount)
 
      ! Loop over myid grids by vector sweeps
      ncache=active(ilevel)%ngrid
+!$omp parallel do private(igrid,ngrid,i)
      do igrid=1,ncache,nvector
         ngrid=MIN(nvector,ncache-igrid+1)
         do i=1,ngrid
@@ -149,6 +151,8 @@ subroutine force_fine(ilevel,icount)
 
   ! Loop over myid grids by vector sweeps
   ncache=active(ilevel)%ngrid
+!$omp parallel do private(igrid,ngrid,ind,iskip,i,idim) &
+!$omp & reduction(+:epot_loc) reduction(MAX:rho_loc)
   do igrid=1,ncache,nvector
      ngrid=MIN(nvector,ncache-igrid+1)
      do i=1,ngrid
@@ -220,7 +224,8 @@ subroutine gradient_phi(ind_grid,ngrid,ilevel,icount)
   real(dp),dimension(1:nvector),save::phi1,phi2,phi3,phi4
   real(dp),dimension(1:nvector,1:twotondim,1:ndim),save::phi_left,phi_right
 
-!$omp threadprivate(ind_cell,ind_left,ind_right,igridn,phi1,phi2,phi3,phi4,phi_left,phi_right)
+!$omp threadprivate(ind_cell,ind_left,ind_right,igridn)
+!$omp threadprivate(phi1,phi2,phi3,phi4,phi_left,phi_right)
 
   ! Mesh size at level ilevel
   dx=0.5D0**ilevel
