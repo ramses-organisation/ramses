@@ -1,6 +1,5 @@
 import matplotlib as mpl
-#mpl.use('Agg')
-mpl.use('MacOSX')                                                                                                                #mpl.use('QtAgg')
+mpl.use('Agg')
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.interpolate import griddata

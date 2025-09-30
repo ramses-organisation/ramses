@@ -39,7 +39,7 @@ A_region=50.
 /
 
 &OUTPUT_PARAMS
-tout=0.05
+tout=0.03
 /
 
 &HYDRO_PARAMS
