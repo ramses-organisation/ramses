@@ -111,7 +111,7 @@ subroutine cmp_residual_mg_fine(ilevel)
 
       ! Loop over active grids
 !$omp do
-      !TC: TODO vectorize? 
+      !TC: TODO vectorize?
       do igrid_mg=1,ngrid
          igrid_amr = active(ilevel)%igrid(igrid_mg)
          icell_amr = iskip_amr + igrid_amr
@@ -471,7 +471,7 @@ subroutine interpolate_and_correct_fine(ifinelevel)
 !$omp&                 ind_f,iskip_f_amr,ind_average,&
 !$omp&                 ind_father,coeff,icell_c_amr,ind_c,igrid_c_amr,cpu_amr,igrid_c_mg,icell_c_mg) &
 !$omp&         shared(ngrid_f,ifinelevel,icoarselevel,active,father,phi,bbb,ccc,&
-!$omp&                f,ncoarse,ngridmax,cpu_map,lookup_mg,active_mg)  
+!$omp&                f,ncoarse,ngridmax,cpu_map,lookup_mg,active_mg)
    do istart=1,ngrid_f,nvector
 
       ! Gather nvector grids

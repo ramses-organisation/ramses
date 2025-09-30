@@ -869,7 +869,7 @@ subroutine cic_from_multipole(ilevel)
 #endif
         end do
      end do
-!$omp end do nowait 
+!$omp end do nowait
   end do
 !$omp do
   do ind=1,twotondim
