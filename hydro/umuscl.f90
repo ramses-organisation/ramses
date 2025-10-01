@@ -40,7 +40,6 @@ subroutine unsplit(uin,gravin,pin,flux,tmp,dx,dy,dz,dt,ngrid)
 
   ! Primitive variables
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar),save::qin
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2       ),save::cin
 
   ! Slopes
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim),save::dq
@@ -62,32 +61,24 @@ subroutine unsplit(uin,gravin,pin,flux,tmp,dx,dy,dz,dt,ngrid)
   dtdx = dt/dx
 
   ! Translate to primitive variables, compute sound speeds
-  call ctoprim(uin,qin,cin,gravin,dt,ngrid)
+  call ctoprim(uin,qin,gravin,dt,ngrid)
 
   ! Compute TVD slopes
   call uslope(qin,dq,dx,dt,ngrid)
 
   ! Compute 3D traced-states in all three directions
   if(scheme=='muscl')then
-#if NDIM==1
-     call trace1d(qin,dq,qm,qp,dx      ,dt,ngrid)
-#endif
-#if NDIM==2
-     call trace2d(qin,dq,qm,qp,dx,dy   ,dt,ngrid)
-#endif
-#if NDIM==3
-     call trace3d(qin,dq,qm,qp,dx,dy,dz,dt,ngrid)
-#endif
+     call trace(qin,dq,qm,qp,dx      ,dt,ngrid)
   endif
   if(scheme=='plmde')then
 #if NDIM==1
-     call tracex  (qin,dq,cin,qm,qp,dx      ,dt,ngrid)
+     call tracex  (qin,dq,qm,qp,dx      ,dt,ngrid)
 #endif
 #if NDIM==2
-     call tracexy (qin,dq,cin,qm,qp,dx,dy   ,dt,ngrid)
+     call tracexy (qin,dq,qm,qp,dx,dy   ,dt,ngrid)
 #endif
 #if NDIM==3
-     call tracexyz(qin,dq,cin,qm,qp,dx,dy,dz,dt,ngrid)
+     call tracexyz(qin,dq,qm,qp,dx,dy,dz,dt,ngrid)
 #endif
   endif
 
@@ -123,540 +114,156 @@ end subroutine unsplit
 !###########################################################
 !###########################################################
 !###########################################################
-subroutine trace1d(q,dq,qm,qp,dx,dt,ngrid)
+subroutine trace(q,dq,qm,qp,dx,dt,ngrid)
   use amr_parameters
   use hydro_parameters
   use const
   implicit none
-
-  integer ::ngrid
-  real(dp)::dx, dt
-
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::dq
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qm
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qp
-
-  ! Local variables
-  integer ::i, j, k, l
+  integer,intent(in)::ngrid
+  real(dp),intent(in)::dx, dt
+  ! cell-center values of all variables (quantities)
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar),intent(in)::q
+  ! TDV-limited gradients, as calculated by uslope
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim),intent(in)::dq
+  ! states at the "plus" side of the interface (right/top/front)
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim),intent(out)::qp
+  ! state at the "minus" side of the interface (left/bottom/back)
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim),intent(out)::qm
+  ! ---------------------------------------------------------------------
+  ! "Trace" the evolution of the cell-centered state to the cell interfaces
+  ! over half a time step.
+  ! Predicts the "plus" and "minus" interface states (qp and qm) from the
+  ! cell-centered primitive variables (q) and the TVD-limited slopes (dp),
+  ! including transverse derivatives (MUSCL-Hancock scheme).  !
+  ! The output of this routine will be given to the Riemann solver.
+  ! --------------------------------------------------------------------
+  real(dp),dimension(1:nvar)::S0,var
+  real(dp),dimension(1:nvar,1:ndim)::dvar
+  real(dp)::oneoverr,dvel_diag,corr,result_m,result_p
+  integer ::i,j,k,l,ivar,idim
   integer ::ilo,ihi,jlo,jhi,klo,khi
-  integer ::ir, iu, ip
+  integer,parameter ::ir=1,ip=neul
   real(dp)::dtdx
-  real(dp)::r, u, p
-  real(dp)::drx, dux, dpx
-  real(dp)::sr0, su0, sp0
-#if NENER>0
-  integer::irad
-  real(dp),dimension(1:nener)::e, dex, se0
-#endif
-#if NVAR > NHYDRO + NENER
-  integer::n
-  real(dp)::a, dax, sa0
-#endif
 
   dtdx = dt/dx
-
   ilo=MIN(1,iu1+1); ihi=MAX(1,iu2-1)
   jlo=MIN(1,ju1+1); jhi=MAX(1,ju2-1)
   klo=MIN(1,ku1+1); khi=MAX(1,ku2-1)
-  ir=1; iu=2; ip=3
 
-  do k = klo, khi
-     do j = jlo, jhi
-        do i = ilo, ihi
-           do l = 1, ngrid
+   do k = klo, khi
+      do j = jlo, jhi
+         do i = ilo, ihi
+            !DIR$ IVDEP
+            !DIR$ SIMD
+            do l = 1, ngrid
 
-              ! Cell centered values
-              r   =  q(l,i,j,k,ir)
-              u   =  q(l,i,j,k,iu)
-              p   =  q(l,i,j,k,ip)
+               ! Retrieve data for cell l
+
+               ! Cell centered values
+               !DIR$ UNROLL
+               do ivar=1,nvar
+                  var(ivar) = q(l,i,j,k,ivar)
+               end do
+               oneoverr = 1d0/var(ir)
+
+               ! Limited gradients in all 3 directions
+               !DIR$ UNROLL
+               do ivar=1,nvar
+                  !DIR$ UNROLL
+                  do idim=1,ndim
+                     dvar(ivar,idim) = dq(l,i,j,k,ivar,idim)
+                  end do
+               end do
+
+               ! Compute source terms
+
+               S0 = 0
+
+               ! Advection for each variable q
+               ! - u*dq/dx - v*dq/dy - w*dq/z
+               !DIR$ UNROLL
+               do ivar=1,nvar
+                  !DIR$ UNROLL
+                  do idim=1,ndim
+                     S0(ivar) = S0(ivar) - var(1+idim)*dvar(ivar,idim)
+                  end do
+               end do
+
+               ! Pressure gradient acceleration for velocities
+               ! vx: -1/rho * dp/dx
+               ! vy: -1/rho * dp/dy
+               ! vz: -1/rho * dp/dz
+               !DIR$ UNROLL
+               do idim=1,ndim
+                  S0(1+idim) = S0(1+idim) - dvar(ip,idim)*oneoverr
 #if NENER>0
-              do irad=1,nener
-                 e(irad) = q(l,i,j,k,ip+irad)
-              end do
+                  !DIR$ UNROLL
+                  do ivar=1,nener
+                     S0(1+idim) = S0(1+idim) - dvar(ip+ivar,idim)*oneoverr
+                  end do
 #endif
-              ! TVD slopes in X direction
-              drx = dq(l,i,j,k,ir,1)
-              dux = dq(l,i,j,k,iu,1)
-              dpx = dq(l,i,j,k,ip,1)
+               end do
+
+               ! Calculate the velocity divergence
+               ! div_vel = du/dx + dv/dy + dw/dz
+               dvel_diag = 0
+               !DIR$ UNROLL
+               do idim=1,ndim
+                  dvel_diag = dvel_diag +  dvar(1+idim,idim)
+               end do
+
+               ! Fluid compression/expansion for density
+               ! -div_vel*rho
+               S0(ir) = S0(ir) - dvel_diag*var(ir)
+
+               ! Compression heating / expansion cooling for pressure
+               ! -div_vel*gamma*P
+               S0(ip) = S0(ip) - dvel_diag*gamma*var(ip)
+
 #if NENER>0
-              do irad=1,nener
-                 dex(irad) = dq(l,i,j,k,ip+irad,1)
-              end do
+               ! Compression heating / expansion cooling for extra energies
+               ! -div_vel*gamma_rad*e_rad
+               !DIR$ UNROLL
+               do ivar=1,nener
+                  S0(ip+ivar) = S0(ip+ivar) - dvel_diag*gamma_rad(ivar)*var(ip+ivar)
+               end do
 #endif
 
-              ! Source terms (including transverse derivatives)
-              sr0 = -u*drx - (dux)*r
-              sp0 = -u*dpx - (dux)*gamma*p
-              su0 = -u*dux - (dpx)/r
-#if NENER>0
-              do irad=1,nener
-                 su0 = su0 - (dex(irad))/r
-                 se0(irad) = -u*dex(irad) &
-                      & - (dux)*gamma_rad(irad)*e(irad)
-              end do
-#endif
+               ! Calculate and store result:
+               ! q+(t+0.5dt) = q(t) + 0.5*dq(t)/dx - S*0.5*dt/dx
+               ! q-(t+0.5dt) = q(t) - 0.5*dq(t)/dx - S*0.5*dt/dx
 
-              ! Right state
-              qp(l,i,j,k,ir,1) = r - half*drx + sr0*dtdx*half
-              qp(l,i,j,k,iu,1) = u - half*dux + su0*dtdx*half
-              qp(l,i,j,k,ip,1) = p - half*dpx + sp0*dtdx*half
-!              qp(l,i,j,k,ir,1) = max(smallr, qp(l,i,j,k,ir,1))
-              if(qp(l,i,j,k,ir,1)<smallr)qp(l,i,j,k,ir,1)=r
-#if NENER>0
-              do irad=1,nener
-                 qp(l,i,j,k,ip+irad,1) = e(irad) - half*dex(irad) + se0(irad)*dtdx*half
-              end do
-#endif
+               ! Check result for density. If too small, use
+               ! rho+(t+0.5dt) = rho(t)
+               ! rho-(t+0.5dt) = rho(t)
+               ! Prevents negative densities
+               corr = S0(ir) * dtdx !convert S0 to spatial slope correction
+               !DIR$ UNROLL
+               do idim=1,ndim
+                  result_p = var(ir) + half*(corr - dvar(ir,idim))
+                  result_m = var(ir) + half*(corr + dvar(ir,idim))
+                  qp(l,i,j,k,ir,idim) = merge(var(ir), result_p, result_p<smallr)
+                  qm(l,i,j,k,ir,idim) = merge(var(ir), result_m, result_m<smallr)
+               end do
 
-              ! Left state
-              qm(l,i,j,k,ir,1) = r + half*drx + sr0*dtdx*half
-              qm(l,i,j,k,iu,1) = u + half*dux + su0*dtdx*half
-              qm(l,i,j,k,ip,1) = p + half*dpx + sp0*dtdx*half
-!              qm(l,i,j,k,ir,1) = max(smallr, qm(l,i,j,k,ir,1))
-              if(qm(l,i,j,k,ir,1)<smallr)qm(l,i,j,k,ir,1)=r
-#if NENER>0
-              do irad=1,nener
-                 qm(l,i,j,k,ip+irad,1) = e(irad) + half*dex(irad) + se0(irad)*dtdx*half
-              end do
-#endif
+               !DIR$ UNROLL
+               do ivar=2,nvar
+                  corr = S0(ivar) * dtdx
+                  !DIR$ UNROLL
+                  do idim=1,ndim
+                     result_p = var(ivar) + half*(corr - dvar(ivar,idim))
+                     result_m = var(ivar) + half*(corr + dvar(ivar,idim))
+                     qp(l,i,j,k,ivar,idim) = result_p
+                     qm(l,i,j,k,ivar,idim) = result_m
+                  end do
+               end do
 
-           end do
-        end do
-     end do
-  end do
+            end do
+         end do
+      end do
+   end do
 
-#if NVAR > NHYDRO + NENER
-  ! Passive scalars
-  do n = ndim+nener+3, nvar
-     do k = klo, khi
-        do j = jlo, jhi
-           do i = ilo, ihi
-              do l = 1, ngrid
-                 a   = q(l,i,j,k,n)       ! Cell centered values
-                 u   = q(l,i,j,k,iu)
-                 dax = dq(l,i,j,k,n,1)    ! TVD slopes
-                 sa0 = -u*dax             ! Source terms
-                 qp(l,i,j,k,n,1) = a - half*dax + sa0*dtdx*half   ! Right state
-                 qm(l,i,j,k,n,1) = a + half*dax + sa0*dtdx*half   ! Left state
-              end do
-           end do
-        end do
-     end do
-  end do
-#endif
-
-end subroutine trace1d
-!###########################################################
-!###########################################################
-!###########################################################
-!###########################################################
-#if NDIM>1
-subroutine trace2d(q,dq,qm,qp,dx,dy,dt,ngrid)
-  use amr_parameters
-  use hydro_parameters
-  use const
-  implicit none
-
-  integer ::ngrid
-  real(dp)::dx, dy, dt
-
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::dq
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qm
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qp
-
-  ! declare local variables
-  integer ::i, j, k, l
-  integer ::ilo,ihi,jlo,jhi,klo,khi
-  integer ::ir, iu, iv, ip
-  real(dp)::dtdx, dtdy
-  real(dp)::r, u, v, p
-  real(dp)::drx, dux, dvx, dpx
-  real(dp)::dry, duy, dvy, dpy
-  real(dp)::sr0, su0, sv0, sp0
-#if NENER>0
-  integer ::irad
-  real(dp),dimension(1:nener)::e, dex, dey, se0
-#endif
-#if NVAR > NHYDRO + NENER
-  integer ::n
-  real(dp)::a, dax, day, sa0
-#endif
-
-  dtdx = dt/dx
-  dtdy = dt/dy
-  ilo=MIN(1,iu1+1); ihi=MAX(1,iu2-1)
-  jlo=MIN(1,ju1+1); jhi=MAX(1,ju2-1)
-  klo=MIN(1,ku1+1); khi=MAX(1,ku2-1)
-  ir=1; iu=2; iv=3; ip=4
-
-  do k = klo, khi
-     do j = jlo, jhi
-        do i = ilo, ihi
-           do l = 1, ngrid
-
-              ! Cell centered values
-              r   =  q(l,i,j,k,ir)
-              u   =  q(l,i,j,k,iu)
-              v   =  q(l,i,j,k,iv)
-              p   =  q(l,i,j,k,ip)
-#if NENER>0
-              do irad=1,nener
-                 e(irad) = q(l,i,j,k,ip+irad)
-              end do
-#endif
-
-              ! TVD slopes in all directions
-              drx = dq(l,i,j,k,ir,1)
-              dux = dq(l,i,j,k,iu,1)
-              dvx = dq(l,i,j,k,iv,1)
-              dpx = dq(l,i,j,k,ip,1)
-#if NENER>0
-              do irad=1,nener
-                 dex(irad) = dq(l,i,j,k,ip+irad,1)
-              end do
-#endif
-
-              dry = dq(l,i,j,k,ir,2)
-              duy = dq(l,i,j,k,iu,2)
-              dvy = dq(l,i,j,k,iv,2)
-              dpy = dq(l,i,j,k,ip,2)
-#if NENER>0
-              do irad=1,nener
-                 dey(irad) = dq(l,i,j,k,ip+irad,2)
-              end do
-#endif
-
-              ! source terms (with transverse derivatives)
-              sr0 = -u*drx-v*dry - (dux+dvy)*r
-              sp0 = -u*dpx-v*dpy - (dux+dvy)*gamma*p
-              su0 = -u*dux-v*duy - (dpx    )/r
-              sv0 = -u*dvx-v*dvy - (dpy    )/r
-#if NENER>0
-              do irad=1,nener
-                 su0 = su0 - (dex(irad))/r
-                 sv0 = sv0 - (dey(irad))/r
-                 se0(irad) = -u*dex(irad)-v*dey(irad) &
-                      & - (dux+dvy)*gamma_rad(irad)*e(irad)
-              end do
-#endif
-
-              ! Right state at left interface
-              qp(l,i,j,k,ir,1) = r - half*drx + sr0*dtdx*half
-              qp(l,i,j,k,iu,1) = u - half*dux + su0*dtdx*half
-              qp(l,i,j,k,iv,1) = v - half*dvx + sv0*dtdx*half
-              qp(l,i,j,k,ip,1) = p - half*dpx + sp0*dtdx*half
-!              qp(l,i,j,k,ir,1) = max(smallr, qp(l,i,j,k,ir,1))
-              if(qp(l,i,j,k,ir,1)<smallr)qp(l,i,j,k,ir,1)=r
-#if NENER>0
-              do irad=1,nener
-                 qp(l,i,j,k,ip+irad,1) = e(irad) - half*dex(irad) + se0(irad)*dtdx*half
-              end do
-#endif
-
-              ! Left state at right interface
-              qm(l,i,j,k,ir,1) = r + half*drx + sr0*dtdx*half
-              qm(l,i,j,k,iu,1) = u + half*dux + su0*dtdx*half
-              qm(l,i,j,k,iv,1) = v + half*dvx + sv0*dtdx*half
-              qm(l,i,j,k,ip,1) = p + half*dpx + sp0*dtdx*half
-!              qm(l,i,j,k,ir,1) = max(smallr, qm(l,i,j,k,ir,1))
-              if(qm(l,i,j,k,ir,1)<smallr)qm(l,i,j,k,ir,1)=r
-#if NENER>0
-              do irad=1,nener
-                 qm(l,i,j,k,ip+irad,1) = e(irad) + half*dex(irad) + se0(irad)*dtdx*half
-              end do
-#endif
-
-              ! Top state at bottom interface
-              qp(l,i,j,k,ir,2) = r - half*dry + sr0*dtdy*half
-              qp(l,i,j,k,iu,2) = u - half*duy + su0*dtdy*half
-              qp(l,i,j,k,iv,2) = v - half*dvy + sv0*dtdy*half
-              qp(l,i,j,k,ip,2) = p - half*dpy + sp0*dtdy*half
-!              qp(l,i,j,k,ir,2) = max(smallr, qp(l,i,j,k,ir,2))
-              if(qp(l,i,j,k,ir,2)<smallr)qp(l,i,j,k,ir,2)=r
-#if NENER>0
-              do irad=1,nener
-                 qp(l,i,j,k,ip+irad,2) = e(irad) - half*dey(irad) + se0(irad)*dtdy*half
-              end do
-#endif
-
-              ! Bottom state at top interface
-              qm(l,i,j,k,ir,2) = r + half*dry + sr0*dtdy*half
-              qm(l,i,j,k,iu,2) = u + half*duy + su0*dtdy*half
-              qm(l,i,j,k,iv,2) = v + half*dvy + sv0*dtdy*half
-              qm(l,i,j,k,ip,2) = p + half*dpy + sp0*dtdy*half
-!              qm(l,i,j,k,ir,2) = max(smallr, qm(l,i,j,k,ir,2))
-              if(qm(l,i,j,k,ir,2)<smallr)qm(l,i,j,k,ir,2)=r
-#if NENER>0
-              do irad=1,nener
-                 qm(l,i,j,k,ip+irad,2) = e(irad) + half*dey(irad) + se0(irad)*dtdy*half
-              end do
-#endif
-
-           end do
-        end do
-     end do
-  end do
-
-#if NVAR > NHYDRO + NENER
-  ! passive scalars
-  do n = ndim+nener+3, nvar
-     do k = klo, khi
-        do j = jlo, jhi
-           do i = ilo, ihi
-              do l = 1, ngrid
-                 a   = q(l,i,j,k,n)       ! Cell centered values
-                 u   = q(l,i,j,k,iu)
-                 v   = q(l,i,j,k,iv)
-                 dax = dq(l,i,j,k,n,1)    ! TVD slopes
-                 day = dq(l,i,j,k,n,2)
-                 sa0 = -u*dax-v*day       ! Source terms
-                 qp(l,i,j,k,n,1) = a - half*dax + sa0*dtdx*half   ! Right state
-                 qm(l,i,j,k,n,1) = a + half*dax + sa0*dtdx*half   ! Left state
-                 qp(l,i,j,k,n,2) = a - half*day + sa0*dtdy*half   ! Top state
-                 qm(l,i,j,k,n,2) = a + half*day + sa0*dtdy*half   ! Bottom state
-              end do
-           end do
-        end do
-     end do
-  end do
-#endif
-
-end subroutine trace2d
-#endif
-!###########################################################
-!###########################################################
-!###########################################################
-!###########################################################
-#if NDIM>2
-subroutine trace3d(q,dq,qm,qp,dx,dy,dz,dt,ngrid)
-  use amr_parameters
-  use hydro_parameters
-  use const
-  implicit none
-
-  integer ::ngrid
-  real(dp)::dx, dy, dz, dt
-
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::dq
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qm
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qp
-
-  ! declare local variables
-  integer ::i, j, k, l
-  integer ::ilo,ihi,jlo,jhi,klo,khi
-  integer ::ir, iu, iv, iw, ip
-  real(dp)::dtdx, dtdy, dtdz
-  real(dp)::r, u, v, w, p
-  real(dp)::drx, dux, dvx, dwx, dpx
-  real(dp)::dry, duy, dvy, dwy, dpy
-  real(dp)::drz, duz, dvz, dwz, dpz
-  real(dp)::sr0, su0, sv0, sw0, sp0
-#if NENER>0
-  integer ::irad
-  real(dp),dimension(1:nener)::e, dex, dey, dez, se0
-#endif
-#if NVAR > NHYDRO + NENER
-  integer ::n
-  real(dp)::a, dax, day, daz, sa0
-#endif
-
-  dtdx = dt/dx
-  dtdy = dt/dy
-  dtdz = dt/dz
-  ilo=MIN(1,iu1+1); ihi=MAX(1,iu2-1)
-  jlo=MIN(1,ju1+1); jhi=MAX(1,ju2-1)
-  klo=MIN(1,ku1+1); khi=MAX(1,ku2-1)
-  ir=1; iu=2; iv=3; iw=4; ip=5
-
-  do k = klo, khi
-     do j = jlo, jhi
-        do i = ilo, ihi
-           do l = 1, ngrid
-
-              ! Cell centered values
-              r   =  q(l,i,j,k,ir)
-              u   =  q(l,i,j,k,iu)
-              v   =  q(l,i,j,k,iv)
-              w   =  q(l,i,j,k,iw)
-              p   =  q(l,i,j,k,ip)
-#if NENER>0
-              do irad=1,nener
-                 e(irad) = q(l,i,j,k,ip+irad)
-              end do
-#endif
-
-              ! TVD slopes in all 3 directions
-              drx = dq(l,i,j,k,ir,1)
-              dpx = dq(l,i,j,k,ip,1)
-              dux = dq(l,i,j,k,iu,1)
-              dvx = dq(l,i,j,k,iv,1)
-              dwx = dq(l,i,j,k,iw,1)
-#if NENER>0
-              do irad=1,nener
-                 dex(irad) = dq(l,i,j,k,ip+irad,1)
-              end do
-#endif
-
-              dry = dq(l,i,j,k,ir,2)
-              dpy = dq(l,i,j,k,ip,2)
-              duy = dq(l,i,j,k,iu,2)
-              dvy = dq(l,i,j,k,iv,2)
-              dwy = dq(l,i,j,k,iw,2)
-#if NENER>0
-              do irad=1,nener
-                 dey(irad) = dq(l,i,j,k,ip+irad,2)
-              end do
-#endif
-
-              drz = dq(l,i,j,k,ir,3)
-              dpz = dq(l,i,j,k,ip,3)
-              duz = dq(l,i,j,k,iu,3)
-              dvz = dq(l,i,j,k,iv,3)
-              dwz = dq(l,i,j,k,iw,3)
-#if NENER>0
-              do irad=1,nener
-                 dez(irad) = dq(l,i,j,k,ip+irad,3)
-              end do
-#endif
-
-              ! Source terms (including transverse derivatives)
-              sr0 = -u*drx-v*dry-w*drz - (dux+dvy+dwz)*r
-              sp0 = -u*dpx-v*dpy-w*dpz - (dux+dvy+dwz)*gamma*p
-              su0 = -u*dux-v*duy-w*duz - (dpx        )/r
-              sv0 = -u*dvx-v*dvy-w*dvz - (dpy        )/r
-              sw0 = -u*dwx-v*dwy-w*dwz - (dpz        )/r
-#if NENER>0
-              do irad=1,nener
-                 su0 = su0 - (dex(irad))/r
-                 sv0 = sv0 - (dey(irad))/r
-                 sw0 = sw0 - (dez(irad))/r
-                 se0(irad) = -u*dex(irad)-v*dey(irad)-w*dez(irad) &
-                      & - (dux+dvy+dwz)*gamma_rad(irad)*e(irad)
-              end do
-#endif
-
-              ! Right state at left interface
-              qp(l,i,j,k,ir,1) = r - half*drx + sr0*dtdx*half
-              qp(l,i,j,k,ip,1) = p - half*dpx + sp0*dtdx*half
-              qp(l,i,j,k,iu,1) = u - half*dux + su0*dtdx*half
-              qp(l,i,j,k,iv,1) = v - half*dvx + sv0*dtdx*half
-              qp(l,i,j,k,iw,1) = w - half*dwx + sw0*dtdx*half
-!              qp(l,i,j,k,ir,1) = max(smallr, qp(l,i,j,k,ir,1))
-              if(qp(l,i,j,k,ir,1)<smallr)qp(l,i,j,k,ir,1)=r
-#if NENER>0
-              do irad=1,nener
-                 qp(l,i,j,k,ip+irad,1) = e(irad) - half*dex(irad) + se0(irad)*dtdx*half
-              end do
-#endif
-
-              ! Left state at left interface
-              qm(l,i,j,k,ir,1) = r + half*drx + sr0*dtdx*half
-              qm(l,i,j,k,ip,1) = p + half*dpx + sp0*dtdx*half
-              qm(l,i,j,k,iu,1) = u + half*dux + su0*dtdx*half
-              qm(l,i,j,k,iv,1) = v + half*dvx + sv0*dtdx*half
-              qm(l,i,j,k,iw,1) = w + half*dwx + sw0*dtdx*half
-!              qm(l,i,j,k,ir,1) = max(smallr, qm(l,i,j,k,ir,1))
-              if(qm(l,i,j,k,ir,1)<smallr)qm(l,i,j,k,ir,1)=r
-#if NENER>0
-              do irad=1,nener
-                 qm(l,i,j,k,ip+irad,1) = e(irad) + half*dex(irad) + se0(irad)*dtdx*half
-              end do
-#endif
-
-              ! Top state at bottom interface
-              qp(l,i,j,k,ir,2) = r - half*dry + sr0*dtdy*half
-              qp(l,i,j,k,ip,2) = p - half*dpy + sp0*dtdy*half
-              qp(l,i,j,k,iu,2) = u - half*duy + su0*dtdy*half
-              qp(l,i,j,k,iv,2) = v - half*dvy + sv0*dtdy*half
-              qp(l,i,j,k,iw,2) = w - half*dwy + sw0*dtdy*half
-!              qp(l,i,j,k,ir,2) = max(smallr, qp(l,i,j,k,ir,2))
-              if(qp(l,i,j,k,ir,2)<smallr)qp(l,i,j,k,ir,2)=r
-#if NENER>0
-              do irad=1,nener
-                 qp(l,i,j,k,ip+irad,2) = e(irad) - half*dey(irad) + se0(irad)*dtdy*half
-              end do
-#endif
-
-              ! Bottom state at top interface
-              qm(l,i,j,k,ir,2) = r + half*dry + sr0*dtdy*half
-              qm(l,i,j,k,ip,2) = p + half*dpy + sp0*dtdy*half
-              qm(l,i,j,k,iu,2) = u + half*duy + su0*dtdy*half
-              qm(l,i,j,k,iv,2) = v + half*dvy + sv0*dtdy*half
-              qm(l,i,j,k,iw,2) = w + half*dwy + sw0*dtdy*half
-!              qm(l,i,j,k,ir,2) = max(smallr, qm(l,i,j,k,ir,2))
-              if(qm(l,i,j,k,ir,2)<smallr)qm(l,i,j,k,ir,2)=r
-#if NENER>0
-              do irad=1,nener
-                 qm(l,i,j,k,ip+irad,2) = e(irad) + half*dey(irad) + se0(irad)*dtdy*half
-              end do
-#endif
-
-              ! Back state at front interface
-              qp(l,i,j,k,ir,3) = r - half*drz + sr0*dtdz*half
-              qp(l,i,j,k,ip,3) = p - half*dpz + sp0*dtdz*half
-              qp(l,i,j,k,iu,3) = u - half*duz + su0*dtdz*half
-              qp(l,i,j,k,iv,3) = v - half*dvz + sv0*dtdz*half
-              qp(l,i,j,k,iw,3) = w - half*dwz + sw0*dtdz*half
-!              qp(l,i,j,k,ir,3) = max(smallr, qp(l,i,j,k,ir,3))
-              if(qp(l,i,j,k,ir,3)<smallr)qp(l,i,j,k,ir,3)=r
-#if NENER>0
-              do irad=1,nener
-                 qp(l,i,j,k,ip+irad,3) = e(irad) - half*dez(irad) + se0(irad)*dtdz*half
-              end do
-#endif
-
-              ! Front state at back interface
-              qm(l,i,j,k,ir,3) = r + half*drz + sr0*dtdz*half
-              qm(l,i,j,k,ip,3) = p + half*dpz + sp0*dtdz*half
-              qm(l,i,j,k,iu,3) = u + half*duz + su0*dtdz*half
-              qm(l,i,j,k,iv,3) = v + half*dvz + sv0*dtdz*half
-              qm(l,i,j,k,iw,3) = w + half*dwz + sw0*dtdz*half
-!              qm(l,i,j,k,ir,3) = max(smallr, qm(l,i,j,k,ir,3))
-              if(qm(l,i,j,k,ir,3)<smallr)qm(l,i,j,k,ir,3)=r
-#if NENER>0
-              do irad=1,nener
-                 qm(l,i,j,k,ip+irad,3) = e(irad) + half*dez(irad) + se0(irad)*dtdz*half
-              end do
-#endif
-
-           end do
-        end do
-     end do
-  end do
-
-#if NVAR > NHYDRO + NENER
-  ! Passive scalars
-  do n = ndim+nener+3, nvar
-     do k = klo, khi
-        do j = jlo, jhi
-           do i = ilo, ihi
-              do l = 1, ngrid
-                 a   = q(l,i,j,k,n)       ! Cell centered values
-                 u   = q(l,i,j,k,iu)
-                 v   = q(l,i,j,k,iv)
-                 w   = q(l,i,j,k,iw)
-                 dax = dq(l,i,j,k,n,1)    ! TVD slopes
-                 day = dq(l,i,j,k,n,2)
-                 daz = dq(l,i,j,k,n,3)
-                 sa0 = -u*dax-v*day-w*daz     ! Source terms
-                 qp(l,i,j,k,n,1) = a - half*dax + sa0*dtdx*half  ! Right state
-                 qm(l,i,j,k,n,1) = a + half*dax + sa0*dtdx*half  ! Left state
-                 qp(l,i,j,k,n,2) = a - half*day + sa0*dtdy*half  ! Bottom state
-                 qm(l,i,j,k,n,2) = a + half*day + sa0*dtdy*half  ! Upper state
-                 qp(l,i,j,k,n,3) = a - half*daz + sa0*dtdz*half  ! Front state
-                 qm(l,i,j,k,n,3) = a + half*daz + sa0*dtdz*half  ! Back state
-              end do
-           end do
-        end do
-     end do
-  end do
-#endif
-
-end subroutine trace3d
-#endif
+end subroutine trace
 !###########################################################
 !###########################################################
 !###########################################################
@@ -809,20 +416,21 @@ end subroutine cmpflxm
 !###########################################################
 !###########################################################
 !###########################################################
-subroutine ctoprim(uin,q,c,gravin,dt,ngrid)
+subroutine ctoprim(uin,q,gravin,dt,ngrid)
   use amr_parameters
   use hydro_parameters
   use const
   implicit none
-
-  integer ::ngrid
-  real(dp)::dt
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::uin
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:ndim)::gravin
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2)::c
-
+  integer, intent(in)::ngrid
+  real(dp),intent(in)::dt
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar),intent(in)::uin
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:ndim),intent(in)::gravin
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar),intent(out)::q
+  !---------------------------------------------------------
+  ! Translate Conservative variables uin to PRIMitive variables q.
+  !---------------------------------------------------------
   integer ::i, j, k, l
+  real(dp) ::rho_grid,vx_grid,vy_grid,vz_grid
   real(dp)::eint, smalle, dtxhalf, oneoverrho
   real(dp)::eken, erad
 #if NVAR > NHYDRO + NENER
@@ -842,25 +450,26 @@ subroutine ctoprim(uin,q,c,gravin,dt,ngrid)
            do l = 1, ngrid
 
               ! Compute density
-              q(l,i,j,k,1) = max(uin(l,i,j,k,1),smallr)
+              ! We keep it in a local scalar to avoid store-load dependencies of q(l,i,j,k,1)
+              rho_grid = max(uin(l,i,j,k,1),smallr)
 
               ! Compute velocities
-              oneoverrho = one/q(l,i,j,k,1)
-              q(l,i,j,k,2) = uin(l,i,j,k,2)*oneoverrho
+              oneoverrho = one/rho_grid
+              vx_grid = uin(l,i,j,k,2)*oneoverrho
 #if NDIM>1
-              q(l,i,j,k,3) = uin(l,i,j,k,3)*oneoverrho
+              vy_grid = uin(l,i,j,k,3)*oneoverrho
 #endif
 #if NDIM>2
-              q(l,i,j,k,4) = uin(l,i,j,k,4)*oneoverrho
+              vz_grid = uin(l,i,j,k,4)*oneoverrho
 #endif
 
               ! Compute specific kinetic energy
-              eken = half*q(l,i,j,k,2)*q(l,i,j,k,2)
+              eken = half*vx_grid*vx_grid
 #if NDIM>1
-              eken = eken + half*q(l,i,j,k,3)*q(l,i,j,k,3)
+              eken = eken + half*vy_grid*vy_grid
 #endif
 #if NDIM>2
-              eken = eken + half*q(l,i,j,k,4)*q(l,i,j,k,4)
+              eken = eken + half*vz_grid*vz_grid
 #endif
               ! Compute non-thermal pressure
               erad = zero
@@ -872,24 +481,18 @@ subroutine ctoprim(uin,q,c,gravin,dt,ngrid)
 #endif
               ! Compute thermal pressure
               eint = MAX(uin(l,i,j,k,neul)*oneoverrho-eken-erad,smalle)
-              q(l,i,j,k,neul) = (gamma-one)*q(l,i,j,k,1)*eint
+              q(l,i,j,k,neul) = (gamma-one)*rho_grid*eint
 
-              ! Compute sound speed
-              c(l,i,j,k)=gamma*q(l,i,j,k,neul)
-#if NENER>0
-              do irad=1,nener
-                 c(l,i,j,k)=c(l,i,j,k)+gamma_rad(irad)*q(l,i,j,k,nhydro+irad)
-              enddo
-#endif
-              c(l,i,j,k)=sqrt(c(l,i,j,k)*oneoverrho)
+              ! Now, we store the density
+              q(l,i,j,k,1) = rho_grid
 
-              ! Gravity predictor step
-              q(l,i,j,k,2) = q(l,i,j,k,2) + gravin(l,i,j,k,1)*dtxhalf
+              ! Store velocity and apply gravity predictor step
+              q(l,i,j,k,2) = vx_grid + gravin(l,i,j,k,1)*dtxhalf
 #if NDIM>1
-              q(l,i,j,k,3) = q(l,i,j,k,3) + gravin(l,i,j,k,2)*dtxhalf
+              q(l,i,j,k,3) = vy_grid + gravin(l,i,j,k,2)*dtxhalf
 #endif
 #if NDIM>2
-              q(l,i,j,k,4) = q(l,i,j,k,4) + gravin(l,i,j,k,3)*dtxhalf
+              q(l,i,j,k,4) = vz_grid + gravin(l,i,j,k,3)*dtxhalf
 #endif
 
            end do
@@ -919,513 +522,91 @@ end subroutine ctoprim
 !###########################################################
 !###########################################################
 subroutine uslope(q,dq,dx,dt,ngrid)
-  use amr_parameters
-  use hydro_parameters
+  use amr_parameters, only:dp,nvector,ndim
+  use hydro_parameters, only:nvar,slope_type,iu1,iu2,ju1,ju2,ku1,ku2
   use const
+  use slope_types
   implicit none
 
-  integer::ngrid
-  real(dp)::dx,dt
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::dq
+  integer,intent(in)::ngrid
+  real(dp),intent(in)::dx,dt
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar),intent(in)::q
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim),intent(out)::dq
 
   ! local arrays
   integer::i, j, k, l, n
-  real(dp)::dsgn, dlim, dcen, dlft, drgt, slop
-#if NDIM==2
-  real(dp)::dfll,dflm,dflr,dfml,dfmm,dfmr,dfrl,dfrm,dfrr
-#endif
-#if NDIM==3
-  real(dp)::dflll,dflml,dflrl,dfmll,dfmml,dfmrl,dfrll,dfrml,dfrrl
-  real(dp)::dfllm,dflmm,dflrm,dfmlm,dfmmm,dfmrm,dfrlm,dfrmm,dfrrm
-  real(dp)::dfllr,dflmr,dflrr,dfmlr,dfmmr,dfmrr,dfrlr,dfrmr,dfrrr
-  real(dp)::dfz
-#endif
-#if NDIM>1
-  real(dp)::vmin,vmax,dfx,dfy,dff
-#endif
+  real(dp)::slope_type_real,dtdx
   integer::ilo,ihi,jlo,jhi,klo,khi
 
   ilo=MIN(1,iu1+1); ihi=MAX(1,iu2-1)
   jlo=MIN(1,ju1+1); jhi=MAX(1,ju2-1)
   klo=MIN(1,ku1+1); khi=MAX(1,ku2-1)
 
-  if(slope_type==0)then
-     dq=zero
-     return
-  end if
+  slope_type_real = REAL(slope_type, kind=dp)
+  dtdx=dt/dx
 
-#if NDIM==1
   do n = 1, nvar
      do k = klo, khi
         do j = jlo, jhi
            do i = ilo, ihi
-              if(slope_type==1.or.slope_type==2.or.slope_type==3)then  ! minmod or average
-                 do l = 1, ngrid
-                    dlft = MIN(slope_type,2)*(q(l,i  ,j,k,n) - q(l,i-1,j,k,n))
-                    drgt = MIN(slope_type,2)*(q(l,i+1,j,k,n) - q(l,i  ,j,k,n))
-                    dcen = half*(dlft+drgt)/MIN(slope_type,2)
-                    dsgn = sign(one, dcen)
-                    slop = min(abs(dlft),abs(drgt))
-                    dlim = slop
-                    if((dlft*drgt)<=zero)dlim=zero
-                    dq(l,i,j,k,n,1) = dsgn*min(dlim,abs(dcen))
-                 end do
-              else if(slope_type==4)then ! superbee
-                 do l = 1, ngrid
-                    dcen = q(l,i,j,k,2)*dt/dx
-                    dlft = two/(one+dcen)*(q(l,i,j,k,n)-q(l,i-1,j,k,n))
-                    drgt = two/(one-dcen)*(q(l,i+1,j,k,n)-q(l,i,j,k,n))
-                    dcen = half*(q(l,i+1,j,k,n)-q(l,i-1,j,k,n))
-                    dsgn = sign(one, dlft)
-                    slop = min(abs(dlft),abs(drgt))
-                    dlim = slop
-                    if((dlft*drgt)<=zero)dlim=zero
-                    dq(l,i,j,k,n,1) = dsgn*dlim !min(dlim,abs(dcen))
-                 end do
-              else if(slope_type==5)then ! ultrabee
+              if(slope_type==0)then
+                 dq(:,i,j,k,n,:) = zero
+#if NDIM==1
+              else if(slope_type==1.or.slope_type==2.or.slope_type==3)then  ! minmod or average
+#elif NDIM==2
+              else if(slope_type==1.or.slope_type==2)then  ! minmod or average
+#else
+              else if(slope_type==1)then ! minmod
+#endif
+                 call calc_uslope_minmod_average(q,dq,i,j,k,n,ngrid,slope_type_real)
+#if NDIM==3
+              else if(slope_type==2)then
+                 ! moncen
+                 call calc_uslope_moncen(q,dq,i,j,k,n,ngrid)
+#endif
+#if NDIM>1
+              else if(slope_type==3)then
+                 ! positivity preserving unsplit slope (2D or 3D)
+                 call calc_uslope_positivity_preserving(q,dq,i,j,k,n,ngrid)
+#endif
+#if NDIM==1
+              else if(slope_type==4)then
+                 ! superbee (only 1D)
+                 call calc_uslope_superbee(q,dq,i,j,k,n,ngrid,dtdx)
+
+              else if(slope_type==5)then
+                 ! ultrabee (only 1D)
                  if(n==1)then
-                    do l = 1, ngrid
-                       dcen = q(l,i,j,k,2)*dt/dx
-                       if(dcen>=0)then
-                          dlft = two/(zero+dcen+1d-10)*(q(l,i,j,k,n)-q(l,i-1,j,k,n))
-                          drgt = two/(one -dcen      )*(q(l,i+1,j,k,n)-q(l,i,j,k,n))
-                       else
-                          dlft = two/(one +dcen      )*(q(l,i,j,k,n)-q(l,i-1,j,k,n))
-                          drgt = two/(zero-dcen+1d-10)*(q(l,i+1,j,k,n)-q(l,i,j,k,n))
-                       endif
-                       dsgn = sign(one, dlft)
-                       slop = min(abs(dlft),abs(drgt))
-                       dlim = slop
-                       dcen = half*(q(l,i+1,j,k,n)-q(l,i-1,j,k,n))
-                       if((dlft*drgt)<=zero)dlim=zero
-                       dq(l,i,j,k,n,1) = dsgn*dlim !min(dlim,abs(dcen))
-                    end do
+                    call calc_uslope_ultrabee(q,dq,i,j,k,n,ngrid,dtdx)
                  else
-                    do l = 1, ngrid
-                       dq(l,i,j,k,n,1) = 0
-                    end do
-                 end if
-              else if(slope_type==6)then ! unstable
+                    dq(:,i,j,k,n,:) = zero
+                 endif
+
+              else if(slope_type==6)then
+                 ! unstable (only 1D)
                  if(n==1)then
-                    do l = 1, ngrid
-                       dlft = (q(l,i,j,k,n)-q(l,i-1,j,k,n))
-                       drgt = (q(l,i+1,j,k,n)-q(l,i,j,k,n))
-                       slop = 0.5d0*(dlft+drgt)
-                       dlim = slop
-                       dq(l,i,j,k,n,1) = dlim
-                    end do
+                    call calc_uslope_unstable(q,dq,i,j,k,n,ngrid)
                  else
-                    do l = 1, ngrid
-                       dq(l,i,j,k,n,1) = 0
-                    end do
-                 end if
-              else if(slope_type==7)then ! van Leer
-                 do l = 1, ngrid
-                    dlft = (q(l,i  ,j,k,n) - q(l,i-1,j,k,n))
-                    drgt = (q(l,i+1,j,k,n) - q(l,i  ,j,k,n))
-                    if((dlft*drgt)<=zero) then
-                       dq(l,i,j,k,n,1)=zero
-                    else
-                       dq(l,i,j,k,n,1)=(2*dlft*drgt/(dlft+drgt))
-                    end if
-                 end do
-              else if(slope_type==8)then ! generalized moncen/minmod parameterisation (van Leer 1979)
-                 do l = 1, ngrid
-                    dlft = (q(l,i  ,j,k,n) - q(l,i-1,j,k,n))
-                    drgt = (q(l,i+1,j,k,n) - q(l,i  ,j,k,n))
-                    dcen = half*(dlft+drgt)
-                    dsgn = sign(one, dcen)
-                    slop = min(slope_theta*abs(dlft),slope_theta*abs(drgt))
-                    dlim = slop
-                    if((dlft*drgt)<=zero)dlim=zero
-                    dq(l,i,j,k,n,1) = dsgn*min(dlim,abs(dcen))
-                 end do
+                    dq(:,i,j,k,n,:) = zero
+                 endif
+#endif
+              else if(slope_type==7)then
+                 ! van Leer
+                 call calc_uslope_vanLeer(q,dq,i,j,k,n,ngrid)
+
+              else if(slope_type==8)then
+                 ! generalized moncen/minmod parameterisation (van Leer 1979)
+                 call calc_uslope_vanLeer_bis(q,dq,i,j,k,n,ngrid)
+
               else
                  write(*,*)'Unknown slope type',dx,dt
-                 stop
-              end if
+                 call clean_stop
+              endif
+
            end do
         end do
      end do
   end do
-#endif
 
-#if NDIM==2
-  if(slope_type==1.or.slope_type==2)then  ! minmod or average
-     do n = 1, nvar
-        do k = klo, khi
-           do j = jlo, jhi
-              do i = ilo, ihi
-                 ! slopes in first coordinate direction
-                 do l = 1, ngrid
-                    dlft = slope_type*(q(l,i  ,j,k,n) - q(l,i-1,j,k,n))
-                    drgt = slope_type*(q(l,i+1,j,k,n) - q(l,i  ,j,k,n))
-                    dcen = half*(dlft+drgt)/slope_type
-                    dsgn = sign(one, dcen)
-                    slop = min(abs(dlft),abs(drgt))
-                    dlim = slop
-                    if((dlft*drgt)<=zero)dlim=zero
-                    dq(l,i,j,k,n,1) = dsgn*min(dlim,abs(dcen))
-                 end do
-                 ! slopes in second coordinate direction
-                 do l = 1, ngrid
-                    dlft = slope_type*(q(l,i,j  ,k,n) - q(l,i,j-1,k,n))
-                    drgt = slope_type*(q(l,i,j+1,k,n) - q(l,i,j  ,k,n))
-                    dcen = half*(dlft+drgt)/slope_type
-                    dsgn = sign(one,dcen)
-                    slop = min(abs(dlft),abs(drgt))
-                    dlim = slop
-                    if((dlft*drgt)<=zero)dlim=zero
-                    dq(l,i,j,k,n,2) = dsgn*min(dlim,abs(dcen))
-                 end do
-              end do
-           end do
-        end do
-     end do
-  else if(slope_type==3)then ! positivity preserving 2d unsplit slope
-     do n = 1, nvar
-        do k = klo, khi
-           do j = jlo, jhi
-              do i = ilo, ihi
-                 do l = 1, ngrid
-                    dfll = q(l,i-1,j-1,k,n)-q(l,i,j,k,n)
-                    dflm = q(l,i-1,j  ,k,n)-q(l,i,j,k,n)
-                    dflr = q(l,i-1,j+1,k,n)-q(l,i,j,k,n)
-                    dfml = q(l,i  ,j-1,k,n)-q(l,i,j,k,n)
-                    dfmm = q(l,i  ,j  ,k,n)-q(l,i,j,k,n)
-                    dfmr = q(l,i  ,j+1,k,n)-q(l,i,j,k,n)
-                    dfrl = q(l,i+1,j-1,k,n)-q(l,i,j,k,n)
-                    dfrm = q(l,i+1,j  ,k,n)-q(l,i,j,k,n)
-                    dfrr = q(l,i+1,j+1,k,n)-q(l,i,j,k,n)
-
-                    vmin = min(dfll,dflm,dflr,dfml,dfmm,dfmr,dfrl,dfrm,dfrr)
-                    vmax = max(dfll,dflm,dflr,dfml,dfmm,dfmr,dfrl,dfrm,dfrr)
-
-                    dfx  = half*(q(l,i+1,j,k,n)-q(l,i-1,j,k,n))
-                    dfy  = half*(q(l,i,j+1,k,n)-q(l,i,j-1,k,n))
-                    dff  = half*(abs(dfx)+abs(dfy))
-
-                    if(dff>zero)then
-                       slop = min(one,min(abs(vmin),abs(vmax))/dff)
-                    else
-                       slop = one
-                    endif
-
-                    dlim = slop
-
-                    dq(l,i,j,k,n,1) = dlim*dfx
-                    dq(l,i,j,k,n,2) = dlim*dfy
-
-                 end do
-              end do
-           end do
-        end do
-     end do
-  else if(slope_type==7)then ! van Leer
-     do n = 1, nvar
-        do k = klo, khi
-           do j = jlo, jhi
-              do i = ilo, ihi
-                 ! slopes in first coordinate direction
-                 do l = 1, ngrid
-                    dlft = (q(l,i  ,j,k,n) - q(l,i-1,j,k,n))
-                    drgt = (q(l,i+1,j,k,n) - q(l,i  ,j,k,n))
-                    if((dlft*drgt)<=zero) then
-                       dq(l,i,j,k,n,1)=zero
-                    else
-                       dq(l,i,j,k,n,1)=(2*dlft*drgt/(dlft+drgt))
-                       end if
-                 end do
-                 ! slopes in second coordinate direction
-                 do l = 1, ngrid
-                    dlft = (q(l,i,j  ,k,n) - q(l,i,j-1,k,n))
-                    drgt = (q(l,i,j+1,k,n) - q(l,i,j  ,k,n))
-                    if((dlft*drgt)<=zero) then
-                       dq(l,i,j,k,n,2)=zero
-                    else
-                       dq(l,i,j,k,n,2)=(2*dlft*drgt/(dlft+drgt))
-                    end if
-                 end do
-              end do
-           end do
-        end do
-     end do
-  else if(slope_type==8)then ! generalized moncen/minmod parameterisation (van Leer 1979)
-     do n = 1, nvar
-        do k = klo, khi
-           do j = jlo, jhi
-              do i = ilo, ihi
-                 ! slopes in first coordinate direction
-                 do l = 1, ngrid
-                    dlft = (q(l,i  ,j,k,n) - q(l,i-1,j,k,n))
-                    drgt = (q(l,i+1,j,k,n) - q(l,i  ,j,k,n))
-                    dcen = half*(dlft+drgt)
-                    dsgn = sign(one, dcen)
-                    slop = min(slope_theta*abs(dlft),slope_theta*abs(drgt))
-                    dlim = slop
-                    if((dlft*drgt)<=zero)dlim=zero
-                    dq(l,i,j,k,n,1) = dsgn*min(dlim,abs(dcen))
-                 end do
-                 ! slopes in second coordinate direction
-                 do l = 1, ngrid
-                    dlft = (q(l,i,j  ,k,n) - q(l,i,j-1,k,n))
-                    drgt = (q(l,i,j+1,k,n) - q(l,i,j  ,k,n))
-                    dcen = half*(dlft+drgt)
-                    dsgn = sign(one,dcen)
-                    slop = min(slope_theta*abs(dlft),slope_theta*abs(drgt))
-                    dlim = slop
-                    if((dlft*drgt)<=zero)dlim=zero
-                    dq(l,i,j,k,n,2) = dsgn*min(dlim,abs(dcen))
-                 end do
-              end do
-           end do
-        end do
-     end do
-  else
-     write(*,*)'Unknown slope type',dx,dt
-     stop
-  endif
-#endif
-
-#if NDIM==3
-  if(slope_type==1)then  ! minmod
-     do n = 1, nvar
-        do k = klo, khi
-           do j = jlo, jhi
-              do i = ilo, ihi
-                 ! slopes in first coordinate direction
-                 do l = 1, ngrid
-                    dlft = q(l,i  ,j,k,n) - q(l,i-1,j,k,n)
-                    drgt = q(l,i+1,j,k,n) - q(l,i  ,j,k,n)
-                    if((dlft*drgt)<=zero) then
-                       dq(l,i,j,k,n,1) = zero
-                    else if(dlft>0) then
-                       dq(l,i,j,k,n,1) = min(dlft,drgt)
-                    else
-                       dq(l,i,j,k,n,1) = max(dlft,drgt)
-                    end if
-                 end do
-                 ! slopes in second coordinate direction
-                 do l = 1, ngrid
-                    dlft = q(l,i,j  ,k,n) - q(l,i,j-1,k,n)
-                    drgt = q(l,i,j+1,k,n) - q(l,i,j  ,k,n)
-                    if((dlft*drgt)<=zero) then
-                       dq(l,i,j,k,n,2) = zero
-                    else if(dlft>0) then
-                       dq(l,i,j,k,n,2) = min(dlft,drgt)
-                    else
-                       dq(l,i,j,k,n,2) = max(dlft,drgt)
-                    end if
-                 end do
-                 ! slopes in third coordinate direction
-                 do l = 1, ngrid
-                    dlft = q(l,i,j,k  ,n) - q(l,i,j,k-1,n)
-                    drgt = q(l,i,j,k+1,n) - q(l,i,j,k  ,n)
-                    if((dlft*drgt)<=zero) then
-                       dq(l,i,j,k,n,3) = zero
-                    else if(dlft>0) then
-                       dq(l,i,j,k,n,3) = min(dlft,drgt)
-                    else
-                       dq(l,i,j,k,n,3) = max(dlft,drgt)
-                    end if
-                 end do
-              end do
-           end do
-        end do
-     end do
-  else if(slope_type==2)then ! moncen
-     do n = 1, nvar
-        do k = klo, khi
-           do j = jlo, jhi
-              do i = ilo, ihi
-                 ! slopes in first coordinate direction
-                 do l = 1, ngrid
-                    dlft = slope_type*(q(l,i  ,j,k,n) - q(l,i-1,j,k,n))
-                    drgt = slope_type*(q(l,i+1,j,k,n) - q(l,i  ,j,k,n))
-                    dcen = half*(dlft+drgt)/slope_type
-                    dsgn = sign(one, dcen)
-                    slop = min(abs(dlft),abs(drgt))
-                    dlim = slop
-                    if((dlft*drgt)<=zero)dlim=zero
-                    dq(l,i,j,k,n,1) = dsgn*min(dlim,abs(dcen))
-                 end do
-                 ! slopes in second coordinate direction
-                 do l = 1, ngrid
-                    dlft = slope_type*(q(l,i,j  ,k,n) - q(l,i,j-1,k,n))
-                    drgt = slope_type*(q(l,i,j+1,k,n) - q(l,i,j  ,k,n))
-                    dcen = half*(dlft+drgt)/slope_type
-                    dsgn = sign(one,dcen)
-                    slop = min(abs(dlft),abs(drgt))
-                    dlim = slop
-                    if((dlft*drgt)<=zero)dlim=zero
-                    dq(l,i,j,k,n,2) = dsgn*min(dlim,abs(dcen))
-                 end do
-                 ! slopes in third coordinate direction
-                 do l = 1, ngrid
-                    dlft = slope_type*(q(l,i,j,k  ,n) - q(l,i,j,k-1,n))
-                    drgt = slope_type*(q(l,i,j,k+1,n) - q(l,i,j,k  ,n))
-                    dcen = half*(dlft+drgt)/slope_type
-                    dsgn = sign(one,dcen)
-                    slop = min(abs(dlft),abs(drgt))
-                    dlim = slop
-                    if((dlft*drgt)<=zero)dlim=zero
-                    dq(l,i,j,k,n,3) = dsgn*min(dlim,abs(dcen))
-                 end do
-              end do
-           end do
-        end do
-     end do
-  else if(slope_type==3)then ! positivity preserving 3d unsplit slope
-     do n = 1, nvar
-        do k = klo, khi
-           do j = jlo, jhi
-              do i = ilo, ihi
-                 do l = 1, ngrid
-                    dflll = q(l,i-1,j-1,k-1,n)-q(l,i,j,k,n)
-                    dflml = q(l,i-1,j  ,k-1,n)-q(l,i,j,k,n)
-                    dflrl = q(l,i-1,j+1,k-1,n)-q(l,i,j,k,n)
-                    dfmll = q(l,i  ,j-1,k-1,n)-q(l,i,j,k,n)
-                    dfmml = q(l,i  ,j  ,k-1,n)-q(l,i,j,k,n)
-                    dfmrl = q(l,i  ,j+1,k-1,n)-q(l,i,j,k,n)
-                    dfrll = q(l,i+1,j-1,k-1,n)-q(l,i,j,k,n)
-                    dfrml = q(l,i+1,j  ,k-1,n)-q(l,i,j,k,n)
-                    dfrrl = q(l,i+1,j+1,k-1,n)-q(l,i,j,k,n)
-
-                    dfllm = q(l,i-1,j-1,k  ,n)-q(l,i,j,k,n)
-                    dflmm = q(l,i-1,j  ,k  ,n)-q(l,i,j,k,n)
-                    dflrm = q(l,i-1,j+1,k  ,n)-q(l,i,j,k,n)
-                    dfmlm = q(l,i  ,j-1,k  ,n)-q(l,i,j,k,n)
-                    dfmmm = q(l,i  ,j  ,k  ,n)-q(l,i,j,k,n)
-                    dfmrm = q(l,i  ,j+1,k  ,n)-q(l,i,j,k,n)
-                    dfrlm = q(l,i+1,j-1,k  ,n)-q(l,i,j,k,n)
-                    dfrmm = q(l,i+1,j  ,k  ,n)-q(l,i,j,k,n)
-                    dfrrm = q(l,i+1,j+1,k  ,n)-q(l,i,j,k,n)
-
-                    dfllr = q(l,i-1,j-1,k+1,n)-q(l,i,j,k,n)
-                    dflmr = q(l,i-1,j  ,k+1,n)-q(l,i,j,k,n)
-                    dflrr = q(l,i-1,j+1,k+1,n)-q(l,i,j,k,n)
-                    dfmlr = q(l,i  ,j-1,k+1,n)-q(l,i,j,k,n)
-                    dfmmr = q(l,i  ,j  ,k+1,n)-q(l,i,j,k,n)
-                    dfmrr = q(l,i  ,j+1,k+1,n)-q(l,i,j,k,n)
-                    dfrlr = q(l,i+1,j-1,k+1,n)-q(l,i,j,k,n)
-                    dfrmr = q(l,i+1,j  ,k+1,n)-q(l,i,j,k,n)
-                    dfrrr = q(l,i+1,j+1,k+1,n)-q(l,i,j,k,n)
-
-                    vmin = min(dflll,dflml,dflrl,dfmll,dfmml,dfmrl,dfrll,dfrml,dfrrl, &
-                         &     dfllm,dflmm,dflrm,dfmlm,dfmmm,dfmrm,dfrlm,dfrmm,dfrrm, &
-                         &     dfllr,dflmr,dflrr,dfmlr,dfmmr,dfmrr,dfrlr,dfrmr,dfrrr)
-                    vmax = max(dflll,dflml,dflrl,dfmll,dfmml,dfmrl,dfrll,dfrml,dfrrl, &
-                         &     dfllm,dflmm,dflrm,dfmlm,dfmmm,dfmrm,dfrlm,dfrmm,dfrrm, &
-                         &     dfllr,dflmr,dflrr,dfmlr,dfmmr,dfmrr,dfrlr,dfrmr,dfrrr)
-
-                    dfx  = half*(q(l,i+1,j,k,n)-q(l,i-1,j,k,n))
-                    dfy  = half*(q(l,i,j+1,k,n)-q(l,i,j-1,k,n))
-                    dfz  = half*(q(l,i,j,k+1,n)-q(l,i,j,k-1,n))
-                    dff  = half*(abs(dfx)+abs(dfy)+abs(dfz))
-
-                    if(dff>zero)then
-                       slop = min(one,min(abs(vmin),abs(vmax))/dff)
-                    else
-                       slop = one
-                    endif
-
-                    dlim = slop
-
-                    dq(l,i,j,k,n,1) = dlim*dfx
-                    dq(l,i,j,k,n,2) = dlim*dfy
-                    dq(l,i,j,k,n,3) = dlim*dfz
-
-                 end do
-              end do
-           end do
-        end do
-     end do
-  else if(slope_type==7)then ! van Leer
-     do n = 1, nvar
-        do k = klo, khi
-           do j = jlo, jhi
-              do i = ilo, ihi
-                 ! slopes in first coordinate direction
-                 do l = 1, ngrid
-                    dlft = (q(l,i  ,j,k,n) - q(l,i-1,j,k,n))
-                    drgt = (q(l,i+1,j,k,n) - q(l,i  ,j,k,n))
-                    if((dlft*drgt)<=zero) then
-                       dq(l,i,j,k,n,1)=zero
-                    else
-                       dq(l,i,j,k,n,1)=(2*dlft*drgt/(dlft+drgt))
-                    end if
-                 end do
-                 ! slopes in second coordinate direction
-                 do l = 1, ngrid
-                    dlft = (q(l,i,j  ,k,n) - q(l,i,j-1,k,n))
-                    drgt = (q(l,i,j+1,k,n) - q(l,i,j  ,k,n))
-                    if((dlft*drgt)<=zero) then
-                       dq(l,i,j,k,n,2)=zero
-                    else
-                       dq(l,i,j,k,n,2)=(2*dlft*drgt/(dlft+drgt))
-                    end if
-                 end do
-                 ! slopes in third coordinate direction
-                 do l = 1, ngrid
-                    dlft = (q(l,i,j,k  ,n) - q(l,i,j,k-1,n))
-                    drgt = (q(l,i,j,k+1,n) - q(l,i,j,k  ,n))
-                    if((dlft*drgt)<=zero) then
-                       dq(l,i,j,k,n,3)=zero
-                    else
-                       dq(l,i,j,k,n,3)=(2*dlft*drgt/(dlft+drgt))
-                    end if
-                 end do
-              end do
-           end do
-        end do
-     end do
-  else if(slope_type==8)then ! generalized moncen/minmod parameterisation (van Leer 1979)
-     do n = 1, nvar
-        do k = klo, khi
-           do j = jlo, jhi
-              do i = ilo, ihi
-                 ! slopes in first coordinate direction
-                 do l = 1, ngrid
-                    dlft = (q(l,i  ,j,k,n) - q(l,i-1,j,k,n))
-                    drgt = (q(l,i+1,j,k,n) - q(l,i  ,j,k,n))
-                    dcen = half*(dlft+drgt)
-                    dsgn = sign(one, dcen)
-                    slop = min(slope_theta*abs(dlft),slope_theta*abs(drgt))
-                    dlim = slop
-                    if((dlft*drgt)<=zero)dlim=zero
-                    dq(l,i,j,k,n,1) = dsgn*min(dlim,abs(dcen))
-                 end do
-                 ! slopes in second coordinate direction
-                 do l = 1, ngrid
-                    dlft = (q(l,i,j  ,k,n) - q(l,i,j-1,k,n))
-                    drgt = (q(l,i,j+1,k,n) - q(l,i,j  ,k,n))
-                    dcen = half*(dlft+drgt)
-                    dsgn = sign(one,dcen)
-                    slop = min(slope_theta*abs(dlft),slope_theta*abs(drgt))
-                    dlim = slop
-                    if((dlft*drgt)<=zero)dlim=zero
-                    dq(l,i,j,k,n,2) = dsgn*min(dlim,abs(dcen))
-                 end do
-                 ! slopes in third coordinate direction
-                 do l = 1, ngrid
-                    dlft = (q(l,i,j,k  ,n) - q(l,i,j,k-1,n))
-                    drgt = (q(l,i,j,k+1,n) - q(l,i,j,k  ,n))
-                    dcen = half*(dlft+drgt)
-                    dsgn = sign(one,dcen)
-                    slop = min(slope_theta*abs(dlft),slope_theta*abs(drgt))
-                    dlim = slop
-                    if((dlft*drgt)<=zero)dlim=zero
-                    dq(l,i,j,k,n,3) = dsgn*min(dlim,abs(dcen))
-                 end do
-              end do
-           end do
-        end do
-     end do
-  else
-     write(*,*)'Unknown slope type',dx,dt
-     stop
-  endif
-#endif
 
 end subroutine uslope

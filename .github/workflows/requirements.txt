@@ -2,3 +2,4 @@ numpy==2.2
 matplotlib==3.9
 scipy==1.15.1
 f90nml==1.4.5
+pyvista==0.46.3
