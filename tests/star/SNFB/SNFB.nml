@@ -65,7 +65,7 @@ iseed = 0
 &FEEDBACK_PARAMS
 f_w=0.5
 f_ek=0.5
-eta_sn=0.1
+eta_sn=0.1 ! set to 0 to test without SN FB
 yield=0.05
 rbubble=200.
 /
