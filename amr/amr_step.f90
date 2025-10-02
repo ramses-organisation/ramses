@@ -124,7 +124,7 @@ recursive subroutine amr_step(ilevel,icount)
   !-----------------
   ! Particle leakage
   !-----------------
-                               call timer('particles','start')
+                               call timer('particles - make tree','start')
   if(pic)call make_tree_fine(ilevel)
 
   !------------------------
@@ -222,7 +222,7 @@ recursive subroutine amr_step(ilevel,icount)
   !-------------------------------------------
   if(pic)then
      ! Remove particles to finer levels
-                               call timer('particles','start')
+                               call timer('particles - kill tree','start')
      call kill_tree_fine(ilevel)
      ! Update boundary conditions for remaining particles
      call virtual_tree_fine(ilevel)
@@ -259,7 +259,7 @@ recursive subroutine amr_step(ilevel,icount)
 
      ! Synchronize remaining particles for gravity
      if(pic)then
-                               call timer('particles','start')
+                               call timer('particles - synchro','start')
         if(static_dm.or.static_stars)then
            call synchro_fine_static(ilevel)
         else
@@ -470,7 +470,7 @@ recursive subroutine amr_step(ilevel,icount)
   ! Move particles
   !---------------
   if(pic)then
-                               call timer('particles','start')
+                               call timer('particles - move','start')
      if(static_dm.or.static_stars)then
         call move_fine_static(ilevel) ! Only remaining particles
      else
@@ -518,7 +518,7 @@ recursive subroutine amr_step(ilevel,icount)
   !----------------------------
   ! Merge finer level particles
   !----------------------------
-                               call timer('particles','start')
+                               call timer('particles - merge tree','start')
   if(pic)call merge_tree_fine(ilevel)
 
   !---------------
