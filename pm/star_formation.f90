@@ -560,10 +560,13 @@ subroutine star_formation(ilevel)
               ! Poisson mean
               PoissMean=mgas/mstar
               if((trel>0.).and.(.not.cosmo)) PoissMean = PoissMean*min((t/trel), 1.0d0)
-              ! Compute Poisson realisation
-              call poissdev(localseed,PoissMean,nstar(i))
-              ! override for tests mostly
-              if(.not.randomize_sf) nstar(i)=1 ! so we form only 1 mstar
+              if(randomize_sf)then
+                 ! Compute Poisson realisation
+                 call poissdev(localseed,PoissMean,nstar(i))
+              else
+                 ! this is useful for the test suite only
+                 nstar(i)=PoissMean
+              endif
               ! Compute depleted gas mass
               mgas=nstar(i)*mstar
               ! Security to prevent more than 90% of gas depletion
