@@ -59,7 +59,7 @@ if plot_in_2d:
     z1 = griddata(points,0.5*b2,(grid_x,grid_y, grid_z),method='nearest')
 
     b2_proj = np.sum(z1, axis=0) #proj along y-axis
-    
+
     im = ax.imshow(np.log10(b2_proj), origin="lower", aspect='equal', extent=[xmin, xmax, ymin, ymax])
 
     cb = []
