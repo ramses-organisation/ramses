@@ -6,30 +6,12 @@ subroutine init_amr
   use bisection
   use mpi_mod
   implicit none
-  integer::i,idim,ncell,iskip,ind,ncache,ilevel,ibound,nboundary2
-  integer::ncpu2,ndim2,nx2,ny2,nz2,ngridmax2,nlevelmax2
-  integer::noutput2,iout2,ifout2,ilun
-  integer::ix,iy,iz,ix_max,iy_max,iz_max,nxny,nx_loc
-  real(dp)::mass_sph2
-  integer,dimension(:),allocatable::ind_grid,iig,pos,grid
-  real(dp),dimension(1:MAXOUT)::aout2=1.1d0
-  real(dp),dimension(1:MAXOUT)::tout2=0.0d0
-  real(dp),dimension(:),allocatable::xxg
+  integer::i,ncell,iskip,ind,ilevel
+  integer::ix,iy,iz,nxny,nx_loc
   integer ,dimension(1:nvector)::c
   real(dp),dimension(1:nvector,1:ndim)::x
   real(qdp),dimension(1:nvector)::order_min,order_max
-  logical::ok
   real(dp)::dx_loc,scale
-  character(LEN=128)::ordering2
-  character(LEN=80)::fileloc
-  character(LEN=5)::nchar,ncharcpu
-  integer,parameter::tag=1100
-#ifndef WITHOUTMPI
-  integer::dummy_io,info2,info
-#endif
-#ifdef QUADHILBERT
-  real(kind=8),allocatable,dimension(:)::bound_key_restart
-#endif
 
   if(verbose.and.myid==1)write(*,*)'Entering init_amr'
 
@@ -37,10 +19,6 @@ subroutine init_amr
   ncoarse=nx*ny*nz
   ncell=ncoarse+twotondim*ngridmax
   nxny=nx*ny
-  ix_max=0; iy_max=0; iz_max=0
-  if(ndim>0)ix_max=1
-  if(ndim>1)iy_max=1
-  if(ndim>2)iz_max=1
   nx_loc=icoarse_max-icoarse_min+1
   scale=boxlen/dble(nx_loc)
 
@@ -257,294 +235,331 @@ subroutine init_amr
   ! Read amr file for a restart
   !----------------------------
   if(nrestart>0)then
-
-     ! Wait for the token
-#ifndef WITHOUTMPI
-     if(IOGROUPSIZE>0) then
-        if (mod(myid-1,IOGROUPSIZE)/=0) then
-           call MPI_RECV(dummy_io,1,MPI_INTEGER,myid-1-1,tag,MPI_COMM_WORLD,MPI_STATUS_IGNORE,info2)
-        end if
-     endif
-#endif
-
-#ifdef QUADHILBERT
-    if(nrestart_quad.eq.nrestart) allocate(bound_key_restart(0:ndomain))
-#endif
-
-     ilun=myid+103
-     call title(nrestart,nchar)
-
-     if(IOGROUPSIZEREP>0)then
-        call title(((myid-1)/IOGROUPSIZEREP)+1,ncharcpu)
-        fileloc='output_'//TRIM(nchar)//'/group_'//TRIM(ncharcpu)//'/amr_'//TRIM(nchar)//'.out'
-     else
-        fileloc='output_'//TRIM(nchar)//'/amr_'//TRIM(nchar)//'.out'
-     endif
-
-     call title(myid,nchar)
-     fileloc=TRIM(fileloc)//TRIM(nchar)
-     inquire(file=fileloc, exist=ok)
-     if(.not. ok)then
-        write(*,*)'Restart failed:'
-        write(*,*)'File '//TRIM(fileloc)//' not found'
-        call clean_stop
-     end if
-     if(debug)write(*,*)'amr.tmp opened for processor ',myid
-     open(unit=ilun,file=fileloc,form='unformatted')
-     ! Read grid variables
-     read(ilun)ncpu2
-     read(ilun)ndim2
-     read(ilun)nx2,ny2,nz2
-     read(ilun)nlevelmax2
-     read(ilun)ngridmax2
-     read(ilun)nboundary2
-     read(ilun)ngrid_current
-     read(ilun)boxlen
-     if(ncpu2.ne.ncpu)then
-        if(myid==1)then
-           write(*,*)'Number of processes not compatible'
-           write(*,*)'ncpu should be set equal to',ncpu2
-        endif
-        call clean_stop
-     end if
-     ! Read time variables
-     read(ilun)noutput2,iout2,ifout2
-     read(ilun)tout2(1:noutput2)
-     read(ilun)aout2(1:noutput2)
-     ! Check compatibility with current parameters
-     if((ndim2.ne.ndim).or.(nx2.ne.nx).or.(ny2.ne.ny).or.(nz2.ne.nz).or.&
-          & (nboundary2.ne.nboundary).or.(nlevelmax2>nlevelmax).or.&
-          & (ngrid_current>ngridmax))then
-        write(*,*)'File amr.tmp is not compatible with namelist'
-        write(*,*)'         ndim   nx   ny   nz nlevelmax   ngridmax nboundary'
-        write(*,'("amr.tmp  =",4(I4,1x),5x,I4,4x,I4,3x,I8)')&
-             & ndim2,nx2,ny2,nz2,nlevelmax2,ngrid_current,nboundary2
-        write(*,'("namelist =",4(I4,1x),5x,I4,4x,I4,3x,I8)')&
-             & ndim ,nx ,ny ,nz ,nlevelmax , ngridmax     ,nboundary
-        if(myid==1)write(*,*)'Restart failed'
-        call clean_stop
-     end if
-     ifout=ifout2
-     if(ifout.gt.nrestart+1) ifout=nrestart+1
-     read(ilun)t
-     read(ilun)dtold(1:nlevelmax2)
-     read(ilun)dtnew(1:nlevelmax2)
-     read(ilun)nstep,nstep_coarse
-     nstep_coarse_old=nstep_coarse
-     read(ilun)einit,mass_tot_0,rho_tot
-     read(ilun)omega_m,omega_l,omega_k,omega_b,h0,aexp_ini,boxlen_ini
-     read(ilun)aexp,hexp,aexp_old,epot_tot_int,epot_tot_old
-     if(cosmo)then
-        read(ilun)mass_sph
-     else
-        read(ilun)mass_sph2
-     endif
-     if(myid==1)write(*,*)'Restarting at t=',t,' nstep_coarse=',nstep_coarse
-     trestart = t
-
-     ! determine moment of next output
-     tout_next = (floor(t/delta_tout)+1)*delta_tout
-     aout_next = (floor(aexp/delta_aout)+1)*delta_aout
-     iout = 1
-     if (.not.all(tout==HUGE(1.0D0))) then
-        do while(tout(iout)<=t)
-           iout = iout+1
-        enddo
-     else if(.not.all(aout==HUGE(1.0D0)))then
-        do while(aout(iout)<=aexp)
-           iout = iout+1
-        enddo
-     endif
-
-     ! Compute movie frame number if applicable
-     if(imovout>0) then
-        do i=2,imovout
-           if(aendmov>0)then
-              if(aexp>amovout(i-1).and.aexp<amovout(i)) then
-                 imov=i
-              endif
-           else
-              if(t>tmovout(i-1).and.t<tmovout(i)) then
-                 imov=i
-              endif
-           endif
-        enddo
-        if(aendmov>0)then
-           if(myid==1)write(*,*) "Frame number, aexp ",imov, amovout(imov)
-        else
-           if(myid==1)write(*,*) "Frame number, t ",imov, tmovout(imov)
-        endif
-     endif
-
-     ! Read levels variables
-     read(ilun)headl(1:ncpu,1:nlevelmax2)
-     read(ilun)taill(1:ncpu,1:nlevelmax2)
-     read(ilun)numbl(1:ncpu,1:nlevelmax2)
-     read(ilun)numbtot(1:10,1:nlevelmax2)
-     ! Read boundary linked list
-     if(simple_boundary)then
-        read(ilun)headb(1:nboundary,1:nlevelmax2)
-        read(ilun)tailb(1:nboundary,1:nlevelmax2)
-        read(ilun)numbb(1:nboundary,1:nlevelmax2)
-     end if
-     ! Read free memory
-     read(ilun)headf,tailf,numbf,used_mem,used_mem_tot
-     headf=ngrid_current+1
-     tailf=ngridmax
-     numbf=ngridmax-ngrid_current
-     prev(headf)=0
-     next(tailf)=0
-     ! Read cpu boundaries
-     read(ilun)ordering2
-     if(ordering2.ne.ordering)then
-        if(myid==1)write(*,*)'Ordering is uncompatible'
-        call clean_stop
-     endif
-     if(ordering=='bisection') then
-        read(ilun)bisec_wall(1:nbinodes)
-        read(ilun)bisec_next(1:nbinodes,1:2)
-        read(ilun)bisec_indx(1:nbinodes)
-        read(ilun)bisec_cpubox_min(1:ncpu,1:ndim)
-        read(ilun)bisec_cpubox_max(1:ncpu,1:ndim)
-     else
-#ifdef QUADHILBERT
-        if(nrestart_quad.eq.nrestart) then
-           read(ilun)bound_key_restart(0:ndomain)
-           bound_key(0:ndomain)=bound_key_restart(0:ndomain)
-        else
-           read(ilun)bound_key(0:ndomain)
-        endif
-#else
-        read(ilun)bound_key(0:ndomain)
-#endif
-     endif
-     ! Read coarse level
-     read(ilun)son(1:ncoarse)
-     read(ilun)flag1(1:ncoarse)
-     read(ilun)cpu_map(1:ncoarse)
-     ! Read fine levels
-     do ilevel=1,nlevelmax2
-        do ibound=1,nboundary+ncpu
-           if(ibound<=ncpu)then
-              ncache=numbl(ibound,ilevel)
-           else
-              ncache=numbb(ibound-ncpu,ilevel)
-           end if
-           if(ncache>0)then
-              allocate(ind_grid(1:ncache))
-              allocate(xxg(1:ncache))
-              allocate(iig(1:ncache))
-              allocate(pos(1:ncache))
-              allocate(grid(1:ncache))
-              ! Read grid index
-              read(ilun)ind_grid
-              ! Read next index
-              read(ilun)iig
-              do i=1,ncache
-                 next(ind_grid(i))=iig(i)
-              end do
-              ! Read prev index
-              read(ilun)iig
-              do i=1,ncache
-                 prev(ind_grid(i))=iig(i)
-              end do
-              ! Read grid center
-              do idim=1,ndim
-                 read(ilun)xxg
-                 do i=1,ncache
-                    xg(ind_grid(i),idim)=xxg(i)
-                 end do
-              end do
-              ! Read father index
-              read(ilun)iig
-              if(ngridmax.ne.ngridmax2.and.ilevel>1)then
-                 do i=1,ncache
-                    pos(i)=(iig(i)-ncoarse-1)/ngridmax2
-                 end do
-                 do i=1,ncache
-                    grid(i)=iig(i)-ncoarse-pos(i)*ngridmax2
-                 end do
-                 do i=1,ncache
-                    iig(i)=ncoarse+pos(i)*ngridmax+grid(i)
-                 end do
-              end if
-              do i=1,ncache
-                 father(ind_grid(i))=iig(i)
-              end do
-              ! Read nbor index
-              do ind=1,twondim
-                 read(ilun)iig
-                 if(ngridmax.ne.ngridmax2.and.ilevel>1)then
-                    do i=1,ncache
-                       pos(i)=(iig(i)-ncoarse-1)/ngridmax2
-                    end do
-                    do i=1,ncache
-                       grid(i)=iig(i)-ncoarse-pos(i)*ngridmax2
-                    end do
-                    do i=1,ncache
-                       iig(i)=ncoarse+pos(i)*ngridmax+grid(i)
-                    end do
-                 end if
-                 do i=1,ncache
-                    nbor(ind_grid(i),ind)=iig(i)
-                 end do
-              end do
-              ! Read son index
-              do ind=1,twotondim
-                 iskip=ncoarse+(ind-1)*ngridmax
-                 read(ilun)iig
-                 do i=1,ncache
-                    son(ind_grid(i)+iskip)=iig(i)
-                 end do
-              end do
-              ! Read cpu map
-              do ind=1,twotondim
-                 iskip=ncoarse+(ind-1)*ngridmax
-                 read(ilun)iig
-                 do i=1,ncache
-                    cpu_map(ind_grid(i)+iskip)=iig(i)
-                 end do
-              end do
-              ! Read refinement map
-              do ind=1,twotondim
-                 iskip=ncoarse+(ind-1)*ngridmax
-                 read(ilun)iig
-                 do i=1,ncache
-                    flag1(ind_grid(i)+iskip)=iig(i)
-                 end do
-              end do
-              deallocate(xxg,iig,pos,grid,ind_grid)
-           end if
-        end do
-     end do
-     close(ilun)
-#ifdef QUADHILBERT
-     if(nrestart_quad.eq.nrestart) deallocate(bound_key_restart)
-#endif
-
-     ! Send the token
-#ifndef WITHOUTMPI
-     if(IOGROUPSIZE>0) then
-        if(mod(myid,IOGROUPSIZE)/=0 .and.(myid.lt.ncpu))then
-           dummy_io=1
-           call MPI_SEND(dummy_io,1,MPI_INTEGER,myid-1+1,tag,MPI_COMM_WORLD,info2)
-        end if
-     endif
-#endif
-
-
-
-#ifndef WITHOUTMPI
-     if(debug)write(*,*)'amr.tmp read for processor ',myid
-     call MPI_BARRIER(MPI_COMM_WORLD,info)
-#endif
-     if(verbose)write(*,*)'AMR backup files read completed'
-
-     ! Build communicators
-     do ilevel=1,nlevelmax
-        call build_comm(ilevel)
-     end do
-
+     call restart_amr
   end if
 
 end subroutine init_amr
+!###########################################################
+!###########################################################
+!###########################################################
+!###########################################################
+subroutine restart_amr
+   use amr_commons
+   use hydro_commons
+   use pm_commons
+   use poisson_commons
+   use bisection
+   use mpi_mod
+   implicit none
+   !----------------------------
+   ! Read amr file for a restart
+   !----------------------------
+   integer::i,idim,iskip,ind,ncache,ilevel,ibound,nboundary2
+   integer::ncpu2,ndim2,nx2,ny2,nz2,ngridmax2,nlevelmax2
+   integer::noutput2,iout2,ifout2,ilun
+   real(dp)::mass_sph2
+   integer,dimension(:),allocatable::ind_grid,iig,pos,grid
+   real(dp),dimension(1:MAXOUT)::aout2=1.1d0
+   real(dp),dimension(1:MAXOUT)::tout2=0.0d0
+   real(dp),dimension(:),allocatable::xxg
+   logical::ok
+   character(LEN=128)::ordering2
+   character(LEN=80)::fileloc
+   character(LEN=5)::nchar,ncharcpu
+   integer,parameter::tag=1100
+#ifndef WITHOUTMPI
+   integer::dummy_io,info2,info
+#endif
+#ifdef QUADHILBERT
+    real(kind=8),allocatable,dimension(:)::bound_key_restart
+#endif
+
+   ! Constants
+   ncoarse=nx*ny*nz
+
+   ! Wait for the token
+#ifndef WITHOUTMPI
+   if(IOGROUPSIZE>0) then
+      if (mod(myid-1,IOGROUPSIZE)/=0) then
+         call MPI_RECV(dummy_io,1,MPI_INTEGER,myid-1-1,tag,MPI_COMM_WORLD,MPI_STATUS_IGNORE,info2)
+      end if
+   endif
+#endif
+
+#ifdef QUADHILBERT
+   if(nrestart_quad.eq.nrestart) allocate(bound_key_restart(0:ndomain))
+#endif
+
+   ilun=myid+103
+   call title(nrestart,nchar)
+
+   if(IOGROUPSIZEREP>0)then
+      call title(((myid-1)/IOGROUPSIZEREP)+1,ncharcpu)
+      fileloc='output_'//TRIM(nchar)//'/group_'//TRIM(ncharcpu)//'/amr_'//TRIM(nchar)//'.out'
+   else
+      fileloc='output_'//TRIM(nchar)//'/amr_'//TRIM(nchar)//'.out'
+   endif
+
+   call title(myid,nchar)
+   fileloc=TRIM(fileloc)//TRIM(nchar)
+   inquire(file=fileloc, exist=ok)
+   if(.not. ok)then
+      write(*,*)'Restart failed:'
+      write(*,*)'File '//TRIM(fileloc)//' not found'
+      call clean_stop
+   end if
+   if(debug)write(*,*)'amr.tmp opened for processor ',myid
+   open(unit=ilun,file=fileloc,form='unformatted')
+   ! Read grid variables
+   read(ilun)ncpu2
+   read(ilun)ndim2
+   read(ilun)nx2,ny2,nz2
+   read(ilun)nlevelmax2
+   read(ilun)ngridmax2
+   read(ilun)nboundary2
+   read(ilun)ngrid_current
+   read(ilun)boxlen
+   if(ncpu2.ne.ncpu)then
+      if(myid==1)then
+         write(*,*)'Number of processes not compatible'
+         write(*,*)'ncpu should be set equal to',ncpu2
+      endif
+      call clean_stop
+   end if
+   ! Read time variables
+   read(ilun)noutput2,iout2,ifout2
+   read(ilun)tout2(1:noutput2)
+   read(ilun)aout2(1:noutput2)
+   ! Check compatibility with current parameters
+   if((ndim2.ne.ndim).or.(nx2.ne.nx).or.(ny2.ne.ny).or.(nz2.ne.nz).or.&
+        & (nboundary2.ne.nboundary).or.(nlevelmax2>nlevelmax).or.&
+        & (ngrid_current>ngridmax))then
+      write(*,*)'File amr.tmp is not compatible with namelist'
+      write(*,*)'         ndim   nx   ny   nz nlevelmax   ngridmax nboundary'
+      write(*,'("amr.tmp  =",4(I4,1x),5x,I4,4x,I4,3x,I8)')&
+           & ndim2,nx2,ny2,nz2,nlevelmax2,ngrid_current,nboundary2
+      write(*,'("namelist =",4(I4,1x),5x,I4,4x,I4,3x,I8)')&
+           & ndim ,nx ,ny ,nz ,nlevelmax , ngridmax     ,nboundary
+      if(myid==1)write(*,*)'Restart failed'
+      call clean_stop
+   end if
+   ifout=ifout2
+   if(ifout.gt.nrestart+1) ifout=nrestart+1
+   read(ilun)t
+   read(ilun)dtold(1:nlevelmax2)
+   read(ilun)dtnew(1:nlevelmax2)
+   read(ilun)nstep,nstep_coarse
+   nstep_coarse_old=nstep_coarse
+   read(ilun)einit,mass_tot_0,rho_tot
+   read(ilun)omega_m,omega_l,omega_k,omega_b,h0,aexp_ini,boxlen_ini
+   read(ilun)aexp,hexp,aexp_old,epot_tot_int,epot_tot_old
+   if(cosmo)then
+      read(ilun)mass_sph
+   else
+      read(ilun)mass_sph2
+   endif
+   if(myid==1)write(*,*)'Restarting at t=',t,' nstep_coarse=',nstep_coarse
+   trestart = t
+
+   ! determine moment of next output
+   tout_next = (floor(t/delta_tout)+1)*delta_tout
+   aout_next = (floor(aexp/delta_aout)+1)*delta_aout
+   iout = 1
+   if (.not.all(tout==HUGE(1.0D0))) then
+      do while(tout(iout)<=t)
+         iout = iout+1
+      enddo
+   else if(.not.all(aout==HUGE(1.0D0)))then
+      do while(aout(iout)<=aexp)
+         iout = iout+1
+      enddo
+   endif
+
+   ! Compute movie frame number if applicable
+   if(imovout>0) then
+      do i=2,imovout
+         if(aendmov>0)then
+            if(aexp>amovout(i-1).and.aexp<amovout(i)) then
+               imov=i
+            endif
+         else
+            if(t>tmovout(i-1).and.t<tmovout(i)) then
+               imov=i
+            endif
+         endif
+      enddo
+      if(aendmov>0)then
+         if(myid==1)write(*,*) "Frame number, aexp ",imov, amovout(imov)
+      else
+         if(myid==1)write(*,*) "Frame number, t ",imov, tmovout(imov)
+      endif
+   endif
+
+   ! Read levels variables
+   read(ilun)headl(1:ncpu,1:nlevelmax2)
+   read(ilun)taill(1:ncpu,1:nlevelmax2)
+   read(ilun)numbl(1:ncpu,1:nlevelmax2)
+   read(ilun)numbtot(1:10,1:nlevelmax2)
+   ! Read boundary linked list
+   if(simple_boundary)then
+      read(ilun)headb(1:nboundary,1:nlevelmax2)
+      read(ilun)tailb(1:nboundary,1:nlevelmax2)
+      read(ilun)numbb(1:nboundary,1:nlevelmax2)
+   end if
+   ! Read free memory
+   read(ilun)headf,tailf,numbf,used_mem,used_mem_tot
+   headf=ngrid_current+1
+   tailf=ngridmax
+   numbf=ngridmax-ngrid_current
+   prev(headf)=0
+   next(tailf)=0
+   ! Read cpu boundaries
+   read(ilun)ordering2
+   if(ordering2.ne.ordering)then
+      if(myid==1)write(*,*)'Ordering is uncompatible'
+      call clean_stop
+   endif
+   if(ordering=='bisection') then
+      read(ilun)bisec_wall(1:nbinodes)
+      read(ilun)bisec_next(1:nbinodes,1:2)
+      read(ilun)bisec_indx(1:nbinodes)
+      read(ilun)bisec_cpubox_min(1:ncpu,1:ndim)
+      read(ilun)bisec_cpubox_max(1:ncpu,1:ndim)
+   else
+#ifdef QUADHILBERT
+      if(nrestart_quad.eq.nrestart) then
+         read(ilun)bound_key_restart(0:ndomain)
+         bound_key(0:ndomain)=bound_key_restart(0:ndomain)
+      else
+         read(ilun)bound_key(0:ndomain)
+      endif
+#else
+      read(ilun)bound_key(0:ndomain)
+#endif
+   endif
+   ! Read coarse level
+   read(ilun)son(1:ncoarse)
+   read(ilun)flag1(1:ncoarse)
+   read(ilun)cpu_map(1:ncoarse)
+   ! Read fine levels
+   do ilevel=1,nlevelmax2
+      do ibound=1,nboundary+ncpu
+         if(ibound<=ncpu)then
+            ncache=numbl(ibound,ilevel)
+         else
+            ncache=numbb(ibound-ncpu,ilevel)
+         end if
+         if(ncache>0)then
+            allocate(ind_grid(1:ncache))
+            allocate(xxg(1:ncache))
+            allocate(iig(1:ncache))
+            allocate(pos(1:ncache))
+            allocate(grid(1:ncache))
+            ! Read grid index
+            read(ilun)ind_grid
+            ! Read next index
+            read(ilun)iig
+            do i=1,ncache
+               next(ind_grid(i))=iig(i)
+            end do
+            ! Read prev index
+            read(ilun)iig
+            do i=1,ncache
+               prev(ind_grid(i))=iig(i)
+            end do
+            ! Read grid center
+            do idim=1,ndim
+               read(ilun)xxg
+               do i=1,ncache
+                  xg(ind_grid(i),idim)=xxg(i)
+               end do
+            end do
+            ! Read father index
+            read(ilun)iig
+            if(ngridmax.ne.ngridmax2.and.ilevel>1)then
+               do i=1,ncache
+                  pos(i)=(iig(i)-ncoarse-1)/ngridmax2
+               end do
+               do i=1,ncache
+                  grid(i)=iig(i)-ncoarse-pos(i)*ngridmax2
+               end do
+               do i=1,ncache
+                  iig(i)=ncoarse+pos(i)*ngridmax+grid(i)
+               end do
+            end if
+            do i=1,ncache
+               father(ind_grid(i))=iig(i)
+            end do
+            ! Read nbor index
+            do ind=1,twondim
+               read(ilun)iig
+               if(ngridmax.ne.ngridmax2.and.ilevel>1)then
+                  do i=1,ncache
+                     pos(i)=(iig(i)-ncoarse-1)/ngridmax2
+                  end do
+                  do i=1,ncache
+                     grid(i)=iig(i)-ncoarse-pos(i)*ngridmax2
+                  end do
+                  do i=1,ncache
+                     iig(i)=ncoarse+pos(i)*ngridmax+grid(i)
+                  end do
+               end if
+               do i=1,ncache
+                  nbor(ind_grid(i),ind)=iig(i)
+               end do
+            end do
+            ! Read son index
+            do ind=1,twotondim
+               iskip=ncoarse+(ind-1)*ngridmax
+               read(ilun)iig
+               do i=1,ncache
+                  son(ind_grid(i)+iskip)=iig(i)
+               end do
+            end do
+            ! Read cpu map
+            do ind=1,twotondim
+               iskip=ncoarse+(ind-1)*ngridmax
+               read(ilun)iig
+               do i=1,ncache
+                  cpu_map(ind_grid(i)+iskip)=iig(i)
+               end do
+            end do
+            ! Read refinement map
+            do ind=1,twotondim
+               iskip=ncoarse+(ind-1)*ngridmax
+               read(ilun)iig
+               do i=1,ncache
+                  flag1(ind_grid(i)+iskip)=iig(i)
+               end do
+            end do
+            deallocate(xxg,iig,pos,grid,ind_grid)
+         end if
+      end do
+   end do
+   close(ilun)
+#ifdef QUADHILBERT
+   if(nrestart_quad.eq.nrestart) deallocate(bound_key_restart)
+#endif
+
+   ! Send the token
+#ifndef WITHOUTMPI
+   if(IOGROUPSIZE>0) then
+      if(mod(myid,IOGROUPSIZE)/=0 .and.(myid.lt.ncpu))then
+         dummy_io=1
+         call MPI_SEND(dummy_io,1,MPI_INTEGER,myid-1+1,tag,MPI_COMM_WORLD,info2)
+      end if
+   endif
+#endif
+
+#ifndef WITHOUTMPI
+   if(debug)write(*,*)'amr.tmp read for processor ',myid
+   call MPI_BARRIER(MPI_COMM_WORLD,info)
+#endif
+   if(verbose)write(*,*)'AMR backup files read completed'
+
+   ! Build communicators
+   do ilevel=1,nlevelmax
+      call build_comm(ilevel)
+   end do
+
+end subroutine restart_amr
