@@ -83,6 +83,9 @@ subroutine init_hydro
      read(ilun)ncpu2
      read(ilun)nvar2
      if(strict_equilibrium>0)nvar2=nvar2-2
+#ifdef SOLVERmhd
+     nvar2=nvar2-3
+#endif
      read(ilun)ndim2
      read(ilun)nlevelmax2
      read(ilun)nboundary2
@@ -90,7 +93,7 @@ subroutine init_hydro
      if(myid==1)then
         write(*,*)'Restart - Non-thermal pressure / Passive scalar mapping'
         write(*,'(A50)')"__________________________________________________"
-        do i=1,nvar2-3-nhydro
+        do i=1,nvar2-nhydro
             if(remap_pscalar(i).gt.0) then
                write(*,'(A,I3,A,I3)') ' Restart var',i+nhydro,' loaded in var',remap_pscalar(i)
             else if(remap_pscalar(i).gt.-1)then
@@ -102,21 +105,21 @@ subroutine init_hydro
         write(*,'(A50)')"__________________________________________________"
      endif
 #ifdef RT
-     if((neq_chem.or.rt).and.nvar2.lt.nvar_all)then ! OK to add ionization fraction vars
+     if((neq_chem.or.rt).and.nvar2.lt.nvar)then ! OK to add ionization fraction vars
         ! Convert birth times for RT postprocessing:
         if(rt.and.static) convert_birth_times=.true.
         if(myid==1) write(*,*)'File hydro.tmp is not compatible'
         if(myid==1) write(*,*)'Found nvar2  =',nvar2
-        if(myid==1) write(*,*)'Expected=',nvar_all
+        if(myid==1) write(*,*)'Expected=',nvar
         if(myid==1) write(*,*)'..so only reading available variables and setting the rest to zero'
      end if
-     if((neq_chem.or.rt).and.nvar2.gt.nvar+3)then ! Not OK to drop variables
+     if((neq_chem.or.rt).and.nvar2.gt.nvar)then ! Not OK to drop variables
 #else
-     if(nvar2.ne.(nvar_all))then
+     if(nvar2.ne.(nvar))then
 #endif
         if(myid==1) write(*,*)'File hydro.tmp is not compatible'
         if(myid==1) write(*,*)'Found   =',nvar2
-        if(myid==1) write(*,*)'Expected=',nvar_all
+        if(myid==1) write(*,*)'Expected=',nvar
         call clean_stop
      end if
      do ilevel=1,nlevelmax2
@@ -207,7 +210,7 @@ subroutine init_hydro
                  end do
 #if NVAR>NHYDRO+NENER
                  ! Read passive scalars if any
-                 do ivar=nhydro+1+nener,max(nvar2-3,nvar)
+                 do ivar=nhydro+1+nener,max(nvar2,nvar)
                     if(remap_pscalar(ivar-nhydro).gt.-1) read(ilun)xx
                     if(ivar.gt.nvar)then
                        continue

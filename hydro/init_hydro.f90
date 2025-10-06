@@ -83,6 +83,9 @@ subroutine init_hydro
      read(ilun)ncpu2
      read(ilun)nvar2
      if(strict_equilibrium>0)nvar2=nvar2-2
+#ifdef SOLVERmhd
+     nvar2=nvar2-3
+#endif
      read(ilun)ndim2
      read(ilun)nlevelmax2
      read(ilun)nboundary2
@@ -108,16 +111,15 @@ subroutine init_hydro
         if(myid==1) write(*,*)'File hydro.tmp is not compatible'
         if(myid==1) write(*,*)'Found nvar2  =',nvar2
         if(myid==1) write(*,*)'Expected=',nvar
-        if(myid==1) write(*,*)'..so only reading first ',nvar2, &
-                  'variables and setting the rest to zero'
+        if(myid==1) write(*,*)'..so only reading available variables and setting the rest to zero'
      end if
      if((neq_chem.or.rt).and.nvar2.gt.nvar)then ! Not OK to drop variables
 #else
-     if(nvar2.ne.(nvar_all))then
+     if(nvar2.ne.(nvar))then
 #endif
         if(myid==1) write(*,*)'File hydro.tmp is not compatible'
         if(myid==1) write(*,*)'Found   =',nvar2
-        if(myid==1) write(*,*)'Expected=',nvar_all
+        if(myid==1) write(*,*)'Expected=',nvar
         call clean_stop
      end if
      do ilevel=1,nlevelmax2
@@ -163,7 +165,20 @@ subroutine init_hydro
                        end do
                     end if
                  end do
-
+#ifdef SOLVERmhd
+                 do ivar=6,8 ! Read left B field
+                    read(ilun)xx
+                    do i=1,ncache
+                       uold(ind_grid(i)+iskip,ivar)=xx(i)
+                    end do
+                 end do
+                 do ivar=nvar+1,nvar+3 ! Read right B field
+                    read(ilun)xx
+                    do i=1,ncache
+                       uold(ind_grid(i)+iskip,ivar)=xx(i)
+                    end do
+                 end do
+#endif
 #if NENER>0
                  ! Read non-thermal pressures --> non-thermal energies
                  do ivar=nhydro+1,nhydro+nener
@@ -183,13 +198,17 @@ subroutine init_hydro
                     xx(i)=xx(i)/(gamma-1d0)
                     if (uold(ind_grid(i)+iskip,1)>0.)then
                     d=max(uold(ind_grid(i)+iskip,1),smallr)
-
                     xx(i)=xx(i)+0.5d0*uold(ind_grid(i)+iskip,2)**2/d
-#if NDIM>1
+#if NDIM>1 || SOLVERmhd
                     xx(i)=xx(i)+0.5d0*uold(ind_grid(i)+iskip,3)**2/d
 #endif
-#if NDIM>2
+#if NDIM>2 || SOLVERmhd
                     xx(i)=xx(i)+0.5d0*uold(ind_grid(i)+iskip,4)**2/d
+#endif
+#ifdef SOLVERmhd
+                    xx(i)=xx(i)+0.125d0*(uold(ind_grid(i)+iskip,6)+uold(ind_grid(i)+iskip,nvar+1))**2
+                    xx(i)=xx(i)+0.125d0*(uold(ind_grid(i)+iskip,7)+uold(ind_grid(i)+iskip,nvar+2))**2
+                    xx(i)=xx(i)+0.125d0*(uold(ind_grid(i)+iskip,8)+uold(ind_grid(i)+iskip,nvar+3))**2
 #endif
 #if NENER>0
                     do irad=1,nener
