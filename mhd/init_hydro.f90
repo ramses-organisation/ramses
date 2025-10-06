@@ -15,7 +15,7 @@ subroutine init_hydro
   integer ,dimension(:),allocatable::ind_grid
   real(dp),dimension(:),allocatable::xx
   real(dp)::gamma2
-  real(dp)::d,u,v,w,A,B,C,e
+  real(dp)::d
   character(LEN=80)::fileloc
   character(LEN=5)::nchar,ncharcpu
   integer,parameter::tag=1108
@@ -190,21 +190,20 @@ subroutine init_hydro
                  ! Read thermal pressure --> total fluid energy
                  read(ilun)xx
                  do i=1,ncache
-                    e=xx(i)/(gamma-1d0)
+                    xx(i)=xx(i)/(gamma-1d0)
                     d=max(uold(ind_grid(i)+iskip,1),smallr)
-                    u=uold(ind_grid(i)+iskip,2)/d
-                    v=uold(ind_grid(i)+iskip,3)/d
-                    w=uold(ind_grid(i)+iskip,4)/d
-                    A=0.5*(uold(ind_grid(i)+iskip,6)+uold(ind_grid(i)+iskip,nvar+1))
-                    B=0.5*(uold(ind_grid(i)+iskip,7)+uold(ind_grid(i)+iskip,nvar+2))
-                    C=0.5*(uold(ind_grid(i)+iskip,8)+uold(ind_grid(i)+iskip,nvar+3))
+                    xx(i)=xx(i)+0.5d0*uold(ind_grid(i)+iskip,2)**2/d
+                    xx(i)=xx(i)+0.5d0*uold(ind_grid(i)+iskip,3)**2/d
+                    xx(i)=xx(i)+0.5d0*uold(ind_grid(i)+iskip,4)**2/d
+                    xx(i)=xx(i)+0.125d0*(uold(ind_grid(i)+iskip,6)+uold(ind_grid(i)+iskip,nvar+1))**2
+                    xx(i)=xx(i)+0.125d0*(uold(ind_grid(i)+iskip,7)+uold(ind_grid(i)+iskip,nvar+2))**2
+                    xx(i)=xx(i)+0.125d0*(uold(ind_grid(i)+iskip,8)+uold(ind_grid(i)+iskip,nvar+3))**2
 #if NENER>0
                     do irad=1,nener
-                       e=e+uold(ind_grid(i)+iskip,nhydro+irad)
+                       xx(i)=xx(i)+uold(ind_grid(i)+iskip,nhydro+irad)
                     end do
 #endif
-
-                    uold(ind_grid(i)+iskip,neul)=e+0.5*d*(u**2+v**2+w**2)+0.5*(A**2+B**2+C**2)
+                    uold(ind_grid(i)+iskip,neul)=xx(i)
                  end do
 #if NVAR>NHYDRO+NENER
                  ! Read passive scalars if any
