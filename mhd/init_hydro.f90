@@ -1,15 +1,15 @@
 subroutine init_hydro
   use amr_commons
   use hydro_commons
+#ifdef RT
+  use rt_parameters,only: convert_birth_times
+#endif
   use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
-  integer::dummy_io,info,info2
+  integer::info,info2,dummy_io
 #endif
   integer::ncell,ncache,iskip,igrid,i,ilevel,ind,ivar
-#if NENER>0
-  integer::irad
-#endif
   integer::nvar2,ilevel2,numbl2,ilun,ibound,istart
   integer::ncpu2,ndim2,nlevelmax2,nboundary2
   integer ,dimension(:),allocatable::ind_grid
@@ -19,6 +19,9 @@ subroutine init_hydro
   character(LEN=80)::fileloc
   character(LEN=5)::nchar,ncharcpu
   integer,parameter::tag=1108
+#if NENER>0
+  integer::irad
+#endif
 
   if(verbose)write(*,*)'Entering init_hydro'
 
@@ -26,8 +29,8 @@ subroutine init_hydro
   ! Allocate conservative, cell-centered variables arrays
   !------------------------------------------------------
   ncell=ncoarse+twotondim*ngridmax
-  allocate(uold(1:ncell,1:nvar+3))
-  allocate(unew(1:ncell,1:nvar+3))
+  allocate(uold(1:ncell,1:nvar_all))
+  allocate(unew(1:ncell,1:nvar_all))
   uold=0.0d0; unew=0.0d0
   if(MC_tracer) then
      allocate(fluxes(1:ncell,1:twondim))
@@ -79,14 +82,41 @@ subroutine init_hydro
      open(unit=ilun,file=fileloc,form='unformatted')
      read(ilun)ncpu2
      read(ilun)nvar2
+     if(strict_equilibrium>0)nvar2=nvar2-2
      read(ilun)ndim2
      read(ilun)nlevelmax2
      read(ilun)nboundary2
      read(ilun)gamma2
-     if(nvar2.ne.(nvar+3))then
-        write(*,*)'File hydro.tmp is not compatible'
-        write(*,*)'Found   =',nvar2
-        write(*,*)'Expected=',nvar+3
+     if(myid==1)then
+        write(*,*)'Restart - Non-thermal pressure / Passive scalar mapping'
+        write(*,'(A50)')"__________________________________________________"
+        do i=1,nvar2-3-nhydro
+            if(remap_pscalar(i).gt.0) then
+               write(*,'(A,I3,A,I3)') ' Restart var',i+nhydro,' loaded in var',remap_pscalar(i)
+            else if(remap_pscalar(i).gt.-1)then
+               write(*,'(A,I3,A)') ' Restart var',i+nhydro,' read but not loaded'
+            else
+               write(*,'(A,I3,A)') ' Restart var',i+nhydro,' not read'
+            endif
+        enddo
+        write(*,'(A50)')"__________________________________________________"
+     endif
+#ifdef RT
+     if((neq_chem.or.rt).and.nvar2.lt.nvar_all)then ! OK to add ionization fraction vars
+        ! Convert birth times for RT postprocessing:
+        if(rt.and.static) convert_birth_times=.true.
+        if(myid==1) write(*,*)'File hydro.tmp is not compatible'
+        if(myid==1) write(*,*)'Found nvar2  =',nvar2
+        if(myid==1) write(*,*)'Expected=',nvar_all
+        if(myid==1) write(*,*)'..so only reading available variables and setting the rest to zero'
+     end if
+     if((neq_chem.or.rt).and.nvar2.gt.nvar+3)then ! Not OK to drop variables
+#else
+     if(nvar2.ne.(nvar_all))then
+#endif
+        if(myid==1) write(*,*)'File hydro.tmp is not compatible'
+        if(myid==1) write(*,*)'Found   =',nvar2
+        if(myid==1) write(*,*)'Expected=',nvar_all
         call clean_stop
      end if
      do ilevel=1,nlevelmax2
@@ -147,9 +177,13 @@ subroutine init_hydro
 #if NENER>0
                  ! Read non-thermal pressures --> non-thermal energies
                  do ivar=nhydro+1,nhydro+nener
-                    read(ilun)xx
+                    if(remap_pscalar(ivar-nhydro).gt.-1) read(ilun)xx
                     do i=1,ncache
-                       uold(ind_grid(i)+iskip,ivar)=xx(i)/(gamma_rad(ivar-nhydro)-1d0)
+                       if(remap_pscalar(ivar-nhydro).gt.0) then
+                          uold(ind_grid(i)+iskip,remap_pscalar(ivar-nhydro))=xx(i)/(gamma_rad(ivar-nhydro)-1d0)
+                       else if(remap_pscalar(ivar-nhydro).lt.0) then
+                          uold(ind_grid(i)+iskip,abs(remap_pscalar(ivar-nhydro)))=0d0
+                       endif
                     end do
                  end do
 #endif
@@ -174,13 +208,32 @@ subroutine init_hydro
                  end do
 #if NVAR>NHYDRO+NENER
                  ! Read passive scalars if any
-                 do ivar=nhydro+1+nener,nvar
-                    read(ilun)xx
+                 do ivar=nhydro+1+nener,max(nvar2-3,nvar)
+                    if(remap_pscalar(ivar-nhydro).gt.-1) read(ilun)xx
+                    if(ivar.gt.nvar)then
+                       continue
+                    endif
                     do i=1,ncache
-                       uold(ind_grid(i)+iskip,ivar)=xx(i)*max(uold(ind_grid(i)+iskip,1),smallr)
+                       if(remap_pscalar(ivar-nhydro).gt.0)then
+                          uold(ind_grid(i)+iskip,remap_pscalar(ivar-nhydro))=xx(i)*max(uold(ind_grid(i)+iskip,1),smallr)
+                       else if(remap_pscalar(ivar-nhydro).lt.0) then
+                          uold(ind_grid(i)+iskip,abs(remap_pscalar(ivar-nhydro)))=0d0
+                       endif
                     end do
                  end do
 #endif
+                 ! Read equilibrium density and pressure profiles
+                 if(strict_equilibrium>0)then
+                    read(ilun)xx
+                    do i=1,ncache
+                       rho_eq(ind_grid(i)+iskip)=xx(i)
+                    end do
+                    read(ilun)xx
+                    do i=1,ncache
+                       p_eq(ind_grid(i)+iskip)=xx(i)
+                    end do
+                 endif
+
               end do
               deallocate(ind_grid,xx)
            end if
