@@ -9,9 +9,8 @@ verbose=.false.
 /
 
 &OUTPUT_PARAMS
-noutput=5
-aend=4.66e-02
-aout=2.e-02,3.e-02,4.e-02,4.66e-02
+noutput=1
+aout=4.66e-02
 /
 
 &INIT_PARAMS
