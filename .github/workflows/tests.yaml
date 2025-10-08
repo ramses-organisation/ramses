@@ -18,7 +18,7 @@ jobs:
         runs-on: ubuntu-latest
         strategy:
             matrix:
-                test-family: [hydro,mhd,poisson,rt,sink,turb,tracer,star]
+                test-family: [hydro,mhd,poisson,rt,sink,star,turb,tracer]
         steps:
         - name: Checkout repository
           uses: actions/checkout@v4
