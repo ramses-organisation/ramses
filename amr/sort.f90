@@ -319,6 +319,13 @@ SUBROUTINE quick_sort_int_int(list, order, n)
   INTEGER, DIMENSION (1:n), INTENT(INOUT)  :: order
 
 
+  ! Local variable
+  INTEGER :: i
+
+  DO i = 1, n
+     order(i) = i
+  END DO
+
   CALL quick_sort_1_int_int(1, n)
 
 CONTAINS
