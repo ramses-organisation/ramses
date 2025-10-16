@@ -87,7 +87,8 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
   call ctoprim(uin,qin,bf,gravin,dt,ngrid)
 
   ! Compute TVD slopes
-  call uslope(qin,dq,bf,dbf,dx,dt,ngrid)
+  call uslope(qin,dq,dx,dt,ngrid)
+  call uslope_mag(bf,dbf,dx,dt,ngrid)
 
   ! Compute 3D traced-states in all three directions
 #if NDIM==1
@@ -2138,9 +2139,9 @@ end subroutine ctoprim
 !###########################################################
 !###########################################################
 !###########################################################
-subroutine uslope(q,dq,bf,dbf,dx,dt,ngrid)
+subroutine uslope(q,dq,dx,dt,ngrid)
   use amr_parameters, only:dp,nvector,ndim
-  use hydro_parameters, only:nvar,slope_type,slope_mag_type,iu1,iu2,ju1,ju2,ku1,ku2
+  use hydro_parameters, only:nvar,slope_type,iu1,iu2,ju1,ju2,ku1,ku2
   use const
   use slope_types
   implicit none
@@ -2149,8 +2150,6 @@ subroutine uslope(q,dq,bf,dbf,dx,dt,ngrid)
   real(dp),intent(in)::dx,dt
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar),intent(in)::q
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim),intent(out)::dq
-  real(dp),dimension(1:nvector,iu1:iu2+1,ju1:ju2+1,ku1:ku2+1,1:3),intent(in)::bf
-  real(dp),dimension(1:nvector,iu1:iu2+1,ju1:ju2+1,ku1:ku2+1,1:3,1:ndim),intent(out)::dbf
 
   ! local arrays
   integer::i, j, k, l, n
@@ -2196,6 +2195,34 @@ subroutine uslope(q,dq,bf,dbf,dx,dt,ngrid)
      end do
   end do
 
+end subroutine uslope
+!###########################################################
+!###########################################################
+!###########################################################
+!###########################################################
+subroutine uslope_mag(bf,dbf,dx,dt,ngrid)
+  use amr_parameters, only:dp,nvector,ndim
+  use hydro_parameters, only:nvar,slope_mag_type,iu1,iu2,ju1,ju2,ku1,ku2
+  use const
+  use slope_types
+  implicit none
+
+  integer,intent(in)::ngrid
+  real(dp),intent(in)::dx,dt
+  real(dp),dimension(1:nvector,iu1:iu2+1,ju1:ju2+1,ku1:ku2+1,1:3),intent(in)::bf
+  real(dp),dimension(1:nvector,iu1:iu2+1,ju1:ju2+1,ku1:ku2+1,1:3,1:ndim),intent(out)::dbf
+
+  ! local arrays
+  integer::i, j, k, l, n
+  real(dp):: dlft, drgt, bcen
+  real(dp)::slope_type_real,dtdx
+  integer::ilo,ihi,jlo,jhi,klo,khi
+
+  ilo=MIN(1,iu1+1); ihi=MAX(1,iu2-1)
+  jlo=MIN(1,ju1+1); jhi=MAX(1,ju2-1)
+  klo=MIN(1,ku1+1); khi=MAX(1,ku2-1)
+
+  dtdx=dt/dx
 
   ! 1D/2D transverse TVD slopes for face-centered magnetic fields
 #if NDIM>1
@@ -2381,4 +2408,4 @@ subroutine uslope(q,dq,bf,dbf,dx,dt,ngrid)
   endif
 #endif
 
-end subroutine uslope
+end subroutine uslope_mag
