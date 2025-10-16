@@ -41,9 +41,6 @@ subroutine unsplit(uin,gravin,pin,flux,tmp,dx,dy,dz,dt,ngrid)
   ! Primitive variables
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar),save::qin
 
-  ! Slopes
-  !real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim),save::dq
-
   ! Left and right state arrays
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim),save::qm
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim),save::qp
@@ -148,8 +145,8 @@ subroutine trace(q,qm,qp,dx,dt,ngrid)
    do k = klo, khi
       do j = jlo, jhi
          do i = ilo, ihi
+            ! Calculate slopes
             call uslope(q,dvar,dtdx,i,j,k,ngrid)
-
 
             !DIR$ IVDEP
             !DIR$ SIMD
@@ -163,15 +160,6 @@ subroutine trace(q,qm,qp,dx,dt,ngrid)
                   var(l,ivar) = q(l,i,j,k,ivar)
                end do
                oneoverr = 1d0/var(l,ir)
-
-               ! Limited gradients in all 3 directions
-               !DIR$ UNROLL
-               !do ivar=1,nvar
-               !   !DIR$ UNROLL
-               !   do idim=1,ndim
-               !      dvar(l,ivar,idim) = dq(l,i,j,k,ivar,idim)
-               !   end do
-               !end do
 
                ! Compute source terms
 
@@ -520,79 +508,78 @@ end subroutine ctoprim
 !###########################################################
 !###########################################################
 subroutine uslope(q,dq,dtdx,i,j,k,ngrid)
-  use amr_parameters, only:dp,nvector,ndim
-  use hydro_parameters, only:nvar,slope_type,iu1,iu2,ju1,ju2,ku1,ku2
-  use const
-  use slope_types
-  implicit none
+   use amr_parameters,   only:dp,nvector,ndim
+   use hydro_parameters, only:nvar,slope_type,iu1,iu2,ju1,ju2,ku1,ku2
+   use const
+   use slope_types
+   implicit none
 
-  integer,intent(in)::ngrid
-  integer,intent(in)::i, j, k
-  real(dp),intent(in)::dtdx
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar),intent(in)::q
-  real(dp),dimension(1:nvector,1:nvar,1:ndim),intent(out)::dq
+   integer,intent(in)::ngrid
+   integer,intent(in)::i,j,k
+   real(dp),intent(in)::dtdx
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar),intent(in)::q
+   real(dp),dimension(1:nvector,1:nvar,1:ndim),intent(out)::dq
 
-  ! local arrays
-  integer::l, n
-  real(dp)::slope_type_real
+   ! local variables
+   integer::l, n
+   real(dp)::slope_type_real
 
-  slope_type_real = REAL(slope_type, kind=dp)
+   slope_type_real = REAL(slope_type, kind=dp)
 
-  do n = 1, nvar
-              if(slope_type==0)then
-                 dq(:,n,:) = zero
+   do n = 1, nvar
+      if(slope_type==0)then
+         dq(:,n,:) = zero
 #if NDIM==1
-              else if(slope_type==1.or.slope_type==2.or.slope_type==3)then  ! minmod or average
+      else if(slope_type==1.or.slope_type==2.or.slope_type==3)then  ! minmod or average
 #elif NDIM==2
-              else if(slope_type==1.or.slope_type==2)then  ! minmod or average
+      else if(slope_type==1.or.slope_type==2)then  ! minmod or average
 #else
-              else if(slope_type==1)then ! minmod
+      else if(slope_type==1)then ! minmod
 #endif
-                 call calc_uslope_minmod_average(q,dq,i,j,k,n,ngrid,slope_type_real)
+         call calc_uslope_minmod_average(q,dq,i,j,k,n,ngrid,slope_type_real)
 #if NDIM==3
-              else if(slope_type==2)then
-                 ! moncen
-                 call calc_uslope_moncen(q,dq,i,j,k,n,ngrid)
+      else if(slope_type==2)then
+         ! moncen
+         call calc_uslope_moncen(q,dq,i,j,k,n,ngrid)
 #endif
 #if NDIM>1
-              else if(slope_type==3)then
-                 ! positivity preserving unsplit slope (2D or 3D)
-                 call calc_uslope_positivity_preserving(q,dq,i,j,k,n,ngrid)
+      else if(slope_type==3)then
+         ! positivity preserving unsplit slope (2D or 3D)
+         call calc_uslope_positivity_preserving(q,dq,i,j,k,n,ngrid)
 #endif
 #if NDIM==1
-              else if(slope_type==4)then
-                 ! superbee (only 1D)
-                 call calc_uslope_superbee(q,dq,i,j,k,n,ngrid,dtdx)
+      else if(slope_type==4)then
+         ! superbee (only 1D)
+         call calc_uslope_superbee(q,dq,i,j,k,n,ngrid,dtdx)
 
-              else if(slope_type==5)then
-                 ! ultrabee (only 1D)
-                 if(n==1)then
-                    call calc_uslope_ultrabee(q,dq,i,j,k,n,ngrid,dtdx)
-                 else
-                    dq(:,n,:) = zero
-                 endif
+      else if(slope_type==5)then
+         ! ultrabee (only 1D)
+         if(n==1)then
+            call calc_uslope_ultrabee(q,dq,i,j,k,n,ngrid,dtdx)
+         else
+            dq(:,n,:) = zero
+         endif
 
-              else if(slope_type==6)then
-                 ! unstable (only 1D)
-                 if(n==1)then
-                    call calc_uslope_unstable(q,dq,i,j,k,n,ngrid)
-                 else
-                    dq(:,n,:) = zero
-                 endif
+      else if(slope_type==6)then
+         ! unstable (only 1D)
+         if(n==1)then
+            call calc_uslope_unstable(q,dq,i,j,k,n,ngrid)
+         else
+            dq(:,n,:) = zero
+         endif
 #endif
-              else if(slope_type==7)then
-                 ! van Leer
-                 call calc_uslope_vanLeer(q,dq,i,j,k,n,ngrid)
+      else if(slope_type==7)then
+         ! van Leer
+         call calc_uslope_vanLeer(q,dq,i,j,k,n,ngrid)
 
-              else if(slope_type==8)then
-                 ! generalized moncen/minmod parameterisation (van Leer 1979)
-                 call calc_uslope_vanLeer_bis(q,dq,i,j,k,n,ngrid)
+      else if(slope_type==8)then
+         ! generalized moncen/minmod parameterisation (van Leer 1979)
+         call calc_uslope_vanLeer_bis(q,dq,i,j,k,n,ngrid)
 
-              else
-                 write(*,*)'Unknown slope type'
-                 call clean_stop
-              endif
-  end do
-
+      else
+         write(*,*)'Unknown slope type'
+         call clean_stop
+      endif
+   end do
 
 end subroutine uslope
