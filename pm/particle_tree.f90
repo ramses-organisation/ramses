@@ -217,6 +217,11 @@ subroutine make_tree_fine(ilevel)
      ip=0
      ! Loop over grids
      do jgrid=1,numbl(icpu,ilevel)
+        if(icpu==myid)then
+           igrid=active(ilevel)%igrid(jgrid)
+        else
+           igrid=reception(icpu,ilevel)%igrid(jgrid)
+        end if
         npart1=numbp(igrid)  ! Number of particles in the grid
         if(npart1>0)then
            ig=ig+1
@@ -243,7 +248,6 @@ subroutine make_tree_fine(ilevel)
            end do
            ! End loop over particles
         end if
-        igrid=next(igrid)   ! Go to next grid
      end do
      ! End loop over grids
      if(ip>0)call check_tree(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
