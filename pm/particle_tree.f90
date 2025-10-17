@@ -211,11 +211,13 @@ subroutine make_tree_fine(ilevel)
   scale=boxlen/dble(nx_loc)
 
   ! Loop over cpus
+!$omp parallel private(icpu,igrid,ig,ip,jgrid,npart1,ipart,jpart,next_part)
   do icpu=1,ncpu
      igrid=headl(icpu,ilevel)
      ig=0
      ip=0
      ! Loop over grids
+!$omp do
      do jgrid=1,numbl(icpu,ilevel)
         if(icpu==myid)then
            igrid=active(ilevel)%igrid(jgrid)
@@ -249,10 +251,12 @@ subroutine make_tree_fine(ilevel)
            ! End loop over particles
         end if
      end do
+!$omp end do nowait
      ! End loop over grids
      if(ip>0)call check_tree(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
   end do
   ! End loop over cpus
+!$omp end parallel
 
   ! Periodic boundaries
   if(sink)then
