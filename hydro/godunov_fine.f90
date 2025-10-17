@@ -49,86 +49,104 @@ subroutine set_unew(ilevel)
   ! This routine sets array unew to its initial value uold before calling
   ! the hydro scheme. unew is set to zero in virtual boundaries.
   !--------------------------------------------------------------------------
-  integer::i,ivar,ind,icpu,iskip
+  integer::i,ivar,ind,icpu,ncache,iskip,igrid,ngrid,icell
   real(dp)::d,u,v,w,e
+  integer,dimension(1:nvector),save::ind_grid,ind_cell
 #if NENER>0
   integer::irad
 #endif
+
+!$omp threadprivate(ind_grid,ind_cell)
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
 
   ! Set unew to uold for myid cells
-!$omp parallel do private(iskip,ivar,i,d,u,v,w,e)
+!$omp parallel private(iskip,ivar,i,d,u,v,w,e)
   do ind=1,twotondim
      iskip=ncoarse+(ind-1)*ngridmax
      do ivar=1,nvar
+!$omp do
         do i=1,active(ilevel)%ngrid
            unew(active(ilevel)%igrid(i)+iskip,ivar) = uold(active(ilevel)%igrid(i)+iskip,ivar)
         end do
+!$omp end do nowait
      end do
      if(momentum_feedback>0)then
+!$omp do
         do i=1,active(ilevel)%ngrid
            pstarnew(active(ilevel)%igrid(i)+iskip) = 0
         end do
+!$omp end do nowait
      endif
      if(pressure_fix)then
+!$omp do
         do i=1,active(ilevel)%ngrid
-           divu(active(ilevel)%igrid(i)+iskip) = 0
-        end do
-        do i=1,active(ilevel)%ngrid
-           d=max(uold(active(ilevel)%igrid(i)+iskip,1),smallr)
+           icell=active(ilevel)%igrid(i)+iskip
+           divu(icell) = 0
+           d=max(uold(icell,1),smallr)
            u=0; v=0; w=0
-           if(ndim>0)u=uold(active(ilevel)%igrid(i)+iskip,2)/d
-           if(ndim>1)v=uold(active(ilevel)%igrid(i)+iskip,3)/d
-           if(ndim>2)w=uold(active(ilevel)%igrid(i)+iskip,4)/d
-           e=uold(active(ilevel)%igrid(i)+iskip,neul)-0.5d0*d*(u**2+v**2+w**2)
+           if(ndim>0)u=uold(icell,2)/d
+           if(ndim>1)v=uold(icell,3)/d
+           if(ndim>2)w=uold(icell,4)/d
+           e=uold(icell,neul)-0.5d0*d*(u**2+v**2+w**2)
 #if NENER>0
            do irad=1,nener
-              e=e-uold(active(ilevel)%igrid(i)+iskip,nhydro+irad)
+              e=e-uold(icell,nhydro+irad)
            end do
 #endif
-           enew(active(ilevel)%igrid(i)+iskip)=e
+           enew(icell)=e
         end do
+!$omp end do nowait
      end if
   end do
+!$omp end parallel
 
   ! Set unew to 0 for virtual boundary cells
-!$omp parallel do private(ind,iskip,ivar,i)
+!$omp parallel private(icpu,ncache,igrid,ngrid,i,ind,iskip,ivar)
   do icpu=1,ncpu
-  do ind=1,twotondim
-     iskip=ncoarse+(ind-1)*ngridmax
-     do ivar=1,nvar
-        do i=1,reception(icpu,ilevel)%ngrid
+     ncache=reception(icpu,ilevel)%ngrid
+     ! Loop over grids by vector sweeps
+!$omp do
+     do igrid=1,ncache,nvector
+        ! Gather nvector grids
+        ngrid=MIN(nvector,ncache-igrid+1)
+        do i=1,ngrid
 #ifdef LIGHT_MPI_COMM
-           unew(reception(icpu,ilevel)%pcomm%igrid(i)+iskip,ivar)=0
+           ind_grid(i)=reception(icpu,ilevel)%pcomm%igrid(igrid+i-1)
 #else
-           unew(reception(icpu,ilevel)%igrid(i)+iskip,ivar)=0
+           ind_grid(i)=reception(icpu,ilevel)%igrid(igrid+i-1)
 #endif
+        end do
+        ! Loop over cells
+        do ind=1,twotondim
+           ! Gather cell indices
+           iskip=ncoarse+(ind-1)*ngridmax
+           do i=1,ngrid
+              ind_cell(i)=iskip+ind_grid(i)
+           end do
+           do ivar=1,nvar
+              do i=1,ngrid
+                 unew(ind_cell(i),ivar)=0
+              end do
+           end do
+           if(momentum_feedback>0)then
+              do i=1,ngrid
+                 pstarnew(ind_cell(i)) = 0
+              end do
+           endif
+           if(pressure_fix)then
+              do i=1,ngrid
+                 divu(ind_cell(i)) = 0
+                 enew(ind_cell(i)) = 0
+              end do
+           end if
         end do
      end do
-     if(momentum_feedback>0)then
-        do i=1,reception(icpu,ilevel)%ngrid
-#ifdef LIGHT_MPI_COMM
-           pstarnew(reception(icpu,ilevel)%pcomm%igrid(i)+iskip) = 0
-#else
-           pstarnew(reception(icpu,ilevel)%igrid(i)+iskip) = 0
-#endif
-        end do
-     endif
-     if(pressure_fix)then
-        do i=1,reception(icpu,ilevel)%ngrid
-#ifdef LIGHT_MPI_COMM
-           divu(reception(icpu,ilevel)%pcomm%igrid(i)+iskip) = 0
-           enew(reception(icpu,ilevel)%pcomm%igrid(i)+iskip) = 0
-#else
-           divu(reception(icpu,ilevel)%igrid(i)+iskip) = 0
-           enew(reception(icpu,ilevel)%igrid(i)+iskip) = 0
-#endif
-        end do
-     end if
+!$omp end do nowait
   end do
-  end do
+!$omp end parallel
+
 
 111 format('   Entering set_unew for level ',i2)
 
@@ -162,13 +180,14 @@ subroutine set_uold(ilevel)
   dx=0.5d0**ilevel*scale
 
   ! Set uold to unew for myid cells
-!$omp parallel do private(iskip,ivar,i,d,u,v,w,e_kin,e_cons,e_prim,e_trunc,div)
+!$omp parallel private(iskip,ivar,i,d,u,v,w,e_kin,e_cons,e_prim,e_trunc,div)
   do ind=1,twotondim
      iskip=ncoarse+(ind-1)*ngridmax
 
      ! -------------------------------------------------------------------------------------------------------------------------------------------------------------
      ! L. Romano 13.06.2023 -- Catch advection errors due to smallr
 #if NVAR > NHYDRO+NENER
+!$omp do
      do i=1,active(ilevel)%ngrid
         if(uold(active(ilevel)%igrid(i)+iskip,1).lt.smallr.and.unew(active(ilevel)%igrid(i)+iskip,1).gt.uold(active(ilevel)%igrid(i)+iskip,1))then
            ! inflow into previously floored cell: fix concentrations
@@ -182,21 +201,27 @@ subroutine set_uold(ilevel)
            end do
         end if
      end do
+!$omp end do nowait
 #endif
      ! -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
      do ivar=1,nvar
+!$omp do
         do i=1,active(ilevel)%ngrid
            uold(active(ilevel)%igrid(i)+iskip,ivar) = unew(active(ilevel)%igrid(i)+iskip,ivar)
         end do
+!$omp end do nowait
      end do
      if(momentum_feedback>0)then
+!$omp do
         do i=1,active(ilevel)%ngrid
            pstarold(active(ilevel)%igrid(i)+iskip) = pstarnew(active(ilevel)%igrid(i)+iskip)
         end do
+!$omp end do nowait
      endif
      if(pressure_fix)then
         ! Correct total energy if internal energy is too small
+!$omp do
         do i=1,active(ilevel)%ngrid
            ind_cell=active(ilevel)%igrid(i)+iskip
            d=max(uold(ind_cell,1),smallr)
@@ -219,8 +244,10 @@ subroutine set_uold(ilevel)
               uold(ind_cell,neul)=e_prim+e_kin
            end if
         end do
+!$omp end do nowait
      end if
   end do
+!$omp end parallel
 
 111 format('   Entering set_uold for level ',i2)
 
