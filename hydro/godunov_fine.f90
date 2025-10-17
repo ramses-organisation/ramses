@@ -49,11 +49,14 @@ subroutine set_unew(ilevel)
   ! This routine sets array unew to its initial value uold before calling
   ! the hydro scheme. unew is set to zero in virtual boundaries.
   !--------------------------------------------------------------------------
-  integer::i,ivar,ind,icpu,iskip
+  integer::i,ivar,ind,icpu,ncache,iskip,igrid,ngrid,icell
   real(dp)::d,u,v,w,e
+  integer,dimension(1:nvector),save::ind_grid,ind_cell
 #if NENER>0
   integer::irad
 #endif
+
+!$omp threadprivate(ind_grid,ind_cell)
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
@@ -79,19 +82,20 @@ subroutine set_unew(ilevel)
      if(pressure_fix)then
 !$omp do
         do i=1,active(ilevel)%ngrid
-           divu(active(ilevel)%igrid(i)+iskip) = 0
-           d=max(uold(active(ilevel)%igrid(i)+iskip,1),smallr)
+           icell=active(ilevel)%igrid(i)+iskip
+           divu(icell) = 0
+           d=max(uold(icell,1),smallr)
            u=0; v=0; w=0
-           if(ndim>0)u=uold(active(ilevel)%igrid(i)+iskip,2)/d
-           if(ndim>1)v=uold(active(ilevel)%igrid(i)+iskip,3)/d
-           if(ndim>2)w=uold(active(ilevel)%igrid(i)+iskip,4)/d
-           e=uold(active(ilevel)%igrid(i)+iskip,neul)-0.5d0*d*(u**2+v**2+w**2)
+           if(ndim>0)u=uold(icell,2)/d
+           if(ndim>1)v=uold(icell,3)/d
+           if(ndim>2)w=uold(icell,4)/d
+           e=uold(icell,neul)-0.5d0*d*(u**2+v**2+w**2)
 #if NENER>0
            do irad=1,nener
-              e=e-uold(active(ilevel)%igrid(i)+iskip,nhydro+irad)
+              e=e-uold(icell,nhydro+irad)
            end do
 #endif
-           enew(active(ilevel)%igrid(i)+iskip)=e
+           enew(icell)=e
         end do
 !$omp end do nowait
      end if
