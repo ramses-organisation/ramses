@@ -121,24 +121,32 @@ subroutine init_flag(ilevel)
 
   ! Initialize flag1 to 0
   nflag=0
+!$omp parallel private(ind,iskip,i)
   do ind=1,twotondim
      iskip=ncoarse+(ind-1)*ngridmax
+!$omp do
      do i=1,active(ilevel)%ngrid
         flag1(active(ilevel)%igrid(i)+iskip)=0
      end do
+!$omp end do nowait
   end do
+!$omp end parallel
 
   ! If load balancing operations, flag only refined cells
   if(balance)then
+!$omp parallel private(ind,iskip,i) reduction(+:nflag)
      do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
+!$omp do
         do i=1,active(ilevel)%ngrid
            if(son(active(ilevel)%igrid(i)+iskip)>0)then
               flag1(active(ilevel)%igrid(i)+iskip)=1
               nflag=nflag+1
            end if
         end do
+!$omp end do nowait
      end do
+!$omp end parallel
   else
      ! If cell is refined and contains a flagged son
      ! or a refined son, then flag cell for refinement.
@@ -146,13 +154,17 @@ subroutine init_flag(ilevel)
         call test_flag(ilevel)
      else
         ! If ilevel < levelmin, set flag to 1 for all cells
+!$omp parallel private(ind,iskip,i) reduction(+:nflag)
         do ind=1,twotondim
            iskip=ncoarse+(ind-1)*ngridmax
+!$omp do
            do i=1,active(ilevel)%ngrid
               flag1(active(ilevel)%igrid(i)+iskip)=1
            end do
+!$omp end do nowait
            nflag=nflag+active(ilevel)%ngrid
         end do
+!$omp end parallel
      end if
   end if
 
@@ -179,9 +191,11 @@ subroutine test_flag(ilevel)
   logical::ok
 
   ! Loop over cells
+!$omp parallel private(ind,iskip,i,ind_grid_son,ok,ind_son,iskip_son,ind_cell_son) reduction(+:nflag)
   do ind=1,twotondim
      iskip=ncoarse+(ind-1)*ngridmax
      ! Test all refined cells
+!$omp do
      do i=1,active(ilevel)%ngrid
         ! Gather child grid number
         ind_grid_son=son(active(ilevel)%igrid(i)+iskip)
@@ -202,7 +216,9 @@ subroutine test_flag(ilevel)
            nflag=nflag+1
         end if
      end do
+!$omp end do nowait
   end do
+!$omp end parallel
   ! End loop over cells
 
 end subroutine test_flag
@@ -228,6 +244,7 @@ subroutine ensure_ref_rules(ilevel)
 !$omp threadprivate(ind_grid,ind_cell,nbors_father_cells,ok)
 
   ncache=active(ilevel)%ngrid
+!$omp parallel do private(igrid,ngrid,i,ind,iskip)
   do igrid=1,ncache,nvector
      ! Gather nvector grids
      ngrid=MIN(nvector,ncache-igrid+1)
@@ -353,6 +370,7 @@ subroutine userflag_fine(ilevel)
 
   ! Loop over active grids
   ncache=active(ilevel)%ngrid
+!$omp parallel do private(igrid,ngrid,i,ind,iskip,idim,nok) reduction(+:nflag)
   do igrid=1,ncache,nvector
 
      ! Gather nvector grids
@@ -583,6 +601,7 @@ subroutine smooth_fine(ilevel)
   ! Loop over steps
   do ismooth=1,ndim
      ! Initialize flag2 to 0
+!$omp parallel do private(igrid,ngrid,i,ind,iskip)
      do igrid=1,ncache,nvector
         ngrid=MIN(nvector,ncache-igrid+1)
         do i=1,ngrid
@@ -599,6 +618,7 @@ subroutine smooth_fine(ilevel)
         end do
      end do
      ! Count neighbors and set flag2 accordingly
+!$omp parallel do private(igrid,ngrid,i,ind,iskip)
      do igrid=1,ncache,nvector
         ngrid=MIN(nvector,ncache-igrid+1)
         do i=1,ngrid
@@ -610,6 +630,7 @@ subroutine smooth_fine(ilevel)
         end do
      end do
      ! Set flag1=1 for cells with flag2=1
+!$omp parallel do private(igrid,ngrid,i,ind,iskip) reduction(+:nflag)
      do igrid=1,ncache,nvector
         ngrid=MIN(nvector,ncache-igrid+1)
         do i=1,ngrid
