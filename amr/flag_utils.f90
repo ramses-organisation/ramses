@@ -839,7 +839,10 @@ subroutine init_refmap_fine(ilevel)
      i1_min=n1(ilevel)+1; i1_max=0
      i2_min=n2(ilevel)+1; i2_max=0
      i3_min=n3(ilevel)+1; i3_max=0
+!$omp parallel private(ind,i,igrid,xx1,xx2,xx3) &
+!$omp& reduction(MIN:i1_min,i2_min,i3_min) reduction(MAX:i1_max,i2_max,i3_max)
      do ind=1,twotondim
+!$omp do
         do i=1,ncache
            igrid=active(ilevel)%igrid(i)
            xx1=xg(igrid,1)+xc(ind,1)-skip_loc(1)
@@ -855,7 +858,9 @@ subroutine init_refmap_fine(ilevel)
            i3_min=MIN(i3_min,int(xx3)+1)
            i3_max=MAX(i3_max,int(xx3)+1)
         end do
+!$omp end do nowait
      end do
+!$omp end parallel
      error=.false.
      if(i1_min<1.or.i1_max>n1(ilevel))error=.true.
      if(i2_min<1.or.i2_max>n2(ilevel))error=.true.
@@ -939,8 +944,10 @@ subroutine init_refmap_fine(ilevel)
   if(ncache>0)then
 
      ! Loop over cells
+!$omp parallel private(ind,iskip,i,igrid,icell,xx1,xx2,xx3,i1,i2,i3)
      do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
+!$omp do
         do i=1,ncache
            igrid=active(ilevel)%igrid(i)
            icell=igrid+iskip
@@ -956,7 +963,9 @@ subroutine init_refmap_fine(ilevel)
            ! Scatter to corresponding primitive variable
            cpu_map2(icell)=int(init_array(i1,i2,i3))
         end do
+!$omp end do nowait
      end do
+!$omp end parallel
      ! End loop over cells
   endif
 
