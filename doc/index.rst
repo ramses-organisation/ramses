@@ -19,7 +19,7 @@ generated output files. A pdf version of this documentation can be found
 `here <Ramses.pdf>`_.
 
 **New users of Ramses are invited to follow the ramses's** `tutorials <https://ramses-tutorials.readthedocs.io/en/latest/>`_,
-**that covers the basics to setup a simulation and helps to get started
+**that cover the basics to setup a simulation and help with getting started
 with some common applications.**
 
 
