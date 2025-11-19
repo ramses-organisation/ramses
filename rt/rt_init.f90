@@ -433,6 +433,7 @@ SUBROUTINE add_rt_sources(ilevel,dt)
   ncache=active(ilevel)%ngrid
   ! dx (and dx_loc=dx) are just equal to 1/nx (where 1 is the boxlength)
   ! Loop over grids by vector sweeps
+!$omp parallel do private(ngrid,i,iskip,idim,ivar)
   do igrid=1,ncache,nvector
      ngrid=MIN(nvector,ncache-igrid+1)
      do i=1,ngrid
@@ -511,6 +512,7 @@ SUBROUTINE add_UV_background(ilevel)
 
   ncache=active(ilevel)%ngrid
   ! Loop over grids by vector sweeps
+!$omp parallel do private(ngrid,i,ind,iskip,ic,nH,efactor,j,ig)
   do igrid=1,ncache,nvector
      ngrid=MIN(nvector,ncache-igrid+1)
      do i=1,ngrid
