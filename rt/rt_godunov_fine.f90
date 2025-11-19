@@ -52,6 +52,7 @@ SUBROUTINE rt_set_unew(ilevel)
   if(verbose)write(*,111)ilevel
 
   ! Set rtunew to rtuold for myid cells
+!$omp parallel do private(ind,iskip,ivar,i)
   do ind=1,twotondim
      iskip=ncoarse+(ind-1)*ngridmax
      do ivar=1,nrtvar
@@ -62,6 +63,7 @@ SUBROUTINE rt_set_unew(ilevel)
   end do
 
   ! Set rtunew to 0 for virtual boundary cells
+!$omp parallel do private(icpu,ind,iskip,ivar,i)
   do icpu=1,ncpu
   do ind=1,twotondim
      iskip=ncoarse+(ind-1)*ngridmax
@@ -104,6 +106,7 @@ SUBROUTINE rt_set_uold(ilevel)
   if(rt_smooth) return
 
   ! Set rtuold to rtunew for myid cells
+!$omp parallel do private(ind,iskip,ivar,i,ig,icell,Npc,fred)
   do ind=1,twotondim
      iskip=ncoarse+(ind-1)*ngridmax
      do ivar=1,nrtvar
