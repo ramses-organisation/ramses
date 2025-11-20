@@ -58,7 +58,7 @@ subroutine set_unew(ilevel)
   ! Set unew to uold for myid cells
   do ind=1,twotondim
      iskip=ncoarse+(ind-1)*ngridmax
-     do ivar=1,nvar+3
+     do ivar=1,nvar_all
         do i=1,active(ilevel)%ngrid
            unew(active(ilevel)%igrid(i)+iskip,ivar) = uold(active(ilevel)%igrid(i)+iskip,ivar)
         end do
@@ -90,15 +90,33 @@ subroutine set_unew(ilevel)
   do icpu=1,ncpu
   do ind=1,twotondim
      iskip=ncoarse+(ind-1)*ngridmax
-     do ivar=1,nvar+3
+     do ivar=1,nvar_all
         do i=1,reception(icpu,ilevel)%ngrid
+#ifdef LIGHT_MPI_COMM
+           unew(reception(icpu,ilevel)%pcomm%igrid(i)+iskip,ivar)=0
+#else
            unew(reception(icpu,ilevel)%igrid(i)+iskip,ivar)=0
+#endif
         end do
      end do
+     if(momentum_feedback>0)then
+        do i=1,reception(icpu,ilevel)%ngrid
+#ifdef LIGHT_MPI_COMM
+           pstarnew(reception(icpu,ilevel)%pcomm%igrid(i)+iskip) = 0
+#else
+           pstarnew(reception(icpu,ilevel)%igrid(i)+iskip) = 0
+#endif
+        end do
+     endif
      if(pressure_fix)then
         do i=1,reception(icpu,ilevel)%ngrid
+#ifdef LIGHT_MPI_COMM
+           divu(reception(icpu,ilevel)%pcomm%igrid(i)+iskip) = 0
+           enew(reception(icpu,ilevel)%pcomm%igrid(i)+iskip) = 0
+#else
            divu(reception(icpu,ilevel)%igrid(i)+iskip) = 0
            enew(reception(icpu,ilevel)%igrid(i)+iskip) = 0
+#endif
         end do
      end if
   end do
@@ -229,11 +247,16 @@ subroutine set_uold(ilevel)
 #endif
      ! -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-     do ivar=1,nvar+3
+     do ivar=1,nvar_all
         do i=1,active(ilevel)%ngrid
            uold(active(ilevel)%igrid(i)+iskip,ivar) = unew(active(ilevel)%igrid(i)+iskip,ivar)
         end do
      end do
+     if(momentum_feedback>0)then
+        do i=1,active(ilevel)%ngrid
+           pstarold(active(ilevel)%igrid(i)+iskip) = pstarnew(active(ilevel)%igrid(i)+iskip)
+        end do
+     endif
      if(pressure_fix)then
         do i=1,active(ilevel)%ngrid
            ind_cell=active(ilevel)%igrid(i)+iskip
