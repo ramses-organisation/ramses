@@ -324,6 +324,7 @@ subroutine add_gravity_source_terms(ilevel)
         e_kin=0.5d0*d*(u**2+v**2+w**2)
         e_prim=unew(ind_cell,neul)-e_kin
         d_old=max(uold(ind_cell,1),smallr)
+        if(strict_equilibrium>0)req=rho_eq(ind_cell)
         fact=d_old/d*0.5*dtnew(ilevel)
         if(ndim>0)then
            u=u+f(ind_cell,1)*fact
