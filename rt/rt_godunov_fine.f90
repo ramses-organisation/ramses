@@ -449,6 +449,7 @@ SUBROUTINE rt_godfine1(ind_grid, ncache, ilevel, dt)
   !--------------------------------------
   ! Conservative update at level ilevel-1
   !--------------------------------------
+  if(levelmin.lt.nlevelmax)then
   if (rt_nsubcycle == 1)then
      ! Loop over dimensions
      do idim=1,ndim
@@ -534,4 +535,5 @@ SUBROUTINE rt_godfine1(ind_grid, ncache, ilevel, dt)
      ! End loop over dimensions
   end if
   ! End if-clause for rt-subcycling
+  end if
 END SUBROUTINE rt_godfine1
