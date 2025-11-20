@@ -20,7 +20,7 @@ SUBROUTINE rt_godunov_fine(ilevel, dt)
 
   ! Loop over active grids by vector sweeps
   ncache=active(ilevel)%ngrid  ! total # of grids at level ilevel
-!$omp parallel do private(ngrid)
+!$omp parallel do private(igrid,ngrid,i)
   do igrid=1,ncache,nvector    ! take steps of 500 grids up to ncache
      ngrid=MIN(nvector,ncache-igrid+1) ! # of grids in each sweep
      do i=1,ngrid              ! collect grid indices for one sweep
@@ -484,7 +484,7 @@ SUBROUTINE rt_godfine1(ind_grid, ncache, ilevel, dt)
               do j3=j3min,j3max-j0 ! 1 to 1 if dim=2, 1 to 2 otherwise
                  do i3=i3min,i3max-i0 ! 1 to 1 if dim=1, 1 to 2 otherwise
                     do i=1,nb_noneigh
-!!!$omp atomic update
+!$omp atomic update
                        rtunew(ind_buffer(i),ivar) =                      &
                            & rtunew(ind_buffer(i),ivar)                  &
                            & - flux(ind_cell(i),i3,j3,k3,ivar,idim)      &
@@ -520,7 +520,7 @@ SUBROUTINE rt_godfine1(ind_grid, ncache, ilevel, dt)
               do j3=j3min+j0,j3max
                  do i3=i3min+i0,i3max
                     do i=1,nb_noneigh
-!!!$omp atomic update
+!$omp atomic update
                        rtunew(ind_buffer(i),ivar) =                          &
                            & rtunew(ind_buffer(i),ivar)                      &
                            & + flux(ind_cell(i),i3+i0,j3+j0,k3+k0,ivar,idim) &
