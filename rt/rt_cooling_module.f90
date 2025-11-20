@@ -258,7 +258,9 @@ SUBROUTINE rt_solve_cooling(T2, xion, Np, Fp, p_gas, dNpdt, dFpdt        &
      nAct_next=0                     ! Active cells for the next iteration
      do ia=1,nAct                             ! Loop over the active cells
         i = indAct(ia)                        !                 Cell index
+!!!$omp critical
         call cool_step(i)
+!!!$omp end critical
         if(loopcnt .gt. 100000) then
            call display_coolinfo(.true., loopcnt, i, dt-tleft(i), dt     &
                             ,ddt(i), nH(i), T2(i),  xion(:,i),  Np(:,i)  &
@@ -323,21 +325,29 @@ contains
     use const
     implicit none
     integer, intent(in)::icell
-    real(dp),dimension(nDim),save:: dmom
-    real(dp),dimension(nIons),save:: alpha, beta, nN, nI
-    real(dp),save:: dUU, fracMax, x_tot
-    real(dp),save:: mu, TK, nHe, ne, neInit, Hrate
-    real(dp):: xHI,dxHI, xH2=0d0,dXH2=0d0, xHeI,dxHeI
-    real(dp),save:: Crate, dCdT2, X_nHkb, rate, dRate, cr, de=0d0
-    real(dp),save:: photoRate, metal_tot, metal_prime, ss_factor, f_dust
-    integer,save:: iion,igroup,idim
-    real(dp),dimension(nGroups),save:: recRad, phAbs, phSc, dustAbs
-    real(dp),dimension(nGroups),save:: dustSc, kAbs_loc,kSc_loc
-    real(dp),save:: rho, TR, one_over_C_v, E_rad, dE_T, fluxMag, mom_fact
-    real(dp),save:: G0, eff_peh, cdex, ncr
+    real(dp),dimension(nDim):: dmom
+    real(dp),dimension(nIons):: alpha, beta, nN, nI
+    real(dp):: dUU, fracMax, x_tot
+    real(dp):: mu, TK, nHe, ne, neInit, Hrate
+    real(dp):: xHI,dxHI, xH2,dXH2, xHeI,dxHeI
+    real(dp):: Crate, dCdT2, X_nHkb, rate, dRate, cr, de
+    real(dp):: photoRate, metal_tot, metal_prime, ss_factor, f_dust
+    integer:: iion,igroup,idim
+    real(dp),dimension(nGroups):: recRad, phAbs, phSc, dustAbs
+    real(dp),dimension(nGroups):: dustSc, kAbs_loc,kSc_loc
+    real(dp):: rho, TR, one_over_C_v, E_rad, dE_T, fluxMag, mom_fact
+    real(dp):: G0, eff_peh, cdex, ncr
     logical::newAtomicCons=.true.
-!$omp threadprivate(dmom,alpha, beta, nN, nI,recRad, phAbs, phSc, dustAbs,dustSc, kAbs_loc,kSc_loc)
-!$omp threadprivate(rho, TR, one_over_C_v, E_rad, dE_T, fluxMag, mom_fact,G0, eff_peh, cdex, ncr)
+!!!$omp threadprivate(dmom,alpha, beta, nN, nI,recRad, phAbs, phSc, dustAbs,dustSc, kAbs_loc,kSc_loc)
+!!!$omp threadprivate(dUU, fracMax, x_tot,mu, TK, nHe, ne, neInit, Hrate)
+!!!$omp threadprivate(rho, TR, one_over_C_v, E_rad, dE_T, fluxMag, mom_fact,G0, eff_peh, cdex, ncr)
+!!!$omp threadprivate(iion,igroup,idim)
+!!!$omp threadprivate(photoRate, metal_tot, metal_prime, ss_factor, f_dust)
+!!!$omp threadprivate(Crate, dCdT2, X_nHkb, rate, dRate, cr, de)
+
+    xH2=0d0
+    dXH2=0d0
+    de=0d0
     !---------------------------------------------------------------------
     dt_ok=.false.
     nHe=0.25*nH(icell)*Y/X  !         Helium number density
@@ -888,6 +898,12 @@ SUBROUTINE cmp_chem_eq(TK, nH, t_rad_spec, nSpec, nTot, mu, Zsol)
   real(dp)::err_nE, err_nH2, n_H2_old
 !-------------------------------------------------------------------------
 
+  g_H2=0;   g_HI=0;    g_HEI=0; g_HEII=0   ! Photoion/dissoc
+  aZ_H2=0;  a_HI=0;  a_HEI=0;   a_HEII=0  ! Formation
+  b_H2HI=0; b_H2H2=0;  b_HI=0;    b_HEI=0; b_HEII=0!Col
+  C_HII=0;  C_H2=0;    D_H2=0;  f_HII=0;   f_H2=0  ! Cre & destr
+  D_HEI=0;  C_HEIII=0; f_HeI=0; f_HeIII=0; f_dust=0! Cre & destr
+
   g_HI   = t_rad_spec(ixHII)                  !      Photoionization [s-1]
   if(isH2) then
      g_H2   = t_rad_spec(ixHI)                !    Photodissociation [s-1]
@@ -1089,7 +1105,7 @@ subroutine rt_cmp_metals(T2,nH,mu,metal_tot,metal_prime,aexp)
   ! Cooling from metals only (without the contribution of H and He)
   ! log cooling rate in [erg s-1 cm3]
   ! S. Ploeckinger 06/2015
-  real(kind=8),dimension(1:91) :: excess_cooling_cc07 = (/ &
+  real(kind=8),dimension(1:91),parameter :: excess_cooling_cc07 = (/ &
        &  -24.9082, -24.9082, -24.5503, -24.0898, -23.5328, -23.0696, -22.7758, &
        &  -22.6175, -22.5266, -22.4379, -22.3371, -22.2289, -22.1181, -22.0078, &
        &  -21.8992, -21.7937, -21.6921, -21.5961, -21.5089, -21.4343, -21.3765, &
@@ -1136,10 +1152,17 @@ subroutine rt_cmp_metals(T2,nH,mu,metal_tot,metal_prime,aexp)
        & 0.0000000 /)
   real(dp)::TT,lTT,deltaT,lcool1,lcool2,lcool1_prime,lcool2_prime
   real(dp)::ZZ,deltaZ
-  real(dp)::c1=0.4,c2=10.0,TT0=1d5,TTC=1d6,alpha1=0.15
-  real(dp)::ux,g_courty,f_courty=1d0,g_courty_prime,f_courty_prime
+  real(dp)::c1,c2,TT0,TTC,alpha1
+  real(dp)::ux,g_courty,f_courty,g_courty_prime,f_courty_prime
   integer::iT,iZ
 !-------------------------------------------------------------------------
+  c1=0.4
+  c2=10.0
+  TT0=1d5
+  TTC=1d6
+  alpha1=0.15
+  f_courty=1d0
+
   ZZ=1d0/aexp-1d0
   TT=T2*mu
   lTT=log10(TT)
@@ -1207,6 +1230,8 @@ FUNCTION getMu(xion, Tmu)
   real(kind=8),save :: xHI, xHII, xHeII, xHeIII
   real(kind=8)::getMu
 !-------------------------------------------------------------------------
+!$omp threadprivate(xHI, xHII, xHeII, xHeIII)
+
   xHII=0d0 ; xHeII=0d0 ; xHeIII=0d0
   if(isH2) then
      xHI=xion(ixHI)
