@@ -27,9 +27,11 @@ subroutine synchro_fine(ilevel)
   endif
 
   ! Synchronize velocity using CIC
+!$omp parallel private(ig,ip,jgrid,igrid,npart1,ipart,local_counter,jpart)
   ig=0
   ip=0
   ! Loop over grids
+!$omp do
   do jgrid=1,active(ilevel)%ngrid
      igrid=active(ilevel)%igrid(jgrid)
      npart1=numbp(igrid)  ! Number of particles in the grid
@@ -69,8 +71,10 @@ subroutine synchro_fine(ilevel)
         end if
      end if
   end do
+!$omp end do nowait
   ! End loop over grids
   if(ip>0)call sync(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
+!$omp end parallel
 
   !sink cloud particles are used to average the grav. acceleration
   if(sink)then
@@ -125,9 +129,11 @@ subroutine synchro_fine_static(ilevel)
   endif
 
   ! Synchronize velocity using CIC
+!$omp parallel private(ig,ip,jgrid,igrid,npart1,npart2,ipart,jpart,next_part)
   ig=0
   ip=0
   ! Loop over grids
+!$omp do
   do jgrid=1,active(ilevel)%ngrid
      igrid=active(ilevel)%igrid(jgrid)
      npart1=numbp(igrid)  ! Number of particles in the grid
@@ -198,8 +204,10 @@ subroutine synchro_fine_static(ilevel)
         ! End loop over particles
      end if
   end do
+!$omp end do nowait
   ! End loop over grids
   if(ip>0)call sync(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
+!$omp end parallel
 
   !sink cloud particles are used to average the grav. acceleration
   if(sink)then
