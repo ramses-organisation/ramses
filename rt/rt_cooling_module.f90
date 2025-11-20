@@ -197,7 +197,6 @@ SUBROUTINE rt_solve_cooling(T2, xion, Np, Fp, p_gas, dNpdt, dFpdt        &
   real(dp)::one_over_Np_FRAC, one_over_Fp_FRAC, one_over_T_FRAC
   real(dp),dimension(1:nGroups) :: group_egy_ratio, group_egy_erg
 
-  call updateRTGroups_CoolConstants(ilevel)
   ! Store some temporary variables reduce computations
   one_over_rt_c_cgs = 1d0 / rt_c_cgs(ilevel)
   one_over_Np_FRAC = 1d0 / Np_FRAC
@@ -1013,6 +1012,9 @@ SUBROUTINE rt_evol_single_cell(astart,aend,dasura,h,omegab,omega0,omegaL &
   aexp = astart
   T2_com = 2.726d0 / aexp * aexp**2 / mu_mol
   nH_com = omegab*rhoc*h**2*X/mH
+
+
+  call updateRTGroups_CoolConstants(levelmin)
 
   mu_dp = mu
   call cmp_Equilibrium_Abundances(                                       &

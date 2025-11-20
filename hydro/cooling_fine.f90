@@ -19,6 +19,10 @@ subroutine cooling_fine(ilevel)
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
 
+#ifdef RT
+  call updateRTGroups_CoolConstants(ilevel)
+#endif
+
   ! Operator splitting step for cooling source term
   ! by vector sweeps
   ncache=active(ilevel)%ngrid

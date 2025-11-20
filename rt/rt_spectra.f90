@@ -545,6 +545,7 @@ SUBROUTINE update_SED_group_props()
         enddo
      endif
   end do
+  ! Correct cooling constants after photon groups are updated
   do i=levelmin,nlevelmax
      call updateRTgroups_CoolConstants(i)
   enddo
