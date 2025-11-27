@@ -238,7 +238,7 @@ subroutine init_amr
      allocate(tailp(1:ngridmax))
      allocate(numbp(1:ngridmax))
      headp=0; tailp=0; numbp=0
-#ifdef _OPENMP
+#ifdef OPENMP
      allocate(numbp_old(1:ngridmax))
      allocate(headp_old(1:ngridmax))
      allocate(nextp_old(1:npartmax))
