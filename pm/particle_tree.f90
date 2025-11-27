@@ -210,6 +210,35 @@ subroutine make_tree_fine(ilevel)
   if(ndim>2)skip_loc(3)=dble(kcoarse_min)
   scale=boxlen/dble(nx_loc)
 
+  ! Store old linked lists for indexing in parallel
+#ifdef OPENMP
+!$omp parallel private(igrid,npart1,ipart,next_part)
+  do icpu=1,ncpu
+!$omp do
+     do jgrid=1,numbl(icpu,ilevel)
+        if(icpu==myid)then
+           igrid=active(ilevel)%igrid(jgrid)
+        else
+           igrid=reception(icpu,ilevel)%igrid(jgrid)
+        end if
+        npart1=numbp(igrid) ! Number of particles in the grid
+        numbp_old(igrid)=npart1
+        if(npart1>0)then
+           headp_old(igrid)=headp(igrid)
+           ipart=headp(igrid)
+           do jpart=1,npart1
+              ! Save next particle  <--- Very important !!!
+              next_part=nextp(ipart)
+              nextp_old(ipart)=next_part
+              ipart=next_part  ! Go to next particle
+           end do
+        end if
+     end do
+!$omp end do nowait
+  end do
+!$omp end parallel
+#endif
+
   ! Loop over cpus
 !$omp parallel private(icpu,igrid,ig,ip,jgrid,npart1,ipart,jpart,next_part)
   do icpu=1,ncpu
@@ -224,15 +253,27 @@ subroutine make_tree_fine(ilevel)
         else
            igrid=reception(icpu,ilevel)%igrid(jgrid)
         end if
+#ifdef OPENMP
+        npart1=numbp_old(igrid)  ! Number of particles in the grid
+#else
         npart1=numbp(igrid)  ! Number of particles in the grid
+#endif
         if(npart1>0)then
            ig=ig+1
            ind_grid(ig)=igrid
+#ifdef OPENMP
+           ipart=headp_old(igrid)
+#else
            ipart=headp(igrid)
+#endif
            ! Loop over particles
            do jpart=1,npart1
               ! Save next particle  <--- Very important !!!
+#ifdef OPENMP
+              next_part=nextp_old(ipart)
+#else
               next_part=nextp(ipart)
+#endif
               if(ig==0)then
                  ig=1
                  ind_grid(ig)=igrid
