@@ -71,8 +71,8 @@ subroutine flag_fine(ilevel,icount)
   ! - ilevel integer
   !       the current level for which the refinement map should
   !       be computed
-  ! - icount integer 
-  !       the current step in the subcycle 
+  ! - icount integer
+  !       the current step in the subcycle
   !--------------------------------------------------------
   integer::iexpand
 
@@ -129,11 +129,11 @@ subroutine init_flag(ilevel)
   ! This routine initialize the refinement map
   ! to a minimal state in order to satisfy the
   ! refinement rules.
-  ! 
-  ! The array flag1 is modified. It is set to 1 for cells that 
-  ! contains son cells that are themselves already refined or 
-  ! are “to be refined” (ie already flagged). 
-  ! These are known because the the flagging operation 
+  !
+  ! The array flag1 is modified. It is set to 1 for cells that
+  ! contains son cells that are themselves already refined or
+  ! are “to be refined” (ie already flagged).
+  ! These are known because the the flagging operation
   ! is done level by level, starting from the finer ones.
   !
   ! In levels below levelmin, all cells are marked for refinement.
@@ -466,8 +466,8 @@ subroutine poisson_refine(ind_cell,ok,ncell,ilevel)
   !-------------------------------------------------
   ! This routine sets ok to 1 if cell statisfy
   ! the user-defined criterion for Lagrangian-based
-  ! refinement, 
-  ! 
+  ! refinement,
+  !
   ! Parameters:
   ! ------------
   ! - ind_cell integer array
@@ -536,7 +536,7 @@ subroutine geometry_refine(xx,ok,ncell,ilevel)
   real(dp),dimension(1:nvector,1:ndim)::xx
   logical ,dimension(1:nvector)::ok
   !-------------------------------------------------
-  ! This routine apply a filter for the refinement based on the 
+  ! This routine apply a filter for the refinement based on the
   ! geometric location of the cell.
   !
   ! It sets ok to 0 if cell lies outside the user-defined
