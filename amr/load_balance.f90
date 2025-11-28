@@ -222,6 +222,7 @@ subroutine load_balance
   do ilevel=1,nlevelmax
      ! Build new communicators
      call build_comm(ilevel)
+!$omp parallel do private(ind,iskip,i)
      do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
         do i=1,active(ilevel)%ngrid
@@ -287,7 +288,7 @@ subroutine cmp_new_cpu_map
   ! This routine computes the new cpu map using
   ! the choosen ordering to balance load across cpus.
   !---------------------------------------------------
-  integer::igrid,ncell,ncell_loc,ncache,ngrid
+  integer::igrid,ncell,ncell_loc,ncache,ngrid,ncell_omp
   integer::ilevel,i,ind,idim
   integer::nx_loc
   integer::icpu,isub,idom
@@ -298,7 +299,7 @@ subroutine cmp_new_cpu_map
   real(dp)::dx,scale
   real(dp),dimension(1:twotondim,1:3)::xc
   real(dp),dimension(1:nvector,1:ndim),save::xx
-  real(kind=8)::incost_tot,local_cost,cell_cost
+  real(kind=8)::incost_tot,local_cost,cell_cost,incost_tot_omp
   real(kind=8),dimension(0:ndomain)::incost_new,incost_old
   integer(kind=8),dimension(1:overload)::npart_sub
   integer(kind=8)::wflag
@@ -372,6 +373,8 @@ subroutine cmp_new_cpu_map
   end do
   end do
   ! Loop over levels
+!$omp parallel private(dx,ix,iy,iz,xc,ncache) &
+!$omp & private(ngrid,iskip,idim,ncell_loc,ncell_omp,isub,wflag)
   do ilevel=1,nlevelmax
      ! Cell size and cell center offset
      dx=0.5d0**ilevel
@@ -395,6 +398,7 @@ subroutine cmp_new_cpu_map
            ncache=reception(icpu,ilevel)%ngrid
         end if
         ! Loop over grids by vector sweeps
+!$omp do
         do igrid=1,ncache,nvector
            ! Gather nvector grids
            ngrid=MIN(nvector,ncache-igrid+1)
@@ -433,37 +437,43 @@ subroutine cmp_new_cpu_map
               ncell_loc=0
               do i=1,ngrid
                  if(cpu_map(ind_cell(i))==myid.and.son(ind_cell(i))==0)then
+!$omp atomic capture
                     ncell    =ncell    +1
+                    ncell_omp=ncell
+!$omp end atomic
                     ncell_loc=ncell_loc+1
                     isub=(dom(ncell_loc)-1)/ncpu+1
                     ncell_sub(isub)=ncell_sub(isub)+1
-                    flag1(ncell)=8*10 ! Magic number
+                    flag1(ncell_omp)=8*10 ! Magic number
                     if(pic)then
                        ! Add more load for tracer particles
                        if (tracer .and. ilevel >= tracer_first_balance_levelmin) then
-                          flag1(ncell) = flag1(ncell) + numbp(ind_grid(i)) + &
+                          flag1(ncell_omp) = flag1(ncell_omp) + numbp(ind_grid(i)) + &
                                tracer_first_balance_part_per_cell
                        else
-                          flag1(ncell)=flag1(ncell)+numbp(ind_grid(i))
+                          flag1(ncell_omp)=flag1(ncell_omp)+numbp(ind_grid(i))
                        endif
                     end if
-                    wflag = flag1(ncell)*niter_cost(ilevel)
+                    wflag = flag1(ncell_omp)*niter_cost(ilevel)
                     if (wflag > 2147483647) then
                        write(*,*) ' wrong type for flag1 --> change to integer kind=8: ',wflag
                        stop
                     endif
-                    flag1(ncell)=flag1(ncell)*niter_cost(ilevel)
-                    npart_sub(isub)=npart_sub(isub)+flag1(ncell)
-                    hilbert_key(ncell)=order_max(ncell_loc)
+                    flag1(ncell_omp)=flag1(ncell_omp)*niter_cost(ilevel)
+!$omp atomic update
+                    npart_sub(isub)=npart_sub(isub)+flag1(ncell_omp)
+                    hilbert_key(ncell_omp)=order_max(ncell_loc)
                  end if
               end do
            end do
            ! End loop over cells
         end do
+!$omp end do nowait
         ! End loop over grids
      end do
      ! End loop over cpus
   end do
+!$omp end parallel
   ! End loop over levels
 
   !------------------------------------------------
@@ -481,6 +491,8 @@ subroutine cmp_new_cpu_map
 #ifndef WITHOUTMPI
   call MPI_ALLREDUCE(cost_loc,cost_old,ndomain,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
 #endif
+
+  ! Cumulative sum cost: must be sequencial!
   incost_tot = 0D0
   incost_old(0) = 0D0
   do idom = 1,ndomain
@@ -577,6 +589,7 @@ subroutine cmp_new_cpu_map
   end do
   end do
   ! Loop over levels
+!$omp parallel private(ilevel,dx,ind,ix,iy,iz,xc,ncache,ngrid,iskip)
   do ilevel=1,nlevelmax
      ! Cell size and cell center offset
      dx=0.5d0**ilevel
@@ -594,6 +607,7 @@ subroutine cmp_new_cpu_map
      end do
      ncache=active(ilevel)%ngrid
      ! Loop over grids by vector sweeps
+!$omp do
      do igrid=1,ncache,nvector
         ! Gather nvector grids
         ngrid=MIN(nvector,ncache-igrid+1)
@@ -633,8 +647,10 @@ subroutine cmp_new_cpu_map
         end do
         ! End loop over cells
      end do
+!$omp end do nowait
      ! End loop over grids
   end do
+!$omp end parallel
   ! End loop over levels
 
   ! Update virtual boundaries for new cpu map
@@ -710,6 +726,7 @@ subroutine cmp_cpumap_modified(x,c,nn,particle_cpu,cpu_list)
   integer::i,idom , idx, found
   real(qdp),dimension(1:nvector),save::order
 
+!$omp threadprivate(order)
 
   if(ordering /= 'bisection') then
      call cmp_ordering(x,order,nn)
