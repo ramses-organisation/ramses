@@ -13,9 +13,9 @@ subroutine init_tree
   !-----------------------------------------------------------------------
   ! This subroutine build the particle linked list at the coarse level for
   ! ALL the particles in the box.
-  ! The particles are first placed in the level 1 grids and then they are 
-  ! sorted according to their position down to levelmin. If needed, they 
-  ! are communicated to the appropriate MPI domains. This routine should 
+  ! The particles are first placed in the level 1 grids and then they are
+  ! sorted according to their position down to levelmin. If needed, they
+  ! are communicated to the appropriate MPI domains. This routine should
   ! be used only as initial set up for the particle tree.
   !-----------------------------------------------------------------------
   ! Common arrays updated
@@ -293,7 +293,7 @@ subroutine check_tree(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   integer,dimension(1:nvector)::ind_grid_part,ind_part
   !-----------------------------------------------------------------------
   ! This routine is called by make_tree_fine.
-  ! This routine checks if particles have moved from their parent grid and 
+  ! This routine checks if particles have moved from their parent grid and
   ! if does, disconnects them from parent grid linked list and connects them
   ! to the corresponding neighboring grid linked list.
   !-----------------------------------------------------------------------
@@ -638,7 +638,7 @@ subroutine merge_tree_fine(ilevel)
   ! Input parameters
   ! ilevel        => (input) current level
   !
-  ! Common arrays updated  
+  ! Common arrays updated
   ! headp <= (modify) head pointer of particle linked list
   ! tailp <= (modify) tail pointer of particle linked list
   ! nextp <= (modify) next pointer of particle linked list
@@ -729,11 +729,11 @@ subroutine virtual_tree_fine(ilevel)
   implicit none
   integer::ilevel
   !-----------------------------------------------------------------------
-  ! This subroutine checks particles that are located in virtual boundaries 
-  ! and moves them to corresponding processor domains. Particles are detached 
-  ! from their grids and their informations are gathered in communication 
-  ! buffers ('reception') and sent to the corresponding processors through 
-  ! MPI communications. After transferring, particles are reconnected to 
+  ! This subroutine checks particles that are located in virtual boundaries
+  ! and moves them to corresponding processor domains. Particles are detached
+  ! from their grids and their informations are gathered in communication
+  ! buffers ('reception') and sent to the corresponding processors through
+  ! MPI communications. After transferring, particles are reconnected to
   ! their new grids ('emission') linked lists on the receiving processors.
   !-----------------------------------------------------------------------
   ! Input parameters
@@ -1213,9 +1213,9 @@ subroutine fill_comm(ind_part,ind_com,ind_list,np,ilevel,icpu)
   use amr_commons
   implicit none
   !-----------------------------------------------------------------------
-  ! This subroutine is called by virtual_tree_fine. It fills the communication 
-  ! buffers with informations of particles located at virtual boundaries 
-  ! ('reception'). It also removes particles from their parent grid linked 
+  ! This subroutine is called by virtual_tree_fine. It fills the communication
+  ! buffers with informations of particles located at virtual boundaries
+  ! ('reception'). It also removes particles from their parent grid linked
   ! list and add them to the free particle list.
   !-----------------------------------------------------------------------
   ! Input parameters
@@ -1362,8 +1362,8 @@ subroutine empty_comm(ind_com,np,ilevel,icpu)
   use amr_commons
   implicit none
   !-----------------------------------------------------------------------
-  ! This subroutine is called by virtual_tree_fine. It transfers particle 
-  ! informations in the communcation buffers to particle arrays. It also 
+  ! This subroutine is called by virtual_tree_fine. It transfers particle
+  ! informations in the communcation buffers to particle arrays. It also
   ! attaches particles to their new parent grid linked list.
   !-----------------------------------------------------------------------
   ! Input parameters
