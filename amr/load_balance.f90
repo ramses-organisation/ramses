@@ -443,6 +443,7 @@ subroutine cmp_new_cpu_map
 !$omp end atomic
                     ncell_loc=ncell_loc+1
                     isub=(dom(ncell_loc)-1)/ncpu+1
+!$omp atomic update
                     ncell_sub(isub)=ncell_sub(isub)+1
                     flag1(ncell_omp)=8*10 ! Magic number
                     if(pic)then
