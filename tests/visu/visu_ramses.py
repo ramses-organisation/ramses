@@ -239,9 +239,9 @@ def load_snapshot(nout, read_hydro=True, read_grav=False, read_rt=False):
             nlines_ordering = 1
 
             # Determine bound key precision
-            ninteg = 14+(3*info["ncpu"]*info["levelmax"])+(10*info["levelmax"])+(3*nboundary*info["levelmax"])+5+ninteg_ordering
-            nfloat = 18+(2*noutput)+(2*info["levelmax"])+nfloat_ordering
-            nlines = 21+2+3*min(1,nboundary)+1+1+nlines_ordering
+            ninteg = 14+(3*info["ncpu"]*info["levelmax"])+(10*info["levelmax"])+(3*nboundary*info["levelmax"])+5
+            nfloat = 18+(2*noutput)+(2*info["levelmax"])
+            nlines = 21+2+3*min(1,nboundary)+1+1
             nstrin = 128
             nquadr = 0
             offset = 4*ninteg + 8*(nlines+nfloat) + nstrin + nquadr*16
