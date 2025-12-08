@@ -13,6 +13,11 @@ defaults:
   run:
     shell: bash
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+
 jobs:
     build:
         name: "${{ matrix.test-type }} in ${{ matrix.ndim }}D"
