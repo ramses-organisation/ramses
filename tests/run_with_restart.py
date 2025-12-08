@@ -1,4 +1,9 @@
-import f90nml
+try:
+    import f90nml
+except ImportError:
+    print("Please install f90nml to use this script.")
+    exit(1)
+
 import os
 import argparse
 import shutil
@@ -21,20 +26,33 @@ Where:
 The script uses the f90nml library to read and write Fortran namelist files.
 """
 
-def apply_output_factor(nml, factor, keep_tout=False):
+def apply_output_factor(nml, factor, add_extra_output_time=False):
     """
     Apply a factor to the output time in the namelist.
     This function modifies the namelist in place.
+
+    Parameters
+    ---------
+    nml: namelist
+        Namelist object to modify in place
+    factor: float
+        Factor to apply to the existing output
+    add_extra_output_time: bool
+        Add the modified output time after the existing one instead of
+        modifying it.
     """
     if "tout" in nml["output_params"]:
         tout = nml["output_params"]["tout"]
-        if keep_tout:
+        if add_extra_output_time:
             nml["output_params"]["tout"] = [tout, tout * factor]
         else:
             nml["output_params"]["tout"] = tout * factor
     elif "aout" in nml["output_params"]:
         aout = nml["output_params"]["aout"]
-        nml["output_params"]["aout"] = aout * factor
+        if add_extra_output_time:
+            nml["output_params"]["aout"] = [aout, aout * factor]
+        else:
+            nml["output_params"]["aout"] = aout * factor
     else:
         print("ERROR: noutput found but tout or aout not found in output_params")
 
@@ -61,9 +79,11 @@ def step_1(test_name):
     if "noutput" in nml["output_params"]:
         assert(nml["output_params"]["noutput"] == 1)
         nml = apply_output_factor(nml, 0.5)
+    elif "tout" in nml["output_params"]:
+        nout = len(nml["output_params"]["tout"])
+        nml["output_params"]["tout"] = nml["output_params"]["tout"][0:int(nout/2)]
     else:
         assert("tend" in nml["output_params"])
-        assert("tout" not in nml["output_params"])
         assert("foutput" in nml["output_params"])
         tend = nml["output_params"]["tend"]
         nml["output_params"]["tend"] = tend / 2
@@ -79,16 +99,21 @@ def step_2(test_name):
     nml_path = f"{test_name}.nml"
     nml = f90nml.read(nml_path)
 
+    # Find the last output time
+    all_outputs = sorted(glob.glob("output_*"))
+    last_output = int(all_outputs[-1].split("_")[-1])
+    print(f"Restarting from output {last_output}")
+    nml["run_params"]["nrestart"] = last_output
 
     if "noutput" in nml["output_params"]:
         nml["run_params"]["nrestart"] = 2
         nml["output_params"]["noutput"] = 2
-        nml = apply_output_factor(nml, 2, keep_tout=True)
+        nml = apply_output_factor(nml, 2, add_extra_output_time=True)
+    elif "tout" in nml["output_params"]:
+        # recover original output list from namelist
+        nml_orig = f90nml.read(nml_path + "_backup")
+        nml["output_params"]["tout"] = nml_orig["output_params"]["tout"]
     else:
-        # Find the last output time
-        last_output = int(glob.glob("output_*")[-1].split("_")[-1])
-        print(f"Restarting from output {last_output}")
-        nml["run_params"]["nrestart"] = last_output
         tend = nml["output_params"]["tend"]
         nml["output_params"]["tend"] = tend * 2
 

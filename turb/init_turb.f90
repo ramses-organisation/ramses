@@ -159,23 +159,23 @@ subroutine init_turb
       ! Call turb_next_field to create second field
       call turb_next_field
       if (instant_turb) then
-         write (6,'(A$)') " Evolving initial turbulent field..."
+         write (6,'(A,$)') " Evolving initial turbulent field..."
          call flush(6)
          cur_percent = instant_turb_percent
          do i=1,instant_turb_mult*turb_Ndt
             call turb_next_field
             turb_next_time = turb_last_time
             turb_last_time = turb_last_time - turb_dt
-            write (6,'(A$)') '.'
+            write (6,'(A,$)') '.'
             if (100.0*real(i)/real(instant_turb_mult*turb_Ndt)&
                 & >= cur_percent) then
-               write (6, '(A,I0,A$)') '(',int(cur_percent+0.5),'%)'
+               write (6, '(A,I0,A,$)') '(',int(cur_percent+0.5),'%)'
                cur_percent = cur_percent + instant_turb_percent
                if (cur_percent >= 99.99999999999) cur_percent = 200.0
             end if
             call flush(6)
          end do
-         write (6,'(A$)') " done."
+         write (6,'(A,$)') " done."
          write (6,*)
          call flush(6)
          turb_last_time = turb_next_time

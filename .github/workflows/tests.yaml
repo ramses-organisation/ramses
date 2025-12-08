@@ -18,7 +18,7 @@ jobs:
         runs-on: ubuntu-latest
         strategy:
             matrix:
-                test-family: [hydro,mhd,poisson,rt,sink,turb,tracer]
+                test-family: [hydro,mhd,poisson,rt,sink,star,turb,tracer]
         steps:
         - name: Checkout repository
           uses: actions/checkout@v4
@@ -35,6 +35,8 @@ jobs:
           uses: wtfjoke/setup-tectonic@v3
           with:
             tectonic-version: 0.15.0
+        - name: Setup headless display for pyvista
+          uses: pyvista/setup-headless-display-action@v3
         - name: "Run tests ${{ matrix.test-family }}"
           run: |
             cd tests

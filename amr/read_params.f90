@@ -2,6 +2,8 @@ subroutine read_params
   use amr_commons
   use hydro_parameters, only:nvar,nhydro
   use mpi_mod
+  use buildinfo
+  use iso_fortran_env, ONLY: output_unit !standard output
   implicit none
   !--------------------------------------------------
   ! Local variables
@@ -81,7 +83,9 @@ subroutine read_params
   if(IOGROUPSIZE>0.or.IOGROUPSIZECONE>0.or.IOGROUPSIZEREP>0)write(*,*)' '
 
   ! Write information about git version
-  call write_gitinfo
+  write(*,*)' '
+  call write_gitinfo(output_unit)
+  write(*,*)' '
 
   ! Read namelist filename from command line argument
   narg = command_argument_count()
@@ -466,7 +470,7 @@ subroutine read_output_params(namelist_unit,nml_ok)
 
    ! Parameters to specify when to write an output
    namelist/output_params/noutput,foutput,aout,tout &
-   & ,tend,delta_tout,aend,delta_aout,gadget_output,walltime_hrs,minutes_dump
+   & ,tend,delta_tout,aend,delta_aout,gadget_output,walltime_hrs,minutes_dump,output_to_log
 
    ! Go to the beginning of the file
    rewind(namelist_unit)

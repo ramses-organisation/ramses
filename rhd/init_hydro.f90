@@ -107,7 +107,7 @@ subroutine init_hydro
                     ! convert to conservative variables
                     lor=(1-vx(i)**2-vy(i)**2-vz(i)**2)**(-1./2.)
                     tau=pp(i)/rr(i)
-                    if (eos .eq. 'TM') then
+                    if (eos_rhd .eq. 'TM') then
                        h=5d0/2d0*tau+3d0/2d0*sqrt(tau**2+4d0/9d0)
                     else
                        h=1d0+tau*gamma/(gamma-1d0)

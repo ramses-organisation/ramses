@@ -23,10 +23,6 @@ module amr_commons
   real(dp)::rho_tot=0.0D0                       ! Mean density in the box
   real(dp)::t=0.0D0                             ! Time variable
 
-  ! executable identification
-  CHARACTER(LEN=300)::builddate,buildcommand,patchdir
-  CHARACTER(LEN=300)::gitrepo,gitbranch,githash
-
   ! Save namelist filename
   CHARACTER(LEN=300)::namelist_file
 

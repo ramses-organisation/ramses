@@ -135,8 +135,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
 
   ! Polytropic constant for Jeans length related polytropic EOS
   if(jeans_ncells>0)then
-     polytropic_constant=2d0*(boxlen*jeans_ncells*0.5d0**dble(nlevelmax)*scale_l/aexp)**2/ &
-          & twopi*6.67d-8*scale_d*(scale_t/scale_l)**2
+     polytropic_constant=factG_in_cgs*(boxlen*jeans_ncells*0.5d0**dble(nlevelmax)*scale_l/aexp)**2/ pi / gamma
   endif
 
 #ifdef RT
@@ -336,7 +335,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
         ! cooling floor
         if(jeans_ncells>0)then
            do i=1,nleaf
-              T2min(i) = nH(i)*polytropic_constant*scale_T2
+              T2min(i) = nH(i)*polytropic_constant*mH**2/X/kB
            end do
         else
            do i=1,nleaf
