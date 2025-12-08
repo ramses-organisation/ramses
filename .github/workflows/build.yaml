@@ -13,6 +13,11 @@ defaults:
   run:
     shell: bash
 
+concurrency:
+  group: ci-${{github.ref}}-${{github.event.pull_request.number || github.run_number}}
+  cancel-in-progress: true
+
+
 jobs:
     build:
         name: "${{ matrix.test-type }} in ${{ matrix.ndim }}D"
