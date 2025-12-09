@@ -1,0 +1,129 @@
+# This file was initially copied from https://github.com/Shamrock-code/Shamrock/blob/main/.github/workflows/on_completed_pr_workflow.yml
+
+
+name: on PR (completed)
+
+# This workflow is triggered by the completion of the "on PR" workflow
+# which can be use to perform reporting while allowing the use of the pull_request
+# event to trigger the pr workflow.
+
+
+on:
+  workflow_run:
+    workflows: ['on PR']
+    types:
+    - completed
+
+
+
+jobs:
+  comment_with_results:
+    runs-on: ubuntu-latest
+
+    steps:
+
+     - name: Install pdfunite
+       run: sudo apt install -y poppler-utils
+
+     - name: 'Download reports artifact'
+       uses: actions/github-script@v6
+       with:
+          script: |
+            let allArtifacts = await github.rest.actions.listWorkflowRunArtifacts({
+               owner: context.repo.owner,
+               repo: context.repo.repo,
+               run_id: context.payload.workflow_run.id,
+            });
+        
+            // Filter artifacts whose name starts with 'test-results'
+            let reportArtifacts = allArtifacts.data.artifacts.filter((artifact) => {
+              return artifact.name.startsWith("test-results");
+            });
+        
+            // Loop through each matching artifact and download it
+            const fs = require('fs');
+            for (const artifact of reportArtifacts) {
+              console.log(`Downloading artifact: ${artifact.name}`);
+        
+              let download = await github.rest.actions.downloadArtifact({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                artifact_id: artifact.id,
+                archive_format: 'zip',
+              });
+        
+              // Save each artifact with its original name
+              fs.writeFileSync(`${process.env.GITHUB_WORKSPACE}/${artifact.name}.zip`, Buffer.from(download.data));
+            }
+
+     - name: Read PR number from file
+       id: read_pr
+       run: |
+          pr_number=$(cat pr_number.txt)
+          echo "PR Number: $pr_number"
+          echo "::set-output name=pr_number::$pr_number"
+
+
+     - name: 'Unzip all zip files in workspace'
+       run: |
+          for file in *.zip; do
+            unzip -o "$file" -d .
+            test_name=${file##test-results-}
+            test_name=${test_name%%.zip}
+            mv test_results.pdf test_result_${test_name}.pdf 
+            mv test_suite.log test_suite_${test_name}.log
+          done
+          rm *.zip
+
+
+     - name: 'Merge all files into a single file'
+       shell: bash
+       run: |
+          # Create a merged file
+          merged_file="test_suite.log"
+
+          echo " -- sort filelist"
+          # add local set otherwise sort is weird
+          LC_ALL=C filelist=$(echo *.txt | tr ' ' '\n' | sort)
+          echo "$filelist"
+
+          # Append each .txt file into the merged file in sorted order
+          for txt_file in $filelist; do
+            echo "Appending: $txt_file"
+            cat "$txt_file" >> "$merged_file"
+          done
+
+          # Create a unique pdf
+          pdfunite *.pdf test_results.pdf
+
+
+     - name: Upload the resulting pdf 
+       uses: actions/upload-artifact@v4
+       id: artifact-upload-step-pdf
+       with:
+          name: test_results.pdf
+          path: test_results.pdf
+
+     - name: Upload the resulting log 
+       uses: actions/upload-artifact@v4
+       id: artifact-upload-step-log
+       with:
+          name: test_suite.log
+          path: test_suite.log
+
+     # See https://github.com/actions/upload-artifact/issues/50#issuecomment-1856471599
+     - name: Report artifacts url
+       run: echo "Test suite results:[PDF link](${{ steps.artifact-upload-step-pdf.outputs.artifact-url }}) (can expire)" > comment.md
+
+     - name: 'Comment merged report on the PR'
+       uses: thollander/actions-comment-pull-request@v3
+       with:
+          file-path: comment.md
+          comment-tag: workflow_report
+          mode: recreate
+          create-if-not-exists: true
+          pr-number: ${{ steps.read_pr.outputs.pr_number }}
+          
+        
+
+          
