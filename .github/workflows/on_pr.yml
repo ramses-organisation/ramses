@@ -8,6 +8,25 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+
+  
+  upload_pr_detail:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Save PR number
+        env:
+          PR_NUMBER: ${{ github.event.number }}
+        run: |
+          mkdir -p ./pr
+          echo $PR_NUMBER > ./pr_number.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: report_pr_number
+          path: ./pr_number.txt
+
+
   build:
     name: Build Ramses
     uses: ./.github/workflows/build.yaml
