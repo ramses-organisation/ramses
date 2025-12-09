@@ -22,40 +22,6 @@ jobs:
 
     steps:
 
-     - name: 'Merge all files into a single file'
-       shell: bash
-       run: |
-          # Create a merged file
-          merged_file="test_suite.log"
-
-          echo " -- sort filelist"
-          # add local set otherwise sort is weird
-          LC_ALL=C filelist=$(echo *.txt | tr ' ' '\n' | sort)
-          echo "$filelist"
-
-          # Append each .txt file into the merged file in sorted order
-          for txt_file in $filelist; do
-            echo "Appending: $txt_file"
-            cat "$txt_file" >> "$merged_file"
-          done
-
-          # Create a unique pdf
-          pdfunite *.pdf test_results.pdf
-
-
-     - name: Upload the resulting pdf
-       uses: actions/upload-artifact@v4
-       id: artifact-upload-step-pdf
-       with:
-          name: test_results.pdf
-          path: test_results.pdf
-
-     - name: Upload the resulting log
-       uses: actions/upload-artifact@v4
-       id: artifact-upload-step-log
-       with:
-          name: test_suite.log
-          path: test_suite.log
 
      # See https://github.com/actions/upload-artifact/issues/50#issuecomment-1856471599
      - name: Report artifacts url
