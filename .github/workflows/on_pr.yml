@@ -9,7 +9,7 @@ concurrency:
 
 jobs:
 
-  
+
   upload_pr_detail:
     runs-on: ubuntu-latest
 

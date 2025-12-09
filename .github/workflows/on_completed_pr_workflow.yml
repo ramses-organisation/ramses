@@ -34,24 +34,24 @@ jobs:
                repo: context.repo.repo,
                run_id: context.payload.workflow_run.id,
             });
-        
+
             // Filter artifacts whose name starts with 'test-results'
             let reportArtifacts = allArtifacts.data.artifacts.filter((artifact) => {
               return artifact.name.startsWith("test-results");
             });
-        
+
             // Loop through each matching artifact and download it
             const fs = require('fs');
             for (const artifact of reportArtifacts) {
               console.log(`Downloading artifact: ${artifact.name}`);
-        
+
               let download = await github.rest.actions.downloadArtifact({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 artifact_id: artifact.id,
                 archive_format: 'zip',
               });
-        
+
               // Save each artifact with its original name
               fs.writeFileSync(`${process.env.GITHUB_WORKSPACE}/${artifact.name}.zip`, Buffer.from(download.data));
             }
@@ -70,7 +70,7 @@ jobs:
             unzip -o "$file" -d .
             test_name=${file##test-results-}
             test_name=${test_name%%.zip}
-            mv test_results.pdf test_result_${test_name}.pdf 
+            mv test_results.pdf test_result_${test_name}.pdf
             mv test_suite.log test_suite_${test_name}.log
           done
           rm *.zip
@@ -97,14 +97,14 @@ jobs:
           pdfunite *.pdf test_results.pdf
 
 
-     - name: Upload the resulting pdf 
+     - name: Upload the resulting pdf
        uses: actions/upload-artifact@v4
        id: artifact-upload-step-pdf
        with:
           name: test_results.pdf
           path: test_results.pdf
 
-     - name: Upload the resulting log 
+     - name: Upload the resulting log
        uses: actions/upload-artifact@v4
        id: artifact-upload-step-log
        with:
@@ -123,7 +123,3 @@ jobs:
           mode: recreate
           create-if-not-exists: true
           pr-number: ${{ steps.read_pr.outputs.pr_number }}
-          
-        
-
-          
