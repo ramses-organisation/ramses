@@ -117,7 +117,7 @@ jobs:
 
     - name: Report artifacts url
       run: echo ">[!NOTE]" > comment.md
-           echo ">:notebook:&nbsp;Test suite results [test-results.zip](${{ steps.artifact-upload-step.outputs.artifact-url }}) (can expire)" >> comment.md
+           echo ">Test suite results [test-results.zip](${{ steps.artifact-upload-step.outputs.artifact-url }}) (can expire)" >> comment.md
 
     - name: 'Comment merged report on the PR'
       uses: thollander/actions-comment-pull-request@v3
