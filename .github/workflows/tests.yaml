@@ -2,17 +2,12 @@ name: Test RAMSES
 
 
 on:
-  pull_request:
+  workflow_call:
   workflow_dispatch:
 
 defaults:
   run:
     shell: bash
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
 
 jobs:
 
@@ -48,7 +43,7 @@ jobs:
           uses: actions/upload-artifact@v4
           if: always()
           with:
-            name: "test-results ${{ matrix.test-family }}"
+            name: "test-results-${{ matrix.test-family }}"
             path: |
               tests/test_results.pdf
               tests/test_suite.log

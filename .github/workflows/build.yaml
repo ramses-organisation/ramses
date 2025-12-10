@@ -1,22 +1,13 @@
 name: Build RAMSES
 
 on:
-  push:
-    branches:
-        - dev
-        - stable
-  pull_request:
+  workflow_call:
   workflow_dispatch:
 
 
 defaults:
   run:
     shell: bash
-
-concurrency:
-  group: ci-${{github.ref}}-${{github.event.pull_request.number || github.run_number}}
-  cancel-in-progress: true
-
 
 jobs:
     build:
