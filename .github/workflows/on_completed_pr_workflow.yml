@@ -110,13 +110,16 @@ jobs:
       id: artifact-upload-step
       with:
         name: test_results
-        path: test_results.pdf
-              test_suite.log
+        path: |
+          ./test_results.pdf
+          ./test_suite.log
 
     # See https://github.com/actions/upload-artifact/issues/50#issuecomment-1856471599
 
     - name: Report artifacts url
-      run:  echo 'Test suite results URL is ${{ steps.artifact-upload-step.outputs.artifact-url }}'   > comment.md
+      run:  |
+        echo '>[!NOTE]' > comment.md
+        echo '> Test suite results are [here](${{ steps.artifact-upload-step.outputs.artifact-url }})' >> comment.md
 
     - name: 'Comment merged report on the PR'
       uses: thollander/actions-comment-pull-request@v3
