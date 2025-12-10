@@ -73,7 +73,7 @@ jobs:
           test_name=${test_name%%.zip}
           mv test_results.pdf test_result_${test_name}.pdf
           mv test_suite.log test_suite_${test_name}.log
-        done 
+        done
         unzip test_pr_number.zip
         rm *.zip
 
