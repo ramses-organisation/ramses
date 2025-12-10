@@ -116,7 +116,7 @@ jobs:
     # See https://github.com/actions/upload-artifact/issues/50#issuecomment-1856471599
 
     - name: Report artifacts url
-      run: echo ":notebook:  Test suite results : [test-results.zip](${{ steps.artifact-upload-step-pdf.outputs.artifact-url }}) (can expire)" > comment.md
+      run: echo ":notebook:\ Test suite results\ :\ [test-results.zip](${{ steps.artifact-upload-step-pdf.outputs.artifact-url }}) (can expire)" > comment.md
 
     - name: 'Comment merged report on the PR'
       uses: thollander/actions-comment-pull-request@v3
