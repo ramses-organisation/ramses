@@ -1,7 +1,7 @@
+name: on PR (completed)
+
 # This file was initially copied from https://github.com/Shamrock-code/Shamrock/blob/main/.github/workflows/on_completed_pr_workflow.yml
 
-
-name: on PR (completed)
 
 # This workflow is triggered by the completion of the "on PR" workflow
 # which can be use to perform reporting while allowing the use of the pull_request
