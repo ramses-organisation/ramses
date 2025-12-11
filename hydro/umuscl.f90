@@ -68,7 +68,15 @@ subroutine unsplit(uin,gravin,pin,flux,tmp,dx,dy,dz,dt,ngrid)
 
   ! Compute 3D traced-states in all three directions
   if(scheme=='muscl')then
-     call trace(qin,dq,qm,qp,dx      ,dt,ngrid)
+#if NDIM==1
+     call trace1d(qin,dq,qm,qp,dx      ,dt,ngrid)
+#endif
+#if NDIM==2
+     call trace2d(qin,dq,qm,qp,dx,dy   ,dt,ngrid)
+#endif
+#if NDIM==3
+     call trace3d(qin,dq,qm,qp,dx,dy,dz,dt,ngrid)
+#endif
   endif
   if(scheme=='plmde')then
 #if NDIM==1
@@ -114,156 +122,540 @@ end subroutine unsplit
 !###########################################################
 !###########################################################
 !###########################################################
-subroutine trace(q,dq,qm,qp,dx,dt,ngrid)
+subroutine trace1d(q,dq,qm,qp,dx,dt,ngrid)
   use amr_parameters
   use hydro_parameters
   use const
   implicit none
-  integer,intent(in)::ngrid
-  real(dp),intent(in)::dx, dt
-  ! cell-center values of all variables (quantities)
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar),intent(in)::q
-  ! TDV-limited gradients, as calculated by uslope
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim),intent(in)::dq
-  ! states at the "plus" side of the interface (right/top/front)
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim),intent(out)::qp
-  ! state at the "minus" side of the interface (left/bottom/back)
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim),intent(out)::qm
-  ! ---------------------------------------------------------------------
-  ! "Trace" the evolution of the cell-centered state to the cell interfaces
-  ! over half a time step.
-  ! Predicts the "plus" and "minus" interface states (qp and qm) from the
-  ! cell-centered primitive variables (q) and the TVD-limited slopes (dp),
-  ! including transverse derivatives (MUSCL-Hancock scheme).  !
-  ! The output of this routine will be given to the Riemann solver.
-  ! --------------------------------------------------------------------
-  real(dp),dimension(1:nvar)::S0,var
-  real(dp),dimension(1:nvar,1:ndim)::dvar
-  real(dp)::oneoverr,dvel_diag,corr,result_m,result_p
-  integer ::i,j,k,l,ivar,idim
+
+  integer ::ngrid
+  real(dp)::dx, dt
+
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::dq
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qm
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qp
+
+  ! Local variables
+  integer ::i, j, k, l
   integer ::ilo,ihi,jlo,jhi,klo,khi
-  integer,parameter ::ir=1,ip=neul
+  integer ::ir, iu, ip
   real(dp)::dtdx
+  real(dp)::r, u, p
+  real(dp)::drx, dux, dpx
+  real(dp)::sr0, su0, sp0
+#if NENER>0
+  integer::irad
+  real(dp),dimension(1:nener)::e, dex, se0
+#endif
+#if NVAR > NHYDRO + NENER
+  integer::n
+  real(dp)::a, dax, sa0
+#endif
 
   dtdx = dt/dx
+
   ilo=MIN(1,iu1+1); ihi=MAX(1,iu2-1)
   jlo=MIN(1,ju1+1); jhi=MAX(1,ju2-1)
   klo=MIN(1,ku1+1); khi=MAX(1,ku2-1)
+  ir=1; iu=2; ip=3
 
-   do k = klo, khi
-      do j = jlo, jhi
-         do i = ilo, ihi
-            !DIR$ IVDEP
-            !DIR$ SIMD
-            do l = 1, ngrid
+  do k = klo, khi
+     do j = jlo, jhi
+        do i = ilo, ihi
+           do l = 1, ngrid
 
-               ! Retrieve data for cell l
-
-               ! Cell centered values
-               !DIR$ UNROLL
-               do ivar=1,nvar
-                  var(ivar) = q(l,i,j,k,ivar)
-               end do
-               oneoverr = 1d0/var(ir)
-
-               ! Limited gradients in all 3 directions
-               !DIR$ UNROLL
-               do ivar=1,nvar
-                  !DIR$ UNROLL
-                  do idim=1,ndim
-                     dvar(ivar,idim) = dq(l,i,j,k,ivar,idim)
-                  end do
-               end do
-
-               ! Compute source terms
-
-               S0 = 0
-
-               ! Advection for each variable q
-               ! - u*dq/dx - v*dq/dy - w*dq/z
-               !DIR$ UNROLL
-               do ivar=1,nvar
-                  !DIR$ UNROLL
-                  do idim=1,ndim
-                     S0(ivar) = S0(ivar) - var(1+idim)*dvar(ivar,idim)
-                  end do
-               end do
-
-               ! Pressure gradient acceleration for velocities
-               ! vx: -1/rho * dp/dx
-               ! vy: -1/rho * dp/dy
-               ! vz: -1/rho * dp/dz
-               !DIR$ UNROLL
-               do idim=1,ndim
-                  S0(1+idim) = S0(1+idim) - dvar(ip,idim)*oneoverr
+              ! Cell centered values
+              r   =  q(l,i,j,k,ir)
+              u   =  q(l,i,j,k,iu)
+              p   =  q(l,i,j,k,ip)
 #if NENER>0
-                  !DIR$ UNROLL
-                  do ivar=1,nener
-                     S0(1+idim) = S0(1+idim) - dvar(ip+ivar,idim)*oneoverr
-                  end do
+              do irad=1,nener
+                 e(irad) = q(l,i,j,k,ip+irad)
+              end do
 #endif
-               end do
-
-               ! Calculate the velocity divergence
-               ! div_vel = du/dx + dv/dy + dw/dz
-               dvel_diag = 0
-               !DIR$ UNROLL
-               do idim=1,ndim
-                  dvel_diag = dvel_diag +  dvar(1+idim,idim)
-               end do
-
-               ! Fluid compression/expansion for density
-               ! -div_vel*rho
-               S0(ir) = S0(ir) - dvel_diag*var(ir)
-
-               ! Compression heating / expansion cooling for pressure
-               ! -div_vel*gamma*P
-               S0(ip) = S0(ip) - dvel_diag*gamma*var(ip)
-
+              ! TVD slopes in X direction
+              drx = dq(l,i,j,k,ir,1)
+              dux = dq(l,i,j,k,iu,1)
+              dpx = dq(l,i,j,k,ip,1)
 #if NENER>0
-               ! Compression heating / expansion cooling for extra energies
-               ! -div_vel*gamma_rad*e_rad
-               !DIR$ UNROLL
-               do ivar=1,nener
-                  S0(ip+ivar) = S0(ip+ivar) - dvel_diag*gamma_rad(ivar)*var(ip+ivar)
-               end do
+              do irad=1,nener
+                 dex(irad) = dq(l,i,j,k,ip+irad,1)
+              end do
 #endif
 
-               ! Calculate and store result:
-               ! q+(t+0.5dt) = q(t) + 0.5*dq(t)/dx - S*0.5*dt/dx
-               ! q-(t+0.5dt) = q(t) - 0.5*dq(t)/dx - S*0.5*dt/dx
+              ! Source terms (including transverse derivatives)
+              sr0 = -u*drx - (dux)*r
+              sp0 = -u*dpx - (dux)*gamma*p
+              su0 = -u*dux - (dpx)/r
+#if NENER>0
+              do irad=1,nener
+                 su0 = su0 - (dex(irad))/r
+                 se0(irad) = -u*dex(irad) &
+                      & - (dux)*gamma_rad(irad)*e(irad)
+              end do
+#endif
 
-               ! Check result for density. If too small, use
-               ! rho+(t+0.5dt) = rho(t)
-               ! rho-(t+0.5dt) = rho(t)
-               ! Prevents negative densities
-               corr = S0(ir) * dtdx !convert S0 to spatial slope correction
-               !DIR$ UNROLL
-               do idim=1,ndim
-                  result_p = var(ir) + half*(corr - dvar(ir,idim))
-                  result_m = var(ir) + half*(corr + dvar(ir,idim))
-                  qp(l,i,j,k,ir,idim) = merge(var(ir), result_p, result_p<smallr)
-                  qm(l,i,j,k,ir,idim) = merge(var(ir), result_m, result_m<smallr)
-               end do
+              ! Right state
+              qp(l,i,j,k,ir,1) = r - half*drx + sr0*dtdx*half
+              qp(l,i,j,k,iu,1) = u - half*dux + su0*dtdx*half
+              qp(l,i,j,k,ip,1) = p - half*dpx + sp0*dtdx*half
+!              qp(l,i,j,k,ir,1) = max(smallr, qp(l,i,j,k,ir,1))
+              if(qp(l,i,j,k,ir,1)<smallr)qp(l,i,j,k,ir,1)=r
+#if NENER>0
+              do irad=1,nener
+                 qp(l,i,j,k,ip+irad,1) = e(irad) - half*dex(irad) + se0(irad)*dtdx*half
+              end do
+#endif
 
-               !DIR$ UNROLL
-               do ivar=2,nvar
-                  corr = S0(ivar) * dtdx
-                  !DIR$ UNROLL
-                  do idim=1,ndim
-                     result_p = var(ivar) + half*(corr - dvar(ivar,idim))
-                     result_m = var(ivar) + half*(corr + dvar(ivar,idim))
-                     qp(l,i,j,k,ivar,idim) = result_p
-                     qm(l,i,j,k,ivar,idim) = result_m
-                  end do
-               end do
+              ! Left state
+              qm(l,i,j,k,ir,1) = r + half*drx + sr0*dtdx*half
+              qm(l,i,j,k,iu,1) = u + half*dux + su0*dtdx*half
+              qm(l,i,j,k,ip,1) = p + half*dpx + sp0*dtdx*half
+!              qm(l,i,j,k,ir,1) = max(smallr, qm(l,i,j,k,ir,1))
+              if(qm(l,i,j,k,ir,1)<smallr)qm(l,i,j,k,ir,1)=r
+#if NENER>0
+              do irad=1,nener
+                 qm(l,i,j,k,ip+irad,1) = e(irad) + half*dex(irad) + se0(irad)*dtdx*half
+              end do
+#endif
 
-            end do
-         end do
-      end do
-   end do
+           end do
+        end do
+     end do
+  end do
 
-end subroutine trace
+#if NVAR > NHYDRO + NENER
+  ! Passive scalars
+  do n = ndim+nener+3, nvar
+     do k = klo, khi
+        do j = jlo, jhi
+           do i = ilo, ihi
+              do l = 1, ngrid
+                 a   = q(l,i,j,k,n)       ! Cell centered values
+                 u   = q(l,i,j,k,iu)
+                 dax = dq(l,i,j,k,n,1)    ! TVD slopes
+                 sa0 = -u*dax             ! Source terms
+                 qp(l,i,j,k,n,1) = a - half*dax + sa0*dtdx*half   ! Right state
+                 qm(l,i,j,k,n,1) = a + half*dax + sa0*dtdx*half   ! Left state
+              end do
+           end do
+        end do
+     end do
+  end do
+#endif
+
+end subroutine trace1d
+!###########################################################
+!###########################################################
+!###########################################################
+!###########################################################
+#if NDIM>1
+subroutine trace2d(q,dq,qm,qp,dx,dy,dt,ngrid)
+  use amr_parameters
+  use hydro_parameters
+  use const
+  implicit none
+
+  integer ::ngrid
+  real(dp)::dx, dy, dt
+
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::dq
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qm
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qp
+
+  ! declare local variables
+  integer ::i, j, k, l
+  integer ::ilo,ihi,jlo,jhi,klo,khi
+  integer ::ir, iu, iv, ip
+  real(dp)::dtdx, dtdy
+  real(dp)::r, u, v, p
+  real(dp)::drx, dux, dvx, dpx
+  real(dp)::dry, duy, dvy, dpy
+  real(dp)::sr0, su0, sv0, sp0
+#if NENER>0
+  integer ::irad
+  real(dp),dimension(1:nener)::e, dex, dey, se0
+#endif
+#if NVAR > NHYDRO + NENER
+  integer ::n
+  real(dp)::a, dax, day, sa0
+#endif
+
+  dtdx = dt/dx
+  dtdy = dt/dy
+  ilo=MIN(1,iu1+1); ihi=MAX(1,iu2-1)
+  jlo=MIN(1,ju1+1); jhi=MAX(1,ju2-1)
+  klo=MIN(1,ku1+1); khi=MAX(1,ku2-1)
+  ir=1; iu=2; iv=3; ip=4
+
+  do k = klo, khi
+     do j = jlo, jhi
+        do i = ilo, ihi
+           do l = 1, ngrid
+
+              ! Cell centered values
+              r   =  q(l,i,j,k,ir)
+              u   =  q(l,i,j,k,iu)
+              v   =  q(l,i,j,k,iv)
+              p   =  q(l,i,j,k,ip)
+#if NENER>0
+              do irad=1,nener
+                 e(irad) = q(l,i,j,k,ip+irad)
+              end do
+#endif
+
+              ! TVD slopes in all directions
+              drx = dq(l,i,j,k,ir,1)
+              dux = dq(l,i,j,k,iu,1)
+              dvx = dq(l,i,j,k,iv,1)
+              dpx = dq(l,i,j,k,ip,1)
+#if NENER>0
+              do irad=1,nener
+                 dex(irad) = dq(l,i,j,k,ip+irad,1)
+              end do
+#endif
+
+              dry = dq(l,i,j,k,ir,2)
+              duy = dq(l,i,j,k,iu,2)
+              dvy = dq(l,i,j,k,iv,2)
+              dpy = dq(l,i,j,k,ip,2)
+#if NENER>0
+              do irad=1,nener
+                 dey(irad) = dq(l,i,j,k,ip+irad,2)
+              end do
+#endif
+
+              ! source terms (with transverse derivatives)
+              sr0 = -u*drx-v*dry - (dux+dvy)*r
+              sp0 = -u*dpx-v*dpy - (dux+dvy)*gamma*p
+              su0 = -u*dux-v*duy - (dpx    )/r
+              sv0 = -u*dvx-v*dvy - (dpy    )/r
+#if NENER>0
+              do irad=1,nener
+                 su0 = su0 - (dex(irad))/r
+                 sv0 = sv0 - (dey(irad))/r
+                 se0(irad) = -u*dex(irad)-v*dey(irad) &
+                      & - (dux+dvy)*gamma_rad(irad)*e(irad)
+              end do
+#endif
+
+              ! Right state at left interface
+              qp(l,i,j,k,ir,1) = r - half*drx + sr0*dtdx*half
+              qp(l,i,j,k,iu,1) = u - half*dux + su0*dtdx*half
+              qp(l,i,j,k,iv,1) = v - half*dvx + sv0*dtdx*half
+              qp(l,i,j,k,ip,1) = p - half*dpx + sp0*dtdx*half
+!              qp(l,i,j,k,ir,1) = max(smallr, qp(l,i,j,k,ir,1))
+              if(qp(l,i,j,k,ir,1)<smallr)qp(l,i,j,k,ir,1)=r
+#if NENER>0
+              do irad=1,nener
+                 qp(l,i,j,k,ip+irad,1) = e(irad) - half*dex(irad) + se0(irad)*dtdx*half
+              end do
+#endif
+
+              ! Left state at right interface
+              qm(l,i,j,k,ir,1) = r + half*drx + sr0*dtdx*half
+              qm(l,i,j,k,iu,1) = u + half*dux + su0*dtdx*half
+              qm(l,i,j,k,iv,1) = v + half*dvx + sv0*dtdx*half
+              qm(l,i,j,k,ip,1) = p + half*dpx + sp0*dtdx*half
+!              qm(l,i,j,k,ir,1) = max(smallr, qm(l,i,j,k,ir,1))
+              if(qm(l,i,j,k,ir,1)<smallr)qm(l,i,j,k,ir,1)=r
+#if NENER>0
+              do irad=1,nener
+                 qm(l,i,j,k,ip+irad,1) = e(irad) + half*dex(irad) + se0(irad)*dtdx*half
+              end do
+#endif
+
+              ! Top state at bottom interface
+              qp(l,i,j,k,ir,2) = r - half*dry + sr0*dtdy*half
+              qp(l,i,j,k,iu,2) = u - half*duy + su0*dtdy*half
+              qp(l,i,j,k,iv,2) = v - half*dvy + sv0*dtdy*half
+              qp(l,i,j,k,ip,2) = p - half*dpy + sp0*dtdy*half
+!              qp(l,i,j,k,ir,2) = max(smallr, qp(l,i,j,k,ir,2))
+              if(qp(l,i,j,k,ir,2)<smallr)qp(l,i,j,k,ir,2)=r
+#if NENER>0
+              do irad=1,nener
+                 qp(l,i,j,k,ip+irad,2) = e(irad) - half*dey(irad) + se0(irad)*dtdy*half
+              end do
+#endif
+
+              ! Bottom state at top interface
+              qm(l,i,j,k,ir,2) = r + half*dry + sr0*dtdy*half
+              qm(l,i,j,k,iu,2) = u + half*duy + su0*dtdy*half
+              qm(l,i,j,k,iv,2) = v + half*dvy + sv0*dtdy*half
+              qm(l,i,j,k,ip,2) = p + half*dpy + sp0*dtdy*half
+!              qm(l,i,j,k,ir,2) = max(smallr, qm(l,i,j,k,ir,2))
+              if(qm(l,i,j,k,ir,2)<smallr)qm(l,i,j,k,ir,2)=r
+#if NENER>0
+              do irad=1,nener
+                 qm(l,i,j,k,ip+irad,2) = e(irad) + half*dey(irad) + se0(irad)*dtdy*half
+              end do
+#endif
+
+           end do
+        end do
+     end do
+  end do
+
+#if NVAR > NHYDRO + NENER
+  ! passive scalars
+  do n = ndim+nener+3, nvar
+     do k = klo, khi
+        do j = jlo, jhi
+           do i = ilo, ihi
+              do l = 1, ngrid
+                 a   = q(l,i,j,k,n)       ! Cell centered values
+                 u   = q(l,i,j,k,iu)
+                 v   = q(l,i,j,k,iv)
+                 dax = dq(l,i,j,k,n,1)    ! TVD slopes
+                 day = dq(l,i,j,k,n,2)
+                 sa0 = -u*dax-v*day       ! Source terms
+                 qp(l,i,j,k,n,1) = a - half*dax + sa0*dtdx*half   ! Right state
+                 qm(l,i,j,k,n,1) = a + half*dax + sa0*dtdx*half   ! Left state
+                 qp(l,i,j,k,n,2) = a - half*day + sa0*dtdy*half   ! Top state
+                 qm(l,i,j,k,n,2) = a + half*day + sa0*dtdy*half   ! Bottom state
+              end do
+           end do
+        end do
+     end do
+  end do
+#endif
+
+end subroutine trace2d
+#endif
+!###########################################################
+!###########################################################
+!###########################################################
+!###########################################################
+#if NDIM>2
+subroutine trace3d(q,dq,qm,qp,dx,dy,dz,dt,ngrid)
+  use amr_parameters
+  use hydro_parameters
+  use const
+  implicit none
+
+  integer ::ngrid
+  real(dp)::dx, dy, dz, dt
+
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::dq
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qm
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qp
+
+  ! declare local variables
+  integer ::i, j, k, l
+  integer ::ilo,ihi,jlo,jhi,klo,khi
+  integer ::ir, iu, iv, iw, ip
+  real(dp)::dtdx, dtdy, dtdz
+  real(dp)::r, u, v, w, p
+  real(dp)::drx, dux, dvx, dwx, dpx
+  real(dp)::dry, duy, dvy, dwy, dpy
+  real(dp)::drz, duz, dvz, dwz, dpz
+  real(dp)::sr0, su0, sv0, sw0, sp0
+#if NENER>0
+  integer ::irad
+  real(dp),dimension(1:nener)::e, dex, dey, dez, se0
+#endif
+#if NVAR > NHYDRO + NENER
+  integer ::n
+  real(dp)::a, dax, day, daz, sa0
+#endif
+
+  dtdx = dt/dx
+  dtdy = dt/dy
+  dtdz = dt/dz
+  ilo=MIN(1,iu1+1); ihi=MAX(1,iu2-1)
+  jlo=MIN(1,ju1+1); jhi=MAX(1,ju2-1)
+  klo=MIN(1,ku1+1); khi=MAX(1,ku2-1)
+  ir=1; iu=2; iv=3; iw=4; ip=5
+
+  do k = klo, khi
+     do j = jlo, jhi
+        do i = ilo, ihi
+           do l = 1, ngrid
+
+              ! Cell centered values
+              r   =  q(l,i,j,k,ir)
+              u   =  q(l,i,j,k,iu)
+              v   =  q(l,i,j,k,iv)
+              w   =  q(l,i,j,k,iw)
+              p   =  q(l,i,j,k,ip)
+#if NENER>0
+              do irad=1,nener
+                 e(irad) = q(l,i,j,k,ip+irad)
+              end do
+#endif
+
+              ! TVD slopes in all 3 directions
+              drx = dq(l,i,j,k,ir,1)
+              dpx = dq(l,i,j,k,ip,1)
+              dux = dq(l,i,j,k,iu,1)
+              dvx = dq(l,i,j,k,iv,1)
+              dwx = dq(l,i,j,k,iw,1)
+#if NENER>0
+              do irad=1,nener
+                 dex(irad) = dq(l,i,j,k,ip+irad,1)
+              end do
+#endif
+
+              dry = dq(l,i,j,k,ir,2)
+              dpy = dq(l,i,j,k,ip,2)
+              duy = dq(l,i,j,k,iu,2)
+              dvy = dq(l,i,j,k,iv,2)
+              dwy = dq(l,i,j,k,iw,2)
+#if NENER>0
+              do irad=1,nener
+                 dey(irad) = dq(l,i,j,k,ip+irad,2)
+              end do
+#endif
+
+              drz = dq(l,i,j,k,ir,3)
+              dpz = dq(l,i,j,k,ip,3)
+              duz = dq(l,i,j,k,iu,3)
+              dvz = dq(l,i,j,k,iv,3)
+              dwz = dq(l,i,j,k,iw,3)
+#if NENER>0
+              do irad=1,nener
+                 dez(irad) = dq(l,i,j,k,ip+irad,3)
+              end do
+#endif
+
+              ! Source terms (including transverse derivatives)
+              sr0 = -u*drx-v*dry-w*drz - (dux+dvy+dwz)*r
+              sp0 = -u*dpx-v*dpy-w*dpz - (dux+dvy+dwz)*gamma*p
+              su0 = -u*dux-v*duy-w*duz - (dpx        )/r
+              sv0 = -u*dvx-v*dvy-w*dvz - (dpy        )/r
+              sw0 = -u*dwx-v*dwy-w*dwz - (dpz        )/r
+#if NENER>0
+              do irad=1,nener
+                 su0 = su0 - (dex(irad))/r
+                 sv0 = sv0 - (dey(irad))/r
+                 sw0 = sw0 - (dez(irad))/r
+                 se0(irad) = -u*dex(irad)-v*dey(irad)-w*dez(irad) &
+                      & - (dux+dvy+dwz)*gamma_rad(irad)*e(irad)
+              end do
+#endif
+
+              ! Right state at left interface
+              qp(l,i,j,k,ir,1) = r - half*drx + sr0*dtdx*half
+              qp(l,i,j,k,ip,1) = p - half*dpx + sp0*dtdx*half
+              qp(l,i,j,k,iu,1) = u - half*dux + su0*dtdx*half
+              qp(l,i,j,k,iv,1) = v - half*dvx + sv0*dtdx*half
+              qp(l,i,j,k,iw,1) = w - half*dwx + sw0*dtdx*half
+!              qp(l,i,j,k,ir,1) = max(smallr, qp(l,i,j,k,ir,1))
+              if(qp(l,i,j,k,ir,1)<smallr)qp(l,i,j,k,ir,1)=r
+#if NENER>0
+              do irad=1,nener
+                 qp(l,i,j,k,ip+irad,1) = e(irad) - half*dex(irad) + se0(irad)*dtdx*half
+              end do
+#endif
+
+              ! Left state at left interface
+              qm(l,i,j,k,ir,1) = r + half*drx + sr0*dtdx*half
+              qm(l,i,j,k,ip,1) = p + half*dpx + sp0*dtdx*half
+              qm(l,i,j,k,iu,1) = u + half*dux + su0*dtdx*half
+              qm(l,i,j,k,iv,1) = v + half*dvx + sv0*dtdx*half
+              qm(l,i,j,k,iw,1) = w + half*dwx + sw0*dtdx*half
+!              qm(l,i,j,k,ir,1) = max(smallr, qm(l,i,j,k,ir,1))
+              if(qm(l,i,j,k,ir,1)<smallr)qm(l,i,j,k,ir,1)=r
+#if NENER>0
+              do irad=1,nener
+                 qm(l,i,j,k,ip+irad,1) = e(irad) + half*dex(irad) + se0(irad)*dtdx*half
+              end do
+#endif
+
+              ! Top state at bottom interface
+              qp(l,i,j,k,ir,2) = r - half*dry + sr0*dtdy*half
+              qp(l,i,j,k,ip,2) = p - half*dpy + sp0*dtdy*half
+              qp(l,i,j,k,iu,2) = u - half*duy + su0*dtdy*half
+              qp(l,i,j,k,iv,2) = v - half*dvy + sv0*dtdy*half
+              qp(l,i,j,k,iw,2) = w - half*dwy + sw0*dtdy*half
+!              qp(l,i,j,k,ir,2) = max(smallr, qp(l,i,j,k,ir,2))
+              if(qp(l,i,j,k,ir,2)<smallr)qp(l,i,j,k,ir,2)=r
+#if NENER>0
+              do irad=1,nener
+                 qp(l,i,j,k,ip+irad,2) = e(irad) - half*dey(irad) + se0(irad)*dtdy*half
+              end do
+#endif
+
+              ! Bottom state at top interface
+              qm(l,i,j,k,ir,2) = r + half*dry + sr0*dtdy*half
+              qm(l,i,j,k,ip,2) = p + half*dpy + sp0*dtdy*half
+              qm(l,i,j,k,iu,2) = u + half*duy + su0*dtdy*half
+              qm(l,i,j,k,iv,2) = v + half*dvy + sv0*dtdy*half
+              qm(l,i,j,k,iw,2) = w + half*dwy + sw0*dtdy*half
+!              qm(l,i,j,k,ir,2) = max(smallr, qm(l,i,j,k,ir,2))
+              if(qm(l,i,j,k,ir,2)<smallr)qm(l,i,j,k,ir,2)=r
+#if NENER>0
+              do irad=1,nener
+                 qm(l,i,j,k,ip+irad,2) = e(irad) + half*dey(irad) + se0(irad)*dtdy*half
+              end do
+#endif
+
+              ! Back state at front interface
+              qp(l,i,j,k,ir,3) = r - half*drz + sr0*dtdz*half
+              qp(l,i,j,k,ip,3) = p - half*dpz + sp0*dtdz*half
+              qp(l,i,j,k,iu,3) = u - half*duz + su0*dtdz*half
+              qp(l,i,j,k,iv,3) = v - half*dvz + sv0*dtdz*half
+              qp(l,i,j,k,iw,3) = w - half*dwz + sw0*dtdz*half
+!              qp(l,i,j,k,ir,3) = max(smallr, qp(l,i,j,k,ir,3))
+              if(qp(l,i,j,k,ir,3)<smallr)qp(l,i,j,k,ir,3)=r
+#if NENER>0
+              do irad=1,nener
+                 qp(l,i,j,k,ip+irad,3) = e(irad) - half*dez(irad) + se0(irad)*dtdz*half
+              end do
+#endif
+
+              ! Front state at back interface
+              qm(l,i,j,k,ir,3) = r + half*drz + sr0*dtdz*half
+              qm(l,i,j,k,ip,3) = p + half*dpz + sp0*dtdz*half
+              qm(l,i,j,k,iu,3) = u + half*duz + su0*dtdz*half
+              qm(l,i,j,k,iv,3) = v + half*dvz + sv0*dtdz*half
+              qm(l,i,j,k,iw,3) = w + half*dwz + sw0*dtdz*half
+!              qm(l,i,j,k,ir,3) = max(smallr, qm(l,i,j,k,ir,3))
+              if(qm(l,i,j,k,ir,3)<smallr)qm(l,i,j,k,ir,3)=r
+#if NENER>0
+              do irad=1,nener
+                 qm(l,i,j,k,ip+irad,3) = e(irad) + half*dez(irad) + se0(irad)*dtdz*half
+              end do
+#endif
+
+           end do
+        end do
+     end do
+  end do
+
+#if NVAR > NHYDRO + NENER
+  ! Passive scalars
+  do n = ndim+nener+3, nvar
+     do k = klo, khi
+        do j = jlo, jhi
+           do i = ilo, ihi
+              do l = 1, ngrid
+                 a   = q(l,i,j,k,n)       ! Cell centered values
+                 u   = q(l,i,j,k,iu)
+                 v   = q(l,i,j,k,iv)
+                 w   = q(l,i,j,k,iw)
+                 dax = dq(l,i,j,k,n,1)    ! TVD slopes
+                 day = dq(l,i,j,k,n,2)
+                 daz = dq(l,i,j,k,n,3)
+                 sa0 = -u*dax-v*day-w*daz     ! Source terms
+                 qp(l,i,j,k,n,1) = a - half*dax + sa0*dtdx*half  ! Right state
+                 qm(l,i,j,k,n,1) = a + half*dax + sa0*dtdx*half  ! Left state
+                 qp(l,i,j,k,n,2) = a - half*day + sa0*dtdy*half  ! Bottom state
+                 qm(l,i,j,k,n,2) = a + half*day + sa0*dtdy*half  ! Upper state
+                 qp(l,i,j,k,n,3) = a - half*daz + sa0*dtdz*half  ! Front state
+                 qm(l,i,j,k,n,3) = a + half*daz + sa0*dtdz*half  ! Back state
+              end do
+           end do
+        end do
+     end do
+  end do
+#endif
+
+end subroutine trace3d
+#endif
 !###########################################################
 !###########################################################
 !###########################################################
