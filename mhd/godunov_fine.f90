@@ -190,7 +190,11 @@ subroutine update_cosmomag(ilevel,exp_scale)
     ! Do the same for reception cells
     do icpu=1,ncpu
       do i=1,reception(icpu,ilevel)%ngrid
+#ifdef LIGHT_MPI_COMM
+        ind_cell = reception(icpu,ilevel)%pcomm%igrid(i)+iskip
+#else
         ind_cell = reception(icpu,ilevel)%igrid(i)+iskip
+#endif
         call scale_cosmomag(ind_cell,exp_scale)
       end do
     end do
