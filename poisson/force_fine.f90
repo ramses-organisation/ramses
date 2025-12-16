@@ -73,17 +73,13 @@ subroutine force_fine(ilevel,icount)
            do i=1,ngrid
               ind_cell(i)=iskip+ind_grid(i)
            end do
-           ! Gather cell centre positions
+           ! Gather cell centre positions and
+           ! rescale position from code units to user units
            do idim=1,ndim
               do i=1,ngrid
                  xx(i,idim)=xg(ind_grid(i),idim)+xc(ind,idim)
-              end do
-           end do
-           ! Rescale position from code units to user units
-           do idim=1,ndim
-              do i=1,ngrid
                  xx(i,idim)=(xx(i,idim)-skip_loc(idim))*scale
-              end do
+               end do
            end do
 
            ! Call analytical gravity routine
@@ -292,29 +288,21 @@ subroutine gradient_phi(ind_grid,ngrid,ilevel,icount)
            else
               phi1(i)=phi_left(i,id1,idim)
            end if
-        end do
-        do i=1,ngrid
            if(igridn(i,ig2)>0)then
               phi2(i)=phi(igridn(i,ig2)+ih2)
            else
               phi2(i)=phi_right(i,id2,idim)
            end if
-        end do
-        do i=1,ngrid
            if(igridn(i,ig3)>0)then
               phi3(i)=phi(igridn(i,ig3)+ih3)
            else
               phi3(i)=phi_left(i,id3,idim)
            end if
-        end do
-        do i=1,ngrid
            if(igridn(i,ig4)>0)then
               phi4(i)=phi(igridn(i,ig4)+ih4)
            else
               phi4(i)=phi_right(i,id4,idim)
            end if
-        end do
-        do i=1,ngrid
            f(ind_cell(i),idim)=a*(phi1(i)-phi2(i)) &
                 &             -b*(phi3(i)-phi4(i))
         end do

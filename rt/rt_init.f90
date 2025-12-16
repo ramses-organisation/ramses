@@ -93,44 +93,14 @@ SUBROUTINE update_rt_c
   use amr_commons
   implicit none
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
+  integer::i
 !-------------------------------------------------------------------------
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
-  rt_c=rt_c_cgs/scale_v
-  rt_c2=rt_c**2
+  do i=nlevelmax,levelmin,-1
+    rt_c(i)=rt_c_cgs(i)/scale_v
+    rt_c2(i)=rt_c(i)**2
+  enddo
 END SUBROUTINE update_rt_c
-
-!*************************************************************************
-SUBROUTINE adaptive_rt_c_update(ilevel, dt)
-
-! Set the lightspeed such that RT can be done at ilevel in time dt in
-! a single step.
-!-------------------------------------------------------------------------
-  use amr_parameters
-  use rt_parameters
-  use SED_module
-  implicit none
-  integer:: ilevel, nx_loc
-  real(dp):: dt, scale, dx
-  real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
-!-------------------------------------------------------------------------
-  ! Mesh spacing at ilevel
-  nx_loc=icoarse_max-icoarse_min+1
-  scale=boxlen/dble(nx_loc)
-  dx=0.5D0**ilevel*scale
-
-  ! new lightspeed
-  rt_c = dx/3d0/dt * rt_courant_factor
-  rt_c2 = rt_c**2
-
-  ! new ligtspeed in cgs
-  call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
-  rt_c_cgs = rt_c*scale_v
-  rt_c_fraction = rt_c_cgs/c_cgs
-
-  call updateRTGroups_CoolConstants        ! These change as a consequence
-
-END SUBROUTINE adaptive_rt_c_update
-
 
 !*************************************************************************
 SUBROUTINE read_rt_params(nml_ok)
@@ -144,8 +114,8 @@ SUBROUTINE read_rt_params(nml_ok)
   use UV_module
   use SED_module
   implicit none
-  logical::nml_ok
-  integer::iCount
+  logical::nml_ok, rt_vsla=.false.
+  integer::iCount,ilevel
 !-------------------------------------------------------------------------
   namelist/rt_params/rt_star, rt_esc_frac, rt_flux_scheme, rt_smooth     &
        & ,rt_is_outflow_bound, rt_TConst, rt_courant_factor              &
@@ -153,7 +123,7 @@ SUBROUTINE read_rt_params(nml_ok)
        & ,sed_dir, uv_file, rt_UVsrc_nHmax, nUVgroups, nSEDgroups        &
        & ,SED_isEgy, rt_output_coolstats, hll_evals_file                 &
        & ,upload_equilibrium_x, X, Y, rt_is_init_xion                    &
-       & ,rt_err_grad_n, rt_floor_n, rt_err_grad_xHII, rt_floor_xHII     &
+       & ,rt_err_grad_cn, rt_floor_cn, rt_err_grad_xHII, rt_floor_xHII   &
        & ,rt_err_grad_xHI, rt_floor_xHI, rt_refine_aexp, is_mu_H2,isHe   &
        & ,isH2, rt_isIR, is_kIR_T, rt_T_rad, rt_vc, rt_pressBoost        &
        & ,rt_isoPress, rt_isIRtrap, iPEH_group, heat_unresolved_HII      &
@@ -192,14 +162,45 @@ SUBROUTINE read_rt_params(nml_ok)
   if(nGroups.le.0) rt=.false. ! No sense  doing rt if there are no photons
   if(.not. rt .and. .not. rt_star) sedprops_update=-1
 
-  if(rt_err_grad_n .gt. 0. .or. rt_err_grad_xHII .gt. 0.                 &
+  if(rt_err_grad_cn .gt. 0. .or. rt_err_grad_xHII .gt. 0.                &
        .or. rt_err_grad_xHI .gt. 0.) rt_refine=.true.
 
-  rt_c_cgs = c_cgs * rt_c_fraction
-  !call update_rt_c
+  ! Reduced light speed. First check if only one light speed fraction set
+  ! and if so, set that same light speed fraction at all levels (which is
+  ! the previous non-variable light speed behaviour). If more than one
+  ! fraction is set, we are using a variable speed of light.
+  if(rt_c_fraction(1).ne.rt_c_fraction(2) .and. rt_c_fraction(2).eq.1.0  &
+                                .and. all((rt_c_fraction(2:)).eq.1.0)) then
+
+      rt_c_fraction(2:) = rt_c_fraction(1)
+  endif
+
+  ! Shift lightspeed fractions from levels [1:] to [levelmin:]
+  do ilevel=nlevelmax,levelmin,-1
+     rt_c_fraction(ilevel)=rt_c_fraction(ilevel-levelmin+1)
+  end do
+  do ilevel=1,levelmin-1     ! Just a dummy lightspeed for non-leaf levels
+     rt_c_fraction(ilevel)=1.0
+  end do
+  do ilevel=nlevelmax,levelmin,-1 !Set the light speed(s) according to f_c
+     rt_c_cgs(ilevel) = c_cgs * rt_c_fraction(ilevel)
+  end do
+
+  ! Print a message if using level-variable speed of light
+  do ilevel=levelmin,nlevelmax-1
+     if(rt_c_fraction(ilevel) .ne. rt_c_fraction(nlevelmax)) then
+        if(myid==1) write(*,112) rt_c_fraction(levelmin:nlevelmax)
+        rt_vsla=.true.
+        exit
+     endif
+  end do
+  if(.not. rt_vsla .and. myid==1) write(*,113) rt_c_fraction(levelmin)
 
   ! Trapped IR pressure closure as in Rosdahl & Teyssier 2015, eq 43:
-  if(rt_isIRtrap) gamma_rad(1) = rt_c_fraction / 3d0 + 1d0
+  ! NOTE: Because of gamma_rad, IR trapping and the variable speed of light
+  ! are mutually incompatible. For those two to work together at the same time
+  ! gamma_rad must be level-dependent, i.e. gamma_rad(iNENER,iLevel)
+  if(rt_isIRtrap) gamma_rad(1) = rt_c_fraction(nlevelmax) / 3d0 + 1d0
 
   if(rt_Tconst .ge. 0d0) rt_isTconst=.true.
 
@@ -246,11 +247,13 @@ SUBROUTINE read_rt_params(nml_ok)
      nml_ok=.false.
   endif
 
-  call read_rt_groups(nml_ok)
+  call read_rt_groups()
+112 format (' Using a level-variable speed of light, with f_c= '20(1pe12.3))
+113 format (' Using a uniform reduced speed of light fraction of f_c='1pe10.3)
 END SUBROUTINE read_rt_params
 
 !*************************************************************************
-SUBROUTINE read_rt_groups(nml_ok)
+SUBROUTINE read_rt_groups()
 
 ! Read rt_groups namelist
 !-------------------------------------------------------------------------
@@ -259,7 +262,6 @@ SUBROUTINE read_rt_groups(nml_ok)
   use rt_cooling_module
   use SED_module
   implicit none
-  logical::nml_ok
   integer::i,igroup_HI=0, igroup_HII=0, igroup_HeII=0, igroup_HeIII=0
 !-------------------------------------------------------------------------
   namelist/rt_groups/group_csn, group_cse, group_egy, spec2group         &
@@ -370,7 +372,9 @@ SUBROUTINE read_rt_groups(nml_ok)
     enddo
   endif
 
-  call updateRTGroups_CoolConstants
+  do i=nlevelmax,levelmin,-1
+     call updateRTGroups_CoolConstants(i)
+  enddo
   call write_group_props(.false.,6)
 END SUBROUTINE read_rt_groups
 
@@ -459,7 +463,7 @@ SUBROUTINE add_rt_sources(ilevel,dt)
            end do
         end do
         ! find injected values per cell
-        call rt_sources_vsweep(xx,uu,dx_loc,dt,ngrid)
+        call rt_sources_vsweep(xx,uu,dx_loc,dt,ngrid,ilevel)
         ! Write the RT variables
         do ivar=1,nrtvar
            do i=1,ngrid
@@ -485,7 +489,7 @@ SUBROUTINE add_UV_background(ilevel)
 !
 ! ilevel => amr level at which to inject the radiation
 !------------------------------------------------------------------------
-  use UV_module, ONLY: UV_Nphot_cgs, nUVgroups, iUVgroups
+  use UV_module, ONLY: UV_fluxes_cgs, nUVgroups, iUVgroups
   use amr_commons
   use rt_parameters
   use hydro_commons
@@ -521,7 +525,8 @@ SUBROUTINE add_UV_background(ilevel)
            do j=1,nUVgroups
               ig = iGroups(iUVgroups(j))
               rtunew(ic,ig) = max(rtunew(ic,ig)                     &
-                                 ,UV_Nphot_cgs(j)/scale_np * efactor)
+                                 ,UV_fluxes_cgs(j)/rt_c_cgs(ilevel) &
+                                  /scale_np * efactor)
            end do
         end do
      end do
@@ -534,7 +539,7 @@ SUBROUTINE add_UV_background(ilevel)
 END SUBROUTINE add_UV_background
 
 !************************************************************************
-SUBROUTINE rt_sources_vsweep(x,uu,dx,dt,nn)
+SUBROUTINE rt_sources_vsweep(x,uu,dx,dt,nn,ilevel)
 
 ! Do a vector sweep, injecting RT source regions into cells, that is if
 ! they are in any of these regions.
@@ -552,7 +557,7 @@ SUBROUTINE rt_sources_vsweep(x,uu,dx,dt,nn)
   real(dp)::dx,dt,dx_cgs,dt_cgs
   real(dp),dimension(1:nvector,1:nrtvar)::uu
   real(dp),dimension(1:nvector,1:ndim)::x
-  integer::i,k,group_ind
+  integer::i,k,group_ind,ilevel
   real(dp)::vol,r,xn,yn,zn,en
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   real(dp)::scale_np,scale_fp
@@ -591,17 +596,17 @@ SUBROUTINE rt_sources_vsweep(x,uu,dx,dt,nn)
            end if
            ! If cell lies within region, inject value
            if(r<1.0)then
-              uu(i,group_ind) = rt_n_source(k)/rt_c_cgs/scale_Np
+              uu(i,group_ind) = rt_n_source(k)/rt_c_cgs(ilevel)/scale_Np
               ! The input flux is the fraction Fp/(c*Np) (Max 1 magnitude)
               uu(i,group_ind+1) =                                       &
-                        rt_u_source(k) * rt_c * rt_n_source(k) / scale_Np
+                      rt_u_source(k)*rt_c(ilevel)*rt_n_source(k)/scale_Np
 #if NDIM>1
               uu(i,group_ind+2) =                                       &
-                        rt_v_source(k) * rt_c * rt_n_source(k) / scale_Np
+                      rt_v_source(k)*rt_c(ilevel)*rt_n_source(k)/scale_Np
 #endif
 #if NDIM>2
               uu(i,group_ind+3) =                                       &
-                        rt_w_source(k) * rt_c * rt_n_source(k) / scale_Np
+                      rt_w_source(k)*rt_c(ilevel)*rt_n_source(k)/scale_Np
 #endif
            end if
         end do
@@ -627,15 +632,15 @@ SUBROUTINE rt_sources_vsweep(x,uu,dx,dt,nn)
               ! Photon input is in # per sec...need to convert to uu
               uu(i,group_ind)=uu(i,group_ind)                            &
                             + rt_n_source(k) / scale_Np * r / vol * dt_cgs
-              uu(i,group_ind+1)=uu(i,group_ind+1) + rt_u_source(k) *rt_c &
-                            * rt_n_source(k) / scale_Np * r / vol * dt_cgs
+              uu(i,group_ind+1)=uu(i,group_ind+1) + rt_u_source(k)       &
+                        *rt_c(ilevel)*rt_n_source(k)/scale_Np*r/vol*dt_cgs
 #if NDIM>1
-              uu(i,group_ind+2)=uu(i,group_ind+2) + rt_v_source(k) *rt_c &
-                            * rt_n_source(k) / scale_Np * r / vol * dt_cgs
+              uu(i,group_ind+2)=uu(i,group_ind+2) + rt_v_source(k)       &
+                        *rt_c(ilevel)*rt_n_source(k)/scale_Np*r/vol*dt_cgs
 #endif
 #if NDIM>2
-              uu(i,group_ind+3)=uu(i,group_ind+3) + rt_w_source(k) *rt_c &
-                            * rt_n_source(k) / scale_Np * r / vol * dt_cgs
+              uu(i,group_ind+3)=uu(i,group_ind+3) + rt_w_source(k)       &
+                        *rt_c(ilevel)*rt_n_source(k)/scale_Np*r/vol*dt_cgs
 #endif
            endif
         end do

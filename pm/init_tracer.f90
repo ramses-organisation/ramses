@@ -29,11 +29,11 @@ subroutine init_tracer
 #endif
     indglob = npart_tot
 
-    if (trim(tracer_feed_fmt) == 'binary') then
+    if (trim(tracer_feed_fmt) == 'binary' .and. MC_tracer) then ! Not tested for classic tracers
         call load_tracers_bin(1)
-    else if (trim(tracer_feed_fmt) == 'binary2') then
+    else if (trim(tracer_feed_fmt) == 'binary2' .and. MC_tracer) then ! Not tested for classic tracers
         call load_tracers_bin(2)
-    else if (trim(tracer_feed_fmt) == 'inplace') then
+    else if (trim(tracer_feed_fmt) == 'inplace' .and. MC_tracer) then ! Not tested for classic tracers
         call load_tracers_inplace
     else if (trim(tracer_feed_fmt) == 'ascii') then
         call load_tracers
@@ -83,7 +83,7 @@ subroutine load_tracers
        if(myid==1)then
           jpart=0
           do i=1,nvector
-             read(10,*,end=100)xx1,xx2,xx3
+             read(10,*,end=100)xx1,xx2,xx3 ! Warning: the file should contain 3 columns (even in 2D, the 3rd column is ignored)
              jpart=jpart+1
              indglob=indglob+1
              xx(i,1)=xx1*boxlen !+boxlen/2.0
@@ -115,8 +115,8 @@ subroutine load_tracers
                 write(*,*)'npartmax should be greater than',ipart, 'got', npartmax
                 stop
              endif
-             xp(ipart,:)  = xx(i,:)
-             vp(ipart,:)  = vv(i,:)
+             xp(ipart,:ndim)  = xx(i,:ndim)
+             vp(ipart,:ndim)  = vv(i,:ndim)
              mp(ipart)    = tracer_mass
              levelp(ipart)= levelmin
              idp(ipart)   = ii(i)

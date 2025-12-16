@@ -36,7 +36,6 @@ subroutine phi_fine_cg(ilevel,icount)
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
 
-
   ! Set constants
   dx2=(0.5D0**ilevel)**2
   nx_loc=icoarse_max-icoarse_min+1
@@ -162,23 +161,13 @@ subroutine phi_fine_cg(ilevel,icount)
      alpha_cg = r2/pAp
 
      !====================================
-     ! Recurrence on x
+     ! Recurrence on x and r
      !====================================
      do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
         do i=1,active(ilevel)%ngrid
            idx=active(ilevel)%igrid(i)+iskip
            phi(idx)=phi(idx)+alpha_cg*f(idx,2)
-        end do
-     end do
-
-     !====================================
-     ! Recurrence on r
-     !====================================
-     do ind=1,twotondim
-        iskip=ncoarse+(ind-1)*ngridmax
-        do i=1,active(ilevel)%ngrid
-           idx=active(ilevel)%igrid(i)+iskip
            f(idx,1)=f(idx,1)-alpha_cg*f(idx,3)
         end do
      end do
@@ -214,16 +203,16 @@ subroutine cmp_residual_cg(ilevel,icount)
   use hydro_commons
   use poisson_commons
   use constants, only: twopi
+  use amr_constants, only:iii,jjj
   implicit none
   integer::ilevel,icount
   !------------------------------------------------------------------
   ! This routine computes the residual for the Conjugate Gradient
   ! Poisson solver. The residual is stored in f(i,1).
   !------------------------------------------------------------------
-  integer::i,idim,igrid,ngrid,ncache,ind,iskip,nx_loc
-  integer::id1,id2,ig1,ig2,ih1,ih2
+  integer::i,idim,inbor,igrid,ngrid,ncache,ind,iskip,nx_loc
+  integer::id1,ig1,ih1,id2,ig2,ih2
   real(dp)::dx2,fourpi,scale,oneoversix,fact
-  integer,dimension(1:3,1:2,1:8)::iii,jjj
 
   integer ,dimension(1:nvector),save::ind_grid,ind_cell
   integer ,dimension(1:nvector,0:twondim),save::igridn
@@ -240,13 +229,6 @@ subroutine cmp_residual_cg(ilevel,icount)
   if(cosmo)fourpi=1.5D0*omega_m*aexp*scale
   oneoversix=1.0D0/dble(twondim)
   fact=oneoversix*fourpi*dx2
-
-  iii(1,1,1:8)=(/1,0,1,0,1,0,1,0/); jjj(1,1,1:8)=(/2,1,4,3,6,5,8,7/)
-  iii(1,2,1:8)=(/0,2,0,2,0,2,0,2/); jjj(1,2,1:8)=(/2,1,4,3,6,5,8,7/)
-  iii(2,1,1:8)=(/3,3,0,0,3,3,0,0/); jjj(2,1,1:8)=(/3,4,1,2,7,8,5,6/)
-  iii(2,2,1:8)=(/0,0,4,4,0,0,4,4/); jjj(2,2,1:8)=(/3,4,1,2,7,8,5,6/)
-  iii(3,1,1:8)=(/5,5,5,5,0,0,0,0/); jjj(3,1,1:8)=(/5,6,7,8,1,2,3,4/)
-  iii(3,2,1:8)=(/0,0,0,0,6,6,6,6/); jjj(3,2,1:8)=(/5,6,7,8,1,2,3,4/)
 
   ! Loop over myid grids by vector sweeps
   ncache=active(ilevel)%ngrid
@@ -320,15 +302,11 @@ subroutine cmp_residual_cg(ilevel,icount)
            residu(i)=residu(i)+fact*(rho(ind_cell(i))-rho_tot)
         end do
 
-        ! Store results in f(i,1)
+        ! Store results in f(i,1) and f(i,2)
         do i=1,ngrid
            f(ind_cell(i),1)=residu(i)
-        end do
-
-        ! Store results in f(i,2)
-        do i=1,ngrid
            f(ind_cell(i),2)=residu(i)
-        end do
+         end do
 
      end do
      ! End loop over cells
@@ -346,16 +324,16 @@ subroutine cmp_Ap_cg(ilevel)
   use pm_commons
   use hydro_commons
   use poisson_commons
+  use amr_constants, only:iii,jjj
   implicit none
   integer::ilevel
   !------------------------------------------------------------------
   ! This routine computes Ap for the Conjugate Gradient
   ! Poisson Solver and store the result into f(i,3).
   !------------------------------------------------------------------
-  integer::i,idim,igrid,ngrid,ncache,ind,iskip
-  integer::id1,id2,ig1,ig2,ih1,ih2
+  integer::i,idim,inbor,igrid,ngrid,ncache,ind,iskip
+  integer::id1,ig1,ih1,id2,ig2,ih2
   real(dp)::oneoversix
-  integer,dimension(1:3,1:2,1:8)::iii,jjj
 
   integer,dimension(1:nvector),save::ind_grid,ind_cell
   integer,dimension(1:nvector,0:twondim),save::igridn
@@ -364,13 +342,6 @@ subroutine cmp_Ap_cg(ilevel)
 
   ! Set constants
   oneoversix=1.0D0/dble(twondim)
-
-  iii(1,1,1:8)=(/1,0,1,0,1,0,1,0/); jjj(1,1,1:8)=(/2,1,4,3,6,5,8,7/)
-  iii(1,2,1:8)=(/0,2,0,2,0,2,0,2/); jjj(1,2,1:8)=(/2,1,4,3,6,5,8,7/)
-  iii(2,1,1:8)=(/3,3,0,0,3,3,0,0/); jjj(2,1,1:8)=(/3,4,1,2,7,8,5,6/)
-  iii(2,2,1:8)=(/0,0,4,4,0,0,4,4/); jjj(2,2,1:8)=(/3,4,1,2,7,8,5,6/)
-  iii(3,1,1:8)=(/5,5,5,5,0,0,0,0/); jjj(3,1,1:8)=(/5,6,7,8,1,2,3,4/)
-  iii(3,2,1:8)=(/0,0,0,0,6,6,6,6/); jjj(3,2,1:8)=(/5,6,7,8,1,2,3,4/)
 
   ! Loop over myid grids by vector sweeps
   ncache=active(ilevel)%ngrid
@@ -395,7 +366,6 @@ subroutine cmp_Ap_cg(ilevel)
 
      ! Loop over cells
      do ind=1,twotondim
-
         ! Gather neighboring potential
         do idim=1,ndim
            id1=jjj(idim,1,ind); ig1=iii(idim,1,ind)
@@ -477,8 +447,6 @@ subroutine make_initial_phi(ilevel,icount)
            iskip=ncoarse+(ind-1)*ngridmax
            do i=1,ngrid
               ind_cell(i)=iskip+ind_grid(i)
-           end do
-           do i=1,ngrid
               phi(ind_cell(i))=0
            end do
            do idim=1,ndim
@@ -502,8 +470,6 @@ subroutine make_initial_phi(ilevel,icount)
            iskip=ncoarse+(ind-1)*ngridmax
            do i=1,ngrid
               ind_cell(i)=iskip+ind_grid(i)
-           end do
-           do i=1,ngrid
               phi(ind_cell(i))=phi_int(i,ind)
            end do
            do idim=1,ndim
@@ -527,7 +493,6 @@ subroutine make_multipole_phi(ilevel)
   use amr_commons
   use pm_commons
   use poisson_commons
-  use constants, only: twopi
   implicit none
   integer::ilevel
 
@@ -540,7 +505,7 @@ subroutine make_multipole_phi(ilevel)
   real(dp),dimension(1:3)::skip_loc
   real(dp),dimension(1:twotondim,1:3)::xc
   real(dp),dimension(1:nvector),save::rr,pp
-  real(dp),dimension(1:nvector,1:ndim),save::xx
+  real(dp),dimension(1:nvector),save::xx
 
   ! Mesh size at level ilevel
   dx=0.5D0**ilevel
@@ -583,19 +548,14 @@ subroutine make_multipole_phi(ilevel)
         end do
 
         if(simple_boundary)then
-           ! Compute cell center in code units
-           do idim=1,ndim
-               do i=1,ngrid
-                  xx(i,idim)=xg(ind_grid(i),idim)+xc(ind,idim)
-               end do
-           end do
-
-           ! Rescale position from code units to user units
            rr(1:ngrid)=0.0d0
            do idim=1,ndim
                do i=1,ngrid
-                  xx(i,idim)=(xx(i,idim)-skip_loc(idim))*scale
-                  rr(i)=rr(i)+(xx(i,idim)-multipole(idim+1)/multipole(1))**2
+                  ! Compute cell center in code units
+                  xx(i)=xg(ind_grid(i),idim)+xc(ind,idim)
+                  ! Rescale position from code units to user units
+                  xx(i)=(xx(i)-skip_loc(idim))*scale
+                  rr(i)=rr(i)+(xx(i)-multipole(idim+1)/multipole(1))**2
                end do
            end do
 

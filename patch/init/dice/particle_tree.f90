@@ -281,7 +281,6 @@ subroutine check_tree(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   real(dp),dimension(1:3)::xbound
   ! Grid-based arrays
   integer ,dimension(1:nvector,1:threetondim),save::nbors_father_cells
-  integer ,dimension(1:nvector,1:twotondim),save::nbors_father_grids
   real(dp),dimension(1:nvector,1:ndim),save::x0
   integer ,dimension(1:nvector),save::ind_father
   ! Particle-based arrays
@@ -311,7 +310,7 @@ subroutine check_tree(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   do i=1,ng
      ind_father(i)=father(ind_grid(i))
   end do
-  call get3cubefather(ind_father,nbors_father_cells,nbors_father_grids,ng,ilevel)
+  call get3cubefather(ind_father,nbors_father_cells,ng,ilevel)
 
   ! Compute particle position in 3-cube
   error=.false.
@@ -1282,11 +1281,11 @@ subroutine empty_comm(ind_com,np,ilevel,icpu)
   do i=1,np
 #ifdef LIGHT_MPI_COMM
      levelp(ind_part(i))=int(emission_part(ilevel)%f8(2, offset_np+ind_com(i)-1), 4)
-     idp   (ind_part(i))=int(emission_part(ilevel)%f8(3, offset_np+ind_com(i)-1))
+     idp   (ind_part(i))=emission_part(ilevel)%f8(3, offset_np+ind_com(i)-1)
      typep(ind_part(i)) =int2part(int(emission_part(ilevel)%f8(4, offset_np+ind_com(i)-1), 4))
 #else
      levelp(ind_part(i))=int(emission(icpu,ilevel)%fp(ind_com(i),2), 4)
-     idp   (ind_part(i))=int(emission(icpu,ilevel)%fp(ind_com(i),3))
+     idp   (ind_part(i))=emission(icpu,ilevel)%fp(ind_com(i),3)
      typep(ind_part(i)) =int2part(int(emission(icpu,ilevel)%fp(ind_com(i),4), 4))
 #endif
   end do

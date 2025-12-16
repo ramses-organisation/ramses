@@ -28,9 +28,9 @@ y = data["data"]["y"]
 r = np.sqrt(x**2 + y**2)
 rho = data["data"]["density"]*scale_d
 P = data["data"]["pressure"]*scale_d*scale_v**2
-ps1 = data["data"]["scalar_01"]
-ps2 = data["data"]["scalar_02"]
-ps3 = data["data"]["scalar_03"]
+ps_xHI = data["data"]["scalar_00"]
+ps_xHII = data["data"]["scalar_01"]
+ps_xH2 = 1.0-ps_xHI-ps_xHII
 ux  = data["data"]["velocity_x"]
 uy  = data["data"]["velocity_y"]
 
@@ -42,15 +42,15 @@ r_edges = np.linspace(rmin,rmax,nr)
 n_bin, xedges1 = np.histogram(r,bins=(r_edges))
 rho_bin, xedges1 = np.histogram(r,bins=(r_edges),weights=rho)
 P_bin, xedges1 = np.histogram(r,bins=(r_edges),weights=P)
-ps1_bin, xedges1 = np.histogram(r,bins=(r_edges),weights=ps1)
-ps2_bin, xedges1 = np.histogram(r,bins=(r_edges),weights=ps2)
-ps3_bin, xedges1 = np.histogram(r,bins=(r_edges),weights=ps3)
+ps_xHI_bin, xedges1 = np.histogram(r,bins=(r_edges),weights=ps_xHI)
+ps_xHII_bin, xedges1 = np.histogram(r,bins=(r_edges),weights=ps_xHII)
+ps_xH2_bin, xedges1 = np.histogram(r,bins=(r_edges),weights=ps_xH2)
 cube = np.where(n_bin > 0.0)
 dens = rho_bin[cube]/n_bin[cube]
 pres = P_bin[cube]/n_bin[cube]
-ion1 = ps1_bin[cube]/n_bin[cube]
-ion2 = ps2_bin[cube]/n_bin[cube]
-ion3 = ps3_bin[cube]/n_bin[cube]
+xHI =  ps_xHI_bin[cube]/n_bin[cube]
+xHII = ps_xHII_bin[cube]/n_bin[cube]
+xH2 =  ps_xH2_bin[cube]/n_bin[cube]
 rr = np.zeros([nr-1])
 for i in range(nr-1):
     rr[i] = 0.5*(r_edges[i]+r_edges[i+1])
@@ -61,9 +61,9 @@ ax1.plot(r_mesh,np.log10(dens),'o',mec='b',mfc='None',label='density')
 ax5 = ax1.twinx()
 ax5.plot(r_mesh,np.log10(pres),'o',mec='r',mfc='None',label='Pressure')
 
-ax2.plot(r_mesh,np.log10(ion1),'o',mec='k',mfc='None',label='Ions 1')
-ax2.plot(r_mesh,np.log10(ion2),'o',mec='lime',mfc='None',label='Ions 2')
-ax2.plot(r_mesh,np.log10(ion3),'o',mec='magenta',mfc='None',label='Ions 3')
+ax2.plot(r_mesh,np.log10(xH2),'o',mec='r',mfc='None',label='xH2')
+ax2.plot(r_mesh,np.log10(xHI),'o',mec='k',mfc='None',label='xHI')
+ax2.plot(r_mesh,np.log10(xHII),'o',mec='lime',mfc='None',label='xHII')
 ax1.set_xlabel('Distance (pc)')
 ax1.set_ylabel('log(Density)')
 ax5.set_ylabel('log(Pressure)')
@@ -72,7 +72,7 @@ ax5.legend(loc=(0.65,0.2),fontsize=12)
 ax1.set_xlim([0.0,rmax])
 
 ax2.set_xlabel('Distance (pc)')
-ax2.set_ylabel('log(Ion)')
+ax2.set_ylabel('log(fion)')
 ax2.legend(loc=1,fontsize=12)
 ax2.set_xlim([0.0,rmax])
 

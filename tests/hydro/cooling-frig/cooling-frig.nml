@@ -36,8 +36,8 @@ p_region=319266 ! 8000 K
 /
 
 &OUTPUT_PARAMS
-noutput=2
-tout=0.0,0.62  ! 100Myr
+noutput=1
+tout=0.62  ! 100Myr
 /
 
 &UNITS_PARAMS

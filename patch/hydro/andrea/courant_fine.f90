@@ -118,7 +118,7 @@ subroutine courant_fine(ilevel)
   comm_buffin(3)=eint_loc
   call MPI_ALLREDUCE(comm_buffin,comm_buffout,3,MPI_DOUBLE_PRECISION,MPI_SUM,&
        &MPI_COMM_WORLD,info)
-  call MPI_ALLREDUCE(dt_loc     ,dt_all      ,1,MPI_DOUBLE_PRECISION,MPI_MIN,&
+  call MPI_ALLREDUCE(dt_loc,dt_all,1,MPI_DOUBLE_PRECISION,MPI_MIN,&
        &MPI_COMM_WORLD,info)
   mass_all=comm_buffout(1)
   ekin_all=comm_buffout(2)
@@ -138,6 +138,130 @@ subroutine courant_fine(ilevel)
 111 format('   Entering courant_fine for level ',I2)
 
 end subroutine courant_fine
+!###########################################################
+!###########################################################
+!###########################################################
+!###########################################################
+subroutine cmpdt(uu,gg,dx,dt,ncell)
+  use amr_parameters
+  use hydro_parameters
+  use const
+  implicit none
+  integer::ncell
+  real(dp)::dx,dt
+  real(dp),dimension(1:nvector,1:nvar)::uu
+  real(dp),dimension(1:nvector,1:ndim)::gg
+
+  real(dp)::dtcell,smallp
+  integer::k,idim
+#if NENER>0
+  integer::irad
+#endif
+
+  smallp = smallc**2/gamma
+
+  ! Convert to primitive variables
+  do k = 1,ncell
+     uu(k,1)=max(uu(k,1),smallr)
+  end do
+  ! Velocity
+  do idim = 1,ndim
+     do k = 1, ncell
+        uu(k,idim+1) = uu(k,idim+1)/uu(k,1)
+     end do
+  end do
+  ! Internal energy
+  do idim = 1,ndim
+     do k = 1, ncell
+        uu(k,neul) = uu(k,neul)-half*uu(k,1)*uu(k,idim+1)**2
+     end do
+  end do
+#if NENER>0
+  do irad = 1,nener
+     do k = 1, ncell
+        uu(k,neul) = uu(k,neul)-uu(k,nhydro+irad)
+     end do
+  end do
+#endif
+
+  ! Debug
+  if(debug)then
+     do k = 1, ncell
+        if(uu(k,neul).le.0.or.uu(k,1).le.smallr)then
+           write(*,*)'stop in cmpdt'
+           write(*,*)'dx   =',dx
+           write(*,*)'ncell=',ncell
+           write(*,*)'rho  =',uu(k,1)
+           write(*,*)'P    =',uu(k,neul)
+           write(*,*)'vel  =',uu(k,2:ndim+1)
+           stop
+        end if
+     end do
+  end if
+
+  ! Compute pressure
+  do k = 1, ncell
+     uu(k,neul) = max((gamma-one)*uu(k,neul),uu(k,1)*smallp)
+  end do
+#if NENER>0
+  do irad = 1,nener
+     do k = 1, ncell
+        uu(k,nhydro+irad) = (gamma_rad(irad)-1)*uu(k,nhydro+irad)
+     end do
+  end do
+#endif
+
+  ! Compute sound speed
+  do k = 1, ncell
+     uu(k,neul) = gamma*uu(k,neul)
+  end do
+#if NENER>0
+  do irad = 1,nener
+     do k = 1, ncell
+        uu(k,neul) = uu(k,neul) + gamma_rad(irad)*uu(k,nhydro+irad)
+     end do
+  end do
+#endif
+  do k = 1, ncell
+     uu(k,neul)=sqrt(uu(k,neul)/uu(k,1))
+  end do
+
+  ! Compute wave speed
+  do k = 1, ncell
+     uu(k,neul)=dble(ndim)*uu(k,neul)
+  end do
+  do idim = 1,ndim
+     do k = 1, ncell
+        uu(k,neul)=uu(k,neul)+abs(uu(k,idim+1))
+     end do
+  end do
+
+  ! Compute gravity strength ratio
+  do k = 1, ncell
+     uu(k,1)=zero
+  end do
+  do idim = 1,ndim
+     do k = 1, ncell
+        uu(k,1)=uu(k,1)+abs(gg(k,idim))
+     end do
+  end do
+  do k = 1, ncell
+     uu(k,1)=uu(k,1)*dx/uu(k,neul)**2
+     uu(k,1)=MAX(uu(k,1),0.0001_dp)
+  end do
+
+  ! Compute maximum time step for each authorized cell
+  dt = courant_factor*dx/smallc
+  do k = 1,ncell
+     dtcell = dx/uu(k,neul)*(sqrt(one+two*courant_factor*uu(k,1))-one)/uu(k,1)
+     dt = min(dt,dtcell)
+  end do
+
+end subroutine cmpdt
+!###########################################################
+!###########################################################
+!###########################################################
+!###########################################################
 
 subroutine bondi_fine(ilevel)
   use amr_commons

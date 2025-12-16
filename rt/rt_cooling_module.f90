@@ -94,7 +94,7 @@ SUBROUTINE rt_set_model(h,omegab, omega0, omegaL, astart_sim, T2_sim)
   Np_MIN = 1d-13                        !            Photon density floor
   Np_FRAC = 0.2
 
-  Fp_MIN  = 1D-13*rt_c_cgs               !           Minimum photon fluxes
+  Fp_MIN  = 1D-13*rt_c_cgs(levelmin)    !           Minimum photon fluxes
   Fp_FRAC = 0.5
 
   ! Calculate initial temperature
@@ -151,7 +151,7 @@ END SUBROUTINE update_UVrates
 
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 SUBROUTINE rt_solve_cooling(T2, xion, Np, Fp, p_gas, dNpdt, dFpdt        &
-                           ,nH, c_switch, Zsolar, dt, a_exp, nCell)
+                           ,nH, c_switch, Zsolar, dt, a_exp, nCell,ilevel)
 ! Semi-implicitly solve for new temperature, ionization states,
 ! photon density/flux, and gas velocity in a number of cells.
 ! Parameters:
@@ -168,6 +168,7 @@ SUBROUTINE rt_solve_cooling(T2, xion, Np, Fp, p_gas, dNpdt, dFpdt        &
 ! dt      =>  Timestep size             [s]
 ! a_exp   =>  Cosmic expansion
 ! nCell   =>  Number of cells (length of all the above vectors)
+! ilevel  =>  Cell refinement level
 !
 ! We use a slightly modified method of Anninos et al. (1997).
 !-------------------------------------------------------------------------
@@ -181,7 +182,7 @@ SUBROUTINE rt_solve_cooling(T2, xion, Np, Fp, p_gas, dNpdt, dFpdt        &
   real(dp),dimension(1:nvector):: nH, Zsolar
   logical,dimension(1:nvector):: c_switch
   real(dp)::dt, a_exp
-  integer::ncell !--------------------------------------------------------
+  integer::ncell, ilevel !------------------------------------------------
   real(dp),dimension(1:nvector):: tLeft, ddt
   logical:: dt_ok
   real(dp)::dt_rec
@@ -196,8 +197,9 @@ SUBROUTINE rt_solve_cooling(T2, xion, Np, Fp, p_gas, dNpdt, dFpdt        &
   real(dp)::one_over_Np_FRAC, one_over_Fp_FRAC, one_over_T_FRAC
   real(dp),dimension(1:nGroups) :: group_egy_ratio, group_egy_erg
 
+  call updateRTGroups_CoolConstants(ilevel)
   ! Store some temporary variables reduce computations
-  one_over_rt_c_cgs = 1d0 / rt_c_cgs
+  one_over_rt_c_cgs = 1d0 / rt_c_cgs(ilevel)
   one_over_Np_FRAC = 1d0 / Np_FRAC
   one_over_Fp_FRAC = 1d0 / Fp_FRAC
   one_over_T_FRAC = 1d0 / T_FRAC
@@ -243,7 +245,7 @@ SUBROUTINE rt_solve_cooling(T2, xion, Np, Fp, p_gas, dNpdt, dFpdt        &
      if(rt) then
         do ig=1,ngroups
            Np(ig,i) = MAX(smallNp, Np(ig,i))
-           call reduce_flux(Fp(:,ig,i),Np(ig,i)*rt_c_cgs)
+           call reduce_flux(Fp(:,ig,i),Np(ig,i)*rt_c_cgs(ilevel))
         end do
      endif
   end do
@@ -262,7 +264,7 @@ SUBROUTINE rt_solve_cooling(T2, xion, Np, Fp, p_gas, dNpdt, dFpdt        &
            call display_coolinfo(.true., loopcnt, i, dt-tleft(i), dt     &
                             ,ddt(i), nH(i), T2(i),  xion(:,i),  Np(:,i)  &
                             ,Fp(:,:,i),  p_gas(:,i)                      &
-                            ,dT2, dXion, dNp, dFp, dp_gas, code)
+                            ,dT2, dXion, dNp, dFp, dp_gas, code, ilevel)
         endif
         if(.not. dt_ok) then
            ddt(i)=ddt(i)/2.                    ! Try again with smaller dt
@@ -385,14 +387,14 @@ contains
           ! For the radiation temperature,  weigh the energy in each group
           ! by its opacity over IR opacity (derived from IR temperature)
           E_rad = group_egy_erg(iIR) * dNp(iIR)
-          TR = max(0d0,(E_rad*rt_c_fraction/a_r)**0.25)   ! IR temperature
+          TR = max(0d0,(E_rad*rt_c_fraction(ilevel)/a_r)**0.25)     ! IR T
           kAbs_loc(iIR) = kappaAbs(iIR) * (TR/10d0)**2
           do iGroup=1,nGroups
              if(iGroup .ne. iIR)                                         &
                   E_rad = E_rad + kAbs_loc(iGroup) / kAbs_loc(iIR)       &
                                 * group_egy_erg(iGroup) * dNp(iGroup)
           end do
-          TR = max(0d0,(E_rad*rt_c_fraction/a_r)**0.25) ! Rad. temperature
+          TR = max(0d0,(E_rad*rt_c_fraction(ilevel)/a_r)**0.25)   ! Rad. T
           if(rt_T_rad) then ! Use radiation temperature for everything
              dT2 = TR/mu ;   TK = TR
           endif
@@ -401,8 +403,8 @@ contains
           kSc_loc(iIR)  = kappaSc(iIR)  * (TR/10d0)**2 * exp(-TR/1d3)
        endif ! if(is_kIR_T)
        ! Set dust absorption and scattering rates [s-1]:
-       dustAbs(:)  = kAbs_loc(:) *rho*Zsolar(icell)*f_dust*rt_c_cgs
-       dustSc(iIR) = kSc_loc(iIR)*rho*Zsolar(icell)*f_dust*rt_c_cgs
+       dustAbs(:)  = kAbs_loc(:) *rho*Zsolar(icell)*f_dust*rt_c_cgs(ilevel)
+       dustSc(iIR) = kSc_loc(iIR)*rho*Zsolar(icell)*f_dust*rt_c_cgs(ilevel)
 
     endif
 
@@ -451,14 +453,14 @@ contains
           !       should not include PEH absorption when PEH is included.
           ! from Bakes and Tielens 1994 and Wolfire 2003
           G0  = group_egy_erg(iPEH_group)                                &
-              * dNp(iPEH_group) * rt_c_cgs / 1.6d-3
+              * dNp(iPEH_group) * rt_c_cgs(ilevel) / 1.6d-3
           eff_peh = 4.87d-2                                              &
                   / (1d0 + 4d-3 * (G0*sqrt(TK)/ne*2.)**0.73)      &
                   + 3.65d-2 * (TK/1d4)**0.7                       &
                   / (1d0 + 2d-4 * (G0 * sqrt(TK) / ne*2. ))
           phAbs(iPEH_group) = phAbs(iPEH_group)                          &
-                            + 8.125d-22 * eff_peh * rt_c_cgs * nH(icell) &
-                            * Zsolar(icell) * f_dust
+                            + 8.125d-22 * eff_peh * rt_c_cgs(ilevel)     &
+                            * nH(icell) * Zsolar(icell) * f_dust
        endif
 
        dmom(1:nDim)=0d0
@@ -480,7 +482,7 @@ contains
                   (ddt(icell)*dFpdt(idim,igroup,icell)+dFp(idim,igroup)) &
                   /(1d0+ddt(icell)*(phAbs(igroup)+phSc(igroup)))
           end do
-          call reduce_flux(dFp(:,igroup),dNp(igroup)*rt_c_cgs)
+          call reduce_flux(dFp(:,igroup),dNp(igroup)*rt_c_cgs(ilevel))
 
           do idim=1,nDim
              dUU = ABS(dFp(idim,igroup)-Fp(idim,igroup,icell))           &
@@ -575,7 +577,7 @@ contains
        endif
        Crate = compCoolrate(TK,ne,nN,nI,dCdT2)       ! Cooling
        dCdT2 = dCdT2 * mu                            ! dC/dT2 = mu * dC/dT
-       metal_tot=0d0 ; metal_prime=0d0             ! Metal cooling
+       metal_tot=0d0 ; metal_prime=0d0               ! Metal cooling
        if(Zsolar(icell) .gt. 0d0) &
             call rt_cmp_metals(T2(icell),nH(icell),mu,metal_tot          &
                               ,metal_prime,a_exp)
@@ -604,9 +606,9 @@ contains
           !           / ( 1/Delta t + 4 c/lambda/C_v a T^3 + c_red/lambda)
           one_over_C_v = mh*mu*(gamma-1d0) / (rho*kb)
           E_rad = group_egy_erg(iIR) * dNp(iIR)
-          dE_T = (rt_c_cgs * E_rad - c_cgs*a_r*TK**4)                    &
+          dE_T = (rt_c_cgs(ilevel) * E_rad - c_cgs*a_r*TK**4)            &
                /(1d0/(kAbs_loc(iIR) * Zsolar(icell) * rho * ddt(icell))  &
-               +4d0*c_cgs * one_over_C_v *a_r*TK**3+rt_c_cgs)
+               +4d0*c_cgs * one_over_C_v *a_r*TK**3+rt_c_cgs(ilevel))
           dT2 = dT2 + 1d0/mu * one_over_C_v * dE_T
           dNp(iIR) = dNp(iIR) - dE_T * one_over_egy_IR_erg
 
@@ -626,7 +628,7 @@ contains
           endif
           fracMax=MAX(fracMax,dUU)
           TK=dT2*mu
-          call reduce_flux(dFp(:,iIR),dNp(iIR)*rt_c_cgs)
+          call reduce_flux(dFp(:,iIR),dNp(iIR)*rt_c_cgs(ilevel))
        endif
     endif
 #endif
@@ -818,7 +820,7 @@ END SUBROUTINE rt_solve_cooling
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 SUBROUTINE display_coolinfo(stopRun, loopcnt, i, dtDone, dt, ddt, nH    &
                             ,T2,  xion,  Np,  Fp,  p_gas                &
-                            ,dT2, dXion, dNp, dFp, dp_gas, code)
+                            ,dT2, dXion, dNp, dFp, dp_gas, code, ilevel)
 ! Print cooling information to standard output, and maybe stop execution.
 !------------------------------------------------------------------------
   use amr_commons
@@ -829,11 +831,11 @@ SUBROUTINE display_coolinfo(stopRun, loopcnt, i, dtDone, dt, ddt, nH    &
   real(dp),dimension(nDim):: p_gas, dp_gas
   real(dp)::T2, dT2, dtDone, dt, ddt, nH
   logical::stopRun
-  integer::loopcnt,i, code
+  integer::loopcnt,i, code, ilevel
 !------------------------------------------------------------------------
   if(stopRun) write(*, 111) loopcnt
   if(.true.) then
-     write(*,900) loopcnt, myid, code, i, dtDone, dt, ddt, rt_c_cgs, nH
+     write(*,900) loopcnt,myid,code,i,dtDone,dt,ddt,rt_c_cgs(ilevel),nH,ilevel
      write(*,901) T2,      xion,      Np,      Fp,      p_gas
      write(*,902) dT2,     dXion,     dNp,     dFp,     dp_gas
      write(*,903) dT2/ddt, dXion/ddt, dNp/ddt, dFp/ddt, dp_gas/ddt
@@ -851,7 +853,7 @@ SUBROUTINE display_coolinfo(stopRun, loopcnt, i, dtDone, dt, ddt, nH    &
            ' rt_solve_cooling (', I6, ')')
 900 format (I3, '  myid=', I2, ' code=', I2, ' i=', I5, ' t=', 1pe12.3,xs&
             '/', 1pe12.3, ' ddt=', 1pe12.3, ' c=', 1pe12.3, &
-            ' nH=', 1pe12.3)
+            ' nH=', 1pe12.3, ' ilevel=', I3)
 901 format ('  U      =', 20(1pe12.3))
 902 format ('  dU     =', 20(1pe12.3))
 903 format ('  dU/dt  =', 20(1pe12.3))
@@ -1034,7 +1036,7 @@ SUBROUTINE rt_evol_single_cell(astart,aend,dasura,h,omegab,omega0,omegaL &
      nH(1) = nH_com/aexp**3
      T2(1) = T2(1)/aexp**2
      call rt_solve_cooling(T2,xion,Np,Fp,p_gas,dNpdt,dFpdt,nH,c_switch   &
-                           ,Zsolar,dt_cool,aexp,1)
+                           ,Zsolar,dt_cool,aexp,1,levelmin)
      T2(1)=T2(1)*aexp**2
      aexp = aexp + daexp
      if (if_write_result) write(*,'(4(1pe10.3))')                        &
@@ -1219,20 +1221,20 @@ END FUNCTION getMu
 END MODULE rt_cooling_module
 
 !************************************************************************
-SUBROUTINE updateRTGroups_CoolConstants()
+SUBROUTINE updateRTGroups_CoolConstants(ilevel)
 ! Update photon group cooling and heating constants, to reflect an update
 ! in rt_c_cgs and in the cross-sections and energies in the groups.
 !------------------------------------------------------------------------
   use rt_cooling_module
   use rt_parameters
   implicit none
-  integer::iP, iI
+  integer::ilevel,iP, iI
 !------------------------------------------------------------------------
-  signc=group_csn*rt_c_cgs                                    ! [cm3 s-1]
-  sigec=group_cse*rt_c_cgs                                    ! [cm3 s-1]
+  signc=group_csn*rt_c_cgs(ilevel)                            ! [cm3 s-1]
+  sigec=group_cse*rt_c_cgs(ilevel)                            ! [cm3 s-1]
   do iP=1,nGroups
      do iI=1,nIons               ! Photoheating rates for photons on ions
-        PHrate(iP,iI) =  eV2erg * &        ! See eq (19) in Aubert(08)
+        PHrate(iP,iI) =  eV2erg * &           ! See eq (19) in Aubert(08)
              (sigec(iP,iI) * group_egy(iP) - signc(iP,iI)*ionEvs(iI))
         PHrate(iP,iI) = max(PHrate(iP,iI),0d0) !      No negative heating
      end do

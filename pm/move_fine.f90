@@ -19,8 +19,8 @@ subroutine move_fine(ilevel)
   ig=0
   ip=0
   ! Loop over particles that are not tracers
-  igrid=headl(myid,ilevel)
-  do jgrid=1,numbl(myid,ilevel)
+  do jgrid=1,active(ilevel)%ngrid
+     igrid=active(ilevel)%igrid(jgrid)
      npart1=numbp(igrid)  ! Number of particles in the grid
      if(npart1>0)then
         ig=ig+1
@@ -58,7 +58,6 @@ subroutine move_fine(ilevel)
            ig=ig-1
         end if
      end if
-     igrid=next(igrid)   ! Go to next grid
   end do
   ! End loop over grids
   if(ip>0)call move1(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
@@ -98,8 +97,8 @@ subroutine move_fine_static(ilevel)
   ig=0
   ip=0
   ! Loop over grids
-  igrid=headl(myid,ilevel)
-  do jgrid=1,numbl(myid,ilevel)
+  do jgrid=1,active(ilevel)%ngrid
+     igrid=active(ilevel)%igrid(jgrid)
      npart1=numbp(igrid)  ! Number of particles in the grid
      npart2=0
 
@@ -178,7 +177,6 @@ subroutine move_fine_static(ilevel)
         end if
         ! End loop over particles
      end if
-     igrid=next(igrid)   ! Go to next grid
   end do
   ! End loop over grids
   if(ip>0)call move1(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
@@ -213,7 +211,6 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   integer ,dimension(1:nvector),save::father_cell
   real(dp),dimension(1:nvector,1:ndim),save::x0
   integer ,dimension(1:nvector,1:threetondim),save::nbors_father_cells
-  integer ,dimension(1:nvector,1:twotondim),save::nbors_father_grids
   ! Particle-based arrays
   logical ,dimension(1:nvector),save::ok
   real(dp),dimension(1:nvector,1:ndim),save::x,ff,new_xp,new_vp,dd,dg
@@ -246,7 +243,7 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   do i=1,ng
      father_cell(i)=father(ind_grid(i))
   end do
-  call get3cubefather(father_cell,nbors_father_cells,nbors_father_grids,&
+  call get3cubefather(father_cell,nbors_father_cells,&
        & ng,ilevel)
 
   ! Rescale particle position at level ilevel

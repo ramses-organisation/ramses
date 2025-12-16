@@ -5,19 +5,19 @@ hydro=.true.
 poisson=.true.
 pic=.true.
 sink=.true.
-nsubcycle=2,2,2
+nsubcycle=2
 /
 
 &AMR_PARAMS
 levelmin=6
-levelmax=7
+levelmax=8
 ngridmax=500000
 npartmax=100000
 boxlen=4
 /
 
 &REFINE_PARAMS
-jeans_refine=6,6,6
+jeans_refine=6
 interpol_type=0
 interpol_var=1
 sink_refine=.true.
@@ -52,8 +52,8 @@ p_region=0.030361026190591216
 /
 
 &OUTPUT_PARAMS
-noutput=2
-tout=0.0,0.4
+noutput=1
+tout=0.4
 /
 
 &UNITS_PARAMS
@@ -76,11 +76,12 @@ comp_frac=1       ! compressive fraction
 forcing_power_spectrum='power_law' !power_law, parabolic, konstandin, test
 turb_T=0.29241000937376255
 turb_Ndt=100       ! Number of timesteps per autocorr. time
-turb_rms=2.5!5.094074502271999      ! rms turbulent forcing acceleration
-turb_min_rho=1e-10!2.5470372511355715d-6 ! Minimum density for turbulence
+turb_rms=2.5     ! rms turbulent forcing acceleration
+turb_min_rho=1e-10 ! Minimum density for turbulence
 /
 
 &SINK_PARAMS
+nlevelmax_sink=7
 create_sinks=.true.
 check_energies=.false.
 nsinkmax=100

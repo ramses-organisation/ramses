@@ -116,7 +116,7 @@ SUBROUTINE rt_set_uold(ilevel)
            icell=active(ilevel)%igrid(i)+iskip
            ! No negative photon densities:
            rtuold(icell,iGroups(ig)) = max(rtuold(icell,iGroups(ig)),smallNp)
-           Npc=rtuold(icell,iGroups(ig))*rt_c
+           Npc=rtuold(icell,iGroups(ig))*rt_c(ilevel)
            ! Reduced flux, should always be .le. 1
            fred = sqrt(sum((rtuold(icell,iGroups(ig)+1:iGroups(ig)+ndim))**2))/Npc
            if(fred .gt. 1d0) then ! Too big so normalize flux to one
@@ -153,12 +153,14 @@ SUBROUTINE rt_godfine1(ind_grid, ncache, ilevel, dt)
   use rt_hydro_commons
   use rt_flux_module
   use rt_parameters
+  use amr_constants, only:i1min,i1max,j1min,j1max,k1min,k1max, &
+                       &  i2min,i2max,j2min,j2max,k2min,k2max, &
+                       &  i3min,i3max,j3min,j3max,k3min,k3max
   implicit none
   integer::ilevel,ncache
   real(dp)::dt
   integer ,dimension(1:nvector)::ind_grid
   integer ,dimension(1:nvector,1:threetondim),save::nbors_father_cells
-  integer ,dimension(1:nvector,1:twotondim  ),save::nbors_father_grids
   integer ,dimension(1:nvector,0:twondim    ),save::ibuffer_father
   real(dp),dimension(1:nvector,0:twondim  ,1:nrtvar),save::u1
   real(dp),dimension(1:nvector,1:twotondim,1:nrtvar),save::u2
@@ -172,14 +174,12 @@ SUBROUTINE rt_godfine1(ind_grid, ncache, ilevel, dt)
 
   integer::i,j,ivar,idim,ind_son,ind_father,iskip,nbuffer
   integer::i0,j0,k0,i1,j1,k1,i2,j2,k2,i3,j3,k3,nx_loc,nb_noneigh,nexist
-  integer::i1min,i1max,j1min,j1max,k1min,k1max
-  integer::i2min,i2max,j2min,j2max,k2min,k2max
-  integer::i3min,i3max,j3min,j3max,k3min,k3max
   real(dp)::dx,scale,oneontwotondim
 
   logical,dimension(1:nvector),save:: rt_per_bnd=.false.
   integer::ind_nbor
-  real(dp)::dx8,maxDist
+  real(dp)::dx8,maxDist,rt_c_diff
+
 !------------------------------------------------------------------------
   oneontwotondim = 1d0/dble(twotondim) ! 1/8 in 3D
 
@@ -188,26 +188,6 @@ SUBROUTINE rt_godfine1(ind_grid, ncache, ilevel, dt)
   scale=boxlen/dble(nx_loc)           ! length per coarse oct (=boxlen)
   dx=0.5D0**ilevel*scale              ! length per oct/grid at ilevel
   dx8=8.*dx                           ! Outflow boundary
-
-  ! Integer constants
-  i1min=0; i1max=0; i2min=0; i2max=0; i3min=1; i3max=1
-  j1min=0; j1max=0; j2min=0; j2max=0; j3min=1; j3max=1
-  k1min=0; k1max=0; k2min=0; k2max=0; k3min=1; k3max=1
-  if(ndim>0)then
-     i1max=2; i2max=1; i3max=2
-  end if
-  if(ndim>1)then
-     j1max=2; j2max=1; j3max=2
-  end if
-  if(ndim>2)then
-     k1max=2; k2max=1; k3max=2
-  end if
-  ! in 3D:
-  !            min      max    tot
-  ! -----------------------------------------
-  ! i,j,k1      0        2      3
-  ! i,j,k2      0        1      2
-  ! i,j,k3      1        2      2
 
   !------------------------------------------
   ! Gather 3^ndim neighboring father cells
@@ -218,15 +198,11 @@ SUBROUTINE rt_godfine1(ind_grid, ncache, ilevel, dt)
      ind_cell(i)=father(ind_grid(i))
   end do
   ! ..and father cells of neighbor grids:
-  call get3cubefather(ind_cell,nbors_father_cells,nbors_father_grids,ncache,ilevel)
+  call get3cubefather(ind_cell,nbors_father_cells,ncache,ilevel)
   ! now for the parent cell (ind_cell(i)) of each grid i in cache:
   !
   ! nbors_father_cells contains indexes of all it's neighbor cells
   ! (ilevel-1), plus itself, total 3^ndim.
-  !
-  ! nbors_father_grids contains indexes of all the neighboring
-  ! (and containing) grids of the father cell, total 2^ndim
-  ! (in case interpolation is needed I guess)
 
   !---------------------------
   ! Gather 6x6x6 cells stencil
@@ -332,6 +308,12 @@ SUBROUTINE rt_godfine1(ind_grid, ncache, ilevel, dt)
                  do ivar=1,nrtvar
                     uloc(ind_exist(i),i3,j3,k3,ivar) =                   &
                                                   rtuold(ind_cell(i),ivar)
+                    if(son(ind_cell(i))>0 .and. mod(ivar,ndim+1)==1)  then
+                       ! VSLA: finer level and different light speed
+                       uloc(ind_exist(i),i3,j3,k3,ivar)        &
+                            = uloc(ind_exist(i),i3,j3,k3,ivar) &
+                            * rt_c(ilevel+1)/rt_c(ilevel)
+                    endif
                  end do
               endif
            end do
@@ -341,6 +323,12 @@ SUBROUTINE rt_godfine1(ind_grid, ncache, ilevel, dt)
               else
                  do ivar=1,nrtvar
                     uloc(ind_nexist(i),i3,j3,k3,ivar)=u2(i,ind_son,ivar)
+                    if(mod(ivar,ndim+1)==1) then
+                       ! VSLA: coarser level and different light speed
+                       uloc(ind_nexist(i),i3,j3,k3,ivar)        &
+                            = uloc(ind_nexist(i),i3,j3,k3,ivar) &
+                            * rt_c(ilevel-1)/rt_c(ilevel)
+                    endif
                  end do
               endif
            end do
@@ -348,22 +336,25 @@ SUBROUTINE rt_godfine1(ind_grid, ncache, ilevel, dt)
            do ivar=1,nrtvar
               do i=1,nexist
                  uloc(ind_exist(i),i3,j3,k3,ivar)=rtuold(ind_cell(i),ivar)
+                 if(son(ind_cell(i))>0 .and. mod(ivar,ndim+1)==1) then
+                    ! VSLA: finer level and different light speed
+                    uloc(ind_exist(i),i3,j3,k3,ivar) &
+                         = uloc(ind_exist(i),i3,j3,k3,ivar) &
+                         * rt_c(ilevel+1)/rt_c(ilevel)
+                 endif
               end do
               do i=1,nbuffer
                  uloc(ind_nexist(i),i3,j3,k3,ivar)=u2(i,ind_son,ivar)
+                 if(mod(ivar,ndim+1)==1) then
+                    ! VSLA: coarser level and different light speed
+                    uloc(ind_nexist(i),i3,j3,k3,ivar)        &
+                         = uloc(ind_nexist(i),i3,j3,k3,ivar) &
+                         * rt_c(ilevel-1)/rt_c(ilevel)
+                 endif
               end do
            end do
         endif
         ! RT outflow boundary end-----------------------------------------
-
-        !do ivar=1,nrtvar
-        !    do i=1,nexist
-        !       uloc(ind_exist(i),i3,j3,k3,ivar) = rtuold(ind_cell(i),ivar)
-        !    end do
-        !    do i=1,nbuffer
-        !       uloc(ind_nexist(i),i3,j3,k3,ivar) = u2(i,ind_son,ivar)
-        !    end do
-        !end do
 
         ! Gather refinement flag
         do i=1,nexist
@@ -387,11 +378,12 @@ SUBROUTINE rt_godfine1(ind_grid, ncache, ilevel, dt)
   ! Compute fluxes of each photon group, using Eddington tensor
   !----------------------------------------------------------------------
   do i = 1,nGroups
-     call cmp_rt_faces(uloc, flux, dx, dx, dx, dt, iGroups(i), ncache)
+     call cmp_rt_faces(uloc, flux, dx, dx, dx, dt, iGroups(i), ncache   &
+          ,ilevel)
   end do
 
   !----------------------------------------------------------------------
-  ! Reset flux along direction at refined interface
+  ! Reset flux along direction at refined interface, if not rt-subcycling
   !----------------------------------------------------------------------
   if (rt_nsubcycle == 1)then
   do idim=1,ndim
@@ -436,10 +428,10 @@ SUBROUTINE rt_godfine1(ind_grid, ncache, ilevel, dt)
         ! Update conservative variables new state vector
         do ivar=1,nrtvar
            do i=1,ncache
-              rtunew(ind_cell(i),ivar)=                 &
-                   &  rtunew(ind_cell(i),ivar)          &
-                   & +(flux(i,i3   ,j3   ,k3   ,ivar,idim)  &
-                   & - flux(i,i3+i0,j3+j0,k3+k0,ivar,idim))
+              rtunew(ind_cell(i),ivar) =                    &
+                   &  rtunew(ind_cell(i),ivar) +            &
+                   &  (flux(i,i3   ,j3   ,k3   ,ivar,idim)  &
+                   &  -flux(i,i3+i0,j3+j0,k3+k0,ivar,idim))
            end do
         end do
      end do
@@ -473,13 +465,21 @@ SUBROUTINE rt_godfine1(ind_grid, ncache, ilevel, dt)
         end do
         ! Conservative update of new state variables
         do ivar=1,nrtvar
+           ! For VSLA, when updating coarser level, rescale radiation flux
+           ! to the expression which would be seen from there.
+           rt_c_diff = rt_c(ilevel-1)/rt_c(ilevel)
+           if (mod(ivar,ndim+1)==1) then
+              rt_c_diff=1.d0
+           end if
            ! Loop over boundary cells
            do k3=k3min,k3max-k0 ! 1 to 1 if dim=3, 1 to 2 otherwise
               do j3=j3min,j3max-j0 ! 1 to 1 if dim=2, 1 to 2 otherwise
                  do i3=i3min,i3max-i0 ! 1 to 1 if dim=1, 1 to 2 otherwise
                     do i=1,nb_noneigh
-                       rtunew(ind_buffer(i),ivar)=rtunew(ind_buffer(i),ivar) &
-                            & -flux(ind_cell(i),i3,j3,k3,ivar,idim)*oneontwotondim
+                       rtunew(ind_buffer(i),ivar) =                      &
+                           & rtunew(ind_buffer(i),ivar)                  &
+                           & - flux(ind_cell(i),i3,j3,k3,ivar,idim)      &
+                           & * oneontwotondim * rt_c_diff
                     end do
                  end do
               end do
@@ -501,13 +501,20 @@ SUBROUTINE rt_godfine1(ind_grid, ncache, ilevel, dt)
         end do
         ! Conservative update of new state variables
         do ivar=1,nrtvar
+           ! Rescale for VSLA, as above
+           rt_c_diff = rt_c(ilevel-1)/rt_c(ilevel)
+           if (mod(ivar,ndim+1)==1) then
+              rt_c_diff=1.d0
+           end if
            ! Loop over boundary cells
            do k3=k3min+k0,k3max
               do j3=j3min+j0,j3max
                  do i3=i3min+i0,i3max
                     do i=1,nb_noneigh
-                       rtunew(ind_buffer(i),ivar)=rtunew(ind_buffer(i),ivar) &
-                            & +flux(ind_cell(i),i3+i0,j3+j0,k3+k0,ivar,idim)*oneontwotondim
+                       rtunew(ind_buffer(i),ivar) =                          &
+                           & rtunew(ind_buffer(i),ivar)                      &
+                           & + flux(ind_cell(i),i3+i0,j3+j0,k3+k0,ivar,idim) &
+                           & * oneontwotondim * rt_c_diff
                     end do
                  end do
               end do

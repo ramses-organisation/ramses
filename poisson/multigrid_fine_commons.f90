@@ -456,8 +456,8 @@ subroutine build_parent_comms_mg(active_loc, ifinelevel)
          ind_cell_father(i)=father( active_loc%igrid(istart+i-1) )
       end do
 
-      ! Compute neighbouring father cells and grids
-      call get3cubefather(ind_cell_father,nbors_father_cells, &
+      ! Compute neighbouring father grids
+      call get3cubefather_grids(ind_cell_father, &
          & nbors_father_grids,nbatch,ifinelevel)
 
       ! Now process the twotondim father grids
@@ -612,7 +612,7 @@ subroutine build_parent_comms_mg(active_loc, ifinelevel)
       end do
 
       ! Compute neighbouring father cells
-      call get3cubefather(ind_cell_father,nbors_father_cells,nbors_father_grids,nbatch,icoarselevel)
+      call get3cubefather(ind_cell_father,nbors_father_cells,nbatch,icoarselevel)
 
       ! Now process the father grids
       do ind=1,threetondim
@@ -1061,10 +1061,9 @@ subroutine make_fine_bc_rhs(ilevel,icount)
    use pm_commons
    use poisson_commons
    use constants, only: twopi
+   use amr_constants, only:iii,jjj
    implicit none
    integer, intent(in) :: ilevel,icount
-
-   integer, dimension(1:3,1:2,1:8) :: iii, jjj
 
    real(dp) :: dx, oneoverdx2, phi_b, nb_mask, nb_phi, w
 
@@ -1089,13 +1088,6 @@ subroutine make_fine_bc_rhs(ilevel,icount)
 
    dx  = 0.5d0**ilevel
    oneoverdx2 = 1.0d0/(dx*dx)
-
-   iii(1,1,1:8)=(/1,0,1,0,1,0,1,0/); jjj(1,1,1:8)=(/2,1,4,3,6,5,8,7/)
-   iii(1,2,1:8)=(/0,2,0,2,0,2,0,2/); jjj(1,2,1:8)=(/2,1,4,3,6,5,8,7/)
-   iii(2,1,1:8)=(/3,3,0,0,3,3,0,0/); jjj(2,1,1:8)=(/3,4,1,2,7,8,5,6/)
-   iii(2,2,1:8)=(/0,0,4,4,0,0,4,4/); jjj(2,2,1:8)=(/3,4,1,2,7,8,5,6/)
-   iii(3,1,1:8)=(/5,5,5,5,0,0,0,0/); jjj(3,1,1:8)=(/5,6,7,8,1,2,3,4/)
-   iii(3,2,1:8)=(/0,0,0,0,6,6,6,6/); jjj(3,2,1:8)=(/5,6,7,8,1,2,3,4/)
 
    ngrid=active(ilevel)%ngrid
 
@@ -1269,102 +1261,6 @@ end subroutine make_virtual_mg_dp
 ! ########################################################################
 ! ########################################################################
 
-subroutine make_virtual_mg_int(ilevel)
-  use amr_commons
-  use poisson_commons
-  use mpi_mod
-  implicit none
-  integer::ilevel
-
-#ifndef WITHOUTMPI
-  integer,dimension(MPI_STATUS_SIZE,ncpu)::statuses
-  integer::icpu,i,j,ncache,iskip,step,icell
-  integer::countsend,countrecv
-  integer::info,tag=101
-  integer,dimension(ncpu)::reqsend,reqrecv
-#ifdef LIGHT_MPI_COMM
-  integer::idx,offset
-#endif
-  ! Receive all messages
-  countrecv=0
-  do icpu=1,ncpu
-     if(icpu==myid)cycle
-     ncache=active_mg(icpu,ilevel)%ngrid
-     if(ncache>0) then
-       countrecv=countrecv+1
-#ifdef LIGHT_MPI_COMM
-       call MPI_IRECV(active_mg(icpu,ilevel)%pcomm%f(1,1),ncache*twotondim, &
-            & MPI_INTEGER,icpu-1,tag,MPI_COMM_WORLD,reqrecv(countrecv),info)
-#else
-       call MPI_IRECV(active_mg(icpu,ilevel)%f(1,1),ncache*twotondim, &
-            & MPI_INTEGER,icpu-1,tag,MPI_COMM_WORLD,reqrecv(countrecv),info)
-#endif
-     end if
-  end do
-
-  ! Gather emission array
-#ifdef LIGHT_MPI_COMM
-   offset=0
-   do idx=1,emission_mg(ilevel)%nactive
-      do j=1,twotondim
-         step=(j-1)*emission_mg(ilevel)%ngrids(idx)
-         do i=1,emission_mg(ilevel)%ngrids(idx)
-            icell=emission_mg(ilevel)%igrid(offset+i)
-            emission_mg(ilevel)%f(j,offset+i)=active_mg(myid,ilevel)%pcomm%f(j,icell)
-         end do
-      end do
-      offset=offset+emission_mg(ilevel)%ngrids(idx)
-   end do
-#else
-  do icpu=1,ncpu
-     if (emission_mg(icpu,ilevel)%ngrid>0) then
-        do j=1,twotondim
-           step=(j-1)*emission_mg(icpu,ilevel)%ngrid
-           iskip=(j-1)*active_mg(myid,ilevel)%ngrid
-           do i=1,emission_mg(icpu,ilevel)%ngrid
-              icell=emission_mg(icpu,ilevel)%igrid(i)+iskip
-              emission_mg(icpu,ilevel)%f(i+step,1)=active_mg(myid,ilevel)%f(icell,1)
-           end do
-        end do
-     end if
-  end do
-#endif
-
-  ! Send all messages
-  countsend=0
-#ifdef LIGHT_MPI_COMM
-   offset=1
-   do idx=1,emission_mg(ilevel)%nactive
-      ncache=emission_mg(ilevel)%ngrids(idx)*twotondim
-      countsend=countsend+1
-      call MPI_ISEND(emission_mg(ilevel)%f(1,offset),ncache,MPI_INTEGER,&
-                     emission_mg(ilevel)%cpuid(idx)-1,tag,MPI_COMM_WORLD,reqsend(countsend),info)
-      offset=offset+emission_mg(ilevel)%ngrids(idx)
-   end do
-#else
-  do icpu=1,ncpu
-     ncache=emission_mg(icpu,ilevel)%ngrid
-     if(ncache>0) then
-       countsend=countsend+1
-       call MPI_ISEND(emission_mg(icpu,ilevel)%f,ncache*twotondim, &
-            & MPI_INTEGER,icpu-1,tag,MPI_COMM_WORLD,reqsend(countsend),info)
-     end if
-  end do
-#endif
-
-  ! Wait for full completion of receives
-  call MPI_WAITALL(countrecv,reqrecv,statuses,info)
-
-  ! Wait for full completion of sends
-  call MPI_WAITALL(countsend,reqsend,statuses,info)
-
-#endif
-
-end subroutine make_virtual_mg_int
-
-! ########################################################################
-! ########################################################################
-
 subroutine make_reverse_mg_dp(ivar,ilevel)
   use amr_commons
   use poisson_commons
@@ -1464,195 +1360,96 @@ end subroutine make_reverse_mg_dp
 
 ! ########################################################################
 ! ########################################################################
-
-subroutine make_reverse_mg_int(ilevel)
-  use amr_commons
-  use poisson_commons
-  use mpi_mod
-  implicit none
-  integer::ilevel
-
-#ifndef WITHOUTMPI
-  integer,dimension(MPI_STATUS_SIZE,ncpu)::statuses
-  integer::icell,icpu,i,j,ncache,iskip,step
-  integer::countsend,countrecv
-  integer::info,tag=101
-  integer,dimension(ncpu)::reqsend,reqrecv
-#ifdef LIGHT_MPI_COMM
-  integer::idx,offset
-#endif
-
-  ! Receive all messages
-  countrecv=0
-#ifdef LIGHT_MPI_COMM
-  offset=1
-  do idx=1,emission_mg(ilevel)%nactive
-    ncache=emission_mg(ilevel)%ngrids(idx)*twotondim
-    countrecv=countrecv+1
-    call MPI_IRECV(emission_mg(ilevel)%f(1, offset),ncache,MPI_INTEGER,&
-                   emission_mg(ilevel)%cpuid(idx)-1,tag,MPI_COMM_WORLD,reqrecv(countrecv),info)
-    offset=offset+emission_mg(ilevel)%ngrids(idx)
-  end do
-#else
-  do icpu=1,ncpu
-     ncache=emission_mg(icpu,ilevel)%ngrid
-     if(ncache>0) then
-       countrecv=countrecv+1
-       call MPI_IRECV(emission_mg(icpu,ilevel)%f,ncache*twotondim, &
-            & MPI_INTEGER,icpu-1,tag,MPI_COMM_WORLD,reqrecv(countrecv),info)
-     end if
-  end do
-#endif
-
-  ! Send all messages
-  countsend=0
-  do icpu=1,ncpu
-     if(icpu==myid)cycle
-     ncache=active_mg(icpu,ilevel)%ngrid
-     if(ncache>0) then
-       countsend=countsend+1
-#ifdef LIGHT_MPI_COMM
-       call MPI_ISEND(active_mg(icpu,ilevel)%pcomm%f,ncache*twotondim, &
-            & MPI_INTEGER,icpu-1,tag,MPI_COMM_WORLD,reqsend(countsend),info)
-#else
-       call MPI_ISEND(active_mg(icpu,ilevel)%f,ncache*twotondim, &
-            & MPI_INTEGER,icpu-1,tag,MPI_COMM_WORLD,reqsend(countsend),info)
-#endif
-     end if
-  end do
-
-  ! Wait for full completion of receives
-  call MPI_WAITALL(countrecv,reqrecv,statuses,info)
-
-  ! Gather emission array
-#ifdef LIGHT_MPI_COMM
-   offset=0
-   do idx=1,emission_mg(ilevel)%nactive
-      do j=1,twotondim
-         do i=1,emission_mg(ilevel)%ngrids(idx)
-            icell=emission_mg(ilevel)%igrid(offset+i)
-            active_mg(myid,ilevel)%pcomm%f(j,icell)=active_mg(myid,ilevel)%pcomm%f(j,icell)+ &
-                      emission_mg(ilevel)%f(j,offset+i)
-         end do
-      end do
-      offset=offset+emission_mg(ilevel)%ngrids(idx)
-   end do
-#else
-  do icpu=1,ncpu
-     if (emission_mg(icpu,ilevel)%ngrid>0) then
-        do j=1,twotondim
-           step=(j-1)*emission_mg(icpu,ilevel)%ngrid
-           iskip=(j-1)*active_mg(myid,ilevel)%ngrid
-           do i=1,emission_mg(icpu,ilevel)%ngrid
-              icell=emission_mg(icpu,ilevel)%igrid(i)+iskip
-              active_mg(myid,ilevel)%f(icell,1)=active_mg(myid,ilevel)%f(icell,1)+&
-                 & emission_mg(icpu,ilevel)%f(i+step,1)
-           end do
-        end do
-     end if
-  end do
-#endif
-
-  ! Wait for full completion of sends
-  call MPI_WAITALL(countsend,reqsend,statuses,info)
-
-#endif
-
-end subroutine make_reverse_mg_int
-
-
 ! ########################################################################
 ! ########################################################################
-! ########################################################################
-! ########################################################################
-
-subroutine dump_mg_levels(ilevel,idout)
-   use amr_commons
-   use poisson_commons
-   use mpi_mod
-   implicit none
-
-   integer, intent(in) :: idout, ilevel
-
-   character(len=24)  :: cfile
-   character(len=5)   :: ccpu='00000'
-   character(len=5)   :: cout='00000'
-
-   integer :: i, ngrids, igrid, icpu, idim
-
-#ifndef WITHOUTMPI
-   integer,parameter::tag=1119
-   integer::dummy_io,info2
-#endif
-
-   write(ccpu,'(I5.5)') myid
-   write(cout,'(I5.5)') idout
-   cfile='multigrid_'//cout//'.out'//ccpu
-
-   ! Wait for the token
-#ifndef WITHOUTMPI
-   if(IOGROUPSIZE>0) then
-      if (mod(myid-1,IOGROUPSIZE)/=0) then
-         call MPI_RECV(dummy_io,1,MPI_INTEGER,myid-1-1,tag,&
-              & MPI_COMM_WORLD,MPI_STATUS_IGNORE,info2)
-      end if
-   endif
-#endif
-
-   open(unit=10,file=cfile,status='unknown',form='formatted')
-
-   write(10,'(I1)') ndim
-   write(10,'(I1)') myid
-   write(10,'(I1)') ncpu
-   write(10,'(I2)') ilevel
-
-   ! Loop over levels
-   do i=1,ilevel-1
-      ! Active grids
-      ngrids=active_mg(myid,i)%ngrid
-      write(10,*) ngrids
-      do igrid=1,ngrids
-         do idim=1,ndim
-#ifdef LIGHT_MPI_COMM
-            write(10,*) xg(active_mg(myid,i)%pcomm%igrid(igrid),idim)
-#else
-            write(10,*) xg(active_mg(myid,i)%igrid(igrid),idim)
-#endif
-         end do
-      end do
-
-      ! Reception grids
-      do icpu=1,ncpu
-         if(icpu==myid)cycle
-         ngrids=active_mg(icpu,i)%ngrid
-         write(10,*) ngrids
-         do igrid=1,ngrids
-            do idim=1,ndim
-#ifdef LIGHT_MPI_COMM
-               write(10,*) xg(active_mg(icpu,i)%pcomm%igrid(igrid),idim)
-#else
-               write(10,*) xg(active_mg(icpu,i)%igrid(igrid),idim)
-#endif
-            end do
-         end do
-      end do
-
-   end do
-
-   close(10)
-
-        ! Send the token
-#ifndef WITHOUTMPI
-   if(IOGROUPSIZE>0) then
-      if(mod(myid,IOGROUPSIZE)/=0 .and.(myid.lt.ncpu))then
-         dummy_io=1
-         call MPI_SEND(dummy_io,1,MPI_INTEGER,myid-1+1,tag, &
-              & MPI_COMM_WORLD,info2)
-      end if
-   endif
-#endif
-
-end subroutine dump_mg_levels
+! TC: commented out but kept for debugging (used in utils/py)
+!subroutine dump_mg_levels(ilevel,idout)
+!   use amr_commons
+!   use poisson_commons
+!   use mpi_mod
+!   implicit none
+!
+!   integer, intent(in) :: idout, ilevel
+!
+!   character(len=24)  :: cfile
+!   character(len=5)   :: ccpu='00000'
+!   character(len=5)   :: cout='00000'
+!
+!   integer :: i, ngrids, igrid, icpu, idim
+!
+!#ifndef WITHOUTMPI
+!   integer,parameter::tag=1119
+!   integer::dummy_io,info2
+!#endif
+!
+!   write(ccpu,'(I5.5)') myid
+!   write(cout,'(I5.5)') idout
+!   cfile='multigrid_'//cout//'.out'//ccpu
+!
+!   ! Wait for the token
+!#ifndef WITHOUTMPI
+!   if(IOGROUPSIZE>0) then
+!      if (mod(myid-1,IOGROUPSIZE)/=0) then
+!         call MPI_RECV(dummy_io,1,MPI_INTEGER,myid-1-1,tag,&
+!              & MPI_COMM_WORLD,MPI_STATUS_IGNORE,info2)
+!      end if
+!   endif
+!#endif
+!
+!   open(unit=10,file=cfile,status='unknown',form='formatted')
+!
+!   write(10,'(I1)') ndim
+!   write(10,'(I1)') myid
+!   write(10,'(I1)') ncpu
+!   write(10,'(I2)') ilevel
+!
+!   ! Loop over levels
+!   do i=1,ilevel-1
+!      ! Active grids
+!      ngrids=active_mg(myid,i)%ngrid
+!      write(10,*) ngrids
+!      do igrid=1,ngrids
+!         do idim=1,ndim
+!#ifdef LIGHT_MPI_COMM
+!            write(10,*) xg(active_mg(myid,i)%pcomm%igrid(igrid),idim)
+!#else
+!            write(10,*) xg(active_mg(myid,i)%igrid(igrid),idim)
+!#endif
+!         end do
+!      end do
+!
+!      ! Reception grids
+!      do icpu=1,ncpu
+!         if(icpu==myid)cycle
+!         ngrids=active_mg(icpu,i)%ngrid
+!         write(10,*) ngrids
+!         do igrid=1,ngrids
+!            do idim=1,ndim
+!#ifdef LIGHT_MPI_COMM
+!               write(10,*) xg(active_mg(icpu,i)%pcomm%igrid(igrid),idim)
+!#else
+!               write(10,*) xg(active_mg(icpu,i)%igrid(igrid),idim)
+!#endif
+!            end do
+!         end do
+!      end do
+!
+!   end do
+!
+!   close(10)
+!
+!        ! Send the token
+!#ifndef WITHOUTMPI
+!   if(IOGROUPSIZE>0) then
+!      if(mod(myid,IOGROUPSIZE)/=0 .and.(myid.lt.ncpu))then
+!         dummy_io=1
+!         call MPI_SEND(dummy_io,1,MPI_INTEGER,myid-1+1,tag, &
+!              & MPI_COMM_WORLD,info2)
+!      end if
+!   endif
+!#endif
+!
+!end subroutine dump_mg_levels
 
 ! ########################################################################
 ! ########################################################################

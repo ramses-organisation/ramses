@@ -9,7 +9,7 @@ subroutine flag_formation_sites
   use clfind_commons
   use hydro_commons, only:uold
   use hydro_parameters, only:smallr
-  use pm_parameters, only:mass_halo_AGN,mass_clump_AGN
+  use pm_parameters, only:mass_halo_AGN,mass_clump_AGN,nlevelmax_sink
   use constants, only: pi, twopi, M_sun
   use mpi_mod
   implicit none
@@ -40,7 +40,7 @@ subroutine flag_formation_sites
   period(3)=(nz==1)
 
   ! Grid spacing and physical scales
-  dx=0.5D0**nlevelmax
+  dx=0.5D0**nlevelmax_sink
   nx_loc=(icoarse_max-icoarse_min+1)
   scale=boxlen/dble(nx_loc)
   dx_min=dx*scale
@@ -66,7 +66,7 @@ subroutine flag_formation_sites
         pos(1,1:3)=xsink(j,1:3)
         call cmp_cpumap(pos,cc,1)
         if (cc(1) .eq. myid)then
-           call get_cell_index(cell_index,cell_levl,pos,nlevelmax,1)
+           call get_cell_index(cell_index,cell_levl,pos,nlevelmax_sink,1)
            global_peak_id=flag2(cell_index(1))
            if(global_peak_id.NE.0)then
               call get_local_peak_id(global_peak_id,local_peak_id)
@@ -159,7 +159,7 @@ subroutine flag_formation_sites
            pos(1,1:3)=peak_pos(jj,1:3)
            call cmp_cpumap(pos,cc,1)
            if (cc(1) .eq. myid)then
-              call get_cell_index(cell_index,cell_levl,pos,nlevelmax,1)
+              call get_cell_index(cell_index,cell_levl,pos,nlevelmax_sink,1)
               ! Allow sink formation only inside zoom region
               if(ivar_refine>0)then
                  if(uold(cell_index(1),ivar_refine)/max(uold(cell_index(1),1),smallr)>var_cut_refine)then
@@ -201,7 +201,7 @@ subroutine flag_formation_sites
            pos(1,1:3)=peak_pos(jj,1:3)
            call cmp_cpumap(pos,cc,1)
            if (cc(1) .eq. myid)then
-              call get_cell_index(cell_index,cell_levl,pos,nlevelmax,1)
+              call get_cell_index(cell_index,cell_levl,pos,nlevelmax_sink,1)
               flag2(cell_index(1))=jj
               if(verbose)write(*,*)'cpu ',myid,' produces a new sink for clump number ',jj+ipeak_start(myid)
            end if
@@ -497,13 +497,13 @@ subroutine compute_clump_properties_round2
         end do
 
         ! Properties for regions close to peak (4 cells away)
-        if (((xpeak(1)-xcell(1))**2.+(xpeak(2)-xcell(2))**2.+(xpeak(3)-xcell(3))**2.) .LE. 16.*volume(nlevelmax)**(2./3.)/aexp**2)then
+        if (((xpeak(1)-xcell(1))**2.+(xpeak(2)-xcell(2))**2.+(xpeak(3)-xcell(3))**2.) .LE. 16.*volume(nlevelmax_sink)**(2./3.)/aexp**2)then
            clump_mass4(peak_nr)=clump_mass4(peak_nr)+d*vol
         endif
 
         ! Properties for regions close to peak (4 cells away)
         if(mass_star_AGN>0)then
-           if (((xpeak(1)-xcell(1))**2.+(xpeak(2)-xcell(2))**2.+(xpeak(3)-xcell(3))**2.) .LE. 16.*volume(nlevelmax)**(2./3.)/aexp**2)then
+           if (((xpeak(1)-xcell(1))**2.+(xpeak(2)-xcell(2))**2.+(xpeak(3)-xcell(3))**2.) .LE. 16.*volume(nlevelmax_sink)**(2./3.)/aexp**2)then
               clump_star4(peak_nr)=clump_star4(peak_nr)+rho_star*vol
            endif
         endif
@@ -608,6 +608,7 @@ subroutine trim_clumps
 #if NDIM==3
   use amr_commons
   use clfind_commons
+  use pm_parameters, only:nlevelmax_sink
   use pm_commons, only:ir_cloud
   implicit none
 
@@ -636,7 +637,7 @@ subroutine trim_clumps
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
 
   ! Mesh spacing in max level
-  dx=0.5D0**nlevelmax
+  dx=0.5D0**nlevelmax_sink
   nx_loc=(icoarse_max-icoarse_min+1)
   skip_loc(1)=dble(icoarse_min)
   skip_loc(2)=dble(jcoarse_min)
@@ -774,6 +775,7 @@ end subroutine jacobi
 subroutine surface_int
   use amr_commons
   use hydro_commons
+  use pm_parameters, only:nlevelmax_sink
   use pm_commons
   use clfind_commons
   use poisson_commons
@@ -794,7 +796,7 @@ subroutine surface_int
   do ipart=1,ntest
      ip=ip+1
      ilevel=levp(testp_sort(ipart))
-     if (verbose.and.ilevel/=nlevelmax)print*,'not all particles in max level',ilevel
+     if (verbose.and.ilevel/=nlevelmax_sink)print*,'not all particles in max sink level',ilevel
      next_level=0
      if(ipart<ntest)next_level=levp(testp_sort(ipart+1))
      ind_cell(ip)=icellp(testp_sort(ipart))
@@ -822,6 +824,7 @@ end subroutine surface_int
 #if NDIM==3
 subroutine surface_int_np(ind_cell,np,ilevel)
   use amr_commons
+  use pm_parameters, only:nlevelmax_sink
 #ifdef SOLVERmhd
   use clfind_commons, ONLY: center_of_mass,Psurf,MagPsurf,MagTsurf
 #else
@@ -1062,7 +1065,7 @@ subroutine surface_int_np(ind_cell,np,ilevel)
   !===================================
   ! generate neighbors at level ilevel+1
   !====================================
-  if(ilevel<nlevelmax)then
+  if(ilevel<nlevelmax_sink)then
      ! Generate 4x4x4 neighboring cells at level ilevel+1
      do k3=0,3
         do j3=0,3

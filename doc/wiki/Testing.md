@@ -54,6 +54,16 @@ Once the tests have completed, a report is generated in a `.pdf` file named `tes
 ```
 ./run_test_suite.sh -t mhd
 ```
+- Run test suite with coverage:
+```
+./run_test_suite.sh -s
+```
+
+- Run tests with restart:
+```
+./run_test_suite.sh -r
+```
+This will add an intermediate output in the middle of the test, and restart from it.
 
 ## 2. Creating a new test
 
@@ -74,6 +84,33 @@ In that directory, you will need:
 
 - A namelist: `sedov-3d.nml` (the name needs to be the same as the test directory)
 
+:::{warning}
+For the restart system to work, there is some limitations on the output parameters you can use. They have to be on the form
+```
+&OUTPUT_PARAMS
+noutput=1 ! should be 1
+tout=0.620
+/
+```
+or
+```
+&OUTPUT_PARAMS
+noutput=1 ! should be 1
+aout=1.355E-01
+/
+/
+```
+for cosmo runs or
+```
+&OUTPUT_PARAMS
+foutput=1 ! should be 1
+tend=0.05
+/
+```
+
+:::
+
+
 - A file for plotting and checking the solution against a reference: `plot-sedov-3d.py`. It is advised to copy a file from the other directories to see how to write this. **Note that this file needs to contain at least one call to `visu_ramses.check_solution(data["data"], 'sedov-3d')`**.
 
 - A reference solution: `sedov-3d-ref.txt`. To create it, run your test and once the final output (number 2 in this case) has been created, do the following:
@@ -92,6 +129,8 @@ Optional files:
 - `before-test.sh`: if this file is present in the test directory, it will be run before the test begins (useful for e.g. creating symbolic links to libraries...)
 
 - `after-test.sh`: if this file is present in the test directory, it will be run after the test begins (useful for e.g. cleaning up symbolic links to libraries...)
+
+
 
 ### Tuning tolerances for solution verification
 

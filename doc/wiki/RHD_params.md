@@ -52,8 +52,8 @@ and the [documentation page about RHD simulations](./RHD).
 | `rt_pressBoost=1.`           | `real`      |  Multiplication factor to boost or reduce radiation pressure on gas and dust from the default.|
 | `rt_vc=.false.`              | `logical`   |  Include relativistic corrections for the Lorentz boost and work done by photons on the gas (see Appendix A and B in [2]).|
 | **====================** | **====================** | **RT refinement parameters** |
-| `rt_err_grad_n=-1.0`  `rt_err_grad_xHI=-1.0`   `rt_err_grad_xHII=-1.0` |  `real` | Discontinuity-based strategy: photon density and ionization fraction gradients above which a cell is refined. |
-| `rt_floor_n=1d-10`    `rt_floor_xHI=1d-10`    `rt_floor_xHII=1d-10`    |  `real` | Discontinuity-based strategy: photon density and ionization fraction floor below which gradients are ignored. |
+| `rt_err_grad_cn=-1.0`  `rt_err_grad_xHI=-1.0`   `rt_err_grad_xHII=-1.0` |  `real` | Discontinuity-based strategy: photon flux and ionization fraction gradients above which a cell is refined. |
+| `rt_floor_cn=1d-10`    `rt_floor_xHI=1d-10`    `rt_floor_xHII=1d-10`    |  `real` | Discontinuity-based strategy: photon flux and ionization fraction floor below which gradients are ignored. |
 | `rt_refine_aexp=-1.0`        |  `real` | Cosmological expansion at which to turn on RT refinement strategies. |
 | **====================** | **====================** | **RT source regions** |
 | `rt_nsource=0`               |  `integer` | Number of independent source (photon emission) regions in the computational box. |

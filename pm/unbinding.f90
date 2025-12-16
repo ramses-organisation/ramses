@@ -868,7 +868,7 @@ subroutine get_cmp_iter()
   ! is determined iteratively.
   !-------------------------------------------------------------
 
-  integer  :: ipeak, i, ipart, levelmax
+  integer  :: ipeak, i, ipart, true_levelmax
   real(dp) :: r_null, distance
   integer  :: thispart
   real(dp),dimension(1:3) :: period
@@ -882,19 +882,19 @@ subroutine get_cmp_iter()
 
   if (logbins) then
     ! get minimal distance:
-    levelmax=0
+    true_levelmax=0
     do i=1,nlevelmax
-       if(numbtot(1,i)>0) levelmax=levelmax+1
+       if(numbtot(1,i)>0) true_levelmax=true_levelmax+1
     enddo
 
 #ifndef WITHOUTMPI
-    ! get system-wide levelmax
-    call MPI_ALLREDUCE(levelmax,levelmax_glob, 1, MPI_INTEGER, MPI_MAX,MPI_COMM_WORLD, info)
+    ! get system-wide true_levelmax
+    call MPI_ALLREDUCE(true_levelmax,levelmax_glob, 1, MPI_INTEGER, MPI_MAX,MPI_COMM_WORLD, info)
 
-    levelmax=levelmax_glob
+    true_levelmax=levelmax_glob
 #endif
 
-    rmin=boxlen/2**levelmax
+    rmin=boxlen/2**true_levelmax
   endif
 
 
@@ -1013,7 +1013,7 @@ subroutine get_cmp_noiter()
   ! no iteration is necessary.
   !----------------------------------------------------------
 
-  integer  :: ipeak, i, ipart, levelmax
+  integer  :: ipeak, i, ipart, true_levelmax
   real(dp) :: r_null, distance, biggest
   integer  :: thispart
   real(dp),dimension(1:3) :: period
@@ -1031,19 +1031,19 @@ subroutine get_cmp_noiter()
 
   if (logbins) then
     ! get minimal distance:
-    levelmax=0
+    true_levelmax=0
     do i=1,nlevelmax
-       if(numbtot(1,i)>0) levelmax=levelmax+1
+       if(numbtot(1,i)>0) true_levelmax=true_levelmax+1
     enddo
 
 #ifndef WITHOUTMPI
-    ! get system-wide levelmax
-    call MPI_ALLREDUCE(levelmax,levelmax_glob, 1, MPI_INTEGER, MPI_MAX,MPI_COMM_WORLD, info)
+    ! get system-wide true_levelmax
+    call MPI_ALLREDUCE(true_levelmax,levelmax_glob, 1, MPI_INTEGER, MPI_MAX,MPI_COMM_WORLD, info)
 
-    levelmax=levelmax_glob
+    true_levelmax=levelmax_glob
 #endif
 
-    rmin=boxlen/2**levelmax
+    rmin=boxlen/2**true_levelmax
   endif
 
 
@@ -1274,7 +1274,6 @@ subroutine unbinding_neighborsearch(ind_cell,np,jlevel)
   real(dp),dimension(1:3)::skip_loc
   integer ,dimension(1:nvector,1:threetondim),save::nbors_father_cells
   integer ,dimension(1:threetondim)::nbors_father_cells_pass
-  integer ,dimension(1:nvector,1:twotondim),save::nbors_father_grids
   integer::ntestpos,ntp,idim,ipos
 
   real(dp),dimension(1:3)::this_cellpos
@@ -1379,7 +1378,7 @@ subroutine unbinding_neighborsearch(ind_cell,np,jlevel)
   do j=1,np
     ind_cell_coarse(j)=father(ind_grid(j))
   enddo
-  call get3cubefather(ind_cell_coarse,nbors_father_cells,nbors_father_grids,np,jlevel)
+  call get3cubefather(ind_cell_coarse,nbors_father_cells,np,jlevel)
 
 
   do j=1,np

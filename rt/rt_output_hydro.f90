@@ -98,7 +98,7 @@ subroutine rt_backup_hydro(filename, filename_desc)
               do ivar = 1, nGroups
                  ! Store photon density in flux units
                  do i = 1, ncache
-                    xdp(i) = rt_c*rtuold(ind_grid(i)+iskip, iGroups(ivar))
+                    xdp(i) = rt_c(ilevel)*rtuold(ind_grid(i)+iskip, iGroups(ivar))
                  end do
                  write(field_name, '("photon_flux_", i0.2)') ivar
                  call generic_dump(field_name, info_var_count, xdp, unit_out, dump_info_flag, unit_info)
@@ -119,6 +119,7 @@ subroutine rt_backup_hydro(filename, filename_desc)
   end do
   close(unit_out)
 
+  if (myid == 1) close(unit_info)
   ! Send the token
 #ifndef WITHOUTMPI
   if (IOGROUPSIZE > 0) then
@@ -171,9 +172,10 @@ SUBROUTINE output_rtInfo(filename)
   write(ilun,*)
 
   ! Write physical parameters
-  write(ilun,'("unit_np      = ", E23.15)') scale_np
-  write(ilun,'("unit_pf      = ", E23.15)') scale_pf
-  write(ilun,'("rt_c_frac    = ", E23.15)') rt_c_fraction
+  write(ilun,'("unit_np      = ",E23.15)') scale_np
+  write(ilun,'("unit_pf      = ",E23.15)') scale_pf
+  write(ilun,'("rt_c_frac    = ",30(E23.15))') &
+                                         rt_c_fraction(levelmin:nlevelmax)
   write(ilun,*)
 
   ! Write polytropic parameters

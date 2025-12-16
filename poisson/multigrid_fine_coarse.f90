@@ -1,7 +1,7 @@
 ! ------------------------------------------------------------------------
 ! Multigrid Poisson solver for refined AMR levels
 ! ------------------------------------------------------------------------
-! This file contains all MG-coarse-level related routines
+! This file contains all MG-coarse-level related routines (bottom-up)
 !
 ! Used variables:
 !                       finest(AMR)level     coarse(MG)levels
@@ -14,89 +14,6 @@
 !
 ! ------------------------------------------------------------------------
 
-
-! ------------------------------------------------------------------------
-! Mask restriction (top-down, OBSOLETE, UNUSED)
-! ------------------------------------------------------------------------
-
-subroutine restrict_mask_coarse(ifinelevel,allmasked)
-   use amr_commons
-   use poisson_commons
-   implicit none
-   integer, intent(in) :: ifinelevel
-   logical, intent(out) :: allmasked
-
-   integer :: ind_c_cell, ind_f_cell, cpu_amr
-
-   integer :: iskip_c_amr, iskip_c_mg
-   integer :: igrid_c_amr, igrid_c_mg
-   integer :: icell_c_amr, icell_c_mg
-
-   integer :: iskip_f_mg
-   integer :: igrid_f_amr, igrid_f_mg
-   integer :: icell_f_mg
-
-   real(dp) :: ngpmask
-   real(dp) :: dtwotondim = (twotondim)
-
-   integer :: icoarselevel
-   icoarselevel=ifinelevel-1
-   allmasked=.true.
-
-   ! Loop over coarse cells of the myid active comm
-   do ind_c_cell=1,twotondim
-      iskip_c_amr=ncoarse+(ind_c_cell-1)*ngridmax
-      iskip_c_mg =(ind_c_cell-1)*active_mg(myid,icoarselevel)%ngrid
-
-      ! Loop over coarse grids of myid
-      do igrid_c_mg=1,active_mg(myid,icoarselevel)%ngrid
-#ifdef LIGHT_MPI_COMM
-         igrid_c_amr=active_mg(myid,icoarselevel)%pcomm%igrid(igrid_c_mg)
-#else
-         igrid_c_amr=active_mg(myid,icoarselevel)%igrid(igrid_c_mg)
-#endif
-         icell_c_amr=iskip_c_amr+igrid_c_amr
-         icell_c_mg =iskip_c_mg +igrid_c_mg
-         igrid_f_amr=son(icell_c_amr)
-         cpu_amr=cpu_map(icell_c_amr)
-         if(igrid_f_amr==0) then
-            ! Cell is not refined
-            ngpmask      = -1.0d0
-         else
-            ! Cell is refined
-            ! Check if son grid is in MG hierarchy
-            igrid_f_mg=lookup_mg(igrid_f_amr)
-            if(igrid_f_mg<=0) then
-               ! Child oct is not in multigrid hierarchy
-               ngpmask=-1.0d0
-            else
-               ! Child oct is within MG hierarchy
-               ! Loop over fine cells and gather ngpmask
-               ngpmask=0.0d0
-               do ind_f_cell=1,twotondim
-                  ! Extract fine mask value in the corresponding MG comm
-                  iskip_f_mg=(ind_f_cell-1)*active_mg(cpu_amr,ifinelevel)%ngrid
-                  icell_f_mg=iskip_f_mg+igrid_f_mg
-#ifdef LIGHT_MPI_COMM
-                  ngpmask=ngpmask+active_mg(cpu_amr,ifinelevel)%pcomm%u(icell_f_mg,4)
-#else
-                  ngpmask=ngpmask+active_mg(cpu_amr,ifinelevel)%u(icell_f_mg,4)
-#endif
-               end do
-               ngpmask=ngpmask/dtwotondim
-            end if
-         end if
-         ! Store cell mask
-#ifdef LIGHT_MPI_COMM
-         active_mg(myid,icoarselevel)%pcomm%u(icell_c_mg,4)=ngpmask
-#else
-         active_mg(myid,icoarselevel)%u(icell_c_mg,4)=ngpmask
-#endif
-         allmasked=allmasked .and. (ngpmask<=0.0)
-      end do
-   end do
-
-end subroutine restrict_mask_coarse
 
 ! ------------------------------------------------------------------------
 ! Mask restriction (bottom-up)
@@ -168,10 +85,9 @@ subroutine cmp_residual_mg_coarse(ilevel)
    ! Computes the residual for pure MG levels, and stores it into active_mg(myid,ilevel)%u(:,3)
    use amr_commons
    use poisson_commons
+   use amr_constants, only:iii,jjj
    implicit none
    integer, intent(in) :: ilevel
-
-   integer, dimension(1:3,1:2,1:8) :: iii, jjj
 
    real(dp) :: dx, oneoverdx2, phi_c, nb_sum
    integer  :: ngrid
@@ -185,13 +101,6 @@ subroutine cmp_residual_mg_coarse(ilevel)
    ! Set constants
    dx  = 0.5d0**ilevel
    oneoverdx2 = 1.0d0/(dx*dx)
-
-   iii(1,1,1:8)=(/1,0,1,0,1,0,1,0/); jjj(1,1,1:8)=(/2,1,4,3,6,5,8,7/)
-   iii(1,2,1:8)=(/0,2,0,2,0,2,0,2/); jjj(1,2,1:8)=(/2,1,4,3,6,5,8,7/)
-   iii(2,1,1:8)=(/3,3,0,0,3,3,0,0/); jjj(2,1,1:8)=(/3,4,1,2,7,8,5,6/)
-   iii(2,2,1:8)=(/0,0,4,4,0,0,4,4/); jjj(2,2,1:8)=(/3,4,1,2,7,8,5,6/)
-   iii(3,1,1:8)=(/5,5,5,5,0,0,0,0/); jjj(3,1,1:8)=(/5,6,7,8,1,2,3,4/)
-   iii(3,2,1:8)=(/0,0,0,0,6,6,6,6/); jjj(3,2,1:8)=(/5,6,7,8,1,2,3,4/)
 
    ngrid=active_mg(myid,ilevel)%ngrid
 
@@ -331,79 +240,6 @@ end subroutine cmp_residual_mg_coarse
 ! ##################################################################
 ! ##################################################################
 
-subroutine cmp_uvar_norm2_coarse(ivar, ilevel, norm2)
-   use amr_commons
-   use poisson_commons
-   implicit none
-
-   integer,  intent(in)  :: ilevel, ivar
-   real(dp), intent(out) :: norm2
-
-   real(dp) :: dx2
-   integer  :: ngrid
-   integer  :: ind, igrid_mg, icell_mg, iskip_mg
-
-   ! Set constants
-   dx2  = (0.5d0**ilevel)**ndim
-   ngrid=active_mg(myid,ilevel)%ngrid
-
-   norm2 = 0.0d0
-   ! Loop over cells
-   do ind=1,twotondim
-      iskip_mg = (ind-1)*ngrid
-      ! Loop over active grids
-      do igrid_mg=1,ngrid
-         icell_mg = iskip_mg + igrid_mg
-#ifdef LIGHT_MPI_COMM
-         if(active_mg(myid,ilevel)%pcomm%u(icell_mg,4)<=0.0 .and. ivar/=4) cycle
-         norm2 = norm2 + active_mg(myid,ilevel)%pcomm%u(icell_mg,ivar)**2
-#else
-         if(active_mg(myid,ilevel)%u(icell_mg,4)<=0.0 .and. ivar/=4) cycle
-         norm2 = norm2 + active_mg(myid,ilevel)%u(icell_mg,ivar)**2
-#endif
-      end do
-   end do
-   norm2 = dx2*norm2
-end subroutine cmp_uvar_norm2_coarse
-
-! ##################################################################
-! ##################################################################
-
-! subroutine cmp_fvar_norm2_coarse(ivar, ilevel, norm2)
-!    use amr_commons
-!    use poisson_commons
-!    implicit none
-
-!    integer,  intent(in)  :: ilevel, ivar
-!    real(dp), intent(out) :: norm2
-
-!    real(dp) :: dx2
-!    integer  :: ngrid
-!    integer  :: ind, igrid_mg, icell_mg, iskip_mg
-
-!    ! Set constants
-!    dx2  = (0.5d0**ilevel)**ndim
-!    ngrid=active_mg(myid,ilevel)%ngrid
-
-!    norm2 = 0.0d0
-!    ! Loop over cells
-!    do ind=1,twotondim
-!       iskip_mg = (ind-1)*ngrid
-!       ! Loop over active grids
-!       do igrid_mg=1,ngrid
-!          icell_mg = iskip_mg + igrid_mg
-! #ifdef LIGHT_MPI_COMM
-!          if(active_mg(myid,ilevel)%pcomm%u(icell_mg,4)<=0.0) cycle
-!          norm2 = norm2 + active_mg(myid,ilevel)%f(ind,igrid)**2
-! #else
-!          if(active_mg(myid,ilevel)%u(icell_mg,4)<=0.0) cycle
-!          norm2 = norm2 + active_mg(myid,ilevel)%f(icell_mg,ivar)**2
-! #endif
-!       end do
-!    end do
-!    norm2 = dx2*norm2
-! end subroutine cmp_fvar_norm2_coarse
-
 ! ------------------------------------------------------------------------
 ! Gauss-Seidel smoothing
 ! ------------------------------------------------------------------------
@@ -412,12 +248,12 @@ subroutine gauss_seidel_mg_coarse(ilevel,safe,redstep)
    use amr_commons
    use pm_commons
    use poisson_commons
+   use amr_constants, only:iii,jjj
    implicit none
    integer, intent(in) :: ilevel
    logical, intent(in) :: safe
    logical, intent(in) :: redstep
 
-   integer, dimension(1:3,1:2,1:8) :: iii, jjj
    integer, dimension(1:3,1:4)     :: ired, iblack
 
    real(dp) :: dx2, nb_sum, weight
@@ -437,13 +273,6 @@ subroutine gauss_seidel_mg_coarse(ilevel,safe,redstep)
    iblack(2,1:4)=(/2,3,0,0/)
    ired  (3,1:4)=(/1,4,6,7/)
    iblack(3,1:4)=(/2,3,5,8/)
-
-   iii(1,1,1:8)=(/1,0,1,0,1,0,1,0/); jjj(1,1,1:8)=(/2,1,4,3,6,5,8,7/)
-   iii(1,2,1:8)=(/0,2,0,2,0,2,0,2/); jjj(1,2,1:8)=(/2,1,4,3,6,5,8,7/)
-   iii(2,1,1:8)=(/3,3,0,0,3,3,0,0/); jjj(2,1,1:8)=(/3,4,1,2,7,8,5,6/)
-   iii(2,2,1:8)=(/0,0,4,4,0,0,4,4/); jjj(2,2,1:8)=(/3,4,1,2,7,8,5,6/)
-   iii(3,1,1:8)=(/5,5,5,5,0,0,0,0/); jjj(3,1,1:8)=(/5,6,7,8,1,2,3,4/)
-   iii(3,2,1:8)=(/0,0,0,0,6,6,6,6/); jjj(3,2,1:8)=(/5,6,7,8,1,2,3,4/)
 
    ngrid=active_mg(myid,ilevel)%ngrid
 
@@ -590,100 +419,6 @@ subroutine gauss_seidel_mg_coarse(ilevel,safe,redstep)
    end do
 end subroutine gauss_seidel_mg_coarse
 
-! ------------------------------------------------------------------------
-! Residual restriction (top-down, OBSOLETE, UNUSED)
-! ------------------------------------------------------------------------
-
-subroutine restrict_residual_coarse(ifinelevel)
-   ! Restrict coarser (MG) residual at level ifinelevel using NGP into coarser residual at level
-   ! ifinelevel-1
-   ! Restricted residual is stored into the RHS at the coarser level
-   use amr_commons
-   use pm_commons
-   use poisson_commons
-   implicit none
-   integer, intent(in) :: ifinelevel
-
-   real(dp) :: val, w
-   integer  :: icoarselevel, cpu_amr
-   integer  :: ngrid_c, ind_c, iskip_c_amr, iskip_c_mg, igrid_c_amr, icell_c_amr, icell_c_mg, igrid_c_mg
-   integer  :: ind_f, igrid_f_amr, igrid_f_mg, icell_f_mg
-
-   icoarselevel=ifinelevel-1
-
-   ! Loop over coarse MG cells
-   ngrid_c=active_mg(myid,icoarselevel)%ngrid
-   do ind_c=1,twotondim
-      iskip_c_amr = ncoarse + (ind_c-1)*ngridmax
-      iskip_c_mg  = (ind_c-1)*ngrid_c
-
-      do igrid_c_mg=1,ngrid_c
-#ifdef LIGHT_MPI_COMM
-         igrid_c_amr = active_mg(myid,icoarselevel)%pcomm%igrid(igrid_c_mg)
-#else
-         igrid_c_amr = active_mg(myid,icoarselevel)%igrid(igrid_c_mg)
-#endif
-         icell_c_amr = igrid_c_amr + iskip_c_amr
-         cpu_amr     = cpu_map(icell_c_amr)
-         icell_c_mg  = igrid_c_mg  + iskip_c_mg
-
-         ! Get AMR child grid
-         igrid_f_amr = son(icell_c_amr)
-         if(igrid_f_amr==0) then
-#ifdef LIGHT_MPI_COMM
-            active_mg(myid,icoarselevel)%pcomm%u(icell_c_mg,2) = 0.0d0    ! Nullify residual (coarser RHS)
-#else
-            active_mg(myid,icoarselevel)%u(icell_c_mg,2) = 0.0d0    ! Nullify residual (coarser RHS)
-#endif
-            cycle
-         end if
-
-         ! Get child MG grid id
-         igrid_f_mg = lookup_mg(igrid_f_amr)
-         if(igrid_f_mg<=0) then
-            ! Son grid is not in MG hierarchy
-#ifdef LIGHT_MPI_COMM
-            active_mg(myid,icoarselevel)%pcomm%u(icell_c_mg,2) = 0.0d0    ! Nullify residual (coarser RHS)
-#else
-            active_mg(myid,icoarselevel)%u(icell_c_mg,2) = 0.0d0    ! Nullify residual (coarser RHS)
-#endif
-            cycle
-         end if
-
-         ! Loop over child (fine MG) cells
-         val = 0
-         w = 0
-         do ind_f=1,twotondim
-            icell_f_mg = igrid_f_mg + (ind_f-1)*active_mg(cpu_amr,ifinelevel)%ngrid
-
-#ifdef LIGHT_MPI_COMM
-            if (active_mg(cpu_amr,ifinelevel)%pcomm%u(icell_f_mg,4)<=0.0) cycle
-            val = val + active_mg(cpu_amr,ifinelevel)%pcomm%u(icell_f_mg,3)
-#else
-            if (active_mg(cpu_amr,ifinelevel)%u(icell_f_mg,4)<=0.0) cycle
-            val = val + active_mg(cpu_amr,ifinelevel)%u(icell_f_mg,3)
-#endif
-            w = w + 1d0
-         end do
-         ! Store restricted residual into RHS of coarse level
-#ifdef LIGHT_MPI_COMM
-         if(w>0) then
-            active_mg(myid,icoarselevel)%pcomm%u(icell_c_mg,2) = val/w
-         else
-            active_mg(myid,icoarselevel)%pcomm%u(icell_c_mg,2) = 0
-         end if
-#else
-         if(w>0) then
-            active_mg(myid,icoarselevel)%u(icell_c_mg,2) = val/w
-         else
-            active_mg(myid,icoarselevel)%u(icell_c_mg,2) = 0
-         end if
-#endif
-      end do
-   end do
-end subroutine restrict_residual_coarse
-
-
 
 ! ------------------------------------------------------------------------
 ! Residual restriction (bottom-up)
@@ -782,7 +517,6 @@ subroutine interpolate_and_correct_coarse(ifinelevel)
 
    integer,  dimension(1:nvector), save                :: igrid_f_amr, icell_amr, cpu_amr
    integer,  dimension(1:nvector,1:threetondim), save  :: nbors_father_cells
-   integer,  dimension(1:nvector,1:twotondim), save    :: nbors_father_grids
    real(dp), dimension(1:nvector), save                :: corr
 
    ! Local constants
@@ -824,7 +558,7 @@ subroutine interpolate_and_correct_coarse(ifinelevel)
       end do
 
       ! Gather 3x3x3 neighboring parent cells
-      call get3cubefather(icell_amr,nbors_father_cells,nbors_father_grids,nbatch,ifinelevel)
+      call get3cubefather(icell_amr,nbors_father_cells,nbatch,ifinelevel)
 
       ! Update solution for fine grid cells
       do ind_f=1,twotondim
@@ -892,6 +626,7 @@ end subroutine interpolate_and_correct_coarse
 subroutine set_scan_flag_coarse(ilevel)
    use amr_commons
    use poisson_commons
+   use amr_constants, only:iii,jjj
    implicit none
 
    integer, intent(in) :: ilevel
@@ -901,15 +636,6 @@ subroutine set_scan_flag_coarse(ilevel)
    integer :: igrid_amr, igrid_nbor_amr, cpu_nbor_amr
 
    integer :: iskip_mg, icell_mg, igrid_nbor_mg, icell_nbor_mg
-
-   integer, dimension(1:3,1:2,1:8) :: iii, jjj
-
-   iii(1,1,1:8)=(/1,0,1,0,1,0,1,0/); jjj(1,1,1:8)=(/2,1,4,3,6,5,8,7/)
-   iii(1,2,1:8)=(/0,2,0,2,0,2,0,2/); jjj(1,2,1:8)=(/2,1,4,3,6,5,8,7/)
-   iii(2,1,1:8)=(/3,3,0,0,3,3,0,0/); jjj(2,1,1:8)=(/3,4,1,2,7,8,5,6/)
-   iii(2,2,1:8)=(/0,0,4,4,0,0,4,4/); jjj(2,2,1:8)=(/3,4,1,2,7,8,5,6/)
-   iii(3,1,1:8)=(/5,5,5,5,0,0,0,0/); jjj(3,1,1:8)=(/5,6,7,8,1,2,3,4/)
-   iii(3,2,1:8)=(/0,0,0,0,6,6,6,6/); jjj(3,2,1:8)=(/5,6,7,8,1,2,3,4/)
 
    ngrid = active_mg(myid,ilevel)%ngrid
    if(ngrid==0) return

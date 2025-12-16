@@ -149,3 +149,65 @@ subroutine courant_fine(ilevel)
 111 format('   Entering courant_fine for level ',I2)
 
 end subroutine courant_fine
+!###########################################################
+!###########################################################
+!###########################################################
+!###########################################################
+subroutine cmpdt(uu,gg,dx,dt,ncell)
+  use amr_parameters
+  use hydro_parameters
+  use const
+  implicit none
+
+  integer::ncell
+  real(dp)::dx,dt
+  real(dp),dimension(1:nvector,1:nvar)::uu ! conservative
+  real(dp),dimension(1:nvector,1:ndim)::gg
+  real(dp),dimension(1:nvector,1:nvar)::q
+
+  real(dp) ::dtcell,smallp
+  integer  ::k,idim
+  real(dp) ::velx,vely,velz
+  real(dp) :: lor,entho ! Lorentz factor
+  real(dp) :: D,M,E,Mx,My,Mz,u2,Xsi,R
+  real(dp) ::rho,p,vpar,vx,vy,vz
+  integer::a,b,c
+
+!  smallp = smallc**2/gamma
+  dt=courant_factor*dx/smallc
+  !convert to primitive variables
+
+  call ctoprimbis(uu,ncell,q)
+
+  do  k=1,ncell
+  !compute fastest signal speed (x dir)
+     call find_speed_info((/q(k,1),q(k,5),q(k,2),q(k,3),q(k,4)/),velx)
+
+#if NDIM > 1
+     !compute fastest signal speed (y dir)
+     call find_speed_info((/q(k,1),q(k,5),q(k,3),q(k,2),q(k,4)/),vely)
+#endif
+
+#if NDIM == 3
+  !compute fastest signal speed (z dir)
+     call find_speed_info((/q(k,1),q(k,5),q(k,4),q(k,2),q(k,3)/),velz)
+#endif
+
+
+#if NDIM == 1
+     dt=min(dt,dx/velx)
+#endif
+
+#if NDIM == 2
+     dt=min(dt,dx*courant_factor/(velx+vely))
+#endif
+
+#if NDIM == 3
+     dt=min(dt,dx/(velx+vely+velz) )
+#endif
+
+
+  end do
+
+
+end subroutine cmpdt

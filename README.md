@@ -13,20 +13,24 @@
 Ramses is an open source code to model astrophysical systems, featuring self-gravitating, magnetised, compressible, radiative fluid flows. It is based  on the Adaptive Mesh Refinement (AMR)  technique on a  fully-threaded graded octree.
 [ramses](https://github.com/ramses-organisation/ramses/) is written in  Fortran 90 and is making intensive use of the Message Passing Interface (MPI) library.
 
-You can go to the user's guide using [Read The Docs][1].
+### ⬇️ Get the code
 
 Download the code by cloning the git repository using
 ```
 $ git clone https://github.com/ramses-organisation/ramses
 ```
-You will get the latest stable version. To get the development branch, do the following
-```
-$ git clone --branch dev https://github.com/ramses-organisation/ramses
-```
+
+### ℹ️ Get Support
+
+You can go to the user's guide using [Read The Docs][1].
 Please register also to the [mailing list](http://groups.google.com/group/ramses_users).
+You can get support on Ramses on the [Github Discussion page](https://github.com/ramses-organisation/ramses/discussions)
+
+### 🛠️ Tools and ressources
 
 To generate idealised initial conditions of galaxies, check out [DICE][5].
-
 To generate cosmological initial conditions, check out [MUSIC][6].
 
 To visualize RAMSES data, we encourage you to use [YT][9], [OSYRIS][7] or [PYNBODY][8].
+
+You'll find a lot of useful ressources, links and news about the Ramses community on https://ramses.cnrs.fr/, a website edited by the French "SNO" Ramses.

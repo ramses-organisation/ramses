@@ -258,13 +258,13 @@ SUBROUTINE init_SED_table()
 ! each photon group as a function of stellar population age and
 ! metallicity.  The SED is read from a directory specified by sed_dir.
 !-------------------------------------------------------------------------
-  use amr_commons,only:myid
+  use amr_commons,only:myid,ncpu
   use rt_parameters
   use spectrum_integrator_module
   use constants,only:c_cgs, eV2erg, hplanck
   use mpi_mod
 #ifndef WITHOUTMPI
-  use amr_commons,only:IOGROUPSIZE,ncpu
+  use amr_commons,only:IOGROUPSIZE
   real(kind=8),allocatable::tbl2(:,:,:)
   integer::dummy_io,info2,ierr
 #endif
@@ -277,7 +277,6 @@ SUBROUTINE init_SED_table()
   character(len=128)::fZs, fAges, fSEDs                        ! Filenames
   logical::ok,okAge,okZ
   real(kind=8)::dlgA, pL0, pL1, tmp
-  integer::locid,ncpu2
   integer::nv=3+2*nIons  ! # vars in SED table: L,Lacc,egy,nions*(csn,egy)
   integer,parameter::tag=1132
 !-------------------------------------------------------------------------
@@ -371,23 +370,13 @@ SUBROUTINE init_SED_table()
   endif
 #endif
 
-  ! If MPI then share the SED integration between the cpus:
-#ifndef WITHOUTMPI
-  call MPI_COMM_RANK(MPI_COMM_WORLD,locid,ierr)
-  call MPI_COMM_SIZE(MPI_COMM_WORLD,ncpu2,ierr)
-#endif
-#ifdef WITHOUTMPI
-  locid=0
-  ncpu2=1
-#endif
-
   ! Perform SED integration of luminosity, csn and egy per (age,Z) bin----
   allocate(tbl(nAges,nZs,nv))
   do ip = 1,nSEDgroups                                ! Loop photon groups
      tbl=0.
      pL0 = groupL0(ip) ; pL1 = groupL1(ip)! eV interval of photon group ip
      do iz = 1, nzs                                     ! Loop metallicity
-     do ia = locid+1,nAges,ncpu2                                ! Loop age
+     do ia = myid,nAges,ncpu                                ! Loop age
         tbl(ia,iz,1) = getSEDLuminosity(Ls,SEDs(:,ia,iz),nLs,pL0,pL1)
         tbl(ia,iz,3) = getSEDEgy(Ls,SEDs(:,ia,iz),nLs,pL0,pL1)
         do ii = 1,nIonsUsed                                ! Loop species
@@ -556,7 +545,9 @@ SUBROUTINE update_SED_group_props()
         enddo
      endif
   end do
-  call updateRTgroups_coolConstants
+  do i=levelmin,nlevelmax
+     call updateRTgroups_CoolConstants(i)
+  enddo
   if(myid==1) write(*,*) &
                     'SED Photon groups updated through stellar polling'
   !call write_group_props(.true.,6)
@@ -716,7 +707,7 @@ FUNCTION getSEDLuminosity(X, Y, N, e0, e1)
   if(.not. SED_isEgy) then               !  Photon number per sec per Msun
      getSEDLuminosity = const &
           * integrateSpectrum(X, Y, N, e0, e1, species, fLambda)
-     getSEDLuminosity = getSEDLuminosity*L_sun  ! Scale by solar luminosity
+     getSEDLuminosity = getSEDLuminosity*L_sun ! Scale by solar luminosity
   else                             ! SED_isEgy=true -> eV per sec per Msun
      getSEDLuminosity = integrateSpectrum(X, Y, N, e0, e1, species, f1)
      ! Scale by solar lum and convert to eV (bc group energies are in eV)
@@ -1061,7 +1052,6 @@ SUBROUTINE star_RT_vsweep(ind_grid,ind_part,ind_grid_part,ng,np,dt,ilevel)
   real(dp),dimension(1:nvector,1:ndim),save::x0
   integer ,dimension(1:nvector),save::ind_cell
   integer ,dimension(1:nvector,1:threetondim),save::nbors_father_cells
-  integer ,dimension(1:nvector,1:twotondim),save::nbors_father_grids
   ! Particle based arrays
   logical,dimension(1:nvector),save::ok
   real(dp),dimension(1:nvector,ngroups),save::part_NpInp
@@ -1107,10 +1097,8 @@ SUBROUTINE star_RT_vsweep(ind_grid,ind_part,ind_grid_part,ng,np,dt,ilevel)
      ind_cell(i) = father(ind_grid(i))
   end do
   call get3cubefather(&
-          ind_cell, nbors_father_cells, nbors_father_grids, ng, ilevel)
-  ! now nbors_father cells are a cube of 27 cells with ind_cell in the
-  ! middle and nbors_father_grids are the 8 grids that contain these 27
-  ! cells (though only one of those is fully included in the cube)
+          ind_cell, nbors_father_cells, ng, ilevel)
+  ! now nbors_father_cells are a cube of 27 cells with ind_cell in the middle
 
   ! Rescale position of stars to positions within 3x3x3 cell supercube
   do idim = 1, ndim
@@ -1264,7 +1252,7 @@ MODULE UV_module
 
   implicit none
 
-  PUBLIC nUVgroups, iUVvars_cool, UV_Nphot_cgs, init_UV_background       &
+  PUBLIC nUVgroups, iUVvars_cool, UV_fluxes_cgs, init_UV_background      &
        , inp_UV_rates_table, inp_UV_groups_table, UV_minz, UV_maxz       &
        , update_UVsrc, iUVgroups
 
@@ -1280,7 +1268,6 @@ MODULE UV_module
   real(dp),allocatable,dimension(:,:,:)::UV_rates_table
   ! rt_n_UVsrc vectors of redshift dependent fluxes for UV background
   real(dp),allocatable::UV_fluxes_cgs(:)    !                    [#/cm2/s]
-  real(dp),allocatable::UV_Nphot_cgs(:)     !        Photon density [cm-3]
   integer::nUVgroups=0                      !        # of UV photon groups
   ! UV group indexes among nGroup groups,
   ! UV Np indexes among solve_cooling vars:
@@ -1305,12 +1292,12 @@ SUBROUTINE init_UV_background()
 ! d) wavelengths (increasing order) [Angstrom]
 ! e) fluxes per (redshift,wavelength) [photons cm-2 s-1 A-1 sr-1]
 !-------------------------------------------------------------------------
-  use amr_commons,only:myid
+  use amr_commons,only:myid,ncpu
   use rt_parameters
   use SED_module
   use mpi_mod
 #ifndef WITHOUTMPI
-  use amr_commons,only:IOGROUPSIZE,ncpu
+  use amr_commons,only:IOGROUPSIZE
   real(kind=8),allocatable  :: tbl2(:,:)
   integer::dummy_io,info2,ierr
 #endif
@@ -1318,7 +1305,7 @@ SUBROUTINE init_UV_background()
   real(kind=8),allocatable  :: Ls(:)            ! Wavelengths
   real(kind=8),allocatable  :: UV(:,:)          ! UV f(lambda,z)
   real(kind=8),allocatable  :: tbl(:,:)
-  integer::i,iz,ip,ii,locid,ncpu2
+  integer::i,iz,ip,ii
   logical::ok
   real(kind=8)::pL0,pL1
   integer,parameter::tag=1133
@@ -1370,14 +1357,6 @@ SUBROUTINE init_UV_background()
   endif
 #endif
 
-  ! If mpi then share the UV integration between the cpus:
-#ifndef WITHOUTMPI
-  call MPI_COMM_RANK(MPI_COMM_WORLD,locid,ierr)
-  call MPI_COMM_SIZE(MPI_COMM_WORLD,ncpu2,ierr)
-#endif
-#ifdef WITHOUTMPI
-  locid=0 ; ncpu2=1
-#endif
 
   ! Shift the highest z in the table (10) to reionization epoch,
   ! so that we start injecting at z_reion
@@ -1391,7 +1370,7 @@ SUBROUTINE init_UV_background()
      allocate(tbl(UV_nz, 2))
      do ii = 1, nIonsUsed
         tbl=0.
-        do iz = locid+1,UV_nz,ncpu2
+        do iz = myid,UV_nz,ncpu
            tbl(iz,1)= getUV_Irate(Ls,UV(:,iz),nLs,ii)
            tbl(iz,2)= getUV_Hrate(Ls,UV(:,iz),nLs,ii)
         end do
@@ -1434,7 +1413,6 @@ SUBROUTINE init_UV_background()
      end do
      if(nUVgroups .gt. 0) then
         allocate(UV_fluxes_cgs(nUVgroups))             ; UV_fluxes_cgs=0.
-        allocate(UV_Nphot_cgs(nUVgroups))              ; UV_Nphot_cgs=0.
      endif
 
      ! Initialize photon groups table-------------------------------------
@@ -1444,7 +1422,7 @@ SUBROUTINE init_UV_background()
         tbl=0.
         pL0 = groupL0(nSEDgroups+ip) !  Energy interval of photon group ip
         pL1 = groupL1(nSEDgroups+ip) !
-        do iz = locid+1,UV_nz,ncpu2
+        do iz = myid,UV_nz,ncpu
            tbl(iz,1) =        getUVFlux(Ls,UV(:,iz),nLs,pL0,pL1)
            if(tbl(iz,1) .eq. 0d0) cycle     ! Can't integrate zero fluxes
            tbl(iz,2) =        getUVEgy(Ls,UV(:,iz),nLs,pL0,pL1)
@@ -1568,14 +1546,15 @@ SUBROUTINE update_UVsrc
 
   call inp_UV_groups_table(redshift, UVprops, .true.)
   UV_fluxes_cgs(:)      = UVprops(:,1)
-  UV_Nphot_cgs          = UV_fluxes_cgs/rt_c_cgs
   group_egy(iUVgroups)  = UVprops(:,2)
   do i=1,nIonsUsed
      group_csn(iUVgroups,i)  = UVprops(:,1+2*i)
      group_cse(iUVgroups,i)  = UVprops(:,2+2*i)
   enddo
 
-  call updateRTgroups_CoolConstants
+  do i=levelmin,nlevelmax
+     call updateRTgroups_CoolConstants(i)
+  enddo
 
   if(myid==1) then
      write(*,*) 'Updated UV fluxes [# cm-2 s-1] to'

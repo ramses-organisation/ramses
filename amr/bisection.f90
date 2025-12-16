@@ -164,7 +164,7 @@ contains
                if(skip(i)) cycle
 
                bisec_wall(cur_cell) = round_to_bisec_res( ( tmp_bxmin(cur_cell,dir)*lncpu2(i) &
-                                                         + tmp_bxmax(cur_cell,dir)*lncpu1(i) )/lncpu )
+                                                        & + tmp_bxmax(cur_cell,dir)*lncpu1(i) )/lncpu )
                if(bisec_wall(cur_cell)==tmp_bxmin(cur_cell,dir) .or. bisec_wall(cur_cell)==tmp_bxmax(cur_cell,dir)) then
                   if(myid==1) print *,"Problem in bisection tree creation : insufficient resolution"
 #ifndef WITHOUTMPI
@@ -226,7 +226,7 @@ contains
 
                   ! retrieve differential load
                   myload(i) = abs( bisec_hist( i , floor(max(bisec_wall(cur_cell),last_wall(i))/bisec_res)+1 ) &
-                              - bisec_hist( i , floor(min(bisec_wall(cur_cell),last_wall(i))/bisec_res)+1 ) )
+                             & - bisec_hist( i , floor(min(bisec_wall(cur_cell),last_wall(i))/bisec_res)+1 ) )
                end do
 
                ! sum up all differential loads into totload
@@ -286,7 +286,7 @@ contains
                bisec_wall(cur_cell) = round_to_bisec_res( 0.5 * (u_limit(i) + l_limit(i)) )
                ! check if we're at resolution limit for next bisection step
                if( abs(bisec_wall(cur_cell)-u_limit(i))<0.5*bisec_res &
-                       .or. abs(bisec_wall(cur_cell)-l_limit(i))<0.5*bisec_res )  then
+                     &  .or. abs(bisec_wall(cur_cell)-l_limit(i))<0.5*bisec_res )  then
                   ! restore best wall, mark cell done and loop
                   bisec_wall(cur_cell) = best_wall(i)
                   skip(i) = .true.

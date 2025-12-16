@@ -22,7 +22,6 @@ nregion=2
 /
 
 &OUTPUT_PARAMS
-foutput=100000
 noutput=1
 tout=0.5
 /

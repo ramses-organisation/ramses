@@ -7,11 +7,18 @@ module hydro_parameters
 #else
   integer,parameter::nener=NENER
 #endif
+  integer,parameter::neul=5
+#ifndef NHYDRO
+  integer,parameter::nhydro=neul+3 !8
+#else
+  integer,parameter::nhydro=NHYDRO
+#endif
 #ifndef NVAR
-  integer,parameter::nvar=8+nener
+  integer,parameter::nvar=nhydro+nener
 #else
   integer,parameter::nvar=NVAR
 #endif
+  integer,parameter::nvar_all=nvar+3
 
   ! Size of hydro kernel
   integer,parameter::iu1=-1

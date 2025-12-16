@@ -33,8 +33,7 @@ subroutine adaptive_loop
   call init_time                     ! Initialize time variables
   if(hydro)call init_hydro           ! Initialize hydro variables
 #ifdef RT
-  if(rt.or.neq_chem) &
-       & call rt_init_hydro          ! Initialize radiation variables
+  if(rt.or.neq_chem) call rt_init_hydro ! Initialize radiation variables
 #endif
   if(poisson)call init_poisson       ! Initialize poisson variables
 #ifdef ATON
@@ -45,15 +44,15 @@ subroutine adaptive_loop
 #endif
   if(nrestart==0)call init_refine    ! Build initial AMR grid
 
+  ! Initialize cooling look up table
 #ifdef grackle
   if(use_grackle==0)then
-     if(cooling.and..not.neq_chem.and..not.cooling_ism) &
-        call set_table(dble(aexp))    ! Initialize cooling look up table
+     if(cooling.and..not.neq_chem.and..not.cooling_ism) call set_table(dble(aexp))
   endif
 #else
-  if(cooling.and..not.neq_chem.and..not.cooling_ism) &
-       call set_table(dble(aexp))    ! Initialize cooling look up table
+  if(cooling.and..not.neq_chem.and..not.cooling_ism) call set_table(dble(aexp))
 #endif
+
   if(pic)call init_part              ! Initialize particle variables
   if(pic)call init_tree              ! Initialize particle tree
   if(nrestart==0)call init_refine_2  ! Build initial AMR grid again

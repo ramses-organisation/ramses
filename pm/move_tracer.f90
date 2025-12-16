@@ -1,5 +1,5 @@
 subroutine move_tracer_fine(ilevel)
-   use amr_commons, only: headl, numbl, next, nvector, myid
+   use amr_commons, only: headl, numbl, next, nvector, myid, active
    use pm_commons, only: typep, headp, numbp, nextp, move_flag
    use pm_commons, only: is_gas_tracer, is_star_tracer, is_cloud_tracer, part_t
    implicit none
@@ -15,8 +15,8 @@ subroutine move_tracer_fine(ilevel)
    ind_part=0
    ind_grid_part=0
 
-   igrid=headl(myid,ilevel)
-   do jgrid=1,numbl(myid,ilevel)
+   do jgrid=1,active(ilevel)%ngrid
+      igrid=active(ilevel)%igrid(jgrid)
       npart1=numbp(igrid)  ! Number of particles in the grid
       if(npart1>0)then
          ig=ig+1
@@ -57,7 +57,6 @@ subroutine move_tracer_fine(ilevel)
             ig=ig-1
          end if
       end if
-      igrid=next(igrid)   ! Go to next grid
    end do
    ! End loop over grids
    if(ip>0) call move_gas_tracer(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel) ! MC Tracer

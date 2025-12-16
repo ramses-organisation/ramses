@@ -684,6 +684,7 @@ end function J0simple
 !=======================================================================
 subroutine cmp_table(nH_min,nH_max,T2_min,T2_max,nbin_n,nbin_T,aexp)
 !=======================================================================
+  use amr_commons, only:myid,ncpu
   use mpi_mod
   implicit none
   real(kind=8)::nH_min,nH_max,T2_min,T2_max,aexp,tmp
@@ -691,18 +692,8 @@ subroutine cmp_table(nH_min,nH_max,T2_min,T2_max,nbin_n,nbin_T,aexp)
   integer::i_n,i_T
   real(kind=8),dimension(1:3)::t_rad_spec,h_rad_spec
   logical,save::first=.true.
-  integer::myid,ncpu
 #ifndef WITHOUTMPI
   integer::ierr
-#endif
-
-#ifndef WITHOUTMPI
-  call MPI_COMM_RANK(MPI_COMM_WORLD,myid,ierr)
-  call MPI_COMM_SIZE(MPI_COMM_WORLD,ncpu,ierr)
-#endif
-#ifdef WITHOUTMPI
-  myid=0
-  ncpu=1
 #endif
 
   if(.not.first)then
@@ -779,7 +770,7 @@ subroutine cmp_table(nH_min,nH_max,T2_min,T2_max,nbin_n,nbin_T,aexp)
   table%heat_com_prime=0
   table%metal_prime=0
   if (if_species_abundances) table%n_spec=0
-  do i_n = myid+1,nbin_n,ncpu
+  do i_n = myid,nbin_n,ncpu
      call iterate(i_n,t_rad_spec,h_rad_spec,nbin_T,aexp)
   end do
 #ifndef WITHOUTMPI

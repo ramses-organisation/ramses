@@ -769,7 +769,7 @@ subroutine output_frame()
                                      if(movie_vars(kk).eq.i_mv_fp)then
                                         ok_frame=.true.
                                         ivar = movie_var_number(kk)
-                                        uvar=rtuold(ind_cell(i),1+(ivar-1)*(ndim+1))*rt_c
+                                        uvar=rtuold(ind_cell(i),1+(ivar-1)*(ndim+1))*rt_c(ilevel)
                                      endif
                                   endif ! if(rt)
 #endif

@@ -34,7 +34,8 @@ condinit_kind='ana_disk_potential'
 /
 
 &OUTPUT_PARAMS
-tend=0.620
+noutput=1
+tout=0.620
 /
 
 &UNITS_PARAMS

@@ -43,8 +43,8 @@ subroutine tracex(q,dq,c, qm,qp,dx,dt,ngrid)
 !!!!
   entho = gamma/(gamma-one)
 
-  if (eos .eq. 'TM') then
-     write(*,*),'plmde does not work with TM eos, switch to a MUSCL scheme of change the EOS'
+  if (eos_rhd .eq. 'TM') then
+     write(*,*),'plmde does not work with TM eos_rhd, switch to a MUSCL scheme of change the eos_rhd'
      stop
   endif
 

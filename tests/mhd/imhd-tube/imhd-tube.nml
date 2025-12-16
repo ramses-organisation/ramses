@@ -39,7 +39,6 @@ C_region=0.0,0.141120
 /
 
 &OUTPUT_PARAMS
-foutput=1000000
 noutput=1
 tout=0.4
 /
@@ -47,8 +46,9 @@ tout=0.4
 &HYDRO_PARAMS
 gamma=1.6666667
 courant_factor=0.8
-slope_type=0
+slope_type=1
 riemann='hlld'
+riemann2d='hlld'
 /
 
 &REFINE_PARAMS

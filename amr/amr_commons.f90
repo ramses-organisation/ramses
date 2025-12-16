@@ -23,10 +23,6 @@ module amr_commons
   real(dp)::rho_tot=0.0D0                       ! Mean density in the box
   real(dp)::t=0.0D0                             ! Time variable
 
-  ! executable identification
-  CHARACTER(LEN=300)::builddate,buildcommand,patchdir
-  CHARACTER(LEN=300)::gitrepo,gitbranch,githash
-
   ! Save namelist filename
   CHARACTER(LEN=300)::namelist_file
 
@@ -78,7 +74,7 @@ module amr_commons
   integer ,allocatable,dimension(:)  ::father  ! father cell
   integer ,allocatable,dimension(:)  ::next    ! next grid in list
   integer ,allocatable,dimension(:)  ::prev    ! previous grid in list
-  integer ,allocatable,dimension(:)  ::son     ! sons grids
+  integer ,allocatable,dimension(:)  ::son     ! sons grid
   integer ,allocatable,dimension(:)  ::flag1   ! flag for refine
   integer ,allocatable,dimension(:)  ::flag2   ! flag for expansion
 

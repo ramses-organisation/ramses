@@ -14,6 +14,7 @@ subroutine dump_all
   use turb_commons
 #endif
   use mpi_mod
+  use buildinfo
   implicit none
 #if ! defined (WITHOUTMPI) || defined (NOSYSTEM)
   integer::info
@@ -96,12 +97,7 @@ subroutine dump_all
      ! Copy compilation details to output directory
      filename=TRIM(filedir)//'compilation.txt'
      OPEN(UNIT=11, FILE=filename, FORM='formatted')
-     write(11,'(" compile date    = ",A)')TRIM(builddate)
-     write(11,'(" compile command = ",A)')TRIM(buildcommand)
-     write(11,'(" patch dir       = ",A)')TRIM(patchdir)
-     write(11,'(" remote repo     = ",A)')TRIM(gitrepo)
-     write(11,'(" local branch    = ",A)')TRIM(gitbranch)
-     write(11,'(" last commit     = ",A)')TRIM(githash)
+     call write_gitinfo(11)
      CLOSE(11)
   endif
 #ifndef WITHOUTMPI
@@ -508,9 +504,9 @@ subroutine output_header(filename)
   integer::ilun
   character(LEN=80)::fileloc
 #ifdef LONGINT
-  integer(i8b)::npart_family_loc(-5:5), npart_family(-5:5), npart_all_loc, npart_all
+  integer(i8b)::npart_family_loc(-NFAMILIES:NFAMILIES), npart_family(-NFAMILIES:NFAMILIES), npart_all_loc, npart_all
 #else
-  integer::npart_family_loc(-5:5), npart_family(-5:5), npart_all_loc, npart_all
+  integer::npart_family_loc(-NFAMILIES:NFAMILIES), npart_family(-NFAMILIES:NFAMILIES), npart_all_loc, npart_all
 #endif
   integer :: ifam, ipart
 
@@ -547,12 +543,12 @@ subroutine output_header(filename)
 #endif
 
   if (myid == 1) then
-     write(ilun, '(a1,a12,a10)') '#', 'Family', 'Count'
+     write(ilun, '(a1,a12,a15)') '#', 'Family', 'Count'
      do ifam = -NFAMILIES, NFAMILIES
-        write(ilun, '(a13, i10)') &
+        write(ilun, '(a13, i15)') &
              trim(particle_family_keys(ifam)), npart_family(ifam)
      end do
-     write(ilun, '(a13, i10)') &
+     write(ilun, '(a13, i15)') &
           'undefined', npart_all - sum(npart_family)
   end if
 

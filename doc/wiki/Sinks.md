@@ -44,6 +44,7 @@ The block named `&SINK_PARAMS` contains the parameters related to the sink parti
 | `epsilon_kin`         | `float`      | `1.0`         | Kinetic feedback coupling efficiency
 | `kin_mass_loading`    | `float`      | `100.`        | Kinetic feedback mass loading
 | `cone_opening`        | `float`      | `180.`        | Opening angle of the cone through which momentum feedback proceeds
+| `nlevelmax_sink`      | `integer`    | `0`           | Allow sinks to form on a level that is lower than what is set by nlevelmax. This is useful in zoom simulations where nlevelmax is set to a high value but in the first phase refinement is limited to only a few levels. nlevelmax_sink should be set to the maximum allowed refinement level.
 
 
 

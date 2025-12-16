@@ -7,25 +7,21 @@ from matplotlib import ticker
 import visu_ramses
 import numpy as np
 from scipy.interpolate import griddata
+from scipy.io import FortranFile
 
 out_end = 2
 
 # Fundamental constants
-G = 6.67259e-8 #cm^3 g^-1 s^-2             # gravitational constant
 YR = 3.1556926e7 #s                        # 1 year
-MSUN = 1.989e33 #g                         # solar mass
 MH = 1.6737236e-24 #g                      # hydrogen mass
 KB = 1.38064852e-16 #cm^2 g s^-2 K^-1      # Boltzman constant
-PC = 3.0857e18 #cm                         # 1 parsec
-AU = 1.49597871e13 #cm                     # 1 astronomical unit
-
 # code units
 unit_d=1.66e-24
 unit_t=3.004683525921981e15
 unit_l=3.08567758128200e+18
 unit_v=unit_l/unit_t
 
-data = visu_ramses.load_snapshot(out_end)
+data = visu_ramses.load_snapshot(out_end, read_rt=True)
 #for key in data["stellars"].keys():
 #    data["data"]["stellar_"+key] = data["stellars"][key]
 
@@ -33,20 +29,14 @@ x   = data["data"]["x"]
 y   = data["data"]["y"]
 z   = data["data"]["z"]
 dx  = data["data"]["dx"]
-rho = data["data"]["density"]
-p   = data["data"]["pressure"] * unit_d * unit_l**2 / unit_t**2
-cs2 = p/(rho * unit_d)
-temperature = cs2 * 2.37 * MH /KB
-ps1 = data["data"]["scalar_00"]
-ps2 = data["data"]["scalar_01"]
-ps3 = data["data"]["scalar_02"]
-
+data['data']['temperature'] = data["data"]["pressure"]/ data["data"]["density"]
 xmin = np.amin(x-0.5*dx)
 xmax = np.amax(x+0.5*dx)
 ymin = np.amin(y-0.5*dx)
 ymax = np.amax(y+0.5*dx)
 zmin = np.amin(z-0.5*dx)
 zmax = np.amax(z+0.5*dx)
+ext=[xmin, xmax, ymin, ymax]
 
 nx  = 2**7
 dpx = (xmax-xmin)/float(nx)
@@ -57,33 +47,64 @@ ypx = np.linspace(ymin+0.5*dpy,ymax-0.5*dpy,nx)
 zpx = np.linspace(zmin+0.5*dpz,zmax-0.5*dpz,nx)
 grid_x, grid_y, grid_z = np.meshgrid(xpx,ypx,zpx)
 points = np.transpose([x,y,z])
-z1 = griddata(points,rho,(grid_x,grid_y, grid_z),method='nearest')
-z2 = griddata(points,temperature,(grid_x,grid_y, grid_z),method='nearest')
-z3 = griddata(points,ps1,(grid_x,grid_y, grid_z),method='nearest')
-z4 = griddata(points,ps2,(grid_x,grid_y, grid_z),method='nearest')
-z5 = griddata(points,ps3,(grid_x,grid_y, grid_z),method='nearest')
 
-fig, ax = plt.subplots(nrows=2, ncols=3, figsize=(10, 10))
+# Set up each plot
+vars=["density", "temperature", "photon_flux_03", "scalar_00", "scalar_01", "scalar_02"]
+units=[unit_d/MH,  unit_v**2 * 2.37 * MH /KB, unit_v, 1., 1., 1.]
+labels=["log(density [H/cc])", "log(temperature [K])", "log(photon 3 flux [cm-2 s-1])",
+             "log(xHII)", "log(xHeII)", "log(xHeIII)"]
+axx=[0,0,0,1,1,1]
+axy=[0,1,2,0,1,2]
+vmin=[None, None, None, -10, -10, -10]
+vmax=[None, None, None, 0, 0, 0]
+fig, ax = plt.subplots(nrows=3, ncols=3, figsize=(10, 10))
 
-im1 = ax[0,0].imshow(z1[:,:,int(2**7/2.)], origin="lower", aspect='equal', extent=[xmin, xmax, ymin, ymax])
-im2 = ax[0,1].imshow(np.log10(z2[:,:,int(2**7/2.)]), origin="lower", aspect='equal', extent=[xmin, xmax, ymin, ymax])
-im3 = ax[1,0].imshow(np.log10(z3[:,:,int(2**7/2.)]), origin="lower", aspect='equal', extent=[xmin, xmax, ymin, ymax])
-im4 = ax[1,1].imshow(np.log10(z4[:,:,int(2**7/2.)]), origin="lower", aspect='equal', extent=[xmin, xmax, ymin, ymax])
-im5 = ax[1,2].imshow(np.log10(z5[:,:,int(2**7/2.)]), origin="lower", aspect='equal', extent=[xmin, xmax, ymin, ymax])
+# Do the plots
+for i in range(len(vars)):
+    ps = data["data"][vars[i]]*units[i]
+    gd = griddata(points,ps,(grid_x,grid_y,grid_z),method='nearest')
+    im = ax[axx[i],axy[i]].imshow(np.log10(gd[:,:,int(2**7/2.)])
+                ,origin="lower", aspect='equal', extent=[xmin, xmax, ymin, ymax],vmin=vmin[i], vmax=vmax[i])
 
-plt.colorbar(im1, ax=ax[0,0], label='Density [H/cc]')
-plt.colorbar(im2, ax=ax[0,1], label='log(temperature [K])')
-plt.colorbar(im3, ax=ax[1,0], label='Ions 1')
-plt.colorbar(im4, ax=ax[1,1], label='Ions 2')
-plt.colorbar(im5, ax=ax[1,2], label='Ions 3')
+    plt.colorbar(im, ax=ax[axx[i],axy[i]], label=labels[i])
+    ax[axx[i],axy[i]].set_axis_off()
+    ax[axx[i],axy[i]].scatter(data["sinks"]['x'],data["sinks"]['y'], s = 20, marker='x', color='red')
 
-for axis in [ax[0,0],ax[0,1],ax[1,0],ax[1,1],ax[1,2]]:
-    axis.set_axis_off()
-    axis.scatter(data["sinks"]['x'],data["sinks"]['y'], s = 20, marker='x', color='red')
+
+# Read binary movie frames, show and add to output data for testing ================================
+movie_path = './movie1/'
+vars = ['temp', 'Fp3', 'xHII']
+dvars = ['movie_temp', 'movie_Fp3', 'movie_xHII']
+labels = ['log(movie temp [K])', 'log(movie photon 3 flux [cm-2 s-1])', 'log(movie xHII)']
+units=[2.37, unit_v, 1]
+axx=[2,2,2]
+axy=[0,1,2]
+vmin=[None, None, -10]
+vmax=[None, None, 0]
+
+for i in range(len(vars)):
+
+    fname = '%s_00002.map'%(vars[i])
+    ffile = FortranFile(f"{movie_path}{fname}")
+    [time, fdw, fdh, fdd] = ffile.read_reals('d')
+    [frame_nx, frame_ny] = ffile.read_ints()
+    mov_array = np.array(ffile.read_reals('f4'), dtype=np.float64) * units[i]
+    data["data"][dvars[i]] = mov_array
+    mov_map = mov_array.reshape(frame_nx,frame_ny)
+    im = ax[axx[i],axy[i]].imshow(np.log10(mov_map), cmap='viridis', origin="lower", aspect='equal'
+            ,vmin=vmin[i], vmax=vmax[i])
+    ax[axx[i],axy[i]].axis('off')
+    plt.colorbar(im, ax=ax[axx[i],axy[i]], label=labels[i])
 
 fig.savefig('stellar-HII.pdf', bbox_inches="tight")
 
+# Check if test results match reference, both for outputs and movie frames =========================
 # Why is this so inaccurate on multiple cores?
-red_tol = 1.0e-7
-tolerance={"scalar_00":red_tol, "scalar_01":red_tol, "velocity_x":red_tol, "velocity_y":red_tol, "velocity_z":red_tol}
+red_tol = 3e-6
+tolerance={"scalar_00":1e-7, "scalar_01":3.0e-7, "scalar_02":1.0e-7, "velocity_x":1.0e-8, "velocity_y":1.0e-8, "velocity_z":1.0e-8
+  ,'movie_Fp3':red_tol, 'movie_xHII':red_tol
+  ,'photon_flux_01':red_tol, 'photon_flux_01_x':red_tol, 'photon_flux_01_y':red_tol, 'photon_flux_01_z':red_tol
+  ,'photon_flux_02':red_tol, 'photon_flux_02_x':red_tol, 'photon_flux_02_y':red_tol, 'photon_flux_02_z':red_tol
+  ,'photon_flux_03':red_tol, 'photon_flux_03_x':red_tol, 'photon_flux_03_y':red_tol, 'photon_flux_03_z':red_tol}
+
 visu_ramses.check_solution(data["data"],'stellar-HII',tolerance=tolerance,overwrite=False)

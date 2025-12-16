@@ -28,8 +28,8 @@ subroutine synchro_fine(ilevel)
   ig=0
   ip=0
   ! Loop over grids
-  igrid=headl(myid,ilevel)
-  do jgrid=1,numbl(myid,ilevel)
+  do jgrid=1,active(ilevel)%ngrid
+     igrid=active(ilevel)%igrid(jgrid)
      npart1=numbp(igrid)  ! Number of particles in the grid
      if(npart1>0)then
         ig=ig+1
@@ -66,7 +66,6 @@ subroutine synchro_fine(ilevel)
            ig=ig-1
         end if
      end if
-     igrid=next(igrid)   ! Go to next grid
   end do
   ! End loop over grids
   if(ip>0)call sync(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
@@ -125,8 +124,8 @@ subroutine synchro_fine_static(ilevel)
   ig=0
   ip=0
   ! Loop over grids
-  igrid=headl(myid,ilevel)
-  do jgrid=1,numbl(myid,ilevel)
+  do jgrid=1,active(ilevel)%ngrid
+     igrid=active(ilevel)%igrid(jgrid)
      npart1=numbp(igrid)  ! Number of particles in the grid
      npart2=0
 
@@ -194,7 +193,6 @@ subroutine synchro_fine_static(ilevel)
         end do
         ! End loop over particles
      end if
-     igrid=next(igrid)   ! Go to next grid
   end do
   ! End loop over grids
   if(ip>0)call sync(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
@@ -240,7 +238,6 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   real(dp),dimension(1:nvector,1:ndim),save::x0
   integer ,dimension(1:nvector),save::ind_cell
   integer ,dimension(1:nvector,1:threetondim),save::nbors_father_cells
-  integer ,dimension(1:nvector,1:twotondim),save::nbors_father_grids
   ! Particle-based arrays
   logical ,dimension(1:nvector),save::ok
   real(dp),dimension(1:nvector),save::dteff
@@ -270,7 +267,7 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   do i=1,ng
      ind_cell(i)=father(ind_grid(i))
   end do
-  call get3cubefather(ind_cell,nbors_father_cells,nbors_father_grids,ng,ilevel)
+  call get3cubefather(ind_cell,nbors_father_cells,ng,ilevel)
 
   ! Rescale position at level ilevel
   do idim=1,ndim

@@ -13,7 +13,7 @@ poisson=.true.
 pic=.true.
 sink=.true.
 stellar=.true.
-nsubcycle=1,1
+nsubcycle=1
 verbose=.false.
 /
 
@@ -33,15 +33,16 @@ p_region=3300.1987634209013
 
 &AMR_PARAMS
 levelmin=6
-levelmax=7
+levelmax=8
 ngridmax=350000
 npartmax=50000
-nexpand=4,4,4,4,4
+nexpand=4
 boxlen=250. ! pc
 /
 
 &OUTPUT_PARAMS
-tend=0.18
+noutput=1
+tout=0.18
 /
 
 &HYDRO_PARAMS
@@ -66,7 +67,7 @@ units_length  = 3.08567758128200d18 ! 1 pc
 /
 
 &REFINE_PARAMS
-jeans_refine=8,8,8
+jeans_refine=8
 interpol_type=0
 interpol_var=1
 sink_refine=.true.
@@ -78,6 +79,7 @@ gravity_type=0
 
 
 &SINK_PARAMS
+nlevelmax_sink=7
 create_sinks=.false.
 nsinkmax=10
 mass_sink_seed=1 ! in M_sun

@@ -23,28 +23,39 @@
 #       ./run_test_suite.sh -t mhd
 #   - Run quick test suite:
 #       ./run_test_suite.sh -q
+#   - Run test suite with coverage:
+#       ./run_test_suite.sh -s
+#   - Run tests with restart:
+#       ./run_test_suite.sh -r
 #
 #######################################################################
 
 # List of directories to scan
-testlist="hydro,mhd,poisson,rt,sink,turb,tracer,nimhd";
+testlist="hydro,mhd,nimhd,poisson,rt,sink,star,turb,tracer";
 
 #######################################################################
 # Determine the parameters for running the test suite
 #######################################################################
 MPI=0;
 NCPU=1;
+GCOV=0;
 VERBOSE=false;
 DELDATA=true;
+COVERAGE=false;
 CLEAN_ALL=false;
 SELECTTEST=false;
-while getopts "cdp:qt:v" OPTION; do
+RESTART=false;
+while getopts "cdsp:qt:vr" OPTION; do
    case $OPTION in
       c)
          CLEAN_ALL=true;
       ;;
       d)
          DELDATA=false;
+      ;;
+      s)
+         GCOV=1;
+         COVERAGE=true;
       ;;
       p)
          MPI=1;
@@ -56,6 +67,9 @@ while getopts "cdp:qt:v" OPTION; do
       ;;
       v)
          VERBOSE=true;
+      ;;
+      r)
+         RESTART=true;
       ;;
    esac
 done
@@ -69,7 +83,7 @@ BIN_DIRECTORY="${BASE_DIRECTORY}/bin";    # The bin directory
 VISU_DIR="${TEST_DIRECTORY}/visu";        # The visualization directory
 
 export PYTHONPATH=${VISU_DIR}:$PYTHONPATH;
-DELETE_RESULTS="rm -rf output_* *.tex data*.dat *.pdf *.pyc";
+DELETE_RESULTS="rm -rf output_* *.tex data*.dat *.pdf *.pyc *.gc* coverage_stats.txt movie1";
 RETURN_TO_BIN="cd ${BIN_DIRECTORY}";
 EXECNAME="test_exe_";
 LOGFILE="${TEST_DIRECTORY}/test_suite.log";
@@ -286,7 +300,7 @@ for ((i=0;i<$ntests;i++)); do
 
    # Compile source
    echo "Compiling source" | tee -a $LOGFILE;
-   MAKESTRING="make EXEC=${EXECNAME} MPI=${MPI} ${FLAGS}";
+   MAKESTRING="make EXEC=${EXECNAME} MPI=${MPI} GCOV=${GCOV} ${FLAGS}";
    # if [ ${MPI} -eq 1 ]; then
    #    MAKESTRING="${MAKESTRING} -j ${NCPU}";
    # fi
@@ -299,24 +313,49 @@ for ((i=0;i<$ntests;i++)); do
    # Run test
    cd ${TEST_DIRECTORY}/${testname[n]};
    $DELETE_RESULTS;
-   RUN_TEST="${RUN_TEST_BASE}${ndim}d ${rawname[i]}.nml";
-   echo -n "Running test:" | tee -a $LOGFILE;
-   STARTTIME_TEST=$(python3 -c 'import time; print(int(time.time()*1000))');
-   # prepname="prepare-${rawname[i]}.sh";
+
    if $VERBOSE ; then
-      if [ -f ${BEFORETEST} ]; then
-         ${SHELL} ${BEFORETEST} 2>&1 | tee -a $LOGFILE;
-      fi
-      ${RUN_TEST} 2>&1 | tee -a $LOGFILE;
+      function run_before_test
+      {
+         (${SHELL} ${BEFORETEST} 2>&1 | tee -a ${LOGFILE})
+      }
+      function run_test
+      {
+         (${RUN_TEST_BASE}${ndim}d ${rawname[i]}.nml 2>&1 | tee -a ${LOGFILE})
+      }
    else
-      if [ -f ${BEFORETEST} ]; then
-         ${SHELL} ${BEFORETEST} >> $LOGFILE 2>&1;
-      fi
-      ${RUN_TEST} >> $LOGFILE 2>&1;
+      function run_before_test
+      {
+         (${SHELL} ${BEFORETEST} >> ${LOGFILE} 2>&1)
+      }
+      function run_test
+      {
+         (${RUN_TEST_BASE}${ndim}d ${rawname[i]}.nml >> ${LOGFILE} 2>&1)
+      }
    fi
+   echo "Running test:" | tee -a $LOGFILE;
+   STARTTIME_TEST=$(python3 -c 'import time; print(int(time.time()*1000))');
+
+   if [ -f ${BEFORETEST} ]; then
+         run_before_test;
+   fi
+
+   if $RESTART ; then
+      echo  "Restart: step 1 ..." | tee -a $LOGFILE;
+      python3 ../../run_with_restart.py -s 1 -t ${rawname[i]}  | tee -a $LOGFILE;
+      run_test;
+      echo  "Restart: step 2 ..." | tee -a $LOGFILE;
+      python3 ../../run_with_restart.py -s 2 -t ${rawname[i]}  | tee -a $LOGFILE;
+      run_test;
+      echo  "Restart: step 3 ..." | tee -a $LOGFILE;
+      python3 ../../run_with_restart.py -s 3 -t ${rawname[i]}  | tee -a $LOGFILE;
+   else
+      run_test;
+   fi
+
    # Record test time
    ENDTIME_TEST=$(python3 -c 'import time; print(int(time.time()*1000))');
-   milliseconds=$(($ENDTIME_TEST - $STARTTIME_TEST));
+   milliseconds=$((${ENDTIME_TEST} - ${STARTTIME_TEST}));
    seconds=$(($milliseconds / 1000));
    hours=$(($seconds / 3600));
    seconds=$(($seconds % 3600));
@@ -361,6 +400,13 @@ for ((i=0;i<$ntests;i++)); do
    minutes_glob[${i}]=$minutes;
    seconds_glob[${i}]=$seconds;
 
+   # move coverage files to test dir
+   if ${COVERAGE} ; then
+      $RETURN_TO_BIN;
+      gcov *.gcno > coverage_stats.txt
+      cd -
+      mv ${BIN_DIRECTORY}/*.gc* .
+   fi
 done
 
 # Total time ##########################################################
@@ -482,6 +528,21 @@ rm ${latexfile/.tex/.log};
 rm ${latexfile/.tex/.aux};
 rm ${latexfile/.tex/.out};
 rm $latexfile;
+
+#######################################################################
+# Generate total coverage data
+#######################################################################
+if ${COVERAGE} ; then
+   rm -r coverage
+   ALL_TEST_DIRS=""
+   for ((i=0;i<$ntests;i++)); do
+      n=${testnum[i]};
+      test_dir_name=${TEST_DIRECTORY}/${testname[n]};
+      ALL_TEST_DIRS="${ALL_TEST_DIRS} ${test_dir_name}"
+   done
+   mkdir coverage
+   python3 multi_gcov_aggregator.py ${ALL_TEST_DIRS} coverage
+fi
 
 #######################################################################
 # Clean up

@@ -112,13 +112,14 @@ module amr_parameters
   logical::output_now=.false.    ! write output next step
   real(dp)::walltime_hrs=-1      ! Wallclock time for submitted job
   real(dp)::minutes_dump=1       ! Dump an output minutes before walltime ends
-  logical(dp)::finish_run=.false.! trigger cleanup after walltime end dump
+  logical::finish_run=.false.! trigger cleanup after walltime end dump
   real(dp)::delta_tout=HUGE(1.0D0)         ! time difference between outputs
   real(dp)::delta_aout=HUGE(1.0D0)         ! expansion factor difference between outputs
   real(dp),dimension(1:MAXOUT)::aout=HUGE(1.0D0)      ! Output expansion factors
   real(dp),dimension(1:MAXOUT)::tout=HUGE(1.0D0)      ! Output times
   real(dp)::tout_next=HUGE(1.0D0)     ! next output time using delta_tout
   real(dp)::aout_next=HUGE(1.0D0)     ! next output expansion factor using delta_aout
+  logical::output_to_log=.true.  ! write output to log for 1D runs
 
   ! Lightcone parameters
   real(dp)::thetay_cone=12.5d0
@@ -171,6 +172,7 @@ module amr_parameters
   real(dp)::sf_trelax=0              ! Relaxation time for star formation (cosmo=.false. only)
   real(dp)::sf_tdiss=0               ! Dissipation timescale for subgrid turbulence in units of turbulent crossing time
   integer::sf_model=3                ! Virial star formation model
+  logical::randomize_sf=.true.       ! Use the poissdev stellar mass random drawing
   integer::nlevel_collapse=3         ! Number of levels to follow initial dark matter collapse (cosmo=.true. only)
   real(dp)::mass_star_max=120        ! Maximum mass of a star in solar mass
   real(dp)::mass_sne_min=10          ! Minimum mass of a single supernova in solar mass

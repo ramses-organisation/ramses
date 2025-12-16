@@ -26,7 +26,7 @@ subroutine rho_fine(ilevel,icount)
   ! - cpu_map2 containing the refinement map due to particle
   !   number density criterion (quasi Lagrangian mesh).
   !------------------------------------------------------------------
-  integer::iskip,icpu,ind,i,nx_loc,ibound
+  integer::iskip,icpu,ind,i,nx_loc,ibound,ind_cell
   real(dp)::dx,d_scale,scale,dx_loc,scalar
 
   if(.not. poisson)return
@@ -47,18 +47,8 @@ subroutine rho_fine(ilevel,icount)
      do i=nlevelmax,ilevel,-1
         ! Compute mass multipole
         if(hydro)call multipole_fine(i)
-        ! Perform TSC using pseudo-particle
-#ifdef TSC
-        if (ndim==3)then
-           call tsc_from_multipole(i)
-        else
-           write(*,*)'TSC not supported for ndim neq 3'
-           call clean_stop
-        end if
-#else
-        ! Perform CIC using pseudo-particle
+        ! Perform CIC or TSC using pseudo-particle
         call cic_from_multipole(i)
-#endif
         ! Update boundaries
         call make_virtual_reverse_dp(rho(1),i)
         call make_virtual_fine_dp   (rho(1),i)
@@ -83,9 +73,9 @@ subroutine rho_fine(ilevel,icount)
      do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
         do i=1,active(ilevel)%ngrid
-           rho_top(active(ilevel)%igrid(i)+iskip)=rho_top(father(active(ilevel)%igrid(i)))
-           rho(active(ilevel)%igrid(i)+iskip)=rho(active(ilevel)%igrid(i)+iskip)+ &
-                & rho_top(active(ilevel)%igrid(i)+iskip)
+           ind_cell=active(ilevel)%igrid(i)+iskip
+           rho_top(ind_cell)=rho_top(father(active(ilevel)%igrid(i)))
+           rho(ind_cell)=rho(ind_cell)+rho_top(ind_cell)
         end do
      end do
   endif
@@ -100,17 +90,16 @@ subroutine rho_fine(ilevel,icount)
         if(hydro)then
            if(ivar_refine>0)then
               do i=1,active(ilevel)%ngrid
-                 scalar=uold(active(ilevel)%igrid(i)+iskip,ivar_refine) &
-                      & /max(uold(active(ilevel)%igrid(i)+iskip,1),smallr)
+                 ind_cell=active(ilevel)%igrid(i)+iskip
+                 scalar=uold(ind_cell,ivar_refine)/max(uold(ind_cell,1),smallr)
                  if(scalar>var_cut_refine)then
-                    phi(active(ilevel)%igrid(i)+iskip)= &
-                         & rho(active(ilevel)%igrid(i)+iskip)/d_scale
+                    phi(ind_cell)=rho(ind_cell)/d_scale
                  endif
               end do
            else
               do i=1,active(ilevel)%ngrid
-                 phi(active(ilevel)%igrid(i)+iskip)= &
-                      & rho(active(ilevel)%igrid(i)+iskip)/d_scale
+                 ind_cell=active(ilevel)%igrid(i)+iskip
+                 phi(ind_cell)=rho(ind_cell)/d_scale
               end do
            endif
         endif
@@ -202,24 +191,17 @@ subroutine rho_fine(ilevel,icount)
      do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
         do i=1,active(ilevel)%ngrid
-           if(phi(active(ilevel)%igrid(i)+iskip)>=m_refine(ilevel))then
-              cpu_map2(active(ilevel)%igrid(i)+iskip)=1
+           ind_cell=active(ilevel)%igrid(i)+iskip
+           if(phi(ind_cell)>=m_refine(ilevel))then
+              cpu_map2(ind_cell)=1
            else
-              cpu_map2(active(ilevel)%igrid(i)+iskip)=0
+              cpu_map2(ind_cell)=0
            end if
         end do
      end do
      ! Update boundaries
      call make_virtual_fine_int(cpu_map2(1),ilevel)
   end if
-
-!!$  do ind=1,twotondim
-!!$     iskip=ncoarse+(ind-1)*ngridmax
-!!$     do i=1,active(ilevel)%ngrid
-!!$        print*,rho(active(ilevel)%igrid(i)+iskip),rho_tot
-!!$     end do
-!!$  end do
-
 
 111 format('   Entering rho_fine for level ',I2)
 
@@ -343,6 +325,7 @@ end subroutine rho_from_current_level
 subroutine cic_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
   use amr_commons
   use pm_commons
+  use pm_parameters, only:nlevelmax_sink
   use poisson_commons
   use hydro_commons, ONLY: mass_sph
   implicit none
@@ -359,7 +342,6 @@ subroutine cic_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
   real(dp)::dx,dx_loc,scale,vol_loc
   ! Grid-based arrays
   integer ,dimension(1:nvector,1:threetondim),save::nbors_father_cells
-  integer ,dimension(1:nvector,1:twotondim),save::nbors_father_grids
   ! Particle-based arrays
   logical ,dimension(1:nvector),save::ok
   real(dp),dimension(1:nvector),save::mmm
@@ -385,21 +367,13 @@ subroutine cic_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
 
 
   ! Gather neighboring father cells (should be present anytime !)
-  call get3cubefather(ind_cell,nbors_father_cells,nbors_father_grids,ng,ilevel)
+  call get3cubefather(ind_cell,nbors_father_cells,ng,ilevel)
 
   ! Rescale particle position at level ilevel
   do idim=1,ndim
      do j=1,np
         x(j,idim)=xp(ind_part(j),idim)/scale+skip_loc(idim)
-     end do
-  end do
-  do idim=1,ndim
-     do j=1,np
         x(j,idim)=x(j,idim)-x0(ind_grid_part(j),idim)
-     end do
-  end do
-  do idim=1,ndim
-     do j=1,np
         x(j,idim)=x(j,idim)/dx
      end do
   end do
@@ -572,9 +546,6 @@ subroutine cic_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
 
      do j=1,np
         ok(j)=(igrid(j,ind)>0).and.is_not_tracer(fam(j))
-     end do
-
-     do j=1,np
         vol2(j)=mmm(j)*vol(j,ind)/vol_loc
      end do
 
@@ -647,7 +618,7 @@ subroutine cic_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
 
      ! Always refine sinks to the maximum level
      ! by setting particle number density above m_refine(ilevel)
-     if(sink_refine)then
+     if(sink_refine.and.(ilevel<=nlevelmax_sink))then
         do j=1,np
            if ( is_cloud(fam(j)) ) then
               ! if (direct_force_sink(-1*idp(ind_part(j))))then
@@ -882,7 +853,11 @@ subroutine cic_from_multipole(ilevel)
         do i=1,ngrid
            ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
         end do
+#ifdef TSC
+        call tsc_cell(ind_grid,ngrid,ilevel)
+#else
         call cic_cell(ind_grid,ngrid,ilevel)
+#endif
      end do
   end if
 
@@ -905,7 +880,6 @@ subroutine cic_cell(ind_grid,ngrid,ilevel)
   integer::i,j,idim,ind_cell_son,iskip_son,np,ind_son,nx_loc,ind
   integer ,dimension(1:nvector),save::ind_cell
   integer ,dimension(1:nvector,1:threetondim),save::nbors_father_cells
-  integer ,dimension(1:nvector,1:twotondim),save::nbors_father_grids
   ! Particle-based arrays
   logical ,dimension(1:nvector),save::ok
   real(dp),dimension(1:nvector),save::mmm
@@ -936,7 +910,7 @@ subroutine cic_cell(ind_grid,ngrid,ilevel)
   end do
 
   ! Gather 3x3x3 neighboring parent cells
-  call get3cubefather(ind_cell,nbors_father_cells,nbors_father_grids,ngrid,ilevel)
+  call get3cubefather(ind_cell,nbors_father_cells,ngrid,ilevel)
 
   ! Loop over grid cells
   do ind_son=1,twotondim
@@ -964,15 +938,7 @@ subroutine cic_cell(ind_grid,ngrid,ilevel)
      do idim=1,ndim
         do j=1,np
            x(j,idim)=x(j,idim)/scale+skip_loc(idim)
-        end do
-     end do
-     do idim=1,ndim
-        do j=1,np
            x(j,idim)=x(j,idim)-(xg(ind_grid(j),idim)-3d0*dx)
-        end do
-     end do
-     do idim=1,ndim
-        do j=1,np
            x(j,idim)=x(j,idim)/dx
         end do
      end do
@@ -1125,8 +1091,6 @@ subroutine cic_cell(ind_grid,ngrid,ilevel)
      do ind=1,twotondim
         do j=1,np
            ok(j)=igrid(j,ind)>0
-        end do
-        do j=1,np
            vol2(j)=mmm(j)*vol(j,ind)/vol_loc
         end do
         do j=1,np
@@ -1165,7 +1129,6 @@ subroutine tsc_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
   real(dp)::dx,dx_loc,scale,vol_loc
   ! Grid-based arrays
   integer ,dimension(1:nvector,1:threetondim),save::nbors_father_cells
-  integer ,dimension(1:nvector,1:twotondim),save::nbors_father_grids
   ! Particle-based arrays
   logical ,dimension(1:nvector),save::ok,abandoned
   real(dp),dimension(1:nvector),save::mmm
@@ -1176,11 +1139,6 @@ subroutine tsc_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
   real(dp),dimension(1:nvector,1:threetondim),save::vol
   integer ,dimension(1:nvector,1:threetondim),save::igrid,icell,indp,kg
   real(dp),dimension(1:3)::skip_loc
-
-  if (ndim .ne. 3)then
-     write(*,*)'TSC not supported for ndim neq 3'
-     call clean_stop
-  end if
 
   ! Mesh spacing in that level
   dx=0.5D0**ilevel
@@ -1194,21 +1152,13 @@ subroutine tsc_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
   vol_loc=dx_loc**ndim
 
   ! Gather neighboring father cells (should be present at anytime!)
-  call get3cubefather(ind_cell,nbors_father_cells,nbors_father_grids,ng,ilevel)
+  call get3cubefather(ind_cell,nbors_father_cells,ng,ilevel)
 
   ! Rescale particle position at level ilevel
   do idim=1,ndim
      do j=1,np
         x(j,idim)=xp(ind_part(j),idim)/scale+skip_loc(idim)
-     end do
-  end do
-  do idim=1,ndim
-     do j=1,np
         x(j,idim)=x(j,idim)-x0(ind_grid_part(j),idim)
-     end do
-  end do
-  do idim=1,ndim
-     do j=1,np
         x(j,idim)=x(j,idim)/dx
      end do
   end do
@@ -1400,11 +1350,6 @@ subroutine tsc_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
      do j=1,np
         if(.not.abandoned(j)) then
            ok(j)=igrid(j,ind)>0
-        end if
-     end do
-
-     do j=1,np
-        if(.not.abandoned(j)) then
            vol2(j)=mmm(j)*vol(j,ind)/vol_loc
         end if
      end do
@@ -1486,80 +1431,6 @@ end subroutine tsc_amr
 !###########################################################
 !###########################################################
 #if NDIM==3
-subroutine tsc_from_multipole(ilevel)
-  use amr_commons
-  use hydro_commons
-  use poisson_commons
-  use mpi_mod
-  implicit none
-  integer::ilevel
-  !-------------------------------------------------------------------
-  ! This routine compute array rho (source term for Poisson equation)
-  ! by first reseting array rho to zero, then
-  ! by affecting the gas density to leaf cells, and finally
-  ! by performing a restriction operation for split cells.
-  ! For pure particle runs, the restriction is not necessary and the
-  ! routine only set rho to zero. On the other hand, for the Multigrid
-  ! solver, the restriction is necessary in any case.
-  !-------------------------------------------------------------------
-  integer::ind,i,icpu,ncache,ngrid,iskip,ibound
-  integer::igrid
-  integer,dimension(1:nvector),save::ind_grid
-
-  if(numbtot(1,ilevel)==0)return
-  if(verbose)write(*,111)ilevel
-
-  ! Initialize density field to zero
-  do icpu=1,ncpu
-     do ind=1,twotondim
-        iskip=ncoarse+(ind-1)*ngridmax
-        do i=1,reception(icpu,ilevel)%ngrid
-#ifdef LIGHT_MPI_COMM
-           rho(reception(icpu,ilevel)%pcomm%igrid(i)+iskip)=0.0D0
-#else
-           rho(reception(icpu,ilevel)%igrid(i)+iskip)=0.0D0
-#endif
-        end do
-     end do
-  end do
-  do ind=1,twotondim
-     iskip=ncoarse+(ind-1)*ngridmax
-     do i=1,active(ilevel)%ngrid
-        rho(active(ilevel)%igrid(i)+iskip)=0.0D0
-     end do
-  end do
-  ! Reset rho in physical boundaries
-  do ibound=1,nboundary
-     do ind=1,twotondim
-        iskip=ncoarse+(ind-1)*ngridmax
-        do i=1,boundary(ibound,ilevel)%ngrid
-           rho(boundary(ibound,ilevel)%igrid(i)+iskip)=0
-        end do
-     end do
-  end do
-
-  if(hydro)then
-     ! Perform a restriction over split cells (ilevel+1)
-     ncache=active(ilevel)%ngrid
-     do igrid=1,ncache,nvector
-        ! Gather nvector grids
-        ngrid=MIN(nvector,ncache-igrid+1)
-        do i=1,ngrid
-           ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
-        end do
-        call tsc_cell(ind_grid,ngrid,ilevel)
-     end do
-  end if
-
-111 format('   Entering tsc_from_multipole for level',i2)
-
-end subroutine tsc_from_multipole
-#endif
-!###########################################################
-!###########################################################
-!###########################################################
-!###########################################################
-#if NDIM==3
 subroutine tsc_cell(ind_grid,ngrid,ilevel)
   use amr_commons
   use poisson_commons
@@ -1572,7 +1443,6 @@ subroutine tsc_cell(ind_grid,ngrid,ilevel)
   integer::i,j,idim,ind_cell_son,iskip_son,np,ind_son,nx_loc,ind
   integer ,dimension(1:nvector),save::ind_cell
   integer ,dimension(1:nvector,1:threetondim),save::nbors_father_cells
-  integer ,dimension(1:nvector,1:twotondim),save::nbors_father_grids
   ! Particle-based arrays
   logical ,dimension(1:nvector),save::ok
   real(dp),dimension(1:nvector),save::mmm
@@ -1603,7 +1473,7 @@ subroutine tsc_cell(ind_grid,ngrid,ilevel)
   end do
 
   ! Gather 3x3x3 neighboring parent cells
-  call get3cubefather(ind_cell,nbors_father_cells,nbors_father_grids,ngrid,ilevel)
+  call get3cubefather(ind_cell,nbors_father_cells,ngrid,ilevel)
 
   ! Loop over grid cells
   do ind_son=1,twotondim
@@ -1631,15 +1501,7 @@ subroutine tsc_cell(ind_grid,ngrid,ilevel)
      do idim=1,ndim
         do j=1,np
            x(j,idim)=x(j,idim)/scale+skip_loc(idim)
-        end do
-     end do
-     do idim=1,ndim
-        do j=1,np
            x(j,idim)=x(j,idim)-(xg(ind_grid(j),idim)-3d0*dx)
-        end do
-     end do
-     do idim=1,ndim
-        do j=1,np
            x(j,idim)=x(j,idim)/dx
         end do
      end do
@@ -1811,8 +1673,6 @@ subroutine tsc_cell(ind_grid,ngrid,ilevel)
      do ind=1,threetondim
         do j=1,np
            ok(j)=igrid(j,ind)>0
-        end do
-        do j=1,np
            vol2(j)=mmm(j)*vol(j,ind)/vol_loc
         end do
         do j=1,np
