@@ -40,6 +40,7 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
 
   integer ::ngrid
   real(dp)::dx,dy,dz,dt
+  real(dp)::dtdx
 
   ! Input states
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar+3)::uin
@@ -135,22 +136,22 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
        &       qp,iu1  ,iu2  ,ju1  ,ju2  ,ku1  ,ku2  , &
        &          if1  ,if2  ,jlo  ,jhi  ,klo  ,khi  , &
        &       2,3,4,6,7,8,flux,tmp,1,dtdx,ngrid)
-  ! add nimhd
-  do k=klo,khi
-  do j=jlo,jhi
-  do i=if1,if2
 #ifdef NIMHD
-     ! Energy flux from ohmic term dB/dt=rot(-eta*J)
-     if(use_nonideal_mhd) then
+  ! add nimhd
+  if(use_nonideal_mhd) then
+     do k=klo,khi
+     do j=jlo,jhi
+     do i=if1,if2
+        ! Energy flux from ohmic term dB/dt=rot(-eta*J)
         ivar=5
         do l=1,ngrid
            flux(l,i,j,k,ivar,1)=flux(l,i,j,k,ivar,1)+(fluxambdiff(l,i,j,k,1)+fluxohm(l,i,j,k,1))*dt/dx
         end do
-     endif
+     end do
+     end do
+     end do
+  endif
 #endif
-  end do
-  end do
-  end do
 
   ! Solve for 1D flux in Y direction
 #if NDIM>1
