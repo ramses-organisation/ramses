@@ -159,6 +159,7 @@ end subroutine orzag_tang_condinit
 subroutine coeur_condinit(x,q,dx,nn)
   use amr_parameters
   use hydro_parameters
+  use collapse_parameters
   use constants,ONLY:kB,mH,pi,M_sun
   implicit none
   integer ::nn                            ! Number of cells
@@ -169,16 +170,16 @@ subroutine coeur_condinit(x,q,dx,nn)
   ! This routine generates collapsing core initial conditions for RAMSES.
   !================================================================
 
- ! Cloud parameters
-  real(dp):: mass_c = 1.0d0 ! in solar masses
-  real(dp)::delta_rho=0.1
-  real(dp)::alpha_dense_core=0.1
-  real(dp)::beta_dense_core=0.01
-  real(dp)::crit_dense_core=0.1
-
   integer :: i,id,iu,iv,iw,ip
   real(dp):: x0,y0,z0,rc,rs,xx,yy,zz,r0,d0,B0,p0,omega0,C_s,Temp
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
+
+ ! Cloud parameters
+  mass_c = 1.0d0 ! in solar masses
+  delta_rho=0.1
+  alpha_dense_core=0.1
+  beta_dense_core=0.01
+  crit_dense_core=0.1
 
   ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
