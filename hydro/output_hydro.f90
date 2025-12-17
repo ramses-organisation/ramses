@@ -12,18 +12,11 @@ subroutine backup_hydro(filename, filename_desc)
 
   integer :: i, ivar, ncache, ind, ilevel, igrid, iskip, istart, ibound
   integer :: unit_out, unit_info
-  real(dp) :: d
-#ifdef SOLVERmhd
-  real(dp) :: A, B, C
-#endif
   integer, allocatable, dimension(:) :: ind_grid
   real(dp), allocatable, dimension(:) :: xdp
   character(LEN = 5) :: nchar
   character(LEN = 80) :: fileloc
   integer, parameter :: tag = 1121
-#if NENER > 0
-  integer :: irad
-#endif
   logical :: dump_info_flag
   integer :: info_var_count
   character(len=100) :: field_name
@@ -86,85 +79,51 @@ subroutine backup_hydro(filename, filename_desc)
            ! Loop over cells
            do ind = 1, twotondim
               iskip = ncoarse+(ind-1)*ngridmax
-              do ivar = 1, neul-1
-                 if (ivar == 1) then
-                    ! Write density
-                    do i = 1, ncache
-                       xdp(i) = uold(ind_grid(i)+iskip, 1)
-                    end do
-                    field_name = 'density'
-                 else
-                    ! Write velocity field
-                    do i = 1, ncache
-                       xdp(i) = uold(ind_grid(i)+iskip, ivar)/max(uold(ind_grid(i)+iskip, 1), smallr)
-                    end do
-                    field_name = 'velocity_' // dim_keys(ivar - 1)
-                 end if
+              ! Write density
+              field_name = 'density'
+              call gather_conservative_from_uold(ind_grid, iskip, 1, xdp, ncache)
+              call generic_dump(field_name, info_var_count, xdp, unit_out, dump_info_flag, unit_info)
+              ! Write velocity field
+              do ivar = 2, neul-1
+                 field_name = 'velocity_' // dim_keys(ivar - 1)
+                 call gather_primitive_from_uold(ind_grid, iskip, ivar, xdp, ncache)
                  call generic_dump(field_name, info_var_count, xdp, unit_out, dump_info_flag, unit_info)
               end do
 #ifdef SOLVERmhd
-              do ivar = 6, 8 ! Write left B field
-                 do i = 1, ncache
-                    xdp(i) = uold(ind_grid(i)+iskip, ivar)
-                 end do
+              ! Write left B field
+              do ivar = 6, 8
                  field_name = 'B_' // dim_keys(ivar - 6 + 1) // '_left'
+                 call gather_conservative_from_uold(ind_grid, iskip, ivar, xdp, ncache)
                  call generic_dump(field_name, info_var_count, xdp, unit_out, dump_info_flag, unit_info)
               end do
-              do ivar = nvar+1, nvar+3 ! Write right B field
-                 do i = 1, ncache
-                    xdp(i) = uold(ind_grid(i)+iskip, ivar)
-                 end do
+              ! Write right B field
+              do ivar = nvar+1, nvar+3
                  field_name = 'B_' // dim_keys(ivar - (nvar+1) + 1) // '_right'
+                 call gather_conservative_from_uold(ind_grid, iskip, ivar, xdp, ncache)
                  call generic_dump(field_name, info_var_count, xdp, unit_out, dump_info_flag, unit_info)
               end do
 #endif
 #if NENER > 0
               ! Write non-thermal pressures
               do ivar = nhydro+1, nhydro+nener
-                 do i = 1, ncache
-                    xdp(i) = (gamma_rad(ivar-nhydro)-1d0)*uold(ind_grid(i)+iskip, ivar)
-                 end do
                  write(field_name, '("non_thermal_pressure_", i0.2)') ivar-nhydro
+                 call gather_primitive_from_uold(ind_grid, iskip, ivar, xdp, ncache)
                  call generic_dump(field_name, info_var_count, xdp, unit_out, dump_info_flag, unit_info)
               end do
 #endif
               ! Write thermal pressure
-              do i = 1, ncache
-                 d = max(uold(ind_grid(i)+iskip, 1), smallr)
-                 xdp(i) = uold(ind_grid(i)+iskip, neul)
-                 xdp(i) = xdp(i)-0.5d0*uold(ind_grid(i)+iskip, 2)**2/d
-#if NDIM > 1 || SOLVERmhd
-                 xdp(i) = xdp(i)-0.5d0*uold(ind_grid(i)+iskip, 3)**2/d
-#endif
-#if NDIM > 2 || SOLVERmhd
-                 xdp(i) = xdp(i)-0.5d0*uold(ind_grid(i)+iskip, 4)**2/d
-#endif
-#ifdef SOLVERmhd
-                 A = 0.5d0*(uold(ind_grid(i)+iskip, 6)+uold(ind_grid(i)+iskip, nvar+1))
-                 B = 0.5d0*(uold(ind_grid(i)+iskip, 7)+uold(ind_grid(i)+iskip, nvar+2))
-                 C = 0.5d0*(uold(ind_grid(i)+iskip, 8)+uold(ind_grid(i)+iskip, nvar+3))
-                 xdp(i) = xdp(i) - 0.5*(A**2+B**2+C**2)
-#endif
-#if NENER > 0
-                 do irad = 1, nener
-                    xdp(i) = xdp(i)-uold(ind_grid(i)+iskip, nhydro+irad)
-                 end do
-#endif
-                 xdp(i) = (gamma-1d0)*xdp(i)
-              end do
               field_name = 'pressure'
+              call calc_thermal_pressure_from_total_energy(ind_grid, iskip, xdp, ncache)
               call generic_dump(field_name, info_var_count, xdp, unit_out, dump_info_flag, unit_info)
 #if NVAR > NHYDRO+NENER
               ! Write passive scalars if any
               do ivar = nhydro+1+nener, nvar
-                 do i = 1, ncache
-                    xdp(i) = uold(ind_grid(i)+iskip, ivar)/max(uold(ind_grid(i)+iskip, 1), smallr)
-                 end do
                  if (metal .and. imetal == ivar) then
                     field_name = 'metallicity'
                  else
                     write(field_name, '("scalar_", i0.2)') ivar - nhydro - 1 - nener
                  end if
+                 call gather_primitive_from_uold(ind_grid, iskip, ivar, xdp, ncache)
                  call generic_dump(field_name, info_var_count, xdp, unit_out, dump_info_flag, unit_info)
               end do
 #endif
@@ -204,3 +163,115 @@ subroutine backup_hydro(filename, filename_desc)
 
 
 end subroutine backup_hydro
+!#####################################################################
+!#####################################################################
+!#####################################################################
+!#####################################################################
+subroutine gather_conservative_from_uold(ind_grid, iskip, ivar, xdp, ncache)
+   use amr_parameters, only:dp
+   use hydro_commons
+   implicit none
+   integer,intent(in)::ivar,iskip,ncache
+   integer, dimension(1:ncache),intent(in)::ind_grid
+   real(dp), dimension(1:ncache),intent(out)::xdp
+   !-----------------------------------------------------------
+   ! Gather the variable that is present in uold at index ivar
+   ! (e.g. density, B_left, B_right)
+   !-----------------------------------------------------------
+   integer::i
+
+   do i = 1, ncache
+      xdp(i) = uold(ind_grid(i)+iskip, ivar)
+   end do
+
+end subroutine gather_conservative_from_uold
+!#####################################################################
+!#####################################################################
+!#####################################################################
+!#####################################################################
+subroutine gather_primitive_from_uold(ind_grid, iskip, ivar, xdp, ncache)
+   use amr_parameters, only:dp
+   use hydro_commons
+   implicit none
+   integer,intent(in)::ivar,iskip,ncache
+   integer, dimension(1:ncache),intent(in)::ind_grid
+   real(dp), dimension(1:ncache),intent(out)::xdp
+   !-----------------------------------------------------------
+   ! Gather the primitive variable from the conservative variable
+   ! that is present in uold at index ivar
+   ! (e.g. velocity)
+   !-----------------------------------------------------------
+   integer::i
+
+   select case(ivar)
+
+#if NENER > 0
+   case(nhydro+1:nhydro+nener)
+      ! non-thermal pressures
+      do i = 1, ncache
+         xdp(i) = (gamma_rad(ivar-nhydro)-1d0)*uold(ind_grid(i)+iskip, ivar)
+      end do
+#endif
+
+   case default
+      do i = 1, ncache
+         xdp(i) = uold(ind_grid(i)+iskip, ivar)/max(uold(ind_grid(i)+iskip, 1), smallr)
+      end do
+
+   end select
+
+end subroutine gather_primitive_from_uold
+!#####################################################################
+!#####################################################################
+!#####################################################################
+!#####################################################################
+subroutine calc_thermal_pressure_from_total_energy(ind_grid, iskip, pressure, ncache)
+   use amr_parameters, only:dp
+   use hydro_commons
+   implicit none
+   integer,intent(in)::iskip,ncache
+   integer, dimension(1:ncache),intent(in)::ind_grid
+   real(dp), dimension(1:ncache),intent(out)::pressure
+   !--------------------------------------------------------------------------------------
+   ! Calculate the thermal pressure from the total energy, which is stored in uold(:,neul)
+   !--------------------------------------------------------------------------------------
+   integer::i
+#if NENER > 0
+   integer :: irad
+#endif
+   real(dp) :: d,energy
+#ifdef SOLVERmhd
+   real(dp) :: A, B, C
+#endif
+
+   do i = 1, ncache
+      d = max(uold(ind_grid(i)+iskip, 1), smallr)
+      ! total energy
+      energy = uold(ind_grid(i)+iskip, neul)
+      ! subtract kinetic energy
+      energy = energy - 0.5d0*uold(ind_grid(i)+iskip, 2)**2/d
+#if NDIM > 1 || SOLVERmhd
+      energy = energy - 0.5d0*uold(ind_grid(i)+iskip, 3)**2/d
+#endif
+#if NDIM > 2 || SOLVERmhd
+      energy = energy - 0.5d0*uold(ind_grid(i)+iskip, 4)**2/d
+#endif
+#ifdef SOLVERmhd
+      ! subtract magnetic energy
+      A = 0.5d0*(uold(ind_grid(i)+iskip, 6)+uold(ind_grid(i)+iskip, nvar+1))
+      B = 0.5d0*(uold(ind_grid(i)+iskip, 7)+uold(ind_grid(i)+iskip, nvar+2))
+      C = 0.5d0*(uold(ind_grid(i)+iskip, 8)+uold(ind_grid(i)+iskip, nvar+3))
+      energy = energy - 0.5*(A**2+B**2+C**2)
+#endif
+#if NENER > 0
+   ! subtract non-thermal energies
+      do irad = 1, nener
+         energy = energy-uold(ind_grid(i)+iskip, nhydro+irad)
+      end do
+#endif
+
+      ! convert to pressure
+      pressure(i) = (gamma-1d0)*energy
+   end do
+
+end subroutine calc_thermal_pressure_from_total_energy
