@@ -314,7 +314,7 @@ The size of nvector has a strong impact on code performance. A large nvector may
 
 ## 1.6 Finding neighbors
 
-Routines to find neighboring cells and grids are implemented in the file *amr/nbor_utils.f90*. While in most cases, we can simply make use of these routines, it is insightfull to understand how they work. As an exercise, we will go through the process of finding neighbors in 1D, where two configurations are possible:
+Routines to find neighboring cells and grids are implemented in the file *amr/nbor_utils.f90*. While in most cases, we can simply make use of these routines, it is insightful to understand how they work. As an exercise, we will go through the process of finding neighbors in 1D, where two configurations are possible:
 
 <img src="https://codimd.math.cnrs.fr/uploads/upload_0c605967a8c5b9e2cf6675cfe5047f93.png" alt="octree1" width="300"/> 
 
