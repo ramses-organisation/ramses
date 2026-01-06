@@ -467,7 +467,7 @@ Poisson's equation for gravity is written as follows
 
 $\nabla^2 \phi = -4 \pi G \rho$
 
-where $\phi$ is the gravitational potention and $\rho$ the total density field, taking into account the gas and particles. The gravitational force is given by
+where $\phi$ is the gravitational potential and $\rho$ the total density field, taking into account the gas and particles. The gravitational force is given by
 
 $\bf{f}= -\nabla \phi$
 
