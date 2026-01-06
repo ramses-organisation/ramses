@@ -362,7 +362,7 @@ In that case, the coarse level is virtually refined at the fine level, and the h
 ![](https://codimd.math.cnrs.fr/uploads/upload_67cf05e8e166e3e215c15c36b1f5c711.png)
 
 
-Then, the subroutine `unsplit` is called, which calculates the fluxes. The name comes from the implementation being 'unsplit', meaning that the fluxes are computed simultaniously for all spatial directions (see further). The fluxes are always computed at the left side of the cell.
+Then, the subroutine `unsplit` is called, which calculates the fluxes. The name comes from the implementation being 'unsplit', meaning that the fluxes are computed simultaneously for all spatial directions (see further). The fluxes are always computed at the left side of the cell.
 
 Finally, at the end of `godfine1`, `unew` is updated using the fluxes from all directions (unsplit method).
 
