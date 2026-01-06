@@ -47,7 +47,7 @@ A schematic example for two refinement levels in a 2D grid:
 
 * If a cell is refined, the array `son` contains the index of the child grid of the cell, from which the 2$^\texttt{ndim}$ children cells can be accessed. If the cell is not refined, its son is set to 0.
 * A grid at level L has a parent cell at level L-1. The array `father` stores for each grid the index of their parent cell.
-* The father cell of a grid has two directly neighoring cells in each spatial direction (2 in 1D, 4 in 2D and 6 in 3D). The refinement rules dictate that these neighbors exist on the level (but they may be refined themselved). The indices of these neighbors are stored in the array `nbor`, which is a 2D array of size [ngridmax, 2 x ndim].
+* The father cell of a grid has two directly neighoring cells in each spatial direction (2 in 1D, 4 in 2D and 6 in 3D). The refinement rules dictate that these neighbors exist on the level (but they may be refined themselves). The indices of these neighbors are stored in the array `nbor`, which is a 2D array of size [ngridmax, 2 x ndim].
 
 :::info
 **Exercise**
