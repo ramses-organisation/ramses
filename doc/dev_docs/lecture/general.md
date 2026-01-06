@@ -384,7 +384,7 @@ The steps for obtaining the flux are as follows.
 * Solve the Riemann problem at each interface using predicted left/right states to obtain the fluxes $F_{i+1/2}$ `cmpflxm` ("compute flux minus", because only the left flux is calculated)
 
 These fluxes are then used to update the conserved variables.
-Below, we go into eqch step in more detail. You can visit the following page for a more complete description of the MUSCL-Hancock scheme:  https://ammar-hakim.org/sj/hancock-muscl.html
+Below, we go into each step in more detail. You can visit the following page for a more complete description of the MUSCL-Hancock scheme:  https://ammar-hakim.org/sj/hancock-muscl.html
 
 ### Switch to primitive variables
 
