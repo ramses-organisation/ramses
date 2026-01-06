@@ -356,7 +356,7 @@ where $\mathbb{F}_{i\pm1/2}$ are the fluxes going through opposing faces of the 
 
 In the code, the entry point for hydro solver is `godunov_fine`. This routine uses the standard RAMSES structure to gather `nvector` cells to be send of to the core calculation routine `godfine1`.
 
-Inside `godfine1`, the first step is to gather a stencil of 6 x 6 x 6 cells (in 3D) neighboring cells (this is needed to have second order accurary in the slope calculation, see later). If there is AMR, the neighboring cells may not be on the same refinement level and an interpolation is performed.
+Inside `godfine1`, the first step is to gather a stencil of 6 x 6 x 6 cells (in 3D) neighboring cells (this is needed to have second order accuracy in the slope calculation, see later). If there is AMR, the neighboring cells may not be on the same refinement level and an interpolation is performed.
 In that case, the coarse level is virtually refined at the fine level, and the hydro variables are interpolated (done by the routine `interpol_fine`).
 
 ![](https://codimd.math.cnrs.fr/uploads/upload_67cf05e8e166e3e215c15c36b1f5c711.png)
