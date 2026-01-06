@@ -24,7 +24,7 @@ Several data structures are used to keep track of the cells in the grid. We go i
 
 To represent the grid, RAMSES uses an octree structure which can be refined locally. The computational domain is divided into **grids** (classically called octs): collections of 2$^\texttt{ndim}$ **cells** (8 in 3D) where `ndim` is the number of dimensions. On level 1, we start with 1 grid containing 2, 4 or 8 cells which span the entire computational domain. The maximum number of cells in each dimension for a refinement level $L$ is 2$^L$.
 
-Remarkt that the number of cells in a grid is a quantity that is often used in the code, and so it has its own decided variable: 2$^\texttt{ndim}=$`twondim`.
+Remark that the number of cells in a grid is a quantity that is often used in the code, and so it has its own decided variable: 2$^\texttt{ndim}=$`twondim`.
 
 To keep track of the relation between cells and grids of different refinement levels, ramses stores three arrays. They defined in the module `amr_commons` and allocated in the subroutine `init_amr`:
 ```fortran=
