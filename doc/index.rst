@@ -39,8 +39,7 @@ Table of Contents
 .. toctree::
   :caption: Developer Documentation
   :maxdepth: 1
-
-  dev_docs/lecture/index.rst
+  dev_docs/lecture/lectures.rst
   dev_docs/developer_guide.md
   dev_docs/implementation.md
   dev_docs/docs.md
