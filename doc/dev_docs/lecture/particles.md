@@ -5,10 +5,10 @@ tags: RAMSES
 # Lecture: Particles
 
 <!-- - **EXERCISE:** linked lists fun - write metacode to construct a linked list, insert and remove elements from it. Note the dimensions of the arrays you need. Find the lists in ramses, where they are allocated, and defined …
-- Particle updates : 
+- Particle updates :
     - Gravity (details on gravity solver, CIC, level-by-level approach, first kick … ze leapfrog thing…)
     - **EXERCISE:** write pseudo-code
-    - subgrid models … How to create particles, remove particles, change particle properties etc. 
+    - subgrid models … How to create particles, remove particles, change particle properties etc.
 -->
 
 [TOC]
@@ -105,7 +105,7 @@ NB: when implementing new types of particles, make sure to use the right `family
 
 ### 1.3 Initialising particles
 
-In the code, the global particle arrays are *defined* in the `pm_commons` module, but are not *allocated* there: indeed, `npartmax` is a runtime parameter, so it cannot be fixed once and for all in the code. 
+In the code, the global particle arrays are *defined* in the `pm_commons` module, but are not *allocated* there: indeed, `npartmax` is a runtime parameter, so it cannot be fixed once and for all in the code.
 
 Instead, all the particle-related arrays are allocated when the simulation is initialised, in the `init_part` routine, defined in `pm/init_part.f90`. This is done through the following code:
 ```fortran=1
@@ -129,7 +129,7 @@ Can you explain how the `load_ascii` and `load_grafic` subroutines work? For exa
 :::
 
 
-In the case of a **restart**, the process is roughly the same, except that each MPI process opens the corresponding file from the last output. For example, if we restart from output 42, the MPI process 37 will open the file `output_00042/part_00042.out00037`. 
+In the case of a **restart**, the process is roughly the same, except that each MPI process opens the corresponding file from the last output. For example, if we restart from output 42, the MPI process 37 will open the file `output_00042/part_00042.out00037`.
 
 :::warning
 This strategy to initialise the data at restart is part of the reason why RAMSES enforces that the number of MPI processes stays identical when restarting a simulation.
@@ -246,11 +246,11 @@ The following code block represents the usual way of looping over all particles 
            do jpart=1,npart1
               ! Save next particle   <--- Very important !!!
               next_part=nextp(ipart)
-              
+
 			  !----
 			  ! Do something with particle ipart
 			  !----
-			  
+
               ipart=next_part  ! Go to next particle
            end do
         endif
@@ -335,18 +335,18 @@ RAMSES does this through the **cloud-in-cell** scheme, or **CIC**. The idea is t
 <!--
 > [TC] There is only really the CIC, the other method is hidden.
 > [BC] For gravity you can use TSC with #TSC
-> 
+>
 -->
 
-<img src="https://codimd.math.cnrs.fr/uploads/upload_38b7c20ecdc4e03ad3c76510b657d93e.png" alt="octree1" height="300"/> 
+<img src="https://codimd.math.cnrs.fr/uploads/upload_38b7c20ecdc4e03ad3c76510b657d93e.png" alt="octree1" height="300"/>
 
-<img src="https://codimd.math.cnrs.fr/uploads/upload_8875318a7c8ec86312c0d952990c1438.png" alt="octree2" height="300"/> 
+<img src="https://codimd.math.cnrs.fr/uploads/upload_8875318a7c8ec86312c0d952990c1438.png" alt="octree2" height="300"/>
 
 In more details: a particle that "lives" at a level `ilevel` will be represented as a cube with side length $\Delta x = L/2^{\texttt{ilevel}}$, and its volume will therefore be $\Delta x^{\texttt{ndim}}$, usually $\Delta x^3$. We can show that the cloud will overlap with $2^{\texttt{ndim}}$ grid cells. In order to compute the contribution of a particle to each of the overlapping cells, we need:
 - the indices of the cells with which the particle overlaps
 - the overlapping sub-volume of the particle cloud with these cells.
 
-In practice, the second part is done before the first: the sub-volumes are calculated as rectangular cuboids, using the distances to the cell boundaries `dd` and `dg` (respectively for *distance droite* and *distance gauche*). 
+In practice, the second part is done before the first: the sub-volumes are calculated as rectangular cuboids, using the distances to the cell boundaries `dd` and `dg` (respectively for *distance droite* and *distance gauche*).
 
 <!--
 > [TC]: I added the 2nd part of the figure which shows how the volumes are calculated using the particle position. But I got a bit confused about the order.
@@ -403,7 +403,7 @@ Once this is all computed, we need to assign these sub-volumes to the relevant c
 
 ![](https://codimd.math.cnrs.fr/uploads/upload_55e5729c7c5d7250b09df21a174c3b48.png)
 
-First, we need to identify the local index of the parent grid. During the `dd` and `dg` computation, we get the index of the left and right boundaries in `ig` and `id`, respectively. 
+First, we need to identify the local index of the parent grid. During the `dd` and `dg` computation, we get the index of the left and right boundaries in `ig` and `id`, respectively.
 <!--For example, at level 7, this could be `ig=64` and `id=65`, for a cell roughly in the centre of the box.-->
 As the parent grid lives on level `ilevel-1`, the corresponding local) grid indices (`igg` and `igd`, for index grid *gauche* and index grid *droite*) will be halved:
 ```fortran=1
@@ -491,7 +491,7 @@ A good way of choosing `cic_levelmax` is to run a DM-only simulation, and see wh
 This is note done for non-DM particles: indeed, they are expected to "live" at the finest grid level.
 
 
-Second, we can also note that CIC is used in several places. 
+Second, we can also note that CIC is used in several places.
 * `cic_amr` called from `rho_from_current_level`, itself called in `rho_fine`, which calculates the density field of the particles.
 * `cic_cell` called from `cic_from_multipole` which represents the gas cells as *pseudo-particles* to calculate the gas density field (used as input for the gravity calculation) in the same way as the particles. This has some advantages.
 * `cic_only` called from `rho_only_level` in the clumpfinder, to calculate the density field on which to perform the clump finding.
@@ -502,7 +502,7 @@ While all these routines are pretty similar, this leads to a lot of code duplica
 
 Also, RAMSES has an alternative to the CIC scheme that is in principle more accurate: the TSC scheme, for *triangular-shaped cloud*. This is a smoother, more expensive, assignment scheme.
 
-:::info 
+:::info
 **Exercise**:
 Go through the code for the TSC scheme. What is different about it?
 :::
@@ -520,4 +520,3 @@ This is done using the same type of CIC scheme as for the density calculation, e
 Note that special care must be taken when the particle overlaps with cells that are at a different refinement level.
 
 As an exercise, you can go through the `sync` routine called by `synchro_fine` in `pm/synchro_fine.f90` and `move1` called by `move_fine` in `pm/move_fine.f90` to go through the logic.
-

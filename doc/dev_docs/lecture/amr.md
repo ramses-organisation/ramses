@@ -5,7 +5,7 @@ tags: RAMSES
 # Lecture: Mesh data structures & AMR
 
 
-- Discuss the indexing of variables (discuss `ncoarse`, etc., memory mapping with `ind=1…8`, …), AMR structure (at most 1 level difference between neighbour cells, neighbour array, sons, …, links between octs/grids and cells) → explain all pointers/indexes.  😱linked lists for grids ? 
+- Discuss the indexing of variables (discuss `ncoarse`, etc., memory mapping with `ind=1…8`, …), AMR structure (at most 1 level difference between neighbour cells, neighbour array, sons, …, links between octs/grids and cells) → explain all pointers/indexes.  😱linked lists for grids ?
 > [TC]: is all of this addressed?
 
 
@@ -40,7 +40,7 @@ To keep track of the relation between cells and grids of different refinement le
 
 A schematic example for two refinement levels in a 2D grid:
 
-<img src="https://codimd.math.cnrs.fr/uploads/upload_856b10c49f8703c44f65ee8e0143fc27.png" alt="octree1" width="360"/> 
+<img src="https://codimd.math.cnrs.fr/uploads/upload_856b10c49f8703c44f65ee8e0143fc27.png" alt="octree1" width="360"/>
 <img src="https://codimd.math.cnrs.fr/uploads/upload_b3d8694d2f0f8112fd9fc2889513457d.png" alt="octree1" width="360"/>
 
 .
@@ -81,7 +81,7 @@ The cells inside a grid are stored in a specific order. Their position is typica
 
 ![](https://codimd.math.cnrs.fr/uploads/upload_d3ca8e9f132dc6f477fc5bcc3e48586c.png)
 
-Added at the beginning of the list is the root cell and the coarse cells for the physical boundaries, a total of `ncoarse` cells, with `ncoarse=nx*ny*nz`. In the case of periodic boundary conditions `nx=ny=nz=1`, meaning the only coarse cell is the root cell of the octree at level 0. 
+Added at the beginning of the list is the root cell and the coarse cells for the physical boundaries, a total of `ncoarse` cells, with `ncoarse=nx*ny*nz`. In the case of periodic boundary conditions `nx=ny=nz=1`, meaning the only coarse cell is the root cell of the octree at level 0.
 
 How exactly the positions `ind` are defined in space is a matter of arbitrary convention. Variables that define the spatial relations between neighboring grids and cells can be found in `amr_constants`, for example `lll` and `mmm`, and in the routines in *amr/nbors_utils.f90.* They are used, for example, in the neighbor-searching routines (see further). simply want to access all neighbors, and the spatial order is irrelevant.
 
@@ -196,7 +196,7 @@ The subroutine `make_grid_fine` in the file `amr/refine_utils.f90` handles addin
 ## 1.4 The variables `active` and `boundary`
 
 
-One way to access the grids for processing them, is to simply iterate throught the linked list by starting at the `headl` and following `next`. This is however not always practical. Instead, the grid indices are gathered in advance, by iterating through the linked lists and storing them in the variable `active`. An equivalant exists for the grids in the physical boundary, named `boundary`. 
+One way to access the grids for processing them, is to simply iterate throught the linked list by starting at the `headl` and following `next`. This is however not always practical. Instead, the grid indices are gathered in advance, by iterating through the linked lists and storing them in the variable `active`. An equivalant exists for the grids in the physical boundary, named `boundary`.
 These variables are defined in `amr_commons`:
 ```fortran=
 type(communicator),allocatable,dimension(:)  ::active    ! 1:nlevelmax
@@ -292,7 +292,7 @@ end do
 
 ### Nvector sweeps
 
-Nowadays, CPUs are able to operate on multiple values at once that are located in neighboring memory locations. This only works if the exact same operation is to be executed, that is without if-else branching. The memory layout of the AMR-tree can however be complex, possibly leading to unfavorable memory access-patterns. To circumvent this problem, explicit vectorization using the compile-time parameter `NVECTOR` is build-in in RAMSES. 
+Nowadays, CPUs are able to operate on multiple values at once that are located in neighboring memory locations. This only works if the exact same operation is to be executed, that is without if-else branching. The memory layout of the AMR-tree can however be complex, possibly leading to unfavorable memory access-patterns. To circumvent this problem, explicit vectorization using the compile-time parameter `NVECTOR` is build-in in RAMSES.
 
 An standard loop structure in RAMSES then looks like this:
 ```fortran=1
@@ -316,12 +316,12 @@ The size of nvector has a strong impact on code performance. A large nvector may
 
 Routines to find neighboring cells and grids are implemented in the file *amr/nbor_utils.f90*. While in most cases, we can simply make use of these routines, it is insightful to understand how they work. As an exercise, we will go through the process of finding neighbors in 1D, where two configurations are possible:
 
-<img src="https://codimd.math.cnrs.fr/uploads/upload_0c605967a8c5b9e2cf6675cfe5047f93.png" alt="octree1" width="300"/> 
+<img src="https://codimd.math.cnrs.fr/uploads/upload_0c605967a8c5b9e2cf6675cfe5047f93.png" alt="octree1" width="300"/>
 
 .
 
 :::info
-**Exercise (part 1):** In the case of 1D, what are the steps to find the neighboring cells of a given cell? We want the center cell to be included in the list of neighbors. The input of the routine will be the index of the cell. 
+**Exercise (part 1):** In the case of 1D, what are the steps to find the neighboring cells of a given cell? We want the center cell to be included in the list of neighbors. The input of the routine will be the index of the cell.
 :::spoiler **Solution**
 * Step 1: Determine the position of the cell in its grid.
 * Step 2: Determine the index of the grid to which the cell belongs.
@@ -361,7 +361,7 @@ The 1D case is a bit of a special case, because there is no distinction between 
 # 2 Adaptive Mesh Refinement [WIP]
 
 > [name=Blaizot]
-> It is somewhat unclear to me how the grid is initialised. Is this done from level 1 to levelmin(-1 ?) at the start ? If so, this is probably simple enough to provide the pseudo code as an example ? 
+> It is somewhat unclear to me how the grid is initialised. Is this done from level 1 to levelmin(-1 ?) at the start ? If so, this is probably simple enough to provide the pseudo code as an example ?
 > TC: I didn't want to go into that here, but in section 2.
 
 
@@ -414,7 +414,7 @@ All the relevant routines can be found in the file `amr/refine_utils.f90`:
 ### Destroying grids
 Handled by the routine `kill_grid`, which takes as input a list of cells on a specified level L for which their child grid (containing 2$^{ndim}$ cells at level L+1) is to be destroyed.
 
-This routine 
+This routine
 * disconnects the grid from the linked list,
 * adjusts the grid variables to keep the tree up-to-date,
 * resets *all* cell variables for the destroyed cells at level L+1 (uold, unew, phi, ...).

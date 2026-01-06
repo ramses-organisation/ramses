@@ -6,13 +6,13 @@ tags: RAMSES
 # Lecture: General review
 <!--
 - Overview
-    - overview of physics (hydro, MHD, RHD, gravity, …) in ramses, and organisation of the code in directories 
-    - EXERCISE: Students explore the directory structure and figure out together what physical processes are modelled. 
+    - overview of physics (hydro, MHD, RHD, gravity, …) in ramses, and organisation of the code in directories
+    - EXERCISE: Students explore the directory structure and figure out together what physical processes are modelled.
 - General hydro + gravity
-    - explain assuming uniform grid: start in a given state, compute evolution and update (→ introduce the order of things and explain why). Hydro, then gravity, then combined. 
-    - EXERCISE: introduce basic data structure (unew, uold). Students rewrite in pseudo-code the basic solver steps discussed above using these variables. 
-    - AMR = multiple levels, with refinement and de-refinement. Explain strategies, how and when it is done. 
-    - `amr_step`: recursiveness (that comes from timestepping … ) to implement the level by level strategy recursively. Explain upload.Try to be convincing. 
+    - explain assuming uniform grid: start in a given state, compute evolution and update (→ introduce the order of things and explain why). Hydro, then gravity, then combined.
+    - EXERCISE: introduce basic data structure (unew, uold). Students rewrite in pseudo-code the basic solver steps discussed above using these variables.
+    - AMR = multiple levels, with refinement and de-refinement. Explain strategies, how and when it is done.
+    - `amr_step`: recursiveness (that comes from timestepping … ) to implement the level by level strategy recursively. Explain upload.Try to be convincing.
     - EXERCISE: students write pseudo-code again with the recursive loop? Then compare it to the real `amr_step` / or extract pseudo code from messy `amr_step.f90`.
 
 Starting from the full overview of the physics found in the discussion, go through amr_step and explain why things are done in this order.
@@ -35,7 +35,7 @@ program ramses
  call adaptive_loop    ! Start time integration
 end program ramses
 ```
-First, the routine `read_params` will load the parameters from the namelist that was given as input by the user. Then, the routine `adaptive_loop` is called. 
+First, the routine `read_params` will load the parameters from the namelist that was given as input by the user. Then, the routine `adaptive_loop` is called.
 
 
 It is found in *amr/adaptive_loop.f90* and structured as follows:
@@ -60,7 +60,7 @@ subroutine adaptive_loop
 end subroutine adaptive_loop
 ```
 
-First, the simulation is initialized: arrays are allocated and set to appropriate initial values, initial conditions are calculated or read from file, ... 
+First, the simulation is initialized: arrays are allocated and set to appropriate initial values, initial conditions are calculated or read from file, ...
 Then the main time loop is started, which will evolve the simulation in time.
 
 The core of RAMSES is the recursive routine `amr_step` found in the file `amr/amr_step.f90`. In this routine, all individual physics components are called in a specific order.
@@ -78,22 +78,22 @@ recursive subroutine amr_step(ilevel,icount)
 
    call refine
    call load_balance
-    
+
    ... ! Some sink and particle stuff
-   
+
    if(time to output) call dump_all
-   
+
    if (conditions are met)
       call kinetic_feedback             ! feedback from stars
       OR
       call make_stellar_from_sinks
       call make_sn_stellar              ! feedback from sinks
    end if
-   
+
    if(poisson) call rho_fine   ! calc density field for Poisson source term
-   
+
    ... ! Some particle stuff
-   
+
    ! Gravity update: compute grav potential and acceleration
    if(poisson)then
       ...
@@ -101,16 +101,16 @@ recursive subroutine amr_step(ilevel,icount)
       call force_fine(ilevel,icount)
       ...
   end if
-   
+
   if(rt .and. rt_star/sink) call update_star/sink_RT_feedback(ilevel)
-   
+
   call calc_turb_forcing(ilevel)   ! turbulence forcing
-   
+
   call newdt_fine(ilevel)          ! Compute new time step
- 
+
   if(hydro)call set_unew(ilevel)   ! set unew = uold
-  if(rt)call rt_set_unew(ilevel) 
- 
+  if(rt)call rt_set_unew(ilevel)
+
   ! --- Recursive call to amr_step ---
   ...
   !-----------------------------------
@@ -124,14 +124,14 @@ recursive subroutine amr_step(ilevel,icount)
      call godunov_fine(ilevel)
      ...
   endif
-  
- ! Do RT/Chemistry step -> works on uold 
+
+ ! Do RT/Chemistry step -> works on uold
   if(rt .and. rt_advect) then
      call rt_step(ilevel)
   else
      call cooling_fine(ilevel)
   endif
-  
+
   if(pic) call move_fine(ilevel)  ! Move particles
 
   if(conditions met)call star_formation(ilevel)
@@ -145,7 +145,7 @@ recursive subroutine amr_step(ilevel,icount)
   ... ! particle stuff
 
   if(conditions met)call create_sink  ! Sink production
- 
+
 end subroutine amr_step
 ```
 
@@ -176,7 +176,7 @@ $\mathbb{Q}=\left[ \begin{array}{c}
 \textbf{u} \\
 P \\
 \end{array} \right].$
-Indeed, it is easier to use the dual space of the primitive variables in the integration of the hyperbolic solver. In addition, when for instance feedback is activates, mass, momentum or thermal energy are added, which requires to use primitive variables.  
+Indeed, it is easier to use the dual space of the primitive variables in the integration of the hyperbolic solver. In addition, when for instance feedback is activates, mass, momentum or thermal energy are added, which requires to use primitive variables.
 
 Additionnal variables can also be handled in RAMSES. These are non-thermal energies $E_\mathrm{NT}$ (cosmic rays, radiative energy) and passive scalars $X$ (metals, chemical species, tracers, etc...). Passive scalars are variables that are passively advected with the flow. These variables are integrated with the following evolution equations
 
@@ -185,7 +185,7 @@ and
 $\frac{\partial E_\mathrm{NT}}{\partial t}  + \nabla\cdot \left[E_\mathrm{NT} \textbf{u} \right]  =  -P_\mathrm{NT}\nabla.\textbf{u}$
 with $P_\mathrm{NT}=(\gamma_\mathrm{rad}-1)E_\mathrm{NT}$.
 
-Magnetic fields $\textbf{B}$ are stored at each cell faces. They are updated using the induction equation in the ideal MHD limit. 
+Magnetic fields $\textbf{B}$ are stored at each cell faces. They are updated using the induction equation in the ideal MHD limit.
 
 $\frac{\partial \textbf{B}}{\partial t}  - \nabla\times \left[\textbf{u} \times \textbf{B}\right]  = 0.$
 
@@ -265,7 +265,7 @@ Additional variables are stored after the left magnetic field in the following o
 :::
 
 :::info
-**Exercise**: How to add a field variable to `uold` and `unew`? 
+**Exercise**: How to add a field variable to `uold` and `unew`?
 List all the things that need changing (allocation?, initialisation?)
 :::spoiler **Solution**
 * nvar in makefile
@@ -294,7 +294,7 @@ Because RAMSES makes use of common arrays which are globally defined and accessi
   ! Recursive call to amr_step
   !---------------------------
   ...
-  
+
   !-----------
   ! Hydro step
   !-----------
@@ -371,7 +371,7 @@ How source terms are treated will be discussed further.
 ## 2.5 Unsplit MUSCL-Hancock scheme for computing the fluxes
 
 By default, RAMSES uses the MUSCL-Hancock scheme for computing the numerical fluxes across cell faces. This is a predictor-corrector extension of Godunov’s method that allows for second-order accuracy by using
-* piecewise linear reconstruction of the cell states, in contrast to Godunov's original piecewise constant 
+* piecewise linear reconstruction of the cell states, in contrast to Godunov's original piecewise constant
 * a half step prediction for time evolution.
 
 The scheme is extended to multiple dimension in an unsplit fashion, which is why the corresponding entry subroutine is named `unsplit`.
@@ -396,7 +396,7 @@ This choice improves both accuracy and stability of the method. Primitive variab
 A subtlety arises when gravity is included in the simulation. In that case, half a gravity predictor step is applied to the velocity in this routine. See more further.
 
 ### Compute the slopes
-In the MUSCL-Hancock scheme, the goal of the reconstruction step is to approximate the solution inside each cell using a linear profile, instead of a constant value. Given the cell-averaged primitive variables $Q_i$​, the slope $\Delta Q_i$ is computed​ using the cell-centered values of the neighboring cells. 
+In the MUSCL-Hancock scheme, the goal of the reconstruction step is to approximate the solution inside each cell using a linear profile, instead of a constant value. Given the cell-averaged primitive variables $Q_i$​, the slope $\Delta Q_i$ is computed​ using the cell-centered values of the neighboring cells.
 A slope limiter is applied to control oscillations near discontinuities:
 
 $\Delta Q_i = \text{Limiter}(Q_{i+1}-Q_i, Q_i - Q_{i-1})$
@@ -416,17 +416,17 @@ The predictor step advances these states forward by half a timestep to account f
 
 First, the cell centered primitive variables are advanced for hal a timestep.  The evolution is governed by the  Euler equations, linearized around the reconstructed primitive states. In practice, this is done by applying the method of lines to estimate the time derivative and then updating the interface states. In 1D
 
-$\rho^{n+1/2}_i=\rho^n_i - (u^n_i\Delta_x \rho^n_i+\rho^n_i\Delta_x u^n_i)\Delta t/\Delta x$ 
-$u^{n+1/2}_i=u^n_i - (u^n_i\Delta_x u^n_i+\Delta_x P^n_i/\rho^n_i)\Delta t/\Delta x$ 
+$\rho^{n+1/2}_i=\rho^n_i - (u^n_i\Delta_x \rho^n_i+\rho^n_i\Delta_x u^n_i)\Delta t/\Delta x$
+$u^{n+1/2}_i=u^n_i - (u^n_i\Delta_x u^n_i+\Delta_x P^n_i/\rho^n_i)\Delta t/\Delta x$
 
 In the case of multiple dimensions, transverse corrections are applied, accounting for the coupling between spatial directions. These are cross-derivative terms that arise when wave propagation in one direction is affected by gradients in perpendicular directions, which is crucial for preserving accuracy and symmetry in 2D and 3D flows.
 
 In 2D
-$\rho^{n+1/2}_i=\rho^n_i - (u^n_i\Delta_x \rho^n_i+\rho^n_i\Delta_x u^n_i)\Delta t/\Delta x - (u^n_i\Delta_y \rho^n_i+\rho^n_i\Delta_y u^n_i)\Delta t/\Delta y$ 
+$\rho^{n+1/2}_i=\rho^n_i - (u^n_i\Delta_x \rho^n_i+\rho^n_i\Delta_x u^n_i)\Delta t/\Delta x - (u^n_i\Delta_y \rho^n_i+\rho^n_i\Delta_y u^n_i)\Delta t/\Delta y$
 
-$u^{n+1/2}_i=u^n_i - (u^n_i\Delta_x u^n_i+\Delta_x P^n_i/\rho^n_i)\Delta t/\Delta x - (v^n_i\Delta_y u^n_i)\Delta t/\Delta y$ 
+$u^{n+1/2}_i=u^n_i - (u^n_i\Delta_x u^n_i+\Delta_x P^n_i/\rho^n_i)\Delta t/\Delta x - (v^n_i\Delta_y u^n_i)\Delta t/\Delta y$
 
-$v^{n+1/2}_i=v^n_i - (u^n_i\Delta_x v^n_i)\Delta t/\Delta x - (v^n_i\Delta_y v^n_i +\Delta_y P^n_i/\rho^n_i)\Delta t/\Delta y$ 
+$v^{n+1/2}_i=v^n_i - (u^n_i\Delta_x v^n_i)\Delta t/\Delta x - (v^n_i\Delta_y v^n_i +\Delta_y P^n_i/\rho^n_i)\Delta t/\Delta y$
 
 
 
@@ -449,13 +449,13 @@ In the code, the subroutine `cmpflxm` is called for each spatial direction.
 Inside `cmpflxm`, the requested Riemann solver is called.
 The output array `flux` is then updated with the 1D flux for the requested spatial direction.
 
-If AMR is active, the coarse level is updated during the fine level update at fine-to-coarse boundary. 
+If AMR is active, the coarse level is updated during the fine level update at fine-to-coarse boundary.
 
 :::info
-**Exercise**: 1/ Find in the code where the coarse level is virtually refined. Does it imply some interpolation? 
+**Exercise**: 1/ Find in the code where the coarse level is virtually refined. Does it imply some interpolation?
 2/ Find in the code where the coarse level update is done? What does it imply for conservative variable evolution? What about coarse-to-fine boundary?
 :::spoiler **Solution**
-2/ in 'umuscl.f90'. Quantities are conserved. The coarse-to-fine boundary is never considered, the flux being set to zero. 
+2/ in 'umuscl.f90'. Quantities are conserved. The coarse-to-fine boundary is never considered, the flux being set to zero.
 :::
 
 
@@ -497,7 +497,7 @@ and allocated in `init_poisson`:
  allocate(f   (1:ncell,1:3))
  rho=0; phi=0; f=0
 ```
-They consist of 
+They consist of
 * the gravitational force `f`, a vector with `ndim` dimensions,
 * the gravitational potential `phi` and a copy of the old state `phi_old`,
 * the total density distribution `rho`, including gas and particles.
@@ -546,7 +546,7 @@ When there is gravity, a source term $\mathbb{S}$ is added to the Euler equation
 
 $\frac{\partial \mathbb{U}}{\partial t} + \nabla\cdot\mathbb{F}(\mathbb{U}) = \mathbb{S}$.
 
-In ramses, the gravitational source term is calculated as 
+In ramses, the gravitational source term is calculated as
 
 $\mathbb{S}^{n+\frac{1}{2}}_{i}=
 \left[
@@ -563,7 +563,7 @@ In the code, $\mathbb{S}$ is referred to as the gravity source term (not to be c
 :::info
 **Exercise**: Where in `amr_step` is the gravitationnal acceleration source term integrated when you have hydro? Write the corresponding pseudo-code (assuming there are no particles).
 :::spoiler **Solution**
-The acceleration is added in four places, but with a subtile change of sign in one of the calls. Equation 13 in Teyssier (2002) 
+The acceleration is added in four places, but with a subtile change of sign in one of the calls. Equation 13 in Teyssier (2002)
 is done with `add_gravity_source_terms(ilevel)` (index n) and `line 19` for n+1.
 
 The parts in `amr_step` relevant for the gravity calculation in the case of hydro (ignoring particles) can be summarized as follows:
@@ -605,10 +605,10 @@ if(hydro)then
    ...
    ! Add gravity source terms with half a time step to unew
    if(poisson)call add_gravity_source_terms(ilevel)
-   
+
    ! Set uold equal to unew
    call set_uold(ilevel)
-   
+
    ! Add gravity source term with half time step and old force
    ! in order to complete the time step
    if(poisson)call synchro_hydro_fine(ilevel,+0.5*dtnew(ilevel),1)
@@ -617,7 +617,7 @@ end if
 ```
 Remark that the routine `synchro_hydro_fine()` alters `uold`, while `add_gravity_source_terms()` alters `unew`.
 
-Half a timestep is added at the end of the global time step to syncrhonize all levels and to make outputs at the beginning of the next timestep. This contribution is then removed ater the dump.  
+Half a timestep is added at the end of the global time step to syncrhonize all levels and to make outputs at the beginning of the next timestep. This contribution is then removed ater the dump.
 :::
 
 
@@ -656,7 +656,7 @@ call newdt_fine(ilevel)
 ...
 
 ! Move particles
-if(pic) call move_fine(ilevel) ! Only remaining particles  
+if(pic) call move_fine(ilevel) ! Only remaining particles
 ```
 
 Because the gravitational force is known on the grid, not at the particle positions, we need to apply the inverse CIC scheme (see chapter on Particles) when updating particle velocities. In summary, the force acting on the particle will be interpolated from the cells with which the particle "overlaps". Once this is done, the particle velocities can be updated using the time-step of the level on which the particle lives.
@@ -694,7 +694,7 @@ recursive subroutine amr_step(ilevel,icount)
   else
      call update_time(ilevel)
   end if
-  ...  
+  ...
   ! do things at the end
   ...
 end subroutine amr_step
@@ -711,7 +711,7 @@ recursive subroutine amr_step(ilevel,icount)
 
    ! calc phi(ilevel), set unew(ilevel)=uold(ilevel), ..., calc dt(ilevel)
    stuff_before(ilevel)
-   
+
    ! recursive call
    if(ilevel<nlevelmax)then
       if(nsubcycle(ilevel)==2)then
@@ -723,7 +723,7 @@ recursive subroutine amr_step(ilevel,icount)
    else
      call update_time(ilevel)
    end if
-   
+
    ! solve hydro, set uold(ilevel)=unew(ilevel), ...
    stuff_after(ilevel)
 
@@ -775,17 +775,17 @@ call amr_step(l-1,1)
 At the end we have advanced by 4 level l+1 timesteps dt(l+1)
 :::
 
-## Time stepping 
+## Time stepping
 
 RAMSES enables adaptive time stepping where each AMR level evolves with individual timesteps. Though, the following rule always applies:
 
 $\Delta t^{\ell}=\Delta t^{\ell+1}_1+\Delta t^{\ell+1}_2$
 
-An example of time stepping  with two levels in the figure below (Credits: Romain Teyssier) 
+An example of time stepping  with two levels in the figure below (Credits: Romain Teyssier)
 ![](https://codimd.math.cnrs.fr/uploads/upload_6308ef0625fe29ca63f27341366485d5.png)
 
-Level 2 is updated first with first with a time step of size $\Delta t^{\ell+1}_1$  and second with $\Delta t^{\ell+1}_2$.The  coarse level $\ell=1$ is frozen during fine level solves (one order of accuracy down !). The fine flux are averaged in time at coarse fine boundaries. Then level $\ell$ is updated. 
+Level 2 is updated first with first with a time step of size $\Delta t^{\ell+1}_1$  and second with $\Delta t^{\ell+1}_2$.The  coarse level $\ell=1$ is frozen during fine level solves (one order of accuracy down !). The fine flux are averaged in time at coarse fine boundaries. Then level $\ell$ is updated.
 
 $\bf{F}^{n+1/2,\ell}_{i+1/2,j}=\frac{1}{\Delta t_1^{\ell+1}+\Delta t_2^{\ell+1}}\left( \Delta t_1^{\ell+1}\frac{\bf{F}^{n+1/4,\ell+1}_{i+1/2,j-1/4}+\bf{F}^{n+1/4,\ell+1}_{i+1/2,j+1/4}}{2} + \Delta t_2^{\ell+1}\frac{\bf{F}^{n+3/4,\ell+1}_{i+1/2,j-1/4}+\bf{F}^{n+3/4,\ell+1}_{i+1/2,j+1/4}}{2}    \right)$
 
-The timestep is computed in `pm/newdt_fine.f90`. For more information, see Section 2.4 in the  RAMSES paper (Teyssier 2002). 
+The timestep is computed in `pm/newdt_fine.f90`. For more information, see Section 2.4 in the  RAMSES paper (Teyssier 2002).
