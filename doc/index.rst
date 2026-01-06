@@ -28,7 +28,7 @@ Table of Contents
 
 .. toctree::
   :caption: User Documentation
-  :maxdepth: 2
+  :maxdepth: 1
 
   wiki/Start.md
   wiki/Runtime_Parameters.md
@@ -38,7 +38,7 @@ Table of Contents
 
 .. toctree::
   :caption: Developer Documentation
-  :maxdepth: 2
+  :maxdepth: 1
   
   dev_docs/lecture/index.rst
   dev_docs/developer_guide.md
