@@ -202,7 +202,7 @@ These variables are defined in `amr_commons`:
 type(communicator),allocatable,dimension(:)  ::active    ! 1:nlevelmax
 type(communicator),allocatable,dimension(:,:)::boundary  ! 1:MAXBOUND,1:nlevelmax
 ```
-They are arrays of a costume defined data structure called `communicator`. Derived types in fortran are analogous to structs in C/C++. To access its members, the synthax `%` is used. A communicator has various fields, but for keeping track of the grids only two are used:
+They are arrays of a custom defined data structure called `communicator`. Derived types in fortran are analogous to structs in C/C++. To access its members, the synthax `%` is used. A communicator has various fields, but for keeping track of the grids only two are used:
 ```fortran=
 type communicator
   integer                            ::ngrid   ! number of grids
