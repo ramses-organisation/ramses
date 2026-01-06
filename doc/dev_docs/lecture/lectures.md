@@ -12,6 +12,5 @@ particles.md
 parameters.md
 mpi.md
 subgrid.md
-refinement.md
 refinement.rst
 ```
