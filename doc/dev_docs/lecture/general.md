@@ -665,7 +665,7 @@ Because the gravitational force is known on the grid, not at the particle positi
 
 # 4. Detailed dive into `amr_step`
 
-Because RAMSES is an AMR code with the possiblitly for adaptive timestepping, there are certain complexities in `amr_step`.
+Because RAMSES is an AMR code with the possibility for adaptive timestepping, there are certain complexities in `amr_step`.
 
 ## recursivity
 
