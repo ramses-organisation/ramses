@@ -505,7 +505,7 @@ Compiler <https://www.onlinegdb.com/online_fortran_compiler>`__)
        real(kind=kind(0.0d0)), allocatable :: p(:, :)
 
        namelist /VAR_p/ p
-       
+
 
        allocate(p(MAX_LEVEL,MAX_REGION))
        open(newunit=unit, file='namelist.nml', status='old', iostat=ierr)
@@ -513,13 +513,13 @@ Compiler <https://www.onlinegdb.com/online_fortran_compiler>`__)
        close(unit)
 
         write(*,*) "REGIONS"
-    
+
        do  iregion = 1,MAX_REGION
            write(*,*) p(:,iregion)
        end do
-       
+
        write(*,*) "LEVELS"
-       
+
        do ilevel = 1,MAX_LEVEL
            write(*,*) p(ilevel,:)
        end do

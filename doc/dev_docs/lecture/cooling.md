@@ -46,12 +46,12 @@ $$
 - Cooling [Joki ?]
     - General picture, interface, units, implementation choices in RAMSES (different options, …)
     - operator splitting, source term, timesteps … (galaxy vs dense-core-collapse viewpoints…)
-    - **EXERCISE:**  set time step of simulation to resolve cooling time (use some analytic approx). 
+    - **EXERCISE:**  set time step of simulation to resolve cooling time (use some analytic approx).
         - add field to hydro variable (`ivar+n`)
         - store the cooling time
         - output it … (in well understood units…)
-    - **EXERCISE:** introduce a source term evolving as t/tau… 
-- `NENER` : what it is and what it can be used for. 
+    - **EXERCISE:** introduce a source term evolving as t/tau…
+- `NENER` : what it is and what it can be used for.
 - Boundary conditions (review them)
 - Cosmology ($a(t)$) [JS]
 
@@ -60,7 +60,7 @@ $$
 
 # Radiative Cooling (and photo-heating)
 ::: warning
-More on cooling and heating in RAMSES can be found in [Rosdahl's PhD thesis](https://theses.fr/2012LYO10075), or in the [RAMSES-RT paper](https://ui.adsabs.harvard.edu/abs/2013MNRAS.436.2188R/abstract). A classical paper on the topic is [Katz, Weinberg, & Hernquist (1996)](https://ui.adsabs.harvard.edu/abs/1996ApJS..105...19K/abstract). 
+More on cooling and heating in RAMSES can be found in [Rosdahl's PhD thesis](https://theses.fr/2012LYO10075), or in the [RAMSES-RT paper](https://ui.adsabs.harvard.edu/abs/2013MNRAS.436.2188R/abstract). A classical paper on the topic is [Katz, Weinberg, & Hernquist (1996)](https://ui.adsabs.harvard.edu/abs/1996ApJS..105...19K/abstract).
 :::
 
 :::warning
@@ -72,16 +72,16 @@ More on cooling and heating in RAMSES can be found in [Rosdahl's PhD thesis](htt
 In most astrophysical contexts, gas dissipates thermal energy through collisional processes, and this energy is carried away by radiation. Gas may also gain energy from radiation, for example through photo-ionisations. In RAMSES, these radiative cooling and heating terms are accounted for in the energy conservation equation with the net cooling term $\Lambda$:
 
 $$
-\frac{\partial E}{\partial t} + \nabla \cdot \left( (E + P) \boldsymbol{u} \right) = -\rho \boldsymbol{u} \cdot \nabla \phi + \Lambda(\rho, \varepsilon). 
+\frac{\partial E}{\partial t} + \nabla \cdot \left( (E + P) \boldsymbol{u} \right) = -\rho \boldsymbol{u} \cdot \nabla \phi + \Lambda(\rho, \varepsilon).
 $$
 
-Here, $t$ is time, $E = \frac{1}{2}\rho u^2 + e$ is the gas internal energy, $P$ is pressure, $\boldsymbol{u}$ is the gas bulk velocity, $\phi$ is the gravitational potential, and $\Lambda$ is the net cooling term. The pressure is related to the internal energy through $P = (\gamma -1)e$, where $\gamma$ is the ratio of specific heats. 
+Here, $t$ is time, $E = \frac{1}{2}\rho u^2 + e$ is the gas internal energy, $P$ is pressure, $\boldsymbol{u}$ is the gas bulk velocity, $\phi$ is the gravitational potential, and $\Lambda$ is the net cooling term. The pressure is related to the internal energy through $P = (\gamma -1)e$, where $\gamma$ is the ratio of specific heats.
 
 
-RAMSES uses **operator splitting** to solve the Euler equations in steps. In a first step, gravity is computed, and  the gas is advected, basically solving the Euler equations with $\Lambda = 0$. In a second **thermo-chemistry** step, the heating and cooling terms are computed, and the energy is updated. The thermo-chemistry involves the interaction of radiation and matter, and the implementation differs if the code is used in radiation-hydrodynamics (RHD) mode or in hydro (HD) mode. With RHD, the radiation is transfered accross the grid and the thermo-chemistry is computed on the fly. In the HD case, the thermo-chemistry is computed assuming the ionisation equilibrium (possibly in the presence of a uniform UV background). 
+RAMSES uses **operator splitting** to solve the Euler equations in steps. In a first step, gravity is computed, and  the gas is advected, basically solving the Euler equations with $\Lambda = 0$. In a second **thermo-chemistry** step, the heating and cooling terms are computed, and the energy is updated. The thermo-chemistry involves the interaction of radiation and matter, and the implementation differs if the code is used in radiation-hydrodynamics (RHD) mode or in hydro (HD) mode. With RHD, the radiation is transfered accross the grid and the thermo-chemistry is computed on the fly. In the HD case, the thermo-chemistry is computed assuming the ionisation equilibrium (possibly in the presence of a uniform UV background).
 
 
-There are a number of different cooling implementations in RAMSES: 
+There are a number of different cooling implementations in RAMSES:
 - equilibrium cooling with a UVB, using RAMSES (default).
 - equilibrium cooling with a UVB, using Grackle.
 - ISM cooling (with or without RHD).
@@ -130,13 +130,13 @@ Using $\Tmu$ and $\nh$ as look-up indexes, the following rates, all given in [$\
 With these three rates in hand the temperature is updated by solving:
 
 $$
-  \frac{\partial \Tmu}{\partial t} = 
+  \frac{\partial \Tmu}{\partial t} =
   \frac{(\gamma-1) \mh}{\rho \kb} \ \CH,
 $$
 
 where $\CH\equiv\dot{e}=(\Heat + \Cool + Z/\Zsun \, \CoolZ)\, \nh^2$. The update is done with a semi-implicit Euler formulation (See Press et al., 1992):
 
-$$  
+$$
 \Tmu^{t+\dt}= \Tmu^{t} + \frac{\CH K \dt}{1-\CHp K \dt},
 $$
 
@@ -162,7 +162,7 @@ Note that these tables are written to each ramses output directory, allowing the
 Given the abundances, it is then a straightforward matter to calculate and tabulate $\Cool(\Tmu,\nh)$ -- the cooling rate is a sum of bremsstrahlung-, collisional excitation-, collisional ionization-, recombination-, dielectric recombination- and Compton- cooling rates, all fitted analytic functions of temperature and abundances, and fetched from various sources in the literature (e.g. Cen, 1992).
 
 #### The heating rates table:
-It is also straightforward to tabulate $\Heat(\Tmu,\nh)$. Each bin contains 
+It is also straightforward to tabulate $\Heat(\Tmu,\nh)$. Each bin contains
 
 $$
   \Heat=\sum_i \Heat_i n_i,
@@ -186,19 +186,19 @@ $$
 where $f$ is a dimensionless analytic function that corrects for density $\nh$ and UV background photoionization at redshift $z$.
 
 ## Non-equilibrium cooling
-This works quite similarly as the default equilibrium cooling, except, here, the non-equilibrium fraction of ionised hydrogen, and, optionally, HeII, HeIII, and neutral hydrogen (implicitly evolving molecular hydrogen) is evolved and tracked in every cell. These ionisation fractions are stored in passive scalars, usually right after the metallicity scalar. Here, the ionization fractions are evolved along with the temperature in each cooling sub-cycling step in a quasi-implicit fashion (see the RAMSES-RT paper by Rosdahl et al. 2013). 
+This works quite similarly as the default equilibrium cooling, except, here, the non-equilibrium fraction of ionised hydrogen, and, optionally, HeII, HeIII, and neutral hydrogen (implicitly evolving molecular hydrogen) is evolved and tracked in every cell. These ionisation fractions are stored in passive scalars, usually right after the metallicity scalar. Here, the ionization fractions are evolved along with the temperature in each cooling sub-cycling step in a quasi-implicit fashion (see the RAMSES-RT paper by Rosdahl et al. 2013).
 
 The non-equilibrium cooling module was written specifically for radiative transfer (see again the RAMSES-RT paper) and is found in `rt/rt_cooling_module.f90`. It contains the routine `rt_solve_cooling`, called instead of the default `solve_cooling` from `cooling_fine` if the non-equilibrium cooling is activated. In this case, cooling fine updates not only the pressure variable in `uold`, but also the passive scalars corresponding to the ionization fractions of hydrogen and helium (and, if radiative transfer is also activated, the momentum of the gas from radiation-gas interactions and the photon fluxes and densities). The non-equilibrium cooling can only be activated if RAMSES is compiled with the `-RT` flag. However, if the flag is used, non-equilibrium cooling can still be activated without radiative transfer, simply by compiling with zero radiation groups, and using `cooling=.true.` and `neq_chem=.true.` in the `COOLING_PARAMS` namelist.
 
 As for the equilibrium cooling module, cooling and heating rates are tabulated, though in this case only against temperature (in Kelvin), whereas the equilibrium cooling rates can be tabulated against both temperature and gas density. The reason for this is that the cooling rates depend on the ionisation fractions of the gas species, which are direct functions of temperature in equilibrium, but not in non-equilibrium (and tabulating against density is preferrable if possible, since it reduces the computational cost compared to multiplying the cooling rates with densities).
 
-The non-equilibrium heating and cooling rates tables are initialised in `rt_set_table` (called during `init_time`) and updated every coarse timestep from `amr_step`. For the cooling rates, only Compton cooling actually needs to be updated, since the others are not redshift-dependent (with equilibrium cooling all the cooling rates are redshift-dependent trough the PIE ionization fractions). 
+The non-equilibrium heating and cooling rates tables are initialised in `rt_set_table` (called during `init_time`) and updated every coarse timestep from `amr_step`. For the cooling rates, only Compton cooling actually needs to be updated, since the others are not redshift-dependent (with equilibrium cooling all the cooling rates are redshift-dependent trough the PIE ionization fractions).
 
-With non-equilibrium cooling, the homogeneous UV background is more flexible than the hardcoded variants in equilibrium cooling. It can be read from files  
+With non-equilibrium cooling, the homogeneous UV background is more flexible than the hardcoded variants in equilibrium cooling. It can be read from files
 
 
 <!-- ## GRACKLE cooling
-... 
+...
 
 -->
 
@@ -206,9 +206,9 @@ With non-equilibrium cooling, the homogeneous UV background is more flexible tha
 Exercise: figure out how it works.
 
 
-<!-- 
+<!--
 :::warning
-Describe 2 versions (1 with HD and 1 with RHD). Then exercise: (1) figure out how ISM cooling works, (2) implement a new version of cooling ... 
+Describe 2 versions (1 with HD and 1 with RHD). Then exercise: (1) figure out how ISM cooling works, (2) implement a new version of cooling ...
 :::
 
---> 
+-->

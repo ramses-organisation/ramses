@@ -6,21 +6,21 @@ tags: RAMSES
 
 ## Introduction
 
-Many processes happen on unresolved scales in any simulation: star formation, supernova explosions, accretion onto black-holes are typical examples of that in cosmological or galaxy-scale simulations. The effects of these unresolved processes on the surrounding, resolved, medium need to be modeled explicitly, as they do not result from the set of equations (Euler+...) solved by RAMSES. This is where **subgrid models** come in. 
+Many processes happen on unresolved scales in any simulation: star formation, supernova explosions, accretion onto black-holes are typical examples of that in cosmological or galaxy-scale simulations. The effects of these unresolved processes on the surrounding, resolved, medium need to be modeled explicitly, as they do not result from the set of equations (Euler+...) solved by RAMSES. This is where **subgrid models** come in.
 
 From a practical viewpoint, many subgrid models deal with the formation or growth of particles, and with the injection of matter, momentum, energy, etc. from these particles into the surrounding medium. This means **updating particle properties based on grid properties**, and conversely **updating grid quantities based on particle properties**.
 
 Here, we discuss basic algorithms that are commonly used to perform these operations in RAMSES. We will base the explanation on the examples of *star formation* and *SN feedback* subgrid models as a way to illustrate the different operations we need to perform on the grid and on particles.
 
 
-A **star formation subgrid model** operates on leaf cells in typically in 3 steps: 
+A **star formation subgrid model** operates on leaf cells in typically in 3 steps:
 1. Decide whether star formation may occur in the current cell. This depends on a set of conditions (defined by the modeller). These conditions may be local (e.g., a density threshold), or non-local, i.e., depend on the surrounding gas properties (e.g., a converging flow). In the latter case we need to collect information beyond the current leaf cell.
-2. Decide how much gas mass will turn into stars. This depends on the star formation model and may again be a function of local properties (e.g., with a SF efficiency set by the leaf cell's free-fall time) or non-local properties (e.g., with the multi-free-fall models). 
-3. Remove gas from the mesh and spawn new star particles. 
+2. Decide how much gas mass will turn into stars. This depends on the star formation model and may again be a function of local properties (e.g., with a SF efficiency set by the leaf cell's free-fall time) or non-local properties (e.g., with the multi-free-fall models).
+3. Remove gas from the mesh and spawn new star particles.
 
 In turn, **SN feedback subgrid models** need to:
-1. Decide whether a stellar particle releases matter and/or momentum and energy. This may happen as a one-shot event (typically 5-10 Myr after the stellar population formed), or may be modelled as a rate of events. 
-2. Figure out in which cell(s) the star particle will inject stuff. This may be a single cell (for metal release, thermal energy) or a number of cells (e.g. for mechanical feedback). 
+1. Decide whether a stellar particle releases matter and/or momentum and energy. This may happen as a one-shot event (typically 5-10 Myr after the stellar population formed), or may be modelled as a rate of events.
+2. Figure out in which cell(s) the star particle will inject stuff. This may be a single cell (for metal release, thermal energy) or a number of cells (e.g. for mechanical feedback).
 3. Update the star particle and the cell(s) according to the feedback model. Again this can be done in several ways (including through the use of *debris* particles... ).
 
 :::info
@@ -64,11 +64,11 @@ Let's look at the `thermal_feedback` routine in `feedback.f90`. As we have seen 
            do jpart=1,npart1
               ! Save next particle   <--- Very important !!!
               next_part=nextp(ipart)
-              
+
               !----
               ! Do something with particle ipart
               !----
-              
+
               ipart=next_part  ! Go to next particle
            end do
         endif
@@ -97,7 +97,7 @@ It is only in this `feedbk` routine that the actual **cell** is identified, usin
 
 In the `star_formation` routine of `pm/star_formation.f90`, some star formation models require to identify the neighbouring cells of star-forming sites in order to compute the velocity dispersion around a given cell.
 
-For this, we use the `getnbor` routine defined in `pm/star_formation.f90`, and that heavily relies on routines developed in `amr/nbors_utils.f90`. The routine returns the (global) index, called `ind_nbor` of all `2*ndim` cells around a cell indexed by `ind_cell`. 
+For this, we use the `getnbor` routine defined in `pm/star_formation.f90`, and that heavily relies on routines developed in `amr/nbors_utils.f90`. The routine returns the (global) index, called `ind_nbor` of all `2*ndim` cells around a cell indexed by `ind_cell`.
 
 This index can then be used to access the properties of the neighbours. For example, the density in the six cells around the target one are defined through
 ```fortran=1
@@ -221,7 +221,7 @@ This defines for example the length conversion factor, `scale_l`, which is fixed
 
 While this presents no fundamental difficulty, special care must be taken to actually *use* these conversion factors.
 
-For example, the `sf_trelax` namelist parameter is converted to **code units** using 
+For example, the `sf_trelax` namelist parameter is converted to **code units** using
 ```fortran=1
   trel=sf_trelax*Myr2sec/scale_t ! relaxation timescale
 ```
@@ -260,14 +260,14 @@ Complete the following metacode to describe the implementation of a star formati
 ```fortran
 subroutine star_formation()
 
-    ! TO BE COMPLETED ... 
-    
+    ! TO BE COMPLETED ...
+
     ! getting physical info ... (from uold or unew ?, etc.)
     ! units, time, cell sizes, position, density etc
-    ! decide how many stars you form 
-    target_mstar = dt * density / tff * epsilon 
+    ! decide how many stars you form
+    target_mstar = dt * density / tff * epsilon
     ! Poisson sampling
-    ! create particles and add to lists 
+    ! create particles and add to lists
     ! remove matter from cell
 ```
 

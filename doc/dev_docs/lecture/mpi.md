@@ -4,14 +4,14 @@ tags: RAMSES
 
 # Lecture: MPI communications
 
-- Domain decomposition (Hilbert key, etc.), ghost zones, etc. → need for comms. MPI primer ? 
-- **EXERCISE:** When are they done for the mesh ? Guess and write pseudo-code. Check with the TRUTH. 
-- Boundaries updates : unew in the ghost zone is tricky (fetch info from neighbours, and update neighbours). 
-- **EXERCISE:** pseudo-code that ! 
-- Communicating particles (update link lists?). When is it done ? What is done (updates of lists). 
-- **EXERCISE:** pseudo-code that. 
-- specific tricks for particles (sinks) where you need to fetch cell data and modify it. 
-- **EXERCISE:** pseudo-code that. 
+- Domain decomposition (Hilbert key, etc.), ghost zones, etc. → need for comms. MPI primer ?
+- **EXERCISE:** When are they done for the mesh ? Guess and write pseudo-code. Check with the TRUTH.
+- Boundaries updates : unew in the ghost zone is tricky (fetch info from neighbours, and update neighbours).
+- **EXERCISE:** pseudo-code that !
+- Communicating particles (update link lists?). When is it done ? What is done (updates of lists).
+- **EXERCISE:** pseudo-code that.
+- specific tricks for particles (sinks) where you need to fetch cell data and modify it.
+- **EXERCISE:** pseudo-code that.
 
 
 
@@ -147,7 +147,7 @@ Steps:
     * wait for sends to complete
 
 * `make_virtual_reverse` (reverse exchange)
-Send data from the current MPI domain's virtual grids to real grids of neighboring domains. Contributions are **added** to the field. 
+Send data from the current MPI domain's virtual grids to real grids of neighboring domains. Contributions are **added** to the field.
 `xx(igrid) = xx(igrid) + received_value`
 This needs to be done after an update that affect neighboring cells has been performed, i.e. the computation of hydro fluxes and computation of the density field using CIC. For the coarsest levels, sychronous SEND/RECV are used. For the finer levels, a simimal asynchronous send/recv pattern is uses as in the forward exchange.
 
@@ -158,7 +158,7 @@ There are two versions of the `make_virtual_fine` and `make_virtual_reverse` sub
 
 
 :::info
-**Exercise**: For hydro, which array should be used `uold` and `unew`? 
+**Exercise**: For hydro, which array should be used `uold` and `unew`?
 It depends on the exchange(reverse versus forward).
 :::spoiler **Solution**
 It is linked to `set_unew`
@@ -171,7 +171,7 @@ Particles move freely in the computation domain, which means they can travel to 
 
 ## 3.4 When to communicate?
 
-Communications must be done each time a global array, e.g.,  `uold`,   is modified (i.e., after cooling or feedback), to inform the neighbor process about the change, using `make _virtual_fine`. 
+Communications must be done each time a global array, e.g.,  `uold`,   is modified (i.e., after cooling or feedback), to inform the neighbor process about the change, using `make _virtual_fine`.
 
 
 :::info

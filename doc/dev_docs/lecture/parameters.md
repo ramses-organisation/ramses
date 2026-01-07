@@ -5,7 +5,7 @@ tags: RAMSES
 # Interlude: Parameters, initialisation, outputs
 
 - Go back to the code and review it from scratch starting with commons, namelist blocs, initialisations, etc… , and outputs.
-- **EXERCISE:** add a parameter to the namelist, read it, convert it to some units, and print it out. (Try adding parameters to different blocs). 
+- **EXERCISE:** add a parameter to the namelist, read it, convert it to some units, and print it out. (Try adding parameters to different blocs).
 - **EXERCISE:** set the units of a passive scalar in the namelist and use that to change the units of some outputs. (e.g. output metallicity in solar units, with $Z_\odot$ provided in the namelist).
 
 # Input/Output and User Interaction
@@ -61,14 +61,14 @@ Namelists are read once during program initialization. The keywords in the namel
 
    ! Read namelist
    read(namelist_unit,NML=something_params,IOSTAT=nml_err)
-   
+
    ! Checks in whether the namelist was present in the file
    if(nml_err<0)then
       ! EOF reached before namelist was found
    elseif(nml_err>0)then
       ! Problem with formatting in the file
    endif
-   
+
    ! Do some check on the read values
    if(param1<0) nml_ok=.false.
    ...
@@ -108,7 +108,7 @@ Each module or subsystem (e.g. AMR, hydrodynamics, gravity) is controlled by its
     - `sf_params`
     - `units_params`
     - `grackle_params`
-    - `physics_params` (legacy) 
+    - `physics_params` (legacy)
 - the corresponding code module:
     - `clumpfind_params` in *pm/clump_finder.f90*
     - `mergertree_params` in *pm/merger_tree.f90*
@@ -118,7 +118,7 @@ Each module or subsystem (e.g. AMR, hydrodynamics, gravity) is controlled by its
     - `rt_params` and `rt_groups` in *rt/rt_init.f90*
     - `turb_params` in *turb/read_turb_params.f90*
 
-Remark that recently dedicated subroutines have been created in *amr/read_params.f90* to handle the namelist defined in this file. 
+Remark that recently dedicated subroutines have been created in *amr/read_params.f90* to handle the namelist defined in this file.
 
 
 ### 1.4 Adding a new namelist parameter
@@ -143,7 +143,7 @@ Since the new parameter deals adds a heating source, it should be added to the `
        & ,cooling_ism,tuto_heating_model
 ```
 
-**Step 2** 
+**Step 2**
 Searching for the other variables which are associated with this namelist, we find that they are defined in *amr/amr_parameters.f90*, rather than in *hydro/hydro_parameters.f90*. Legacy codes are often plagued by this sort of inconsistencies. We declare the new variable as an integer, since it will take the values 0,1,2 or 3 and we set its default value to 0, which turns the feature off:
 ```fortran
   logical ::cooling_ism = .false.      ! Use cooling module from Audit & Hennebelle 2005 (non-RT)
@@ -213,17 +213,17 @@ subroutine read_tuto_params(namelist_unit,nml_ok)
       if(myid==1)write(*,*)'Error reading namelist &TUTO_PARAMS. Check formatting.'
       nml_ok=.false.
    endif
-   
+
    if(tuto_efficiency<=0)then
       if(myid==1)write(*,*)'Error in the namelist: tuto_efficiency must be larger than 0'
       nml_ok=.false.
    endif
-   
+
    if(tuto_timescale<=0)then
       if(myid==1)write(*,*)'Error in the namelist: tuto_timescale must be larger than 0'
       nml_ok=.false.
    endif
-   
+
    if(myid==1)write(*,*)'TUTO: tuto_efficiency=',tuto_efficiency,', tuto_timescale=',tuto_timescale
 
 end subroutine read_tuto_params
@@ -293,7 +293,7 @@ end subroutine jeans_instability_cos_condinit
 
 ### 2.2 Input file formats
 
-Another way to provide the initial conditions is through files, by setting the namelist parameters `initfile` and `filetype`. 
+Another way to provide the initial conditions is through files, by setting the namelist parameters `initfile` and `filetype`.
 For the variables on the grid, supported formats are ascii and grafic (see *init_flow_fine.f90*), while for particles ascii, grafic, and gadget are available (see *init_part.f90*, and [Section 1.3](https://codimd.math.cnrs.fr/z55fgvBcTjiGxrWt7VBUVw?both#13-Initialising-particles) in the chapter on particles).
 
 If you want to add your own input file, good luck.
@@ -310,13 +310,13 @@ Look in a ramses output. What files are there?
 :::spoiler **Solution**
 Several types of files can be found in a RAMSES snapshot *output_xxxxx/* (non-exhaustive):
 * General simulation info:
-    * info_xxxxxx.txt: units, boxlen, output time, cosmological constants,... 
+    * info_xxxxxx.txt: units, boxlen, output time, cosmological constants,...
     * info_rt_xxxxxx.txt: info on photon groups and chemistry
     * header_xxxxxx.txt: number of particles per family
 * Data outputted by each MPI process (yyyyy):
     * amr_xxxxx.outyyyyyy: the grid linked list variables, grid center position, octree variables, loadbalancing and refinement map
     * hydro_xxxxx.outyyyyyy: all hydro variables
-    * rt_xxxxx.outyyyyyy: 
+    * rt_xxxxx.outyyyyyy:
     * grav_xxxxx.outyyyyyy: gravitational potential and acceleration
     * part_xxxxx.outyyyyyy: particle fields
 * File descriptors: these files list which variables are outputted in the corresponding data files and in which order they are:
@@ -345,7 +345,7 @@ Each module typically has its own `output_xxxx.f90` file / subroutine to deal wi
 
 ### 3.3 Outputting the AMR structure
 
-The outputting of the AMR structure is handled by the routine `backup_amr` which can be found in `amr/output_amr.f90`. It writes: 
+The outputting of the AMR structure is handled by the routine `backup_amr` which can be found in `amr/output_amr.f90`. It writes:
 * the grid linked list variables,
 * the grid center position, and the octree variables
 * the loadbalancing map
@@ -416,7 +416,7 @@ Outputting the hydro variables, which are stored in `uold` (see the chapter on H
     end if
  end do
 end do
-close(unit_out)  
+close(unit_out)
 ```
 :::
 
@@ -432,7 +432,7 @@ end do
 field_name = 'my_variable_name'
 ! Pass data to dump utils for writing
 call generic_dump(field_name, info_var_count, xdp, unit_out,&
-                & dump_info_flag, unit_info)          
+                & dump_info_flag, unit_info)
 ```
 The routine `generic_dump` (defined in the file *io/dump_utils.f90*) is performing the `write` instruction for any type. When adding new variables on the grid, the corresponding backup routine needs to be updated to include a new block following this structure. The name you choose for your new variable will appear in the file descriptor, so make sure to choose something informative.
 
@@ -468,11 +468,11 @@ The routine for outputting particles, `backup_part`, can be found in *pm/output_
 ```
 Remark that the counter `ivar` is updated automatically in `generic_dump`.
 
-Generalized, new particle fields can be added to the output by adding a new block of the form: 
+Generalized, new particle fields can be added to the output by adding a new block of the form:
 ```fortran=1
   ! allocate work array of the correcto type if needed
   allocate(work_array(1:npart))
-  
+
   ! Gather data into work array by looping over all allocated space
   ipart = 0
   do i = 1, npartmax
