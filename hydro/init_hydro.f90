@@ -153,7 +153,11 @@ subroutine init_hydro
                  ! Read velocities --> momenta
                  do ivar=2,neul-1
                     read(ilun)xx
-                    call scatter_primitive_to_uold(ind_grid, iskip, ivar, xx, ncache)
+                    if (read_conservative) then
+                       call scatter_conservative_to_uold(ind_grid, iskip, ivar, xx, ncache)
+                    else
+                       call scatter_primitive_to_uold(ind_grid, iskip, ivar, xx, ncache)
+                    endif
                  end do
 
 #if NENER>0
@@ -161,7 +165,11 @@ subroutine init_hydro
                  do ivar=nhydro+1,nhydro+nener
                     if(remap_pscalar(ivar-nhydro).gt.-1) read(ilun)xx
                     if(remap_pscalar(ivar-nhydro).gt.0) then
-                       call scatter_primitive_to_uold(ind_grid, iskip, remap_pscalar(ivar-nhydro), xx, ncache)
+                       if (read_conservative) then
+                          call scatter_conservative_to_uold(ind_grid, iskip, remap_pscalar(ivar-nhydro), xx, ncache)
+                       else
+                          call scatter_primitive_to_uold(ind_grid, iskip, remap_pscalar(ivar-nhydro), xx, ncache)
+                       endif
                     else if(remap_pscalar(ivar-nhydro).lt.0) then
                        do i=1,ncache
                           uold(ind_grid(i)+iskip,abs(remap_pscalar(ivar-nhydro)))=0d0
@@ -171,7 +179,11 @@ subroutine init_hydro
 #endif
                  ! Read thermal pressure --> total fluid energy
                  read(ilun)xx
-                 call calc_total_energy_from_thermal_pressure(ind_grid, iskip, xx, ncache)
+                 if (read_conservative) then
+                    call scatter_conservative_to_uold(ind_grid, iskip, neul, xx, ncache)
+                 else
+                    call calc_total_energy_from_thermal_pressure(ind_grid, iskip, xx, ncache)
+                 endif
 #if NVAR>NHYDRO+NENER
                  ! Read passive scalars
                  do ivar=nhydro+1+nener,max(nvar2,nvar)
@@ -180,7 +192,11 @@ subroutine init_hydro
                        continue
                     endif
                     if(remap_pscalar(ivar-nhydro).gt.0)then
-                       call scatter_primitive_to_uold(ind_grid, iskip, remap_pscalar(ivar-nhydro), xx, ncache)
+                       if (read_conservative) then
+                          call scatter_conservative_to_uold(ind_grid, iskip, remap_pscalar(ivar-nhydro), xx, ncache)
+                       else
+                          call scatter_primitive_to_uold(ind_grid, iskip, remap_pscalar(ivar-nhydro), xx, ncache)
+                       endif
                     else if(remap_pscalar(ivar-nhydro).lt.0) then
                        do i=1,ncache
                           uold(ind_grid(i)+iskip,abs(remap_pscalar(ivar-nhydro)))=0d0

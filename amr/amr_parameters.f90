@@ -120,6 +120,8 @@ module amr_parameters
   real(dp)::tout_next=HUGE(1.0D0)     ! next output time using delta_tout
   real(dp)::aout_next=HUGE(1.0D0)     ! next output expansion factor using delta_aout
   logical::output_to_log=.true.  ! write output to log for 1D runs
+  logical::write_conservative=.false. ! output conservative variables instead of primitive ones
+  logical::read_conservative=.false.  ! restart from an output which contains conservative variables
 
   ! Lightcone parameters
   real(dp)::thetay_cone=12.5d0

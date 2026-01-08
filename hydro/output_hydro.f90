@@ -86,8 +86,13 @@ subroutine backup_hydro(filename, filename_desc)
               call generic_dump(field_name, info_var_count, xdp, unit_out, dump_info_flag, unit_info)
               ! Write velocity field
               do ivar = 2, neul-1
-                 field_name = 'velocity_' // dim_keys(ivar - 1)
-                 call gather_primitive_from_uold(ind_grid, iskip, ivar, xdp, ncache)
+                 if(write_conservative)then
+                    field_name = 'momentum_' // dim_keys(ivar - 1)
+                    call gather_conservative_from_uold(ind_grid, iskip, ivar, xdp, ncache)
+                 else
+                    field_name = 'velocity_' // dim_keys(ivar - 1)
+                    call gather_primitive_from_uold(ind_grid, iskip, ivar, xdp, ncache)
+                 end if
                  call generic_dump(field_name, info_var_count, xdp, unit_out, dump_info_flag, unit_info)
               end do
 #ifdef SOLVERmhd
@@ -109,24 +114,44 @@ subroutine backup_hydro(filename, filename_desc)
               ! Write non-thermal pressures
               ! (before thermal pressure because we need it to convert between total energy and pressure)
               do ivar = nhydro+1, nhydro+nener
-                 write(field_name, '("non_thermal_pressure_", i0.2)') ivar-nhydro
-                 call gather_primitive_from_uold(ind_grid, iskip, ivar, xdp, ncache)
+                 if(write_conservative)then
+                    write(field_name, '("non_thermal_energy_", i0.2)') ivar-nhydro
+                    call gather_conservative_from_uold(ind_grid, iskip, ivar, xdp, ncache)
+                 else
+                    write(field_name, '("non_thermal_pressure_", i0.2)') ivar-nhydro
+                    call gather_primitive_from_uold(ind_grid, iskip, ivar, xdp, ncache)
+                 end if
                  call generic_dump(field_name, info_var_count, xdp, unit_out, dump_info_flag, unit_info)
               end do
 #endif
-              ! Write thermal pressure (after all other pressures or energies)
-              field_name = 'pressure'
-              call calc_thermal_pressure_from_total_energy(ind_grid, iskip, xdp, ncache)
+              if(write_conservative) then
+                 ! Write total energy as stored in uold
+                 field_name = 'total_energy'
+                 call gather_conservative_from_uold(ind_grid, iskip, neul, xdp, ncache)
+              else
+                 ! Write thermal pressure (after all other pressures or energies)
+                 field_name = 'pressure'
+                 call calc_thermal_pressure_from_total_energy(ind_grid, iskip, xdp, ncache)
+              end if
               call generic_dump(field_name, info_var_count, xdp, unit_out, dump_info_flag, unit_info)
 #if NVAR > NHYDRO+NENER
               ! Write passive scalars if any
               do ivar = nhydro+1+nener, nvar
-                 if (metal .and. imetal == ivar) then
-                    field_name = 'metallicity'
+                 if(write_conservative) then
+                    if (metal .and. imetal == ivar) then
+                       field_name = 'metal_density'
+                    else
+                       write(field_name, '("scalar_density_", i0.2)') ivar - nhydro - 1 - nener
+                    end if
+                    call gather_conservative_from_uold(ind_grid, iskip, ivar, xdp, ncache)
                  else
-                    write(field_name, '("scalar_", i0.2)') ivar - nhydro - 1 - nener
+                    if (metal .and. imetal == ivar) then
+                       field_name = 'metallicity'
+                    else
+                       write(field_name, '("scalar_", i0.2)') ivar - nhydro - 1 - nener
+                    end if
+                    call gather_primitive_from_uold(ind_grid, iskip, ivar, xdp, ncache)
                  end if
-                 call gather_primitive_from_uold(ind_grid, iskip, ivar, xdp, ncache)
                  call generic_dump(field_name, info_var_count, xdp, unit_out, dump_info_flag, unit_info)
               end do
 #endif
