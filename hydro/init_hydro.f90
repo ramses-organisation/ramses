@@ -149,7 +149,7 @@ subroutine init_hydro
                  ! Loop over conservative variables
                  ! Read density (no conversion needed)
                  read(ilun)xx
-                 call scatter_conservative_to_uold(ind_grid, iskip, 1, xx, ncache)                 
+                 call scatter_conservative_to_uold(ind_grid, iskip, 1, xx, ncache)
                  ! Read velocities --> momenta
                  do ivar=2,neul-1
                     read(ilun)xx
@@ -274,7 +274,7 @@ subroutine scatter_primitive_to_uold(ind_grid, iskip, ivar, xx, ncache)
    integer, dimension(1:ncache),intent(in)::ind_grid
    real(dp), dimension(1:ncache),intent(in)::xx
    !-----------------------------------------------------------------------
-   ! Scatter a primitive variable from the array xx into index ivar of uold 
+   ! Scatter a primitive variable from the array xx into index ivar of uold
    ! (which contains conservative quantities)
    ! (e.g. velocity to momentum)
    !-----------------------------------------------------------------------
