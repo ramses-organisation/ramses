@@ -80,6 +80,7 @@ subroutine backup_hydro(filename, filename_desc)
            do ind = 1, twotondim
               iskip = ncoarse+(ind-1)*ngridmax
               ! Write density
+              ! (always first because we need to to convert from/to primitive variables)
               field_name = 'density'
               call gather_conservative_from_uold(ind_grid, iskip, 1, xdp, ncache)
               call generic_dump(field_name, info_var_count, xdp, unit_out, dump_info_flag, unit_info)
@@ -91,6 +92,7 @@ subroutine backup_hydro(filename, filename_desc)
               end do
 #ifdef SOLVERmhd
               ! Write left B field
+              ! (before thermal pressure because we need it to convert between total energy and pressure)
               do ivar = 6, 8
                  field_name = 'B_' // dim_keys(ivar - 6 + 1) // '_left'
                  call gather_conservative_from_uold(ind_grid, iskip, ivar, xdp, ncache)
@@ -105,13 +107,14 @@ subroutine backup_hydro(filename, filename_desc)
 #endif
 #if NENER > 0
               ! Write non-thermal pressures
+              ! (before thermal pressure because we need it to convert between total energy and pressure)
               do ivar = nhydro+1, nhydro+nener
                  write(field_name, '("non_thermal_pressure_", i0.2)') ivar-nhydro
                  call gather_primitive_from_uold(ind_grid, iskip, ivar, xdp, ncache)
                  call generic_dump(field_name, info_var_count, xdp, unit_out, dump_info_flag, unit_info)
               end do
 #endif
-              ! Write thermal pressure
+              ! Write thermal pressure (after all other pressures or energies)
               field_name = 'pressure'
               call calc_thermal_pressure_from_total_energy(ind_grid, iskip, xdp, ncache)
               call generic_dump(field_name, info_var_count, xdp, unit_out, dump_info_flag, unit_info)
@@ -166,7 +169,6 @@ end subroutine backup_hydro
 !#####################################################################
 !#####################################################################
 !#####################################################################
-!#####################################################################
 subroutine gather_conservative_from_uold(ind_grid, iskip, ivar, xdp, ncache)
    use amr_parameters, only:dp
    use hydro_commons
@@ -185,7 +187,6 @@ subroutine gather_conservative_from_uold(ind_grid, iskip, ivar, xdp, ncache)
    end do
 
 end subroutine gather_conservative_from_uold
-!#####################################################################
 !#####################################################################
 !#####################################################################
 !#####################################################################
@@ -233,13 +234,14 @@ subroutine calc_thermal_pressure_from_total_energy(ind_grid, iskip, pressure, nc
    integer, dimension(1:ncache),intent(in)::ind_grid
    real(dp), dimension(1:ncache),intent(out)::pressure
    !--------------------------------------------------------------------------------------
-   ! Calculate the thermal pressure from the total energy, which is stored in uold(:,neul)
+   ! Calculate the thermal pressure from the total energy,
+   ! which is stored in uold(:,neul)
    !--------------------------------------------------------------------------------------
    integer::i
+   real(dp)::d,energy
 #if NENER > 0
    integer :: irad
 #endif
-   real(dp) :: d,energy
 #ifdef SOLVERmhd
    real(dp) :: A, B, C
 #endif
@@ -264,7 +266,7 @@ subroutine calc_thermal_pressure_from_total_energy(ind_grid, iskip, pressure, nc
       energy = energy - 0.5*(A**2+B**2+C**2)
 #endif
 #if NENER > 0
-   ! subtract non-thermal energies
+      ! subtract non-thermal energies
       do irad = 1, nener
          energy = energy-uold(ind_grid(i)+iskip, nhydro+irad)
       end do
