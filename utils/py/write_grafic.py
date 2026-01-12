@@ -1,5 +1,5 @@
 '''
-    Module to write grafic binary files used as initial conditions for 
+    Module to write grafic binary files used as initial conditions for
     non-cosmo simulations with RAMSES.
 
     Be careful in cases where the order of the array representation matters!
@@ -67,8 +67,8 @@ def write_grafic_data(filename, data, endian='<'):
 
 def write_grafic_file(filename, data, size, endian='='):
     ''' Write a grafic binary file with header and data.
-        Default endian is the native one. Files will be consistent 
-        when written and read by the same system. If ICs are generated 
+        Default endian is the native one. Files will be consistent
+        when written and read by the same system. If ICs are generated
         on different systems, use '<' for little-endian or '>' for big-endian,
         to match the endianness of the system running RAMSES. '''
     print('writing grafic file',filename)
