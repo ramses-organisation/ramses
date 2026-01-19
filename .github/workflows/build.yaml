@@ -1,11 +1,7 @@
 name: Build RAMSES
 
 on:
-  push:
-    branches:
-        - dev
-        - stable
-  pull_request:
+  workflow_call:
   workflow_dispatch:
 
 

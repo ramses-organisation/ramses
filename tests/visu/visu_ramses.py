@@ -225,19 +225,32 @@ def load_snapshot(nout, read_hydro=True, read_grav=False, read_rt=False):
             offset = 4*ninteg + 8*(nlines+nfloat) + nstrin + nquadr*16 + 4
             ngridlevel[info["ncpu"]:info["ncpu"]+nboundary,:] = np.asarray(struct.unpack("%ii"%(nboundary*info["levelmax"]), amrContent[offset:offset+4*nboundary*info["levelmax"]])).reshape(info["levelmax"],nboundary).T
 
-        # Determine bound key precision
-        ninteg = 14+(3*info["ncpu"]*info["levelmax"])+(10*info["levelmax"])+(3*nboundary*info["levelmax"])+5
-        nfloat = 18+(2*noutput)+(2*info["levelmax"])
-        nlines = 21+2+3*min(1,nboundary)+1+1
-        nstrin = 128
-        nquadr = 0
-        offset = 4*ninteg + 8*(nlines+nfloat) + nstrin + nquadr*16
-        key_size = struct.unpack("i", amrContent[offset:offset+4])[0]
+        # Depending on the ordering type, we have two different cases
+        if(info["ordering type"] == "bisection"):
+            nbinodes = 2**(math.ceil(math.log(float(info["ncpu"]))/math.log(2.0))+1)-1
+            ninteg_ordering = 3*nbinodes
+            nfloat_ordering = nbinodes+2*info["ncpu"]*info["ndim"]
+            nlines_ordering = 5
+            key_size     = 0
+        else:
+            nbinodes = 0
+            ninteg_ordering = 0
+            nfloat_ordering = 0
+            nlines_ordering = 1
+
+            # Determine bound key precision
+            ninteg = 14+(3*info["ncpu"]*info["levelmax"])+(10*info["levelmax"])+(3*nboundary*info["levelmax"])+5
+            nfloat = 18+(2*noutput)+(2*info["levelmax"])
+            nlines = 21+2+3*min(1,nboundary)+1+1
+            nstrin = 128
+            nquadr = 0
+            offset = 4*ninteg + 8*(nlines+nfloat) + nstrin + nquadr*16
+            key_size = struct.unpack("i", amrContent[offset:offset+4])[0]
 
         # Offset for AMR
-        ninteg1 = 14+(3*info["ncpu"]*info["levelmax"])+(10*info["levelmax"])+(3*nboundary*info["levelmax"])+5+3*ncoarse
-        nfloat1 = 18+(2*noutput)+(2*info["levelmax"])
-        nlines1 = 21+2+3*min(1,nboundary)+1+1+1+3
+        ninteg1 = 14+(3*info["ncpu"]*info["levelmax"])+(10*info["levelmax"])+(3*nboundary*info["levelmax"])+5+ninteg_ordering+3*ncoarse
+        nfloat1 = 18+(2*noutput)+(2*info["levelmax"])+nfloat_ordering
+        nlines1 = 21+2+3*min(1,nboundary)+1+1+nlines_ordering+3
         nstrin1 = 128 + key_size
 
         # Offset for HYDRO

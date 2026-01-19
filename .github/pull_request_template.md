@@ -4,7 +4,7 @@
 
 <!--
 > [!WARNING]
->  Please uncomment this to tell everyone if there is a breacking change.
+>  Please uncomment this to tell everyone if there is a breaking change.
 -->
 
 <!-- Please check the following points -->
