@@ -1,0 +1,293 @@
+!################################################################
+!################################################################
+!################################################################
+!################################################################
+subroutine make_boundary_hydro(ilevel)
+  use amr_commons
+  use hydro_commons
+  use poisson_parameters
+  implicit none
+  integer::ilevel
+  ! -------------------------------------------------------------------
+  ! This routine sets up boundary conditions for fine levels.
+  !
+  ! Boundary types:
+  !   1-6:   Reflexive (wall) boundaries
+  !   11-16: Free (outflow) boundaries
+  !   21-26: Imposed (analytical) boundaries
+  !   31-36: Non-reflecting boundaries for subsonic flows
+  !          (allows perturbations to exit while maintaining
+  !           analytical background profile)
+  ! -------------------------------------------------------------------
+  integer::ibound,boundary_dir,idim,inbor
+  integer::i,ncache,ivar,igrid,ngrid,ind
+  integer::iskip,iskip_ref,gdim=1,nx_loc,ix,iy,iz
+  integer,dimension(1:8)::ind_ref,alt
+  integer,dimension(1:nvector),save::ind_grid,ind_grid_ref
+  integer,dimension(1:nvector),save::ind_cell,ind_cell_ref
+
+  real(dp)::switch,dx,dx_loc,scale,ekin,d,v
+  real(dp),dimension(1:3)::gs,skip_loc
+  real(dp),dimension(1:twotondim,1:3)::xc
+  real(dp),dimension(1:nvector,1:ndim),save::xx,xx_ref
+  real(dp),dimension(1:nvector,1:nvar),save::uu,uu_ana,uu_ana_ref
+
+  if(.not. simple_boundary)return
+  if(verbose)write(*,111)ilevel
+
+  ! Mesh size at level ilevel
+  dx=0.5D0**ilevel
+
+  ! Rescaling factors
+  nx_loc=(icoarse_max-icoarse_min+1)
+  skip_loc=(/0.0d0,0.0d0,0.0d0/)
+  if(ndim>0)skip_loc(1)=dble(icoarse_min)
+  if(ndim>1)skip_loc(2)=dble(jcoarse_min)
+  if(ndim>2)skip_loc(3)=dble(kcoarse_min)
+  scale=boxlen/dble(nx_loc)
+  dx_loc=dx*scale
+
+  ! Set position of cell centers relative to grid center
+  do ind=1,twotondim
+     iz=(ind-1)/4
+     iy=(ind-1-4*iz)/2
+     ix=(ind-1-2*iy-4*iz)
+     if(ndim>0)xc(ind,1)=(dble(ix)-0.5D0)*dx
+     if(ndim>1)xc(ind,2)=(dble(iy)-0.5D0)*dx
+     if(ndim>2)xc(ind,3)=(dble(iz)-0.5D0)*dx
+  end do
+
+  ! Loop over boundaries
+  do ibound=1,nboundary
+
+     call set_boundary_references(ibound,ind_ref,boundary_dir,inbor)
+
+     ! Velocity sign switch for reflexive boundary conditions
+     gs=(/1,1,1/)
+     if(boundary_type(ibound)==1.or.boundary_type(ibound)==2)gs(1)=-1
+     if(boundary_type(ibound)==3.or.boundary_type(ibound)==4)gs(2)=-1
+     if(boundary_type(ibound)==5.or.boundary_type(ibound)==6)gs(3)=-1
+
+     ! Direction of gravity vector for hydrostatic equilibrium
+     if(boundary_dir==1.or.boundary_dir==2)gdim=1
+     if(boundary_dir==3.or.boundary_dir==4)gdim=2
+     if(boundary_dir==5.or.boundary_dir==6)gdim=3
+
+     ! Altitude for hydrostatic equilibrium
+     ! Reflexive boundary
+     if(boundary_type(ibound)==1)alt(1:8)=-(/3,1,3,1,3,1,3,1/)
+     if(boundary_type(ibound)==2)alt(1:8)=+(/1,3,1,3,1,3,1,3/)
+     if(boundary_type(ibound)==3)alt(1:8)=-(/1,1,3,3,1,1,3,3/)
+     if(boundary_type(ibound)==4)alt(1:8)=+(/3,3,1,1,3,3,1,1/)
+     if(boundary_type(ibound)==5)alt(1:8)=-(/1,1,1,1,3,3,3,3/)
+     if(boundary_type(ibound)==6)alt(1:8)=+(/3,3,3,3,1,1,1,1/)
+     ! Free boundary
+     if(boundary_type(ibound)==11)alt(1:8)=-(/2,1,2,1,2,1,2,1/)
+     if(boundary_type(ibound)==12)alt(1:8)=+(/1,2,1,2,1,2,1,2/)
+     if(boundary_type(ibound)==13)alt(1:8)=-(/1,1,2,2,1,1,2,2/)
+     if(boundary_type(ibound)==14)alt(1:8)=+(/2,2,1,1,2,2,1,1/)
+     if(boundary_type(ibound)==15)alt(1:8)=-(/1,1,1,1,2,2,2,2/)
+     if(boundary_type(ibound)==16)alt(1:8)=+(/2,2,2,2,1,1,1,1/)
+
+     ! Loop over grids by vector sweeps
+     ncache=boundary(ibound,ilevel)%ngrid
+     do igrid=1,ncache,nvector
+        ngrid=MIN(nvector,ncache-igrid+1)
+        do i=1,ngrid
+           ind_grid(i)=boundary(ibound,ilevel)%igrid(igrid+i-1)
+        end do
+
+        ! Gather neighboring reference grid
+        do i=1,ngrid
+           ind_grid_ref(i)=son(nbor(ind_grid(i),inbor))
+        end do
+
+        ! Loop over cells
+        do ind=1,twotondim
+           iskip=ncoarse+(ind-1)*ngridmax
+           do i=1,ngrid
+              ind_cell(i)=iskip+ind_grid(i)
+           end do
+
+           ! Gather neighboring reference cell
+           iskip_ref=ncoarse+(ind_ref(ind)-1)*ngridmax
+           do i=1,ngrid
+              ind_cell_ref(i)=iskip_ref+ind_grid_ref(i)
+           end do
+
+           ! Wall boundary conditions (codes 1-10)
+           if((boundary_type(ibound)/10).eq.0)then
+
+              ! Gather reference hydro variables
+              do ivar=1,nvar
+                 do i=1,ngrid
+                    uu(i,ivar)=uold(ind_cell_ref(i),ivar)
+                 end do
+              end do
+
+              ! Scatter to boundary region
+              do ivar=1,nvar
+                 switch=1
+                 if(ivar>1.and.ivar<neul)switch=gs(ivar-1)
+                 do i=1,ngrid
+                    uold(ind_cell(i),ivar)=uu(i,ivar)*switch
+                 end do
+              end do
+
+           ! Free boundary conditions (codes 11-20)
+           else if((boundary_type(ibound)/10).eq.1)then
+
+              ! Gather reference hydro variables
+              do ivar=1,nvar
+                 do i=1,ngrid
+                    uu(i,ivar)=uold(ind_cell_ref(i),ivar)
+                 end do
+              end do
+
+              ! Remove kinetic energy
+              do i=1,ngrid
+                 ekin = 0d0
+                 d    = max(uu(i,1),smallr)
+                 do idim=1,ndim
+                    v = uu(i,idim+1)/d
+                    ekin = ekin+0.5d0*d*v**2
+                 end do
+                 uu(i,neul) = uu(i,neul)-ekin
+              end do
+
+              ! Scatter to boundary region
+              do ivar=1,nvar
+                 do i=1,ngrid
+                    uold(ind_cell(i),ivar)=uu(i,ivar)
+                 end do
+              end do
+
+              ! Prevent inflow back into the box
+              if(no_inflow) then
+                 ivar = gdim+1
+                 if((boundary_dir.eq.1).or.(boundary_dir.eq.3).or.(boundary_dir.eq.5)) then
+                    do i=1,ngrid
+                       uold(ind_cell(i),ivar) = min(0d0,uold(ind_cell(i),ivar))
+                    end do
+                 endif
+                 if((boundary_dir.eq.2).or.(boundary_dir.eq.4).or.(boundary_dir.eq.6)) then
+                    do i=1,ngrid
+                       uold(ind_cell(i),ivar) = max(0d0,uold(ind_cell(i),ivar))
+                    end do
+                 endif
+              endif
+
+              ! Add back kinetic energy
+              do i=1,ngrid
+                 ekin = 0d0
+                 d    = max(uold(ind_cell(i),1),smallr)
+                 do idim=1,ndim
+                    v = uold(ind_cell(i),idim+1)/d
+                    ekin = ekin+0.5d0*d*v**2
+                 end do
+                 uold(ind_cell(i),neul) = uold(ind_cell(i),neul)+ekin
+              end do
+
+           ! Imposed boundary conditions (codes 21-30)
+           else if((boundary_type(ibound)/10).eq.2)then
+
+              ! Compute cell center in code units
+              do idim=1,ndim
+                 do i=1,ngrid
+                    xx(i,idim)=xg(ind_grid(i),idim)+xc(ind,idim)
+                 end do
+              end do
+
+              ! Rescale position from code units to user units
+              do idim=1,ndim
+                 do i=1,ngrid
+                    xx(i,idim)=(xx(i,idim)-skip_loc(idim))*scale
+                 end do
+              end do
+
+              call boundana(xx,uu,dx_loc,ibound,ngrid)
+
+              ! Scatter variables
+              do ivar=1,nvar
+                 do i=1,ngrid
+                    uold(ind_cell(i),ivar)=uu(i,ivar)
+                 end do
+              end do
+
+           ! Non-reflecting boundary conditions (codes 31-36)
+           ! For subsonic flows: allows perturbations to exit
+           ! while maintaining analytical background profile
+           else if((boundary_type(ibound)/10).eq.3)then
+
+              ! Compute boundary cell center in user units
+              do idim=1,ndim
+                 do i=1,ngrid
+                    xx(i,idim)=xg(ind_grid(i),idim)+xc(ind,idim)
+                    xx(i,idim)=(xx(i,idim)-skip_loc(idim))*scale
+                 end do
+              end do
+
+              ! Compute reference cell center in user units
+              do idim=1,ndim
+                 do i=1,ngrid
+                    xx_ref(i,idim)=xg(ind_grid_ref(i),idim)+xc(ind_ref(ind),idim)
+                    xx_ref(i,idim)=(xx_ref(i,idim)-skip_loc(idim))*scale
+                 end do
+              end do
+
+              ! Get analytical state at boundary position
+              call boundana(xx,uu_ana,dx_loc,ibound,ngrid)
+
+              ! Get analytical state at reference position
+              call boundana(xx_ref,uu_ana_ref,dx_loc,ibound,ngrid)
+
+              ! Gather actual state at reference cell
+              do ivar=1,nvar
+                 do i=1,ngrid
+                    uu(i,ivar)=uold(ind_cell_ref(i),ivar)
+                 end do
+              end do
+
+              ! Non-reflecting BC:
+              ! u_boundary = u_analytical + (u_interior - u_analytical_interior)
+              ! This allows perturbations to propagate out while
+              ! maintaining the analytical background for incoming waves
+              do ivar=1,nvar
+                 do i=1,ngrid
+                    uold(ind_cell(i),ivar) = uu_ana(i,ivar) + &
+                         (uu(i,ivar) - uu_ana_ref(i,ivar))
+                 end do
+              end do
+
+              ! Ensure positive density
+              do i=1,ngrid
+                 uold(ind_cell(i),1) = max(uold(ind_cell(i),1), smallr)
+              end do
+
+              ! Ensure positive pressure (total energy > kinetic energy)
+              do i=1,ngrid
+                 ekin = 0d0
+                 d = uold(ind_cell(i),1)
+                 do idim=1,ndim
+                    v = uold(ind_cell(i),idim+1)/d
+                    ekin = ekin + 0.5d0*d*v**2
+                 end do
+                 ! Minimum thermal energy from analytical profile
+                 uold(ind_cell(i),neul) = max(uold(ind_cell(i),neul), &
+                      ekin + 0.1d0*(uu_ana(i,neul) - ekin))
+              end do
+
+           end if
+
+        end do
+        ! End loop over cells
+
+     end do
+     ! End loop over grids
+
+  end do
+  ! End loop over boundaries
+
+111 format('   Entering make_boundary_hydro for level ',I2)
+
+end subroutine make_boundary_hydro

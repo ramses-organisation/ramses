@@ -1,0 +1,154 @@
+! Hot Rotating CGM Inflow Simulation
+! Based on Stern et al. (2024) MNRAS 530, 1711
+!
+! Setup: Hot (~10^6 K) rotating CGM in a 1000 kpc box
+! with isothermal gravity (v_c = 200 km/s)
+!
+! Key physics:
+! - Radiative cooling (built-in RAMSES tables)
+! - Angular momentum conservation
+! - Non-reflecting boundary conditions
+!
+!===============================================================
+
+&RUN_PARAMS
+hydro=.true.
+poisson=.true.
+pic=.false.
+nrestart=0
+ncontrol=1
+nremap=10
+verbose=.false.
+/
+
+&AMR_PARAMS
+levelmin=6
+levelmax=10
+ngridmax=500000
+nexpand=1
+boxlen=1000.0   ! 1000 kpc box
+/
+
+&INIT_PARAMS
+nregion=1
+region_type(1)='square'
+x_center=500.0
+y_center=500.0
+z_center=500.0
+length_x=1000.0
+length_y=1000.0
+length_z=1000.0
+! Initial conditions set by condinit.f90 via cgm_params
+/
+
+&OUTPUT_PARAMS
+foutput=50
+noutput=100
+delta_tout=50.0    ! Output every 50 Myr
+/
+
+&UNITS_PARAMS
+! Code units:
+! Length: 1 kpc = 3.086e21 cm
+! Density: 1 m_p/cm^3 = 1.67e-24 g/cm^3
+! Velocity: 1 km/s = 1e5 cm/s
+! This gives G = 1 approximately
+units_density=1.67d-24    ! g/cm^3 (1 proton/cm^3)
+units_time=3.086d16       ! seconds (~ 1 Gyr)
+units_length=3.086d21     ! cm (1 kpc)
+/
+
+&HYDRO_PARAMS
+gamma=1.6666667
+courant_factor=0.8
+slope_type=2
+scheme='muscl'
+riemann='hllc'
+pressure_fix=.true.
+smallr=1.0d-10
+smallc=1.0d-10
+/
+
+&POISSON_PARAMS
+! Isothermal halo gravity (gravity_type=4)
+! g = -v_c^2 / r * r_hat
+gravity_type=4
+gravity_params(1)=200.0   ! v_c = 200 km/s
+gravity_params(2)=0.5     ! softening = 0.5 kpc
+gravity_params(3)=-1.0    ! x_center (negative = use box center)
+gravity_params(4)=-1.0    ! y_center
+gravity_params(5)=-1.0    ! z_center
+/
+
+&BOUNDARY_PARAMS
+! Non-reflecting boundary conditions (type 31-36)
+! Allows perturbations to exit while maintaining
+! analytical background profile
+nboundary=6
+ibound_min=-1,+1, 0, 0, 0, 0
+ibound_max=-1,+1, 0, 0, 0, 0
+jbound_min= 0, 0,-1,+1, 0, 0
+jbound_max= 0, 0,-1,+1, 0, 0
+kbound_min= 0, 0, 0, 0,-1,+1
+kbound_max= 0, 0, 0, 0,-1,+1
+bound_type=31,32,33,34,35,36   ! Non-reflecting BCs
+/
+
+&COOLING_PARAMS
+cooling=.true.
+metal=.true.
+z_ave=0.3          ! 0.3 solar metallicity
+J21=0.0            ! No UV background
+a_spec=1.0
+/
+
+&REFINE_PARAMS
+! Refine on density and pressure gradients
+err_grad_d=0.1
+err_grad_p=0.1
+err_grad_u=0.1
+interpol_var=1
+interpol_type=2
+/
+
+!===============================================================
+! CGM-specific parameters
+! These control the analytical profiles and boundary conditions
+!===============================================================
+&CGM_PARAMS
+! Circular velocity [km/s]
+cgm_v_c=200.0
+
+! Maximum circularization radius [kpc]
+cgm_Rc_max=15.0
+
+! Central hydrogen density at r=10 kpc [cm^-3]
+cgm_n_H_0=8.0d-4
+
+! Minimum hydrogen density [cm^-3]
+cgm_n_H_floor=1.0d-6
+
+! Cooling function normalization [erg cm^3/s]
+! For T~10^6 K, Z~0.3 Zsun
+cgm_Lambda=3.0d-23
+
+! Mean molecular weight
+cgm_mu=0.6
+
+! Metallicity [Zsun]
+cgm_Z=0.3
+
+! Softening radius [cm] (~0.3 kpc)
+cgm_r_soft=1.0d20
+
+! Cooling radius [kpc]
+cgm_r_cool=100.0
+
+! Mass inflow rate [Msun/yr] for reference
+cgm_Mdot=1.0
+
+! Boundary condition type:
+! 1 = non-reflecting characteristic BC
+! 2 = sponge layer
+cgm_bc_type=1
+/
