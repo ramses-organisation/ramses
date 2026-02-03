@@ -660,7 +660,7 @@ subroutine init_uold(ilevel)
   ! the hydro scheme. unew is set to zero in virtual boundaries.
   !--------------------------------------------------------------------------
   integer::i,ivar,ind,icpu,iskip,idim
-  real(dp)::u,ek,b,eb
+  real(dp)::u,ek,b,eb ! ek: kinetic energy, b: magnetic field magnitude, eb: magnetic energy
   real(dp)::scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2
 
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
@@ -687,12 +687,14 @@ subroutine init_uold(ilevel)
      end do
   end do
 #ifdef SOLVERmhd
+  ! Initialize magnetic fields before energy calculation to ensure
+  ! magnetic energy (eb) is correctly available.
   ! set constant magnetic field
   CALL mag_constant(ilevel)
   ! toroidal field
   CALL mag_compute(ilevel)
 #endif
-   ! Set cell averaged kinetic energy
+  ! Set cell averaged kinetic energy
   do ind=1,twotondim
      iskip=ncoarse+(ind-1)*ngridmax
      do i=1,active(ilevel)%ngrid
@@ -714,10 +716,12 @@ subroutine init_uold(ilevel)
         ek = 0d0
         eb = 0d0
         do idim=1,ndim
+           ! Accumulate kinetic and magnetic energy densities
            ek = ek+0.5*uold(active(ilevel)%igrid(i)+iskip,idim+1)**2/uold(active(ilevel)%igrid(i)+iskip,1)
            b = 0.5*(uold(active(ilevel)%igrid(i)+iskip,idim+5)+uold(active(ilevel)%igrid(i)+iskip,idim+nvar))
            eb = eb+0.5*b**2
         enddo
+        ! Update total energy with both kinetic and magnetic components
         uold(active(ilevel)%igrid(i)+iskip,ndim+2) = uold(active(ilevel)%igrid(i)+iskip,ndim+2)+ek+eb
      end do
   end do
