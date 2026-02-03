@@ -33,6 +33,7 @@ extensions = [
     "nbsphinx",
     "sphinx_copybutton",
     'sphinx_simplepdf',
+    "sphinx_togglebutton",
 ]
 
 # Enable myst extensions
@@ -97,3 +98,4 @@ simplepdf_vars = {
     'cover-bg': primary_color_rgb_string,
     'top-left-content': 'counter(page)',
 }
+

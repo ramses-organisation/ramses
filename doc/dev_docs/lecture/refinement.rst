@@ -6,7 +6,7 @@ Lecture: Refinement schemes & implementation
    Please make sure to read the lecture on the AMR structure before
    following this lecture on the refinement criterions
 
-[TOC]
+.. contents::
 
 --------------
 
@@ -35,21 +35,22 @@ Let first review the description of the refinement algorithm in
 `Teyssier
 2002 <https://ui.adsabs.harvard.edu/abs/2002A%26A...385..337T/abstract>`__.
 
-:::spoiler Click to read
+.. admonition:: Click to read
+   :class: dropdown
 
-   | [name=Teyssier 2002] The first step consists of marking cells for
-     refinement according to user-defined refinement criteria, within
-     the constraint given by a strict refinement rule: any oct in the
-     tree structure has to be surrounded by :math:`3^{ndim} − 1`
-     neighboring parent cells. Thanks to this rule, a smooth transition
-     in spatial resolution between levels is enforced, even in the
-     diagonal directions. Practically, this step consists in three
-     passes through each level, starting from the finer level
-     ``levelmax`` down to the coarse grid :math:`l = 0`.
+   The first step consists of marking cells for
+   refinement according to user-defined refinement criteria, within
+   the constraint given by a strict refinement rule: any oct in the
+   tree structure has to be surrounded by :math:`3^{ndim} − 1`
+   neighboring parent cells. Thanks to this rule, a smooth transition
+   in spatial resolution between levels is enforced, even in the
+   diagonal directions. Practically, this step consists in three
+   passes through each level, starting from the finer level
+   ``levelmax`` down to the coarse grid :math:`l = 0`.
    | 1. If a split cell contains a children cell that is marked or
-     already refined, then mark it for refinement; 2. Mark the
-     :math:`3^{ndim} − 1` neighboring cells 3. If any cell satisfies the
-     user-defined refinement criteria, then mark it for refinement.
+   already refined, then mark it for refinement; 2. Mark the
+   :math:`3^{ndim} − 1` neighboring cells 3. If any cell satisfies the
+   user-defined refinement criteria, then mark it for refinement.
 
    One key ingredient still missing in this procedure is the so-called
    “mesh smoothing”. Usually, refinement are activated when gradients
@@ -71,9 +72,7 @@ Let first review the description of the refinement algorithm in
    splitting leaf cells. If the refinement rule is about to be violated,
    leaf cells are not refined.
 
-..
-
-   [name=Teyssier 2002] The next step consists in splitting or
+   The next step consists in splitting or
    destroying children cells according to the refinement map. RAMSES
    performs two passes through each level, starting from the coarse grid
    up to the finer grid 1. If a leaf cell is marked for refinement, then
@@ -89,7 +88,7 @@ Let first review the description of the refinement algorithm in
    important to stress that this operation is applied at each time step,
    but for a very small number of octs. In other word, at each time
    step, the mesh structure is not rebuilt from scratch, but it is
-   slightly modified, in order to follow the evolution of the flow. :::
+   slightly modified, in order to follow the evolution of the flow. 
 
 In short, the refinement proceeds in two phases:
 
@@ -121,13 +120,13 @@ Section TBD).
 
 The array ``flag1`` is defined in ``amr/amr_commons.f90`` by
 
-.. code:: fortran=1
+.. code:: fortran
 
      integer ,allocatable,dimension(:)  ::flag1   ! flag for refine
 
 and allocated in ``amr/init_amr.f90`` by
 
-.. code:: fortran=1
+.. code:: fortran
 
      ! Allocate AMR cell-based arrays
      allocate(flag1(0:ncell)) ! Note: starting from 0
@@ -146,7 +145,7 @@ be in a refined state (so derefined if it is currently refined).
 
 .. warning::
 
-   :warning: The array ``flag1`` is also used in other part of the code
+   The array ``flag1`` is also used in other part of the code
    for various purposes (including load balance). The refinement
    information is thus only stored and valid in the routine\ ``refine``,
    which should be called just after ``flag``.
@@ -156,52 +155,53 @@ starting from the finest one, and then the routine ``flag_coarse`` on
 the coarse grid (i.e. :math:`l = 0`). For each level, ``flag_fine``
 proceeds in 5 steps:
 
-:::spoiler Click to show the code
+.. admonition:: Show code
+   :class: dropdown
 
-.. code:: fortran=1
+   .. code:: fortran
 
-   subroutine flag_fine(ilevel,icount)
-     use amr_commons
-     implicit none
-     integer::ilevel,icount
-     !--------------------------------------------------------
-     ! This routine builds the refinement map at level ilevel.
-     !--------------------------------------------------------
-     integer::iexpand
+      subroutine flag_fine(ilevel,icount)
+      use amr_commons
+      implicit none
+      integer::ilevel,icount
+      !--------------------------------------------------------
+      ! This routine builds the refinement map at level ilevel.
+      !--------------------------------------------------------
+      integer::iexpand
 
-     if(ilevel==nlevelmax)return
-     if(numbtot(1,ilevel)==0)return
+      if(ilevel==nlevelmax)return
+      if(numbtot(1,ilevel)==0)return
 
-     ! Step 1: initialize refinement map to minimal refinement rules
-     call init_flag(ilevel)
+      ! Step 1: initialize refinement map to minimal refinement rules
+      call init_flag(ilevel)
 
-     ! If ilevel < levelmin, exit routine
-     if(ilevel<levelmin)return
-     if(balance)return
+      ! If ilevel < levelmin, exit routine
+      if(ilevel<levelmin)return
+      if(balance)return
 
-     ! Step 2: make one cubic buffer around flagged cells,
-     ! in order to enforce numerical rule.
-     call smooth_fine(ilevel)
+      ! Step 2: make one cubic buffer around flagged cells,
+      ! in order to enforce numerical rule.
+      call smooth_fine(ilevel)
 
-     ! Step 3: if cell satisfies user-defined physical citeria,
-     ! then flag cell for refinement.
-     call userflag_fine(ilevel)
+      ! Step 3: if cell satisfies user-defined physical citeria,
+      ! then flag cell for refinement.
+      call userflag_fine(ilevel)
 
-     ! Step 4: make nexpand cubic buffers around flagged cells.
-     do iexpand=1,nexpand(ilevel)
-        call smooth_fine(ilevel)
-     end do
+      ! Step 4: make nexpand cubic buffers around flagged cells.
+      do iexpand=1,nexpand(ilevel)
+         call smooth_fine(ilevel)
+      end do
 
-     ! In case of adaptive time step ONLY, check for refinement rules.
-     if(ilevel>levelmin)then
-        if(icount<nsubcycle(ilevel-1))then
-           call ensure_ref_rules(ilevel)
-        end if
-     end if
+      ! In case of adaptive time step ONLY, check for refinement rules.
+      if(ilevel>levelmin)then
+         if(icount<nsubcycle(ilevel-1))then
+            call ensure_ref_rules(ilevel)
+         end if
+      end if
 
-   end subroutine flag_fine
+      end subroutine flag_fine
 
-:::
+
 
 Step 1: Initialisation
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -212,7 +212,7 @@ has been altered in other part of the code for other purposes. Please
 pay attention on how we go through all the active cells of a given level
 since this is used quite a bit here.
 
-.. code:: fortran=1
+.. code:: fortran
 
      ! Initialize flag1 to 0
      nflag=0
@@ -303,8 +303,8 @@ additional filter implementing the geometrical refinement (subroutine
 ``geometry_refine``), that will **unmark** all the cells that do not
 fulffill it by updating the ``ok`` array. By using a temporary array
 instead of ``flag1``, there is no risk of breaking the refinement rules)
- [1]_. Finally all the cells marked with ``ok`` are marked with
-``flag1``.
+
+ [1]_. Finally all the cells marked with ``ok`` are marked with ``flag1``.
 
 Step 4: Mesh smoothing
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -411,9 +411,9 @@ This refines on the gradients of user defined variables. The logic is
 simpler (compute the gradients and then apply the criterion), but the
 routines are spread among several files.
 
-.. container:: info
+.. admonition:: Exercise
 
-   Exercise: follow the different calls of ``hydro_flag`` and then
+   Follow the different calls of ``hydro_flag`` and then
    ``rt_hydro_flag`` to see when the array ``ok`` is updated. Did you
    notice something strange with ``rt_hydro_flag``?
 
@@ -462,78 +462,85 @@ Exercise 2: Improve the geometrical criterion
 Modify ``geometry_refine`` to add more than one region of refinement,
 allowing for more complex shapes.
 
-:::spoiler Clue 1 You can take inspiration from the initial condition
-“regions” parameters, which allows up to ``MAXREGION`` regions to be
-initialized with different parameters. :::
+.. admonition:: Clue 1  
+   :class: dropdown
 
-:::spoiler Clue 2
-
-**Helping TODO List:**
-
--  ☐ In ``amr_parameters``, add a ``MAX_REGION_REFINE`` parameter
--  ☐ Add a new parameter ``refine_params/nregions_refine`` (look at the
-   appropriate lecture to see how to do that)
--  ☐ Change how ``r_refine``, ``x_refine``, etc .. (up to ``b_refine``)
-   are defined. They could look like
-   ``real(dp),dimension(1:MAXLEVEL,1:MAXREGION)`` Look at clue 3 to see
-   how to deal with multidimensional arrays in the namelist. Ideally we
-   want to make sure of not introducing any breaking changes.
--  ☐ Now the hard work is in ``geometry_refine``. You need to introduce
-   the appropriate loops. Beware of the logic: ``geometry_refine`` is a
-   filter: if we have two regions we want to refine cells that are in
-   region 1 OR region 2 [3]_. You may want to use the ``flag2`` array as
-   a temporary array.
--  ☐ Test your new implementation! First run the test suite to make sure
-   you didn’t break anything, and then add a test that uses your
-   improved geometrical criterion. :::
-
-:::spoiler Clue 3 Deal with multidimensional arrays in the namelist:
-there’s some help in
-`StackOverflow <https://stackoverflow.com/questions/59645201/read-array-sections-in-namelist>`__
-You can play with the following program (eg. with `Online Fortran
-Compiler <https://www.onlinegdb.com/online_fortran_compiler>`__)
-
-.. code:: fortran=
-
-   program test
-
-       implicit none
-
-       integer :: ierr, unit, i, ilevel, iregion
-       integer,parameter :: MAX_REGION  = 4
-       integer, parameter :: MAX_LEVEL = 3
-       real(kind=kind(0.0d0)), allocatable :: p(:, :)
-
-       namelist /VAR_p/ p
+   You can take inspiration from the initial condition
+   “regions” parameters, which allows up to ``MAXREGION`` regions to be
+   initialized with different parameters.
 
 
-       allocate(p(MAX_LEVEL,MAX_REGION))
-       open(newunit=unit, file='namelist.nml', status='old', iostat=ierr)
-       read(unit, nml=VAR_p, iostat=ierr)
-       close(unit)
+.. admonition:: Clue 2
+   :class: dropdown
 
-        write(*,*) "REGIONS"
+   **Helping TODO List:**
 
-       do  iregion = 1,MAX_REGION
-           write(*,*) p(:,iregion)
-       end do
+   -  ☐ In ``amr_parameters``, add a ``MAX_REGION_REFINE`` parameter
+   -  ☐ Add a new parameter ``refine_params/nregions_refine`` (look at the
+      appropriate lecture to see how to do that)
+   -  ☐ Change how ``r_refine``, ``x_refine``, etc .. (up to ``b_refine``)
+      are defined. They could look like
+      ``real(dp),dimension(1:MAXLEVEL,1:MAXREGION)`` Look at clue 3 to see
+      how to deal with multidimensional arrays in the namelist. Ideally we
+      want to make sure of not introducing any breaking changes.
+   -  ☐ Now the hard work is in ``geometry_refine``. You need to introduce
+      the appropriate loops. Beware of the logic: ``geometry_refine`` is a
+      filter: if we have two regions we want to refine cells that are in
+      region 1 OR region 2 [3]_. You may want to use the ``flag2`` array as
+      a temporary array.
+   -  ☐ Test your new implementation! First run the test suite to make sure
+      you didn’t break anything, and then add a test that uses your
+      improved geometrical criterion. 
 
-       write(*,*) "LEVELS"
+.. admonition:: Clue 3 
+   :class: dropdown
 
-       do ilevel = 1,MAX_LEVEL
-           write(*,*) p(ilevel,:)
-       end do
-   end program test
+   Deal with multidimensional arrays in the namelist:
+   there’s some help in
+   `StackOverflow <https://stackoverflow.com/questions/59645201/read-array-sections-in-namelist>`__
+   You can play with the following program (eg. with `Online Fortran
+   Compiler <https://www.onlinegdb.com/online_fortran_compiler>`__)
 
-.. code:: fortran=
+   .. code:: fortran
 
-   &VAR_p
-   !p = 1.30, 0.8, 3.1 ! Only one region, backwards compatible syntax
-   p(:,1) = 1.30, 0.8, 3.1 ! Region 1
-   p(:,2) = 1.50, 3.2 ! Region 2
-   /
+      program test
 
-:::
+         implicit none
+
+         integer :: ierr, unit, i, ilevel, iregion
+         integer,parameter :: MAX_REGION  = 4
+         integer, parameter :: MAX_LEVEL = 3
+         real(kind=kind(0.0d0)), allocatable :: p(:, :)
+
+         namelist /VAR_p/ p
+
+
+         allocate(p(MAX_LEVEL,MAX_REGION))
+         open(newunit=unit, file='namelist.nml', status='old', iostat=ierr)
+         read(unit, nml=VAR_p, iostat=ierr)
+         close(unit)
+
+         write(*,*) "REGIONS"
+
+         do  iregion = 1,MAX_REGION
+            write(*,*) p(:,iregion)
+         end do
+
+         write(*,*) "LEVELS"
+
+         do ilevel = 1,MAX_LEVEL
+            write(*,*) p(ilevel,:)
+         end do
+      end program test
+
+   .. code:: 
+
+      &VAR_p
+      !p = 1.30, 0.8, 3.1 ! Only one region, backwards compatible syntax
+      p(:,1) = 1.30, 0.8, 3.1 ! Region 1
+      p(:,2) = 1.50, 3.2 ! Region 2
+      /
+
 
 4. Modify the tree structure
 ----------------------------
