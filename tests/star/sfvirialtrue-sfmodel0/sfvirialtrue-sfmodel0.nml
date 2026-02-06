@@ -66,10 +66,11 @@ sf_model=0
 n_star=1.0                      ! Density threshold for star formation
 eps_star=0.1                    ! Star formation efficiency (% of free-fall time)
 T2_star=10                      ! Cooling floor (in Kelvin)
+randomize_sf=.false.		! dont randomize SF
 /
 
 &STELLAR_PARAMS
-iseed = 0
+iseed = 42
 /
 
 &FEEDBACK_PARAMS
