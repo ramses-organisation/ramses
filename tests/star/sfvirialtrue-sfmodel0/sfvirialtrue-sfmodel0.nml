@@ -1,0 +1,217 @@
+&RUN_PARAMS
+cosmo=.false.
+pic=.true.
+poisson=.true.
+hydro=.true.
+rt=.false.
+sink=.false.
+clumpfind=.false.
+nrestart=0
+nremap=10
+nsubcycle=10*2
+ncontrol=1
+/
+
+&OUTPUT_PARAMS
+noutput=5
+tout=1.      !  (using units_time)
+tend=0.51
+delta_tout=0.25 ! Output every 5 Myr
+/
+
+&INIT_PARAMS
+filetype='dice'
+initfile(1)='./dwarf_galaxy/'
+/
+
+&AMR_PARAMS
+boxlen=50                 ! 50 kpc
+levelmin=7                ! 50 kpc / 2^7  = 390 pc resolution
+levelmax=11               ! 50 kpc / 2^11 =  25 pc resolution
+ngridmax=200000
+npartmax=1000000
+/
+
+!&POISSON_PARAMS
+!epsilon=1e-4
+!/
+
+&BOUNDARY_PARAMS
+nboundary=6
+bound_type= 2, 2,  2,  2,  2,  2
+ibound_min=-1, 1, -1, -1, -1, -1
+ibound_max=-1, 1,  1,  1,  1,  1
+jbound_min= 0, 0, -1,  1, -1, -1
+jbound_max= 0, 0, -1,  1,  1,  1
+kbound_min= 0, 0,  0,  0, -1,  1
+kbound_max= 0, 0,  0,  0, -1,  1
+no_inflow=.true.
+/
+
+&UNITS_PARAMS
+units_density = 0.677025430198932E-22 ! 1e9 Msol/kpc^3
+units_time    = 0.470430312423675E+15 ! So that the gravitational constant G=1
+units_length  = 0.308567758128200E+22 ! kpc
+/
+
+&COOLING_PARAMS
+cooling=.true.
+metal=.true.       ! Requires compiling with additioanl hydro variable if set to true
+z_ave=0.1           ! Initial metallicity
+/
+
+&SF_PARAMS
+sf_virial=.true.
+sf_model=0
+n_star=1.0                      ! Density threshold for star formation
+eps_star=0.1                    ! Star formation efficiency (% of free-fall time)
+T2_star=10                      ! Cooling floor (in Kelvin)
+/
+
+&STELLAR_PARAMS
+iseed = 0
+/
+
+&FEEDBACK_PARAMS
+yield=0.1                       ! SN metal yield
+eta_sn=0.2                      ! Stellar pop mass fraction that goes SN
+t_sne=3.                        ! Stellar particle age at which to go SN, in Myr
+/
+
+&HYDRO_PARAMS
+gamma=1.4
+courant_factor=0.8
+slope_type=1
+pressure_fix=.true.
+beta_fix=0.5
+riemann='hllc'
+/
+
+&REFINE_PARAMS
+jeans_refine=10*4.
+mass_sph=1e-5
+m_refine=10*8.
+interpol_type=0
+interpol_var=1
+/
+
+&RT_PARAMS
+rt_pressboost=1d0
+rt_output_coolstats=.true.
+rt_star=.false.                  ! Release radiation from stars
+sedprops_update=5
+rt_flux_scheme='glf'
+rt_courant_factor=0.8		! courant number for RT timesteps
+rt_c_fraction=0.001	        ! fraction of actual lightspeed set to RT lightspeed
+rt_nsubcycle=500
+rt_otsa=.true.                  ! On-the-spot approximation
+sed_dir='../../SED/bc03/'
+/
+
+&RT_GROUPS
+kappaAbs = 1000,  1000, 1000
+kappaSc =  0.0,   0.0,   0.0
+groupL0  = 13.60, 24.59, 54.42
+groupL1  = 24.59, 54.42, 0.0
+/
+
+&DICE_PARAMS
+ic_file='dwarf_galaxy.g2'   ! Name of the initial conditions file
+ic_nfile=1                    ! If greater than one, look for files with name matching ic_file//'.n'
+ic_ifout=1                    ! Change ramses output index for restarts
+ic_format='Gadget2'           ! Format of the initial conditions. 'Gadget1' or 'Gadget2'
+ic_center=0.0,0.0,0.0         ! Shift center parameter. ICs are automatically shifted with boxlen/2
+ic_scale_pos=1.0              ! Scaling factor for the position vector
+ic_scale_vel=1.0              ! Scaling factor for the velocity vector
+ic_scale_mass=1.0             ! Scaling factor for the mass
+ic_scale_u=1.0                ! Scaling factor for the internal energy
+ic_scale_age=1.0              ! Scaling factor for the particles age
+ic_scale_metal=1.0            ! Scaling factor for the metallicity
+ic_head_name='HEAD'           ! Name of the Header datablock (Gadget2 format only)
+ic_pos_name='POS '            ! Name of the position vector datablock (Gadget2 format only)
+ic_vel_name='VEL '            ! Name of the velocity vector datablock (Gadget2 format only)
+ic_mass_name='MASS'           ! Name of the mass datablock (Gadget2 format only)
+ic_id_name='ID  '             ! Name of the particle identifier datablock (Gadget2 format only)
+ic_u_name='U   '              ! Name of the internal energy datablock (Gadget2 format only)
+ic_metal_name='Z   '          ! Name of the metallicity datablock (Gadget2 format only)
+ic_age_name='AGE '            ! Name of the particle age datablock (Gadget2 format only)
+IG_rho=1.0D-5                 ! Intergalactic gas density
+IG_T2=1.0D5                   ! Intergalactic gas temperature
+IG_metal=1.0D-4               ! Intergalactic gas metallicity
+amr_struct=.false.            ! Reproduce the AMR structure of the Gadget2 file resulting from a ramses to gadget conversion
+gadget_scale_l=3.085677581282D21 ! Gadget file length unit
+gadget_scale_v=1.0D5             ! Gadget file velocity unit
+gadget_scale_m=1.9891D43         ! Gadget file mass unit
+gadget_scale_t=3.15360e+13       ! Gadget file time unit
+ic_skip_type        = -1      ! Skip specific particle type
+cosmo_add_gas_index = -1      ! Gas particle type index for cosmo runs
+ic_mag_const=0.0,0.0,0.0      ! Background magnetic field value for x,y,z component
+ic_mag_center_x=0.0           ! x-coordinate of the magnetic field symmetry center
+ic_mag_center_y=0.0           ! y-coordinate of the magnetic field symmetry center
+ic_mag_center_z=0.0           ! z-coordinate of the magnetic field symmetry center
+ic_mag_axis_x=0.0             ! Magnetic field normal vector x-component
+ic_mag_axis_y=0.0             ! Magnetic field normal vector y-component
+ic_mag_axis_z=1.0             ! Magnetic field normal vector z-component
+ic_mag_scale_R=1.0            ! Toroidal magnetic field scalelength
+ic_mag_scale_H=1.0            ! Toroidal magnetic field scaleheight
+ic_mag_scale_B=0.0            ! Foreground toroidal magnetic field value
+/
+
+&SINK_PARAMS
+! General switches
+smbh=.true.                 ! turns sinks into SMBH
+agn=.true.                  ! enables AGN feedback
+create_sinks=.false.        ! enables formation of new sink particles
+mass_sink_direct_force=1.0  ! minimum mass of sink to treat it with direct solver, in M_sun
+
+! Seeding masses
+mass_sink_seed=1.0d6        ! dynamical mass of sink particle
+mass_smbh_seed=1.0d6        ! accretion mass of sink particle
+mass_halo_AGN=5.d10         ! minimum mass of PHEW halo in which a sink is seeded
+mass_clump_AGN=1.d9         ! minimum mass of PHEW clump in which a sink is seeded
+
+! Accretion
+accretion_scheme='bondi'    ! selects Bondi accretion as accretion mode
+eddington_limit=.true.      ! enables Eddington limit on accretion
+acc_sink_boost=-1           ! boosts accretion according to Booth&Schaye 2009
+boost_threshold_density=0.1 ! threshold density for boosting, typically the same as n_star; in H/cc
+bondi_use_vrel=.false.      ! excludes relative velocity between gas and sink from the accretion calculations
+
+! Merging
+mass_merger_vel_check=1e8   ! sum of sinks' masses for which velocities are checked upon merging to determine if the system is bound
+
+! Feedback
+T2_min=0                    ! if feedback can heat the gas to this temperature then deposit it; here deposits at every fine step
+T2_AGN=0.15d12              ! thermal feedback efficiency
+AGN_fbk_frac_ener=1.0       ! controls what fraction of energy goes into thermal feedback, here 100%
+AGN_fbk_frac_mom=0.0        ! controls what fraction of energy goes into momentum feedback, here 0%
+AGN_fbk_mode_switch_threshold=1d-2 ! switches between thermal (above) and momentum modes for this ratio of Bondi-to-Eddington
+epsilon_kin=1.              ! momentum feedback efficiency
+kin_mass_loading=100.       ! mass loading factor of momentum feedback
+cone_opening=90.            ! opening angle of the cone in which momentum feedback is deposited (180. means full sphere)
+/
+
+&MOVIE_PARAMS
+movie = .false.
+tstartmov=0.0
+tendmov = 16.78
+imovout=200  ! 200 frames
+imov=1
+nw_frame=500 ! Movie frame resolution
+nh_frame=500
+levelmax_frame=10
+xcentre_frame= 25, 0., 0., 0.,  25, 0., 0., 0.
+ycentre_frame= 25, 0., 0., 0.,  25, 0., 0., 0.
+zcentre_frame= 25, 0., 0., 0.,  25, 0., 0., 0.
+deltax_frame= 25.0, 0.0,  25, 0.0
+deltay_frame= 25.0, 0.0,  25, 0.0
+deltaz_frame= 25.0, 0.0,  25, 0.0
+proj_axis='zx'
+movie_vars_txt = 'dens', 'temp', 'stars'
+perspective_camera = .true.,  .true.
+shader_frame =       'square', 'square'
+dtheta_camera=       0.,        0.
+phi_camera=          0.,        0.
+focal_camera=        50.,        50.
+dist_camera=         50.,        50.
+/
