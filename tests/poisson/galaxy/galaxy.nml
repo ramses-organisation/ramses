@@ -1,0 +1,96 @@
+&RUN_PARAMS 
+cosmo=.false.
+pic=.true.
+poisson=.true.
+hydro=.true.
+nrestart=0
+nremap=20
+nsubcycle=1,1,10*2
+ncontrol=1
+nstepmax=10
+/
+
+&OUTPUT_PARAMS
+foutput=10
+tend=1000
+/
+
+&INIT_PARAMS
+condinit_kind='merger'
+filetype='ascii'
+initfile(1)='ICs_lowres'
+/
+
+&AMR_PARAMS
+levelmin=7
+levelmax=12
+ngridtot=1000000
+npartmax=400000
+boxlen=400.0
+/
+
+&POISSON_PARAMS 
+epsilon=1e-4
+/
+
+&BOUNDARY_PARAMS
+nboundary=6
+bound_type= 2, 2,  2,  2,  2,  2
+ibound_min=-1, 1, -1, -1, -1, -1
+ibound_max=-1, 1,  1,  1,  1,  1
+jbound_min= 0, 0, -1,  1, -1, -1
+jbound_max= 0, 0, -1,  1,  1,  1
+kbound_min= 0, 0,  0,  0, -1,  1
+kbound_max= 0, 0,  0,  0, -1,  1
+/
+
+&COOLING_PARAMS
+cooling=.true.
+metal=.false.
+haardt_madau=.true.
+self_shielding=.true.
+z_ave=1.0
+/
+
+&HYDRO_PARAMS
+gamma=1.6666
+courant_factor=0.5
+slope_type=1
+pressure_fix=.true.
+beta_fix=0.5
+riemann='hllc'
+/
+
+&REFINE_PARAMS
+mass_sph=1e-4
+m_refine=10*8.
+jeans_refine=10*4.0
+interpol_type=0
+interpol_var=1
+/
+
+&MERGER_PARAMS
+gal_center1= 0.0D0 , 0.0D0 , 0.0D0
+gal_center2= 1.5D5 , 0.0D0 , 0.0D0
+Mgas_disk1=8.593
+Mgas_disk2=0.0D0
+typ_radius1=3.43218d0
+typ_radius2=1.0D0
+cut_radius1=2.0D1
+cut_radius2=1.0D0
+typ_height1=0.343218d0
+typ_height2=0.300
+cut_height1=3.0
+cut_height2=0.9
+rad_profile='exponential'
+z_profile='exponential'
+IG_density_factor=1.0D-5
+ic_part_file_gal1='ic_part'
+ic_part_file_gal2='ic_part'
+Vcirc_dat_file1='ICs_lowres/Vcirc.dat'
+Vcirc_dat_file2='ICs_lowres/Vcirc.dat'
+gal_axis1=0.0D0,0.0D0,1.0D0
+gal_axis2=0.0D0,0.0D0,1.0D0
+Vgal1=0.0D0,0.0D0,0.0D0
+Vgal2=0.0D0,0.0D0,0.0D0
+/
