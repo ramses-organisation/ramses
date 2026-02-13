@@ -275,8 +275,10 @@ subroutine add_gravity_source_terms(ilevel)
   if(verbose)write(*,111)ilevel
 
   ! Add gravity source term at time t with half time step
+!$omp parallel private(ind,iskip,i,ind_cell,d,u,v,w,e_kin,e_prim,d_old,fact,req)
   do ind=1,twotondim
      iskip=ncoarse+(ind-1)*ngridmax
+!$omp do
      do i=1,active(ilevel)%ngrid
         ind_cell=active(ilevel)%igrid(i)+iskip
         d=max(unew(ind_cell,1),smallr)
@@ -304,7 +306,9 @@ subroutine add_gravity_source_terms(ilevel)
         e_kin=0.5d0*d*(u**2+v**2+w**2)
         unew(ind_cell,neul)=e_prim+e_kin
      end do
+!$omp end do nowait
   end do
+!$omp end parallel
 
 111 format('   Entering add_gravity_source_terms for level ',i2)
 
@@ -349,6 +353,7 @@ subroutine add_pdv_source_terms(ilevel)
 
   ! Loop over myid grids by vector sweeps
   ncache=active(ilevel)%ngrid
+!$omp parallel do private(igrid,ngrid,i,idim,ind,iskip,id1,ig1,ih1,id2,ig2,ih2,d,u,v,w,eold)
   do igrid=1,ncache,nvector
 
      ! Gather nvector grids
@@ -457,8 +462,10 @@ subroutine add_pdv_source_terms(ilevel)
 
   ! Update thermal internal energy
   if(pressure_fix)then
+!$omp parallel private(ind,iskip,i,ind_cell1,d,u,v,w,eold)
      do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
+!$omp do
         do i=1,active(ilevel)%ngrid
            ind_cell1=active(ilevel)%igrid(i)+iskip
            ! Compute old thermal energy
@@ -477,20 +484,26 @@ subroutine add_pdv_source_terms(ilevel)
            enew(ind_cell1)=enew(ind_cell1) &
                 & +(gamma-1.0d0)*eold*divu(ind_cell1) ! Note: here divu=-div.u*dt
         end do
+!$omp end do nowait
      end do
+!$omp end parallel
   end if
 
 #if NENER>0
+!$omp parallel private(irad,ind,iskip,i,ind_cell1)
   do irad=1,nener
      do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
+!$omp do
         do i=1,active(ilevel)%ngrid
            ind_cell1=active(ilevel)%igrid(i)+iskip
            unew(ind_cell1,nhydro+irad)=unew(ind_cell1,nhydro+irad) &
                 & +(gamma_rad(irad)-1.0d0)*uold(ind_cell1,nhydro+irad)*divu(ind_cell1) ! Note: here divu=-div.u*dt
         end do
+!$omp end do nowait
      end do
   end do
+!$omp end parallel
 #endif
 
 111 format('   Entering add_pdv_source_terms for level ',i2)
@@ -731,6 +744,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
      do j3=j3min,j3max-j0
      do i3=i3min,i3max-i0
         do i=1,nb_noneigh
+!$omp atomic update
            divu(ind_buffer(i))=divu(ind_buffer(i)) &
                 & -tmp(ind_cell(i),i3,j3,k3,1,idim)*oneontwotondim
         end do
