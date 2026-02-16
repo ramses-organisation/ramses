@@ -58,40 +58,43 @@ subroutine rho_fine(ilevel,icount)
   !--------------------------
   ! Initialize fields to zero
   !--------------------------
-!$omp parallel do private(ind,iskip,i)
+!$omp parallel private(ind,iskip,i)
   do ind=1,twotondim
      iskip=ncoarse+(ind-1)*ngridmax
+!$omp do
      do i=1,active(ilevel)%ngrid
         phi(active(ilevel)%igrid(i)+iskip)=0.0D0
      end do
+!$omp end do nowait
      if(ilevel==cic_levelmax)then
+!$omp do
         do i=1,active(ilevel)%ngrid
            rho_top(active(ilevel)%igrid(i)+iskip)=0.0D0
         end do
-     endif
-  end do
-  if(cic_levelmax>0.and.ilevel>cic_levelmax)then
-!$omp parallel do private(ind,iskip,i,ind_cell)
-     do ind=1,twotondim
-        iskip=ncoarse+(ind-1)*ngridmax
+!$omp end do nowait
+     else if(cic_levelmax>0.and.ilevel>cic_levelmax)then
+!$omp do
         do i=1,active(ilevel)%ngrid
            ind_cell=active(ilevel)%igrid(i)+iskip
            rho_top(ind_cell)=rho_top(father(active(ilevel)%igrid(i)))
            rho(ind_cell)=rho(ind_cell)+rho_top(ind_cell)
         end do
-     end do
-  endif
+!$omp end do nowait
+     endif
+  end do
+!$omp end parallel
 
   !-------------------------------------------------------------------------
   ! Initialize "number density" field to baryon number density in array phi.
   !-------------------------------------------------------------------------
   if(m_refine(ilevel)>-1.0d0)then
      d_scale=max(mass_sph/dx_loc**ndim,smallr)
-!$omp parallel do private(ind,iskip,i,ind_cell,scalar)
+!$omp parallel private(ind,iskip,i,ind_cell,scalar)
      do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
         if(hydro)then
            if(ivar_refine>0)then
+!$omp do
               do i=1,active(ilevel)%ngrid
                  ind_cell=active(ilevel)%igrid(i)+iskip
                  scalar=uold(ind_cell,ivar_refine)/max(uold(ind_cell,1),smallr)
@@ -99,14 +102,18 @@ subroutine rho_fine(ilevel,icount)
                     phi(ind_cell)=rho(ind_cell)/d_scale
                  endif
               end do
+!$omp end do nowait
            else
+!$omp do
               do i=1,active(ilevel)%ngrid
                  ind_cell=active(ilevel)%igrid(i)+iskip
                  phi(ind_cell)=rho(ind_cell)/d_scale
               end do
+!$omp end do nowait
            endif
         endif
      end do
+!$omp end parallel
   endif
 
   !-------------------------------------------------------
@@ -114,9 +121,9 @@ subroutine rho_fine(ilevel,icount)
   !-------------------------------------------------------
 !$omp parallel private(icpu,ind,iskip,i)
   do icpu=1,ncpu
-!$omp do
      do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
+!$omp do
         do i=1,reception(icpu,ilevel)%ngrid
 #ifdef LIGHT_MPI_COMM
            rho(reception(icpu,ilevel)%pcomm%igrid(i)+iskip)=0.0D0
@@ -126,7 +133,9 @@ subroutine rho_fine(ilevel,icount)
            phi(reception(icpu,ilevel)%igrid(i)+iskip)=0.0D0
 #endif
         end do
+!$omp end do nowait
         if(ilevel==cic_levelmax)then
+!$omp do
            do i=1,reception(icpu,ilevel)%ngrid
 #ifdef LIGHT_MPI_COMM
               rho_top(reception(icpu,ilevel)%pcomm%igrid(i)+iskip)=0.0D0
@@ -134,9 +143,9 @@ subroutine rho_fine(ilevel,icount)
               rho_top(reception(icpu,ilevel)%igrid(i)+iskip)=0.0D0
 #endif
            end do
+!$omp end do nowait
         endif
      end do
-!$omp end do nowait
   end do
 !$omp end parallel
 
@@ -195,9 +204,10 @@ subroutine rho_fine(ilevel,icount)
   ! Compute quasi Lagrangian refinement map
   !-----------------------------------------
   if(m_refine(ilevel)>-1.0d0)then
-!$omp parallel do private(ind,iskip,i,ind_cell)
+!$omp parallel private(ind,iskip,i,ind_cell)
      do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
+!$omp do
         do i=1,active(ilevel)%ngrid
            ind_cell=active(ilevel)%igrid(i)+iskip
            if(phi(ind_cell)>=m_refine(ilevel))then
@@ -206,7 +216,9 @@ subroutine rho_fine(ilevel,icount)
               cpu_map2(ind_cell)=0
            end if
         end do
+!$omp end do nowait
      end do
+!$omp end parallel
      ! Update boundaries
      call make_virtual_fine_int(cpu_map2(1),ilevel)
   end if

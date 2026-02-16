@@ -101,9 +101,11 @@ subroutine move_fine_static(ilevel)
   if(verbose)write(*,111)ilevel
 
   ! Update particles position and velocity
+!$omp parallel private(ig,ip,jgrid,igrid,npart1,npart2,ipart,jpart,next_part,local_counter)
   ig=0
   ip=0
   ! Loop over grids
+!$omp do
   do jgrid=1,active(ilevel)%ngrid
      igrid=active(ilevel)%igrid(jgrid)
      npart1=numbp(igrid)  ! Number of particles in the grid
@@ -185,8 +187,10 @@ subroutine move_fine_static(ilevel)
         ! End loop over particles
      end if
   end do
+!$omp end do nowait
   ! End loop over grids
   if(ip>0)call move1(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
+!$omp end parallel
 
 111 format('   Entering move_fine for level ',I2)
 
