@@ -316,7 +316,7 @@ subroutine cmp_new_cpu_map
   real(kind=8),dimension(0:ndomain)::bigdbl,bigtmp
 #endif
 
-!$omp threadprivate(ind_grid,ind_cell,xx,dom,order_min,order_max,niter_cost,xx_tmp,c_tmp)
+!$omp threadprivate(ind_grid,ind_cell,xx,dom,order_min,order_max,xx_tmp,c_tmp)
 
   ! Local constants
   nxny=nx*ny
