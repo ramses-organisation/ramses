@@ -22,6 +22,7 @@ subroutine cooling_fine(ilevel)
   ! Operator splitting step for cooling source term
   ! by vector sweeps
   ncache=active(ilevel)%ngrid
+!$omp parallel do private(ngrid,i) 
   do igrid=1,ncache,nvector
      ngrid=MIN(nvector,ncache-igrid+1)
      do i=1,ngrid
@@ -493,6 +494,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
         endif
      endif
 #endif
+!$omp critical
 #ifdef RT
      if(neq_chem) then
         T2_new(1:nleaf) = T2(1:nleaf)
@@ -502,6 +504,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
         delta_T2(1:nleaf) = T2_new(1:nleaf) - T2(1:nleaf)
      endif
 #endif
+!$omp end critical
 
 #ifdef RT
      if(.not. static) then
