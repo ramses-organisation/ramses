@@ -13,10 +13,10 @@ ncontrol=1
 /
 
 &OUTPUT_PARAMS
-noutput=5
-tout=1.      !  (using units_time)
-tend=0.51
-delta_tout=0.25 ! Output every 5 Myr
+noutput=5	!  not used
+tout=1.      	!  (using units_time)
+tend=1.01    	!  active
+delta_tout=0.5 	!  active
 /
 
 &INIT_PARAMS
@@ -63,10 +63,11 @@ z_ave=0.1           ! Initial metallicity
 &SF_PARAMS
 sf_virial=.true.
 sf_model=0
-n_star=1.0                      ! Density threshold for star formation
-eps_star=0.1                    ! Star formation efficiency (% of free-fall time)
+n_star=0.1           ! Density threshold for star formation
+eps_star=0.1         ! Star formation efficiency (% of free-fall time)
 T2_star=10                      ! Cooling floor (in Kelvin)
-randomize_sf=.false.		! dont randomize SF
+randomize_sf=.false.		! dont randomize SF for tests
+PoissMeanMult=30.		! PoissonMean multiplier for tests
 /
 
 &STELLAR_PARAMS
