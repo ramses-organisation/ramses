@@ -49,10 +49,9 @@ ymin = ytmax-zoomdx
 ymax = ytmax+zoomdx
 zmin = ztmax-zoomdx
 zmax = ztmax+zoomdx
-    
 
 
-    
+
 # make a subcube of half-size zoomdx around max rho
 nx  = 2**7
 dpx = (xmax-xmin)/float(nx)
