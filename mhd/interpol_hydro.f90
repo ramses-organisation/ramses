@@ -35,6 +35,7 @@ subroutine upload_fine(ilevel)
   !------------------------------------------------------------
   ! Loop over active grids by vector sweeps
   ncache=active(ilevel)%ngrid
+!$omp parallel do private(ngrid,i,ind,iskip,nsplit,icell)
   do igrid=1,ncache,nvector
      ngrid=MIN(nvector,ncache-igrid+1)
      do i=1,ngrid
@@ -84,6 +85,7 @@ subroutine upload_fine(ilevel)
 
   ! Loop over active grids by vector sweeps
   ncache=active(ilevel)%ngrid
+!$omp parallel do private(igrid,ngrid,i,idim,ind_left,ind_right,ind,iskip,id1,id2,ih1,ih2,nsplit,icell,emag)
   do igrid=1,ncache,nvector
      ngrid=MIN(nvector,ncache-igrid+1)
      do i=1,ngrid
