@@ -13,7 +13,7 @@ subroutine remove_list(ind_part,ind_grid,ok,np)
   ! Remove particles from their original linked lists
   !----------------------------------------------------
   integer::j
-!$omp critical
+!$omp critical(omp_particle_list)
   do j=1,np
      if(ok(j))then
         if(prevp(ind_part(j)) .ne. 0) then
@@ -36,7 +36,7 @@ subroutine remove_list(ind_part,ind_grid,ok,np)
         numbp(ind_grid(j))=numbp(ind_grid(j))-1
      end if
   end do
-!$omp end critical
+!$omp end critical(omp_particle_list)
 end subroutine remove_list
 !################################################################
 !################################################################
@@ -52,7 +52,7 @@ subroutine remove_free(ind_part,np)
   ! Get np particle from free memory linked list
   !-----------------------------------------------
   integer::j,ipart
-!$omp critical
+!$omp critical(omp_particle_list)
   do j=1,np
      ipart=headp_free
      ind_part(j)=ipart
@@ -66,5 +66,5 @@ subroutine remove_free(ind_part,np)
      headp_free=nextp(headp_free)
   end do
   npart=npartmax-numbp_free
-!$omp end critical
+!$omp end critical(omp_particle_list)
 end subroutine remove_free
