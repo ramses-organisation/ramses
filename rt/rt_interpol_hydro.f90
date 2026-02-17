@@ -10,6 +10,7 @@ SUBROUTINE rt_upload_fine(ilevel)
   integer::i,ncache,igrid,ngrid,ind,iskip,nsplit,icell
   integer,dimension(1:nvector),save::ind_grid,ind_cell,ind_split
   logical,dimension(1:nvector),save::ok
+!$omp threadprivate(ind_grid,ind_cell,ind_split,ok)
 !------------------------------------------------------------------------
   if(ilevel==nlevelmax)return
   if(numbtot(1,ilevel)==0)return
@@ -75,6 +76,7 @@ SUBROUTINE rt_upl(ind_cell,ncell)
   integer ::ivar,i,ind_son,iskip_son
   integer ,dimension(1:nvector),save::igrid_son,ind_cell_son
   real(dp),dimension(1:nvector),save::getx
+!$omp threadprivate(igrid_son,ind_cell_son,getx)
 !------------------------------------------------------------------------
   ! Get child oct index
   do i=1,ncell
@@ -121,6 +123,7 @@ SUBROUTINE rt_interpol_hydro(u1,u2,nn)
   real(dp),dimension(1:twotondim,1:3)::xc
   real(dp),dimension(1:nvector,0:twondim),save::a
   real(dp),dimension(1:nvector,1:ndim),save::w
+!$omp threadprivate(a,w)
 !------------------------------------------------------------------------
   ! Set position of cell centers relative to grid (oct) center
   !               u1(:,4,:)

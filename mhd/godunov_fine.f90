@@ -352,7 +352,7 @@ subroutine add_pdv_source_terms(ilevel)
   integer::irad
 #endif
 
-!$omp threadprivate(ind_grid,ind_cell,igridn,ind_left,int_right,velg,veld,dx_g,dx_d,divu_loc)
+!$omp threadprivate(ind_grid,ind_cell,igridn,ind_left,ind_right,velg,veld,dx_g,dx_d,divu_loc)
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel

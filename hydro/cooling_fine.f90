@@ -19,9 +19,15 @@ subroutine cooling_fine(ilevel)
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
 
+#ifdef RT
+  call updateRTGroups_CoolConstants(ilevel)
+#endif
+
   ! Operator splitting step for cooling source term
   ! by vector sweeps
   ncache=active(ilevel)%ngrid
+!$omp parallel do private(ngrid,i)
+!!! -> breaks stromgren sphere test because something in cool_step
   do igrid=1,ncache,nvector
      ngrid=MIN(nvector,ncache-igrid+1)
      do i=1,ngrid
@@ -107,6 +113,9 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
 #endif
 
 !$omp threadprivate(ind_cell,ind_leaf,nH,T2,delta_T2,ekk,err,emag,T2min,Zsolar,boost)
+#ifdef RT
+!$omp threadprivate(ekk_new,T2_new,cooling_on,xion,Np, Np_boost, dNpdt,Fp, Fp_boost, dFpdt,p_gas, u_gas)
+#endif
 
   ! Mesh spacing in that level
   dx=0.5D0**ilevel
@@ -493,6 +502,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
         endif
      endif
 #endif
+!!!$omp critical
 #ifdef RT
      if(neq_chem) then
         T2_new(1:nleaf) = T2(1:nleaf)
@@ -502,6 +512,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
         delta_T2(1:nleaf) = T2_new(1:nleaf) - T2(1:nleaf)
      endif
 #endif
+!!!$omp end critical
 
 #ifdef RT
      if(.not. static) then

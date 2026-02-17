@@ -11,6 +11,7 @@ SUBROUTINE rt_init_xion(ilevel)
   integer:: ilevel
   integer:: ncache,i,igrid,ngrid
   integer,dimension(1:nvector),save:: ind_grid
+!$omp threadprivate(ind_grid)
 !-------------------------------------------------------------------------
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
@@ -51,6 +52,7 @@ SUBROUTINE rt_init_xion_vsweep(ind_grid, ngrid)
 #if NENER>0
   integer::irad
 #endif
+!$omp threadprivate(ind_cell,ind_leaf)
 !-------------------------------------------------------------------------
   ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)

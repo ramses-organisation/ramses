@@ -25,6 +25,7 @@ subroutine rt_hydro_flag(ilevel)
   real(dp),dimension(1:3)::skip_loc
   real(dp),dimension(1:twotondim,1:3)::xc
   real(dp),dimension(1:nvector,1:nrtvar),save::uug,uum,uud
+!$omp threadprivate(ind_grid,ind_cell,igridn,indn,c_factor,ok,uug,uum,uud)
   ! ----------------------------------------------------------------------
   if(ilevel==nlevelmax)return
   if(numbtot(1,ilevel)==0)return
