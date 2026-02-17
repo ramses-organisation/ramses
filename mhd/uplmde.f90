@@ -74,6 +74,8 @@ subroutine diffusion_fine(ilevel,dtdiff)
   integer::i,igrid,ncache,ngrid
   integer,dimension(1:nvector),save::ind_grid
 
+!$omp threadprivate(ind_grid)
+
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
 
@@ -132,6 +134,8 @@ subroutine diffine1(ind_grid,ncache,dtdiff,ilevel)
   integer::ind_buffer1,ind_buffer2,ind_buffer3
   integer::ivar1,ivar2,ivar3,ivar4,ivar5,ivar6
   real(dp)::dx,dflux,weight,dflux_x,dflux_y,dflux_z,scale,dx_loc
+
+!$omp threadprivate(nbors_father_cells,ibuffer_father,B1,ind1,B2,ok,Bx,By,Bz,emfx,emfy,emfz,igrid_nbor,ind_cell,ind_buffer,exist_nbor)
 
   ! Mesh size at level ilevel in coarse cell units
   dx=0.5D0**ilevel

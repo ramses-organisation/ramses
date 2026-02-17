@@ -78,6 +78,8 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
   integer::i,j,k,l,ivar
   integer::ilo,ihi,jlo,jhi,klo,khi
 
+!$omp threadprivate(qin,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,emf)
+
   ilo=MIN(1,iu1+2); ihi=MAX(1,iu2-2)
   jlo=MIN(1,ju1+2); jhi=MAX(1,ju2-2)
   klo=MIN(1,ku1+2); khi=MAX(1,ku2-2)
@@ -402,6 +404,8 @@ SUBROUTINE trace2d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dt,ngrid)
 #if NVAR>NHYDRO+NENER
   INTEGER::n
 #endif
+
+!$omp threadprivate(qm,qp,qRT,qRB,qLT,qLB,Ez)
 
   dtdx = dt/dx
   dtdy = dt/dy
@@ -750,6 +754,8 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
 #if NVAR>NHYDRO+NENER
   integer ::n
 #endif
+
+!$omp threadprivate(Ex,Ey,Ez)
 
   dtdx = dt/dx
   dtdy = dt/dy
@@ -2003,6 +2009,8 @@ subroutine ctoprim(uin,q,bf,gravin,dt,ngrid)
 #if NVAR>NHYDRO+NENER
   integer::n
 #endif
+
+!$omp threadprivate(eken,emag,erad)
 
   smalle = smallc**2/gamma/(gamma-one)
   smallp = smallr*smallc**2/gamma

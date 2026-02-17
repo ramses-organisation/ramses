@@ -202,6 +202,8 @@ subroutine cmpdt(uu,gg,dx,dt,ncell)
   integer::irad
 #endif
 
+!$omp threadprivate(a2,B2,rho,ctot)
+
   smallp = smallr*smallc**2/gamma
 
   ! Convert to primitive variables
