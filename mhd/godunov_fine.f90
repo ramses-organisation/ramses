@@ -1299,9 +1299,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
      ind_buffer2=nbors_father_cells(i,ind_father2)
      ind_buffer3=nbors_father_cells(i,ind_father3)
      weight=1.0
-!$omp atomic update
      if(son(ind_buffer1)>0.and.son(ind_buffer3)>0) cycle
-!$omp atomic update
      if(son(ind_buffer1)>0.or.son(ind_buffer2)>0.or.son(ind_buffer3)>0)weight=0.5
      dflux=(emfz(i,3,1,1)+emfz(i,3,1,2))*0.25*weight
 !$omp atomic update
