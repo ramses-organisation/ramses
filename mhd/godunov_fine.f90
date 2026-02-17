@@ -587,7 +587,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
   real(dp),dimension(1:nvector,1:twotondim,1:nvar+3),save::u2
 
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar+3),save::uloc
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:ndim),save::gloc=0.0d0
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:ndim),save::gloc
   real(dp),dimension(1:nvector,if1:if2,jf1:jf2,kf1:kf2,1:nvar,1:ndim),save::flux
   real(dp),dimension(1:nvector,1:3,1:3,1:3),save::emfx,emfy,emfz
   real(dp),dimension(1:nvector,if1:if2,jf1:jf2,kf1:kf2,1:2,1:ndim),save::tmp
@@ -607,6 +607,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
 !$omp threadprivate(uloc,gloc,flux,emfx,emfy,emfz,tmp,ok)
 !$omp threadprivate(igrid_nbor,ind_cell,ind_buffer,ind_exist,ind_nexist)
 
+  gloc=0.0d0
   emfx=0.0d0
   emfy=0.0d0
   emfz=0.0d0
