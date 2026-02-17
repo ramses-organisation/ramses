@@ -56,7 +56,9 @@ subroutine rt_init_flow_fine(ilevel)
   logical::error,ok_file1,ok_file2,ok_file3,ok_file
   character(LEN=80)::filename
   character(LEN=5)::ncharvar
- integer,parameter::tag=1129
+  integer,parameter::tag=1129
+
+!$omp threadprivate(ind_grid,ind_cell,xx,uu)
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel

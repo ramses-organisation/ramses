@@ -13,12 +13,14 @@ SUBROUTINE rt_godunov_fine(ilevel, dt)
   integer::i,igrid,ncache,ngrid
   integer,dimension(1:nvector),save::ind_grid
   real(dp)::dt
+!$omp threadprivate(ind_grid)
 !------------------------------------------------------------------------
   if(numbtot(1,ilevel)==0)return  ! # of grids at ilevel
   if(verbose)write(*,111)ilevel
 
   ! Loop over active grids by vector sweeps
   ncache=active(ilevel)%ngrid  ! total # of grids at level ilevel
+!$omp parallel do private(igrid,ngrid,i)
   do igrid=1,ncache,nvector    ! take steps of 500 grids up to ncache
      ngrid=MIN(nvector,ncache-igrid+1) ! # of grids in each sweep
      do i=1,ngrid              ! collect grid indices for one sweep
@@ -50,6 +52,7 @@ SUBROUTINE rt_set_unew(ilevel)
   if(verbose)write(*,111)ilevel
 
   ! Set rtunew to rtuold for myid cells
+!$omp parallel do private(ind,iskip,ivar,i)
   do ind=1,twotondim
      iskip=ncoarse+(ind-1)*ngridmax
      do ivar=1,nrtvar
@@ -60,6 +63,7 @@ SUBROUTINE rt_set_unew(ilevel)
   end do
 
   ! Set rtunew to 0 for virtual boundary cells
+!$omp parallel do private(icpu,ind,iskip,ivar,i)
   do icpu=1,ncpu
   do ind=1,twotondim
      iskip=ncoarse+(ind-1)*ngridmax
@@ -102,6 +106,7 @@ SUBROUTINE rt_set_uold(ilevel)
   if(rt_smooth) return
 
   ! Set rtuold to rtunew for myid cells
+!$omp parallel do private(ind,iskip,ivar,i,ig,icell,Npc,fred)
   do ind=1,twotondim
      iskip=ncoarse+(ind-1)*ngridmax
      do ivar=1,nrtvar
@@ -180,6 +185,8 @@ SUBROUTINE rt_godfine1(ind_grid, ncache, ilevel, dt)
   integer::ind_nbor
   real(dp)::dx8,maxDist,rt_c_diff
 
+!$omp threadprivate(nbors_father_cells,ibuffer_father,u1,u2,uloc,flux,ok)
+!$omp threadprivate(igrid_nbor,ind_cell,ind_buffer,ind_exist,ind_nexist,rt_per_bnd)
 !------------------------------------------------------------------------
   oneontwotondim = 1d0/dble(twotondim) ! 1/8 in 3D
 
@@ -442,6 +449,7 @@ SUBROUTINE rt_godfine1(ind_grid, ncache, ilevel, dt)
   !--------------------------------------
   ! Conservative update at level ilevel-1
   !--------------------------------------
+  if(levelmin.lt.nlevelmax)then
   if (rt_nsubcycle == 1)then
      ! Loop over dimensions
      do idim=1,ndim
@@ -476,6 +484,7 @@ SUBROUTINE rt_godfine1(ind_grid, ncache, ilevel, dt)
               do j3=j3min,j3max-j0 ! 1 to 1 if dim=2, 1 to 2 otherwise
                  do i3=i3min,i3max-i0 ! 1 to 1 if dim=1, 1 to 2 otherwise
                     do i=1,nb_noneigh
+!$omp atomic update
                        rtunew(ind_buffer(i),ivar) =                      &
                            & rtunew(ind_buffer(i),ivar)                  &
                            & - flux(ind_cell(i),i3,j3,k3,ivar,idim)      &
@@ -511,6 +520,7 @@ SUBROUTINE rt_godfine1(ind_grid, ncache, ilevel, dt)
               do j3=j3min+j0,j3max
                  do i3=i3min+i0,i3max
                     do i=1,nb_noneigh
+!$omp atomic update
                        rtunew(ind_buffer(i),ivar) =                          &
                            & rtunew(ind_buffer(i),ivar)                      &
                            & + flux(ind_cell(i),i3+i0,j3+j0,k3+k0,ivar,idim) &
@@ -525,4 +535,5 @@ SUBROUTINE rt_godfine1(ind_grid, ncache, ilevel, dt)
      ! End loop over dimensions
   end if
   ! End if-clause for rt-subcycling
+  end if
 END SUBROUTINE rt_godfine1

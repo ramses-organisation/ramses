@@ -290,7 +290,7 @@ recursive subroutine amr_step(ilevel,icount)
 #ifdef RT
   ! Turn on RT in case of rt_stars and first stars just created:
   ! Update photon packages according to star particles and sink particles
-                               call timer('radiative transfer','start')
+                               call timer('rt - feedback','start')
   if(rt .and. rt_star) call update_star_RT_feedback(ilevel)
 #if NDIM==3
   if(rt .and. rt_sink) call update_sink_RT_feedback
@@ -321,7 +321,7 @@ recursive subroutine amr_step(ilevel,icount)
 
 #ifdef RT
   ! Set rtunew equal to rtuold
-                               call timer('radiative transfer','start')
+                               call timer('rt - set unew','start')
   if(rt)call rt_set_unew(ilevel)
 #endif
 
@@ -440,7 +440,7 @@ recursive subroutine amr_step(ilevel,icount)
   !---------------------
 #ifdef RT
   if(rt .and. rt_advect) then
-                               call timer('radiative transfer','start')
+                               call timer('rt - step','start')
      call rt_step(ilevel)
   else
      ! Still need a chemistry call if RT is defined but not
@@ -450,13 +450,13 @@ recursive subroutine amr_step(ilevel,icount)
   endif
   ! Regular updates and book-keeping:
   if(ilevel==levelmin) then
-                               call timer('radiative transfer','start')
+                               call timer('rt - book-keeping','start')
      if(cosmo) call update_rt_c
      if(cosmo .and. haardt_madau) call update_UVrates(aexp)
      if(cosmo .and. rt_isDiffuseUVsrc) call update_UVsrc
                                call timer('cooling','start')
      if(cosmo) call update_coolrates_tables(dble(aexp))
-                               call timer('radiative transfer','start')
+                               call timer('rt - book-keeping','start')
      if(ilevel==levelmin) call output_rt_stats
   endif
 #else
@@ -606,36 +606,45 @@ subroutine rt_step(ilevel)
   i_substep = 0
   do while (t_left > 0)                      !                RT sub-cycle
      i_substep = i_substep + 1
+                 call timer('rt - courant','start')
      call get_rt_courant_dt(dt_rt,ilevel)
      ! Temporarily change timestep length to rt step:
      dtnew(ilevel) = MIN(t_left, dt_rt)
      t = t + dtnew(ilevel) ! Shift the time forwards one dt_rt
 
      ! If (myid==1) write(*,900) dt_hydro, dtnew(ilevel), i_substep, ilevel
-     if (i_substep > 1) call rt_set_unew(ilevel)
+     if (i_substep > 1) then
+                 call timer('rt - set unew','start')
+      call rt_set_unew(ilevel)
+     endif
 
+                 call timer('rt - feedback','start')
      if(rt_star) call star_RT_feedback(ilevel,dtnew(ilevel))
 #if NDIM==3
      if(rt_sink) call sink_RT_feedback(ilevel,dtnew(ilevel))
 #endif
 
      ! Hyperbolic solver
-     if(rt_advect) call rt_godunov_fine(ilevel,dtnew(ilevel))
-
+     if(rt_advect) then 
+                 call timer('rt - godunov','start')
+      call rt_godunov_fine(ilevel,dtnew(ilevel))
+     endif
+                 call timer('rt - sources','start')
      call add_rt_sources(ilevel,dtnew(ilevel))
 
+     call timer('rt - ','start')
      ! Reverse update boundaries
      do ivar=1,nrtvar
         call make_virtual_reverse_dp(rtunew(1,ivar),ilevel)
      end do
 
      ! Set rtuold equal to rtunew
+     call timer('rt - set uold','start')
      call rt_set_uold(ilevel)
 
                                call timer('cooling','start')
      if(neq_chem.or.cooling.or.T2_star>0.0.or.barotropic_eos)call cooling_fine(ilevel)
-                               call timer('radiative transfer','start')
-
+                               call timer('rt - rev ghostzones','start')
      do ivar=1,nrtvar
         call make_virtual_fine_dp(rtuold(1,ivar),ilevel)
      end do
@@ -647,6 +656,7 @@ subroutine rt_step(ilevel)
   t = t_save       ! Restore original time (otherwise tiny roundoff error)
 
   ! Restriction operator to update coarser level split cells
+                               call timer('rt - upload fine','start')
   call rt_upload_fine(ilevel)
 
   if (myid==1 .and. rt_nsubcycle .gt. 1) write(*,901) ilevel, i_substep
