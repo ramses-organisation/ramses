@@ -34,6 +34,8 @@ subroutine  condinit(x,u,dx,nn)
 #endif
   real(dp),dimension(1:nvector,1:nvar+3),save::q   ! Primitive variables
 
+!$omp threadprivate(q)
+
   select case (condinit_kind)
 
   case('region')
@@ -186,13 +188,13 @@ subroutine collapse_condinit(x,q,dx,nn)
 
 
   logical,save:: first=.true.
-  real(dp),dimension(1:3,1:100,1:100,1:100),save::q_idl
-  real(dp),save::vx_tot,vy_tot,vz_tot,vx2_tot,vy2_tot,vz2_tot
-  integer,save:: n_size
+  real(dp),dimension(1:3,1:100,1:100,1:100)::q_idl
+  real(dp)::vx_tot,vy_tot,vz_tot,vx2_tot,vy2_tot,vz2_tot
+  integer:: n_size
   integer:: ind_i, ind_j, ind_k
-  real(dp),save:: ind,seed1,seed2,seed3,xi,yi,zi,vx,vy,vz
-  real(dp),save:: C_s,v_rms
-  integer, save :: count_vrms
+  real(dp):: ind,seed1,seed2,seed3,xi,yi,zi,vx,vy,vz
+  real(dp):: C_s,v_rms
+  integer :: count_vrms
 
   id=1; iu=2; iv=3; iw=4; ip=5
   x0=0.5*boxlen
@@ -511,6 +513,8 @@ subroutine ponomarenko_condinit(x,u,dx,nn)
   integer::ivar,i
   real(dp),dimension(1:nvector,1:nvar+3),save::q   ! Primitive variables
   real(dp)::xc,xr,xl,yl,yr,yc,al,ar,r0,a0,twopi,rr,ss,tt
+
+!$omp threadprivate(q)
 
   ! density
   q(1:nn,1)=1.0
