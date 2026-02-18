@@ -138,6 +138,6 @@ if(0):
                "metallicity":1.e-4,\
                }
 if(1):
-     tolerance={"all":1.0e-4,\
+     tolerance={"all":1.0e-13,\
                }
 visu_ramses.check_solution(to_check, 'sfvirialtrue-sfmodel0',tolerance=tolerance)#,overwrite=True)
