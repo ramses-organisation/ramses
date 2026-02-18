@@ -23,6 +23,8 @@ subroutine hydro_refine(ug,um,ud,ok,nn,ilevel)
   real(dp),dimension(1:nvector),save::emagg,emagm,emagd
   real(dp)::dg,dm,dd,pg,pm,pd,vg,vm,vd,cg,cm,cd,error,emag_loc,ethres
 
+!$omp threadprivate(eking,ekinm,ekind,emagg,emagm,emagd)
+
   ! Convert to primitive variables
   do k = 1,nn
      ug(k,1) = max(ug(k,1),smallr)
