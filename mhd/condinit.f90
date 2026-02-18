@@ -34,6 +34,8 @@ subroutine  condinit(x,u,dx,nn)
 #endif
   real(dp),dimension(1:nvector,1:nvar+3),save::q   ! Primitive variables
 
+!$omp threadprivate(q)
+
   select case (condinit_kind)
 
   case('region')
@@ -511,6 +513,8 @@ subroutine ponomarenko_condinit(x,u,dx,nn)
   integer::ivar,i
   real(dp),dimension(1:nvector,1:nvar+3),save::q   ! Primitive variables
   real(dp)::xc,xr,xl,yl,yr,yc,al,ar,r0,a0,twopi,rr,ss,tt
+
+!$omp threadprivate(q)
 
   ! density
   q(1:nn,1)=1.0

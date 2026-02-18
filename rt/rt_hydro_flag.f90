@@ -56,6 +56,7 @@ subroutine rt_hydro_flag(ilevel)
 
   ! Loop over active grids
   ncache=active(ilevel)%ngrid
+!$omp parallel do private(igrid,ngrid,i,ind,iskip,j,idim,ivar,nok) reduction(+:nflag)
   do igrid=1,ncache,nvector
 
      ! Gather nvector grids

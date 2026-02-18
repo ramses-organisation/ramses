@@ -26,7 +26,8 @@ subroutine cooling_fine(ilevel)
   ! Operator splitting step for cooling source term
   ! by vector sweeps
   ncache=active(ilevel)%ngrid
-!$omp parallel do private(ngrid,i) 
+!$omp parallel do private(ngrid,i)
+!!! -> breaks stromgren sphere test because something in cool_step
   do igrid=1,ncache,nvector
      ngrid=MIN(nvector,ncache-igrid+1)
      do i=1,ngrid

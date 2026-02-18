@@ -27,6 +27,8 @@ subroutine make_boundary_hydro(ilevel)
   real(dp),dimension(1:nvector,1:nvar+3),save::uu
   real(dp),dimension(1:nvector,1:twotondim),save::uu_ref
 
+!$omp threadprivate(ind_grid,ind_grid_ref,ind_cell,ind_cell_ref,ind_cell_normal,B_normal,xx,uu,uu_ref)
+
   if(.not. simple_boundary)return
   if(verbose)write(*,111)ilevel
 

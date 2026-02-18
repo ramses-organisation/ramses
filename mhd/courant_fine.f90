@@ -53,6 +53,8 @@ subroutine courant_fine(ilevel)
 
   ! Loop over active grids by vector sweeps
   ncache=active(ilevel)%ngrid
+!$omp parallel do private(ngrid,iskip,nleaf,dt_lev) &
+!$omp & reduction(+:mass_loc,ekin_loc,eint_loc) reduction(MIN:dt_loc)
   do igrid=1,ncache,nvector
      ngrid=MIN(nvector,ncache-igrid+1)
      do i=1,ngrid
@@ -202,6 +204,8 @@ subroutine cmpdt(uu,gg,dx,dt,ncell)
   integer::irad
 #endif
 
+!$omp threadprivate(a2,B2,rho,ctot)
+
   smallp = smallr*smallc**2/gamma
 
   ! Convert to primitive variables
@@ -344,6 +348,7 @@ subroutine velocity_fine(ilevel)
   ncache=active(ilevel)%ngrid
 
   ! Loop over grids by vector sweeps
+!$omp parallel do private(igrid,ngrid,i,iskip,ind,idim,d,u,v,w,A,B,C)
   do igrid=1,ncache,nvector
      ngrid=MIN(nvector,ncache-igrid+1)
      do i=1,ngrid

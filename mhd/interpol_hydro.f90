@@ -24,6 +24,8 @@ subroutine upload_fine(ilevel)
 
   logical,dimension(1:nvector),save::ok,ok_leaf
 
+!$omp threadprivate(ind_grid,ind_cell,ind_split,ind_unsplit,igrid_son,igridn,ok,ok_leaf)
+
   if(ilevel==nlevelmax)return
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
@@ -33,6 +35,7 @@ subroutine upload_fine(ilevel)
   !------------------------------------------------------------
   ! Loop over active grids by vector sweeps
   ncache=active(ilevel)%ngrid
+!$omp parallel do private(ngrid,i,ind,iskip,nsplit,icell)
   do igrid=1,ncache,nvector
      ngrid=MIN(nvector,ncache-igrid+1)
      do i=1,ngrid
@@ -82,6 +85,7 @@ subroutine upload_fine(ilevel)
 
   ! Loop over active grids by vector sweeps
   ncache=active(ilevel)%ngrid
+!$omp parallel do private(igrid,ngrid,i,idim,ind_left,ind_right,ind,iskip,id1,id2,ih1,ih2,nsplit,icell,emag)
   do igrid=1,ncache,nvector
      ngrid=MIN(nvector,ncache-igrid+1)
      do i=1,ngrid
@@ -243,6 +247,8 @@ subroutine upl(ind_cell,ncell)
   integer ,dimension(1:nvector),save::igrid_son,ind_cell_son
   real(dp),dimension(1:nvector),save::getx,ekin,emag,erad
   integer,dimension(1:6,1:4)::hhh
+
+!$omp threadprivate(igrid_son,ind_cell_son,getx,ekin,emag,erad)
 
   ! Get child oct index
   do i=1,ncell
@@ -522,6 +528,8 @@ subroutine upl_left(ind_cell,igrid_son,idim,ncell)
   real(dp),dimension(1:nvector),save::getx
   integer,dimension(1:6,1:4)::hhh
 
+!$omp threadprivate(ind_cell_son,getx)
+
   hhh(1,1:4)=(/1,3,5,7/)
   hhh(2,1:4)=(/2,4,6,8/)
   hhh(3,1:4)=(/1,2,5,6/)
@@ -569,6 +577,8 @@ subroutine upl_right(ind_cell,igrid_son,idim,ncell)
   integer ,dimension(1:nvector),save::ind_cell_son
   real(dp),dimension(1:nvector),save::getx
   integer,dimension(1:6,1:4)::hhh
+
+!$omp threadprivate(ind_cell_son,getx)
 
   hhh(1,1:4)=(/1,3,5,7/)
   hhh(2,1:4)=(/2,4,6,8/)
@@ -634,6 +644,8 @@ subroutine interpol_hydro(u1,ind1,u2,nn)
   real(dp),dimension(1:nvector),save::ekin,emag,erad
   real(dp),dimension(1:nvector,0:twondim  ,1:6),save::B1
   real(dp),dimension(1:nvector,1:twotondim,1:6),save::B2
+
+!$omp threadprivate(a,w,ekin,emag,erad,B1,B2)
 
   ! Set position of cell centers relative to grid center
   do ind=1,twotondim
@@ -861,6 +873,8 @@ subroutine compute_limiter_central(a,w,nn)
   real(dp),dimension(1:nvector),save::corner,kernel,diff_corner,diff_kernel
   real(dp),dimension(1:nvector),save::max_limiter,min_limiter,limiter
 
+!$omp threadprivate(ac,corner,kernel,diff_corner,diff_kernel,max_limiter,min_limiter,limiter)
+
   ! Set position of cell centers relative to grid center
   do ind=1,twotondim
      iz=(ind-1)/4
@@ -1004,6 +1018,8 @@ subroutine interpol_mag(B1,ind1,B2,nn)
   real(dp),dimension(1:nvector,0:1,-1:1,0:1),save::v
   real(dp),dimension(1:nvector,0:1,0:1,-1:1),save::w
 
+!$omp threadprivate(u,v,w)
+
   imax=1; jmax=0; kmax=0
 #if NDIM>1
   jmax=1
@@ -1057,6 +1073,8 @@ subroutine interpol_faces(b1,u,v,w,nn)
   integer::i,j,k,l,imax,jmax,kmax
   real(dp),dimension(1:nvector,0:4),save::b
   real(dp),dimension(1:nvector,1:2),save::s
+
+!$omp threadprivate(b,s)
 
   imax=1; jmax=0; kmax=0
 #if NDIM>1
@@ -1355,6 +1373,8 @@ subroutine cmp_central_faces(u,v,w,nn)
 
   integer::i,j,k,l,ii,jj,kk,imax,jmax,kmax
   real(dp),dimension(1:nvector),save::UXX,VYY,WZZ,UXYZ,VXYZ,WXYZ
+
+!$omp threadprivate(UXX,VYY,WZZ,UXYZ,VXYZ,WXYZ)
 
   imax=1; jmax=0; kmax=0
 #if NDIM>1

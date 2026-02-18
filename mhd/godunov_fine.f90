@@ -24,6 +24,7 @@ subroutine godunov_fine(ilevel)
 
   ! Loop over active grids by vector sweeps
   ncache=active(ilevel)%ngrid
+!$omp parallel do private(igrid,ngrid,i)
   do igrid=1,ncache,nvector
      ngrid=MIN(nvector,ncache-igrid+1)
      do i=1,ngrid
@@ -48,28 +49,33 @@ subroutine set_unew(ilevel)
   ! This routine sets array unew to its initial value uold before calling
   ! the hydro scheme. unew is set to zero in virtual boundaries.
   !--------------------------------------------------------------------------
-  integer::i,ivar,ind,icpu,iskip
+  integer::i,ivar,ind,icpu,ncache,iskip,igrid,ngrid,icell
   real(dp)::d,u,v,w,e,A,B,C
+  integer,dimension(1:nvector),save::ind_grid,ind_cell
 #if NENER>0
   integer::irad
 #endif
+
+!$omp threadprivate(ind_grid,ind_cell)
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
 
   ! Set unew to uold for myid cells
+!$omp parallel private(iskip,ivar,i,d,u,v,w,e,A,B,C)
   do ind=1,twotondim
      iskip=ncoarse+(ind-1)*ngridmax
      do ivar=1,nvar+3
+!$omp do
         do i=1,active(ilevel)%ngrid
            unew(active(ilevel)%igrid(i)+iskip,ivar) = uold(active(ilevel)%igrid(i)+iskip,ivar)
         end do
+!$omp end do nowait
      end do
      if(pressure_fix)then
+!$omp do
         do i=1,active(ilevel)%ngrid
            divu(active(ilevel)%igrid(i)+iskip) = 0
-        end do
-        do i=1,active(ilevel)%ngrid
            d=max(uold(active(ilevel)%igrid(i)+iskip,1),smallr)
            u=uold(active(ilevel)%igrid(i)+iskip,2)/d
            v=uold(active(ilevel)%igrid(i)+iskip,3)/d
@@ -85,26 +91,51 @@ subroutine set_unew(ilevel)
 #endif
            enew(active(ilevel)%igrid(i)+iskip)=e
         end do
+!$omp end do nowait
      end if
   end do
+!$omp end parallel
 
   ! Set unew to 0 for virtual boundary cells
+!$omp parallel private(icpu,ncache,igrid,ngrid,i,ind,iskip,ivar)
   do icpu=1,ncpu
-  do ind=1,twotondim
-     iskip=ncoarse+(ind-1)*ngridmax
-     do ivar=1,nvar+3
-        do i=1,reception(icpu,ilevel)%ngrid
-           unew(reception(icpu,ilevel)%igrid(i)+iskip,ivar)=0
+     ncache=reception(icpu,ilevel)%ngrid
+     ! Loop over grids by vector sweeps
+!$omp do
+     do igrid=1,ncache,nvector
+        ! Gather nvector grids
+        ngrid=MIN(nvector,ncache-igrid+1)
+        do i=1,ngrid
+#ifdef LIGHT_MPI_COMM
+           ind_grid(i)=reception(icpu,ilevel)%pcomm%igrid(igrid+i-1)
+#else
+           ind_grid(i)=reception(icpu,ilevel)%igrid(igrid+i-1)
+#endif
+        end do
+        ! Loop over cells
+        do ind=1,twotondim
+           ! Gather cell indices
+           iskip=ncoarse+(ind-1)*ngridmax
+           do i=1,ngrid
+              ind_cell(i)=iskip+ind_grid(i)
+           end do
+           do ivar=1,nvar+3
+              do i=1,ngrid
+                 unew(ind_cell(i),ivar)=0
+              end do
+           end do
+           if(pressure_fix)then
+              do i=1,ngrid
+                 divu(ind_cell(i)) = 0
+                 enew(ind_cell(i)) = 0
+              end do
+           end if
         end do
      end do
-     if(pressure_fix)then
-        do i=1,reception(icpu,ilevel)%ngrid
-           divu(reception(icpu,ilevel)%igrid(i)+iskip) = 0
-           enew(reception(icpu,ilevel)%igrid(i)+iskip) = 0
-        end do
-     end if
+!$omp end do nowait
   end do
-  end do
+!$omp end parallel
+
 
 111 format('   Entering set_unew for level ',i2)
 
@@ -209,12 +240,14 @@ subroutine set_uold(ilevel)
   dx=0.5d0**ilevel*scale
 
   ! Set uold to unew for myid cells
+!$omp parallel private(iskip,ivar,i,d,u,v,w,A,B,C,e_mag,e_kin,e_cons,e_prim,e_trunc,div)
   do ind=1,twotondim
      iskip=ncoarse+(ind-1)*ngridmax
 
      ! -------------------------------------------------------------------------------------------------------------------------------------------------------------
      ! L. Romano 14.06.2023 -- Catch advection errors due to smallr
 #if NVAR > NHYDRO+NENER
+!$omp do
      do i=1,active(ilevel)%ngrid
         if(uold(active(ilevel)%igrid(i)+iskip,1).lt.smallr.and.unew(active(ilevel)%igrid(i)+iskip,1).gt.uold(active(ilevel)%igrid(i)+iskip,1))then
            ! inflow into previously floored cell: fix concentrations
@@ -228,15 +261,20 @@ subroutine set_uold(ilevel)
            end do
         end if
      end do
+!$omp end do nowait
 #endif
      ! -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
      do ivar=1,nvar+3
+!$omp do
         do i=1,active(ilevel)%ngrid
            uold(active(ilevel)%igrid(i)+iskip,ivar) = unew(active(ilevel)%igrid(i)+iskip,ivar)
         end do
+!$omp end do nowait
      end do
      if(pressure_fix)then
+        ! Correct total energy if internal energy is too small
+!$omp do
         do i=1,active(ilevel)%ngrid
            ind_cell=active(ilevel)%igrid(i)+iskip
            d=max(uold(ind_cell,1),smallr)
@@ -263,8 +301,10 @@ subroutine set_uold(ilevel)
               uold(ind_cell,neul)=e_prim+e_kin+e_mag
            end if
         end do
+!$omp end do nowait
      end if
   end do
+!$omp end parallel
 
 111 format('   Entering set_uold for level ',i2)
 
@@ -547,9 +587,9 @@ subroutine godfine1(ind_grid,ncache,ilevel)
   real(dp),dimension(1:nvector,1:twotondim,1:nvar+3),save::u2
 
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar+3),save::uloc
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:ndim),save::gloc=0.0d0
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:ndim),save::gloc
   real(dp),dimension(1:nvector,if1:if2,jf1:jf2,kf1:kf2,1:nvar,1:ndim),save::flux
-  real(dp),dimension(1:nvector,1:3,1:3,1:3),save::emfx=0.0d0,emfy=0.0d0,emfz=0.0d0
+  real(dp),dimension(1:nvector,1:3,1:3,1:3),save::emfx,emfy,emfz
   real(dp),dimension(1:nvector,if1:if2,jf1:jf2,kf1:kf2,1:2,1:ndim),save::tmp
   logical ,dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),save::ok
 
@@ -566,6 +606,11 @@ subroutine godfine1(ind_grid,ncache,ilevel)
 !$omp threadprivate(nbors_father_cells,ibuffer_father,ind1,u1,u2)
 !$omp threadprivate(uloc,gloc,flux,emfx,emfy,emfz,tmp,ok)
 !$omp threadprivate(igrid_nbor,ind_cell,ind_buffer,ind_exist,ind_nexist)
+
+  gloc=0.0d0
+  emfx=0.0d0
+  emfy=0.0d0
+  emfz=0.0d0
 
   oneontwotondim = 1d0/dble(twotondim)
 
@@ -1029,7 +1074,8 @@ subroutine godfine1(ind_grid,ncache,ilevel)
         do j3=j3min,j3max-j0
         do i3=i3min,i3max-i0
            do i=1,nb_noneigh
-              unew(ind_buffer(i),ivar)=unew(ind_buffer(i),ivar) &
+!$omp atomic update
+            unew(ind_buffer(i),ivar)=unew(ind_buffer(i),ivar) &
                    & -flux(ind_cell(i),i3,j3,k3,ivar,idim)*oneontwotondim
            end do
         end do
@@ -1042,6 +1088,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
         do j3=j3min,j3max-j0
         do i3=i3min,i3max-i0
            do i=1,nb_noneigh
+!$omp atomic update
               unew(ind_buffer(i),nvar+ivar)=unew(ind_buffer(i),nvar+ivar) &
                    & -flux(ind_cell(i),i3,j3,k3,neul+ivar,idim)*oneontwotondim
            end do
@@ -1055,6 +1102,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
      do j3=j3min,j3max-j0
      do i3=i3min,i3max-i0
         do i=1,nb_noneigh
+!$omp atomic update
            divu(ind_buffer(i))=divu(ind_buffer(i)) &
                 & -tmp(ind_cell(i),i3,j3,k3,1,idim)*oneontwotondim
         end do
@@ -1066,6 +1114,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
      do j3=j3min,j3max-j0
      do i3=i3min,i3max-i0
         do i=1,nb_noneigh
+!$omp atomic update
            enew(ind_buffer(i))=enew(ind_buffer(i)) &
                 & -tmp(ind_cell(i),i3,j3,k3,2,idim)*oneontwotondim
         end do
@@ -1094,6 +1143,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
         do j3=j3min+j0,j3max
         do i3=i3min+i0,i3max
            do i=1,nb_noneigh
+!$omp atomic update
               unew(ind_buffer(i),ivar)=unew(ind_buffer(i),ivar) &
                    & +flux(ind_cell(i),i3+i0,j3+j0,k3+k0,ivar,idim)*oneontwotondim
            end do
@@ -1107,6 +1157,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
         do j3=j3min+j0,j3max
         do i3=i3min+i0,i3max
            do i=1,nb_noneigh
+!$omp atomic update
               unew(ind_buffer(i),nvar+ivar)=unew(ind_buffer(i),nvar+ivar) &
                    & +flux(ind_cell(i),i3+i0,j3+j0,k3+k0,neul+ivar,idim)*oneontwotondim
            end do
@@ -1120,6 +1171,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
      do j3=j3min+j0,j3max
      do i3=i3min+i0,i3max
         do i=1,nb_noneigh
+!$omp atomic update
            divu(ind_buffer(i))=divu(ind_buffer(i)) &
                 & +tmp(ind_cell(i),i3+i0,j3+j0,k3+k0,1,idim)*oneontwotondim
         end do
@@ -1131,6 +1183,7 @@ subroutine godfine1(ind_grid,ncache,ilevel)
      do j3=j3min+j0,j3max
      do i3=i3min+i0,i3max
         do i=1,nb_noneigh
+!$omp atomic update
            enew(ind_buffer(i))=enew(ind_buffer(i)) &
                 & +tmp(ind_cell(i),i3+i0,j3+j0,k3+k0,2,idim)*oneontwotondim
         end do
@@ -1166,12 +1219,18 @@ subroutine godfine1(ind_grid,ncache,ilevel)
      if(son(ind_buffer1)>0.and.son(ind_buffer3)>0) cycle
      if(son(ind_buffer1)>0.or.son(ind_buffer2)>0.or.son(ind_buffer3)>0)weight=0.5
      dflux=(emfz(i,1,1,1)+emfz(i,1,1,2))*0.25*weight
+!$omp atomic update
      unew(ind_buffer1,1+neul)=unew(ind_buffer1,1+neul)+dflux
+!$omp atomic update
      unew(ind_buffer2,1+nvar)=unew(ind_buffer2,1+nvar)+dflux
+!$omp atomic update
      unew(ind_buffer2,2+nvar)=unew(ind_buffer2,2+nvar)-dflux
+!$omp atomic update
      unew(ind_buffer3,2+neul)=unew(ind_buffer3,2+neul)-dflux
      if(son(ind_buffer1)==0.and.son(ind_buffer2)==0.and.son(ind_buffer3)==0) then
+!$omp atomic update
         unew(ind_buffer3,1+nvar)=unew(ind_buffer3,1+nvar)-dflux*0.5
+!$omp atomic update
         unew(ind_buffer1,2+nvar)=unew(ind_buffer1,2+nvar)+dflux*0.5
      endif
   end do
@@ -1188,12 +1247,18 @@ subroutine godfine1(ind_grid,ncache,ilevel)
      if(son(ind_buffer1)>0.and.son(ind_buffer3)>0) cycle
      if(son(ind_buffer1)>0.or.son(ind_buffer2)>0.or.son(ind_buffer3)>0)weight=0.5
      dflux=(emfz(i,1,3,1)+emfz(i,1,3,2))*0.25*weight
+!$omp atomic update
      unew(ind_buffer1,2+nvar)=unew(ind_buffer1,2+nvar)-dflux
+!$omp atomic update
      unew(ind_buffer2,2+neul)=unew(ind_buffer2,2+neul)-dflux
+!$omp atomic update
      unew(ind_buffer2,1+nvar)=unew(ind_buffer2,1+nvar)-dflux
+!$omp atomic update
      unew(ind_buffer3,1+neul)=unew(ind_buffer3,1+neul)-dflux
      if(son(ind_buffer1)==0.and.son(ind_buffer2)==0.and.son(ind_buffer3)==0) then
+!$omp atomic update
         unew(ind_buffer3,2+neul)=unew(ind_buffer3,2+neul)+dflux*0.5
+!$omp atomic update
         unew(ind_buffer1,1+nvar)=unew(ind_buffer1,1+nvar)+dflux*0.5
      endif
   end do
@@ -1210,12 +1275,18 @@ subroutine godfine1(ind_grid,ncache,ilevel)
      if(son(ind_buffer1)>0.and.son(ind_buffer3)>0) cycle
      if(son(ind_buffer1)>0.or.son(ind_buffer2)>0.or.son(ind_buffer3)>0)weight=0.5
      dflux=(emfz(i,3,3,1)+emfz(i,3,3,2))*0.25*weight
+!$omp atomic update
      unew(ind_buffer1,1+nvar)=unew(ind_buffer1,1+nvar)-dflux
+!$omp atomic update
      unew(ind_buffer2,1+neul)=unew(ind_buffer2,1+neul)-dflux
+!$omp atomic update
      unew(ind_buffer2,2+neul)=unew(ind_buffer2,2+neul)+dflux
+!$omp atomic update
      unew(ind_buffer3,2+nvar)=unew(ind_buffer3,2+nvar)+dflux
      if(son(ind_buffer1)==0.and.son(ind_buffer2)==0.and.son(ind_buffer3)==0) then
+!$omp atomic update
         unew(ind_buffer3,1+neul)=unew(ind_buffer3,1+neul)+dflux*0.5
+!$omp atomic update
         unew(ind_buffer1,2+neul)=unew(ind_buffer1,2+neul)-dflux*0.5
      endif
   end do
@@ -1232,12 +1303,18 @@ subroutine godfine1(ind_grid,ncache,ilevel)
      if(son(ind_buffer1)>0.and.son(ind_buffer3)>0) cycle
      if(son(ind_buffer1)>0.or.son(ind_buffer2)>0.or.son(ind_buffer3)>0)weight=0.5
      dflux=(emfz(i,3,1,1)+emfz(i,3,1,2))*0.25*weight
+!$omp atomic update
      unew(ind_buffer1,2+neul)=unew(ind_buffer1,2+neul)+dflux
+!$omp atomic update
      unew(ind_buffer2,2+nvar)=unew(ind_buffer2,2+nvar)+dflux
+!$omp atomic update
      unew(ind_buffer2,1+neul)=unew(ind_buffer2,1+neul)+dflux
+!$omp atomic update
      unew(ind_buffer3,1+nvar)=unew(ind_buffer3,1+nvar)+dflux
      if(son(ind_buffer1)==0.and.son(ind_buffer2)==0.and.son(ind_buffer3)==0) then
+!$omp atomic update
         unew(ind_buffer3,2+nvar)=unew(ind_buffer3,2+nvar)-dflux*0.5
+!$omp atomic update
         unew(ind_buffer1,1+neul)=unew(ind_buffer1,1+neul)-dflux*0.5
      endif
   end do
@@ -1258,12 +1335,18 @@ subroutine godfine1(ind_grid,ncache,ilevel)
      if(son(ind_buffer1)>0.and.son(ind_buffer3)>0) cycle
      if(son(ind_buffer1)>0.or.son(ind_buffer2)>0.or.son(ind_buffer3)>0)weight=0.5
      dflux=(emfx(i,1,1,1)+emfx(i,2,1,1))*0.25*weight
+!$omp atomic update
      unew(ind_buffer1,2+neul)=unew(ind_buffer1,2+neul)+dflux
+!$omp atomic update
      unew(ind_buffer2,2+nvar)=unew(ind_buffer2,2+nvar)+dflux
+!$omp atomic update
      unew(ind_buffer2,3+nvar)=unew(ind_buffer2,3+nvar)-dflux
+!$omp atomic update
      unew(ind_buffer3,3+neul)=unew(ind_buffer3,3+neul)-dflux
      if(son(ind_buffer1)==0.and.son(ind_buffer2)==0.and.son(ind_buffer3)==0) then
+!$omp atomic update
         unew(ind_buffer1,3+nvar)=unew(ind_buffer1,3+nvar)+dflux*0.5
+!$omp atomic update
         unew(ind_buffer3,2+nvar)=unew(ind_buffer3,2+nvar)-dflux*0.5
      endif
   end do
@@ -1280,12 +1363,18 @@ subroutine godfine1(ind_grid,ncache,ilevel)
      if(son(ind_buffer1)>0.and.son(ind_buffer3)>0) cycle
      if(son(ind_buffer1)>0.or.son(ind_buffer2)>0.or.son(ind_buffer3)>0)weight=0.5
      dflux=(emfx(i,1,1,3)+emfx(i,2,1,3))*0.25*weight
+!$omp atomic update
      unew(ind_buffer1,3+nvar)=unew(ind_buffer1,3+nvar)-dflux
+!$omp atomic update
      unew(ind_buffer2,3+neul)=unew(ind_buffer2,3+neul)-dflux
+!$omp atomic update
      unew(ind_buffer2,2+nvar)=unew(ind_buffer2,2+nvar)-dflux
+!$omp atomic update
      unew(ind_buffer3,2+neul)=unew(ind_buffer3,2+neul)-dflux
      if(son(ind_buffer1)==0.and.son(ind_buffer2)==0.and.son(ind_buffer3)==0) then
+!$omp atomic update
         unew(ind_buffer1,2+nvar)=unew(ind_buffer1,2+nvar)+dflux*0.5
+!$omp atomic update
         unew(ind_buffer3,3+neul)=unew(ind_buffer3,3+neul)+dflux*0.5
      endif
   end do
@@ -1302,12 +1391,18 @@ subroutine godfine1(ind_grid,ncache,ilevel)
      if(son(ind_buffer1)>0.and.son(ind_buffer3)>0) cycle
      if(son(ind_buffer1)>0.or.son(ind_buffer2)>0.or.son(ind_buffer3)>0)weight=0.5
      dflux=(emfx(i,1,3,3)+emfx(i,2,3,3))*0.25*weight
+!$omp atomic update
      unew(ind_buffer1,2+nvar)=unew(ind_buffer1,2+nvar)-dflux
+!$omp atomic update
      unew(ind_buffer2,2+neul)=unew(ind_buffer2,2+neul)-dflux
+!$omp atomic update
      unew(ind_buffer2,3+neul)=unew(ind_buffer2,3+neul)+dflux
+!$omp atomic update
      unew(ind_buffer3,3+nvar)=unew(ind_buffer3,3+nvar)+dflux
      if(son(ind_buffer1)==0.and.son(ind_buffer2)==0.and.son(ind_buffer3)==0) then
+!$omp atomic update
         unew(ind_buffer3,2+neul)=unew(ind_buffer3,2+neul)+dflux*0.5
+!$omp atomic update
         unew(ind_buffer1,3+neul)=unew(ind_buffer1,3+neul)-dflux*0.5
      endif
   end do
@@ -1324,12 +1419,18 @@ subroutine godfine1(ind_grid,ncache,ilevel)
      if(son(ind_buffer1)>0.and.son(ind_buffer3)>0) cycle
      if(son(ind_buffer1)>0.or.son(ind_buffer2)>0.or.son(ind_buffer3)>0)weight=0.5
      dflux=(emfx(i,1,3,1)+emfx(i,2,3,1))*0.25*weight
+!$omp atomic update
      unew(ind_buffer1,3+neul)=unew(ind_buffer1,3+neul)+dflux
+!$omp atomic update
      unew(ind_buffer2,3+nvar)=unew(ind_buffer2,3+nvar)+dflux
+!$omp atomic update
      unew(ind_buffer2,2+neul)=unew(ind_buffer2,2+neul)+dflux
+!$omp atomic update
      unew(ind_buffer3,2+nvar)=unew(ind_buffer3,2+nvar)+dflux
      if(son(ind_buffer1)==0.and.son(ind_buffer2)==0.and.son(ind_buffer3)==0) then
+!$omp atomic update
         unew(ind_buffer3,3+nvar)=unew(ind_buffer3,3+nvar)-dflux*0.5
+!$omp atomic update
         unew(ind_buffer1,2+neul)=unew(ind_buffer1,2+neul)-dflux*0.5
      endif
   end do
@@ -1350,12 +1451,18 @@ subroutine godfine1(ind_grid,ncache,ilevel)
      if(son(ind_buffer1)>0.and.son(ind_buffer3)>0) cycle
      if(son(ind_buffer1)>0.or.son(ind_buffer2)>0.or.son(ind_buffer3)>0)weight=0.5
      dflux=(emfy(i,1,1,1)+emfy(i,1,2,1))*0.25*weight
+!$omp atomic update
      unew(ind_buffer1,1+neul)=unew(ind_buffer1,1+neul)-dflux
+!$omp atomic update
      unew(ind_buffer2,1+nvar)=unew(ind_buffer2,1+nvar)-dflux
+!$omp atomic update
      unew(ind_buffer2,3+nvar)=unew(ind_buffer2,3+nvar)+dflux
+!$omp atomic update
      unew(ind_buffer3,3+neul)=unew(ind_buffer3,3+neul)+dflux
      if(son(ind_buffer1)==0.and.son(ind_buffer2)==0.and.son(ind_buffer3)==0) then
+!$omp atomic update
         unew(ind_buffer3,1+nvar)=unew(ind_buffer3,1+nvar)+dflux*0.5
+!$omp atomic update
         unew(ind_buffer1,3+nvar)=unew(ind_buffer1,3+nvar)-dflux*0.5
      endif
   end do
@@ -1372,12 +1479,18 @@ subroutine godfine1(ind_grid,ncache,ilevel)
      if(son(ind_buffer1)>0.and.son(ind_buffer3)>0) cycle
      if(son(ind_buffer1)>0.or.son(ind_buffer2)>0.or.son(ind_buffer3)>0)weight=0.5
      dflux=(emfy(i,1,1,3)+emfy(i,1,2,3))*0.25*weight
+!$omp atomic update
      unew(ind_buffer1,3+nvar)=unew(ind_buffer1,3+nvar)+dflux
+!$omp atomic update
      unew(ind_buffer2,3+neul)=unew(ind_buffer2,3+neul)+dflux
+!$omp atomic update
      unew(ind_buffer2,1+nvar)=unew(ind_buffer2,1+nvar)+dflux
+!$omp atomic update
      unew(ind_buffer3,1+neul)=unew(ind_buffer3,1+neul)+dflux
      if(son(ind_buffer1)==0.and.son(ind_buffer2)==0.and.son(ind_buffer3)==0) then
+!$omp atomic update
         unew(ind_buffer3,3+neul)=unew(ind_buffer3,3+neul)-dflux*0.5
+!$omp atomic update
         unew(ind_buffer1,1+nvar)=unew(ind_buffer1,1+nvar)-dflux*0.5
      endif
   end do
@@ -1394,12 +1507,18 @@ subroutine godfine1(ind_grid,ncache,ilevel)
      if(son(ind_buffer1)>0.and.son(ind_buffer3)>0) cycle
      if(son(ind_buffer1)>0.or.son(ind_buffer2)>0.or.son(ind_buffer3)>0)weight=0.5
      dflux=(emfy(i,3,1,3)+emfy(i,3,2,3))*0.25*weight
+!$omp atomic update
      unew(ind_buffer1,1+nvar)=unew(ind_buffer1,1+nvar)+dflux
+!$omp atomic update
      unew(ind_buffer2,1+neul)=unew(ind_buffer2,1+neul)+dflux
+!$omp atomic update
      unew(ind_buffer2,3+neul)=unew(ind_buffer2,3+neul)-dflux
+!$omp atomic update
      unew(ind_buffer3,3+nvar)=unew(ind_buffer3,3+nvar)-dflux
      if(son(ind_buffer1)==0.and.son(ind_buffer2)==0.and.son(ind_buffer3)==0) then
+!$omp atomic update
         unew(ind_buffer3,1+neul)=unew(ind_buffer3,1+neul)-dflux*0.5
+!$omp atomic update
         unew(ind_buffer1,3+neul)=unew(ind_buffer1,3+neul)+dflux*0.5
      endif
   end do
@@ -1416,12 +1535,18 @@ subroutine godfine1(ind_grid,ncache,ilevel)
      if(son(ind_buffer1)>0.and.son(ind_buffer3)>0) cycle
      if(son(ind_buffer1)>0.or.son(ind_buffer2)>0.or.son(ind_buffer3)>0)weight=0.5
      dflux=(emfy(i,3,1,1)+emfy(i,3,2,1))*0.25*weight
+!$omp atomic update
      unew(ind_buffer1,3+neul)=unew(ind_buffer1,3+neul)-dflux
+!$omp atomic update
      unew(ind_buffer2,3+nvar)=unew(ind_buffer2,3+nvar)-dflux
+!$omp atomic update
      unew(ind_buffer2,1+neul)=unew(ind_buffer2,1+neul)-dflux
+!$omp atomic update
      unew(ind_buffer3,1+nvar)=unew(ind_buffer3,1+nvar)-dflux
      if(son(ind_buffer1)==0.and.son(ind_buffer2)==0.and.son(ind_buffer3)==0) then
+!$omp atomic update
         unew(ind_buffer3,3+nvar)=unew(ind_buffer3,3+nvar)+dflux*0.5
+!$omp atomic update
         unew(ind_buffer1,1+neul)=unew(ind_buffer1,1+neul)+dflux*0.5
      endif
   end do

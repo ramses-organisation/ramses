@@ -78,6 +78,8 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
   integer::i,j,k,l,ivar
   integer::ilo,ihi,jlo,jhi,klo,khi
 
+!$omp threadprivate(qin,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,emf)
+
   ilo=MIN(1,iu1+2); ihi=MAX(1,iu2-2)
   jlo=MIN(1,ju1+2); jhi=MAX(1,ju2-2)
   klo=MIN(1,ku1+2); khi=MAX(1,ku2-2)
@@ -217,10 +219,11 @@ SUBROUTINE  trace1d(q,dq,qm,qp,dx,dt,ngrid)
   REAL(dp)::dtdx
   REAL(dp)::r, u, v, w, p, A, B, C
   REAL(dp)::drx, dux, dvx, dwx, dpx, dAx, dBx, dCx
-  REAL(dp)::sr0, su0=0, sv0=0, sw0=0, sp0, sA0, sB0, sC0
+  REAL(dp)::sr0, su0, sv0, sw0, sp0, sA0, sB0, sC0
 #if NENER>0
   real(dp),dimension(1:nener)::e, dex, se0
 #endif
+  su0=0; sv0=0; sw0=0
 
   dtdx = dt/dx
 
@@ -391,7 +394,7 @@ SUBROUTINE trace2d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dt,ngrid)
   REAL(dp)::ELL, ELR, ERL, ERR
   REAL(dp)::drx, dux, dvx, dwx, dpx, dBx, dCx
   REAL(dp)::dry, duy, dvy, dwy, dpy, dAy, dCy
-  REAL(dp)::sr0, su0=0, sv0=0, sw0=0, sp0, sC0
+  REAL(dp)::sr0, su0, sv0, sw0, sp0, sC0
   REAL(dp)::AL, AR, BL, BR
   REAL(dp)::dALy, dARy, dBLx, dBRx
   REAL(DP)::sAL0, sAR0, sBL0, sBR0
@@ -402,6 +405,9 @@ SUBROUTINE trace2d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dt,ngrid)
 #if NVAR>NHYDRO+NENER
   INTEGER::n
 #endif
+
+!$omp threadprivate(Ez)
+  su0=0; sv0=0; sw0=0
 
   dtdx = dt/dx
   dtdy = dt/dy
@@ -737,7 +743,7 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
   REAL(dp)::drx, dux, dvx, dwx, dpx, dBx, dCx
   REAL(dp)::dry, duy, dvy, dwy, dpy, dAy, dCy
   REAL(dp)::drz, duz, dvz, dwz, dpz, dAz, dBz
-  REAL(dp)::sr0, su0=0, sv0=0, sw0=0, sp0
+  REAL(dp)::sr0, su0, sv0, sw0, sp0
   REAL(dp)::AL, AR, BL, BR, CL, CR
   REAL(dp)::dALy, dARy, dALz, dARz
   REAL(dp)::dBLx, dBRx, dBLz, dBRz
@@ -750,6 +756,9 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
 #if NVAR>NHYDRO+NENER
   integer ::n
 #endif
+
+!$omp threadprivate(Ex,Ey,Ez)
+  su0=0; sv0=0; sw0=0
 
   dtdx = dt/dx
   dtdy = dt/dy
@@ -2003,6 +2012,8 @@ subroutine ctoprim(uin,q,bf,gravin,dt,ngrid)
 #if NVAR>NHYDRO+NENER
   integer::n
 #endif
+
+!$omp threadprivate(eken,emag,erad)
 
   smalle = smallc**2/gamma/(gamma-one)
   smallp = smallr*smallc**2/gamma

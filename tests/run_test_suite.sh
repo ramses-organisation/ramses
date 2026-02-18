@@ -105,6 +105,7 @@ if [ ${OPENMP} -eq 1 ]; then
    export OMP_NUM_THREADS=${NTHREADS}
    export OMP_PLACES=cores
    export OMP_PROC_BIND=true
+   export OMP_STACKSIZE=2048M
 fi
 if [ ${MPI} -eq 1 ]; then
    RUN_TEST_BASE="mpirun --map-by slot:pe=${NTHREADS} --np ${NPROC} ${BIN_DIRECTORY}/${EXECNAME}";

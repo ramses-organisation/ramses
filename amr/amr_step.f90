@@ -625,7 +625,7 @@ subroutine rt_step(ilevel)
 #endif
 
      ! Hyperbolic solver
-     if(rt_advect) then 
+     if(rt_advect) then
                  call timer('rt - godunov','start')
       call rt_godunov_fine(ilevel,dtnew(ilevel))
      endif
