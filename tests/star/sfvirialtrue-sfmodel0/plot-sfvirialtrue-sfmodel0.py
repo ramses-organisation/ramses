@@ -126,14 +126,18 @@ to_check["pressure"]=z5.flatten()  # data["data"]["pressure"]
 to_check["density"]=z1.flatten()
 to_check["temperature"]=temp.flatten()
 to_check["metallicity"]=Z.flatten()
+to_check = data["particle"]
+
 
 # tweak tolerance to allow for 2p vs 4p/8p/12p deviations:
 tolerance={}
-if(1):
-    tolerance={"density":1.0e40,\
-               "pressure":1.e40,\
-               "temperature":1.e40,\
-               "metallicity":1.e40,\
+if(0):
+    tolerance={"density":1.0e-4,\
+               "pressure":1.e-4,\
+               "temperature":1.e-4,\
+               "metallicity":1.e-4,\
                }
-
+if(1):
+     tolerance={"all":1.0e-4,\
+               }
 visu_ramses.check_solution(to_check, 'sfvirialtrue-sfmodel0',tolerance=tolerance)#,overwrite=True)
