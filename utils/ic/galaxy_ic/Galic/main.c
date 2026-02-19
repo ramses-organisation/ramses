@@ -33,10 +33,10 @@ int main(int argc,char *argv[])
   DiskHeight=  0.1;  /* thickness of disk in units of radial scale length */
   BulgeSize=   0.1;  /* bulge scale length in units of disk scale length  */
 
-  N_HALO= 100000;    /* desired number of particles in dark halo */
-  N_DISK= 100000;    /* desired number of collisionless particles in disk */
-  N_GAS=  100000;    /* number of gas particles in disk */
-  N_BULGE= 10000;    /* number of bulge particles */
+  N_HALO= 125000;    /* desired number of particles in dark halo */
+  N_DISK= 125000;    /* desired number of collisionless particles in disk */
+  N_GAS=  125000;    /* number of gas particles in disk */
+  N_BULGE= 12500;    /* number of bulge particles */
 
   HI_GasMassFraction=    0.1;     /* in terms of the total gas mass */
   HI_GasDiskScaleLength= 1.0;    /* in terms of scale length of the disk */
