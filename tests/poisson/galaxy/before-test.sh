@@ -4,7 +4,7 @@ if [ ! -d "ICs_lowres" ]; then
     cd ../../../utils/ic/galaxy_ic/Galic/
     make clean
     make
-    ./galic_MakeDiskGalaxy ../../../../tests/poisson/galaxy/ICs_lowres/
+    ./galic_MakeDiskGalaxy ../../../../tests/poisson/galaxy/ICs_lowres/ > ic.log
     cd -
     echo "ICs generated."
 else
