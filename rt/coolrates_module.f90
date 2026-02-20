@@ -69,12 +69,7 @@ MODULE coolrates_module
   type(coolrates_table),save::tbl_cr_H2HI ! Collisional diss. cooling
   type(coolrates_table),save::tbl_cr_H2H2 ! Collisional diss. cooling
 
-!!!$omp threadprivate(tbl_alphaZ_H2, tbl_alphaGP_H2, tbl_alphaA_HII, tbl_alphaA_HeII, tbl_alphaA_HeIII)
-!!!$omp threadprivate(tbl_alphaB_HII, tbl_alphaB_HeII, tbl_alphaB_HeIII, tbl_beta_HI, tbl_beta_HeI, tbl_beta_HeII)
-!!!$omp threadprivate(tbl_cr_ci_HI, tbl_cr_ci_HeI, tbl_cr_ci_HeII, tbl_cr_ce_HI, tbl_cr_ce_HeI, tbl_cr_ce_HeII)
-!!!$omp threadprivate(tbl_cr_r_HII, tbl_cr_r_HeII, tbl_cr_r_HeIII, tbl_cr_bre, tbl_cr_com, tbl_cr_die)
-!!!$omp threadprivate(tbl_beta_H2HI, tbl_beta_H2H2, tbl_beta_H3B, tbl_cr_H2HI, tbl_cr_H2H2)
-! these need to be shared!
+  !OPENMP: coolrates_tables need to be shared!
 
 CONTAINS
 
