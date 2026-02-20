@@ -111,7 +111,6 @@ subroutine cmp_residual_mg_fine(ilevel)
 
       ! Loop over active grids
 !$omp do
-      !TC: TODO vectorize?
       do igrid_mg=1,ngrid
          igrid_amr = active(ilevel)%igrid(igrid_mg)
          icell_amr = iskip_amr + igrid_amr

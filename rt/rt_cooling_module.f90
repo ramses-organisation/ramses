@@ -258,9 +258,7 @@ SUBROUTINE rt_solve_cooling(T2, xion, Np, Fp, p_gas, dNpdt, dFpdt        &
      nAct_next=0                     ! Active cells for the next iteration
      do ia=1,nAct                             ! Loop over the active cells
         i = indAct(ia)                        !                 Cell index
-!!!$omp critical
         call cool_step(i)
-!!!$omp end critical
         if(loopcnt .gt. 100000) then
            call display_coolinfo(.true., loopcnt, i, dt-tleft(i), dt     &
                             ,ddt(i), nH(i), T2(i),  xion(:,i),  Np(:,i)  &
@@ -338,12 +336,6 @@ contains
     real(dp):: rho, TR, one_over_C_v, E_rad, dE_T, fluxMag, mom_fact
     real(dp):: G0, eff_peh, cdex, ncr
     logical::newAtomicCons=.true.
-!!!$omp threadprivate(dmom,alpha, beta, nN, nI,recRad, phAbs, phSc, dustAbs,dustSc, kAbs_loc,kSc_loc)
-!!!$omp threadprivate(dUU, fracMax, x_tot,mu, TK, nHe, ne, neInit, Hrate)
-!!!$omp threadprivate(rho, TR, one_over_C_v, E_rad, dE_T, fluxMag, mom_fact,G0, eff_peh, cdex, ncr)
-!!!$omp threadprivate(iion,igroup,idim)
-!!!$omp threadprivate(photoRate, metal_tot, metal_prime, ss_factor, f_dust)
-!!!$omp threadprivate(Crate, dCdT2, X_nHkb, rate, dRate, cr, de)
 
     xH2=0d0
     dXH2=0d0

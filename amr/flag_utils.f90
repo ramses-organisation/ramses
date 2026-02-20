@@ -601,8 +601,10 @@ subroutine smooth_fine(ilevel)
   ! Loop over steps
   do ismooth=1,ndim
      ! Initialize flag2 to 0
-!$omp parallel do private(igrid,ngrid,i,ind,iskip)
-     do igrid=1,ncache,nvector
+!$omp parallel private(igrid,ngrid,i,ind,iskip) reduction(+:nflag)
+    ! Loops need to be separate in OpenMP to avoid race conditions
+!$omp do
+    do igrid=1,ncache,nvector
         ngrid=MIN(nvector,ncache-igrid+1)
         do i=1,ngrid
            ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
@@ -617,8 +619,9 @@ subroutine smooth_fine(ilevel)
            end do
         end do
      end do
+!$omp end do
+!$omp do
      ! Count neighbors and set flag2 accordingly
-!$omp parallel do private(igrid,ngrid,i,ind,iskip)
      do igrid=1,ncache,nvector
         ngrid=MIN(nvector,ncache-igrid+1)
         do i=1,ngrid
@@ -629,8 +632,9 @@ subroutine smooth_fine(ilevel)
            call count_nbors(igridn,ind,n_nbor(ismooth),ngrid)
         end do
      end do
+!$omp end do
+!$omp do
      ! Set flag1=1 for cells with flag2=1
-!$omp parallel do private(igrid,ngrid,i,ind,iskip) reduction(+:nflag)
      do igrid=1,ncache,nvector
         ngrid=MIN(nvector,ncache-igrid+1)
         do i=1,ngrid
@@ -652,10 +656,12 @@ subroutine smooth_fine(ilevel)
            end do
         end do
      end do
+!$omp end do
+!$omp end parallel
      ! Update boundaries
      call make_virtual_fine_int(flag1(1),ilevel)
      if(simple_boundary)call make_boundary_flag(ilevel)
-  end do
+    end do
   ! End loop over steps
 
 end subroutine smooth_fine

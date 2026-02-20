@@ -51,6 +51,8 @@ subroutine make_boundary_force(ilevel)
   end do
 
   ! Loop over boundaries
+!$omp parallel private(ibound,ind_ref,boundary_dir,inbor,gs) &
+!$omp        & private(ncache,igrid,ngrid,iskip,iskip_ref,i,ind,ivar,switch,idim)
   do ibound=1,nboundary
 
      call set_boundary_references(ibound,ind_ref,boundary_dir,inbor)
@@ -63,6 +65,7 @@ subroutine make_boundary_force(ilevel)
 
      ! Loop over grids by vector sweeps
      ncache=boundary(ibound,ilevel)%ngrid
+!$omp do
      do igrid=1,ncache,nvector
         ngrid=MIN(nvector,ncache-igrid+1)
         do i=1,ngrid
@@ -135,8 +138,9 @@ subroutine make_boundary_force(ilevel)
 
      end do
      ! End loop over grids
-
+!$omp end do nowait
   end do
+!$omp end parallel
   ! End loop over boundaries
 
 111 format('   Entering make_boundary_force for level ',I2)
@@ -196,10 +200,12 @@ subroutine make_boundary_phi(ilevel)
   end do
 
   ! Loop over boundaries
+!$omp parallel private(ibound,ncache,igrid,ngrid,iskip,i,ind,idim)
   do ibound=1,nboundary
 
      ! Loop over grids by vector sweeps
      ncache=boundary(ibound,ilevel)%ngrid
+!$omp do
      do igrid=1,ncache,nvector
         ngrid=MIN(nvector,ncache-igrid+1)
         do i=1,ngrid
@@ -245,8 +251,9 @@ subroutine make_boundary_phi(ilevel)
 
      end do
      ! End loop over grids
-
+!$omp end do nowait
   end do
+!$omp end parallel
   ! End loop over boundaries
 
 111 format('   Entering make_boundary_phi for level ',I2)
@@ -275,10 +282,12 @@ subroutine make_boundary_mask(ilevel)
   if(verbose)write(*,111)ilevel
 
   ! Loop over boundaries
+!$omp parallel private(ibound,ncache,igrid,ngrid,iskip,i,ind)
   do ibound=1,nboundary
 
      ! Loop over grids by vector sweeps
      ncache=boundary(ibound,ilevel)%ngrid
+!$omp do
      do igrid=1,ncache,nvector
         ngrid=MIN(nvector,ncache-igrid+1)
         do i=1,ngrid
@@ -299,8 +308,9 @@ subroutine make_boundary_mask(ilevel)
 
      end do
      ! End loop over grids
-
+!$omp end do nowait
   end do
+!$omp end parallel
   ! End loop over boundaries
 
 111 format('   Entering make_boundary_mask for level ',I2)

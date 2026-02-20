@@ -52,6 +52,8 @@ subroutine make_boundary_hydro(ilevel)
   end do
 
   ! Loop over boundaries
+!$omp parallel private(ibound,ind_ref,boundary_dir,inbor,gs,gdim,alt) &
+!$omp        & private(ncache,igrid,ngrid,iskip,iskip_ref,i,ind,ivar,switch,ekin,d,v,idim)
   do ibound=1,nboundary
 
      call set_boundary_references(ibound,ind_ref,boundary_dir,inbor)
@@ -85,6 +87,7 @@ subroutine make_boundary_hydro(ilevel)
 
      ! Loop over grids by vector sweeps
      ncache=boundary(ibound,ilevel)%ngrid
+!$omp do
      do igrid=1,ncache,nvector
         ngrid=MIN(nvector,ncache-igrid+1)
         do i=1,ngrid
@@ -232,8 +235,9 @@ subroutine make_boundary_hydro(ilevel)
 
      end do
      ! End loop over grids
-
+!$omp end do nowait
   end do
+!$omp end parallel
   ! End loop over boundaries
 
 111 format('   Entering make_boundary_hydro for level ',I2)
