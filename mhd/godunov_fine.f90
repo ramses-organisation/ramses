@@ -199,19 +199,24 @@ subroutine update_cosmomag(ilevel,exp_scale)
     iskip=ncoarse+(ind-1)*ngridmax
 
     ! Update the active cells
+!$omp do
     do i=1,active(ilevel)%ngrid
       ind_cell = active(ilevel)%igrid(i)+iskip
       call scale_cosmomag(ind_cell,exp_scale)
     end do
+!$omp end do nowait
 
     ! Do the same for reception cells
     do icpu=1,ncpu
+!$omp do
       do i=1,reception(icpu,ilevel)%ngrid
         ind_cell = reception(icpu,ilevel)%igrid(i)+iskip
         call scale_cosmomag(ind_cell,exp_scale)
       end do
+!$omp end do nowait
     end do
   end do
+!$omp end parallel
 end subroutine update_cosmomag
 !###########################################################
 !###########################################################
