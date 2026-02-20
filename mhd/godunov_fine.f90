@@ -189,10 +189,12 @@ subroutine update_cosmomag(ilevel,exp_scale)
   integer::ilevel
   !--------------------------------------------------------------------------
   ! This routine updates magnetic field to scale with cosmic expansion
+  ! Updates unew
   !--------------------------------------------------------------------------
   integer::i,ind,iskip,ind_cell,icpu
   real(dp)::exp_scale
 
+!$omp parallel private(ind,iskip,i,ind_cell,icpu)
   do ind=1,twotondim
     iskip=ncoarse+(ind-1)*ngridmax
 
