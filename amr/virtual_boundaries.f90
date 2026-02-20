@@ -1359,8 +1359,10 @@ subroutine build_comm(ilevel)
      call make_virtual_coarse_int(flag2(1))
   else
      ! Initialize flag2 to local adress for cpu map = myid cells
-     ncache=active(ilevel-1)%ngrid
-     do igrid=1,ncache,nvector
+!$omp parallel private(ncache,igrid,ngrid,i,ind,iskip,icpu)
+    ncache=active(ilevel-1)%ngrid
+!$omp do
+    do igrid=1,ncache,nvector
         ngrid=MIN(nvector,ncache-igrid+1)
         do i=1,ngrid
            ind_grid(i)=active(ilevel-1)%igrid(igrid+i-1)
@@ -1379,8 +1381,10 @@ subroutine build_comm(ilevel)
            end do
         end do
      end do
+!$omp end do nowait
      do icpu=1,ncpu
         ncache=reception(icpu,ilevel-1)%ngrid
+!$omp do
         do igrid=1,ncache,nvector
            ngrid=MIN(nvector,ncache-igrid+1)
            do i=1,ngrid
@@ -1404,9 +1408,11 @@ subroutine build_comm(ilevel)
               end do
            end do
         end do
-     end do
-     call make_virtual_reverse_int(flag2(1),ilevel-1)
-     call make_virtual_fine_int   (flag2(1),ilevel-1)
+!$omp end do nowait
+    end do
+!$omp end parallel
+    call make_virtual_reverse_int(flag2(1),ilevel-1)
+    call make_virtual_fine_int   (flag2(1),ilevel-1)
   end if
 
   !--------------------------------------------------------
