@@ -91,36 +91,37 @@ subroutine save_phi_old(ilevel)
   integer ilevel
 
   !save the old potential for time extrapolation in case of subcycling
+  integer::i,ncache,ind,igrid,iskip,istart,ibound,icell
 
-  integer::i,ncache,ind,igrid,iskip,istart,ibound
-  integer,allocatable,dimension(:)::ind_grid
-
-  do ibound=1,nboundary+ncpu
-     if(ibound<=ncpu)then
-        ncache=numbl(ibound,ilevel)
-        istart=headl(ibound,ilevel)
-     else
-        ncache=numbb(ibound-ncpu,ilevel)
-        istart=headb(ibound-ncpu,ilevel)
-     end if
-     if(ncache>0)then
-        allocate(ind_grid(1:ncache))
-        ! Loop over level grids
-        igrid=istart
-        do i=1,ncache
-           ind_grid(i)=igrid
-           igrid=next(igrid)
-        end do
-        ! Loop over cells
-        do ind=1,twotondim
-           iskip=ncoarse+(ind-1)*ngridmax
-           ! save phi
+!$omp parallel do private(ncache,ind,igrid,iskip,ibound,icell)
+  do ind=1,twotondim
+     iskip=ncoarse+(ind-1)*ngridmax
+     do ibound=1,nboundary+ncpu
+        if(ibound<=ncpu)then
+           if(ibound==myid)then
+              ncache=active(ilevel)%ngrid
+           else
+              ncache=reception(ibound,ilevel)%ngrid
+           end if
+        else
+           ncache=boundary(ibound-ncpu,ilevel)%ngrid
+        end if
+        if(ncache>0)then
            do i=1,ncache
-              phi_old(ind_grid(i)+iskip)=phi(ind_grid(i)+iskip)
+              if(ibound<=ncpu) then
+                 if(ibound==myid)then
+                     igrid=active(ilevel)%igrid(i)
+                 else
+                     igrid=reception(ibound,ilevel)%igrid(i)
+                 end if
+              else
+                 igrid=boundary(ibound-ncpu,ilevel)%igrid(i)
+              end if
+              icell=igrid+iskip
+              phi_old(icell)=phi(icell)
            end do
-        end do
-        deallocate(ind_grid)
-     end if
+        end if
+     end do
   end do
 
 end subroutine save_phi_old
