@@ -341,6 +341,7 @@ recursive subroutine amr_step(ilevel,icount)
         call update_time(ilevel)
 #if NDIM==3
         if(sink)call update_sink(ilevel)
+        if(sink)call update_sink_hold(ilevel)
 #endif
      end if
   else

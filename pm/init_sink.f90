@@ -32,6 +32,11 @@ subroutine init_sink
   allocate(xsink(1:nsinkmax,1:ndim))
   msink=0d0; msmbh=0d0; dmfsink=0d0; xsink=boxlen/2
 
+  ! HOLD integrator variables
+  allocate(hold_mask(1:nsinkmax))
+  allocate(hold_tsink(1:nsinkmax))
+  hold_tsink=0d0; hold_mask=.false.
+
   allocate(xsink_graddescent(1:nsinkmax,1:ndim))
   allocate(graddescent_over_dt(1:nsinkmax))
   xsink_graddescent=0d0; graddescent_over_dt=0d0

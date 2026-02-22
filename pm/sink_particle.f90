@@ -2163,6 +2163,141 @@ end subroutine update_sink
 !##############################################################################
 !##############################################################################
 !##############################################################################
+subroutine update_sink_hold(ilevel)
+  use amr_commons
+  use pm_commons
+  implicit none
+  integer::ilevel
+
+  integer::isink,jsink
+  real(dp)::v_dot_r,mu,tau
+  real(dp)::free_fall,free_fall_deriv,free_fall_sym
+  real(dp)::fly_by,fly_by_deriv,fly_by_sym
+  real(dp)::r_mag,v_mag
+  real(dp)::factG
+  real(dp)::r(1:ndim)
+  real(dp)::v(1:ndim)
+
+  factG=1d0
+  ! Commented out for now to avoid cosmo dependence
+  ! if(cosmo)factG=3d0/4d0/twopi*omega_m*aexp
+
+  hold_tsink = huge(1.0_dp)
+
+  ! Calculate characteristic time for each sink
+  do isink=1,nsink
+   do jsink=isink+1,nsink
+      r(1:ndim)=xsink(isink,1:ndim)-xsink(jsink,1:ndim)
+      v(1:ndim)=vsink(isink,1:ndim)-vsink(jsink,1:ndim)
+      
+      r_mag=norm2(r(1:ndim))
+      v_mag=norm2(v(1:ndim))
+
+      v_dot_r=dot_product(r(1:ndim),v(1:ndim))
+
+      mu=msink(isink)+msink(jsink)
+      
+      free_fall=0.1*sqrt(r_mag**3/(factG*mu))
+      free_fall_deriv = (3 * v_dot_r)*free_fall/(2 * (r_mag ** 2))
+
+      fly_by = 0.1 * r_mag / v_mag
+      fly_by_deriv = (v_dot_r / (r_mag * r_mag)) * fly_by * (1 + factG * mu / (v_mag * v_mag * r_mag))
+
+      free_fall_sym = free_fall / (1 - 0.5 * free_fall_deriv)
+      fly_by_sym = fly_by / (1 - 0.5 * fly_by_deriv)
+
+      tau = min(abs(free_fall_sym), abs(fly_by_sym))
+
+      hold_tsink(isink) = min(hold_tsink(isink), tau)
+      hold_tsink(jsink) = min(hold_tsink(jsink), tau)
+   end do
+  end do
+  
+  ! Print all characteristic times for each sink
+  ! if (verbose) then
+  !   do isink=1,nsink
+  !     write(*,*)'Sink ',isink,': ',hold_tsink(isink)
+  !   end do
+  ! endif
+
+  hold_mask = .true.
+  hold_evolve(hold_mask, dtnew(ilevel))
+
+end subroutine update_sink_hold
+!##############################################################################
+!##############################################################################
+!##############################################################################
+!##############################################################################
+subroutine hold_evolve(mask, pivot_dt)
+  use amr_commons
+  use pm_commons
+  implicit none
+
+  logical,intent(in)::mask(:)
+  real(dp),intent(in)::pivot_dt
+  logical::slow_mask(nsink)
+  logical::fast_mask(nsink)
+
+  integer::isink
+  real(dp)::dt
+
+  do isink=1,nsink
+    slow_mask(isink)=mask(isink) .and. (hold_tsink(isink)>=pivot_dt)
+    fast_mask(isink)=mask(isink) .and. (hold_tsink(isink)<pivot_dt)
+  end do
+
+  ! Base case: all particles are slow
+  if (.not. any(fast_mask)) then
+    hold_drift(mask, pivot_dt/2.0)
+    hold_kick(mask, mask, pivot_dt)
+    hold_drift(mask, pivot_dt/2.0)
+    hold_evolve(fast_mask, pivot_dt/2.0)
+  ! Recurse if there are fast particles
+  else
+    hold_evolve(fast_mask, pivot_dt/2.0)
+    hold_drift(slow_mask, pivot_dt/2.0)
+    hold_kick(slow_mask, slow_mask, pivot_dt)
+    hold_kick(slow_mask, fast_mask, pivot_dt)
+    hold_drift(slow_mask, pivot_dt/2.0)
+    hold_evolve(fast_mask, pivot_dt/2.0)
+  endif
+end subroutine hold_evolve
+!##############################################################################
+!##############################################################################
+!##############################################################################
+!##############################################################################
+subroutine hold_drift(mask, dt)
+  use amr_commons
+  use pm_commons
+  implicit none
+  logical,intent(in)::mask(:)
+  real(dp),intent(in)::dt
+
+  do isink=1,nsink
+    if (mask(isink)) then
+      xsink(isink,1:ndim) = xsink(isink,1:ndim) + vsink(isink,1:ndim) * dt
+    end if
+  end do
+end subroutine hold_drift
+!##############################################################################
+!##############################################################################
+!##############################################################################
+!##############################################################################
+subroutine hold_kick(object_mask, source_mask, dt)
+  ! Kicks the object mask particles with the source mask particles
+  use amr_commons
+  use pm_commons
+  implicit none
+  logical,intent(in)::object_mask(:)
+  logical,intent(in)::source_mask(:)
+  real(dp),intent(in)::dt
+
+#endif
+end subroutine hold_kick
+!##############################################################################
+!##############################################################################
+!##############################################################################
+!##############################################################################
 subroutine update_cloud(ilevel)
   use amr_commons
   use pm_commons

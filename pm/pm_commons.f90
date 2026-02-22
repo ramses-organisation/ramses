@@ -32,10 +32,12 @@ module pm_commons
   real(dp),allocatable,dimension(:,:,:)::weighted_momentum
   real(dp),allocatable,dimension(:)    ::rho_sink_tff
   real(dp),allocatable,dimension(:)    ::msum_overlap
+  real(dp),allocatable,dimension(:)    ::hold_tsink
   integer,allocatable,dimension(:)     ::idsink,idsink_new,idsink_old,idsink_all
   logical,allocatable,dimension(:)     ::ok_blast_agn,ok_blast_agn_all
   logical,allocatable,dimension(:)     ::direct_force_sink
   logical,allocatable,dimension(:)     ::new_born,new_born_all,new_born_new
+  logical,allocatable,dimension(:)     ::hold_mask
   integer,allocatable,dimension(:)     ::idsink_sort
   integer::ncloud_sink,ncloud_sink_massive
   integer::nindsink=0
