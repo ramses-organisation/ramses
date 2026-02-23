@@ -22,7 +22,7 @@ subroutine move_fine(ilevel)
   ig=0
   ip=0
   ! Loop over particles that are not tracers
-!$omp do
+!$omp do schedule(dynamic,10)
   do jgrid=1,active(ilevel)%ngrid
      igrid=active(ilevel)%igrid(jgrid)
      npart1=numbp(igrid)  ! Number of particles in the grid
@@ -105,7 +105,7 @@ subroutine move_fine_static(ilevel)
   ig=0
   ip=0
   ! Loop over grids
-!$omp do
+!$omp do schedule(dynamic,10)
   do jgrid=1,active(ilevel)%ngrid
      igrid=active(ilevel)%igrid(jgrid)
      npart1=numbp(igrid)  ! Number of particles in the grid
