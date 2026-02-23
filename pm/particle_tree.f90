@@ -831,6 +831,8 @@ subroutine virtual_tree_fine(ilevel)
   end if
 
   ! Gather particle in communication buffer
+!$omp parallel do private(icpu,ip,ipcom,igrid,npart1,ipart,jpart,next_part)
+! we put openmp on icpu loop to avoid issues with ipcom
   do icpu=1,ncpu
      if(reception(icpu,ilevel)%npart>0)then
      ! Gather particles by vector sweeps
@@ -1057,6 +1059,8 @@ subroutine virtual_tree_fine(ilevel)
      ! Loop over particles by vector sweeps
      ncache=emission(icpu,ilevel)%npart
 #endif
+!$omp parallel do private(ipart,npart1,ip)
+! put the parallel do here to avoid issues with lighMPI
      do ipart=1,ncache,nvector
         npart1=min(nvector,ncache-ipart+1)
         do ip=1,npart1
