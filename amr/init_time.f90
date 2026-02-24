@@ -450,9 +450,9 @@ subroutine init_cosmo
         if(initfile(ilevel).ne.' ')then
            if(multiple)then
               call title(myid,nchar)
-              filename=TRIM(initfile(ilevel))//'/dir_deltab/ic_deltab.'//TRIM(nchar)
+              filename=TRIM(initfile(ilevel))//'/dir_deltab/ic_velcx.'//TRIM(nchar)
            else
-              filename=TRIM(initfile(ilevel))//'/ic_deltab'
+              filename=TRIM(initfile(ilevel))//'/ic_velcx'
            endif
 
            ! Wait for the token
