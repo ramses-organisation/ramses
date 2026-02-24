@@ -269,7 +269,7 @@ subroutine rho_from_current_level(ilevel)
      ! Loop over grids
      ig=0
      ip=0
-!$omp do
+!$omp do schedule(dynamic,10)
      do jgrid=1,numbl(icpu,ilevel)
         if(icpu==myid)then
            igrid=active(ilevel)%igrid(jgrid)

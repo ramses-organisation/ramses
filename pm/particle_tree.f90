@@ -214,7 +214,7 @@ subroutine make_tree_fine(ilevel)
 #ifdef OPENMP
 !$omp parallel private(igrid,npart1,ipart,next_part)
   do icpu=1,ncpu
-!$omp do
+!$omp do schedule(dynamic,10)
      do jgrid=1,numbl(icpu,ilevel)
         if(icpu==myid)then
            igrid=active(ilevel)%igrid(jgrid)
@@ -246,7 +246,7 @@ subroutine make_tree_fine(ilevel)
      ig=0
      ip=0
      ! Loop over grids
-!$omp do
+!$omp do schedule(dynamic,10)
      do jgrid=1,numbl(icpu,ilevel)
         if(icpu==myid)then
            igrid=active(ilevel)%igrid(jgrid)
@@ -463,12 +463,16 @@ subroutine kill_tree_fine(ilevel)
   if(verbose)write(*,111)ilevel
 
   ! Reset all linked lists at level ilevel+1
+!$omp parallel private(i,icpu)
+!$omp do
   do i=1,active(ilevel+1)%ngrid
      headp(active(ilevel+1)%igrid(i))=0
      tailp(active(ilevel+1)%igrid(i))=0
      numbp(active(ilevel+1)%igrid(i))=0
   end do
+!$omp end do nowait
   do icpu=1,ncpu
+!$omp do
      do i=1,reception(icpu,ilevel+1)%ngrid
 #ifdef LIGHT_MPI_COMM
         headp(reception(icpu,ilevel+1)%pcomm%igrid(i))=0
@@ -480,17 +484,25 @@ subroutine kill_tree_fine(ilevel)
         numbp(reception(icpu,ilevel+1)%igrid(i))=0
 #endif
      end do
+!$omp end do nowait
   end do
+!$omp end parallel
 
   ! Sort particles between ilevel and ilevel+1
 
   ! Loop over cpus
+!$omp parallel private(icpu,ig,ip,jgrid,igrid,npart1,ipart,jpart,next_part)
   do icpu=1,ncpu
-     igrid=headl(icpu,ilevel)
      ig=0
      ip=0
      ! Loop over grids
+!$omp do schedule(dynamic,10)
      do jgrid=1,numbl(icpu,ilevel)
+        if(icpu==myid)then
+           igrid=active(ilevel)%igrid(jgrid)
+        else
+           igrid=reception(icpu,ilevel)%igrid(jgrid)
+        end if
         npart1=numbp(igrid)  ! Number of particles in the grid
         if(npart1>0)then
            ig=ig+1
@@ -516,11 +528,12 @@ subroutine kill_tree_fine(ilevel)
            end do
            ! End loop over particles
         end if
-        igrid=next(igrid)   ! Go to next grid
      end do
+!$omp end do nowait
      ! End loop over grids
      if(ip>0)call kill_tree(ind_grid,ind_part,ind_grid_part,ig,ip,ilevel)
   end do
+!$omp end parallel
   ! End loop over cpus
 
 111 format('   Entering kill_tree_fine for level ',I2)
@@ -631,6 +644,7 @@ subroutine merge_tree_fine(ilevel)
   logical,dimension(1:nvector),save::ok
 
 !$omp threadprivate(ind_grid,ind_cell,ind_grid_son,ok)
+! No OpenMP needed here, since it is cheap and needs a critical section.
 
   if(numbtot(1,ilevel)==0)return
   if(ilevel==nlevelmax)return
@@ -686,7 +700,6 @@ subroutine merge_tree_fine(ilevel)
                  tailp(ind_grid(i))=tailp(ind_grid_son(i))
                  numbp(ind_grid(i))=numbp(ind_grid_son(i))
               end if
-
            end if
            end if
            end do
@@ -696,7 +709,6 @@ subroutine merge_tree_fine(ilevel)
      ! End loop over grids
   end do
   ! End loop over cpus
-
 111 format('   Entering merge_tree_fine for level ',I2)
 
 end subroutine merge_tree_fine
@@ -819,6 +831,8 @@ subroutine virtual_tree_fine(ilevel)
   end if
 
   ! Gather particle in communication buffer
+!$omp parallel do private(icpu,ip,ipcom,igrid,npart1,ipart,jpart,next_part)
+! we put openmp on icpu loop to avoid issues with ipcom
   do icpu=1,ncpu
      if(reception(icpu,ilevel)%npart>0)then
      ! Gather particles by vector sweeps
@@ -1045,6 +1059,8 @@ subroutine virtual_tree_fine(ilevel)
      ! Loop over particles by vector sweeps
      ncache=emission(icpu,ilevel)%npart
 #endif
+!$omp parallel do private(ipart,npart1,ip)
+! put the parallel do here to avoid issues with lighMPI
      do ipart=1,ncache,nvector
         npart1=min(nvector,ncache-ipart+1)
         do ip=1,npart1

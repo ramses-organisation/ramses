@@ -127,7 +127,7 @@ subroutine newdt_fine(ilevel)
 !$omp parallel private(jgrid,igrid,npart1,ipart,jpart,ok,ip) reduction(MIN:dt_loc) reduction(+:ekin_loc)
         ! Loop over grids
         ip=0
-!$omp do
+!$omp do schedule(dynamic,10)
         do jgrid=1,active(ilevel)%ngrid
            igrid=active(ilevel)%igrid(jgrid)
            npart1=numbp(igrid)   ! Number of particles in the grid
