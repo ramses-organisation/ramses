@@ -52,8 +52,34 @@ subroutine force_fine(ilevel,icount)
      if(ndim>2)xc(ind,3)=(dble(iz)-0.5D0)*dx
   end do
 
+  !------------------------------
+  ! Compute gradient of potential
+  !------------------------------
+   if (self_gravity.or.gravity_rho_ana_type>0)then
+     ! Update physical boundaries
+     call make_boundary_phi(ilevel)
+
+     ! Loop over myid grids by vector sweeps
+     ncache=active(ilevel)%ngrid
+     do igrid=1,ncache,nvector
+        ngrid=MIN(nvector,ncache-igrid+1)
+        do i=1,ngrid
+           ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
+        end do
+        ! Compute gradient of potential
+        call gradient_phi(ind_grid,ngrid,ilevel,icount)
+     end do
+     ! End loop over grids
+
+#if NDIM==3
+     if (sink)then
+        call f_gas_sink(ilevel)
+     end if
+#endif
+  endif
+
   !-------------------------------------
-  ! Compute analytical gravity force
+  ! Add analytical gravity force
   !-------------------------------------
   if(gravity_force_ana_type>0)then
 
@@ -88,7 +114,7 @@ subroutine force_fine(ilevel,icount)
            ! Scatter variables
            do idim=1,ndim
               do i=1,ngrid
-                 f(ind_cell(i),idim)=ff(i,idim)
+                 f(ind_cell(i),idim)=f(ind_cell(i),idim)+ff(i,idim)
               end do
            end do
 
@@ -98,36 +124,7 @@ subroutine force_fine(ilevel,icount)
      end do
      ! End loop over grids
 
-  else
-     ! reset force to zero
-     f = 0
   end if
-
-  !------------------------------
-  ! Compute gradient of potential
-  !------------------------------
-   if (self_gravity.or.gravity_rho_ana_type>0)then
-     ! Update physical boundaries
-     call make_boundary_phi(ilevel)
-
-     ! Loop over myid grids by vector sweeps
-     ncache=active(ilevel)%ngrid
-     do igrid=1,ncache,nvector
-        ngrid=MIN(nvector,ncache-igrid+1)
-        do i=1,ngrid
-           ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
-        end do
-        ! Compute gradient of potential
-        call gradient_phi(ind_grid,ngrid,ilevel,icount)
-     end do
-     ! End loop over grids
-
-#if NDIM==3
-     if (sink)then
-        call f_gas_sink(ilevel)
-     end if
-#endif
-  endif
 
   ! Update boundaries
   do idim=1,ndim
@@ -302,7 +299,8 @@ subroutine gradient_phi(ind_grid,ngrid,ilevel,icount)
            else
               phi4(i)=phi_right(i,id4,idim)
            end if
-           f(ind_cell(i),idim) =f(ind_cell(i),idim) + (a*(phi1(i)-phi2(i)) - b*(phi3(i)-phi4(i)))
+           f(ind_cell(i),idim)=a*(phi1(i)-phi2(i)) &
+                &             -b*(phi3(i)-phi4(i))
         end do
      end do
   end do
