@@ -102,8 +102,6 @@ sound_speed = (kb_cgs*T/(mu*mH_cgs))**0.5 / scale_v # code units
 ''' ---- Generate ICs ---- '''
 
 # generate fields for the three components of the velocity
-# the average velocity will be zero (no bulk motion)
-# the velocity dispersion will be 1 (before rescaling to Mach)
 vx = make_3dfield(ncells, powerlaw=powerlaw, randomseed=seed1)
 vy = make_3dfield(ncells, powerlaw=powerlaw, randomseed=seed2)
 vz = make_3dfield(ncells, powerlaw=powerlaw, randomseed=seed3)
