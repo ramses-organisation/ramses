@@ -99,11 +99,11 @@ like this:
               do jpart=1,npart1
                  ! Save next particle   <--- Very important !!!
                  next_part=nextp(ipart)
-                 
+
                  !----
                  ! Do something with particle ipart
                  !----
-                 
+
                  ipart=next_part  ! Go to next particle
               end do
            endif
@@ -387,14 +387,14 @@ temperature below ``temperature_star``, which are expected to be in CGS.
 
    subroutine star_formation()
 
-       ! TO BE COMPLETED ... 
-       
+       ! TO BE COMPLETED ...
+
        ! getting physical info ... (from uold or unew ?, etc.)
        ! units, time, cell sizes, position, density etc
-       ! decide how many stars you form 
-       target_mstar = dt * density / tff * epsilon 
+       ! decide how many stars you form
+       target_mstar = dt * density / tff * epsilon
        ! Poisson sampling
-       ! create particles and add to lists 
+       ! create particles and add to lists
        ! remove matter from cell
 
 In a second step, modify the code to implement a star formation model

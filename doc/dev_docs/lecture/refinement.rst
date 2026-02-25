@@ -88,7 +88,7 @@ Let first review the description of the refinement algorithm in
    important to stress that this operation is applied at each time step,
    but for a very small number of octs. In other word, at each time
    step, the mesh structure is not rebuilt from scratch, but it is
-   slightly modified, in order to follow the evolution of the flow. 
+   slightly modified, in order to follow the evolution of the flow.
 
 In short, the refinement proceeds in two phases:
 
@@ -444,10 +444,10 @@ Level 1
 ~~~~~~~
 
 Modify the “Variables and passive scalar” strategy to make it more
-useful: 
+useful:
 1. Make the “Variables and passive scalar” strategy independent
 from the “Quasi Lagrangian strategy” (you can code it as a new strategy,
-with its own parameters). 
+with its own parameters).
 2. Make it possible to have a different
 threshold at each level (ie make ``var_cut_refine`` an array)
 
@@ -464,7 +464,7 @@ Exercise 2: Improve the geometrical criterion
 Modify ``geometry_refine`` to add more than one region of refinement,
 allowing for more complex shapes.
 
-.. admonition:: Clue 1  
+.. admonition:: Clue 1
    :class: dropdown
 
    You can take inspiration from the initial condition
@@ -492,9 +492,9 @@ allowing for more complex shapes.
       a temporary array.
    -  ☐ Test your new implementation! First run the test suite to make sure
       you didn’t break anything, and then add a test that uses your
-      improved geometrical criterion. 
+      improved geometrical criterion.
 
-.. admonition:: Clue 3 
+.. admonition:: Clue 3
    :class: dropdown
 
    Deal with multidimensional arrays in the namelist:
@@ -535,7 +535,7 @@ allowing for more complex shapes.
          end do
       end program test
 
-   .. code:: 
+   .. code::
 
       &VAR_p
       !p = 1.30, 0.8, 3.1 ! Only one region, backwards compatible syntax

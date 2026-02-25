@@ -105,7 +105,7 @@ terminal, this is done as follows:
 
    cd ramses                      # go into your fork's directory
    git checkout dev               # go into the branch dev (of your fork)
-   git checkout -b my-new-feature # create a new branch called my-new-feature. 
+   git checkout -b my-new-feature # create a new branch called my-new-feature.
 
 At this point, the new branch ``my-new-feature`` exists only locally on
 your computer. In order to make it visible/accessible online (in your
@@ -166,7 +166,7 @@ provide a list of basic Git instructions below that you will need.
 
       git status    # check which files have been modified
       git add amr/constants.f90    # add amr/constants.f90 to the next commit.
-      git commit -m "Added a test comment to amr/constants.f90."  # make the commit. 
+      git commit -m "Added a test comment to amr/constants.f90."  # make the commit.
       git push      # push the commit online.
 
 3. Staying in sync with the public version
@@ -207,9 +207,9 @@ Once this is done, you can sync with the following command.
 
 ::
 
-   git fetch upstream    # fetch the latest changes 
+   git fetch upstream    # fetch the latest changes
    git checkout dev      # go to the dev branch
-   git pull --rebase --autostash upstream dev   # do the magic ... 
+   git pull --rebase --autostash upstream dev   # do the magic ...
 
 This last line will replay your local commits on top of the fetched
 changes and will automatically stash your local changes before pulling
@@ -247,8 +247,8 @@ Conflicts are highlighted with the following format:
 ::
 
    <<<<<<< HEAD
-     ! Here some code in my-new-feature. 
-     real(dp) :: my_new_feature_secret_variable 
+     ! Here some code in my-new-feature.
+     real(dp) :: my_new_feature_secret_variable
    =======
      ! Here is some different code from dev, at the same location...
      real(dp),paramter :: thirteen = 13.0d0
@@ -259,8 +259,8 @@ to remove the lines introduced by Git to produce:
 
 ::
 
-     ! Here some code in my-new-feature. 
-     real(dp) :: my_new_feature_secret_variable 
+     ! Here some code in my-new-feature.
+     real(dp) :: my_new_feature_secret_variable
 
      ! Here is some different code from dev, at the same location...
      real(dp),paramter :: thirteen = 13.0d0

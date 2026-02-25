@@ -93,14 +93,14 @@ process a namelist will go through the following steps:
 
       ! Read namelist
       read(namelist_unit,NML=something_params,IOSTAT=nml_err)
-      
+
       ! Checks in whether the namelist was present in the file
       if(nml_err<0)then
          ! EOF reached before namelist was found
       elseif(nml_err>0)then
          ! Problem with formatting in the file
       endif
-      
+
       ! Do some check on the read values
       if(param1<0) nml_ok=.false.
       ...
@@ -284,17 +284,17 @@ needs to be updated.
             if(myid==1)write(*,*)'Error reading namelist &TUTO_PARAMS. Check formatting.'
             nml_ok=.false.
          endif
-         
+
          if(tuto_efficiency<=0)then
             if(myid==1)write(*,*)'Error in the namelist: tuto_efficiency must be larger than 0'
             nml_ok=.false.
          endif
-         
+
          if(tuto_timescale<=0)then
             if(myid==1)write(*,*)'Error in the namelist: tuto_timescale must be larger than 0'
             nml_ok=.false.
          endif
-         
+
          if(myid==1)write(*,*)'TUTO: tuto_efficiency=',tuto_efficiency,', tuto_timescale=',tuto_timescale
 
       end subroutine read_tuto_params
@@ -526,7 +526,7 @@ is done by the routine ``backup_hydro`` found in the file
        end if
     end do
    end do
-   close(unit_out)  
+   close(unit_out)
 
 :::
 
@@ -549,7 +549,7 @@ variable looks like this:
    field_name = 'my_variable_name'
    ! Pass data to dump utils for writing
    call generic_dump(field_name, info_var_count, xdp, unit_out,&
-                   & dump_info_flag, unit_info)          
+                   & dump_info_flag, unit_info)
 
 The routine ``generic_dump`` (defined in the file *io/dump_utils.f90*)
 is performing the ``write`` instruction for any type. When adding new
@@ -605,7 +605,7 @@ new block of the form:
 
      ! allocate work array of the correcto type if needed
      allocate(work_array(1:npart))
-     
+
      ! Gather data into work array by looping over all allocated space
      ipart = 0
      do i = 1, npartmax

@@ -5,7 +5,7 @@
 
    slideOptions:
      transition: concave
-     theme: moon 
+     theme: moon
    -->
 
 Lecture: General review
@@ -15,13 +15,13 @@ Lecture: General review
 
    <!--
    - Overview
-       - overview of physics (hydro, MHD, RHD, gravity, …) in ramses, and organisation of the code in directories 
-       - EXERCISE: Students explore the directory structure and figure out together what physical processes are modelled. 
+       - overview of physics (hydro, MHD, RHD, gravity, …) in ramses, and organisation of the code in directories
+       - EXERCISE: Students explore the directory structure and figure out together what physical processes are modelled.
    - General hydro + gravity
-       - explain assuming uniform grid: start in a given state, compute evolution and update (→ introduce the order of things and explain why). Hydro, then gravity, then combined. 
-       - EXERCISE: introduce basic data structure (unew, uold). Students rewrite in pseudo-code the basic solver steps discussed above using these variables. 
-       - AMR = multiple levels, with refinement and de-refinement. Explain strategies, how and when it is done. 
-       - `amr_step`: recursiveness (that comes from timestepping … ) to implement the level by level strategy recursively. Explain upload.Try to be convincing. 
+       - explain assuming uniform grid: start in a given state, compute evolution and update (→ introduce the order of things and explain why). Hydro, then gravity, then combined.
+       - EXERCISE: introduce basic data structure (unew, uold). Students rewrite in pseudo-code the basic solver steps discussed above using these variables.
+       - AMR = multiple levels, with refinement and de-refinement. Explain strategies, how and when it is done.
+       - `amr_step`: recursiveness (that comes from timestepping … ) to implement the level by level strategy recursively. Explain upload.Try to be convincing.
        - EXERCISE: students write pseudo-code again with the recursive loop? Then compare it to the real `amr_step` / or extract pseudo code from messy `amr_step.f90`.
 
    Starting from the full overview of the physics found in the discussion, go through amr_step and explain why things are done in this order.
@@ -105,22 +105,22 @@ the structure (see ``amr/amr_step.f90``):
 
       call refine
       call load_balance
-       
+
       ... ! Some sink and particle stuff
-      
+
       if(time to output) call dump_all
-      
+
       if (conditions are met)
          call kinetic_feedback             ! feedback from stars
          OR
          call make_stellar_from_sinks
          call make_sn_stellar              ! feedback from sinks
       end if
-      
+
       if(poisson) call rho_fine   ! calc density field for Poisson source term
-      
+
       ... ! Some particle stuff
-      
+
       ! Gravity update: compute grav potential and acceleration
       if(poisson)then
          ...
@@ -128,16 +128,16 @@ the structure (see ``amr/amr_step.f90``):
          call force_fine(ilevel,icount)
          ...
      end if
-      
+
      if(rt .and. rt_star/sink) call update_star/sink_RT_feedback(ilevel)
-      
+
      call calc_turb_forcing(ilevel)   ! turbulence forcing
-      
+
      call newdt_fine(ilevel)          ! Compute new time step
-    
+
      if(hydro)call set_unew(ilevel)   ! set unew = uold
-     if(rt)call rt_set_unew(ilevel) 
-    
+     if(rt)call rt_set_unew(ilevel)
+
      ! --- Recursive call to amr_step ---
      ...
      !-----------------------------------
@@ -151,14 +151,14 @@ the structure (see ``amr/amr_step.f90``):
         call godunov_fine(ilevel)
         ...
      endif
-     
-    ! Do RT/Chemistry step -> works on uold 
+
+    ! Do RT/Chemistry step -> works on uold
      if(rt .and. rt_advect) then
         call rt_step(ilevel)
      else
         call cooling_fine(ilevel)
      endif
-     
+
      if(pic) call move_fine(ilevel)  ! Move particles
 
      if(conditions met)call star_formation(ilevel)
@@ -172,7 +172,7 @@ the structure (see ``amr/amr_step.f90``):
      ... ! particle stuff
 
      if(conditions met)call create_sink  ! Sink production
-    
+
    end subroutine amr_step
 
 Things are done is a specific order. The reasons for this will become
@@ -396,7 +396,7 @@ as regular passive scalars.
         ! Recursive call to amr_step
         !---------------------------
         ...
-        
+
         !-----------
         ! Hydro step
         !-----------
@@ -832,10 +832,10 @@ gravitional acceleration is taken into account using a Velvet scheme
          ...
          ! Add gravity source terms with half a time step to unew
          if(poisson)call add_gravity_source_terms(ilevel)
-         
+
          ! Set uold equal to unew
          call set_uold(ilevel)
-         
+
          ! Add gravity source term with half time step and old force
          ! in order to complete the time step
          if(poisson)call synchro_hydro_fine(ilevel,+0.5*dtnew(ilevel),1)
@@ -898,7 +898,7 @@ positions. In ``amr_step``, we thus find ``synchro_fine`` *before*
    ...
 
    ! Move particles
-   if(pic) call move_fine(ilevel) ! Only remaining particles  
+   if(pic) call move_fine(ilevel) ! Only remaining particles
 
 Because the gravitational force is known on the grid, not at the
 particle positions, we need to apply the inverse CIC scheme (see chapter
@@ -942,7 +942,7 @@ recursivity
      else
         call update_time(ilevel)
      end if
-     ...  
+     ...
      ! do things at the end
      ...
    end subroutine amr_step
@@ -962,7 +962,7 @@ recursivity
 
          ! calc phi(ilevel), set unew(ilevel)=uold(ilevel), ..., calc dt(ilevel)
          stuff_before(ilevel)
-         
+
          ! recursive call
          if(ilevel<nlevelmax)then
             if(nsubcycle(ilevel)==2)then
@@ -974,7 +974,7 @@ recursivity
          else
            call update_time(ilevel)
          end if
-         
+
          ! solve hydro, set uold(ilevel)=unew(ilevel), ...
          stuff_after(ilevel)
 

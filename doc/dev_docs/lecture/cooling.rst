@@ -94,7 +94,7 @@ cooling term :math:`\Lambda`:
 .. math::
 
 
-   \frac{\partial E}{\partial t} + \nabla \cdot \left( (E + P) \boldsymbol{u} \right) = -\rho \boldsymbol{u} \cdot \nabla \phi + \Lambda(\rho, \varepsilon). 
+   \frac{\partial E}{\partial t} + \nabla \cdot \left( (E + P) \boldsymbol{u} \right) = -\rho \boldsymbol{u} \cdot \nabla \phi + \Lambda(\rho, \varepsilon).
 
 Here, :math:`t` is time, :math:`E = \frac{1}{2}\rho u^2 + e` is the gas
 internal energy, :math:`P` is pressure, :math:`\boldsymbol{u}` is the
@@ -239,7 +239,7 @@ With these three rates in hand the temperature is updated by solving:
 .. math::
 
 
-     \frac{\partial \Tmu}{\partial t} = 
+     \frac{\partial \Tmu}{\partial t} =
      \frac{(\gamma-1) \mh}{\rho \kb} \ \CH,
 
 where
@@ -249,7 +249,7 @@ al., 1992):
 
 .. math::
 
-     
+
    \Tmu^{t+\dt}= \Tmu^{t} + \frac{\CH K \dt}{1-\CHp K \dt},
 
 where :math:`K=\eTconv` is the conversion factor between :math:`\eps`
@@ -408,7 +408,7 @@ read from files
 .. raw:: html
 
    <!-- ## GRACKLE cooling
-   ... 
+   ...
 
    -->
 
@@ -419,9 +419,9 @@ Exercise: figure out how it works.
 
 .. raw:: html
 
-   <!-- 
+   <!--
    :::warning
-   Describe 2 versions (1 with HD and 1 with RHD). Then exercise: (1) figure out how ISM cooling works, (2) implement a new version of cooling ... 
+   Describe 2 versions (1 with HD and 1 with RHD). Then exercise: (1) figure out how ISM cooling works, (2) implement a new version of cooling ...
    :::
 
    -->
