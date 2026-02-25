@@ -7,7 +7,7 @@
 
     Used for the decaying turbulence test case in tests/hydro/decaying-turbulence
 '''
-
+from scipy.io import FortranFile
 import numpy as np
 import struct
 import sys
@@ -15,25 +15,14 @@ import sys
 def write_grafic_header(filename, ncells, size, endian='<'):
     ''' Write a simple header for the grafic binary file '''
     # variables for the header line
-    n1 = n2 = n3 = int(ncells)
-    dx = float(size/ncells)
-    xoff1 = xoff2 = xoff3 = float(0.0)
-    boxlen = float(size)
-    f1 = f2 = f3 = float(0.0)
+    n1 = n2 = n3 = np.int32(ncells)
+    dx = np.float64(size/ncells)
+    xoff1 = xoff2 = xoff3 = np.float64(0.0)
+    boxlen = np.float64(size)
+    f1 = f2 = f3 = np.float64(0.0)
 
-    # pack variables for Fortran record payload
-    payload = struct.pack(
-        endian + "3i8f",    # 3 int32 + 8 float32
-        n1, n2, n3,
-        dx, xoff1, xoff2, xoff3,
-        boxlen, f1, f2, f3)
-
-    reclen = len(payload)
-
-    with open(filename, "wb") as f:
-        f.write(struct.pack(endian+"i", reclen))  # leading record marker
-        f.write(payload)
-        f.write(struct.pack(endian+"i", reclen))  # trailing record marker
+    with FortranFile(filename, "w") as f:
+        f.write_record(n1, n2, n3, dx, xoff1, xoff2, xoff3, boxlen, f1, f2, f3)
 
 
 def write_grafic_data(filename, data, endian='<'):
@@ -46,23 +35,15 @@ def write_grafic_data(filename, data, endian='<'):
     swap = ( (endian == '<' and native_byteorder == 'big') or
              (endian == '>' and native_byteorder == 'little') )
 
-    with open(filename, "ab") as f:  # append binary
+    # Append in binary mode
+    with open(filename, "ab") as file_desc, FortranFile(file_desc) as f:
         for i in range(0,ncells):
             # Ensure float32
-            a = np.asarray(data_temp[i,:,:], dtype=np.float32, order="F")
+            # Convert input array into float32 with selected endianness
+            dtype = np.dtype(f"{endian}f")
+            a = data_temp[i,:,:].astype(dtype, order="F")
 
-            # convert byte order if needed
-            if ((a.dtype.byteorder == "=" and swap) or
-                (a.dtype.byteorder == ">" and endian == "<") or
-                (a.dtype.byteorder == "<" and endian == ">") ):
-                a = a.byteswap().newbyteorder()
-
-            raw = a.tobytes(order="F")
-            reclen = len(raw)
-
-            f.write(struct.pack(endian + "i", reclen))
-            f.write(raw)
-            f.write(struct.pack(endian + "i", reclen))
+            f.write_record(a)
 
 
 def write_grafic_file(filename, data, size, endian='='):
