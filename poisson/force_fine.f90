@@ -52,9 +52,6 @@ subroutine force_fine(ilevel,icount)
      if(ndim>2)xc(ind,3)=(dble(iz)-0.5D0)*dx
   end do
 
-  ! reset force to zero
-  f=0d0
-
   !------------------------------
   ! Compute gradient of potential
   !------------------------------
@@ -114,12 +111,20 @@ subroutine force_fine(ilevel,icount)
            ! Call analytical gravity routine
            call gravana(xx,ff,dx_loc,ngrid)
 
-           ! Scatter variables
-           do idim=1,ndim
-              do i=1,ngrid
-                 f(ind_cell(i),idim)=f(ind_cell(i),idim)+ff(i,idim)
+           ! Scatter variables (check needed because f is not reset to 0 but overwritten)
+           if(self_gravity.or.gravity_rho_ana_type>0)then
+              do idim=1,ndim
+                 do i=1,ngrid
+                    f(ind_cell(i),idim)=f(ind_cell(i),idim)+ff(i,idim)
+                 end do
               end do
-           end do
+           else
+              do idim=1,ndim
+                 do i=1,ngrid
+                    f(ind_cell(i),idim)=ff(i,idim)
+                 end do
+              end do
+           end if
 
         end do
         ! End loop over cells
