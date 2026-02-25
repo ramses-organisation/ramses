@@ -6,10 +6,9 @@
 '''
 from scipy.io import FortranFile
 import numpy as np
-import struct
 import sys
 
-def write_grafic_header(filename, ncells, size, endian):
+def write_grafic_header(f, ncells, size, endian):
     ''' Write a simple header for the grafic binary file '''
     i4 = np.dtype(f"{endian}i4").type
     f4 = np.dtype(f"{endian}f4").type
@@ -20,29 +19,21 @@ def write_grafic_header(filename, ncells, size, endian):
     boxlen = f4(size)
     f1 = f2 = f3 = f4(0.0)
 
-    with FortranFile(filename, "w") as f:
-        f.write_record(n1, n2, n3, dx, xoff1, xoff2, xoff3, boxlen, f1, f2, f3)
+    f.write_record(n1, n2, n3, dx, xoff1, xoff2, xoff3, boxlen, f1, f2, f3)
 
 
-def write_grafic_data(filename, data, endian):
+def write_grafic_data(f, data, endian):
     ''' Write data in slices to grafic binary file '''
     ncells = data.shape[0]
     data_temp=data.transpose(2,0,1)
 
-    # check if the native byte order matches the requested one
-    native_byteorder = sys.byteorder
-    swap = ( (endian == '<' and native_byteorder == 'big') or
-             (endian == '>' and native_byteorder == 'little') )
+    dtype = np.dtype(f"{endian}f4")
 
-    # Append in binary mode
-    with open(filename, "ab") as file_desc, FortranFile(file_desc) as f:
-        for i in range(0,ncells):
-            # Ensure float32
-            # Convert input array into float32 with selected endianness
-            dtype = np.dtype(f"{endian}f")
-            a = data_temp[i,:,:].astype(dtype, order="F")
-
-            f.write_record(a)
+    for i in range(0,ncells):
+        # Convert input array into float32 with selected endianness
+        a = np.array(data_temp[i,:,:], dtype=dtype)
+        # flatten in Fortran order explicitly
+        f.write_record(a.ravel(order="F"))
 
 
 def write_grafic_file(filename, data, size, endian='='):
@@ -58,5 +49,8 @@ def write_grafic_file(filename, data, size, endian='='):
             endian = '<'
         else:
             endian = '>'
-    write_grafic_header(filename, data.shape[0], size, endian)
-    write_grafic_data(filename, data, endian)
+
+    header_dtype = np.dtype(endian + "i4")
+    with FortranFile(filename, "w", header_dtype=header_dtype) as f:
+        write_grafic_header(f, data.shape[0], size, endian)
+        write_grafic_data(f, data, endian)
