@@ -444,9 +444,11 @@ Level 1
 ~~~~~~~
 
 Modify the “Variables and passive scalar” strategy to make it more
-useful: 1. Make the “Variables and passive scalar” strategy independent
+useful: 
+1. Make the “Variables and passive scalar” strategy independent
 from the “Quasi Lagrangian strategy” (you can code it as a new strategy,
-with its own parameters). 2. Make it possible to have a different
+with its own parameters). 
+2. Make it possible to have a different
 threshold at each level (ie make ``var_cut_refine`` an array)
 
 Level 2

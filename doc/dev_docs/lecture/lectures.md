@@ -4,13 +4,13 @@
 :maxdepth: 1
 :caption: Lectures:
 
-Global.md
-git.md
-general.md
-amr.md
+Global.rst
+git.rst
+general.rst
+amr.rst
 particles.md
-parameters.md
-mpi.md
-subgrid.md
+parameters.rst
+mpi.rst
+subgrid.rst
 refinement.rst
 ```

@@ -40,7 +40,7 @@ The particle masses are stored in the **`mp`** variable, which is a one-dimensio
 
 
 All these arrays are defined in `pm/pm_commons.f90`:
-```fortran=1
+```fortran
   ! Particles related arrays
   real(dp),allocatable,dimension(:,:)  ::xp       ! Positions
   real(dp),allocatable,dimension(:,:)  ::vp       ! Velocities
@@ -64,11 +64,11 @@ Since 2017, RAMSES implements these as *particle types* (similar, for example, t
 - a `tag` variable
 
 The `typep` variable is defined in `pm/pm_commons.f90`:
-```fortran=1
+```fortran
   type(part_t), allocatable, dimension(:) :: typep  ! Particle type array
 ```
 and the type itself is defined in `pm/pm_parameters.f90`:
-```fortran=1
+```fortran
   type part_t
      ! We store these two things contiguously in memory
      ! because they are fetched at similar times
@@ -108,7 +108,7 @@ NB: when implementing new types of particles, make sure to use the right `family
 In the code, the global particle arrays are *defined* in the `pm_commons` module, but are not *allocated* there: indeed, `npartmax` is a runtime parameter, so it cannot be fixed once and for all in the code.
 
 Instead, all the particle-related arrays are allocated when the simulation is initialised, in the `init_part` routine, defined in `pm/init_part.f90`. This is done through the following code:
-```fortran=1
+```fortran
   ! Allocate particle variables
   allocate(xp    (npartmax,ndim))
   allocate(vp    (npartmax,ndim))
@@ -140,7 +140,7 @@ This strategy to initialise the data at restart is part of the reason why RAMSES
 Identify where, in `init_part.f90`, the particle output files are opened.
 :::spoiler **Solution**
 Look around `if(nrestart>0) then`:
-```fortran=1
+```fortran
 	call title(nrestart,nchar)
 	fileloc='output_'//TRIM(nchar)//'/part_'//TRIM(nchar)//'.out'
 	...
@@ -153,7 +153,7 @@ The `title` function transforms the output number `nrestart` or the MPI process 
 :::
 
 Once the file is open, we first read a header and then, each array stored in the output will be read. For example, the positions are read as:
-```fortran=1
+```fortran
      ! Read position
      allocate(xdp(1:npart2))
      do idim=1,ndim
@@ -184,13 +184,13 @@ As this leads to a tree structure, the bulk of the code dealing with the particl
 ### 2.1 Particle linked list structure
 
 In each  grid, we have a particle linked list defined using the following variables, defined in `pm/pm_commons.f90`:
-```fortran=1
+```fortran
   integer ,allocatable,dimension(:)    ::headp    ! Head particle in grid
   integer ,allocatable,dimension(:)    ::tailp    ! Tail particle in grid
   integer ,allocatable,dimension(:)    ::numbp    ! Number of particles in grid
 ```
 They are allocated in the `init_amr` subroutine (in `amr/init_amr.f90`), if the run parameter flag `pic` (particle in cell) is set:
-```fortran=1
+```fortran
 if(pic)then
    allocate(headp(1:ngridmax))
    allocate(tailp(1:ngridmax))
@@ -201,12 +201,12 @@ endif
 Note that if `pic` is *not* set, there are no particles, so we don't have to do any of this.
 
 As required for a linked list, for each particle the next and previous particle in the list is stored. These arrays are defined in `pm/pm_commons.f90`:
-```fortran=1
+```fortran
   integer ,allocatable,dimension(:)    ::nextp    ! Next particle in list
   integer ,allocatable,dimension(:)    ::prevp    ! Previous particle in list
 ```
 They are allocated in `pm/init_part.f90`:
-```fortran=1
+```fortran
   allocate(nextp (npartmax))
   allocate(prevp (npartmax))
 ```
@@ -233,7 +233,7 @@ Finally, when particles move across processor boundaries (see the [lecture on MP
 The *particle* and *grid* linked lists structures are used to iterate over particles.
 
 The following code block represents the usual way of looping over all particles in a given MPI process:
-```fortran=1
+```fortran
   do icpu=1,ncpu
   ! Loop over cpus
      igrid=headl(icpu,ilevel)
@@ -268,7 +268,7 @@ Note: if I remember correctly, the `icpu` loop is needed because of the MPI deco
 
 
 Then, the section
-```fortran=1
+```fortran
 do jgrid=1, numbl(icpu, ilevel)
 	npart1=numbp(igrid)
     ...
@@ -278,7 +278,7 @@ end do
 loops over all grids at the current level. The variable `npart1=numbp(igrid)` stores the number of particles that exist in grid indexed by `igrid`. Note here that when we first enter the loop, `igrid` is defined from the `headl` access, but at the end of the loop, we go to the next grid in the list, determined by `next(igrid)`.
 
 If there is at least one particle in the grid (i.e., if `npart1>0`), we can loop over the particles in the grid with the particle linked-list:
-```fortran=1
+```fortran
 ipart=headp(igrid)
 do jpart=1,npart1
 	next_part=nextp(ipart)
@@ -299,7 +299,7 @@ Multiple routines in RAMSES need to create or destroy particles. Once again, the
 This is handled by routines found in `pm/add_list.f90` and `pm/remove_list.f90`. Let's quickly review how they work together.
 
 When spawning new particles, we need to insert them somewhere in the particle linked list. This is done relatively easily thanks to the linked list structure: we just need to add the particle index after the current last particle in the `nextp` array. This is essentially what the `add_list` subroutine does in `pm/add_list.f90`:
-```fortran=1
+```fortran
 nextp(tailp(ind_grid(j))) = ind_part(j)
 ```
 Here, `tailp(ind_grid(j))` indicates the tail of the particle linked list in the grid `ind_grid(j)`, and we define the `nextp` particle as the one with index `ind_part(j)`.
@@ -307,7 +307,7 @@ Here, `tailp(ind_grid(j))` indicates the tail of the particle linked list in the
 To make sure that there is enough space in the particle arrays, we need to use the `remove_free` subroutine of `pm/remove_list.f90`, which essentially reserves a block of the particle arrays for the new particles.
 
 As a result, the correct way to update the linked lists when adding new particles is **always** to *first* call `remove_free`, then add the particles with `add_list`. This is for example done in the star formation routine in `pm/star_formation.f90`:
-```fortran=1
+```fortran
         ! Update linked list for stars
         call remove_free(ind_part,nnew)
         call add_list(ind_part,ind_grid_new,ok_new,nnew)
@@ -358,7 +358,7 @@ In practice, the second part is done before the first: the sub-volumes are calcu
 To better understand how the CIC scheme is applied, let's look at the `cic_amr` routine that can be found in the `pm/rho_fine.f90` file.
 
 After some book-keeping, we recover the neighbouring father cells with
-```fortran=1
+```fortran
   call get3cubefather(ind_cell,nbors_father_cells,ng,ilevel)
 ```
 This will be needed to get the grid index of all the neighbours.
@@ -373,7 +373,7 @@ We then rescale all the positions at the current level to get the position of th
 
 
 :::
-```fortran=1
+```fortran
   ! Rescale particle position at level ilevel
   do idim=1,ndim
      do j=1,np
@@ -387,7 +387,7 @@ We then rescale all the positions at the current level to get the position of th
 This is then the time to get the particle properties that we may want to dump on the grid, for example the mass of non-tracer particles. This is done by reading the particle mass `mp` in the `cic_amr` routine, but we could do the same thing for other extensive quantities (e.g., metal mass).
 
 After some extra checks, we then compute `dd` and `dg` along each dimension. The volume of each of the sub-volumes is computed from the values of `dg` and `dd`. For example, in two dimensions:
-```fortran=1
+```fortran
 #if NDIM==2
   do j=1,np
      vol(j,1)=dg(j,1)*dg(j,2)
@@ -406,7 +406,7 @@ Once this is all computed, we need to assign these sub-volumes to the relevant c
 First, we need to identify the local index of the parent grid. During the `dd` and `dg` computation, we get the index of the left and right boundaries in `ig` and `id`, respectively.
 <!--For example, at level 7, this could be `ig=64` and `id=65`, for a cell roughly in the centre of the box.-->
 As the parent grid lives on level `ilevel-1`, the corresponding local) grid indices (`igg` and `igd`, for index grid *gauche* and index grid *droite*) will be halved:
-```fortran=1
+```fortran
   do idim=1,ndim
      do j=1,np
         igg(j,idim)=ig(j,idim)/2
@@ -417,7 +417,7 @@ As the parent grid lives on level `ilevel-1`, the corresponding local) grid indi
 On the figure above, this corresponds to computing the local grid index from the local position.
 
 From there, we compute an index `kg` for each of the 8 sub-volumes, which is used to determine the *global* grid index `igrid` of that parent grid:
-```fortran=1
+```fortran
   do ind=1,twotondim
      do j=1,np
         igrid(j,ind)=son(nbors_father_cells(ind_grid_part(j),kg(j,ind)))
@@ -428,7 +428,7 @@ From there, we compute an index `kg` for each of the 8 sub-volumes, which is use
 We then need to determine which of the 8 cells belonging to the parent grid is relevant, i.e., which is the local `ind` (as defined in the lecture on AMR structure). This is done again by index arithmetics, depending on the values of `ig`, `id`, `igg`, and `igd`, and yields the array `icell(:,:)` where the first dimension corresponds to the particle on which we are working, and the second to the 8 sub-volumes.
 
 We *finally* can compute the global cell index as
-```fortran=1
+```fortran
   ! Compute parent cell adress
   do ind=1,twotondim
      do j=1,np
@@ -438,14 +438,14 @@ We *finally* can compute the global cell index as
 ```
 
 Once all of this is done, we can loop over the particles to do something with the CIC scheme. For example, in `cic_amr`, we compute the contribution of the particles to the density array `rho`: we first define the "mass fraction" `vol2`:
-```fortran=1
+```fortran
      do j=1,np
         ok(j)=(igrid(j,ind)>0).and.is_not_tracer(fam(j))
         vol2(j)=mmm(j)*vol(j,ind)/vol_loc
      end do
 ```
 and then increment `rho` with it:
-```fortran=1
+```fortran
         do j=1,np
            if(ok(j))then
               rho(indp(j,ind))=rho(indp(j,ind))+vol2(j)
@@ -456,7 +456,7 @@ and then increment `rho` with it:
 ### 3.3 Details of the CIC density calculation
 
 If we look more carefully at the main loop where the density field is computed, we can note several things.
-```fortran=1
+```fortran
      if(cic_levelmax==0.or.ilevel<=cic_levelmax)then
         do j=1,np
            if(ok(j))then
