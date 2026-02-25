@@ -16,10 +16,10 @@ def write_grafic_header(filename, ncells, size, endian='<'):
     ''' Write a simple header for the grafic binary file '''
     # variables for the header line
     n1 = n2 = n3 = np.int32(ncells)
-    dx = np.float64(size/ncells)
-    xoff1 = xoff2 = xoff3 = np.float64(0.0)
-    boxlen = np.float64(size)
-    f1 = f2 = f3 = np.float64(0.0)
+    dx = np.float32(size/ncells)
+    xoff1 = xoff2 = xoff3 = np.float32(0.0)
+    boxlen = np.float32(size)
+    f1 = f2 = f3 = np.float32(0.0)
 
     with FortranFile(filename, "w") as f:
         f.write_record(n1, n2, n3, dx, xoff1, xoff2, xoff3, boxlen, f1, f2, f3)
