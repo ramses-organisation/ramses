@@ -23,11 +23,9 @@ subroutine rho_ana(x,d,dx,ncell)
   real(dp):: a1,a2,z0,a1_rho,a2_rho
   real(dp)::scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2
 
-  if (always_use_gravana) return
-
-  select case(gravity_type)
-  ! Remark: no obvious equivalent for gravana's gravity_type==1
-  case(-2)
+  select case(gravity_rho_ana_type)
+  ! Remark: no obvious equivalent for gravana's gravity_force_ana_type==1
+  case(2)
     ! point mass
     emass=dx
     emass=gravity_params(1) ! Softening length
@@ -50,7 +48,7 @@ subroutine rho_ana(x,d,dx,ncell)
        d(i)=MIN(dd,dmass)
   end do
 
-  case(-3)
+  case(3)
     ! vertical galactic gravitational field
     ! Kuijken & Gilmore 1989 taken from Joung & MacLow (2006)
     a1 = gravity_params(1) ! Star potential coefficient in kpc Myr-2

@@ -2,7 +2,7 @@ subroutine newdt_fine(ilevel)
   use pm_commons
   use amr_commons
   use hydro_commons
-  use poisson_commons, ONLY: gravity_type
+  use poisson_commons, ONLY: self_gravity, gravity_rho_ana_type
 #ifdef RT
   use rt_parameters, ONLY: rt_advect, rt_nsubcycle
 #endif
@@ -49,7 +49,7 @@ subroutine newdt_fine(ilevel)
 
   ! Maximum time step
   dtnew(ilevel)=boxlen/smallc
-  if(poisson.and.gravity_type<=0)then
+  if(poisson.and.(self_gravity.or.gravity_rho_ana_type>0))then
      fourpi=4.0d0*pi
      if(cosmo)fourpi=1.5d0*omega_m*aexp
      if (sink)then

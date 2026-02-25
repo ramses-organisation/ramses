@@ -5,13 +5,13 @@ module poisson_parameters
   real(dp)::epsilon=1.0D-4
 
   ! Type of force computation
-  integer ::gravity_type=0
+  integer ::gravity_type=0             ! deprecated
+  logical ::self_gravity=.true.        ! activate self-gravity
+  integer ::gravity_rho_ana_type=0     ! include an analytical density field in Poisson source term
+  integer ::gravity_force_ana_type=0   ! add analytical gravitational force
 
   ! Gravity parameters
   real(dp),dimension(1:10)::gravity_params=0
-
-  ! Use gravana even if gravity_type < 0 instead of rho_ana
-  logical ::always_use_gravana=.false.
 
   ! Maximum level for CIC dark matter interpolation
   integer :: cic_levelmax=0
