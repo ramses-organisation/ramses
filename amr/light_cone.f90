@@ -369,7 +369,7 @@ contains
       ! Reallocation is done in chunks of size alloc_chunk_size, to avoid
       ! reallocating too frequently.
       !=======================================================================!
-      
+
         ! Allocation chunk size
         integer, parameter :: alloc_chunk_size = 100
         integer :: new_nalloc1, new_nalloc2
