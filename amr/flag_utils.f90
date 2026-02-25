@@ -541,6 +541,16 @@ subroutine geometry_refine(xx,ok,ncell,ilevel)
   !
   ! It sets ok to 0 if cell lies outside the user-defined
   ! geometric region that is allowed to refine at the level ilevel.
+  ! Parameters:
+  ! ------------
+  ! - xx real array
+  !       array of cell positions to be tested
+  ! - ok logical array
+  !       array of refinement flags to be updated
+  ! - ncell integer
+  !       number of cells to be tested
+  ! - ilevel integer
+  !       current AMR level
   !-------------------------------------------------
   real(dp)::er,xr,yr,zr,rr,xn,yn,zn,r,aa,bb
   integer ::i

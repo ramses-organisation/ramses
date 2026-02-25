@@ -2,7 +2,11 @@ import matplotlib as mpl
 mpl.use('Agg')
 import numpy as np
 import matplotlib.pyplot as plt
+import csv
+import shutil
 import visu_ramses
+
+## Default params
 
 fig = plt.figure()
 ratio = 0.8
@@ -86,5 +90,51 @@ for var, sim, ana in zip(
 fig.subplots_adjust(wspace=0.3)
 fig.savefig('imhd-tube.pdf',bbox_inches='tight')
 
+
+## Parameter study
+
+# 1. Read error computed with other parameters
+parameter_study_errors = {}
+with open("imhd-tube-parameter-study.csv", "r", encoding="utf-8") as csvfile:
+    reader = csv.DictReader(csvfile)          # reads the header row automatically
+    for row in reader:
+        combo = row["test_name_combi"]
+        err   = float(row["error"])           # cast if numeric
+        parameter_study_errors[combo] = err
+
+# Overwrite reference solution
+overwrite=False #True
+if overwrite:
+    shutil.copyfile("imhd-tube-parameter-study.csv", "imhd-tube-parameter-study-ref.csv")
+
+# 2. Read ref
+parameter_study_ref = {}
+with open("imhd-tube-parameter-study-ref.csv", "r", encoding="utf-8") as csvfile:
+    reader = csv.DictReader(csvfile)          # reads the header row automatically
+    for row in reader:
+        combo = row["test_name_combi"]
+        err   = float(row["error"])           # cast if numeric
+        parameter_study_ref[combo] = err
+
+
+# 3. Compare
+tolerance_param_study = 1e-8
+num_wrong = 0
+
+for key in parameter_study_errors:
+
+    if key not in parameter_study_ref:
+        print(f"Error, {key} not in parameter study reference.\n")
+        num_wrong += 1
+    else:
+        rel_diff = (parameter_study_errors[key] - parameter_study_ref[key]) / parameter_study_ref[key]
+        ok_key = np.all(rel_diff < tolerance_param_study)
+        if not ok_key:
+            print(f"Error in parameter combinaison {key}.\n")
+            print(f"Now {parameter_study_errors[key]} | Ref {parameter_study_ref[key]}.\n")
+            num_wrong += 1
+
+data["data"]["nb_failed_param_combinaison"] = num_wrong
+
 # Check results against reference solution
-visu_ramses.check_solution(data["data"],'imhd-tube', tolerance=tolerance)
+visu_ramses.check_solution(data["data"],'imhd-tube', tolerance=tolerance, overwrite=False)
