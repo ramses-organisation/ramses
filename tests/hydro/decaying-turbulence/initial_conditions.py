@@ -122,23 +122,23 @@ vx = vx * sigma_new/sigma_x
 vy = vy * sigma_new/sigma_y
 vz = vz * sigma_new/sigma_z
 
-'''
-# check new velocity dispersion
-sigma_x_new = np.sqrt(np.sum(vx**2)/num_cells)
-sigma_y_new = np.sqrt(np.sum(vy**2)/num_cells)
-sigma_z_new = np.sqrt(np.sum(vz**2)/num_cells)
-print(sigma_x_new,sigma_y_new,sigma_z_new)
+check = False
+if check:
+    # check new velocity dispersion
+    sigma_x_new = np.sqrt(np.sum(vx**2)/num_cells)
+    sigma_y_new = np.sqrt(np.sum(vy**2)/num_cells)
+    sigma_z_new = np.sqrt(np.sum(vz**2)/num_cells)
+    print(sigma_x_new,sigma_y_new,sigma_z_new)
 
-# make plots to verify the fields look OK
-for seed, v in zip([seed1, seed2, seed3], [vx,vy,vz]):
-    fig, ax = plt.subplots(nrows=1, ncols=3, figsize=[10, 3])
-    ax[0].imshow(v.mean(0), origin='lower')
-    ax[1].imshow(v.mean(1), origin='lower')
-    ax[2].imshow(v.mean(2), origin='lower')
-    plt.tight_layout()
-    plt.savefig('seed{}_pl{}.png'.format(seed, powerlaw))
-    plt.close()
-'''
+    # make plots to verify the fields look OK
+    for seed, v in zip([seed1, seed2, seed3], [vx,vy,vz]):
+        fig, ax = plt.subplots(nrows=1, ncols=3, figsize=[10, 3])
+        ax[0].imshow(v.mean(0), origin='lower')
+        ax[1].imshow(v.mean(1), origin='lower')
+        ax[2].imshow(v.mean(2), origin='lower')
+        plt.tight_layout()
+        plt.savefig('seed{}_pl{}.png'.format(seed, powerlaw))
+        plt.close()
 
 
 ''' ---- Write IC files in a folder in the current test directory ---- '''
