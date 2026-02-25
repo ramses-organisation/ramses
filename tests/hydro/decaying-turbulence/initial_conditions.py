@@ -6,9 +6,6 @@
     The density and pressure fields are set to uniform values as specified in the namelist.
 '''
 
-# REMARK: to make turbustat work, need to downgrade numpy:
-#         python -m pip install "numpy<2"
-from turbustat.simulator import make_3dfield
 from matplotlib import pyplot as plt
 import numpy as np
 import f90nml
@@ -17,6 +14,51 @@ import os
 # it needs to be run from the ramses root folder
 from utils.py.write_grafic import write_grafic_file
 
+
+def make_3dfield(ncells: int, *, powerlaw: int, randomseed: int):
+    # Author: Corentin Cadiou
+    """Generate a 3D random field with a power-law power spectrum.
+
+    Parameters
+    ----------
+    ncells : int
+        The number of cells along each dimension of the 3D field.
+    powerlaw : int
+        The exponent of the power-law power spectrum. For example, a value of
+        2 would correspond to a power spectrum that scales as k^-2.
+    randomseed : int
+        The seed for the random number generator, ensuring reproducibility of
+        the generated field.
+
+    Returns
+    -------
+    field : numpy.ndarray
+        A 3D array of shape (ncells, ncells, ncells) containing the generated
+        random field values.
+    """
+    shape = (ncells, ncells, ncells)
+    shape_fourier = (ncells, ncells, ncells // 2 + 1)
+
+    # Generate the Fourier space whitenoise
+    generator = np.random.default_rng(randomseed)
+    args = {"scale": 1 / np.sqrt(2), "size": shape_fourier}
+    whitenoise = generator.normal(**args) + 1j * generator.normal(**args)
+
+    # Create the k-space grid
+    kx = np.fft.fftfreq(ncells) * ncells
+    ky = np.fft.fftfreq(ncells) * ncells
+    kz = np.fft.rfftfreq(ncells) * ncells
+    kx, ky, kz = np.meshgrid(kx, ky, kz, indexing="ij")
+    k = np.sqrt(kx**2 + ky**2 + kz**2)
+
+    # Compute power spectrum
+    Pk = np.zeros_like(k)
+    Pk[k > 0] = k[k > 0] ** -powerlaw
+
+    # Apply the power spectrum to the whitenoise
+    field_fourier = whitenoise * np.sqrt(Pk)
+
+    return np.fft.irfftn(field_fourier, s=shape)
 
 ''' ---- Parameters ---- '''
 
@@ -66,11 +108,21 @@ vx = make_3dfield(ncells, powerlaw=powerlaw, randomseed=seed1)
 vy = make_3dfield(ncells, powerlaw=powerlaw, randomseed=seed2)
 vz = make_3dfield(ncells, powerlaw=powerlaw, randomseed=seed3)
 
+# correct for possible bulk motion
+vx = vx - vx.mean()
+vy = vy - vy.mean()
+vz = vz - vz.mean()
+
+# calculate current velocity dispersion
+sigma_x = np.sqrt(np.sum(vx**2)/num_cells)
+sigma_y = np.sqrt(np.sum(vy**2)/num_cells)
+sigma_z = np.sqrt(np.sum(vz**2)/num_cells)
+
 # rescale velocity to Mach requested Mach number
 sigma_new = (mach3d/np.sqrt(3))*sound_speed # code units
-vx = vx * sigma_new
-vy = vy * sigma_new
-vz = vz * sigma_new
+vx = vx * sigma_new/sigma_x
+vy = vy * sigma_new/sigma_y
+vz = vz * sigma_new/sigma_z
 
 '''
 # check new velocity dispersion
