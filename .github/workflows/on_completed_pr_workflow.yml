@@ -22,15 +22,6 @@ jobs:
 
     steps:
 
-    - name: Set pending workflow status on commit
-      uses: myrotvorets/set-commit-status-action@master
-      if: always()
-      with:
-        sha: ${{ github.event.workflow_run.head_commit.id }}
-        token: ${{ secrets.GITHUB_TOKEN }}
-        status: pending
-        context: Post workflow comment
-
     - name: Install pdfunite
       run: sudo apt install -y poppler-utils
 
@@ -129,12 +120,3 @@ jobs:
         mode: recreate
         create-if-not-exists: true
         pr-number: ${{ steps.read_pr.outputs.pr_number }}
-
-    - name: Set final workflow status on commit
-      uses: myrotvorets/set-commit-status-action@master
-      if: always()
-      with:
-        sha: ${{ github.event.workflow_run.head_commit.id }}
-        token: ${{ secrets.GITHUB_TOKEN }}
-        status: ${{ job.status }}
-        context: Post workflow comment
