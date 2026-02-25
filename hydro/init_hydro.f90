@@ -28,8 +28,8 @@ subroutine init_hydro
   ! Allocate conservative, cell-centered variables arrays
   !------------------------------------------------------
   ncell=ncoarse+twotondim*ngridmax
-  allocate(uold(1:ncell,1:nvar))
-  allocate(unew(1:ncell,1:nvar))
+  allocate(uold(1:ncell,1:nvar_all))
+  allocate(unew(1:ncell,1:nvar_all))
   uold=0.0d0; unew=0.0d0
   if(MC_tracer) then
      allocate(fluxes(1:ncell,1:twondim))
@@ -82,6 +82,9 @@ subroutine init_hydro
      read(ilun)ncpu2
      read(ilun)nvar2
      if(strict_equilibrium>0)nvar2=nvar2-2
+#ifdef SOLVERmhd
+     nvar2=nvar2-3
+#endif
      read(ilun)ndim2
      read(ilun)nlevelmax2
      read(ilun)nboundary2
@@ -107,16 +110,17 @@ subroutine init_hydro
         if(myid==1) write(*,*)'File hydro.tmp is not compatible'
         if(myid==1) write(*,*)'Found nvar2  =',nvar2
         if(myid==1) write(*,*)'Expected=',nvar
-        if(myid==1) write(*,*)'..so only reading first ',nvar2, &
-                  'variables and setting the rest to zero'
+        if(myid==1) write(*,*)'..so only reading available variables and setting the rest to zero'
      end if
      if((neq_chem.or.rt).and.nvar2.gt.nvar)then ! Not OK to drop variables
+#else
+     if(nvar2.ne.(nvar))then
+#endif
         if(myid==1) write(*,*)'File hydro.tmp is not compatible'
         if(myid==1) write(*,*)'Found   =',nvar2
         if(myid==1) write(*,*)'Expected=',nvar
         call clean_stop
      end if
-#endif
      do ilevel=1,nlevelmax2
         do ibound=1,nboundary+ncpu
            if(ibound<=ncpu)then
@@ -159,7 +163,18 @@ subroutine init_hydro
                        call scatter_primitive_to_uold(ind_grid, iskip, ivar, xx, ncache)
                     endif
                  end do
-
+#ifdef SOLVERmhd
+                 ! Read left magnetic field (no conversion needed)
+                 do ivar=6,8
+                    read(ilun)xx
+                    call scatter_conservative_to_uold(ind_grid, iskip, ivar, xx, ncache)
+                 end do
+                 ! Read right magnetic field (no conversion needed)
+                 do ivar=nvar+1,nvar+3
+                    read(ilun)xx
+                    call scatter_conservative_to_uold(ind_grid, iskip, ivar, xx, ncache)
+                 end do
+#endif
 #if NENER>0
                  ! Read non-thermal pressures --> non-thermal energies
                  do ivar=nhydro+1,nhydro+nener
@@ -185,7 +200,7 @@ subroutine init_hydro
                     call calc_total_energy_from_thermal_pressure(ind_grid, iskip, xx, ncache)
                  endif
 #if NVAR>NHYDRO+NENER
-                 ! Read passive scalars
+                 ! Read passive scalars if any
                  do ivar=nhydro+1+nener,max(nvar2,nvar)
                     if(remap_pscalar(ivar-nhydro).gt.-1) read(ilun)xx
                     if(ivar.gt.nvar)then

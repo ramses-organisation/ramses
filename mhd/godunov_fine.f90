@@ -58,7 +58,7 @@ subroutine set_unew(ilevel)
   ! Set unew to uold for myid cells
   do ind=1,twotondim
      iskip=ncoarse+(ind-1)*ngridmax
-     do ivar=1,nvar+3
+     do ivar=1,nvar_all
         do i=1,active(ilevel)%ngrid
            unew(active(ilevel)%igrid(i)+iskip,ivar) = uold(active(ilevel)%igrid(i)+iskip,ivar)
         end do
@@ -90,15 +90,33 @@ subroutine set_unew(ilevel)
   do icpu=1,ncpu
   do ind=1,twotondim
      iskip=ncoarse+(ind-1)*ngridmax
-     do ivar=1,nvar+3
+     do ivar=1,nvar_all
         do i=1,reception(icpu,ilevel)%ngrid
+#ifdef LIGHT_MPI_COMM
+           unew(reception(icpu,ilevel)%pcomm%igrid(i)+iskip,ivar)=0
+#else
            unew(reception(icpu,ilevel)%igrid(i)+iskip,ivar)=0
+#endif
         end do
      end do
+     if(momentum_feedback>0)then
+        do i=1,reception(icpu,ilevel)%ngrid
+#ifdef LIGHT_MPI_COMM
+           pstarnew(reception(icpu,ilevel)%pcomm%igrid(i)+iskip) = 0
+#else
+           pstarnew(reception(icpu,ilevel)%igrid(i)+iskip) = 0
+#endif
+        end do
+     endif
      if(pressure_fix)then
         do i=1,reception(icpu,ilevel)%ngrid
+#ifdef LIGHT_MPI_COMM
+           divu(reception(icpu,ilevel)%pcomm%igrid(i)+iskip) = 0
+           enew(reception(icpu,ilevel)%pcomm%igrid(i)+iskip) = 0
+#else
            divu(reception(icpu,ilevel)%igrid(i)+iskip) = 0
            enew(reception(icpu,ilevel)%igrid(i)+iskip) = 0
+#endif
         end do
      end if
   end do
@@ -172,7 +190,11 @@ subroutine update_cosmomag(ilevel,exp_scale)
     ! Do the same for reception cells
     do icpu=1,ncpu
       do i=1,reception(icpu,ilevel)%ngrid
+#ifdef LIGHT_MPI_COMM
+        ind_cell = reception(icpu,ilevel)%pcomm%igrid(i)+iskip
+#else
         ind_cell = reception(icpu,ilevel)%igrid(i)+iskip
+#endif
         call scale_cosmomag(ind_cell,exp_scale)
       end do
     end do
@@ -229,11 +251,16 @@ subroutine set_uold(ilevel)
 #endif
      ! -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-     do ivar=1,nvar+3
+     do ivar=1,nvar_all
         do i=1,active(ilevel)%ngrid
            uold(active(ilevel)%igrid(i)+iskip,ivar) = unew(active(ilevel)%igrid(i)+iskip,ivar)
         end do
      end do
+     if(momentum_feedback>0)then
+        do i=1,active(ilevel)%ngrid
+           pstarold(active(ilevel)%igrid(i)+iskip) = pstarnew(active(ilevel)%igrid(i)+iskip)
+        end do
+     endif
      if(pressure_fix)then
         do i=1,active(ilevel)%ngrid
            ind_cell=active(ilevel)%igrid(i)+iskip
@@ -284,6 +311,7 @@ subroutine add_gravity_source_terms(ilevel)
   !--------------------------------------------------------------------------
   integer::i,ind,iskip,ind_cell
   real(dp)::d,u,v,w,e_kin,e_prim,d_old,fact
+  real(dp)::req=0_dp
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
@@ -301,7 +329,8 @@ subroutine add_gravity_source_terms(ilevel)
         e_kin=0.5d0*d*(u**2+v**2+w**2)
         e_prim=unew(ind_cell,neul)-e_kin
         d_old=max(uold(ind_cell,1),smallr)
-        fact=d_old/d*0.5*dtnew(ilevel)
+        if(strict_equilibrium>0)req=rho_eq(ind_cell)
+        fact=(d_old-req)/d*0.5d0*dtnew(ilevel)
         if(ndim>0)then
            u=u+f(ind_cell,1)*fact
            unew(ind_cell,2)=d*u

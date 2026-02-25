@@ -387,8 +387,8 @@ contains
         ! Resize posout, velout, varout, zout
         do idim=1,ndim
             tmparr(idim,1:nalloc1)=posout(idim,1:nalloc1)
-        deallocate(posout); allocate(posout(1:3,1:new_nalloc1))
         end do
+        deallocate(posout); allocate(posout(1:3,1:new_nalloc1))
         do idim=1,ndim
             posout(idim,1:nalloc1)=tmparr(idim,1:nalloc1)
         end do
