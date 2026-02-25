@@ -2,9 +2,6 @@
     Module to write grafic binary files used as initial conditions for
     non-cosmo simulations with RAMSES.
 
-    Be careful in cases where the order of the array representation matters!
-    Little/big endian issues are NOT dealt with!
-
     Used for the decaying turbulence test case in tests/hydro/decaying-turbulence
 '''
 from scipy.io import FortranFile
@@ -12,20 +9,22 @@ import numpy as np
 import struct
 import sys
 
-def write_grafic_header(filename, ncells, size, endian='<'):
+def write_grafic_header(filename, ncells, size, endian):
     ''' Write a simple header for the grafic binary file '''
+    i4 = np.dtype(f"{endian}i4").type
+    f4 = np.dtype(f"{endian}f4").type
     # variables for the header line
-    n1 = n2 = n3 = np.int32(ncells)
-    dx = np.float32(size/ncells)
-    xoff1 = xoff2 = xoff3 = np.float32(0.0)
-    boxlen = np.float32(size)
-    f1 = f2 = f3 = np.float32(0.0)
+    n1 = n2 = n3 = i4(ncells)
+    dx = f4(size/ncells)
+    xoff1 = xoff2 = xoff3 = f4(0.0)
+    boxlen = f4(size)
+    f1 = f2 = f3 = f4(0.0)
 
     with FortranFile(filename, "w") as f:
         f.write_record(n1, n2, n3, dx, xoff1, xoff2, xoff3, boxlen, f1, f2, f3)
 
 
-def write_grafic_data(filename, data, endian='<'):
+def write_grafic_data(filename, data, endian):
     ''' Write data in slices to grafic binary file '''
     ncells = data.shape[0]
     data_temp=data.transpose(2,0,1)
