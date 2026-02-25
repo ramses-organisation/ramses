@@ -47,7 +47,9 @@ subroutine read_hydro_params(nml_ok)
        & ,switch_solv_B,switch_solv_dens,switch_solv_min_dens &
 #endif
        & ,pressure_fix,beta_fix,scheme,riemann &
-       & ,strict_equilibrium
+       & ,strict_equilibrium &
+       & ,add_viscosity,viscosity_kind,mu_viscosity_constant
+
 
   ! Refinement parameters
   namelist/refine_params/x_refine,y_refine,z_refine,r_refine &

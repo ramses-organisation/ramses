@@ -170,4 +170,9 @@ module hydro_parameters
   integer::ixion=imetal
   integer::ichem=imetal
 
+  ! Artificial viscosity
+  logical :: add_viscosity = .false.
+  character(LEN=20)::viscosity_kind='constant_uniform' ! 'constant_uniform'
+  real(dp) :: mu_viscosity_constant = 0.001
+
 end module hydro_parameters

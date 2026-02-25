@@ -167,7 +167,7 @@ subroutine cmpdt(uu,gg,dx,dt,ncell)
   use const
   implicit none
   integer::ncell
-  real(dp)::dx,dt
+  real(dp)::dx,dt,dt_visc
   real(dp),dimension(1:nvector,1:nvar)::uu
   real(dp),dimension(1:nvector,1:ndim)::gg
 
@@ -275,6 +275,18 @@ subroutine cmpdt(uu,gg,dx,dt,ncell)
      dtcell = dx/uu(k,neul)*(sqrt(one+two*courant_factor*uu(k,1))-one)/uu(k,1)
      dt = min(dt,dtcell)
   end do
+
+  ! Maximum time step from viscosity
+
+
+  if (add_viscosity) then
+   select case (viscosity_kind)
+      case('constant_uniform')
+         dt_visc = (dx**2.0)/(4*mu_viscosity_constant)
+      end select
+
+       dt = min(dt,dt_visc)
+   end if
 
 end subroutine cmpdt
 !###########################################################
