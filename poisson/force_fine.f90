@@ -52,6 +52,9 @@ subroutine force_fine(ilevel,icount)
      if(ndim>2)xc(ind,3)=(dble(iz)-0.5D0)*dx
   end do
 
+  ! reset force to zero
+  f=0d0
+
   !------------------------------
   ! Compute gradient of potential
   !------------------------------
