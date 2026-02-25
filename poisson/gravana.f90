@@ -28,18 +28,18 @@ subroutine gravana(x,f,dx,ncell)
      ! Constant vector
      do idim=1,ndim
         do i=1,ncell
-           f(i,idim)=gravity_params(idim)
+           f(i,idim)=gravity_force_ana_params(idim)
         end do
      end do
 
   case(2)
      ! Point mass
-     gmass=gravity_params(1) ! GM
+     gmass=gravity_force_ana_params(1) ! GM
      emass=dx
-     emass=gravity_params(2) ! Softening length
-     xmass=gravity_params(3) ! Point mass coordinates
-     ymass=gravity_params(4)
-     zmass=gravity_params(5)
+     emass=gravity_force_ana_params(2) ! Softening length
+     xmass=gravity_force_ana_params(3) ! Point mass coordinates
+     ymass=gravity_force_ana_params(4)
+     zmass=gravity_force_ana_params(5)
      do i=1,ncell
         rx=0.0d0; ry=0.0d0; rz=0.0d0
         rx=x(i,1)-xmass
@@ -63,9 +63,9 @@ subroutine gravana(x,f,dx,ncell)
      ! vertical galactic gravitational field
      ! Kuijken & Gilmore 1989 taken from Joung & MacLow (2006)
      ! g = -a1 z / sqrt(z^2+z0^2) - a2 z
-     a1 = gravity_params(1) ! Star potential coefficient in kpc Myr-2
-     a2 = gravity_params(2) ! DM potential coefficient in Myr-2
-     z0 = gravity_params(3) ! Scale height in pc
+     a1 = gravity_force_ana_params(1) ! Star potential coefficient in kpc Myr-2
+     a2 = gravity_force_ana_params(2) ! DM potential coefficient in Myr-2
+     z0 = gravity_force_ana_params(3) ! Scale height in pc
     ! standard values are: a1 = 1.42d-3, a2 = 5.49d-4, z0 = 0.18d3 pc
 
     ! The gravitational field is given by

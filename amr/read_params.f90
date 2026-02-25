@@ -642,7 +642,8 @@ subroutine read_poisson_params(namelist_unit,nml_ok)
    integer::nml_err
 
    namelist/poisson_params/epsilon,gravity_type,gravity_params &
-   & ,cg_levelmin,cic_levelmax,self_gravity,gravity_rho_ana_type,gravity_force_ana_type
+   & ,cg_levelmin,cic_levelmax,self_gravity,gravity_rho_ana_type,gravity_force_ana_type &
+   & ,gravity_rho_ana_params,gravity_force_ana_params
 
    ! Go to the beginning of the file
    rewind(namelist_unit)
@@ -662,10 +663,12 @@ subroutine read_poisson_params(namelist_unit,nml_ok)
          self_gravity=.true.
          gravity_rho_ana_type=-gravity_type
          gravity_force_ana_type=0
+         gravity_rho_ana_params=gravity_params
       else if(gravity_type>0)then
          self_gravity=.false.
          gravity_rho_ana_type=0
          gravity_force_ana_type=gravity_type
+         gravity_force_ana_params=gravity_params
       endif
    endif
 

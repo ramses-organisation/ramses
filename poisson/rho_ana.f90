@@ -28,10 +28,10 @@ subroutine rho_ana(x,d,dx,ncell)
   case(2)
     ! point mass
     emass=dx
-    emass=gravity_params(1) ! Softening length
-    xmass=gravity_params(2) ! Point mass coordinates
-    ymass=gravity_params(3)
-    zmass=gravity_params(4)
+    emass=gravity_rho_ana_params(1) ! Softening length
+    xmass=gravity_rho_ana_params(2) ! Point mass coordinates
+    ymass=gravity_rho_ana_params(3)
+    zmass=gravity_rho_ana_params(4)
     dmass=1.0d0/(emass*(1.0d0+emass)**2)
 
     do i=1,ncell
@@ -51,9 +51,9 @@ subroutine rho_ana(x,d,dx,ncell)
   case(3)
     ! vertical galactic gravitational field
     ! Kuijken & Gilmore 1989 taken from Joung & MacLow (2006)
-    a1 = gravity_params(1) ! Star potential coefficient in kpc Myr-2
-    a2 = gravity_params(2) ! DM potential coefficient in Myr-2
-    z0 = gravity_params(3) ! Scale height in pc
+    a1 = gravity_rho_ana_params(1) ! Star potential coefficient in kpc Myr-2
+    a2 = gravity_rho_ana_params(2) ! DM potential coefficient in Myr-2
+    z0 = gravity_rho_ana_params(3) ! Scale height in pc
     ! standard values are: a1 = 1.42d-3, a2 = 5.49d-4, z0 = 0.18d3 pc
 
     ! The gravitational field is given by

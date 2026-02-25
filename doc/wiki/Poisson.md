@@ -18,7 +18,7 @@ Different sources of gravity can be added to the simulation. To activate self-gr
 * adding an analytical density distribution to the Poisson source term from which the gravitational potential is determined (see rho_ana.f90)
 * adding an analytical force directly (see gravana.f90)
 
-Currently, these two methods cannot be combined.
+These two methods can be combined by setting both `gravity_rho_ana_type` and `gravity_force_ana_type`.
 
 | Variable name | Fortran type | Default value  | Description      |
 |:------------------- |:-------|:----- |:------------------------- |
@@ -27,6 +27,8 @@ Currently, these two methods cannot be combined.
 | `gravity_rho_ana_type`      | `integer`  | 0     | Add gravity from an analytical density profile. This will add an analytical contribution to the Poisson source term. 0 = no additional contribution, 2 = a point mass, 3 = galactic disk (see rho_ana.f90)
 | `gravity_force_ana_type`      | `integer`  | 0     | Add an analytical gravitational force. 0 = no additional contribution, 1 = constant vector, 2 = a point mass, 3 = galactic disk (see gravana.f90)
 | `epsilon`           | `real`  | 1e-4  | Stopping criterion for the iterative Poisson solver: residual 2-norm should be lower than `epsilon` times the right hand side 2-norm.
-| `gravity_params`    | `real array`  | 0.0, | Parameters used to define the analytical gravity field (routine `gravana.f90`) or the analytical mass density field (routine `rho_ana.f90`).
+| `gravity_params`    | `real array`  | 0.0, | (deprecated) Parameters used to define the analytical gravity field (routine `gravana.f90`) or the analytical mass density field (routine `rho_ana.f90`).
+| `gravity_rho_ana_params`    | `real array`  | 0.0, | Parameters used to define the analytical mass density field (routine `rho_ana.f90`).
+| `gravity_force_ana_params`    | `real array`  | 0.0, | Parameters used to define the analytical gravity field (routine `gravana.f90`)
 | `cg_levelmin`       | `integer`  | 999 | Minimum level from which the Conjugate Gradient solver is used in place of the Multigrid solver.
 | `cic_levelmax`      |	`integer`  | 0	 | Maximum level for CIC dark matter interpolation (default `cic_levelmax=nlevelmax`)
