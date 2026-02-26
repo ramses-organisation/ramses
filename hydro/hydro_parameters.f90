@@ -123,6 +123,7 @@ module hydro_parameters
 #endif
 #if NENER>0
   real(dp),dimension(1:MAXREGION,1:NENER)::prad_region=0
+  real(dp),dimension(1:MAXREGION,1:NENER)::Erad_region=0
 #endif
 #if NVAR>NHYDRO+NENER
   real(dp),dimension(1:MAXREGION,1:NVAR-NHYDRO-NENER)::var_region=0

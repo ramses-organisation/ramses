@@ -23,6 +23,8 @@ This sets of parameters, contained in the namelist block `&INIT_PARAMS`. This is
 | `A_region=0.0`  | `real arrays` | X magnetic field. |
 | `B_region=0.0`  | `real arrays` | Y magnetic field. |
 | `C_region=0.0`  | `real arrays` | Z magnetic field. |
+| `prad_region=0.0`  | `2D real arrays` | Nener fields, as pressures. |
+| `Erad_region=0.0`  | `2D real arrays` | Nener fields, as energies. |
 | `filetype=ascii`  | `20*char` | Type of initial conditions file for particles. Possible choices are `ascii` or `grafic`. |
 | `aexp_ini=10.0`  | `real` | This parameter sets the starting expansion factor for cosmology runs only. Default value is read in the IC file. |
 | `multiple=.false.` | `logical` | If `.true.`, each processors reads its own IC file. For parallel runs only. |

@@ -31,7 +31,7 @@ subroutine read_hydro_params(nml_ok)
        & ,var_region &
 #endif
 #if NENER>0
-       & ,prad_region &
+       & ,prad_region,Erad_region &
 #endif
        & ,omega_b,alpha_dense_core,beta_dense_core,crit_dense_core,delta_rho,theta_mag,mass_c,Mach
 
