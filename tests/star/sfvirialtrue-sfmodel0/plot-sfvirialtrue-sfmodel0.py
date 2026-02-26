@@ -128,9 +128,12 @@ to_check = data["data"]
 for key in data["particle"].keys():
     to_check['particle '+key] = data["particle"][key]
 
+# default test nproc is 2
+nproc=2
+
 # tweak tolerance to allow for 2p vs 4p/8p/12p deviations:
 tolerance={}
-if(0):
+if(nproc!=2):
     tolerance={"density":1.0e-4,\
                "pressure":1.e-4,\
                "temperature":1.e-4,\
@@ -138,7 +141,7 @@ if(0):
 }
 
 # and this is the "default tolerance"
-if(1):
+if(nproc==2):
      tolerance={"all":1.0e-13,\
                }
 visu_ramses.check_solution(to_check, 'sfvirialtrue-sfmodel0',tolerance=tolerance)#,overwrite=True)
