@@ -72,10 +72,11 @@ module hydro_parameters
   real(dp),dimension(1:MAXBOUND)::B_bound=0
   real(dp),dimension(1:MAXBOUND)::C_bound=0
 #endif
-  ! TODO allow other variables in inflow:
 #if NENER>0
   real(dp),dimension(1:MAXBOUND,1:NENER)::prad_bound=0
+  real(dp),dimension(1:MAXBOUND,1:NENER)::Erad_bound=0
 #endif
+  ! TODO allow passive scalar variables in inflow:
 #if NVAR>NHYDRO+NENER
   real(dp),dimension(1:MAXBOUND,1:NVAR-NHYDRO-NENER)::var_bound=0
 #endif

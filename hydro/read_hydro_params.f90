@@ -9,10 +9,10 @@ subroutine read_hydro_params(nml_ok)
   !--------------------------------------------------
   integer::i,idim,nboundary_true=0
   integer ,dimension(1:MAXBOUND)::bound_type
-  real(dp)::ek_bound
+  real(dp)::e_bound
   logical :: dummy
-#ifdef SOLVERmhd
-  real(dp)::em_bound
+#if NENER>0
+  integer::irad
 #endif
 
   !--------------------------------------------------
@@ -65,7 +65,7 @@ subroutine read_hydro_params(nml_ok)
        & ,ibound_min,ibound_max,jbound_min,jbound_max &
        & ,kbound_min,kbound_max &
 #if NENER>0
-       & ,prad_bound &
+       & ,prad_bound,Erad_bound &
 #endif
 #ifdef SOLVERmhd
        & ,A_bound,B_bound,C_bound &
@@ -420,31 +420,35 @@ subroutine read_hydro_params(nml_ok)
   do i=1,nboundary
      boundary_var(i,1)=MAX(d_bound(i),smallr)
      boundary_var(i,2)=d_bound(i)*u_bound(i)
-#ifdef SOLVERmhd
+     e_bound=0.5d0*d_bound(i)*u_bound(i)**2
+#if NDIM>1 || SOLVERmhd
      boundary_var(i,3)=d_bound(i)*v_bound(i)
+     e_bound=e_bound+0.5d0*d_bound(i)*v_bound(i)**2
+#endif
+#if NDIM>2 || SOLVERmhd
      boundary_var(i,4)=d_bound(i)*w_bound(i)
+     e_bound=e_bound+0.5d0*d_bound(i)*w_bound(i)**2
+#endif
+#ifdef SOLVERmhd
      boundary_var(i,6)=A_bound(i)
      boundary_var(i,7)=B_bound(i)
      boundary_var(i,8)=C_bound(i)
      boundary_var(i,nvar+1)=A_bound(i)
      boundary_var(i,nvar+2)=B_bound(i)
      boundary_var(i,nvar+3)=C_bound(i)
-     ek_bound=0.5d0*d_bound(i)*(u_bound(i)**2+v_bound(i)**2+w_bound(i)**2)
-     em_bound=0.5d0*(A_bound(i)**2+B_bound(i)**2+C_bound(i)**2)
-     boundary_var(i,5)=ek_bound+em_bound+P_bound(i)/(gamma-1.0d0)
-#else
-#if NDIM>1
-     boundary_var(i,3)=d_bound(i)*v_bound(i)
+     e_bound=e_bound + 0.5d0*(A_bound(i)**2+B_bound(i)**2+C_bound(i)**2) ! ekin+emag
 #endif
-#if NDIM>2
-     boundary_var(i,4)=d_bound(i)*w_bound(i)
+#if NENER>0
+   do irad=1,nener
+      if(io_nener_energies)then
+         boundary_var(i,nhydro+irad)=Erad_bound(i,irad)
+      else
+         boundary_var(i,nhydro+irad)=prad_bound(i,irad)/(gamma_rad(irad)-1.0d0)
+      endif
+      e_bound=e_bound + boundary_var(i,nhydro+irad)
+   end do
 #endif
-     ek_bound=0.0d0
-     do idim=1,ndim
-        ek_bound=ek_bound+0.5d0*boundary_var(i,idim+1)**2/boundary_var(i,1)
-     end do
-     boundary_var(i,neul)=ek_bound+P_bound(i)/(gamma-1.0d0)
-#endif
+     boundary_var(i,neul)=e_bound+P_bound(i)/(gamma-1.0d0) !total energy, including nener
   end do
 
   !-----------------------------------
