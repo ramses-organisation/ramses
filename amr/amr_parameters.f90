@@ -175,6 +175,7 @@ module amr_parameters
   real(dp)::sf_tdiss=0               ! Dissipation timescale for subgrid turbulence in units of turbulent crossing time
   integer::sf_model=3                ! Virial star formation model
   logical::randomize_sf=.true.       ! Use the poissdev stellar mass random drawing
+  real(dp)::PoissMeanMult=1.0        ! Poisson Mean Multiplier, applied only when randomize_sf=.false., in test context
   integer::nlevel_collapse=3         ! Number of levels to follow initial dark matter collapse (cosmo=.true. only)
   real(dp)::mass_star_max=120        ! Maximum mass of a star in solar mass
   real(dp)::mass_sne_min=10          ! Minimum mass of a single supernova in solar mass

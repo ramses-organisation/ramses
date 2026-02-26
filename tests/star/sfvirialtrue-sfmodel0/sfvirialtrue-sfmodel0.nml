@@ -1,0 +1,147 @@
+&RUN_PARAMS
+cosmo=.false.
+pic=.true.
+poisson=.true.
+hydro=.true.
+rt=.false.
+sink=.false.
+clumpfind=.false.
+nrestart=0
+nremap=10
+nsubcycle=10*2
+ncontrol=1
+/
+
+&OUTPUT_PARAMS
+noutput=5	!  not used
+tout=1.      	!  (using units_time)
+tend=0.51    	!  active
+delta_tout=0.5 	!  active
+/
+
+&INIT_PARAMS
+filetype='dice'
+initfile(1)='./dwarf_galaxy/'
+/
+
+&AMR_PARAMS
+boxlen=50                 ! 50 kpc
+levelmin=7                ! 50 kpc / 2^7  = 390 pc resolution
+levelmax=11               ! 50 kpc / 2^11 =  25 pc resolution
+ngridmax=200000
+npartmax=1000000
+/
+
+!&POISSON_PARAMS
+!epsilon=1e-4
+!/
+
+&BOUNDARY_PARAMS
+nboundary=6
+bound_type= 2, 2,  2,  2,  2,  2
+ibound_min=-1, 1, -1, -1, -1, -1
+ibound_max=-1, 1,  1,  1,  1,  1
+jbound_min= 0, 0, -1,  1, -1, -1
+jbound_max= 0, 0, -1,  1,  1,  1
+kbound_min= 0, 0,  0,  0, -1,  1
+kbound_max= 0, 0,  0,  0, -1,  1
+no_inflow=.true.
+/
+
+&UNITS_PARAMS
+units_density = 0.677025430198932E-22 ! 1e9 Msol/kpc^3
+units_time    = 0.470430312423675E+15 ! So that the gravitational constant G=1
+units_length  = 0.308567758128200E+22 ! kpc
+/
+
+&COOLING_PARAMS
+cooling=.true.
+metal=.true.       ! Requires compiling with additioanl hydro variable if set to true
+z_ave=0.1           ! Initial metallicity
+/
+
+&SF_PARAMS
+sf_virial=.true.
+sf_model=0
+n_star=0.1           ! Density threshold for star formation
+eps_star=0.1         ! Star formation efficiency (% of free-fall time)
+T2_star=10                      ! Cooling floor (in Kelvin)
+randomize_sf=.false.		! dont randomize SF for tests
+PoissMeanMult=30.		! PoissonMean multiplier for tests
+/
+
+&STELLAR_PARAMS
+iseed = 42
+/
+
+&FEEDBACK_PARAMS
+yield=0.1                       ! SN metal yield
+eta_sn=0.2                      ! Stellar pop mass fraction that goes SN
+t_sne=3.                        ! Stellar particle age at which to go SN, in Myr
+/
+
+&HYDRO_PARAMS
+gamma=1.4
+courant_factor=0.8
+slope_type=1
+pressure_fix=.true.
+beta_fix=0.5
+riemann='hllc'
+/
+
+&REFINE_PARAMS
+jeans_refine=10*4.
+mass_sph=1e-5
+m_refine=10*8.
+interpol_type=0
+interpol_var=1
+/
+
+&DICE_PARAMS
+ic_file='dwarf_galaxy.g2'   ! Name of the initial conditions file
+ic_nfile=1                    ! If greater than one, look for files with name matching ic_file//'.n'
+ic_ifout=1                    ! Change ramses output index for restarts
+ic_format='Gadget2'           ! Format of the initial conditions. 'Gadget1' or 'Gadget2'
+ic_center=0.0,0.0,0.0         ! Shift center parameter. ICs are automatically shifted with boxlen/2
+ic_scale_pos=1.0              ! Scaling factor for the position vector
+ic_scale_vel=1.0              ! Scaling factor for the velocity vector
+ic_scale_mass=1.0             ! Scaling factor for the mass
+ic_scale_u=1.0                ! Scaling factor for the internal energy
+ic_scale_age=1.0              ! Scaling factor for the particles age
+ic_scale_metal=1.0            ! Scaling factor for the metallicity
+ic_head_name='HEAD'           ! Name of the Header datablock (Gadget2 format only)
+ic_pos_name='POS '            ! Name of the position vector datablock (Gadget2 format only)
+ic_vel_name='VEL '            ! Name of the velocity vector datablock (Gadget2 format only)
+ic_mass_name='MASS'           ! Name of the mass datablock (Gadget2 format only)
+ic_id_name='ID  '             ! Name of the particle identifier datablock (Gadget2 format only)
+ic_u_name='U   '              ! Name of the internal energy datablock (Gadget2 format only)
+ic_metal_name='Z   '          ! Name of the metallicity datablock (Gadget2 format only)
+ic_age_name='AGE '            ! Name of the particle age datablock (Gadget2 format only)
+IG_rho=1.0D-5                 ! Intergalactic gas density
+IG_T2=1.0D5                   ! Intergalactic gas temperature
+IG_metal=1.0D-4               ! Intergalactic gas metallicity
+amr_struct=.false.            ! Reproduce the AMR structure of the Gadget2 file resulting from a ramses to gadget conversion
+gadget_scale_l=3.085677581282D21 ! Gadget file length unit
+gadget_scale_v=1.0D5             ! Gadget file velocity unit
+gadget_scale_m=1.9891D43         ! Gadget file mass unit
+gadget_scale_t=3.15360e+13       ! Gadget file time unit
+ic_skip_type        = -1      ! Skip specific particle type
+cosmo_add_gas_index = -1      ! Gas particle type index for cosmo runs
+ic_mag_const=0.0,0.0,0.0      ! Background magnetic field value for x,y,z component
+ic_mag_center_x=0.0           ! x-coordinate of the magnetic field symmetry center
+ic_mag_center_y=0.0           ! y-coordinate of the magnetic field symmetry center
+ic_mag_center_z=0.0           ! z-coordinate of the magnetic field symmetry center
+ic_mag_axis_x=0.0             ! Magnetic field normal vector x-component
+ic_mag_axis_y=0.0             ! Magnetic field normal vector y-component
+ic_mag_axis_z=1.0             ! Magnetic field normal vector z-component
+ic_mag_scale_R=1.0            ! Toroidal magnetic field scalelength
+ic_mag_scale_H=1.0            ! Toroidal magnetic field scaleheight
+ic_mag_scale_B=0.0            ! Foreground toroidal magnetic field value
+/
+
+! Feedback
+T2_min=0                    ! if feedback can heat the gas to this temperature then deposit it; here deposits at every fine step
+epsilon_kin=1.              ! momentum feedback efficiency
+kin_mass_loading=100.       ! mass loading factor of momentum feedback
+cone_opening=90.            ! opening angle of the cone in which momentum feedback is deposited (180. means full sphere)
+/
