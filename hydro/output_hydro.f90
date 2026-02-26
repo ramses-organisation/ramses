@@ -114,7 +114,7 @@ subroutine backup_hydro(filename, filename_desc)
               ! Write non-thermal pressures
               ! (before thermal pressure because we need it to convert between total energy and pressure)
               do ivar = nhydro+1, nhydro+nener
-                 if(write_conservative)then
+                 if(write_conservative.or.io_nener_energies)then
                     write(field_name, '("non_thermal_energy_", i0.2)') ivar-nhydro
                     call gather_conservative_from_uold(ind_grid, iskip, ivar, xdp, ncache)
                  else

@@ -180,7 +180,7 @@ subroutine init_hydro
                  do ivar=nhydro+1,nhydro+nener
                     if(remap_pscalar(ivar-nhydro).gt.-1) read(ilun)xx
                     if(remap_pscalar(ivar-nhydro).gt.0) then
-                       if (read_conservative) then
+                       if (read_conservative.or.io_nener_energies) then
                           call scatter_conservative_to_uold(ind_grid, iskip, remap_pscalar(ivar-nhydro), xx, ncache)
                        else
                           call scatter_primitive_to_uold(ind_grid, iskip, remap_pscalar(ivar-nhydro), xx, ncache)
