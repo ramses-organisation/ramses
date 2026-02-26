@@ -114,7 +114,7 @@ extern double    *vxp_gas,*vyp_gas,*vzp_gas;
 
 
 
-double  LL;       /* LL = extension of fields in R and z. */
+extern double  LL;       /* LL = extension of fields in R and z. */
 
 
 

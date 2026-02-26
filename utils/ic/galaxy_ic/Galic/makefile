@@ -1,4 +1,4 @@
-EXEC   = bin/galic_MakeDiskGalaxy
+EXEC   = galic_MakeDiskGalaxy
 
 SRCS   = main.c  globvars.c \
 	halo.c haloset.c escape.c \
