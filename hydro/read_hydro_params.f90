@@ -58,6 +58,10 @@ subroutine read_hydro_params(nml_ok)
        & ,err_grad_A,err_grad_B,err_grad_C,err_grad_B2 &
        & ,floor_A,floor_B,floor_C,floor_B2,interpol_mag_type &
 #endif
+#if NENER>0
+       & ,err_grad_prad,err_grad_Erad &
+       & ,floor_prad,floor_Erad &
+#endif
        & ,interpol_var,interpol_type,sink_refine
 
   ! Boundary parameters

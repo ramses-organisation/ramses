@@ -101,10 +101,13 @@ module hydro_parameters
   real(dp)::err_grad_lor=-1.0  ! Lorentz factor gradient
 #endif
   real(dp)::mass_sph=0.0d0     ! mass_sph
-  ! TODO allow for discontinuity-based refine on non-standard hydro vars:
 #if NENER>0
   real(dp),dimension(1:NENER)::err_grad_prad=-1
+  real(dp),dimension(1:NENER)::err_grad_Erad=-1
+  real(dp),dimension(1:NENER)::floor_prad=-1
+  real(dp),dimension(1:NENER)::floor_Erad=-1
 #endif
+  ! TODO allow for discontinuity-based refine on passive scalars:
 #if NVAR>NHYDRO+NENER
   real(dp),dimension(1:NVAR-NHYDRO-NENER)::err_grad_var=-1
 #endif
