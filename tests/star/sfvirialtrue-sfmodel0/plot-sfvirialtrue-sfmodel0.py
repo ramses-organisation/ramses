@@ -15,7 +15,7 @@ from matplotlib.colors import LogNorm
 fig, ax = plt.subplots(nrows=3, ncols=3, figsize=(12, 8))
 
 # Load RAMSES output
-data = visu_ramses.load_snapshot(3,read_hydro=True)
+data = visu_ramses.load_snapshot(2,read_hydro=True)
 xp = data["particle"]["position_x"]
 yp = data["particle"]["position_y"]
 zp = data["particle"]["position_z"]
@@ -120,14 +120,13 @@ for c in cb:
 fig.savefig('sfvirialtrue-sfmodel0.pdf',bbox_inches='tight')
 fig.savefig('sfvirialtrue-sfmodel0.png') # => produces a sharper figure on mac
 
-to_check={}
+#to_check={}
 #to_check = data["particle"]
-to_check["pressure"]=z5.flatten()  # data["data"]["pressure"]
-to_check["density"]=z1.flatten()
-to_check["temperature"]=temp.flatten()
-to_check["metallicity"]=Z.flatten()
-to_check = data["particle"]
+#to_check["pressure"]=z5.flatten()  # data["data"]["pressure"]
 
+to_check = data["data"]
+for key in data["particle"].keys():
+    to_check['particle '+key] = data["particle"][key]
 
 # tweak tolerance to allow for 2p vs 4p/8p/12p deviations:
 tolerance={}
@@ -136,7 +135,9 @@ if(0):
                "pressure":1.e-4,\
                "temperature":1.e-4,\
                "metallicity":1.e-4,\
-               }
+}
+
+# and this is the "default tolerance"
 if(1):
      tolerance={"all":1.0e-13,\
                }
