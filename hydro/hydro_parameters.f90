@@ -102,10 +102,10 @@ module hydro_parameters
 #endif
   real(dp)::mass_sph=0.0d0     ! mass_sph
 #if NENER>0
-  real(dp),dimension(1:NENER)::err_grad_prad=-1
-  real(dp),dimension(1:NENER)::err_grad_Erad=-1
-  real(dp),dimension(1:NENER)::floor_prad=-1
-  real(dp),dimension(1:NENER)::floor_Erad=-1
+  real(dp)::err_grad_prad=-1
+  real(dp)::err_grad_Erad=-1
+  real(dp)::floor_prad=-1
+  real(dp)::floor_Erad=-1
 #endif
   ! TODO allow for discontinuity-based refine on passive scalars:
 #if NVAR>NHYDRO+NENER
