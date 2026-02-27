@@ -185,7 +185,7 @@ subroutine hydro_refine(ug,um,ud,ok,nn,ilevel)
 #if NENER>0
   if(err_grad_prad >= 0.)then
      do k=1,nn
-        pg=0.0D0 ; pm=0.0D0 ; pd=0.0D0 ; 
+        pg=0.0D0 ; pm=0.0D0 ; pd=0.0D0 ;
         do irad=1,nener
            pg=pg+ug(k,nhydro+irad)*(gamma_rad(irad)-1d0)
            pm=pm+um(k,nhydro+irad)*(gamma_rad(irad)-1d0)
@@ -200,7 +200,7 @@ subroutine hydro_refine(ug,um,ud,ok,nn,ilevel)
 
   if(err_grad_Erad >= 0.)then
      do k=1,nn
-        Eg=0.0D0 ; Em=0.0D0 ; Ed=0.0D0 ; 
+        Eg=0.0D0 ; Em=0.0D0 ; Ed=0.0D0 ;
         do irad=1,nener
            Eg=Eg+ug(k,nhydro+irad)
            Em=Em+um(k,nhydro+irad)
