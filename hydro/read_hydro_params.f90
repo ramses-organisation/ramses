@@ -89,7 +89,8 @@ subroutine read_hydro_params(nml_ok)
   ! Star formation parameters
   namelist/sf_params/m_star,n_star,T2_star,g_star,del_star &
        & ,eps_star,jeans_ncells,sf_virial,sf_trelax,sf_tdiss,sf_model&
-       & ,sf_log_properties,sf_imf,sf_compressive,randomize_sf
+       & ,sf_log_properties,sf_imf,sf_compressive,randomize_sf&
+       & ,PoissMeanMult
 
   ! Units parameters
   namelist/units_params/units_density,units_time,units_length
