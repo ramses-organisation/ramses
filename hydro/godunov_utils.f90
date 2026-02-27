@@ -118,9 +118,9 @@ subroutine hydro_refine(ug,um,ud,ok,nn)
      do k=1,nn
         pg=0.0D0 ; pm=0.0D0 ; pd=0.0D0 ; 
         do irad=1,nener
-           pg=pg+ug(k,nhydro+irad)*(gamma_rad(ivar)-1d0)
-           pm=pm+um(k,nhydro+irad)*(gamma_rad(ivar)-1d0)
-           pd=pd+ud(k,nhydro+irad)*(gamma_rad(ivar)-1d0)
+           pg=pg+ug(k,nhydro+irad)*(gamma_rad(irad)-1d0)
+           pm=pm+um(k,nhydro+irad)*(gamma_rad(irad)-1d0)
+           pd=pd+ud(k,nhydro+irad)*(gamma_rad(irad)-1d0)
         end do
         error=2.0d0*MAX( &
              & ABS((pd-pm)/(pd+pm+floor_prad)), &
