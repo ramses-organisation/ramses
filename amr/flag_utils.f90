@@ -5,6 +5,11 @@
 subroutine flag
   use amr_commons
   implicit none
+  !--------------------------------------------------------------
+  ! This routine compute the refinement map for all levels.
+  ! The array flag1 is used to store the refinement map.
+  ! The array flag2 is used as temporary workspace.
+  !--------------------------------------------------------------
   integer::ilevel
 
   if(verbose)write(*,*)'Entering flag'
@@ -60,6 +65,14 @@ subroutine flag_fine(ilevel,icount)
   integer::ilevel,icount
   !--------------------------------------------------------
   ! This routine builds the refinement map at level ilevel.
+  !
+  ! Parameters:
+  ! ------------
+  ! - ilevel integer
+  !       the current level for which the refinement map should
+  !       be computed
+  ! - icount integer
+  !       the current step in the subcycle
   !--------------------------------------------------------
   integer::iexpand
 
@@ -116,6 +129,20 @@ subroutine init_flag(ilevel)
   ! This routine initialize the refinement map
   ! to a minimal state in order to satisfy the
   ! refinement rules.
+  !
+  ! The array flag1 is modified. It is set to 1 for cells that
+  ! contains son cells that are themselves already refined or
+  ! are “to be refined” (ie already flagged).
+  ! These are known because the the flagging operation
+  ! is done level by level, starting from the finer ones.
+  !
+  ! In levels below levelmin, all cells are marked for refinement.
+  !
+  ! Parameters:
+  ! ------------
+  ! - ilevel integer
+  !       the current level for which the refinement map should
+  !       be initialized
   !-------------------------------------------
   integer::i,ind,iskip
 
@@ -437,8 +464,20 @@ subroutine poisson_refine(ind_cell,ok,ncell,ilevel)
   integer,dimension(1:nvector)::ind_cell
   logical,dimension(1:nvector)::ok
   !-------------------------------------------------
-  ! This routine sets flag1 to 1 if cell statisfy
-  ! user-defined physical criterion for refinement.
+  ! This routine sets ok to 1 if cell statisfy
+  ! the user-defined criterion for Lagrangian-based
+  ! refinement,
+  !
+  ! Parameters:
+  ! ------------
+  ! - ind_cell integer array
+  !       array of cell indices to be tested
+  ! - ok logical array
+  !       array of refinement flags to be updated
+  ! - ncell integer
+  !       number of cells to be tested
+  ! - ilevel integer
+  !       current AMR level
   !-------------------------------------------------
   integer::i,nx_loc
   real(dp)::d_scale,scale,dx,dx_loc,vol_loc
@@ -497,8 +536,21 @@ subroutine geometry_refine(xx,ok,ncell,ilevel)
   real(dp),dimension(1:nvector,1:ndim)::xx
   logical ,dimension(1:nvector)::ok
   !-------------------------------------------------
-  ! This routine sets flag1 to 1 if cell statisfy
-  ! user-defined physical criterion for refinement.
+  ! This routine apply a filter for the refinement based on the
+  ! geometric location of the cell.
+  !
+  ! It sets ok to 0 if cell lies outside the user-defined
+  ! geometric region that is allowed to refine at the level ilevel.
+  ! Parameters:
+  ! ------------
+  ! - xx real array
+  !       array of cell positions to be tested
+  ! - ok logical array
+  !       array of refinement flags to be updated
+  ! - ncell integer
+  !       number of cells to be tested
+  ! - ilevel integer
+  !       current AMR level
   !-------------------------------------------------
   real(dp)::er,xr,yr,zr,rr,xn,yn,zn,r,aa,bb
   integer ::i
