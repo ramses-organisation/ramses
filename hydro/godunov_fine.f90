@@ -803,7 +803,7 @@ subroutine add_viscosity_source_terms(ilevel)
 
             dxf = (dx_left(i, idim) + dx_right(i, idim))/2.0
 
-            viscosity_term(i, jdim) = viscosity_term(i, jdim) + (den_dvel_right - den_dvel_left)/dxf
+            viscosity_term(i, jdim) = viscosity_term(i, jdim) + (2.0 / ndim) * (den_dvel_right - den_dvel_left)/dxf
           end do
         end do
 
