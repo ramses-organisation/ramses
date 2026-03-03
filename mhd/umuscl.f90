@@ -55,9 +55,6 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar),save::qin
   real(dp),dimension(1:nvector,iu1:iu2+1,ju1:ju2+1,ku1:ku2+1,1:3),save::bf
 
-  ! Cell-centered slopes
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim),save::dq
-
   ! Face-centered slopes
   REAL(dp),DIMENSION(1:nvector,iu1:iu2+1,ju1:ju2+1,ku1:ku2+1,1:3,1:ndim),save::dbf
 
@@ -87,17 +84,17 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
   call ctoprim(uin,qin,bf,gravin,dt,ngrid)
 
   ! Compute TVD slopes
-  call uslope(qin,dq,bf,dbf,dx,dt,ngrid)
+  call uslope_mag(bf,dbf,dx,dt,ngrid)
 
   ! Compute 3D traced-states in all three directions
 #if NDIM==1
-     call trace1d(qin   ,dq    ,qm,qp                ,dx      ,dt,ngrid)
+     call trace1d(qin       ,qm,qp                ,dx      ,dt,ngrid)
 #endif
 #if NDIM==2
-     call trace2d(qin,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy   ,dt,ngrid)
+     call trace2d(qin,bf,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy   ,dt,ngrid)
 #endif
 #if NDIM==3
-     call trace3d(qin,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
+     call trace3d(qin,bf,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
 #endif
 
   ! Solve for 1D flux in X direction
@@ -193,7 +190,7 @@ end subroutine mag_unsplit
 !###########################################################
 !###########################################################
 #if NDIM==1
-SUBROUTINE  trace1d(q,dq,qm,qp,dx,dt,ngrid)
+SUBROUTINE  trace1d(q,qm,qp,dx,dt,ngrid)
   USE amr_parameters
   USE hydro_parameters
   USE const
@@ -203,7 +200,7 @@ SUBROUTINE  trace1d(q,dq,qm,qp,dx,dt,ngrid)
   REAL(dp)::dx,dt
 
   REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q
-  REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::dq
+  REAL(dp),DIMENSION(1:nvector,1:nvar,1:ndim)::dq
   REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qm
   REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qp
 
@@ -232,6 +229,9 @@ SUBROUTINE  trace1d(q,dq,qm,qp,dx,dt,ngrid)
   DO k = klo, khi
      DO j = jlo, jhi
         DO i = ilo, ihi
+           ! Cell-centered slopes
+           call uslope(q,dq,dtdx,i,j,k,ngrid)
+
            DO l = 1, ngrid
 
               ! Cell centered values
@@ -250,16 +250,16 @@ SUBROUTINE  trace1d(q,dq,qm,qp,dx,dt,ngrid)
 #endif
 
               ! TVD slopes in X direction
-              drx = half*dq(l,i,j,k,ir,1)
-              dux = half*dq(l,i,j,k,iu,1)
-              dvx = half*dq(l,i,j,k,iv,1)
-              dwx = half*dq(l,i,j,k,iw,1)
-              dpx = half*dq(l,i,j,k,ip,1)
-              dBx = half*dq(l,i,j,k,iB,1)
-              dCx = half*dq(l,i,j,k,iC,1)
+              drx = half*dq(l,ir,1)
+              dux = half*dq(l,iu,1)
+              dvx = half*dq(l,iv,1)
+              dwx = half*dq(l,iw,1)
+              dpx = half*dq(l,ip,1)
+              dBx = half*dq(l,iB,1)
+              dCx = half*dq(l,iC,1)
 #if NENER>0
               do irad=1,nener
-                 dex(irad) = half*dq(l,i,j,k,iC+irad,1)
+                 dex(irad) = half*dq(l,iC+irad,1)
               end do
 #endif
 
@@ -327,30 +327,24 @@ SUBROUTINE  trace1d(q,dq,qm,qp,dx,dt,ngrid)
               end do
 #endif
            END DO
-        END DO
-     END DO
-  END DO
 
-  ! passive scalars
 #if NVAR>NHYDRO+NENER
-  DO n = 9+nener, nvar
-     DO k = klo, khi
-        DO j = jlo, jhi
-           DO i = ilo, ihi
+           ! passive scalars
+           DO n = 9+nener, nvar
               DO l = 1, ngrid
                  a   = q(l,i,j,k,n )           ! Cell centered values
                  u   = q(l,i,j,k,iu)
-                 dax = half * dq(l,i,j,k,n,1)  ! TVD slope
+                 dax = half * dq(l,n,1)  ! TVD slope
                  sa0 = -u*dax                  ! Source terms
                  a   = a + sa0*dtdx            ! Predicted state
                  qp(l,i,j,k,n,1) = a - dax     ! Right state
                  qm(l,i,j,k,n,1) = a + dax     ! Left state
               END DO
            END DO
+#endif
         END DO
      END DO
   END DO
-#endif
 
 END SUBROUTINE trace1d
 #endif
@@ -359,7 +353,7 @@ END SUBROUTINE trace1d
 !###########################################################
 !###########################################################
 #if NDIM==2
-SUBROUTINE trace2d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dt,ngrid)
+SUBROUTINE trace2d(q,bf,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dt,ngrid)
   USE amr_parameters
   USE hydro_parameters
   USE const
@@ -369,7 +363,7 @@ SUBROUTINE trace2d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dt,ngrid)
   REAL(dp)::dx, dy, dt
 
   REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q
-  REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::dq
+  REAL(dp),DIMENSION(1:nvector,1:nvar,1:ndim)::dq
   REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qm
   REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qp
 
@@ -429,6 +423,9 @@ SUBROUTINE trace2d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dt,ngrid)
   DO k = klo, khi
      DO j = jlo, jhi
         DO i = ilo, ihi
+           ! Cell-centered slopes
+           call uslope(q,dq,dtdx,i,j,k,ngrid)
+
            DO l = 1, ngrid
 
               ! Cell centered values
@@ -453,30 +450,30 @@ SUBROUTINE trace2d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dt,ngrid)
               BR =  bf(l,i  ,j+1,k,2)
 
               ! Cell centered TVD slopes in X direction
-              drx = half * dq(l,i,j,k,ir,1)
-              dux = half * dq(l,i,j,k,iu,1)
-              dvx = half * dq(l,i,j,k,iv,1)
-              dwx = half * dq(l,i,j,k,iw,1)
-              dpx = half * dq(l,i,j,k,ip,1)
-              dBx = half * dq(l,i,j,k,iB,1)
-              dCx = half * dq(l,i,j,k,iC,1)
+              drx = half * dq(l,ir,1)
+              dux = half * dq(l,iu,1)
+              dvx = half * dq(l,iv,1)
+              dwx = half * dq(l,iw,1)
+              dpx = half * dq(l,ip,1)
+              dBx = half * dq(l,iB,1)
+              dCx = half * dq(l,iC,1)
 #if NENER>0
               do irad=1,nener
-                 dex(irad) = half*dq(l,i,j,k,iC+irad,1)
+                 dex(irad) = half*dq(l,iC+irad,1)
               end do
 #endif
 
               ! Cell centered TVD slopes in Y direction
-              dry = half * dq(l,i,j,k,ir,2)
-              duy = half * dq(l,i,j,k,iu,2)
-              dvy = half * dq(l,i,j,k,iv,2)
-              dwy = half * dq(l,i,j,k,iw,2)
-              dpy = half * dq(l,i,j,k,ip,2)
-              dAy = half * dq(l,i,j,k,iA,2)
-              dCy = half * dq(l,i,j,k,iC,2)
+              dry = half * dq(l,ir,2)
+              duy = half * dq(l,iu,2)
+              dvy = half * dq(l,iv,2)
+              dwy = half * dq(l,iw,2)
+              dpy = half * dq(l,ip,2)
+              dAy = half * dq(l,iA,2)
+              dCy = half * dq(l,iC,2)
 #if NENER>0
               do irad=1,nener
-                 dey(irad) = half*dq(l,i,j,k,iC+irad,2)
+                 dey(irad) = half*dq(l,iC+irad,2)
               end do
 #endif
 
@@ -663,22 +660,16 @@ SUBROUTINE trace2d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dt,ngrid)
               end do
 #endif
            END DO
-        END DO
-     END DO
-  END DO
 
 #if NVAR>NHYDRO+NENER
-  ! Passive scalars
-  DO n = 9+nener, nvar
-     DO k = klo, khi
-        DO j = jlo, jhi
-           DO i = ilo, ihi
+           ! Passive scalars
+           DO n = 9+nener, nvar
               DO l = 1, ngrid
                  r   = q(l,i,j,k,n )              ! Cell centered values
                  u   = q(l,i,j,k,iu)
                  v   = q(l,i,j,k,iv)
-                 drx = half * dq(l,i,j,k,n,1)     ! TVD slopes
-                 dry = half * dq(l,i,j,k,n,2)
+                 drx = half * dq(l,n,1)     ! TVD slopes
+                 dry = half * dq(l,n,2)
                  sr0 = -u*drx*dtdx -v*dry*dtdy    ! Source terms
                  r   = r + sr0                    ! Predicted state
                  qp(l,i,j,k,n,1) = r - drx        ! Right state
@@ -687,11 +678,10 @@ SUBROUTINE trace2d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dt,ngrid)
                  qm(l,i,j,k,n,2) = r + dry        ! Bottom state
               END DO
            END DO
+#endif
         END DO
      END DO
   END DO
-#endif
-
 END SUBROUTINE trace2d
 #endif
 !###########################################################
@@ -699,7 +689,7 @@ END SUBROUTINE trace2d
 !###########################################################
 !###########################################################
 #if NDIM==3
-SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
+SUBROUTINE trace3d(q,bf,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
   USE amr_parameters
   USE hydro_parameters
   USE const
@@ -709,7 +699,7 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
   REAL(dp)::dx, dy, dz, dt
 
   REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q
-  REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::dq
+  REAL(dp),DIMENSION(1:nvector,1:nvar,1:ndim)::dq
   REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qm
   REAL(dp),DIMENSION(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qp
 
@@ -790,6 +780,9 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
   DO k = klo, khi
      DO j = jlo, jhi
         DO i = ilo, ihi
+           ! Cell-centered slopes
+           call uslope(q,dq,dtdx,i,j,k,ngrid)
+
            DO l = 1, ngrid
 
               ! Cell centered values
@@ -815,40 +808,40 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               CR =  bf(l,i  ,j  ,k+1,3)
 
               ! Cell centered TVD slopes in X, Y and Z directions
-              drx = half * dq(l,i,j,k,ir,1)
-              dux = half * dq(l,i,j,k,iu,1)
-              dvx = half * dq(l,i,j,k,iv,1)
-              dwx = half * dq(l,i,j,k,iw,1)
-              dpx = half * dq(l,i,j,k,ip,1)
-              dBx = half * dq(l,i,j,k,iB,1)
-              dCx = half * dq(l,i,j,k,iC,1)
+              drx = half * dq(l,ir,1)
+              dux = half * dq(l,iu,1)
+              dvx = half * dq(l,iv,1)
+              dwx = half * dq(l,iw,1)
+              dpx = half * dq(l,ip,1)
+              dBx = half * dq(l,iB,1)
+              dCx = half * dq(l,iC,1)
 #if NENER>0
               do irad=1,nener
-                 dex(irad) = half*dq(l,i,j,k,iC+irad,1)
+                 dex(irad) = half*dq(l,iC+irad,1)
               end do
 #endif
-              dry = half * dq(l,i,j,k,ir,2)
-              duy = half * dq(l,i,j,k,iu,2)
-              dvy = half * dq(l,i,j,k,iv,2)
-              dwy = half * dq(l,i,j,k,iw,2)
-              dpy = half * dq(l,i,j,k,ip,2)
-              dAy = half * dq(l,i,j,k,iA,2)
-              dCy = half * dq(l,i,j,k,iC,2)
+              dry = half * dq(l,ir,2)
+              duy = half * dq(l,iu,2)
+              dvy = half * dq(l,iv,2)
+              dwy = half * dq(l,iw,2)
+              dpy = half * dq(l,ip,2)
+              dAy = half * dq(l,iA,2)
+              dCy = half * dq(l,iC,2)
 #if NENER>0
               do irad=1,nener
-                 dey(irad) = half*dq(l,i,j,k,iC+irad,2)
+                 dey(irad) = half*dq(l,iC+irad,2)
               end do
 #endif
-              drz = half * dq(l,i,j,k,ir,3)
-              duz = half * dq(l,i,j,k,iu,3)
-              dvz = half * dq(l,i,j,k,iv,3)
-              dwz = half * dq(l,i,j,k,iw,3)
-              dpz = half * dq(l,i,j,k,ip,3)
-              dAz = half * dq(l,i,j,k,iA,3)
-              dBz = half * dq(l,i,j,k,iB,3)
+              drz = half * dq(l,ir,3)
+              duz = half * dq(l,iu,3)
+              dvz = half * dq(l,iv,3)
+              dwz = half * dq(l,iw,3)
+              dpz = half * dq(l,ip,3)
+              dAz = half * dq(l,iA,3)
+              dBz = half * dq(l,iB,3)
 #if NENER>0
               do irad=1,nener
-                 dez(irad) = half*dq(l,i,j,k,iC+irad,3)
+                 dez(irad) = half*dq(l,iC+irad,3)
               end do
 #endif
               ! Face centered TVD slopes in transverse directions
@@ -1218,24 +1211,18 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
               end do
 #endif
            END DO
-        END DO
-     END DO
-  END DO
 
 #if NVAR>NHYDRO+NENER
-  ! Passive scalars
-  DO n = 9+nener, nvar
-     DO k = klo, khi
-        DO j = jlo, jhi
-           DO i = ilo, ihi
+           ! Passive scalars
+           DO n = 9+nener, nvar
               DO l = 1, ngrid
                  r   = q(l,i,j,k,n )            ! Cell centered values
                  u   = q(l,i,j,k,iu)
                  v   = q(l,i,j,k,iv)
                  w   = q(l,i,j,k,iw)
-                 drx = half * dq(l,i,j,k,n,1)   ! TVD slopes
-                 dry = half * dq(l,i,j,k,n,2)
-                 drz = half * dq(l,i,j,k,n,3)
+                 drx = half * dq(l,n,1)   ! TVD slopes
+                 dry = half * dq(l,n,2)
+                 drz = half * dq(l,n,3)
                  sr0 = -u*drx*dtdx -v*dry*dtdy -w*drz*dtdz   ! Source terms
                  r   = r + sr0                  ! Predicted state
                  qp(l,i,j,k,n,1) = r - drx      ! Right state
@@ -1246,11 +1233,10 @@ SUBROUTINE trace3d(q,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,dx,dy,dz,dt,ngrid)
                  qm(l,i,j,k,n,3) = r + drz      ! Back state
               END DO
            END DO
+#endif
         END DO
      END DO
   END DO
-#endif
-
 END SUBROUTINE trace3d
 #endif
 !###########################################################
@@ -2138,17 +2124,64 @@ end subroutine ctoprim
 !###########################################################
 !###########################################################
 !###########################################################
-subroutine uslope(q,dq,bf,dbf,dx,dt,ngrid)
+subroutine uslope(q,dq,dtdx,i,j,k,ngrid)
+   use amr_parameters,   only:dp,nvector,ndim
+   use hydro_parameters, only:nvar,slope_type,iu1,iu2,ju1,ju2,ku1,ku2
+   use const
+   use slope_types
+   implicit none
+
+   integer,intent(in)::ngrid
+   integer,intent(in)::i,j,k
+   real(dp),intent(in)::dtdx
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar),intent(in)::q
+   real(dp),dimension(1:nvector,1:nvar,1:ndim),intent(out)::dq
+
+   ! local variables
+   integer::l, n
+   real(dp)::slope_type_real
+
+   slope_type_real = REAL(slope_type, kind=dp)
+
+   do n = 1, nvar
+      if(slope_type==0)then
+         dq(:,n,:) = zero
+      else if(slope_type==1.or.slope_type==2)then  ! minmod or average
+         call calc_uslope_minmod_average(q,dq,i,j,k,n,ngrid,slope_type_real)
+#if NDIM>1
+      else if(slope_type==3)then
+         ! positivity preserving unsplit slope (2D or 3D)
+         call calc_uslope_positivity_preserving(q,dq,i,j,k,n,ngrid)
+#endif
+#if NDIM==3
+      else if(slope_type==7)then
+         ! van Leer
+         call calc_uslope_vanLeer(q,dq,i,j,k,n,ngrid)
+
+      else if(slope_type==8)then
+         ! generalized moncen/minmod parameterisation (van Leer 1979)
+         call calc_uslope_vanLeer_bis(q,dq,i,j,k,n,ngrid)
+#endif
+      else
+         write(*,*)'Unknown slope type'
+         call clean_stop
+      endif
+   end do
+
+end subroutine uslope
+!###########################################################
+!###########################################################
+!###########################################################
+!###########################################################
+subroutine uslope_mag(bf,dbf,dx,dt,ngrid)
   use amr_parameters, only:dp,nvector,ndim
-  use hydro_parameters, only:nvar,slope_type,slope_mag_type,iu1,iu2,ju1,ju2,ku1,ku2
+  use hydro_parameters, only:nvar,slope_mag_type,iu1,iu2,ju1,ju2,ku1,ku2
   use const
   use slope_types
   implicit none
 
   integer,intent(in)::ngrid
   real(dp),intent(in)::dx,dt
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar),intent(in)::q
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim),intent(out)::dq
   real(dp),dimension(1:nvector,iu1:iu2+1,ju1:ju2+1,ku1:ku2+1,1:3),intent(in)::bf
   real(dp),dimension(1:nvector,iu1:iu2+1,ju1:ju2+1,ku1:ku2+1,1:3,1:ndim),intent(out)::dbf
 
@@ -2162,40 +2195,7 @@ subroutine uslope(q,dq,bf,dbf,dx,dt,ngrid)
   jlo=MIN(1,ju1+1); jhi=MAX(1,ju2-1)
   klo=MIN(1,ku1+1); khi=MAX(1,ku2-1)
 
-  slope_type_real = REAL(slope_type, kind=dp)
   dtdx=dt/dx
-
-  do n = 1, nvar
-     do k = klo, khi
-        do j = jlo, jhi
-           do i = ilo, ihi
-              if(slope_type==0)then
-                 dq(:,i,j,k,n,:) = zero
-              else if(slope_type==1.or.slope_type==2)then  ! minmod or average
-                 call calc_uslope_minmod_average(q,dq,i,j,k,n,ngrid,slope_type_real)
-#if NDIM>1
-              else if(slope_type==3)then
-                 ! positivity preserving unsplit slope (2D or 3D)
-                 call calc_uslope_positivity_preserving(q,dq,i,j,k,n,ngrid)
-#endif
-#if NDIM==3
-              else if(slope_type==7)then
-                 ! van Leer
-                 call calc_uslope_vanLeer(q,dq,i,j,k,n,ngrid)
-
-              else if(slope_type==8)then
-                 ! generalized moncen/minmod parameterisation (van Leer 1979)
-                 call calc_uslope_vanLeer_bis(q,dq,i,j,k,n,ngrid)
-#endif
-              else
-                 write(*,*)'Unknown slope type',dx,dt
-                 call clean_stop
-              endif
-           end do
-        end do
-     end do
-  end do
-
 
   ! 1D/2D transverse TVD slopes for face-centered magnetic fields
 #if NDIM>1
@@ -2381,4 +2381,4 @@ subroutine uslope(q,dq,bf,dbf,dx,dt,ngrid)
   endif
 #endif
 
-end subroutine uslope
+end subroutine uslope_mag

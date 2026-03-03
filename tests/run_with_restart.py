@@ -88,6 +88,8 @@ def step_1(test_name):
         tend = nml["output_params"]["tend"]
         nml["output_params"]["tend"] = tend / 2
 
+    #nml["output_params"]["write_conservative"] = True
+
     f90nml.write(nml=nml, nml_path=nml_path, force=True)
 
 def step_2(test_name):
@@ -98,6 +100,7 @@ def step_2(test_name):
 
     nml_path = f"{test_name}.nml"
     nml = f90nml.read(nml_path)
+    nml_orig = f90nml.read(nml_path + "_backup")
 
     # Find the last output time
     all_outputs = sorted(glob.glob("output_*"))
@@ -111,12 +114,14 @@ def step_2(test_name):
         nml = apply_output_factor(nml, 2, add_extra_output_time=True)
     elif "tout" in nml["output_params"]:
         # recover original output list from namelist
-        nml_orig = f90nml.read(nml_path + "_backup")
         nml["output_params"]["tout"] = nml_orig["output_params"]["tout"]
     else:
         tend = nml["output_params"]["tend"]
         nml["output_params"]["tend"] = tend * 2
 
+    #nml["output_params"]["read_conservative"] = True
+    ##if "write_conservative" in nml_orig["output_params"]:
+    #nml["output_params"]["write_conservative"] = False #nml_orig["output_params"]["write_conservative"]
 
     f90nml.write(nml=nml, nml_path=nml_path, force=True)
 
