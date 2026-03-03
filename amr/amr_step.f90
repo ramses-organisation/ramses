@@ -408,7 +408,7 @@ recursive subroutine amr_step(ilevel,icount)
 
      ! Add viscous source terms to unew
       if(add_viscosity)then
-         call add_viscous_source_terms(ilevel)
+         call add_viscosity_source_terms(ilevel)
       endif
 
      ! Set uold equal to unew
