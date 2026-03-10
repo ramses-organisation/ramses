@@ -696,22 +696,22 @@ subroutine add_viscosity_source_terms(ilevel)
 
         ! Central value
         vel_neigh(i, 0, 0, 0, 1:ndim) = uloc(i, i3c(ind), j3c(ind), k3c(ind), 2:ndim + 1)/max(uloc(i, i3c(ind), j3c(ind), k3c(ind), 1), smallr)
-  
+
         ! left and right neighbors
         ! x coordinate
         vel_neigh(i, -1, 0, 0, 1:ndim) = uloc(i, i3l(ind), j3c(ind), k3c(ind), 2:ndim + 1)/max(uloc(i, i3l(ind), j3c(ind), k3c(ind), 1), smallr)
         vel_neigh(i, 1, 0, 0, 1:ndim) = uloc(i, i3r(ind), j3c(ind), k3c(ind), 2:ndim + 1)/max(uloc(i, i3r(ind), j3c(ind), k3c(ind), 1), smallr)
         den_left(i, 1) = max(uloc(i, i3l(ind), j3c(ind), k3c(ind), 1), smallr)
         den_right(i, 1) = max(uloc(i, i3r(ind), j3c(ind), k3c(ind), 1), smallr)
-        
+
 #if NDIM > 1
         ! y coordinate
         vel_neigh(i, 0, -1, 0, 1:ndim) = uloc(i, i3c(ind), j3l(ind), k3c(ind), 2:ndim + 1)/max(uloc(i, i3c(ind), j3l(ind), k3c(ind), 1), smallr)
         vel_neigh(i, 0, 1, 0, 1:ndim) = uloc(i, i3c(ind), j3r(ind), k3c(ind), 2:ndim + 1)/max(uloc(i, i3c(ind), j3r(ind), k3c(ind), 1), smallr)
         den_left(i, 2) = max(uloc(i, i3c(ind), j3l(ind), k3c(ind), 1), smallr)
         den_right(i, 2) = max(uloc(i, i3c(ind), j3r(ind), k3c(ind), 1), smallr)
-        
-#endif 
+
+#endif
 #if NDIM > 2
         ! z coordinate
         vel_neigh(i, 0, 0, -1, 1:ndim) = uloc(i, i3c(ind), j3c(ind), k3l(ind), 2:ndim + 1)/max(uloc(i, i3c(ind), j3c(ind), k3l(ind), 1), smallr)
@@ -721,12 +721,12 @@ subroutine add_viscosity_source_terms(ilevel)
 #endif
 
         ! Diagonal neighbors
-        ! same z coordinate      
+        ! same z coordinate
         vel_neigh(i, -1, -1, 0, 1:ndim) = uloc(i, i3l(ind), j3l(ind), k3c(ind), 2:ndim + 1)/max(uloc(i, i3l(ind), j3l(ind), k3c(ind), 1), smallr)
         vel_neigh(i, -1, 1, 0, 1:ndim) = uloc(i, i3l(ind), j3r(ind), k3c(ind), 2:ndim + 1)/max(uloc(i, i3l(ind), j3r(ind), k3c(ind), 1), smallr)
         vel_neigh(i, 1, -1, 0, 1:ndim) = uloc(i, i3r(ind), j3l(ind), k3c(ind), 2:ndim + 1)/max(uloc(i, i3r(ind), j3l(ind), k3c(ind), 1), smallr)
         vel_neigh(i, 1, 1,  0, 1:ndim) = uloc(i, i3r(ind), j3r(ind), k3c(ind), 2:ndim + 1)/max(uloc(i, i3r(ind), j3r(ind), k3c(ind), 1), smallr)
-        
+
         ! same y coordinate
         vel_neigh(i, -1, 0, -1, 1:ndim) = uloc(i, i3l(ind), j3c(ind), k3l(ind), 2:ndim + 1)/max(uloc(i, i3l(ind), j3c(ind), k3l(ind), 1), smallr)
         vel_neigh(i, -1, 0, 1, 1:ndim) = uloc(i, i3l(ind), j3c(ind), k3r(ind), 2:ndim + 1)/max(uloc(i, i3l(ind), j3c(ind), k3r(ind), 1), smallr)
@@ -740,7 +740,7 @@ subroutine add_viscosity_source_terms(ilevel)
         vel_neigh(i, 0, 1, 1, 1:ndim) = uloc(i, i3c(ind), j3r(ind), k3r(ind), 2:ndim + 1)/max(uloc(i, i3c(ind), j3r(ind), k3r(ind), 1), smallr)
 
       end do
-    
+
 
 ! Compute the viscosity term
       viscosity_term(1:ngrid, 1:ndim) = 0.0d0
@@ -780,19 +780,25 @@ subroutine add_viscosity_source_terms(ilevel)
 
         den = max(uold(ind_cell(i), 1), smallr) ! density of the cell
 
-        ! Crossed term F2_j = d_i (rho nu d_j v_i ) 
+        ! Crossed term F2_j = d_i (rho nu d_j v_i )
         do jdim = 1, ndim
           do idim = 1, ndim
+              if (idim == jdim) then
+                v_ileft_jtop = vel(idim)
+                v_ileft_jbottom = vel_neigh(i, -e(1, jdim), -e(2, jdim), -e(3, jdim), idim)
+                v_iright_jtop =  vel_neigh(i, e(1, jdim), e(2, jdim), e(3, jdim), idim)
+                v_iright_jbottom =  vel(idim)
+              else
+                ! Averaged value of the velocity at the top left corner of the cell
+                ! The cells with the same jdim coordinate as the cell i are omitted because they cancel out when subtracted to obtain the derivative
 
-              ! Averaged value of the velocity at the top left corner of the cell
-              ! The cells with the same jdim coordinate as the cell i are omitted because they cancel out when subtracted to obtain the derivative
-              v_ileft_jtop =     (vel_neigh(i, - e(1, jdim), - e(2, jdim), - e(3, jdim), idim) + vel_neigh(i, - e(1, idim) - e(1, jdim), - e(2, idim) - e(2, jdim), - e(3, idim) - e(3, jdim), idim))/4.0 
-              ! Averaged value of the velocity at the bottom left corner of the cell
-              v_ileft_jbottom  = (vel_neigh(i,   e(1, jdim),   e(2, jdim),   e(3, jdim), idim) + vel_neigh(i, - e(1, idim) + e(1, jdim), - e(2, idim) + e(2, jdim), - e(3, idim) + e(3, jdim), idim))/4.0
+                v_ileft_jtop =     (vel_neigh(i, - e(1, jdim), - e(2, jdim), - e(3, jdim), idim) + vel_neigh(i, - e(1, idim) - e(1, jdim), - e(2, idim) - e(2, jdim), - e(3, idim) - e(3, jdim), idim))/4.0
+                ! Averaged value of the velocity at the bottom left corner of the cell
+                v_ileft_jbottom  = (vel_neigh(i,   e(1, jdim),   e(2, jdim),   e(3, jdim), idim) + vel_neigh(i, - e(1, idim) + e(1, jdim), - e(2, idim) + e(2, jdim), - e(3, idim) + e(3, jdim), idim))/4.0
 
-              v_iright_jtop =    (vel_neigh(i, - e(1, jdim), - e(2, jdim), - e(3, jdim), idim) + vel_neigh(i,   e(1, idim) - e(1, jdim),   e(2, idim) - e(2, jdim),   e(3, idim) - e(3, jdim), idim))/4.0
-              v_iright_jbottom = (vel_neigh(i,   e(1, jdim),   e(2, jdim),   e(3, jdim), idim) + vel_neigh(i,   e(1, idim) + e(1, jdim),   e(2, idim) + e(2, jdim),   e(3, idim) + e(3, jdim), idim))/4.0
-
+                v_iright_jtop =    (vel_neigh(i, - e(1, jdim), - e(2, jdim), - e(3, jdim), idim) + vel_neigh(i,   e(1, idim) - e(1, jdim),   e(2, idim) - e(2, jdim),   e(3, idim) - e(3, jdim), idim))/4.0
+                v_iright_jbottom = (vel_neigh(i,   e(1, jdim),   e(2, jdim),   e(3, jdim), idim) + vel_neigh(i,   e(1, idim) + e(1, jdim),   e(2, idim) + e(2, jdim),   e(3, idim) + e(3, jdim), idim))/4.0
+              end if
               ! First derivative of the velocity at the left and right faces in the direction jdim
               ! The derivative on the left is computed as the difference between the top-left and bottom-left values divided by the distance between them, which is dx_loc
               den_dvel_left = ((den + den_left(i, idim))/2.0)*(nu_viscosity + nu_viscosity_left(idim))/2.0*((v_ileft_jtop - v_ileft_jbottom)/dx_loc)
@@ -800,30 +806,36 @@ subroutine add_viscosity_source_terms(ilevel)
 
               ! Second derivative at the cell center
               viscosity_term(i, jdim) = viscosity_term(i, jdim) + (den_dvel_right - den_dvel_left) / dx_loc
-          end do 
+          end do
         end do
 
 
-        ! Crossed term F3_i =  - (2/ndim) d_i rho nu d_j v_j 
+        ! Crossed term F3_i =  - (2/ndim) d_i rho nu d_j v_j
         do jdim = 1, ndim
           do idim = 1, ndim
+              if (idim == jdim) then
+                v_ileft_jtop = vel(jdim)
+                v_ileft_jbottom = vel_neigh(i, -e(1, jdim), -e(2, jdim), -e(3, jdim), jdim)
+                v_iright_jtop =  vel_neigh(i, e(1, jdim), e(2, jdim), e(3, jdim), jdim)
+                v_iright_jbottom =  vel(jdim)
+              else
+                ! Averaged value of the velocity at the top left corner of the cell
+                v_ileft_jtop =     (vel_neigh(i, - e(1, jdim), - e(2, jdim), - e(3, jdim), jdim) + vel_neigh(i, - e(1, idim) - e(1, jdim), - e(2, idim) - e(2, jdim), - e(3, idim) - e(3, jdim), jdim))/4.0
+                ! Averaged value of the velocity at the bottom left corner of the cell
+                v_ileft_jbottom  = (vel_neigh(i,   e(1, jdim),   e(2, jdim),   e(3, jdim), jdim) + vel_neigh(i, - e(1, idim) + e(1, jdim), - e(2, idim) + e(2, jdim), - e(3, idim) + e(3, jdim), jdim))/4.0
 
-              ! Averaged value of the velocity at the top left corner of the cell
-              v_ileft_jtop =     (vel_neigh(i, - e(1, jdim), - e(2, jdim), - e(3, jdim), jdim) + vel_neigh(i, - e(1, idim) - e(1, jdim), - e(2, idim) - e(2, jdim), - e(3, idim) - e(3, jdim), jdim))/4.0
-              ! Averaged value of the velocity at the bottom left corner of the cell
-              v_ileft_jbottom  = (vel_neigh(i,   e(1, jdim),   e(2, jdim),   e(3, jdim), jdim) + vel_neigh(i, - e(1, idim) + e(1, jdim), - e(2, idim) + e(2, jdim), - e(3, idim) + e(3, jdim), jdim))/4.0
+                v_iright_jtop =    (vel_neigh(i, - e(1, jdim), - e(2, jdim), - e(3, jdim), jdim) + vel_neigh(i,   e(1, idim) - e(1, jdim),   e(2, idim) - e(2, jdim),   e(3, idim) - e(3, jdim), jdim))/4.0
+                v_iright_jbottom =  (vel_neigh(i,   e(1, jdim),   e(2, jdim),   e(3, jdim), jdim) + vel_neigh(i,   e(1, idim) + e(1, jdim),   e(2, idim) + e(2, jdim),   e(3, idim) + e(3, jdim), jdim))/4.0
+              end if
 
-              v_iright_jtop =    (vel_neigh(i, - e(1, jdim), - e(2, jdim), - e(3, jdim), jdim) + vel_neigh(i,   e(1, idim) - e(1, jdim),   e(2, idim) - e(2, jdim),   e(3, idim) - e(3, jdim), jdim))/4.0
-              v_iright_jbottom =  (vel_neigh(i,   e(1, jdim),   e(2, jdim),   e(3, jdim), jdim) + vel_neigh(i,   e(1, idim) + e(1, jdim),   e(2, idim) + e(2, jdim),   e(3, idim) + e(3, jdim), jdim))/4.0
-              
               ! rho nu  d_j v_j
               den_dvel_left = ((den + den_left(i, idim))/2.0)*(nu_viscosity + nu_viscosity_left(idim))/2.0*((v_ileft_jtop - v_ileft_jbottom)/dx_loc)
               den_dvel_right = ((den + den_right(i, idim))/2.0)*(nu_viscosity + nu_viscosity_right(idim))/2.0*((v_iright_jtop - v_iright_jbottom)/dx_loc)
 
-              !  - (2/ndim) d_i rho nu d_j v_j 
+              !  - (2/ndim) d_i rho nu d_j v_j
               viscosity_term(i, idim) = viscosity_term(i, idim) - (2.0/ndim)*(den_dvel_right - den_dvel_left) / dx_loc
           end do
-        end do 
+        end do
 
       end do
 
