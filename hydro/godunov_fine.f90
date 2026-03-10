@@ -784,25 +784,25 @@ subroutine add_viscosity_source_terms(ilevel)
         do jdim = 1, ndim
           do idim = 1, ndim
               if (idim == jdim) then
-                v_ileft_jtop = vel(idim)
-                v_ileft_jbottom = vel_neigh(i, -e(1, jdim), -e(2, jdim), -e(3, jdim), idim)
-                v_iright_jtop =  vel_neigh(i, e(1, jdim), e(2, jdim), e(3, jdim), idim)
-                v_iright_jbottom =  vel(idim)
+                v_ileft_jtop     =   vel_neigh(i, -e(1, jdim), -e(2, jdim), -e(3, jdim), idim)
+                v_ileft_jbottom  =   vel(idim)
+                v_iright_jtop    =   vel(idim)
+                v_iright_jbottom =   vel_neigh(i, e(1, jdim), e(2, jdim), e(3, jdim), idim)
               else
                 ! Averaged value of the velocity at the top left corner of the cell
                 ! The cells with the same jdim coordinate as the cell i are omitted because they cancel out when subtracted to obtain the derivative
 
-                v_ileft_jtop =     (vel_neigh(i, - e(1, jdim), - e(2, jdim), - e(3, jdim), idim) + vel_neigh(i, - e(1, idim) - e(1, jdim), - e(2, idim) - e(2, jdim), - e(3, idim) - e(3, jdim), idim))/4.0
+                v_ileft_jtop     = (vel_neigh(i, - e(1, jdim), - e(2, jdim), - e(3, jdim), idim) + vel_neigh(i, - e(1, idim) - e(1, jdim), - e(2, idim) - e(2, jdim), - e(3, idim) - e(3, jdim), idim))/4.0
                 ! Averaged value of the velocity at the bottom left corner of the cell
                 v_ileft_jbottom  = (vel_neigh(i,   e(1, jdim),   e(2, jdim),   e(3, jdim), idim) + vel_neigh(i, - e(1, idim) + e(1, jdim), - e(2, idim) + e(2, jdim), - e(3, idim) + e(3, jdim), idim))/4.0
 
-                v_iright_jtop =    (vel_neigh(i, - e(1, jdim), - e(2, jdim), - e(3, jdim), idim) + vel_neigh(i,   e(1, idim) - e(1, jdim),   e(2, idim) - e(2, jdim),   e(3, idim) - e(3, jdim), idim))/4.0
+                v_iright_jtop    = (vel_neigh(i, - e(1, jdim), - e(2, jdim), - e(3, jdim), idim) + vel_neigh(i,   e(1, idim) - e(1, jdim),   e(2, idim) - e(2, jdim),   e(3, idim) - e(3, jdim), idim))/4.0
                 v_iright_jbottom = (vel_neigh(i,   e(1, jdim),   e(2, jdim),   e(3, jdim), idim) + vel_neigh(i,   e(1, idim) + e(1, jdim),   e(2, idim) + e(2, jdim),   e(3, idim) + e(3, jdim), idim))/4.0
               end if
               ! First derivative of the velocity at the left and right faces in the direction jdim
               ! The derivative on the left is computed as the difference between the top-left and bottom-left values divided by the distance between them, which is dx_loc
-              den_dvel_left = ((den + den_left(i, idim))/2.0)*(nu_viscosity + nu_viscosity_left(idim))/2.0*((v_ileft_jtop - v_ileft_jbottom)/dx_loc)
-              den_dvel_right = ((den + den_right(i, idim))/2.0)*(nu_viscosity + nu_viscosity_right(idim))/2.0*((v_iright_jtop - v_iright_jbottom)/dx_loc)
+              den_dvel_left = ((den + den_left(i, idim))/2.0)*(nu_viscosity + nu_viscosity_left(idim))/2.0*((v_ileft_jbottom - v_ileft_jtop)/dx_loc)
+              den_dvel_right = ((den + den_right(i, idim))/2.0)*(nu_viscosity + nu_viscosity_right(idim))/2.0*((v_iright_jbottom - v_iright_jtop)/dx_loc)
 
               ! Second derivative at the cell center
               viscosity_term(i, jdim) = viscosity_term(i, jdim) + (den_dvel_right - den_dvel_left) / dx_loc
@@ -814,10 +814,10 @@ subroutine add_viscosity_source_terms(ilevel)
         do jdim = 1, ndim
           do idim = 1, ndim
               if (idim == jdim) then
-                v_ileft_jtop = vel(jdim)
-                v_ileft_jbottom = vel_neigh(i, -e(1, jdim), -e(2, jdim), -e(3, jdim), jdim)
-                v_iright_jtop =  vel_neigh(i, e(1, jdim), e(2, jdim), e(3, jdim), jdim)
-                v_iright_jbottom =  vel(jdim)
+                v_ileft_jtop     =   vel_neigh(i, -e(1, jdim), -e(2, jdim), -e(3, jdim), jdim)
+                v_ileft_jbottom  =   vel(jdim)
+                v_iright_jtop    =   vel(jdim)
+                v_iright_jbottom =   vel_neigh(i, e(1, jdim), e(2, jdim), e(3, jdim), jdim)
               else
                 ! Averaged value of the velocity at the top left corner of the cell
                 v_ileft_jtop =     (vel_neigh(i, - e(1, jdim), - e(2, jdim), - e(3, jdim), jdim) + vel_neigh(i, - e(1, idim) - e(1, jdim), - e(2, idim) - e(2, jdim), - e(3, idim) - e(3, jdim), jdim))/4.0
@@ -829,8 +829,8 @@ subroutine add_viscosity_source_terms(ilevel)
               end if
 
               ! rho nu  d_j v_j
-              den_dvel_left = ((den + den_left(i, idim))/2.0)*(nu_viscosity + nu_viscosity_left(idim))/2.0*((v_ileft_jtop - v_ileft_jbottom)/dx_loc)
-              den_dvel_right = ((den + den_right(i, idim))/2.0)*(nu_viscosity + nu_viscosity_right(idim))/2.0*((v_iright_jtop - v_iright_jbottom)/dx_loc)
+              den_dvel_left = ((den + den_left(i, idim))/2.0)*(nu_viscosity + nu_viscosity_left(idim))/2.0*((v_ileft_jbottom - v_ileft_jtop)/dx_loc)
+              den_dvel_right = ((den + den_right(i, idim))/2.0)*(nu_viscosity + nu_viscosity_right(idim))/2.0*((v_iright_jbottom - v_iright_jtop)/dx_loc)
 
               !  - (2/ndim) d_i rho nu d_j v_j
               viscosity_term(i, idim) = viscosity_term(i, idim) - (2.0/ndim)*(den_dvel_right - den_dvel_left) / dx_loc
