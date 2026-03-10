@@ -282,7 +282,7 @@ subroutine cmpdt(uu,gg,dx,dt,ncell)
   if (add_viscosity) then
    select case (viscosity_kind)
       case('constant_uniform')
-         dt_visc = (dx**2.0)/(4*nu_viscosity_constant)
+         dt_visc = (dx**2.0)/(2*ndim*nu_viscosity_constant)
       end select
 
        dt = min(dt,dt_visc)
