@@ -753,11 +753,11 @@ subroutine add_viscosity_source_terms(ilevel)
         select case (viscosity_kind)
         case ('constant_uniform')
 
-          mu_viscosity = mu_viscosity_constant
-          mu_viscosity_left(1) = mu_viscosity_constant
-          mu_viscosity_left(2) = mu_viscosity_constant
-          mu_viscosity_right(1) = mu_viscosity_constant
-          mu_viscosity_right(2) = mu_viscosity_constant
+          mu_viscosity = nu_viscosity_constant
+          mu_viscosity_left(1) = nu_viscosity_constant
+          mu_viscosity_left(2) = nu_viscosity_constant
+          mu_viscosity_right(1) = nu_viscosity_constant
+          mu_viscosity_right(2) = nu_viscosity_constant
 
         end select
 

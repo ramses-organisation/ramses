@@ -48,7 +48,7 @@ subroutine read_hydro_params(nml_ok)
 #endif
        & ,pressure_fix,beta_fix,scheme,riemann &
        & ,strict_equilibrium &
-       & ,add_viscosity,viscosity_kind,mu_viscosity_constant
+       & ,add_viscosity,viscosity_kind,nu_viscosity_constant
 
 
   ! Refinement parameters
