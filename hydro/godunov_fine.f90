@@ -763,6 +763,7 @@ subroutine add_viscosity_source_terms(ilevel)
         do jdim = 1, ndim ! component of the laplacian and the velocity
           do idim = 1, ndim ! direction for derivatives
 
+            ! e(i, j)  is the krocknecker symbole delta_ij
             vel_left = vel_neigh(i, - e(1, idim), - e(2, idim), - e(3, idim), jdim)
             vel_right = vel_neigh(i, e(1, idim), e(2, idim), e(3, idim), jdim)
 
@@ -857,12 +858,12 @@ subroutine add_viscosity_source_terms(ilevel)
 #if NDIM > 2
         dw = unew(ind_cell(i), 4)
 #endif
-        du = du + viscosity_term(i, 1)*dtnew(ilevel)
+        du = du - viscosity_term(i, 1)*dtnew(ilevel)
         unew(ind_cell(i), 2) = du
-        dv = dv + viscosity_term(i, 2)*dtnew(ilevel)
+        dv = dv - viscosity_term(i, 2)*dtnew(ilevel)
         unew(ind_cell(i), 3) = dv
 #if NDIM > 2
-        dw = dw + viscosity_term(i, 3)*dtnew(ilevel)
+        dw = dw - viscosity_term(i, 3)*dtnew(ilevel)
         unew(ind_cell(i), 4) = dw
 #endif
 
@@ -871,6 +872,7 @@ subroutine add_viscosity_source_terms(ilevel)
         w = dw/d
 
         e_kin = 0.5d0*d*(u**2 + v**2 + w**2)
+        ! TODO : correct the energy update
         unew(ind_cell(i), ndim + 2) = e_nokin + e_kin
       end do
 
