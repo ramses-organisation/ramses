@@ -23,10 +23,10 @@ subroutine backup_hydro(filename, filename_desc)
 
 !#if USE_FLD==1
   real(dp)::cmp_temp,p
-  integer::ht
+  integer::ht,irad
 !#endif
 #if USE_FLD==1
-  real(dp)::e,u,v,w
+  real(dp)::A,B,C,d,e,u,v,w
 #endif
 
   if (verbose) write(*,*)'Entering backup_hydro'
