@@ -591,6 +591,7 @@ subroutine read_hydro_params(nml_ok)
      boundary_var(i,nvar+3)=C_bound(i)
 
      er_bound=0.0D0
+#if USE_FLD==1
 #if NENER>0
      do j=1,nent
         boundary_var(i,firstindex_er+j)=prad_bound(i,j)
@@ -611,7 +612,7 @@ subroutine read_hydro_params(nml_ok)
 #endif
      end do
 #endif
-     
+#endif
      ek_bound=0.5d0*d_bound(i)*(u_bound(i)**2+v_bound(i)**2+w_bound(i)**2)
      em_bound=0.5d0*(A_bound(i)**2+B_bound(i)**2+C_bound(i)**2)
      boundary_var(i,5)=ek_bound+em_bound+er_bound+P_bound(i)/(gamma-1.0d0)
@@ -632,6 +633,7 @@ subroutine read_hydro_params(nml_ok)
      boundary_var(i,neul)=ek_bound+P_bound(i)/(gamma-1.0d0)
 
      er_bound=0.0D0
+#if USE_FLD==1
 #if NENER>0
      do j=1,nent
         boundary_var(i,firstindex_er+j)=prad_bound(i,j)
@@ -650,7 +652,7 @@ subroutine read_hydro_params(nml_ok)
 #if USE_FLD==1
      if(energy_fix)boundary_var(i,nvar)=P_bound(i)/(gamma-1.0d0)
 #endif
-
+#endif
 #endif
   end do
 
