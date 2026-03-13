@@ -97,7 +97,7 @@ module amr_parameters
   integer::nbileafnodes=2                  ! Max number of leaf (terminal) nodes
   real(dp)::bisec_tol=0.05d0               ! Tolerance for bisection load balancing
 
-  ! Step parameters
+                                 ! Step parameters
   integer::nrestart=0            ! New run or backup file number
   integer::nrestart_quad=0       ! Restart with double precision Hilbert keys
   real(dp)::trestart=0           ! Restart time

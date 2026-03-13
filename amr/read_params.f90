@@ -4,10 +4,6 @@ subroutine read_params
   use mpi_mod
   use buildinfo
   use iso_fortran_env, ONLY: output_unit !standard output
-#if USE_FLD==1  
-  use cloud_module
-!!$  use feedback_module
-#endif
   implicit none
   !--------------------------------------------------
   ! Local variables

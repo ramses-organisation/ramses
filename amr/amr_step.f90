@@ -307,6 +307,7 @@ recursive subroutine amr_step(ilevel,icount)
 
 #if USE_FLD==1
   ! Compute radiative acceleration
+                               call timer('fld - force','start')
   if(fld)call rad_force_fine(ilevel)
 #endif
 
@@ -529,17 +530,9 @@ recursive subroutine amr_step(ilevel,icount)
 
     if((static_gas).and.(FLD))then
      call upload_fine(ilevel)
-#ifdef SOLVERmhd
-     do ivar=1,nvar+3
-#else
-        do ivar=1,nvar
-#endif
+        do ivar=1,nvar_all
            call make_virtual_fine_dp(uold(1,ivar),ilevel)
-#ifdef SOLVERmhd
      end do
-#else
-     end do
-#endif
      if(simple_boundary)call make_boundary_hydro(ilevel)
   end if
 
@@ -554,18 +547,10 @@ recursive subroutine amr_step(ilevel,icount)
 
   if(hydro)then
                                call timer('hydro - ghostzones2','start')
-  ! Update boundaries 
-#ifdef SOLVERmhd
-     do ivar=1,nvar+3
-#else
-     do ivar=1,nvar
-#endif
+     ! Update boundaries
+     do ivar=1,nvar_all
         call make_virtual_fine_dp(uold(1,ivar),ilevel)
-#ifdef SOLVERmhd
      end do
-#else
-     end do
-#endif
      if(simple_boundary)call make_boundary_hydro(ilevel)
   endif
 #endif
