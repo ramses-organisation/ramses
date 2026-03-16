@@ -788,7 +788,7 @@ end function av
 subroutine cal_Hr(E,F,Hr)
 
   use amr_parameters      , only : ndim,dp
-  use constants           , only : c_cgs
+  use constants           , only : clight
   use radiation_parameters, only : irad_trans_model,irad_trans_model_p1,irad_trans_model_m1
   use const
 
@@ -813,13 +813,13 @@ subroutine cal_Hr(E,F,Hr)
 
      fx = zero ; fy = zero ; fz = zero
 
-                   fx = F(1)/(c_cgs*E) 
-     if(ndim.gt.1) fy = F(2)/(c_cgs*E)
-     if(ndim.gt.2) fz = F(3)/(c_cgs*E)
+                   fx = F(1)/(clight*E) 
+     if(ndim.gt.1) fy = F(2)/(clight*E)
+     if(ndim.gt.2) fz = F(3)/(clight*E)
 
      normef = 0.
      do i = 1,ndim
-        normef = normef + (F(i)/c_cgs/E)**2
+        normef = normef + (F(i)/clight/E)**2
      enddo
      normef = sqrt(normef)
 
