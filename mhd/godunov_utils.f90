@@ -7,6 +7,7 @@ subroutine hydro_refine(ug,um,ud,ok,nn,ilevel)
   use hydro_parameters
   use amr_commons, ONLY: emag_tot
   use const
+  use constants, only:clight
   implicit none
   ! dummy arguments
   integer nn,ilevel

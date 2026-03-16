@@ -426,6 +426,7 @@ subroutine add_pdv_source_terms(ilevel)
 #if USE_FLD==1
   use cooling_module!,ONLY:clight
   use radiation_parameters!,ONLY:eray_min,nu_min_hz,nu_max_hz,stellar_photon
+  use constants, only:clight
 #endif
   implicit none
   integer::ilevel

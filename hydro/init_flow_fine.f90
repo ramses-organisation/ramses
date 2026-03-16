@@ -507,7 +507,7 @@ subroutine region_condinit(x,q,dx,nn)
   use amr_parameters
   use hydro_parameters
 #if USE_FLD==1
-  use constants,only:kb,mH
+  use constants,only:kb,mH,clight
 #endif
   implicit none
   integer ::nn
