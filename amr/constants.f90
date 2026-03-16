@@ -18,13 +18,13 @@ module constants
 #if USE_FLD==0
   real(dp),parameter ::kB           = 1.3806490d-16 ! Boltzmann const. [erg K-1]; SI
   real(dp),parameter ::c_cgs        = 2.9979246d+10 ! Speed of light [cm s-1]; SI
-  real(kind=8),parameter ::clight   = 2.9979250d+10 !TC: two inconsistent values are used (c_cgs)
   real(dp),parameter ::a_r          = 7.5657233d-15 ! Radiation density const. [erg cm-3 K-4]; SI (derived)
   real(dp),parameter ::mH           = 1.6605390d-24 ! H atom mass [g] = amu, i.e. atomic mass unit; NIST
 #else 
   ! take the ramses-ism values for getting automatic tests cases passed
   real(dp),parameter ::kB           = 1.38062d-16 ! Boltzmann const. [erg K-1]; SI
   real(dp),parameter ::c_cgs        = 2.9979250d+10 ! Speed of light [cm s-1]; SI 
+  real(kind=8),parameter ::clight   = 2.9979250d+10 !TC: two inconsistent values are used (c_cgs)
   real(dp),parameter ::mH           = 1.6600000d-24 ! H atom mass [g] = amu, i.e. atomic mass unit; NIST
   real(dp),parameter:: a_r=7.56591469318689378e-015_dp
 #endif
