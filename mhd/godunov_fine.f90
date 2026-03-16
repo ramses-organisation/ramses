@@ -592,11 +592,9 @@ subroutine add_pdv_source_terms(ilevel)
                  divu_loc(i,j,idim) = (veld(i,j,idim)-velg(i,j,idim)) &
                       &                    / (dx_g(i,j)     +dx_d(i,j))
               end do
-#if USE_FLD==1
               do igroup=1,ngrp
                  gradEr(i,j,igroup) = (Erd(i,j,igroup)-Erg(i,j,igroup))/(dx_g(i,j)+dx_d(i,j))
               enddo
-#endif
            enddo
         end do
 #endif
@@ -620,11 +618,14 @@ subroutine add_pdv_source_terms(ilevel)
               end do
 #endif
               ! Add -pdV term
-              enew(ind_cell(i))=enew(ind_cell(i)) &
 #if USE_FLD==0
-                   & -(gamma-1.0d0)*eold*divu_loc(i)*dtnew(ilevel)
+              enew(ind_cell(i))=enew(ind_cell(i)) &
+                     & -(gamma-1.0d0)*eold*divu_loc(i)*dtnew(ilevel)
 #else
-                   & -(gamma-1.0d0)*eold*divu_loc(i,idim,idim)*dtnew(ilevel)
+              do idim=1,ndim
+                 enew(ind_cell(i))=enew(ind_cell(i)) &
+                      & -(gamma-1.0d0)*eold*divu_loc(i,idim,idim)*dtnew(ilevel)
+              end do
 #endif
            end do
         end if
@@ -667,7 +668,8 @@ subroutine add_pdv_source_terms(ilevel)
            ekin  = d*usquare/2.0
            ! Compute gas temperature in cgs
            eps   = uold(ind_cell(i),5)-ekin-emag-erad_loc
-           if(energy_fix)eps   = uold(ind_cell(i),nvar) 
+           if(energy_fix)eps   = uold(ind_cell(i),nvar)
+  
            call temperature_eos(d,eps,Tp_loc,ht)
 
            ! Compute radiative pressure in all groups
@@ -891,8 +893,7 @@ subroutine add_pdv_source_terms(ilevel)
            call pressure_eos(d,eps,pp_eos)
            do idim=1,ndim
               unew(ind_cell(i),nvar) = unew(ind_cell(i),nvar) &
-                   & - (pp_eos*divu_loc(i,idim,idim))*dtnew(ilevel)
-
+                   & + (-pp_eos*divu_loc(i,idim,idim))*dtnew(ilevel)
            end do
         end do
 !***********
