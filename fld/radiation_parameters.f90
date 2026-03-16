@@ -106,13 +106,14 @@ function planck_ana(dens,Tp,Tr,igroup,insink)
 
   use amr_commons
   use radiation_parameters
+  use constants, only:pi
 
   implicit none
 
   integer ,intent(in)    :: igroup
   real(dp),intent(in)    :: dens,Tp,Tr
   logical, intent(in)    :: insink
-  real(dp)               :: planck_ana,pi,Tgd
+  real(dp)               :: planck_ana,Tgd
   real(dp)               :: Tevap ! if sublimation_kuiper
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   ! Conversion factor from user units to cgs units
@@ -136,7 +137,6 @@ function planck_ana(dens,Tp,Tr,igroup,insink)
 
   if(sublimation_kuiper) then
      !# RMR ## Sublimation mimicked by a d/g ratio that decreases as a arctan function centered on Tevap ##
-     pi=acos(-1.0d0)
      planck_ana = planck_ana*(0.5d0 - 1./pi*atan(0.01d0*(Tp - Tevap) ) ) & !planck_ana contains the d/g ratio of 0.01
           +dens*0.01d0*(1.0d0-0.01d0*(0.5d0 - 1./pi*atan(0.01d0*(Tp - Tevap) ) )) !=> quasi full gas
   endif
@@ -158,13 +158,14 @@ function rosseland_ana(dens,Tp,Tr,igroup,insink)
 
   use amr_commons
   use radiation_parameters
+  use constants, only:pi
 
   implicit none
 
   integer ,intent(in)    :: igroup
   real(dp),intent(in)    :: dens,Tp,Tr
   logical, intent(in)    :: insink
-  real(dp)               :: rosseland_ana,pi,Tgd
+  real(dp)               :: rosseland_ana,Tgd
   real(dp)               :: Tevap ! if sublimation_kuiper
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   ! Conversion factor from user units to cgs units
@@ -188,7 +189,6 @@ function rosseland_ana(dens,Tp,Tr,igroup,insink)
 
   if(sublimation_kuiper) then
      !# RMR ## Sublimation mimicked by a d/g ratio that decreases as a arctan function centered on Tevap ##
-     pi=acos(-1.0d0)
      rosseland_ana = rosseland_ana*(0.5d0 - 1./pi*atan(0.01d0*(Tp - Tevap) ) ) & !ross_ana contains the d/g ratio of 0.01
           +dens*0.01d0*(1.0d0-0.01d0*(0.5d0 - 1./pi*atan(0.01d0*(Tp - Tevap) ) )) !=> quasi full gas
   endif

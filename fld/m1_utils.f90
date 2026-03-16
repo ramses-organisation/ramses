@@ -20,11 +20,12 @@ subroutine compute_valp
   use constants, only : c_cgs
   use radiation_parameters, only : valp,n_points
   use const
+  use constants, only:pi
 
   implicit none
 
   integer :: i,j,k
-  real(dp) :: normef,theta,eps,pi
+  real(dp) :: normef,theta,eps
 
   real(dp), dimension(4,4) :: mat
   real(dp), dimension(4) :: WR,WI
@@ -39,8 +40,6 @@ subroutine compute_valp
   real(dp),dimension(1:3    ) :: F
   real(dp),dimension(3,3    ) :: Dedd,Dedd_dE
   real(dp),dimension(3,3,1:3) :: Dedd_dF
-
-  pi=acos(-one)
 
   E=one
   F=zero
@@ -155,6 +154,7 @@ function interpol_valp(f,t,e,ivalp)
 
   use radiation_parameters, only : n_points,valp
   use const
+  use constants, only:pi
 
   implicit none
   
@@ -162,11 +162,9 @@ function interpol_valp(f,t,e,ivalp)
   integer :: i_f,i_t,i_e
   integer :: i_f_p,i_t_p,i_e_p
   
-  real(dp) :: f,t,e,pi
+  real(dp) :: f,t,e
   real(dp) :: interpol_valp
   real(dp) :: fmin,tmin,emin,df,dt,de,lf,lt,le,dd1,dd2,dd3,de1,de2,de3
-
-  pi=acos(-one)
 
   fmin = zero
   tmin = zero

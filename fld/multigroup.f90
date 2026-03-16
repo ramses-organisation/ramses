@@ -105,20 +105,17 @@ end function deriv_radiation_source
 !! inside a given group.
 !<
 function artheta4(Tray,igrp)
-
   use const
   use radiation_parameters, only : nu_min_hz,nu_max_hz,eray_min
-  use constants           , only : kb,c_cgs,hplanck
+  use constants           , only : pi,hplanck,kb,clight
 
   implicit none
 
   real(dp), intent(in) :: Tray
   integer , intent(in) :: igrp
-  real(dp)             :: constant,xmin,xmax,xsimin,xsimax,xi,artheta4,pi,BPlanck
+  real(dp)             :: constant,xmin,xmax,xsimin,xsimax,xi,artheta4,BPlanck
 
-  pi=acos(-one)
-
-  constant = (eight*pi*kb**4)/(c_cgs*hplanck)**3
+  constant = (eight*pi*kb**4)/(clight*hplanck)**3
 
   xmin = hplanck*nu_min_hz(igrp)/(kb*Tray)
   xmax = hplanck*nu_max_hz(igrp)/(kb*Tray)
@@ -134,7 +131,6 @@ function artheta4(Tray,igrp)
   return
 
 end function artheta4
-
 !###########################################################
 !###########################################################
 !###########################################################
@@ -146,10 +142,8 @@ end function artheta4
 !! distribution between two frequencies.
 !<
 function xi(nu)
-
   use const
   use coeff_xi
-
   implicit none
 
   real(dp),intent(in) :: nu
@@ -184,18 +178,16 @@ function deriv_artheta4(Tray,igrp)
 
   use const
   use radiation_parameters, only : nu_min_hz,nu_max_hz,eray_min,deray_min
-  use constants           , only : kb,c_cgs,hplanck
+  use constants           , only : pi,kb,clight,hplanck
 
   implicit none
 
   real(dp), intent(in) :: Tray
   integer , intent(in) :: igrp
   real(dp)             :: xi,deriv_xi,deriv_artheta4,nu,dnu,Div_BPlanck
-  real(dp)             :: constant,xmin,xmax,xsimin,xsimax,v1,v2,v3,pi
+  real(dp)             :: constant,xmin,xmax,xsimin,xsimax,v1,v2,v3
 
-  pi = acos(-one)
-
-  constant = (eight*pi*kb**4)/(c_cgs*hplanck)**3
+  constant = (eight*pi*kb**4)/(clight*hplanck)**3
 
   xmin = hplanck*nu_min_hz(igrp)/(kb*Tray)
   xmax = hplanck*nu_max_hz(igrp)/(kb*Tray)
@@ -647,21 +639,19 @@ end subroutine tabulate_art4
 function BPlanck(nu,T)
 
   use amr_parameters, only : dp
-  use constants     , only : kb,c_cgs,hplanck
+  use constants     , only : pi,kb,clight,hplanck
   use coeff_xi      , only : limhigh
   use const
 
   implicit none
 
   real(dp), intent(in) :: nu,T
-  real(dp)             :: BPlanck,pi
-
-  pi=acos(-one)
+  real(dp)             :: BPlanck
 
   if((hplanck*nu/(kb*T)) > limhigh)then
-     BPlanck = (eight*pi*hplanck*nu**3)/c_cgs**3 * exp(-hplanck*nu/(kb*T))
+     BPlanck = (eight*pi*hplanck*nu**3)/clight**3 * exp(-hplanck*nu/(kb*T))
   else
-     BPlanck = (eight*pi*hplanck*nu**3)/c_cgs**3 / ( exp(hplanck*nu/(kb*T)) - one )
+     BPlanck = (eight*pi*hplanck*nu**3)/clight**3 / ( exp(hplanck*nu/(kb*T)) - one )
   endif
 
 end function BPlanck

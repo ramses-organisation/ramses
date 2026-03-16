@@ -11,10 +11,8 @@ subroutine diffusion_cg (ilevel,Nsub)
   use rt_hydro_commons !hybrid RT
   use rt_cooling_module !hybrid RT
 #endif
+  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  include 'mpif.h'
-#endif
   !=========================================================
   ! Iterative solver with Stabilised Bi-Conjugate Gradient method
   ! to solve A x = b
@@ -1060,6 +1058,7 @@ subroutine cmp_matrix_and_vector_coeff_m1(ilevel)
   use radiation_parameters
   use const
   use units_commons
+  use constants, only:pi
   implicit none
 
   integer,intent(IN)::ilevel
@@ -1109,7 +1108,7 @@ subroutine cmp_matrix_and_vector_coeff_m1(ilevel)
   real(dp)                                 :: conv
   real(dp), dimension(                  2) :: signe
   real(dp)                                 :: xx,v1,v2,v3,v4,r,kappa_rhoM,kappa_rhoP
-  real(dp)                                 :: ff1,ff2,thetaM,thetaP,interpol_valp,fM,fP,pi
+  real(dp)                                 :: ff1,ff2,thetaM,thetaP,interpol_valp,fM,fP
   real(dp)                                 :: kp,kE,kF,ks,kFM,kFP,ksM,ksP,scattering_ana
   integer                                  :: iface,idim,jdim,kdim,index_e
   logical                                  :: cal_valp,chi_uniforme,derive_chi
@@ -1297,8 +1296,6 @@ subroutine cmp_matrix_and_vector_coeff_m1(ilevel)
               cal_valp=.true.
               chi_uniforme=.false.
               derive_chi=.false.
-
-              pi=acos(-one)
 
               coeff_glob_left  (ind_cell(i),:,:,:) = zero
               coeff_glob_right (ind_cell(i),:,:,:) = zero
