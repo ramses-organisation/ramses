@@ -74,7 +74,7 @@ subroutine diffusion_cg (ilevel,Nsub)
   real(dp)::bcell2,bx,by,bz,jsquare,jx,jy,jz,etaohmdiss,betaad,ionisrate
 #endif
 
-  real(dp)::scale_nH,scale_T2,scale_t,scale_v,scale_d,scale_l,scale_kappa
+  real(dp)::scale_nH,scale_T2,scale_t,scale_v,scale_d,scale_l
 
 #ifdef RT
   real(dp)::scale_Np,scale_Fp !hybrid RT
@@ -82,7 +82,6 @@ subroutine diffusion_cg (ilevel,Nsub)
 #endif
 
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
-  scale_kappa=1/scale_l
   
   if(myid==1 .and. (mod(nstep,ncontrol)==0)) write(*,*) 'entering radiative transfer for level ',ilevel
 
@@ -1131,9 +1130,8 @@ subroutine cmp_matrix_and_vector_coeff_m1(ilevel)
   integer, dimension(nwork*nvar_bicg)       :: work
   real(dp),dimension(1:nvar_bicg,1:nvar_bicg) ::inv
 
-  real(dp)::scale_nH,scale_T2,scale_t,scale_v,scale_d,scale_l,scale_kappa
+  real(dp)::scale_nH,scale_T2,scale_t,scale_v,scale_d,scale_l
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
-  scale_kappa=1/scale_l
 
   ! Mesh size at level ilevel
   dx=half**ilevel
@@ -2447,6 +2445,7 @@ subroutine compute_residual_in_cell(i,vol_loc,residual,mat_residual)
   use cloud_module, only : rt_feedback
   use units_commons
   use const
+  use constants, only: eV2erg
 #ifdef RT
   use pm_commons !hybrid RT, needs sink quantities
   use rt_hydro_commons !hybrid RT
@@ -2470,9 +2469,8 @@ subroutine compute_residual_in_cell(i,vol_loc,residual,mat_residual)
   real(dp)::scale_Np,scale_Fp !hybrid RT
 #endif
 
-  real(dp)::scale_nH,scale_T2,scale_t,scale_v,scale_d,scale_l,scale_kappa
+  real(dp)::scale_nH,scale_T2,scale_t,scale_v,scale_d,scale_l
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
-  scale_kappa=1/scale_l
 
 #ifdef RT
   call rt_units(scale_Np,scale_Fp)
@@ -2578,9 +2576,8 @@ subroutine compute_coeff_left_right_in_cell(i,idim,cell_left,cell_right,nbor_ile
   integer::igroup,irad
   real(dp),dimension(nvar_bicg)::C_g,C_d,phi_g,phi_c,phi_d,nu_g,nu_c,nu_d
 
-  real(dp)::scale_nH,scale_T2,scale_t,scale_v,scale_d,scale_l,scale_kappa
+  real(dp)::scale_nH,scale_T2,scale_t,scale_v,scale_d,scale_l
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
-  scale_kappa=1/scale_l
 
   surf_loc = dx_loc**(ndim-1)
 

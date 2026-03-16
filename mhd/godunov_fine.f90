@@ -427,6 +427,7 @@ subroutine add_pdv_source_terms(ilevel)
   use cooling_module!,ONLY:clight
   use radiation_parameters!,ONLY:eray_min,nu_min_hz,nu_max_hz,stellar_photon
   use constants, only:clight
+  use units_commons, only:scale_kappa
 #endif
   implicit none
   integer::ilevel
@@ -482,9 +483,8 @@ subroutine add_pdv_source_terms(ilevel)
 #endif
 
 #if USE_FLD==1
-  real(dp)::scale_nH,scale_T2,scale_t,scale_v,scale_d,scale_l,scale_kappa
+  real(dp)::scale_nH,scale_T2,scale_t,scale_v,scale_d,scale_l
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
-  scale_kappa=1./scale_l
 #endif
 
   if(numbtot(1,ilevel)==0)return
@@ -1914,9 +1914,8 @@ subroutine rad_force_fine(ilevel)
   integer  :: ht 
 
 #if USE_FLD==1
-  real(dp)::scale_nH,scale_T2,scale_t,scale_v,scale_d,scale_l,scale_kappa
+  real(dp)::scale_nH,scale_T2,scale_t,scale_v,scale_d,scale_l
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
-  scale_kappa=1/scale_l
 #endif
 
   if(numbtot(1,ilevel)==0)return

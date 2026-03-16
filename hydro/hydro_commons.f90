@@ -43,6 +43,6 @@ end module const
 ! Units
 module units_commons
   use amr_parameters, only : dp
-  real(dp):: scale_E0,scale_m,P_cal,C_cal
+  real(dp):: scale_E0,scale_kappa,scale_m,P_cal,C_cal
 end module units_commons
 #endif

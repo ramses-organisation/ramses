@@ -12,10 +12,10 @@ module constants
   ! * PCAD - http://www.astro.wisc.edu/~dolan/constants.html
   ! * NIST - National Institute of Standards and Technology
   ! * IAU - Internatonal Astronomical Union resolution
-  real(dp),parameter ::hplanck      = 6.6260702d-27 ! Planck const. [erg s]; SI
-  real(dp),parameter ::eV2erg       = 1.6021766d-12 ! Electronvolt [erg]; SI
 #if USE_FLD==0
   real(dp),parameter ::pi           = twopi/2d0
+  real(dp),parameter ::hplanck      = 6.6260702d-27 ! Planck const. [erg s]; SI
+  real(dp),parameter ::eV2erg       = 1.6021766d-12 ! Electronvolt [erg]; SI
   real(dp),parameter ::kB           = 1.3806490d-16 ! Boltzmann const. [erg K-1]; SI
   real(dp),parameter ::c_cgs        = 2.9979246d+10 ! Speed of light [cm s-1]; SI
   real(dp),parameter ::a_r          = 7.5657233d-15 ! Radiation density const. [erg cm-3 K-4]; SI (derived)
@@ -23,11 +23,13 @@ module constants
 #else 
   ! take the ramses-ism values for getting automatic tests cases passed
   real(dp),parameter ::pi           = acos(-1.0d0)!twopi/2d0
-  real(dp),parameter ::kB           = 1.38062d-16 ! Boltzmann const. [erg K-1]; SI
-  real(dp),parameter ::c_cgs        = 2.9979250d+10 ! Speed of light [cm s-1]; SI 
+  real(dp),parameter ::hplanck      = 6.6262000d-27!6.6260702d-27 ! Planck const. [erg s]; SI
+  real(dp),parameter ::eV2erg       = 1.6022000d-12!1.6021766d-12 ! Electronvolt [erg]; SI
+  real(dp),parameter ::kB           = 1.3806200d-16 !1.3806490d-16 ! Boltzmann const. [erg K-1]; SI
+  real(dp),parameter ::c_cgs        = 2.9979250d+10!2.9979246d+10 ! Speed of light [cm s-1]; SI (TC:used)
   real(kind=8),parameter ::clight   = 2.9979250d+10 !TC: two inconsistent values are used (c_cgs)
-  real(dp),parameter ::mH           = 1.6600000d-24 ! H atom mass [g] = amu, i.e. atomic mass unit; NIST
-  real(dp),parameter:: a_r=7.56591469318689378e-015_dp
+  real(dp),parameter ::a_r          = 7.5657d-15 !7.5657233d-15 ! Radiation density const. [erg cm-3 K-4]; SI (derived)
+  real(dp),parameter ::mH           = 1.6600000d-24 !1.6605390d-24 ! H atom mass [g] = amu, i.e. atomic mass unit; NIST
 #endif
   real(dp),parameter ::factG_in_cgs = 6.6740800d-08 ! Gravitational const. [cm3 g-1 s-2]; NIST
   real(dp),parameter ::sigma_T      = 6.6524587d-25 ! Thomson scattering cross-section [cm2]; NIST
