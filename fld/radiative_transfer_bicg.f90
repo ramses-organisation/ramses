@@ -1131,6 +1131,10 @@ subroutine cmp_matrix_and_vector_coeff_m1(ilevel)
   integer, dimension(nwork*nvar_bicg)       :: work
   real(dp),dimension(1:nvar_bicg,1:nvar_bicg) ::inv
 
+  real(dp)::scale_nH,scale_T2,scale_t,scale_v,scale_d,scale_l,scale_kappa
+  call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
+  scale_kappa=1/scale_l
+
   ! Mesh size at level ilevel
   dx=half**ilevel
 
