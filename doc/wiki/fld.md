@@ -11,7 +11,9 @@
 | `split_groups_log=.true.` | `logical`    | Generate logaritmically (`.true.`) or linearly (`.false.`) spaced radiation bins between `numin` and `numax`.  |
 | `extra_end_group=.false.` | `logical`    | The last radiation group goes from `numax` to infinity, instead of stopping at `numax`.  |
 | `read_groups=.false.` | `logical`    | If `.true.`, read radiation group boundaries from a file named 'groups.dat', instead of generating them automatically.  |
-
+| `rosseland_params=1.0` | array of `real`| Rosseland opacity coefficient's parameters |
+| `planck_params=1.0` | array of `real`| Planck opacity coefficient's parameters |
+| `sublimation_kuiper=.false.` | `logical`    |  Mimicks dust sublimation with decreasing d/g ratio, see Kuiper+10 ApJ |
 
 ## Setting radiation groups
 
@@ -44,3 +46,16 @@ TODO
 
 Providing the group boundaries with a file allows for more flexibility. An example of a user provided groups.dat file and corresponding namelist:
 TODO
+
+
+## Opacities
+
+TODO
+
+## Timestep considerations
+
+TODO
+
+## Numerical parameters for the algorithm
+
+## Radiation feedback from sinks
