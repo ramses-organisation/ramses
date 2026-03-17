@@ -3,7 +3,9 @@ subroutine units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
   use hydro_commons
   use constants, only: Mpc2cm, mH, kB, rhoc
   use cooling_module, only: X
+#if USE_FLD==1
   use units_commons, only : scale_kappa
+#endif
   implicit none
 
   real(dp)::scale_nH,scale_T2,scale_t,scale_v,scale_d,scale_l
