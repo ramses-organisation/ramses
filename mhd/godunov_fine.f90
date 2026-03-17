@@ -311,11 +311,12 @@ subroutine set_uold(ilevel)
               uold(ind_cell,neul)=e_prim+e_kin+e_mag
            end if
 
+#if USE_FLD==1
            e_prim = uold(ind_cell,5)-e_kin-e_mag ! uncomment this for radiative shock
            if(energy_fix)then
               e_prim = uold(ind_cell,nvar)
            end if
-#if USE_FLD==1
+
            ! Compute temperature for perfect gas to prevent crash in the interpolation routine of the EOS
            
            ! Compute gas temperature in cgs
@@ -342,18 +343,18 @@ subroutine set_uold(ilevel)
               uold(ind_cell,5)=e_prim+e_kin+e_mag
               uold(ind_cell,nvar)=e_prim
            end if
-#endif
+
            if(energy_fix)then
               uold(ind_cell,5)=e_prim+e_kin+e_mag
               uold(ind_cell,nvar)=e_prim
            end if
-
+#endif
         end do
      end if
   end do
 
   ! Overwrite state if using induction scheme
-  if(ischeme == 1) call velocity_fine(ilevel)
+  !if(ischeme == 1) call velocity_fine(ilevel)
 
 111 format('   Entering set_uold for level ',i2)
 
@@ -453,9 +454,10 @@ subroutine add_pdv_source_terms(ilevel)
   integer::irad
 #endif
 
+#if USE_FLD==1 || USE_M_1==1
   integer::j,ivar
   real(dp)::usquare,emag,ekin,erad_loc,eps,cv,pp_eos
-#if USE_FLD==1 || USE_M_1==1
+
   real(dp),dimension(1:nvector,1:ndim,1:ngrp),save::Erg,Erd
   real(dp) ,dimension(1:nvector,1:ndim,1:ngrp)::gradEr
 
@@ -621,7 +623,7 @@ subroutine add_pdv_source_terms(ilevel)
               ! Add -pdV term
 #if USE_FLD==0
               enew(ind_cell(i))=enew(ind_cell(i)) &
-                     & -(gamma-1.0d0)*eold*divu_loc(i)*dtnew(ilevel)
+                   & -(gamma-1.0d0)*eold*divu_loc(i)*dtnew(ilevel)
 #else
               do idim=1,ndim
                  enew(ind_cell(i))=enew(ind_cell(i)) &
