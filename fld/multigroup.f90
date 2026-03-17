@@ -35,8 +35,8 @@ end module coeff_xi
 !<
 function radiation_source(T,igrp)
   use const
-  use radiation_parameters, only : ngrp,aR,grey_rad_transfer,Tray_min,stellar_photon
-
+  use radiation_parameters, only : ngrp,grey_rad_transfer,Tray_min,stellar_photon
+  use constants, only:aR
   implicit none
 
   real(dp), intent(in) :: T
@@ -70,8 +70,8 @@ end function radiation_source
 !<
 function deriv_radiation_source(T,igrp)
   use const
-  use radiation_parameters, only : ngrp,aR,grey_rad_transfer,Tray_min,stellar_photon
-
+  use radiation_parameters, only : ngrp,grey_rad_transfer,Tray_min,stellar_photon
+  use constants, only:aR
   implicit none
 
   real(dp), intent(in) :: T

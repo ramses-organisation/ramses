@@ -29,6 +29,7 @@ module constants
   real(dp),parameter ::c_cgs        = 2.9979250d+10!2.9979246d+10 ! Speed of light [cm s-1]; SI (TC:used)
   real(kind=8),parameter ::clight   = 2.9979250d+10 !TC: two inconsistent values are used (c_cgs)
   real(dp),parameter ::a_r          = 7.5657d-15 !7.5657233d-15 ! Radiation density const. [erg cm-3 K-4]; SI (derived)
+  real(dp),parameter:: aR=7.56591469318689378e-015_dp
   real(dp),parameter ::mH           = 1.6600000d-24 !1.6605390d-24 ! H atom mass [g] = amu, i.e. atomic mass unit; NIST
 #endif
   real(dp),parameter ::factG_in_cgs = 6.6740800d-08 ! Gravitational const. [cm3 g-1 s-2]; NIST

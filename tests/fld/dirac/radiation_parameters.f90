@@ -15,11 +15,10 @@ module radiation_parameters
   ! Multigroup
   integer,parameter::Nomega=100     ! Number of points in the omega data to compute Q moment term
 
-  real(dp),parameter:: aR=7.56591469318689378e-015_dp
-  real(dp),parameter::Tray_min=0.5d-10 ! Minimum temperature in the radiative energy
-  real(dp),parameter:: eray_min=(aR)*Tray_min**4 ! minimum rad energy inside frequency group
-  real(dp),parameter:: deray_min=(4.0d0*aR)*Tray_min**3 ! minimum rad energy derivative inside frequency group
-  real(dp):: small_er=1.0d-50       ! minimum rad energy inside frequency group in code units
+  real(dp)::Tray_min=0.5d0 ! Minimum temperature in the radiative energy
+  real(dp):: eray_min      ! minimum rad energy inside frequency group
+  real(dp):: deray_min     ! minimum rad energy derivative inside frequency group
+  real(dp):: small_er=1.0d-30       ! minimum rad energy inside frequency group in code units
   
   real(dp) :: numin=1.0d5,numax=1.0d19 ! Overall frequency boudaries
   real(dp) :: frequency_upperlimit=1.0d35 ! High end frequency if 'extra_end_group = .true.
@@ -90,11 +89,6 @@ module radiation_parameters
 #else
   logical, parameter :: bicg_to_cg = .false.
 #endif
-
-  ! RT on sinks?
-  logical::rt_sink      =.false.   ! Radiative transfer on sinks activated
-  logical::rt_protostar_m1=.false. ! Hybrid RT : M1 + FLD
-  logical::output_rtvar_in_hydro=.false. ! Output rt variable in hydro files for convenience (temporaray)
 
 end module radiation_parameters
 

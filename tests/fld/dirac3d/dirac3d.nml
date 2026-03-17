@@ -73,4 +73,5 @@ dt_control=.true.
 robin=1.0d0
 Tr_floor=0.00029492547
 min_optical_depth=1.d-20
+Tray_min=0.5d-10
 /

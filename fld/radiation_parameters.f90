@@ -15,10 +15,9 @@ module radiation_parameters
   ! Multigroup
   integer,parameter::Nomega=100     ! Number of points in the omega data to compute Q moment term
 
-  real(dp),parameter:: aR=7.56591469318689378e-015_dp
-  real(dp),parameter::Tray_min=0.5d0 ! Minimum temperature in the radiative energy
-  real(dp),parameter:: eray_min=(aR)*Tray_min**4 ! minimum rad energy inside frequency group
-  real(dp),parameter:: deray_min=(4.0d0*aR)*Tray_min**3 ! minimum rad energy derivative inside frequency group
+  real(dp)::Tray_min=0.5d0 ! Minimum temperature in the radiative energy
+  real(dp):: eray_min      ! minimum rad energy inside frequency group
+  real(dp):: deray_min     ! minimum rad energy derivative inside frequency group
   real(dp):: small_er=1.0d-30       ! minimum rad energy inside frequency group in code units
   
   real(dp) :: numin=1.0d5,numax=1.0d19 ! Overall frequency boudaries

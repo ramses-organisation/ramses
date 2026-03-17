@@ -30,7 +30,8 @@ subroutine init_flow_fine(ilevel)
   use hydro_commons
   use cooling_module
 #if USE_FLD==1
-  use radiation_parameters,only:eray_min,small_er
+  use radiation_parameters,only:Tray_min,eray_min,deray_min,small_er
+  use constants, only:aR
 #endif
   use mpi_mod
 #if USE_TURB==1
@@ -75,6 +76,8 @@ subroutine init_flow_fine(ilevel)
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
 
 #if USE_FLD==1
+  eray_min=(aR)*Tray_min**4
+  deray_min=(4.0d0*aR)*Tray_min**3
   small_er=eray_min/(scale_d*Scale_v**2)
 #endif
   
