@@ -492,11 +492,13 @@ subroutine add_viscosity_source_terms(ilevel)
   integer, dimension(1:nvector, 1:threetondim), save::nbors_father_cells
   real(dp), dimension(1:nvector, 1:ndim), save::den_left, den_right
   real(dp), dimension(1:nvector, 1:ndim), save::viscosity_term
+  real(dp) :: energy_visc, e_prev
   real(dp) :: nu_viscosity
   real(dp), dimension(1:ndim) :: vel
   real(dp) :: den
   real(dp) ::vel_left, vel_right
   real(dp) :: den_dvel_left, den_dvel_right ! density times velocity derivative left and right
+   real(dp):: den_En_left, den_En_right ! density times velocity times velocity derivative left and right
   real(dp) :: d = 0, u = 0, v = 0, w = 0, du = 0, dv = 0, dw = 0, e_kin = 0, e_nokin = 0
 #ifdef SOLVERMHD
   real(dp) :: A, B, C
@@ -732,6 +734,7 @@ subroutine add_viscosity_source_terms(ilevel)
 
 ! Compute the viscosity term
       viscosity_term(1:ngrid, 1:ndim) = 0.0d0
+      energy_visc = 0.0d0
       do i = 1, ngrid
 
         den = max(uold(ind_cell(i), 1), smallr) ! density of the cell
@@ -764,15 +767,19 @@ subroutine add_viscosity_source_terms(ilevel)
             ! second derivative at the cell center
             viscosity_term(i, jdim) = viscosity_term(i, jdim) + (1 + e(idim, jdim) * (1.0 - 2.0 / ndim)) * (den_dvel_right - den_dvel_left) / (dx_loc)
 
+            ! First derivative for the energy term
+            den_En_left  =  ((vel(jdim) + vel_left) / 2.0 ) * den_dvel_left
+            den_En_right =  ((vel(jdim) + vel_right) / 2.0) * den_dvel_right
+            
+            ! Second derivative for energy term
+            energy_visc = energy_visc + (den_En_right - den_En_left) / (2* dx_loc)
+
             ! Bulk viscosity
             if (idim == jdim) then
               den_dvel_left  =  ((den + den_left(i,idim)) / 2.0 ) * nu_viscosity_bulk * ((vel(jdim) - vel_left ) / (dx_loc))
               den_dvel_right =  ((den + den_right(i,idim)) / 2.0) * nu_viscosity_bulk * ((vel_right - vel(jdim) ) /  (dx_loc))
               viscosity_term(i, jdim) = viscosity_term(i, jdim) + (den_dvel_right - den_dvel_left) / (dx_loc)
             end if
-
-
-
           end do
         end do
 
@@ -796,7 +803,15 @@ subroutine add_viscosity_source_terms(ilevel)
               den_dvel_right = den_right(i, idim)*nu_viscosity_right(idim) * (v_iright_jbottom - v_iright_jtop)/(2 * dx_loc)
 
               ! Second derivative at the cell center
-               viscosity_term(i, jdim) = viscosity_term(i, jdim) + (den_dvel_right - den_dvel_left) / (2 * dx_loc)
+              viscosity_term(i, jdim) = viscosity_term(i, jdim) + (den_dvel_right - den_dvel_left) / (2* dx_loc)
+              
+              ! First derivative for the energy term
+              den_En_left  =  ((vel(idim) + vel_left) / 2.0 ) * den_dvel_left
+              den_En_right =  ((vel(idim) + vel_right) / 2.0) * den_dvel_right
+            
+              ! Second derivative for energy term
+              energy_visc = energy_visc + (den_En_right - den_En_left) / (2* dx_loc)
+
           end do
         end do
 
@@ -819,6 +834,12 @@ subroutine add_viscosity_source_terms(ilevel)
               !  - (2/ndim) d_i rho nu d_j v_j
               viscosity_term(i, idim) = viscosity_term(i, idim) - (2.0/ndim)*(den_dvel_right - den_dvel_left) / (2 * dx_loc)
 
+              ! First derivative for the energy term
+              den_En_left  =  ((vel(jdim) + vel_left) / 2.0 ) * den_dvel_left
+              den_En_right =  ((vel(jdim) + vel_right) / 2.0) * den_dvel_right
+            
+              ! Second derivative for energy term
+              energy_visc = energy_visc + (den_En_right - den_En_left) / (2* dx_loc)
 
               ! Bulk viscosity contribution
               den_dvel_left = den_left(i, idim) * nu_viscosity_bulk*(v_ileft_jbottom - v_ileft_jtop)/(2 * dx_loc)
@@ -833,15 +854,6 @@ subroutine add_viscosity_source_terms(ilevel)
       do i = 1, ngrid
         ! Add viscosity term at time t
         d = max(unew(ind_cell(i), 1), smallr)
-        u = 0.0d0; v = 0.0d0; w = 0.0d0
-        u = unew(ind_cell(i), 2)/d
-        v = unew(ind_cell(i), 3)/d
-#if NDIM > 2
-        w = unew(ind_cell(i), 4)/d
-#endif
-        e_kin = 0.5d0*d*(u**2 + v**2 + w**2)
-        e_nokin = unew(ind_cell(i), ndim + 2) - e_kin
-
         du = 0.0d0; dv = 0.0d0; dw = 0.0d0
         du = unew(ind_cell(i), 2)
         dv = unew(ind_cell(i), 3)
@@ -857,13 +869,10 @@ subroutine add_viscosity_source_terms(ilevel)
         unew(ind_cell(i), 4) = dw
 #endif
 
-        u = du/d
-        v = dv/d
-        w = dw/d
-
-        e_kin = 0.5d0*d*(u**2 + v**2 + w**2)
-        ! TODO : correct the energy update
-        unew(ind_cell(i), ndim + 2) = e_nokin + e_kin
+        ! Update the energy
+        e_prev = unew(ind_cell(i), ndim + 2)
+        unew(ind_cell(i), ndim + 2) = e_prev + energy_visc
+ 
       end do
 
     end do
