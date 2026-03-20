@@ -45,7 +45,7 @@ The block named `&SINK_PARAMS` contains the parameters related to the sink parti
 | `kin_mass_loading`    | `float`      | `100.`        | Kinetic feedback mass loading
 | `cone_opening`        | `float`      | `180.`        | Opening angle of the cone through which momentum feedback proceeds
 | `nlevelmax_sink`      | `integer`    | `0`           | Allow sinks to form on a level that is lower than what is set by nlevelmax. This is useful in zoom simulations where nlevelmax is set to a high value but in the first phase refinement is limited to only a few levels. nlevelmax_sink should be set to the maximum allowed refinement level.
-| `cloud_pts_check`     | `boolean`    | `.false.`     | Useful when there is a large number of sinks (>1000) with a large number of cores. When true: Optimizes the creation of cloud particles.
+| `cloud_pts_check`     | `boolean`    | `.false.`     | Useful when there is a large number of sinks (>1000) with a large number of cores. When true: optimizes the creation of cloud particles.
 
 
 ## Example set of parameters for cosmological simulations with AGN feedback ##
