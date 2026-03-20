@@ -131,9 +131,6 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
 #endif
   endif
   nISM = MAX(nCOM,nISM)
-  do i=1,5
-     polytrope_rho_cu(i) = polytrope_rho(i)/scale_d
-  end do
 
   ! Polytropic constant for Jeans length related polytropic EOS
   if(jeans_ncells>0)then
@@ -329,6 +326,10 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
      ! Compute temperature from polytrope EOS
      !==========================================
      if(barotropic_eos.and.(barotropic_eos_form.ne.'legacy'))then
+        ! convert units of user-inputted EOS parameters
+        do i=1,5
+           polytrope_rho_cu(i) = polytrope_rho(i)/scale_d
+        end do
         do i=1,nleaf
            ! analytic EOS
            call barotropic_eos_temperature(nH(i), T2min(i))
