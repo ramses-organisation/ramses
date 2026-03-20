@@ -229,7 +229,7 @@ module amr_parameters
                                         !'custom': for patching your own eos
                                         !'legacy': same as polytrop but using the old n_star, g_star and T2_star
   real(dp),dimension(5)::polytrope_rho=1.0d50     ! array of normalisation or knee-density densities for EOS, in g/cm3
-  real(dp),dimension(5)::polytrope_rho_cu         ! polytrope_rho in code units
+  real(dp),dimension(5)::polytrope_n              ! polytrope_rho in H/cc for calculation
   real(dp),dimension(5)::polytrope_index=1.0d0    ! sets gamma in EOS = polytropic index
   real(dp)::T_eos=10                    ! sets T0 in EOS: isothermal temperature or temperature normalisation, in K
   real(dp)::mu_gas=1d0                  ! molecular weight

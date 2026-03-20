@@ -326,9 +326,9 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
      ! Compute temperature from polytrope EOS
      !==========================================
      if(barotropic_eos.and.(barotropic_eos_form.ne.'legacy'))then
-        ! convert units of user-inputted EOS parameters
+        ! convert user-inputted EOS parameters from g/cm3 to H/cc
         do i=1,5
-           polytrope_rho_cu(i) = polytrope_rho(i)/scale_d
+           polytrope_n(i) = polytrope_rho(i) * X/mH
         end do
         do i=1,nleaf
            ! analytic EOS
