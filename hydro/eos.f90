@@ -14,16 +14,16 @@ subroutine barotropic_eos_temperature(density, temperature)
    CASE ('isothermal')
       temperature = T2_eos
    CASE ('polytrope')
-      temperature = T2_eos*((density/scale_nH)/polytrope_rho_cu)**(polytrope_index-1.0d0)
+      temperature = T2_eos*((density/scale_nH)/polytrope_rho_cu(1))**(polytrope_index(1)-1.0d0)
    CASE ('double_polytrope')
       ! to convert n to rho: rho = density/scale_nH*scale_d
-      temperature = T2_eos * (1 + ((density/scale_nH)/polytrope_rho_cu)**(polytrope_index-1.0d0))
+      temperature = T2_eos * (1 + ((density/scale_nH)/polytrope_rho_cu(1))**(polytrope_index(1)-1.0d0))
    CASE ('custom')
       ! WRITE YOUR FAVORITE EOS HERE
-      if((density/scale_nH)<polytrope_rho_cu)then
+      if((density/scale_nH)<polytrope_rho_cu(1))then
          temperature = T2_eos
       else
-         temperature = T2_eos * ((density/scale_nH)/polytrope_rho_cu)**(polytrope_index-1.0d0)
+         temperature = T2_eos * ((density/scale_nH)/polytrope_rho_cu(1))**(polytrope_index(1)-1.0d0)
       endif
    CASE DEFAULT
      write(*,*)'unknown barotropic eos form'

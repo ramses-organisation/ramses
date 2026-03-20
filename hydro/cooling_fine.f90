@@ -131,7 +131,9 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
 #endif
   endif
   nISM = MAX(nCOM,nISM)
-  polytrope_rho_cu = polytrope_rho/scale_d
+  do i=1,5
+     polytrope_rho_cu(i) = polytrope_rho(i)/scale_d
+  end do
 
   ! Polytropic constant for Jeans length related polytropic EOS
   if(jeans_ncells>0)then
