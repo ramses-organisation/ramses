@@ -6,7 +6,7 @@ subroutine barotropic_eos_temperature(nH, temperature)
    !--------------------------------------------------------------
    real(dp), intent(in) ::nH
    real(dp), intent(out)::temperature
-   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
+   real(dp)::factor1,factor2,factor3
 
    SELECT CASE (barotropic_eos_form)
    CASE ('isothermal')
@@ -16,6 +16,12 @@ subroutine barotropic_eos_temperature(nH, temperature)
    CASE ('double_polytrope')
       ! to convert n to rho: rho = nH/scale_nH*scale_d
       temperature = T2_eos * (1 + (nH/polytrope_n(1))**(polytrope_index(1)-1.0d0))
+   CASE ('2nd_collapse')
+      ! to convert n to rho: rho = nH/scale_nH*scale_d
+      factor1 = sqrt(1 + (nH/polytrope_n(1))**(2*polytrope_index(1)))
+      factor2 = (1 + (nH/polytrope_n(2)))**polytrope_index(2)
+      factor3 = (1 + (nH/polytrope_n(3)))**polytrope_index(3)
+      temperature = T2_eos * factor1 * factor2 * factor3
    CASE ('custom')
       ! WRITE YOUR FAVORITE EOS HERE
       if(nH<polytrope_n(1))then
