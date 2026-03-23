@@ -30,6 +30,8 @@ The block named `&COOLING_PARAMS` contains the parameters related to cooling / b
 | `ind_rsink`              | `real` | 4.0  | Number of cells defining the radius of the sphere where AGN feedback is active
 | `T2max`                  | `real` | HUGE  | Temperature ceiling for gas heating (heating ceiling if `isothermal=.false.`)
 | `neq_chem`               | `logical` | `.false.`  | Enable non-equilibrium chemistry
+| `X`                      | `real` | 0.76d0 | Hydrogen fraction
+| `Y`                      | `real` | 0.24d0 | Helium fraction
 
 
 ## Star formation parameters ##
