@@ -75,7 +75,7 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
   integer::i,j,k,l,ivar
   integer::ilo,ihi,jlo,jhi,klo,khi
 
-!$omp threadprivate(qin,bf,dq,dbf,qm,qp,qRT,qRB,qLT,qLB,emf)
+!$omp threadprivate(qin,bf,dbf,qm,qp,qRT,qRB,qLT,qLB,emf)
 
   ilo=MIN(1,iu1+2); ihi=MAX(1,iu2-2)
   jlo=MIN(1,ju1+2); jhi=MAX(1,ju2-2)

@@ -126,7 +126,7 @@ subroutine set_unew(ilevel)
            end do
            if(momentum_feedback>0)then
               do i=1,ngrid
-                 pstarnew(ind_cell(i),ivar)=0
+                 pstarnew(ind_cell(i))=0
               end do
            endif
            if(pressure_fix)then
