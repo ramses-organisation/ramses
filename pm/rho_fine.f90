@@ -786,7 +786,7 @@ subroutine multipole_fine(ilevel)
         endif
 
         ! Add analytical density profile for leaf cells only
-        if(gravity_type < 0)then
+        if(gravity_rho_ana_type>0)then
            ! Call user defined routine rho_ana
            call rho_ana(xx,dd,dx_loc,nleaf)
            ! Scatter results to array phi

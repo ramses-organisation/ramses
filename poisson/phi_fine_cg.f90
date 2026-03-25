@@ -32,7 +32,7 @@ subroutine phi_fine_cg(ilevel,icount)
   real(kind=8) :: rhs_norm_all, pAp_all, r2_all
 #endif
 
-  if(gravity_type>0)return
+  if((.not.self_gravity).and.gravity_rho_ana_type==0)return
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
 

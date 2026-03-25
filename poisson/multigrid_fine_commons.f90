@@ -45,7 +45,7 @@ subroutine multigrid_fine(ilevel,icount)
    integer :: info
 #endif
 
-   if(gravity_type>0)return
+   if((.not.self_gravity).and.gravity_rho_ana_type==0)return
    if(numbtot(1,ilevel)==0)return
 
    if(verbose) print '(A,I2)','Entering fine multigrid at level ',ilevel

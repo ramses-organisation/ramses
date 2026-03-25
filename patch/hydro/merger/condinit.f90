@@ -241,7 +241,6 @@ subroutine condinit(x,u,dx,nn)
 #endif
   real(dp),dimension(1:nvector,1:nvar),save::q   ! Primitive variables
 
-
   select case (condinit_kind)
 
   case('region')

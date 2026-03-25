@@ -1,7 +1,9 @@
 subroutine refine
   use amr_commons
   implicit none
-
+  !--------------------------------------------------------------
+  ! This routine applies the refinement map for all levels.
+  !--------------------------------------------------------------
   integer::ilevel
 
   if(verbose)write(*,*)'Entering refine'

@@ -4,7 +4,7 @@
 
 This namelist, `&POISSON_PARAMS`, is used to specify runtime parameters for the Poisson solver. It is used only if `poisson=.true.` or `pic=.true.`
 
-
+### Solvers
 Two different Poisson solvers are available in RAMSES: conjugate gradient (CG) and multigrid (MG). Unlike the CG solver, MG has an initialization overhead cost (at every call of the solver), but is much more efficient on very big levels with few "holes". The multigrid solver is therefore used for all coarse levels.
 
 In addition, MG can be used on refined levels in conjuction with CG. The parameter `cg_levelmin` selects the Poisson solver as follows:
@@ -13,10 +13,22 @@ In addition, MG can be used on refined levels in conjuction with CG. The paramet
 * Refined levels with *l* < `cg_levelmin` are solved with MG
 * Refined levels with *l* >=  `cg_levelmin` are solved with CG
 
+### Gravity types
+Different sources of gravity can be added to the simulation. To activate self-gravity of the gas and particles, set `self_gravity=.true.`. Additional sources of gravity can be added by
+* adding an analytical density distribution to the Poisson source term from which the gravitational potential is determined (see rho_ana.f90)
+* adding an analytical force directly (see gravana.f90)
+
+These two methods can be combined by setting both `gravity_rho_ana_type` and `gravity_force_ana_type`.
+
 | Variable name | Fortran type | Default value  | Description      |
 |:------------------- |:-------|:----- |:------------------------- |
-| `gravity_type`      | `int`  | 0     | Type of gravity force. Possible choices are: `gravity_type=0` self-gravity (Poisson solver); `gravity_type>0` analytical gravity vector; `gravity_type<0` self-gravity plus additional analytical density profile
+| `gravity_type`      | `integer`  | 0     | (deprecated) Type of gravity force. Possible choices are: `gravity_type=0` self-gravity (Poisson solver); `gravity_type>0` analytical gravity vector; `gravity_type<0` self-gravity plus additional analytical density profile
+| `self_gravity`      | `logical`  | `.true.`     | Switch on self-gravity (Poisson solver)
+| `gravity_rho_ana_type`      | `integer`  | 0     | Add gravity from an analytical density profile. This will add an analytical contribution to the Poisson source term. 0 = no additional contribution, 2 = a point mass, 3 = galactic disk (see rho_ana.f90)
+| `gravity_force_ana_type`      | `integer`  | 0     | Add an analytical gravitational force. 0 = no additional contribution, 1 = constant vector, 2 = a point mass, 3 = galactic disk (see gravana.f90)
 | `epsilon`           | `real`  | 1e-4  | Stopping criterion for the iterative Poisson solver: residual 2-norm should be lower than `epsilon` times the right hand side 2-norm.
-| `gravity_params`    | `real array`  | 0.0, | Parameters used to define the analytical gravity field (routine `gravana.f90`) or the analytical mass density field (routine `rho_ana.f90`).
+| `gravity_params`    | `real array`  | 0.0, | (deprecated) Parameters used to define the analytical gravity field (routine `gravana.f90`) or the analytical mass density field (routine `rho_ana.f90`).
+| `gravity_rho_ana_params`    | `real array`  | 0.0, | Parameters used to define the analytical mass density field (routine `rho_ana.f90`).
+| `gravity_force_ana_params`    | `real array`  | 0.0, | Parameters used to define the analytical gravity field (routine `gravana.f90`)
 | `cg_levelmin`       | `integer`  | 999 | Minimum level from which the Conjugate Gradient solver is used in place of the Multigrid solver.
 | `cic_levelmax`      |	`integer`  | 0	 | Maximum level for CIC dark matter interpolation (default `cic_levelmax=nlevelmax`)

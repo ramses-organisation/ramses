@@ -65,7 +65,7 @@ subroutine set_unew(ilevel)
 !$omp parallel private(iskip,ivar,i,d,u,v,w,e)
   do ind=1,twotondim
      iskip=ncoarse+(ind-1)*ngridmax
-     do ivar=1,nvar
+     do ivar=1,nvar_all
 !$omp do
         do i=1,active(ilevel)%ngrid
            unew(active(ilevel)%igrid(i)+iskip,ivar) = uold(active(ilevel)%igrid(i)+iskip,ivar)
@@ -125,7 +125,7 @@ subroutine set_unew(ilevel)
            do i=1,ngrid
               ind_cell(i)=iskip+ind_grid(i)
            end do
-           do ivar=1,nvar
+           do ivar=1,nvar_all
               do i=1,ngrid
                  unew(ind_cell(i),ivar)=0
               end do
@@ -205,7 +205,7 @@ subroutine set_uold(ilevel)
 #endif
      ! -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-     do ivar=1,nvar
+     do ivar=1,nvar_all
 !$omp do
         do i=1,active(ilevel)%ngrid
            uold(active(ilevel)%igrid(i)+iskip,ivar) = unew(active(ilevel)%igrid(i)+iskip,ivar)

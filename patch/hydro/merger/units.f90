@@ -12,7 +12,7 @@ subroutine units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
 
   ! scale_d converts mass density from user units into g/cc
   !scale_d = 1.0
-  ! On prend comme unit de masse : 10**9 masses solaires
+  ! Unit of mass : 10**9 solar masses
   scale_d = 1.0D9 * M_sun / kpc2cm**3
   if(cosmo) scale_d = omega_m * rhoc *(h0/100)**2 / aexp**3
 
