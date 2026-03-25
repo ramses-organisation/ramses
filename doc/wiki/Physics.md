@@ -17,8 +17,8 @@ The block named `&COOLING_PARAMS` contains the parameters related to cooling / b
 | `isothermal`             | `logical` | `.false.`  | (deprecated) Enable equation of state for gas (heating and cooling disabled if `.true.`)
 | `barotropic_eos`         | `logical` | `.false.`  | Enable barotropic equation of state for gas (heating and cooling disabled if `.true.`). Replaced 'isothermal'
 | `barotropic_eos_form`    | `string`  | `legacy`   | Type of barotropic EOS. Options: isothermal, polytrope, double_polytrope, custom, legacy
-| `polytrope_rho`          | `real`    | 1.0d50     | sets rho0 in EOS (density normalisation or knee-density), in g/cm3
-| `polytrope_index`        | `real`    | 1.0d0      | sets gamma in EOS (polytropic index)
+| `polytrope_rho`          | `real array`    | 1.0d50     | sets normalisation or knee-densities in EOS (see hydro/eos.f90), in g/cm3
+| `polytrope_index`        | `real array`    | 1.0d0      | sets polytropic indices in EOS (see hydro/eos.f90)
 | `T_eos`                  | `real`    | 10         | sets T0 in EOS (isothermal temperature or temperature normalisation), in K
 | `mu_gas`                 | `real`    | 1d0        | molecular weight
 | `haardt_madau`           | `logical` | `.false.`  | Enable UV background
