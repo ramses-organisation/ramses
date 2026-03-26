@@ -16,6 +16,7 @@ subroutine barotropic_eos_temperature(nH, temperature)
    CASE ('double_polytrope')
       temperature = T2_eos * (1 + (nH/polytrope_n(1))**(polytrope_index(1)-1.0d0))
    CASE ('2nd_collapse')
+      ! Machida & Inutsuka 2006, Marchand et al. 2016
       factor1 = sqrt(1 + (nH/polytrope_n(1))**(2*polytrope_index(1)))
       factor2 = (1 + (nH/polytrope_n(2)))**polytrope_index(2)
       factor3 = (1 + (nH/polytrope_n(3)))**polytrope_index(3)
