@@ -173,6 +173,7 @@ module hydro_parameters
   ! Artificial viscosity
   logical :: add_viscosity = .false.
   character(LEN=20)::viscosity_kind='constant_uniform' ! 'constant_uniform'
-  real(dp) :: nu_viscosity_constant = 0.001
+  real(dp) :: nu_viscosity_shear = 0.001 ! Shear viscosity coefficient for constant uniform viscosity
+  real(dp) :: nu_viscosity_bulk = 0.001 ! Bulk viscosity coefficient for constant uniform viscosity
 
 end module hydro_parameters

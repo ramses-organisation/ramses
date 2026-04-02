@@ -741,14 +741,14 @@ subroutine add_viscosity_source_terms(ilevel)
         select case (viscosity_kind)
         case ('constant_uniform')
 
-          nu_viscosity          = nu_viscosity_constant
-          nu_viscosity_left(:)  = nu_viscosity_constant
-          nu_viscosity_right(:) = nu_viscosity_constant
+          nu_viscosity          = nu_viscosity_shear
+          nu_viscosity_left(:)  = nu_viscosity_shear
+          nu_viscosity_right(:) = nu_viscosity_shear
 
         end select
 
         ! Add non crossed terms (F1_j = d_i (rho nu d_i v_j ))
-        ! + (1 - 2/dim) d_i (rho nu d_i v_i) from the non-crossed terms when idim = jdim
+        ! + (1 - 2/dim) d_i (rho nu d_i v_i) from the non-crossed terms  F2 and F3 when idim = jdim
 
         do jdim = 1, ndim ! component of the laplacian and the velocity
           do idim = 1, ndim ! direction for derivatives
@@ -763,6 +763,16 @@ subroutine add_viscosity_source_terms(ilevel)
 
             ! second derivative at the cell center
             viscosity_term(i, jdim) = viscosity_term(i, jdim) + (1 + e(idim, jdim) * (1.0 - 2.0 / ndim)) * (den_dvel_right - den_dvel_left) / (dx_loc)
+
+            ! Bulk viscosity
+            if (idim == jdim) then
+              den_dvel_left  =  ((den + den_left(i,idim)) / 2.0 ) * nu_viscosity_bulk * ((vel(jdim) - vel_left ) / (dx_loc))
+              den_dvel_right =  ((den + den_right(i,idim)) / 2.0) * nu_viscosity_bulk * ((vel_right - vel(jdim) ) /  (dx_loc))
+              viscosity_term(i, jdim) = viscosity_term(i, jdim) + (den_dvel_right - den_dvel_left) / (dx_loc)
+            end if
+
+
+      
           end do
         end do
 
@@ -808,6 +818,13 @@ subroutine add_viscosity_source_terms(ilevel)
 
               !  - (2/ndim) d_i rho nu d_j v_j
               viscosity_term(i, idim) = viscosity_term(i, idim) - (2.0/ndim)*(den_dvel_right - den_dvel_left) / (2 * dx_loc)
+
+
+              ! Bulk viscosity contribution
+              den_dvel_left = den_left(i, idim) * nu_viscosity_bulk*(v_ileft_jbottom - v_ileft_jtop)/(2 * dx_loc)
+              den_dvel_right = den_right(i, idim) * nu_viscosity_bulk*(v_iright_jbottom - v_iright_jtop)/(2 * dx_loc)
+
+              viscosity_term(i, idim) = viscosity_term(i, idim) + (den_dvel_right - den_dvel_left) / (2 * dx_loc)
           end do
         end do
 
