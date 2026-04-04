@@ -23,6 +23,7 @@ subroutine dump_all
   character(LEN=5)::nchar,ncharcpu
   character(LEN=80)::filename,filename_desc,filedir
   integer::ierr
+  real(dp),parameter::eps_a=1d-10
 
   if(nstep_coarse==nstep_coarse_old.and.nstep_coarse>0)return
   if(nstep_coarse==0.and.nrestart>0)return
@@ -31,7 +32,10 @@ subroutine dump_all
   call write_screen
   call title(ifout,nchar)
   ifout=ifout+1
-  if(t>=tout(iout).or.aexp>=aout(iout))iout=iout+1
+  if(t>=tout(iout) .or. &
+     aexp>=aout(iout) - merge(eps_a,0.0d0,exact_output_time)) then
+     iout=iout+1
+  endif
   if(t>=tout_next)tout_next=tout_next+delta_tout
   if(aexp>=aout_next)aout_next=aout_next+delta_aout
   output_done=.true.

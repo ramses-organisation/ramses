@@ -29,6 +29,7 @@ recursive subroutine amr_step(ilevel,icount)
   integer::i,idim,ivar
   logical::ok_defrag,output_now_all
   logical,save::first_step=.true.
+  real(dp), parameter :: eps_a = 1d-10
 
   if(numbtot(1,ilevel)==0)return
 
@@ -140,8 +141,12 @@ recursive subroutine amr_step(ilevel,icount)
      call MPI_ALLREDUCE(output_now,output_now_all,1,MPI_LOGICAL,MPI_LOR,MPI_COMM_WORLD,mpi_err)
 #endif
      if(foutput>0)then
-     if(mod(nstep_coarse,foutput)==0.or.aexp>=aout(iout).or.t>=tout(iout) &
-        &.or.aexp>=aout_next.or.t>=tout_next.or.output_now_all.EQV..true.)then
+     if(mod(nstep_coarse,foutput)==0 .or. &
+        aexp>=aout(iout) - merge(eps_a,0.0d0,exact_output_time) .or. &
+        t>=tout(iout) .or. &
+        aexp>=aout_next .or. &
+        t>=tout_next .or. &
+        output_now_all.EQV..true.) then
                                call timer('io','start')
         if(.not.ok_defrag)then
            call defrag
