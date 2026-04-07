@@ -4,10 +4,18 @@ This section of the documentation discusses the structure of the code and the im
 
 ```{toctree}
 :maxdepth: 1
-:caption: Lectures:
+:caption: General overview of the code:
 
 architecture.rst
+hydro.rst
+gravity.rst
 general.rst
+```
+
+```{toctree}
+:maxdepth: 1
+:caption: Lectures:
+
 amr.rst
 particles.md
 parameters.rst
