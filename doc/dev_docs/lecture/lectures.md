@@ -6,13 +6,10 @@ This section of the documentation discusses the structure of the code and the im
 :maxdepth: 1
 :caption: Lectures:
 
-architecture.rst
+general.rst
 hydro.rst
 gravity.rst
-general.rst
 amr.rst
-refine.rst
-boundaries.rst
 particles.md
 parameters.rst
 mpi.rst
