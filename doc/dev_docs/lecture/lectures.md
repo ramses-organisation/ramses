@@ -11,9 +11,17 @@ hydro.rst
 gravity.rst
 amr.rst
 particles.md
-parameters.rst
 mpi.rst
 subgrid.rst
 refinement.rst
 git.rst
+```
+
+```{toctree}
+:maxdepth: 1
+:caption: Input/Output and User Interaction:
+
+parameters.rst
+input.rst
+output.rst
 ```
