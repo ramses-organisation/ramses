@@ -1,13 +1,15 @@
 4. Detailed dive into ``amr_step``
 ==================================
 
+.. contents::
+
 Because RAMSES is an AMR code with the possiblitly for adaptive
 timestepping, there are certain complexities in ``amr_step``.
 
-recursivity
------------
+4.1 recursivity
+---------------
 
-.. code:: fortran=
+.. code:: fortran
 
    recursive subroutine amr_step(ilevel,icount)
      ...
@@ -38,90 +40,95 @@ recursivity
      ...
    end subroutine amr_step
 
-.. container:: info
+.. admonition:: **Exercise** 
 
-   **Exercise** Write down the calls to ``amr_step`` assuming there are
-   3 refinement levels. A) First assume there is no subcycling
-   (nsubcycle(ilevel)==1 for all levels). B) Now assume you have
-   subcycling for all levels. :::spoiler **Solution** If we split the
-   computations done in amr_step into two parts: stuff done before the
-   recursive call to amr_step and stuff done after
+   Write down the calls to ``amr_step`` assuming there are
+   3 refinement levels. 
+      A) First assume there is no subcycling (nsubcycle(ilevel)==1 for all levels).
+      B) Now assume you have subcycling for all levels.
+   
+   .. admonition:: **Solution**
+      :class: dropdown
+   
+      If we split the
+      computations done in amr_step into two parts: stuff done before the
+      recursive call to amr_step and stuff done after
 
-   .. code:: fortran=
+      .. code:: fortran
 
-      recursive subroutine amr_step(ilevel,icount)
+         recursive subroutine amr_step(ilevel,icount)
 
-         ! calc phi(ilevel), set unew(ilevel)=uold(ilevel), ..., calc dt(ilevel)
-         stuff_before(ilevel)
+            ! calc phi(ilevel), set unew(ilevel)=uold(ilevel), ..., calc dt(ilevel)
+            stuff_before(ilevel)
 
-         ! recursive call
-         if(ilevel<nlevelmax)then
-            if(nsubcycle(ilevel)==2)then
-               call amr_step(ilevel+1,1)
-               call amr_step(ilevel+1,2)
+            ! recursive call
+            if(ilevel<nlevelmax)then
+               if(nsubcycle(ilevel)==2)then
+                  call amr_step(ilevel+1,1)
+                  call amr_step(ilevel+1,2)
+               else
+                  call amr_step(ilevel+1,1)
+               endif
             else
-               call amr_step(ilevel+1,1)
-            endif
-         else
-           call update_time(ilevel)
-         end if
+            call update_time(ilevel)
+            end if
 
-         ! solve hydro, set uold(ilevel)=unew(ilevel), ...
-         stuff_after(ilevel)
+            ! solve hydro, set uold(ilevel)=unew(ilevel), ...
+            stuff_after(ilevel)
 
-      end subroutine amr_step
+         end subroutine amr_step
 
-   A) Without subcycling
+      A) Without subcycling
 
-   ::
+      ::
 
-      call amr_step(l-1)
-              stuff_before(l-1)
-          call amr_step(l)
-              stuff_before(l)
-              call amr_step(l+1)
-                  stuff_before(l+1)
-                  t = t+dt(l+1)
-                  stuff_after(l+1)
-              stuff_after(l)
-          stuff_after(l-1)
+         call amr_step(l-1)
+               stuff_before(l-1)
+            call amr_step(l)
+               stuff_before(l)
+               call amr_step(l+1)
+                     stuff_before(l+1)
+                     t = t+dt(l+1)
+                     stuff_after(l+1)
+               stuff_after(l)
+            stuff_after(l-1)
 
-   At the end we have advanced by dt(l+1)
+      At the end we have advanced by dt(l+1)
 
-   B) With subcycling
+      B) With subcycling
 
-   ::
+      ::
 
-      call amr_step(l-1,1)
-              stuff_before(l-1)
-          call amr_step(l,1)
-              stuff_before(l)
-              call amr_step(l+1,1)
-                  stuff_before(l+1)
-                  t = t+dt(l+1)
-                  stuff_after(l+1)
-              call amr_step(l+1,2)
-                  stuff_before(l+1)
-                  t = t+dt(l+1)
-                  stuff_after(l+1)
-              stuff_after(l)
-          call amr_step(l,2)
-              stuff_before(l)
-              call amr_step(l+1,1)
-                  stuff_before(l+1)
-                  t = t+dt(l+1)
-                  stuff_after(l+1)
-              call amr_step(l+1,2)
-                  stuff_before(l+1)
-                  t = t+dt(l+1)
-                  stuff_after(l+1)
-              stuff_after(l)
-          stuff_after(l-1)
+         call amr_step(l-1,1)
+               stuff_before(l-1)
+            call amr_step(l,1)
+               stuff_before(l)
+               call amr_step(l+1,1)
+                     stuff_before(l+1)
+                     t = t+dt(l+1)
+                     stuff_after(l+1)
+               call amr_step(l+1,2)
+                     stuff_before(l+1)
+                     t = t+dt(l+1)
+                     stuff_after(l+1)
+               stuff_after(l)
+            call amr_step(l,2)
+               stuff_before(l)
+               call amr_step(l+1,1)
+                     stuff_before(l+1)
+                     t = t+dt(l+1)
+                     stuff_after(l+1)
+               call amr_step(l+1,2)
+                     stuff_before(l+1)
+                     t = t+dt(l+1)
+                     stuff_after(l+1)
+               stuff_after(l)
+            stuff_after(l-1)
 
-   At the end we have advanced by 4 level l+1 timesteps dt(l+1)
+      At the end we have advanced by 4 level l+1 timesteps dt(l+1)
 
-Time stepping
--------------
+4.2 Time stepping
+----------------
 
 RAMSES enables adaptive time stepping where each AMR level evolves with
 individual timesteps. Though, the following rule always applies:
@@ -129,7 +136,9 @@ individual timesteps. Though, the following rule always applies:
 :math:`\Delta t^{\ell}=\Delta t^{\ell+1}_1+\Delta t^{\ell+1}_2`
 
 An example of time stepping with two levels in the figure below
-(Credits: Romain Teyssier) |image3|
+(Credits: Romain Teyssier)
+
+|image3|
 
 Level 2 is updated first with first with a time step of size
 :math:`\Delta t^{\ell+1}_1` and second with
