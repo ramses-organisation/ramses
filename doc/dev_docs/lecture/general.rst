@@ -1,5 +1,5 @@
 
-Code architecture and amr_step
+Structure of the code
 ==============================
 
 .. contents::

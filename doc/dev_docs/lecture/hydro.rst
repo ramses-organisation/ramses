@@ -1,10 +1,10 @@
-2. Hydrodynamics
+Hydrodynamics
 ================
 
 .. contents::
 
 
-2.1 The Euler equations of hydrodynamics
+1. The Euler equations of hydrodynamics
 ----------------------------------------
 
 RAMSES uses conservative variables that are updated with the conservative equations (mass, momentum, total energy)
@@ -67,7 +67,7 @@ are updated using the induction equation in the ideal MHD limit.
 
 :math:`\frac{\partial \textbf{B}}{\partial t}  - \nabla\times \left[\textbf{u} \times \textbf{B}\right]  = 0.`
 
-2.2 Hydro variables in RAMSES
+2. Hydro variables in RAMSES
 -----------------------------
 
 The arrays ``uold`` and ``unew``
@@ -217,7 +217,7 @@ as regular passive scalars.
       * how to output metadata info, input (don’t forget conversion to primitive vars)
       * a recipe to convert conservative to primitive variable in the routine ``ctoprim``
 
-2.3 The hydro step in ``amr_step``
+3. The hydro step in ``amr_step``
 ----------------------------------
 
 .. admonition:: Exercise
@@ -269,7 +269,7 @@ as regular passive scalars.
          endif
          ...
 
-2.4 Solving hydro with the Finite Volume Method (FVM)
+4. Solving hydro with the Finite Volume Method (FVM)
 -----------------------------------------------------
 
 Several numerical methods exist to solve the hydrodynamic equations on a
@@ -339,7 +339,7 @@ fluxes from all directions (unsplit method).
 
 How source terms are treated will be discussed further.
 
-2.5 Unsplit MUSCL-Hancock scheme for computing the fluxes
+5. Unsplit MUSCL-Hancock scheme for computing the fluxes
 ---------------------------------------------------------
 
 By default, RAMSES uses the MUSCL-Hancock scheme for computing the

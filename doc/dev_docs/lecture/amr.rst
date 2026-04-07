@@ -1,4 +1,4 @@
-5. Storing and accessing elements of the AMR grid
+Mesh data structures
 =====================
 
 Several data structures are used to keep track of the cells in the grid.
@@ -6,7 +6,7 @@ We go into the purpose of each of them.
 
 .. contents::
 
-5.1 Octree representation of the computational domain
+1. Octree representation of the computational domain
 -----------------------------------------------------
 
 To represent the grid, RAMSES uses an octree structure which can be
@@ -72,7 +72,7 @@ A schematic example for two refinement levels in a 2D grid:
       This is implemented in the routine ``getnborgrids`` in
       *amr/nbors_utils.f90*.
 
-5.2 Grid versus cell based arrays
+2. Grid versus cell based arrays
 ---------------------------------
 
 In general, AMR grid related arrays are defined in *amr_commons.f90*,
@@ -141,7 +141,7 @@ neighbors, and the spatial order is irrelevant.
          iskip=ncoarse+(ind-1)*ngridmax
          igrid=icell-iskip
 
-5.3 Linked list variables
+3. Linked list variables
 -------------------------
 
 The grids making up the computational domain are stored in a linked list
@@ -274,7 +274,7 @@ A grid can only be part of **one** list at a time.
       ``make_grid_coarse``. The last code block of this routine handles the
       linked list update.
 
-5.4 The variables ``active`` and ``boundary``
+4. The variables ``active`` and ``boundary``
 ---------------------------------------------
 
 One way to access the grids for processing them, is to simply iterate
@@ -349,7 +349,7 @@ regions for each level. Its contents is gathered by starting at
       ``virtual_boundaries.f90``, which builds the communication structure
       for a specified AMR level.
 
-5.5 Processing grids and cells
+5. Processing grids and cells
 ------------------------------
 
 Iterating through grids
@@ -447,7 +447,7 @@ nvector may lead to a better vectorization rate, but small nvector
 values are better for hardware cache performance. The best value is
 dependent in the machine and the type of simulation.
 
-5.6 Finding neighbors
+6. Finding neighbors
 ---------------------
 
 Routines to find neighboring cells and grids are implemented in the file

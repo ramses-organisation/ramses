@@ -1,10 +1,10 @@
-3. Gravity
+Gravity
 ==========
 
 .. contents::
 
 
-3.1 The Poisson equation for gravity
+1. The Poisson equation for gravity
 ------------------------------------
 
 Poisson’s equation for gravity is written as follows
@@ -31,7 +31,7 @@ found in the subdirectory *poisson/*. Since source term and force
 application deal with either gas or particles, the routines related to
 these steps are either found in the directory *pm/* or *hydro/*.
 
-3.2 Gravity variables in RAMSES
+2. Gravity variables in RAMSES
 -------------------------------
 
 The variables for the gravity module are defined in ``poisson_commons``:
@@ -58,7 +58,7 @@ They consist of
 * the gravitational potential ``phi`` and a copy of the old state ``phi_old``, 
 * the total density distribution ``rho``, including gas and particles.
 
-3.3 Computing the Poisson source term
+3. Computing the Poisson source term
 -------------------------------------
 
 The first step is to compute the Poisson source term on the grid. We
@@ -79,7 +79,7 @@ in ``amr_step``:
    ! Compute poisson source term (i.e. the density field)
    call rho_fine(ilevel,icount)
 
-3.4 Solving for the gravitational potential and force
+4. Solving for the gravitational potential and force
 -----------------------------------------------------
 
 Once we have the density field, we can feed it to our Poisson solver of
@@ -112,7 +112,7 @@ We can find these two step in ``amr_step``:
    ! Compute gravitational acceleration
    call force_fine(ilevel,icount)
 
-3.5 Applying the gravitational force on the gas
+5. Applying the gravitational force on the gas
 -----------------------------------------------
 
 When there is gravity, a source term :math:`\mathbb{S}` is added to the
@@ -210,7 +210,7 @@ gravitional acceleration is taken into account using a Velvet scheme
       syncrhonize all levels and to make outputs at the beginning of the
       next timestep. This contribution is then removed ater the dump.
 
-3.6 Applying the gravitational force on the particles
+6. Applying the gravitational force on the particles
 -----------------------------------------------------
 
 For the particles, the gravitational acceleration is taken into account
