@@ -11,7 +11,7 @@
    ``settings``, into the ``SSH and GPG keys`` section, and follow
    instructions from there).
 
-Lecture: Git
+How to use Git
 ============
 
 **RAMSES uses Git to manage code** development and version control. Git

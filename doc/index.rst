@@ -41,9 +41,9 @@ Table of Contents
   :maxdepth: 1
 
   dev_docs/developer_guide.md
+  dev_docs/contributors.md
   dev_docs/git.rst
   dev_docs/docs.md
-  dev_docs/contributors.md
   dev_docs/lecture/lectures.md
 
 .. |github tag| image:: https://img.shields.io/badge/GitHub-black.svg?style=flat&logo=github
