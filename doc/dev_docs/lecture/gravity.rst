@@ -17,11 +17,12 @@ gravitational force is given by
 
 :math:`\bf{f}= -\nabla \phi`
 
-The steps for solving gravity are as followed: \* determine the Poisson
-source term \* compute the gravitational potential by solving the
-Poisson equation \* calculate the gravitational force (or acceleration)
-by taking the gradient of the potential \* apply the force to the gas
-and particles.
+The steps for solving gravity are as followed:
+
+* determine the Poisson source term 
+* compute the gravitational potential by solving the Poisson equation 
+* calculate the gravitational force (or acceleration) by taking the gradient of the potential 
+* apply the force to the gas and particles.
 
 We will address each of these steps in more detail below.
 
@@ -35,7 +36,7 @@ these steps are either found in the directory *pm/* or *hydro/*.
 
 The variables for the gravity module are defined in ``poisson_commons``:
 
-::
+.. code:: fortran
 
     real(dp),allocatable,dimension(:)  ::phi,phi_old       ! Potential
     real(dp),allocatable,dimension(:)  ::rho               ! Density
@@ -43,7 +44,7 @@ The variables for the gravity module are defined in ``poisson_commons``:
 
 and allocated in ``init_poisson``:
 
-::
+.. code:: fortran
 
     allocate(rho (1:ncell))
     allocate(phi (1:ncell))
@@ -51,10 +52,11 @@ and allocated in ``init_poisson``:
     allocate(f   (1:ncell,1:3))
     rho=0; phi=0; f=0
 
-They consist of \* the gravitational force ``f``, a vector with ``ndim``
-dimensions, \* the gravitational potential ``phi`` and a copy of the old
-state ``phi_old``, \* the total density distribution ``rho``, including
-gas and particles.
+They consist of 
+
+* the gravitational force ``f``, a vector with ``ndim`` dimensions, 
+* the gravitational potential ``phi`` and a copy of the old state ``phi_old``, 
+* the total density distribution ``rho``, including gas and particles.
 
 3.3 Computing the Poisson source term
 -------------------------------------
@@ -72,7 +74,7 @@ will be added together, resulting in a total density field (stored in
 The routine responsible for this step is ``rho_fine``, which is called
 in ``amr_step``:
 
-.. code:: fortran=
+.. code:: fortran
 
    ! Compute poisson source term (i.e. the density field)
    call rho_fine(ilevel,icount)
@@ -92,7 +94,7 @@ of ``phi``. This is done by the routine ``force_fine``. The resulting
 
 We can find these two step in ``amr_step``:
 
-.. code:: fortran=
+.. code:: fortran
 
    ! Compute gravitational potential
    if(ilevel>levelmin)then
@@ -135,76 +137,80 @@ term (not to be confused with the Poisson source term). For the gas,
 gravitional acceleration is taken into account using a Velvet scheme
 (time centered).
 
-.. container:: info
+.. admonition:: Exercise
 
-   **Exercise**: Where in ``amr_step`` is the gravitationnal
+   Where in ``amr_step`` is the gravitationnal
    acceleration source term integrated when you have hydro? Write the
    corresponding pseudo-code (assuming there are no particles).
-   :::spoiler **Solution** The acceleration is added in four places, but
-   with a subtile change of sign in one of the calls. Equation 13 in
-   Teyssier (2002) is done with ``add_gravity_source_terms(ilevel)``
-   (index n) and ``line 19`` for n+1.
 
-   The parts in ``amr_step`` relevant for the gravity calculation in the
-   case of hydro (ignoring particles) can be summarized as follows:
+   .. admonition:: **Solution**
+      :class: dropdown
+      
+      The acceleration is added in four places, but
+      with a subtile change of sign in one of the calls. Equation 13 in
+      Teyssier (2002) is done with ``add_gravity_source_terms(ilevel)``
+      (index n) and ``line 19`` for n+1.
 
-   .. code:: fortran=
+      The parts in ``amr_step`` relevant for the gravity calculation in the
+      case of hydro (ignoring particles) can be summarized as follows:
 
-      ! GRAVITY UPDATE
-      if(poisson)then
-         ! Save old potential for time-extrapolation at level boundaries
-         call save_phi_old(ilevel)
+      .. code:: fortran
 
-         ! Compute poisson source term (i.e. the density field)
-         call rho_fine(ilevel,icount)
+         ! GRAVITY UPDATE
+         if(poisson)then
+            ! Save old potential for time-extrapolation at level boundaries
+            call save_phi_old(ilevel)
 
-         ! Remove gravity source term with half time step and old force (u+0.5*f*dt)
-         if(hydro) call synchro_hydro_fine(ilevel,-0.5*dtnew(ilevel),1)
+            ! Compute poisson source term (i.e. the density field)
+            call rho_fine(ilevel,icount)
 
-         ! Compute gravitational potential using multigrid of CG method
-         call multigrid_fine(ilevel,icount) OR phi_fine_cg(ilevel,icount)
+            ! Remove gravity source term with half time step and old force (u+0.5*f*dt)
+            if(hydro) call synchro_hydro_fine(ilevel,-0.5*dtnew(ilevel),1)
 
-         ! Compute gravitational acceleration
-         call force_fine(ilevel,icount)
+            ! Compute gravitational potential using multigrid of CG method
+            call multigrid_fine(ilevel,icount) OR phi_fine_cg(ilevel,icount)
 
-         ! Add gravity source term with half time step and new force
-         if(hydro) call synchro_hydro_fine(ilevel,+0.5*dtnew(ilevel),1)
-      end if
-      ...
+            ! Compute gravitational acceleration
+            call force_fine(ilevel,icount)
 
-      ! Compute new time step
-      call newdt_fine(ilevel)
-
-      ! Set unew equal to uold
-      if(hydro)call set_unew(ilevel)
-
-      ! RECURSIVE STEP TO AMR_STEP
-      ...
-
-      ! HYDRO STEP
-      if(hydro)then
-         ! Solve hydro
+            ! Add gravity source term with half time step and new force
+            if(hydro) call synchro_hydro_fine(ilevel,+0.5*dtnew(ilevel),1)
+         end if
          ...
-         ! Add gravity source terms with half a time step to unew
-         if(poisson)call add_gravity_source_terms(ilevel)
 
-         ! Set uold equal to unew
-         call set_uold(ilevel)
+         ! Compute new time step
+         call newdt_fine(ilevel)
 
-         ! Add gravity source term with half time step and old force
-         ! in order to complete the time step
-         if(poisson)call synchro_hydro_fine(ilevel,+0.5*dtnew(ilevel),1)
+         ! Set unew equal to uold
+         if(hydro)call set_unew(ilevel)
+
+         ! RECURSIVE STEP TO AMR_STEP
          ...
-      end if
 
-   Remark that the routine ``synchro_hydro_fine()`` alters ``uold``,
-   while ``add_gravity_source_terms()`` alters ``unew``.
+         ! HYDRO STEP
+         if(hydro)then
+            ! Solve hydro
+            ...
+            ! Add gravity source terms with half a time step to unew
+            if(poisson)call add_gravity_source_terms(ilevel)
 
-   Half a timestep is added at the end of the global time step to
-   syncrhonize all levels and to make outputs at the beginning of the
-   next timestep. This contribution is then removed ater the dump.
+            ! Set uold equal to unew
+            call set_uold(ilevel)
 
-3.5 Applying the gravitational force on the particles
+            ! Add gravity source term with half time step and old force
+            ! in order to complete the time step
+            if(poisson)call synchro_hydro_fine(ilevel,+0.5*dtnew(ilevel),1)
+            ...
+         end if
+
+      Remark that the routine ``synchro_hydro_fine()`` alters ``uold``,
+      while ``add_gravity_source_terms()`` alters ``unew``.
+
+      Half a timestep is added at the end of the global time step to
+      syncrhonize all levels and to make outputs at the beginning of the
+      next timestep. This contribution is then removed ater the dump.
+
+3.6 Applying the gravitational force on the particles
 -----------------------------------------------------
 
 For the particles, the gravitational acceleration is taken into account
@@ -231,7 +237,7 @@ gravitational force has been calculated using the updated particle
 positions. In ``amr_step``, we thus find ``synchro_fine`` *before*
 ``move_fine``:
 
-.. code:: fortran=
+.. code:: fortran
 
    ! Gravity update
    if(poisson)then

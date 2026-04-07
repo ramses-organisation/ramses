@@ -170,7 +170,7 @@ magentic field. So we have
 To compute the cell-center magnetic field, for example for outputting,
 we do
 
-.. code:: fortran=
+.. code:: fortran
 
    Bx(i) = 0.5*(uold(i,neul+1) + uold(i,nvar+1))
    By(i) = 0.5*(uold(i,neul+2) + uold(i,nvar+2))
