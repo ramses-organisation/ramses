@@ -137,7 +137,7 @@ term (not to be confused with the Poisson source term). For the gas,
 gravitional acceleration is taken into account using a Velvet scheme
 (time centered).
 
-.. admonition:: Exercise
+.. admonition:: **Exercise**
 
    Where in ``amr_step`` is the gravitationnal
    acceleration source term integrated when you have hydro? Write the
