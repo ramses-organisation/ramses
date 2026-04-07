@@ -41,7 +41,7 @@ Table of Contents
   :maxdepth: 1
 
   dev_docs/developer_guide.md
-  dev_docs/lecture/git.rst
+  dev_docs/git.rst
   dev_docs/docs.md
   dev_docs/contributors.md
   dev_docs/lecture/lectures.md

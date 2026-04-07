@@ -14,7 +14,6 @@ particles.md
 mpi.rst
 subgrid.rst
 refinement.rst
-git.rst
 ```
 
 ```{toctree}
