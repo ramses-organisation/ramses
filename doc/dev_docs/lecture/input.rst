@@ -33,48 +33,50 @@ variables are converted to the conservative ones. The conservative
 variables are then returned to ``init_flow_fine`` through the array
 ``u``, where they are written to ``uold``.
 
-.. container:: info
+.. admonition:: **Exercise**
 
-   **Exercise:** Implement a new ``condinit_type`` that adds a
+   Implement a new ``condinit_type`` that adds a
    sinusoidal perturbation on a uniform density background in 1D:
    :math:`\rho(x) = \rho_0 [1 + A \cos(\frac{2\pi x}{\lambda})]` The
-   pressure is set to the same value as the density. :::spoiler
-   **Solution**
+   pressure is set to the same value as the density. 
+   
+   .. admonition:: **Solution**
+      :class: dropdown
 
-   .. code:: fortran=
+      .. code:: fortran
 
-      ...
-        case('jeans_instability_cos')
-           call jeans_instability_cos_condinit(x, q, dx, nn)
-      ...
-      !================================================================
-      subroutine jeans_instability_cos_condinit(x,q,dx,nn)
-        use amr_parameters
-        use hydro_parameters
-        use constants, only:pi
+          ...
+            case('jeans_instability_cos')
+              call jeans_instability_cos_condinit(x, q, dx, nn)
+          ...
+          !================================================================
+          subroutine jeans_instability_cos_condinit(x,q,dx,nn)
+            use amr_parameters
+            use hydro_parameters
+            use constants, only:pi
 
-        implicit none
-        integer ::nn                            ! Number of cells
-        real(dp)::dx                            ! Cell size
-        real(dp),dimension(1:nvector,1:nvar)::q ! Primitive variables
-        real(dp),dimension(1:nvector,1:ndim)::x ! Cell center position.
-        !================================================================
-        ! sinusoidal perturbation of amplitude A
-        !================================================================
-        integer::i
-        real(dp),parameter::A=1d-4, lambda=0.5
+            implicit none
+            integer ::nn                            ! Number of cells
+            real(dp)::dx                            ! Cell size
+            real(dp),dimension(1:nvector,1:nvar)::q ! Primitive variables
+            real(dp),dimension(1:nvector,1:ndim)::x ! Cell center position.
+            !================================================================
+            ! sinusoidal perturbation of amplitude A
+            !================================================================
+            integer::i
+            real(dp),parameter::A=1d-4, lambda=0.5
 
-        ! Call built-in initial condition generator to init the fields
-        call region_condinit(x,q,dx,nn)
+            ! Call built-in initial condition generator to init the fields
+            call region_condinit(x,q,dx,nn)
 
-        do i=1,nn
-          ! density
-          q(i,1) = 1+A*cos(2*pi*x(i,1)/lambda)
-          ! pressure
-          q(i,3)=q(i,1)
-        end do
+            do i=1,nn
+              ! density
+              q(i,1) = 1+A*cos(2*pi*x(i,1)/lambda)
+              ! pressure
+              q(i,3)=q(i,1)
+            end do
 
-      end subroutine jeans_instability_cos_condinit
+          end subroutine jeans_instability_cos_condinit
 
 2. Input file formats
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -83,8 +85,6 @@ Another way to provide the initial conditions is through files, by
 setting the namelist parameters ``initfile`` and ``filetype``. For the
 variables on the grid, supported formats are ascii and grafic (see
 *init_flow_fine.f90*), while for particles ascii, grafic, and gadget are
-available (see *init_part.f90*, and `Section
-1.3 <https://codimd.math.cnrs.fr/z55fgvBcTjiGxrWt7VBUVw?both#13-Initialising-particles>`__
-in the chapter on particles).
+available (see *init_part.f90*, and the chapter on particles).
 
 If you want to add your own input file, good luck.
