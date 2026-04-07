@@ -1,3 +1,10 @@
+2. Hydrodynamics
+================
+
+.. Admonition:: **Topics**
+
+   Hydro equation
+
 .. contents::
 
 2. Hydrodynamics
@@ -6,33 +13,44 @@
 2.1 The Euler equations of hydrodynamics
 ----------------------------------------
 
-RAMSES uses conservative variables that are updated with the
-conservative equations (mass, momentum, total energy)
+RAMSES uses conservative variables that are updated with the conservative equations (mass, momentum, total energy)
+
 :math:`\frac{\partial \rho}{\partial t}  + \nabla\cdot \left[\rho\textbf{u} \right]  =  0 \\
 \frac{\partial \rho\textbf{u}}{\partial t}  + \nabla \cdot\left[\rho \textbf{u}\otimes \textbf{u} + P \mathbb{I} \right] = 0\\
 \frac{\partial E_\mathrm{T}}{\partial t} + \nabla\cdot \left[\textbf{u}\left( E_\mathrm{T} + P \right)\right] = 0,`
-with :math:`\rho` the density, :math:`\textbf{u}` the velocity,
-:math:`E_\mathrm{T}=e + 1/2\rho
-\textbf{u}^2` the total energy, :math:`e` the gas thermal energy, and
-:math:`P=(\gamma-1)e` the gas pressure. :math:`\gamma` is the adiabatic
-index
+
+with 
+:math:`\rho` the density,
+:math:`\textbf{u}` the velocity,
+:math:`E_\mathrm{T}=e + 1/2\rho \textbf{u}^2` the total energy,
+:math:`e` the gas thermal energy, and
+:math:`P=(\gamma-1)e` the gas pressure. 
+:math:`\gamma` is the adiabatic index.
 
 The system can be written in the canonical form
+
 :math:`\frac{\partial \mathbb{U}}{\partial t} + \nabla\cdot\mathbb{F}(\mathbb{U}) = \mathbb{S},`
+
 where :math:`\mathbb{U}` is the vector of conservative variables
+
 :math:`\mathbb{U}=\left[ \begin{array}{c}
 \rho \\
 \rho\textbf{u} \\
 E_\mathrm{T} \\
-\end{array} \right],` :math:`\mathbb{F}` is the flux, and
-:math:`\mathbb{S}` the source terms. :math:`\mathbb{U}` are the
-fundamentals variables in RAMSES which are stored in ``uold`` and
-``unew`` (see below). For practical reasons, RAMSES often switches to
-primitive variables :math:`\mathbb{Q}=\left[ \begin{array}{c}
+\end{array} \right],`
+
+:math:`\mathbb{F}` is the flux, and
+:math:`\mathbb{S}` the source terms.
+:math:`\mathbb{U}` are the fundamentals variables in RAMSES which are stored in ``uold`` and ``unew`` (see below).
+For practical reasons, RAMSES often switches to primitive variables
+
+:math:`\mathbb{Q}=\left[ \begin{array}{c}
 \rho \\
 \textbf{u} \\
 P \\
-\end{array} \right].` Indeed, it is easier to use the dual space of the
+\end{array} \right].` 
+
+Indeed, it is easier to use the dual space of the
 primitive variables in the integration of the hyperbolic solver. In
 addition, when for instance feedback is activates, mass, momentum or
 thermal energy are added, which requires to use primitive variables.
@@ -45,8 +63,9 @@ advected with the flow. These variables are integrated with the
 following evolution equations
 
 :math:`\frac{\partial \rho X}{\partial t}  + \nabla\cdot \left[\rho X\textbf{u} \right]  =  0`
-and
+
 :math:`\frac{\partial E_\mathrm{NT}}{\partial t}  + \nabla\cdot \left[E_\mathrm{NT} \textbf{u} \right]  =  -P_\mathrm{NT}\nabla.\textbf{u}`
+
 with :math:`P_\mathrm{NT}=(\gamma_\mathrm{rad}-1)E_\mathrm{NT}`.
 
 Magnetic fields :math:`\textbf{B}` are stored at each cell faces. They
@@ -92,10 +111,11 @@ Number of hydro variables ``nvar``
 
 The total amount of independent variables stored on the AMR grid is set
 at compile time in the Makefile by the parameter ``nvar``. It includes
-\* the Euler variables: density, velocity and pressure \* the magnetic
-field vector (on the left cell face), when compiled with MHD \* an
-optional number of non-thermal energies (``NENER``) \* an optional
-number of passive scalars (``NMETALS`` and ``NPSCAL``)
+
+* the Euler variables: density, velocity and pressure 
+* the magnetic field vector (on the left cell face), when compiled with MHD 
+* an optional number of non-thermal energies (``NENER``)
+* an optional number of passive scalars (``NMETALS`` and ``NPSCAL``)
 
 Remark that ``NMETALS`` and ``NPSCAL`` are not passed to the source
 code. For the hydro-solver there is no distinction between these types
@@ -134,19 +154,24 @@ variables. The number of Euler variables with addition of the magnetic
 field is indicated by ``nhydro`` in the code. This makes it easy to loop
 over them:
 
-::
+.. code:: fortran
 
    do i=1,nhydro
 
-We have - for HYDRO: ``nhydro=neul`` - for MHD: ``nhydro=neul+3=8``
+We have 
+
+* for HYDRO: ``nhydro=neul``
+* for MHD: ``nhydro=neul+3=8``
 
 Additionally, the magnetic field on the right cell face is added at the
 very end of the variable array. This means that when following the
 evolution of magnetic fields, we store 6 additional variables. For
 convenience, the code defines the parameter ``nvar_all`` which, in
 addition to the independent ``nvar`` variables, includes the right
-magentic field. So we have - for HYDRO: ``nvar_all = nvar`` - for MHD:
-``nvar_all = nvar+3``
+magentic field. So we have 
+
+* for HYDRO: ``nvar_all = nvar`` 
+* for MHD: ``nvar_all = nvar+3``
 
 To compute the cell-center magnetic field, for example for outputting,
 we do
@@ -165,9 +190,9 @@ scalars are accessed through the indices ``imetal``, ``idelay``,
 different star formation recipes. In the hydro-solver, these are evolved
 as regular passive scalars.
 
-.. warning::
+.. Admonition:: **Summary** 
 
-   **Summary** To access the Euler variables in ``uold`` and ``unew``,
+   To access the Euler variables in ``uold`` and ``unew``,
    use the indices:
 
    -  density: ``1``
@@ -175,72 +200,80 @@ as regular passive scalars.
    -  momentum or velocities (HYDRO case): ``2`` up to ``1+ndim``
    -  momentum or velocities (MHD case): ``2, 3, 4``
 
-   To access the magnetic field: - on the left side of the cells:
-   ``neul + 1``, ``neul+2``, ``neul+3`` - on the right side of the
-   cells: ``nvar+1``, ``nvar+2``, ``nvar+3``
+   To access the magnetic field: 
+   
+   - on the left side of the cells: ``neul + 1``, ``neul+2``, ``neul+3`` 
+   - on the right side of the cells: ``nvar+1``, ``nvar+2``, ``nvar+3``
 
    Additional variables are stored after the left magnetic field in the
-   following order: - NENER: ``inener=nhydro+1`` up to ``nhydro+nener``
+   following order:
+   
+   - NENER: ``inener=nhydro+1`` up to ``nhydro+nener``
    - passive scalars: ``nhydro+nener+1`` up to ``nvar``
 
-.. container:: info
+.. admonition:: Exercise
 
-   **Exercise**: How to add a field variable to ``uold`` and ``unew``?
+   How to add a field variable to ``uold`` and ``unew``?
    List all the things that need changing (allocation?, initialisation?)
-   :::spoiler **Solution** \* nvar in makefile \* how to output metadata
-   info, input (don’t forget conversion to primitive vars) \* a recipe
-   to convert conservative to primitive variable in the routine
-   ``ctoprim``
+
+   .. admonition:: **Solution**
+      :class: dropdown
+
+      * nvar in makefile
+      * how to output metadata info, input (don’t forget conversion to primitive vars)
+      * a recipe to convert conservative to primitive variable in the routine ``ctoprim``
 
 2.3 The hydro step in ``amr_step``
 ----------------------------------
 
-.. container:: info
+.. admonition:: Exercise
 
-   **Exercise**: Where are ‘uold’ and ‘unew’ altered? (ignore MPI
-   communications for now) Because RAMSES makes use of common arrays
+   Where are ‘uold’ and ‘unew’ altered? Ignore MPI communications for now.
+   Because RAMSES makes use of common arrays
    which are globally defined and accessible by all parts of the code,
    it can be tricky to see which routines use these arrays as input or
    alter their state. Rewrite ``amr_step`` in pseudo-code, indicating
-   where the arrays ``uold`` and ``unew`` are updated. ::: spoiler
-   **Solution**
+   where the arrays ``uold`` and ``unew`` are updated.
 
-   .. code:: fortran=
+   .. admonition:: **Solution**
+      :class: dropdown
 
-        ...
-        ! Compute new time step
-        call newdt_fine(ilevel)
+      .. code:: fortran=
 
-        ! Set unew = uold
-        if(hydro)call set_unew(ilevel)
+         ...
+         ! Compute new time step
+         call newdt_fine(ilevel)
 
-        !---------------------------
-        ! Recursive call to amr_step
-        !---------------------------
-        ...
+         ! Set unew = uold
+         if(hydro)call set_unew(ilevel)
 
-        !-----------
-        ! Hydro step
-        !-----------
-        if(hydro)then
-           ! Hyperbolic solver - add flux to unew
-           call godunov_fine(ilevel)
+         !---------------------------
+         ! Recursive call to amr_step
+         !---------------------------
+         ...
 
-           ...
-           ! Add gravity source terms to unew
-           if(poisson) call add_gravity_source_terms(ilevel)
+         !-----------
+         ! Hydro step
+         !-----------
+         if(hydro)then
+            ! Hyperbolic solver - add flux to unew
+            call godunov_fine(ilevel)
 
-           ! Add non conservative pdV terms to unew
-           ! for thermal and/or non-thermal energies
-           if(pressure_fix.OR.nener>0) call add_pdv_source_terms(ilevel)
+            ...
+            ! Add gravity source terms to unew
+            if(poisson) call add_gravity_source_terms(ilevel)
 
-           ! Set uold = unew
-           call set_uold(ilevel)
+            ! Add non conservative pdV terms to unew
+            ! for thermal and/or non-thermal energies
+            if(pressure_fix.OR.nener>0) call add_pdv_source_terms(ilevel)
 
-           ...
+            ! Set uold = unew
+            call set_uold(ilevel)
 
-        endif
-      ...
+            ...
+
+         endif
+         ...
 
 2.4 Solving hydro with the Finite Volume Method (FVM)
 -----------------------------------------------------
@@ -263,16 +296,12 @@ integral form results in
 
 When defining the cell-averaged conserved quantities as
 
-:math:``
-  \mathbb{U}_i(t) = \frac{1}{|V_i|} \int_{V_i} \mathbb{U}(\mathbf{x}, t) \, dV ,
-  ``
+:math:`\mathbb{U}_i(t) = \frac{1}{|V_i|} \int_{V_i} \mathbb{U}(\mathbf{x}, t) \, dV ,`
 
 and the numerical flux through face :math:`f` as :math:`\mathbb{F}_f`,
 the semi-discrete update of the conservative variables becomes:
 
-:math:``
-\frac{d \mathbb{U}_i}{dt} = -\frac{1}{|V_i|} \sum_{f \in  \text{faces}} \mathbb{F}_f A_f + \mathbb{S}_i
-``
+:math:`\frac{d \mathbb{U}_i}{dt} = -\frac{1}{|V_i|} \sum_{f \in  \text{faces}} \mathbb{F}_f A_f + \mathbb{S}_i`
 
 with :math:`A_f` the area of face :math:`f` and :math:`\mathbb{S}_i` the
 cell-averaged source term.
@@ -287,9 +316,7 @@ used the MUSCL-Hancock scheme, which is a second-order Godunov method
 
 Discretizing further, the conservative variable update becomes (in 1D):
 
-:math:``
-\mathbb{U}_i^{n+1} = \mathbb{U}_i^{n} - \frac{\Delta t}{\Delta x} (\mathbb{F}_{i+1/2} -  \mathbb{F}_{i-1/2}) + \Delta t \, \mathbb{S}_i
-``
+:math:`\mathbb{U}_i^{n+1} = \mathbb{U}_i^{n} - \frac{\Delta t}{\Delta x} (\mathbb{F}_{i+1/2} -  \mathbb{F}_{i-1/2}) + \Delta t \, \mathbb{S}_i`
 
 where :math:`\mathbb{F}_{i\pm1/2}` are the fluxes going through opposing
 faces of the cell.
@@ -323,10 +350,11 @@ How source terms are treated will be discussed further.
 
 By default, RAMSES uses the MUSCL-Hancock scheme for computing the
 numerical fluxes across cell faces. This is a predictor-corrector
-extension of Godunov’s method that allows for second-order accuracy by
-using \* piecewise linear reconstruction of the cell states, in contrast
-to Godunov’s original piecewise constant \* a half step prediction for
-time evolution.
+extension of Godunov's method that allows for second-order accuracy by
+using 
+
+* piecewise linear reconstruction of the cell states, in contrast to Godunov's original piecewise constant
+* a half step prediction for time evolution.
 
 The scheme is extended to multiple dimension in an unsplit fashion,
 which is why the corresponding entry subroutine is named ``unsplit``.
@@ -335,19 +363,15 @@ time, that is in one timestep. Transverse corrections are included. This
 approach avoids splitting errors, better preserves symmetry and is
 overall more accurate for multi-dimensional simulations.
 
-The steps for obtaining the flux are as follows. \* Convert conservative
-cell-centered variables to primitive variables (``ctoprim``) \*
-Calculate the limited slopes (TVD) for the primitive variables that will
-be used to reconstruct the state at the cell edges and evaluate space
-derivative for the time evolution below (MUSCL part, ``uslope``) \*
-Evolve (or ``trace``) the cell centered states forward in time for half
-a time step and then project on cell faces (Hancock part). \* Solve the
-Riemann problem at each interface using predicted left/right states to
-obtain the fluxes :math:`F_{i+1/2}` ``cmpflxm`` (“compute flux minus”,
-because only the left flux is calculated)
+The steps for obtaining the flux are as follows. 
+
+* Convert conservative cell-centered variables to primitive variables (``ctoprim``) 
+* Calculate the limited slopes (TVD) for the primitive variables that will be used to reconstruct the state at the cell edges and evaluate space derivative for the time evolution below (MUSCL part, ``uslope``) 
+* Evolve (or ``trace``) the cell centered states forward in time for half a time step and then project on cell faces (Hancock part). 
+* Solve the Riemann problem at each interface using predicted left/right states to obtain the fluxes :math:`F_{i+1/2}` ``cmpflxm`` (“compute flux minus”, because only the left flux is calculated)
 
 These fluxes are then used to update the conserved variables. Below, we
-go into eqch step in more detail. You can visit the following page for a
+go into each step in more detail. You can visit the following page for a
 more complete description of the MUSCL-Hancock scheme:
 https://ammar-hakim.org/sj/hancock-muscl.html
 
@@ -390,8 +414,9 @@ applied to control oscillations near discontinuities:
 
 For example, the average slope without limiting would be simply
 
-:math:`\Delta Q_i = \frac{(Q_{i+1} - Q_i) + (Q_i - Q_{i-1})}{2}`, which
-can introduce new extrema in the reconstructed field. This configuration
+:math:`\Delta Q_i = \frac{(Q_{i+1} - Q_i) + (Q_i - Q_{i-1})}{2}`,
+
+which can introduce new extrema in the reconstructed field. This configuration
 is prone to oscillations. Total variation diminishing (TVD) limiters
 prevent the apparition of these spurious oscillations.
 
@@ -414,6 +439,7 @@ applying the method of lines to estimate the time derivative and then
 updating the interface states. In 1D
 
 :math:`\rho^{n+1/2}_i=\rho^n_i - (u^n_i\Delta_x \rho^n_i+\rho^n_i\Delta_x u^n_i)\Delta t/\Delta x`
+
 :math:`u^{n+1/2}_i=u^n_i - (u^n_i\Delta_x u^n_i+\Delta_x P^n_i/\rho^n_i)\Delta t/\Delta x`
 
 In the case of multiple dimensions, transverse corrections are applied,
@@ -423,6 +449,7 @@ is affected by gradients in perpendicular directions, which is crucial
 for preserving accuracy and symmetry in 2D and 3D flows.
 
 In 2D
+
 :math:`\rho^{n+1/2}_i=\rho^n_i - (u^n_i\Delta_x \rho^n_i+\rho^n_i\Delta_x u^n_i)\Delta t/\Delta x - (u^n_i\Delta_y \rho^n_i+\rho^n_i\Delta_y u^n_i)\Delta t/\Delta y`
 
 :math:`u^{n+1/2}_i=u^n_i - (u^n_i\Delta_x u^n_i+\Delta_x P^n_i/\rho^n_i)\Delta t/\Delta x - (v^n_i\Delta_y u^n_i)\Delta t/\Delta y`
@@ -433,8 +460,9 @@ Then, we define left and right interface states at the boundaries of
 each cell:
 
 :math:`Q_i^m = Q_i^{n+1/2} - \frac{1}{2} \Delta Q_i\\
-Q_i^p = Q_i^{n+1/2} + \frac{1}{2} \Delta Q_i` These reconstructed values
-represent the linearly extrapolated states at each interface, from
+Q_i^p = Q_i^{n+1/2} + \frac{1}{2} \Delta Q_i`
+
+These reconstructed values represent the linearly extrapolated states at each interface, from
 within cell ii. This reconstruction is applied in each spatial direction
 independently.
 
@@ -458,15 +486,15 @@ requested spatial direction.
 If AMR is active, the coarse level is updated during the fine level
 update at fine-to-coarse boundary.
 
-.. container:: info
+.. admonition:: Exercise
 
-   **Exercise**: 1/ Find in the code where the coarse level is virtually
-   refined. Does it imply some interpolation? 2/ Find in the code where
-   the coarse level update is done? What does it imply for conservative
-   variable evolution? What about coarse-to-fine boundary? :::spoiler
-   **Solution** 2/ in ‘umuscl.f90’. Quantities are conserved. The
-   coarse-to-fine boundary is never considered, the flux being set to
-   zero.
+   1. Find in the code where the coarse level is virtually refined. Does it imply some interpolation?
+   2. Find in the code where the coarse level update is done? What does it imply for conservative variable evolution? What about coarse-to-fine boundary? 
+
+   .. admonition:: **Solution**
+      :class: dropdown
+
+      2. in ‘umuscl.f90’. Quantities are conserved. The coarse-to-fine boundary is never considered, the flux being set to zero.
 
 3. Gravity
 ==========

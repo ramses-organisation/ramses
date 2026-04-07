@@ -4,8 +4,7 @@
 
 .. Admonition:: **Topics**
 
-   basic code structure, introduction of
-   AMR step
+   basic code structure, introduction of AMR step
 
 .. contents::
 
