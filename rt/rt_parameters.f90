@@ -152,6 +152,6 @@ module rt_parameters
   real(dp),dimension(1:NGROUPS)::ssh2 = 1d0, isLW = 0d0
 
   ! RT on sinks?
-  logical::rt_protostar_m1=.false. ! Hybrid RT : M1 + FLD
+!  logical::rt_protostar_m1=.false. ! Hybrid RT : M1 + FLD
 
 end module rt_parameters

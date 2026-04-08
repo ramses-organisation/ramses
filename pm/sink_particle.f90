@@ -3157,8 +3157,207 @@ subroutine synchronize_sink_info
   call MPI_BCAST(new_born,   nsinkmax, MPI_LOGICAL,          1, MPI_COMM_WORLD, info)
 
 end subroutine synchronize_sink_info
+!##############################################################################
+!##############################################################################
+!##############################################################################
+!##############################################################################
+subroutine radiative_feedback_sink(ilevel)
+  use pm_commons
+  use amr_commons
+  use hydro_commons
+  use cloud_module,only: lum_injection
+!  use rt_parameters,only: rt_protostar_m1 !hybrid RT
+  use cooling_module,only: clight
+  use radiation_parameters,only:stellar_photon,sinks_opt_thin
+  use units_commons
+  use constants, only: pi
+#ifdef RT
+  use rt_hydro_commons
 #endif
-!##############################################################################
-!##############################################################################
-!##############################################################################
-!##############################################################################
+  implicit none
+#ifndef WITHOUTMPI
+  include 'mpif.h'
+#endif
+  integer::ilevel
+  !------------------------------------------------------------------------
+  ! This routine performs radiative feedback from the sink. It vectorizes 
+  ! the loop over all sink cloud particles and calls accrete_sink as soon 
+  !as nvector particles are collected
+  !------------------------------------------------------------------------
+!!$  integer::igrid,jgrid,ipart,jpart,next_part,info,ix,iy,iz
+!!$  integer::ig,ip,npart1,npart2,icpu,lev,isink,ind
+!!$  integer,dimension(1:nvector)::ind_grid,ind_part,ind_grid_part
+  integer::isink,ind,ix,iy,iz,ngrid,iskip
+  integer::i,nx_loc,igrid,ncache,igrp
+  integer,dimension(1:nvector)::ind_grid,ind_cell
+  real(dp)::x,y,z,dx,dxx,dyy,dzz,drr,rr
+  real(dp)::scale,dx_loc,vol_loc,rmax2,rmax,vol_injection
+  real(dp)::q,h_loc,kernelvalue,weight,radiation_source, Tstar,Lum_group
+  real(dp),dimension(1:3)::skip_loc
+  real(dp),dimension(1:twotondim,1:3)::xc
+  logical ,dimension(1:nvector)::ok
+  real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
+
+  !pi=acos(-1.0d0)
+  if(.not.cosmo) call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
+
+  if(numbtot(1,ilevel)==0)return
+  if(verbose)write(*,111)ilevel
+
+  ! Mesh spacing in that level
+  nx_loc=(icoarse_max-icoarse_min+1)
+  skip_loc=(/0.0d0,0.0d0,0.0d0/)
+  if(ndim>0)skip_loc(1)=dble(icoarse_min)
+  if(ndim>1)skip_loc(2)=dble(jcoarse_min)
+  if(ndim>2)skip_loc(3)=dble(kcoarse_min)
+  scale=boxlen/dble(nx_loc)
+  
+  ! Computing local volume (important for averaging hydro quantities) 
+  dx=0.5D0**ilevel 
+  dx_loc=dx*scale
+  vol_loc=dx_loc**ndim
+  rmax = ir_cloud*dx_loc
+  rmax2=rmax**2
+  h_loc=rmax/2.0d0
+  ! Cells center position relative to grid center position
+  do ind=1,twotondim  
+     iz=(ind-1)/4
+     iy=(ind-1-4*iz)/2
+     ix=(ind-1-2*iy-4*iz)
+     xc(ind,1)=(dble(ix)-0.5D0)*dx
+     xc(ind,2)=(dble(iy)-0.5D0)*dx
+     xc(ind,3)=(dble(iz)-0.5D0)*dx
+  end do
+  
+  ! Loop over grids
+  ncache=active(ilevel)%ngrid
+  do igrid=1,ncache,nvector
+     ngrid=MIN(nvector,ncache-igrid+1)
+     do i=1,ngrid
+        ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
+     end do
+     
+     ! Loop over cells
+     do ind=1,twotondim  
+        iskip=ncoarse+(ind-1)*ngridmax
+        do i=1,ngrid
+           ind_cell(i)=iskip+ind_grid(i)
+        end do
+        
+           ! Flag leaf cells
+        do i=1,ngrid
+           ok(i)=son(ind_cell(i))==0
+        end do
+        
+        do i=1,ngrid
+           if(ok(i))then
+              ! Get gas cell position
+              in_sink(ind_cell(i))=.false. ! for optically-thin sink
+              x=(xg(ind_grid(i),1)+xc(ind,1)-skip_loc(1))*scale
+              y=(xg(ind_grid(i),2)+xc(ind,2)-skip_loc(2))*scale
+              z=(xg(ind_grid(i),3)+xc(ind,3)-skip_loc(3))*scale
+              do isink=1,nsink
+                 ! Check if the cell lies within the sink radius
+                 dxx=x-xsink(isink,1)
+                 if(dxx> 0.5*scale)then
+                    dxx=dxx-scale
+                 endif
+                 if(dxx<-0.5*scale)then
+                    dxx=dxx+scale
+                 endif
+                 dyy=y-xsink(isink,2)
+                 if(dyy> 0.5*scale)then
+                    dyy=dyy-scale
+                 endif
+                 if(dyy<-0.5*scale)then
+                    dyy=dyy+scale
+                 endif
+                 dzz=z-xsink(isink,3)
+                 if(dzz> 0.5*scale)then
+                    dzz=dzz-scale
+                 endif
+                 if(dzz<-0.5*scale)then
+                    dzz=dzz+scale
+                 endif
+                 drr=dxx*dxx+dyy*dyy+dzz*dzz
+                 rr=sqrt(drr)
+                 
+                 if(drr.lt.rmax2)then
+                    q = rr/h_loc
+                    !              
+                    ! Spread luminosity using a M4 spline truncated at 2*h_loc
+                    kernelvalue=0.0d0
+                    
+                    if ((q.lt.1.0)) kernelvalue = 1.0d0-1.5d0*q**2+0.75d0*q**3 !=0.25d0*(2.0d0-q)**3-(1.0d0-q)**3
+                    if ((q.ge.1.0)  .and.(q.lt.2.0)) kernelvalue = 0.25d0*(2.0d0-q)**3
+                    weight = kernelvalue/(pi*h_loc**3)
+                    weight =1.0d0 ! bypass wightin. Maybe to be reconsidered...
+                    Tstar = Teff_sink(isink)
+                    if(Tstar .gt. 0)then
+                       if(.not. rt_protostar_m1 .or. isink .gt. 1)then                       
+                          if(stellar_photon)then
+                             igrp=1    ! Put all stellar radiative flux in the first group
+                             uold(ind_cell(i),5     )=uold(ind_cell(i),5     ) + Lum_sink(isink)*weight*dtnew(ilevel)
+                             uold(ind_cell(i),8+igrp)=uold(ind_cell(i),8+igrp) + Lum_sink(isink)*weight*dtnew(ilevel)
+                          else
+                             do igrp=1,ngrp 
+                                Lum_group = radiation_source(Tstar,igrp)/(scale_d*scale_v**2)*(pi*rsink_star(isink)**2*clight/scale_v)
+                                uold(ind_cell(i),5     )=uold(ind_cell(i),5     ) + Lum_group*weight*dtnew(ilevel)
+                                uold(ind_cell(i),8+igrp)=uold(ind_cell(i),8+igrp) + Lum_group*weight*dtnew(ilevel)
+                             end do
+                          end if
+                       endif
+#ifdef RT
+                       if(rt_protostar_m1 .and. isink ==1)then
+                          ! We assume that energy is transported with M1 (rather than a number of photons with a mean energy groupe_egy).
+                          ! To be reconsidered when we will do Hii ionisation for later evolution.
+                          Lum_group = aR*(Tstar**4)/(scale_d*scale_v**2)*(pi*rsink_star(isink)**2*clight/scale_v)
+                          rtunew(ind_cell(i),1)=rtunew(ind_cell(i),1) + Lum_group*weight*dtnew(ilevel)/((group_egy(1)*ev2erg)/scale_d/scale_v**2)
+                          if(sinks_opt_thin) in_sink(ind_cell(i))=.true.
+                       end if
+#endif
+                    end if
+
+                 endif
+                 
+              end do
+           endif
+        end do
+        
+     end do
+     ! End loop over cells
+  end do
+  ! End loop over grids
+111 format('   Entering radiative_feedback_sink for level ',I2)
+
+
+  !PH 29/12/2019 PH debug acc_rate
+!  acc_rate(1:nsink)=0.
+  !Now that the accretion luminosity has been damped, put the accreted mass to zero
+!  dmfsink(1:nsink)=0.
+!  dtdmsink(1:nsink)=0.
+
+
+  ! Update hydro quantities for split cells
+  call upload_fine(ilevel)
+  do igrp=1,nvar
+     call make_virtual_fine_dp(uold(1,igrp),ilevel)
+  enddo
+  
+
+end subroutine radiative_feedback_sink
+!################################################################
+!################################################################
+!################################################################
+!################################################################
+#else
+subroutine radiative_feedback_sink(ilevel)
+  implicit none
+  integer::ilevel
+
+  write(*,*) 'You should not enter here with NDIM!=3...'
+
+  return
+  
+end subroutine radiative_feedback_sink
+#endif

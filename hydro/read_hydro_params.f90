@@ -8,6 +8,9 @@ subroutine read_hydro_params(nml_ok)
   use constants
   use cloud_module
 #endif
+#if RT==1
+  use rt_parameters,only:rt_protostar_m1
+#endif
   implicit none
   logical::nml_ok
   !--------------------------------------------------
@@ -207,6 +210,7 @@ subroutine read_hydro_params(nml_ok)
 #if USE_FLD==1
   ! Conversion factor from user units to cgs units (to be done after read physics_params with units_density...)
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
+  if(barotropic_eos)fld=.false.
 #endif
   
 ! MHD sets enums for riemann solvers, hydro just does a string compare
@@ -270,6 +274,9 @@ subroutine read_hydro_params(nml_ok)
   ! Initialize multigroup
   allocate(nu_min_hz(1:ngrp),nu_max_hz(1:ngrp),nu_min_ev(1:ngrp),nu_max_ev(1:ngrp))
   call create_groups
+  eray_min = (aR)*Tray_min**4
+  deray_min = (4.0d0*aR)*Tray_min**3
+  small_er = eray_min/(scale_d*Scale_v**2)
   call tabulate_art4
   call read_omegas
   if(myid==1 .and. grey_rad_transfer .and. ngrp .gt.1) then

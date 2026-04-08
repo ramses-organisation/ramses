@@ -269,4 +269,7 @@ module hydro_parameters
   integer::ixion=imetal
   integer::ichem=imetal
 
+  ! RT on sinks?
+  logical::rt_protostar_m1=.false. ! Hybrid RT : M1 + FLD
+
 end module hydro_parameters
