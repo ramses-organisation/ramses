@@ -540,7 +540,7 @@ subroutine computdifmag(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
    real(dp)::rhof,bsqf,epsf,tcellf
    real(dp)::etaod2,etaohmdiss
    integer , dimension(1:3) :: index_i,index_j,index_k
-
+   integer :: ht
    emfohmdiss = 0d0
    fluxohm = 0d0
 
@@ -566,9 +566,9 @@ subroutine computdifmag(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
                bsquarey=bemfy(l,i,j,k,1)**2+bemfy(l,i,j,k,2)**2+bemfy(l,i,j,k,3)**2
                bsquarez=bemfz(l,i,j,k,1)**2+bemfz(l,i,j,k,2)**2+bemfz(l,i,j,k,3)**2
 
-               call ideal_gas_temperature(rhox, epsx, tcellx)
-               call ideal_gas_temperature(rhoy, epsy, tcelly)
-               call ideal_gas_temperature(rhoz, epsz, tcellz)
+               call temperature_eos(rhox, epsx, tcellx,ht)
+               call temperature_eos(rhoy, epsy, tcelly,ht)
+               call temperature_eos(rhoz, epsz, tcellz,ht)
 
                etaod2x=etaohmdiss(rhox,bsquarex,tcellx,dt,dx,.true.)
                etaod2y=etaohmdiss(rhoy,bsquarey,tcelly,dt,dx,.true.)
@@ -586,7 +586,7 @@ subroutine computdifmag(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
                   bsqf=bmagij(l,i,j,k,1,h)**2+bmagij(l,i,j,k,2,h)**2+bmagij(l,i,j,k,3,h)**2
 
                   ! Compute gas temperature in cgs
-                  call ideal_gas_temperature(rhof, epsf, tcellf)
+                  call temperature_eos(rhof, epsf, tcellf,ht)
                      
                   etaod2=etaohmdiss(rhof,bsqf,tcellf,0d0,0d0,.false.)
                   fluxohm(l,i,j,k,h)=etaod2*fluxmd(l,i,j,k,h)
@@ -623,7 +623,7 @@ subroutine computambip(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,b
    ! outputs
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::emfambdiff
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::fluxambdiff
-
+   integer :: ht
    ! declare local variables
    INTEGER ::i, j, k, l
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::florentzx,florentzy,florentzz
@@ -632,7 +632,7 @@ subroutine computambip(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,b
    real(dp)::rhox,rhoy,rhoz,rhofx,rhofy,rhofz
    real(dp)::bsquarex,bsquarey,bsquarez,bsquare
    real(dp)::bsquarexx,bsquareyy,bsquarezz
-   real(dp)::betaad2,betaadbricolo
+   real(dp)::betaad2,betaad
    real(dp)::rhocell,bcell,tcell
    real(dp)::crossprodx,crossprody,crossprodz
 
@@ -677,7 +677,8 @@ subroutine computambip(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,b
                rhocell = min(rhox,rhoy,rhoz,rhofx,rhofy,rhofz)
 
                ! Compute gas temperature in cgs
-               call ideal_gas_temperature(u(l,i,j,k,1), u(l,i,j,k,5), tcell)
+
+               call temperature_eos(u(l,i,j,k,1), u(l,i,j,k,5), tcell,ht)
 
                bsquarex=bemfx(l,i,j,k,1)**2+bemfx(l,i,j,k,2)**2+bemfx(l,i,j,k,3)**2
                bsquarey=bemfy(l,i,j,k,1)**2+bemfy(l,i,j,k,2)**2+bemfy(l,i,j,k,3)**2
@@ -700,7 +701,7 @@ subroutine computambip(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,b
                emfambdiff(l,i,j,k,1)=crossprodx(v1x,v1y,v1z,v2x,v2y,v2z)
 
                rhox=0.25d0*(u(l,i,j,k,1)+u(l,i,j-1,k,1)+u(l,i,j,k-1,1)+u(l,i,j-1,k-1,1))
-               betaad2=betaadbricolo(rhocell,rhox,dt,bcell,bcell,dx,tcell,.true.)
+               betaad2=betaad(rhocell,rhox,dt,bcell,bcell,dx,tcell,.true.)
                emfambdiff(l,i,j,k,1)=emfambdiff(l,i,j,k,1)*betaad2 
 
                ! EMF y
@@ -714,7 +715,7 @@ subroutine computambip(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,b
                emfambdiff(l,i,j,k,2)=crossprody(v1x,v1y,v1z,v2x,v2y,v2z)
 
                rhoy=0.25d0*(u(l,i,j,k,1)+u(l,i-1,j,k,1)+u(l,i,j,k-1,1)+u(l,i-1,j,k-1,1))
-               betaad2=betaadbricolo(rhocell,rhoy,dt,bcell,bcell,dx,tcell,.true.)
+               betaad2=betaad(rhocell,rhoy,dt,bcell,bcell,dx,tcell,.true.)
                emfambdiff(l,i,j,k,2)=emfambdiff(l,i,j,k,2)*betaad2            
                     
                ! EMF z
@@ -728,21 +729,21 @@ subroutine computambip(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,b
                emfambdiff(l,i,j,k,3)=crossprodz(v1x,v1y,v1z,v2x,v2y,v2z)
 
                rhoz=0.25d0*(u(l,i,j,k,1)+u(l,i-1,j,k,1)+u(l,i,j-1,k,1)+u(l,i-1,j-1,k,1))
-               betaad2=betaadbricolo(rhocell,rhoz,dt,bcell,bcell,dx,tcell,.true.)
+               betaad2=betaad(rhocell,rhoz,dt,bcell,bcell,dx,tcell,.true.)
                emfambdiff(l,i,j,k,3)=emfambdiff(l,i,j,k,3)*betaad2
 
                ! energy flux on faces
 
                rhofx=0.5d0*(u(l,i,j,k,1)+u(l,i-1,j,k,1))
-               betaad2=betaadbricolo(rhocell,rhofx,dt,bcell,bcell,dx,tcell,.true.)
+               betaad2=betaad(rhocell,rhofx,dt,bcell,bcell,dx,tcell,.true.)
                fluxambdiff(l,i,j,k,1)=-betaad2*fluxad(l,i,j,k,1)
 
                rhofy=0.5d0*(u(l,i,j,k,1)+u(l,i,j-1,k,1))
-               betaad2=betaadbricolo(rhocell,rhofy,dt,bcell,bcell,dx,tcell,.true.) !TC:dy?
+               betaad2=betaad(rhocell,rhofy,dt,bcell,bcell,dx,tcell,.true.) !TC:dy?
                fluxambdiff(l,i,j,k,2)=-betaad2*fluxad(l,i,j,k,2)
 
                rhofz=0.5d0*(u(l,i,j,k,1)+u(l,i,j,k-1,1))
-               betaad2=betaadbricolo(rhocell,rhofz,dt,bcell,bcell,dx,tcell,.true.) !TC: dz?
+               betaad2=betaad(rhocell,rhofz,dt,bcell,bcell,dx,tcell,.true.) !TC: dz?
                fluxambdiff(l,i,j,k,3)=-betaad2*fluxad(l,i,j,k,3)
 
             end do
@@ -891,7 +892,7 @@ end function crossprodz
 !###########################################################
 !###########################################################
 !###########################################################
-double precision function betaadbricolo(rhocelln,rhon,dt,bsquare,bsquareold,dx,temper,limit)
+double precision function betaad(rhocelln,rhon,dt,bsquare,bsquareold,dx,temper,limit)
 
    use hydro_parameters
    use amr_commons
@@ -900,7 +901,7 @@ double precision function betaadbricolo(rhocelln,rhon,dt,bsquare,bsquareold,dx,t
    use constants
 
    implicit none
-   real(dp) ::rhocelln,rhon,betaadbricolotemp,dt,bsquare,bsquareold,dx,temper
+   real(dp) ::rhocelln,rhon,betaadtemp,dt,bsquare,bsquareold,dx,temper
    real(dp)::gammaadbis,densionbis,rhotemp,rhotemp_cell
    real(dp)::xx,dtt,bbcgs
    logical::limit
@@ -912,12 +913,12 @@ double precision function betaadbricolo(rhocelln,rhon,dt,bsquare,bsquareold,dx,t
 
    if(resistivity_method==0)then
       ! fixed resistivity
-      betaadbricolo=1d0/(gammaAD*rhon)
+      betaad=1d0/(gammaAD*rhon)
    elseif(resistivity_method==1)then
       ! *** put your analytic resistivity here ***
       !analytical model resitivity(rho,T), Shu?
       gammaAD = 1
-      betaadbricolo=1d0/(gammaAD*rhon)
+      betaad=1d0/(gammaAD*rhon)
    else
       ! table
       rhotemp = MAX(rhon,rho_threshold)
@@ -927,9 +928,9 @@ double precision function betaadbricolo(rhocelln,rhon,dt,bsquare,bsquareold,dx,t
       ! gammaadbis and densionbis already in user units
 
       if(xx.ne.0d0) then
-         betaadbricolo=1d0/xx 
+         betaad=1d0/xx 
       else
-         betaadbricolo=1d39
+         betaad=1d39
          if(rhotemp < 1.0d+14)then
             write(*,*)'WARNING gammaadbis(rhocelln,bsquare,bsquareold,temper)*densionbis(rhocelln)*rhocelln in the cell equals 0',gammaadbis(rhotemp_cell,bsquare,bsquareold,temper),densionbis(rhocelln),rhocelln,bsquare,bsquareold,temper
          endif
@@ -941,9 +942,9 @@ double precision function betaadbricolo(rhocelln,rhon,dt,bsquare,bsquareold,dx,t
       ! a l'interface : cote ou coin selon les cas. A utiliser si l'on est pas dans un cas seuille
 
       if(xx.ne.0d0) then
-         betaadbricolotemp=1d0/xx 
+         betaadtemp=1d0/xx 
       else
-         betaadbricolotemp=1d39
+         betaadtemp=1d39
          if(rhotemp < 1.0d+14)then
             write(*,*)'WARNING gammaadbis(rhon,bsquare,bsquareold,temper)*densionbis(rhon)*rhon at the interface equals 0',gammaadbis(rhotemp,bsquare,bsquareold,temper),densionbis(rhon),rhon
          endif
@@ -953,7 +954,7 @@ double precision function betaadbricolo(rhocelln,rhon,dt,bsquare,bsquareold,dx,t
       if(limit.and.nminitimestep) then
          if(dt.ne.0d0) then
             ! recalculate the ambipolar diffusion timestep for the current cell
-            xx=bsquare*betaadbricolo
+            xx=bsquare*betaad
             if(xx.ne.0d0) then
                dtt=coefad*dx*dx/xx
             else
@@ -962,62 +963,16 @@ double precision function betaadbricolo(rhocelln,rhon,dt,bsquare,bsquareold,dx,t
             ! check whether it is smaller than the global timestep that has been determined
             if (dtt.le.dt) then
                ! if so, adjust the resistivity to match the timestep
-               betaadbricolo=coefad*dx*dx/(dt*bsquare)
+               betaad=coefad*dx*dx/(dt*bsquare)
             else
-               betaadbricolo=betaadbricolotemp
+               betaad=betaadtemp
             endif
          endif
       endif
    endif
 
-end function betaadbricolo
-!###########################################################
-!###########################################################
-!###########################################################
-double precision function betaad(rhon,bsquare,temper)
-
-   use hydro_parameters
-   use nimhd_parameters
-   implicit none
-
-   ! rhon in code units
-   real(dp)::rhon,rhotemp,bsquare,temper
-   real(dp)::gammaadbis,densionbis
-   real(dp)::xx
-
-   ! function which computes the coefficient beta which
-   ! appears in ambipolar diffusion dB/dt=curl(gamma(j*B)*B)+...
-   ! see Duffin & Pudritz 2008, astro-ph 08/10/08 eq (5)
-   ! WARNING no mu_0 needed here because F_Lorentz used
-
-   if(resistivity_method==0)then
-      ! fixed resistivity
-      betaad=1d0/(gammaAD*rhon)
-   elseif(resistivity_method==1)then
-      ! *** put your analytic resistivity here ***
-      !analytical model resitivity(rho,T), Shu?
-      gammaAD = 1
-      betaad=1d0/(gammaAD*rhon)
-   else
-      ! table
-
-      ! Warning gammaadbis and densionbis already in code units
-      rhotemp = MAX(rhon,rho_threshold)
-      ! TC: rho_threshold is a units disaster waiting to happen
-
-      xx=gammaadbis(rhotemp,bsquare,bsquare,temper)*densionbis(rhotemp)*rhotemp
-      if(xx.ne.0d0) then
-         betaad=1d0/xx 
-      else
-         betaad=1d39
-         if(rhotemp < 1.0d+14)then
-         !TC: hard coded value in code units (not good)
-            write(*,*)'WARNING gammaadbis(rhotemp,bsquare,temper)*densionbis(rhon)*rhon equal 0',gammaadbis(rhotemp,bsquare,bsquare,temper),densionbis(rhotemp),rhotemp
-         endif
-      endif
-   endif
-
 end function betaad
+
 !###########################################################
 !###########################################################
 !###########################################################
@@ -1056,6 +1011,7 @@ double precision function gammaadbis(rhon,BBcell,BBcellold,temper)
 
    BBcgs=sqrt(BBcell*(4d0*pi*scale_d*(scale_v)**2))
    eta_AD_chimie=BBcgs**2/(eta_AD_chimie*densionbis(inp)*inp*scale_d*scale_d*c_cgs**2)  ! need B in G, output is gammaad in cgs
+   !print *, eta_AD_chimie, temper
 
    gammaadbis=eta_AD_chimie*scale_t*scale_d ! in code units
 

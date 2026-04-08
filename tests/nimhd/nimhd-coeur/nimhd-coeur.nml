@@ -39,19 +39,19 @@ riemann2d='hlld'
 pressure_fix=.false.
 /
 
-!&UNITS_PARAMS
-!units_length=1.4959787070d13 !AU
-!units_time=3.15576000d7      !year
-!units_density=1.504529327352399d-8 !1/(G*scale_t**2)
-!/
+&UNITS_PARAMS
+units_density= 3.83584509e-24      ! so that density in code units is equal to density in part/cc
+units_length= 3.0856776e+18        ! 1 pc in cm
+units_time= 1.9769994708456518e15  ! so that G=1 in code units
+/
 
 &COOLING_PARAMS
 barotropic_eos=.true.
-barotropic_eos_form='double_polytrope'
-polytrope_rho=1d-13 !g/cm3
-polytrope_index=1.666667
-T_eos=10d0
-mu_gas=2.31d0
+barotropic_eos_form='double_polytrope' ! type of barotropic eos
+polytrope_rho=1d-13                    ! sets rho_ad in EOS, in g/cm3
+polytrope_index=1.666667               ! sets gamma in EOS
+T_eos=10d0                             ! sets T0 in EOS, in K
+mu_gas=2.31d0                          ! molecular weight
 /
 
 &REFINE_PARAMS 
@@ -67,7 +67,7 @@ nminitimestep=.true.
 resistivity_method=2
 coefad=0.1d0
 coefalfven=0.3
-rho_threshold=4d7
+rho_threshold=1d5
 coefdtohm=0.2d0
 /
 
