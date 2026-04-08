@@ -182,3 +182,24 @@ subroutine velana(x,v,dx,t,ncell)
 
 
 end subroutine velana
+
+subroutine velana_ponomarenko(x,v,dx,t,ncell)
+  use amr_parameters
+  use hydro_parameters
+  implicit none
+  integer ::ncell                         ! Size of input arrays
+  real(dp)::dx                            ! Cell size
+  real(dp)::t                             ! Current time
+  real(dp),dimension(1:nvector,1:3)::v    ! Velocity field
+  real(dp),dimension(1:nvector,1:ndim)::x ! Cell center position.
+  !================================================================
+  ! This routine computes the user defined velocity fields.
+  ! x(i,1:ndim) are cell center position in [0,boxlen] (user units).
+  ! v(i,1:3) is the imposed 3-velocity in user units.
+  !================================================================
+  integer::i
+  real(dp)::xx,yy,zz,vx,vy,vz,rr,tt,omega,aa,twopi
+
+  ! Add here, if you wish, some user-defined initial conditions
+
+end subroutine velana_ponomarenko
