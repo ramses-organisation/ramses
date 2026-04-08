@@ -2,6 +2,9 @@ subroutine backup_hydro(filename, filename_desc)
   use amr_commons
   use hydro_commons
   use dump_utils, only : dump_header_info, generic_dump, dim_keys
+#ifdef RT
+  use rt_hydro_commons, only: nRTvar, nGroups, iGroups, rtuold
+#endif
   use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
@@ -10,7 +13,7 @@ subroutine backup_hydro(filename, filename_desc)
 
   character(len=80), intent(in) :: filename, filename_desc
 
-  integer :: i, ivar, ncache, ind, ilevel, igrid, iskip, istart, ibound
+  integer :: i, ivar, ncache, ind, ilevel, igrid, iskip, istart, ibound, idim
   integer :: unit_out, unit_info
   integer, allocatable, dimension(:) :: ind_grid
   real(dp), allocatable, dimension(:) :: xdp
@@ -320,6 +323,25 @@ subroutine backup_hydro(filename, filename_desc)
                  field_name = 'equilibrium_pressure'
                  call generic_dump(field_name, info_var_count, xdp, unit_out, dump_info_flag, unit_info)
               endif
+
+#ifdef RT
+              do ivar=1,nGroups
+                 do i=1,ncache
+                    xdp(i)=rtuold(ind_grid(i)+iskip,iGroups(ivar))!*rt_c
+                 end do
+                 write(field_name, '("photon_number_flux_", i0.2)') ivar
+                 call generic_dump(field_name, info_var_count, xdp, unit_out, dump_info_flag, unit_info)
+                 do idim=1,ndim
+                    ! Store photon flux
+                    do i=1,ncache
+                       xdp(i)=rtuold(ind_grid(i)+iskip,iGroups(ivar)+idim)
+                    end do
+                    write(field_name, '("photon_number_", a, "flux_", i0.2)') dim_keys(idim), ivar
+                    call generic_dump(field_name, info_var_count, xdp, unit_out, dump_info_flag, unit_info)
+                 enddo
+              end do
+#endif
+
               ! We did one output, deactivate dumping of variables
               dump_info_flag = .false.
            end do

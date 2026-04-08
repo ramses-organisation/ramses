@@ -7,14 +7,14 @@ subroutine init_hydro
   use amr_parameters,only:eos
 #endif
 #ifdef RT
-  use rt_parameters,only: convert_birth_times
+  use rt_parameters,only: convert_birth_times, nGroups, nRTvar
 #endif
   use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
   integer::info,info2,dummy_io
 #endif
-  integer::ncell,ncache,iskip,igrid,i,ilevel,ind,ivar
+  integer::ncell,ncache,iskip,igrid,i,ilevel,ind,ivar,idim
   integer::nvar2,ilevel2,numbl2,ilun,ibound,istart
   integer::ncpu2,ndim2,nlevelmax2,nboundary2
   integer ,dimension(:),allocatable::ind_grid
@@ -152,15 +152,15 @@ subroutine init_hydro
         write(*,'(A50)')"__________________________________________________"
      endif
 #ifdef RT
-     if((neq_chem.or.rt).and.nvar2.lt.nvar)then ! OK to add ionization fraction vars
+     if((neq_chem.or.rt).and.nvar2.lt.nvar+nRTvar)then ! OK to add ionization fraction vars
         ! Convert birth times for RT postprocessing:
         if(rt.and.static) convert_birth_times=.true.
         if(myid==1) write(*,*)'File hydro.tmp is not compatible'
         if(myid==1) write(*,*)'Found nvar2  =',nvar2
-        if(myid==1) write(*,*)'Expected=',nvar
+        if(myid==1) write(*,*)'Expected=',nvar+nRTvar
         if(myid==1) write(*,*)'..so only reading available variables and setting the rest to zero'
      end if
-     if((neq_chem.or.rt).and.nvar2.gt.nvar)then ! Not OK to drop variables
+     if((neq_chem.or.rt).and.nvar2.gt.nvar+nRTvar)then ! Not OK to drop variables
 #else
      if(nvar2.ne.(nvar))then
 #endif
@@ -462,6 +462,16 @@ subroutine init_hydro
                        p_eq(ind_grid(i)+iskip)=xx(i)
                     end do
                  endif
+
+#ifdef RT
+                 ! Read-only
+                 do ivar=1,nGroups
+                    read(ilun)xx
+                    do idim=1,ndim
+                       read(ilun)xx
+                    enddo
+                 end do
+#endif
 
               end do
               deallocate(ind_grid,xx)

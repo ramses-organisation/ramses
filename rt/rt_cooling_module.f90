@@ -151,7 +151,7 @@ END SUBROUTINE update_UVrates
 
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 SUBROUTINE rt_solve_cooling(T2, xion, Np, Fp, p_gas, dNpdt, dFpdt        &
-                           ,nH, c_switch, Zsolar, dt, a_exp, nCell,ilevel)
+                           ,nH, c_switch, Zsolar, dt, a_exp, nCell,ilevel, insink)
 ! Semi-implicitly solve for new temperature, ionization states,
 ! photon density/flux, and gas velocity in a number of cells.
 ! Parameters:
@@ -180,7 +180,7 @@ SUBROUTINE rt_solve_cooling(T2, xion, Np, Fp, p_gas, dNpdt, dFpdt        &
   real(dp),dimension(1:ndim, 1:nGroups, 1:nvector):: Fp, dFpdt
   real(dp),dimension(1:ndim, 1:nvector):: p_gas
   real(dp),dimension(1:nvector):: nH, Zsolar
-  logical,dimension(1:nvector):: c_switch
+  logical,dimension(1:nvector):: c_switch, insink
   real(dp)::dt, a_exp
   integer::ncell, ilevel !------------------------------------------------
   real(dp),dimension(1:nvector):: tLeft, ddt
@@ -321,6 +321,7 @@ contains
   ! routine).
   !-----------------------------------------------------------------------
     use amr_commons
+    use pm_commons, only: nsink, Teff_sink
     use const
     implicit none
     integer, intent(in)::icell
@@ -338,6 +339,15 @@ contains
     real(dp),save:: G0, eff_peh, cdex, ncr
     logical::newAtomicCons=.true.
     !---------------------------------------------------------------------
+        interface
+       real(dp) function planck_ana(a,b,c,d,e)
+       import :: dp
+       real(dp), intent(in)  :: a,b,c
+       integer, intent(in)   :: d
+       logical, intent(in)   :: e
+     end function planck_ana
+    end interface
+
     dt_ok=.false.
     nHe=0.25*nH(icell)*Y/X  !         Helium number density
     ! U contains the original values, dU the updated ones:
@@ -378,6 +388,14 @@ contains
     ss_factor=1d0                    ! UV background self_shielding factor
     if(self_shielding) ss_factor = exp(-nH(icell)/1d-2)
     rho = nH(icell) / X * mH
+    !! if hybrid RT : M1 abs opacity is Planck's mean at Tstar                                    
+    if (nsink .gt. 0 .and. Teff_sink(1) .gt. 0.0d0 .and. rt_protostar_m1 &
+         & .and. ngrp==1) then
+       kappaAbs = planck_ana(rho, TK, Teff_sink(1), 1,insink(icell))/rho
+    else
+       kappaAbs = 0.0d0 !doesn't matter because no M1 photons in principle                                
+    endif
+
 #if NGROUPS>0
     ! Set dust opacities--------------------------------------------------
     if(rt .and. nGroups .gt. 0) then
@@ -403,9 +421,14 @@ contains
           kSc_loc(iIR)  = kappaSc(iIR)  * (TR/10d0)**2 * exp(-TR/1d3)
        endif ! if(is_kIR_T)
        ! Set dust absorption and scattering rates [s-1]:
+       if(rt_protostar_m1) then !currently, use z_ave=1 in the namelist
+          dustAbs(:)  = kAbs_loc(:) *rho*z_ave*rt_c_cgs(ilevel) !what about f_dust here?
+          dustSc(iIR) = kSc_loc(iIR)*rho*z_ave*rt_c_cgs(ilevel) !what about f_dust here?
+          !put back Zsolar when doing ionization
+       else
        dustAbs(:)  = kAbs_loc(:) *rho*Zsolar(icell)*f_dust*rt_c_cgs(ilevel)
        dustSc(iIR) = kSc_loc(iIR)*rho*Zsolar(icell)*f_dust*rt_c_cgs(ilevel)
-
+       endif
     endif
 
     ! UPDATE PHOTON DENSITY AND FLUX *************************************
@@ -1006,7 +1029,7 @@ SUBROUTINE rt_evol_single_cell(astart,aend,dasura,h,omegab,omega0,omegaL &
   real(dp),dimension(1:ndim, 1:nGroups, 1:nvector):: Fp, dFpdt
   real(dp),dimension(1:ndim, 1:nvector):: p_gas
   real(dp),dimension(1:nvector)::nH=0., Zsolar=0.
-  logical,dimension(1:nvector)::c_switch=.true.
+  logical,dimension(1:nvector)::c_switch=.true., insink
 !-------------------------------------------------------------------------
   aexp = astart
   T2_com = 2.726d0 / aexp * aexp**2 / mu_mol
@@ -1036,7 +1059,7 @@ SUBROUTINE rt_evol_single_cell(astart,aend,dasura,h,omegab,omega0,omegaL &
      nH(1) = nH_com/aexp**3
      T2(1) = T2(1)/aexp**2
      call rt_solve_cooling(T2,xion,Np,Fp,p_gas,dNpdt,dFpdt,nH,c_switch   &
-                           ,Zsolar,dt_cool,aexp,1,levelmin)
+                           ,Zsolar,dt_cool,aexp,1,levelmin,insink)
      T2(1)=T2(1)*aexp**2
      aexp = aexp + daexp
      if (if_write_result) write(*,'(4(1pe10.3))')                        &

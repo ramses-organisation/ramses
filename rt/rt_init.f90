@@ -6,6 +6,7 @@ SUBROUTINE rt_init
 !  chemistry, even if rt=.false.
 !-------------------------------------------------------------------------
   use amr_commons
+  use pm_commons, only: nsink
   use hydro_commons
   use rt_hydro_commons
   use rt_flux_module
@@ -65,6 +66,7 @@ SUBROUTINE rt_init
   if(rt .and. rt_nsource .gt. 0) rt_advect=.true.
   if(rt .and. rt_nregion .gt. 0) rt_advect=.true.
   if(rt .and. rt_AGN ) rt_advect=.true.
+  if(rt .and. nsink .gt. 0 .and. rt_protostar_m1) rt_advect=.true.
   ! UV propagation is checked in set_model
   ! Star feedback is checked in amr_step
 
@@ -142,7 +144,7 @@ SUBROUTINE read_rt_params(nml_ok)
        & ,rt_n_source, rt_u_source, rt_v_source, rt_w_source             &
        ! RT boundary (for boundary conditions)                           &
        & ,rt_n_bound,rt_u_bound,rt_v_bound,rt_w_bound                    &
-       & ,rt_AGN, rt_sink
+       & ,rt_AGN, rt_sink, rt_protostar_m1
 
 
   ! Set default initialisation of ionisation states:

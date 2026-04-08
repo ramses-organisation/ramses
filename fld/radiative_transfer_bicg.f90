@@ -662,7 +662,7 @@ subroutine diffusion_cg (ilevel,Nsub)
 #ifdef RT
      if(rt_protostar_m1 .and. rt_advect .and. nsink >0 .and. Teff_sink(1) > 0.0d0)then !heating term by M1 photons absorbed
         do im1=1,ngroups !!! Loop over M1 photon groups
-           protostellar_heating = rtuold(liste_ind(i),iGroups(im1))*scale_Np*group_egy(im1)*ev_to_erg*planck_ana(rho*scale_d,Told,Teff_sink(1),1,in_sink(liste_ind(i)))*rt_c_cgs*z_ave / (scale_d*scale_v**2)
+           protostellar_heating = rtuold(liste_ind(i),iGroups(im1))*scale_Np*group_egy(im1)*ev2erg*planck_ana(rho*scale_d,Told,Teff_sink(1),1,in_sink(liste_ind(i)))*rt_c_cgs(ilevel)*z_ave / (scale_d*scale_v**2)
            end do
      end if
 #endif
@@ -965,7 +965,7 @@ subroutine cmp_matrix_and_vector_coeff_fld(ilevel)
         do i=1,ngrid
            if(son(ind_cell(i)) == 0 )then
 
-              call compute_residual_in_cell(ind_cell(i),vol_loc,residual,mat_residual)
+              call compute_residual_in_cell(ind_cell(i),ilevel,vol_loc,residual,mat_residual)
 
               do igroup=1,ngrp
                  do igrp=1,ngrp
@@ -1948,7 +1948,7 @@ subroutine cmp_matrix_vector_product(ilevel,compute)
            if(son(ind_cell(i)) == 0 )then
 
               if(.not.store_matrix)then
-                 call compute_residual_in_cell(ind_cell(i),vol_loc,residual_glob(1,:),mat_residual_glob(1,:,:))
+                 call compute_residual_in_cell(ind_cell(i),ilevel,vol_loc,residual_glob(1,:),mat_residual_glob(1,:,:))
                  ind_res = 1
               else
                  ind_res = ind_cell(i)
@@ -2437,7 +2437,7 @@ end function nu_surf
 !###########################################################
 !###########################################################
 
-subroutine compute_residual_in_cell(i,vol_loc,residual,mat_residual)
+subroutine compute_residual_in_cell(i,ilevel,vol_loc,residual,mat_residual)
 
   use hydro_parameters,only:nvar
   use hydro_commons
@@ -2453,7 +2453,7 @@ subroutine compute_residual_in_cell(i,vol_loc,residual,mat_residual)
 #endif
 
   implicit none
-  integer,intent(in)::i
+  integer,intent(in)::i,ilevel
   real(dp),intent(in)::vol_loc
   real(dp),dimension(nvar_bicg,nvar_bicg),intent(out)::mat_residual
   real(dp),dimension(nvar_bicg          ),intent(out)::residual
@@ -2537,7 +2537,7 @@ subroutine compute_residual_in_cell(i,vol_loc,residual,mat_residual)
 #ifdef RT
      if(rt_protostar_m1 .and. rt_advect .and. nsink >0 .and. Teff_sink(1) > 0.0d0)then !heating by M1 photons into CvT
        do im1=1,ngroups
-           protostellar_heating = rtuold(i,iGroups(im1))*scale_Np*group_egy(im1)*ev_to_erg*planck_ana(rho*scale_d,Told,Teff_sink(1),1,in_sink(i))*rt_c_cgs*z_ave / (scale_d*scale_v**2)
+           protostellar_heating = rtuold(i,iGroups(im1))*scale_Np*group_egy(im1)*ev2erg*planck_ana(rho*scale_d,Told,Teff_sink(1),1,in_sink(i))*rt_c_cgs(ilevel)*z_ave / (scale_d*scale_v**2)
         end do
      end if
 #endif

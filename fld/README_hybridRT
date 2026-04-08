@@ -1,0 +1,64 @@
+Collapse with hybrid RT
+
+### Purpose ###
+To treat the stellar radiation with the M1 of RAMSES-RT and the ambiant (dusty) emission with the FLD.
+Why? Because IR dust opacities are usually very different from UV opacities. Separating the radiation origin is essential in some problems. Plus: treating radiation in the free-streaming limit with M1.
+Currently done for the sink#1 (Rq: when #i and #j sinks merge, the sink number kept is min(i,j)), can be easily extended to more sinks and/or more photon groups*.
+
+*be careful with what you want to do with the crossing of radiation beams in M1, with the temperature chosen for the opacities, how photon groups are chosen etc. See the discussion in the manuscript.
+
+### Namelist parameters ###
+The hybrid RT depends on all the FLD and RAMSES-RT namelist parameters.
+In addition of these:
+- rt_protostar_m1=.true. : activates the hybrid RT
+- rt_protostar_fld=.false. : complementary to rt_protostar_m1, only one of the two can be set to .true.
+- sinks_opt_thin=.true. : the cells within sink volumes are flagged, so the opacities (planck_ana, rosseland_ana) computed in those cells are set so that the cell optical depth is min_optical_depth (radiation parameters)
+- sublimation_kuiper=.true./.false. : adhoc formula for mimicking dust grains evaporation but similar to literature works in massive star formation, see Kuiper+10 ApJ. Not 
+- rt_isoPress=.true. already present in RAMSES-RT, makes the stellar radiative force isotropic
+- lum_injection=0/1 : way of injection radiative energy in the sink volume (0= volume-averaged, 1=central oct only). Careful if 0 and sinks_opt_thin=.false. (see Mignon-Risse+21 AA, App. A)
+
+### For compilation ###
+
+make NDIM=3 NIMHD=1 USE_FLD=1 NGRP=1 NGROUPS=1 NIONS=3 PATCH=../patch/collapse/ (or any other patch)
+
+## to compile with 3D, NIMHD, Hybrid radiative transfer with FLD with 1 "grp" of photons and RAMSES-RT with 1 "group" of photons and 3 ions (passive scalar unused). In the namelist, specify rt_protostar_fld=.false. in RADIATION PARAMS and rt_protostar_m1=.true. in RT PARAMS.
+
+#make NDIM=3 NIMHD=1 USE_FLD=1 NGRP=1 PATCH=../patch/collapse
+
+## to compile with 3D, NIMHD, radiative transfer with FLD with 1 "grp" of photons. Remove RT keywords from namelist, and specify rt_protostar_fld=.true.
+
+- For now, always put NIONS=3 to enable M1 RT.
+- NGROUPS=3 at least if only ionisation, more if FUV and/or IR. If NGROUPS=1, by default, it will act on the first IONS. If we want to work with IR or stellar photons, the photoionizing cross sections has to be put to zero in the namelist (group_cse - energy-weighted cross sesction - and group_csn - number-weighted cross section). group_csn(NGROUPS,NIONS) is used the number of photonionisation, and group_cse(NGROUPS,NIONS) for the energy by photoionisation heating (directly put in the thermal energy). By default, it is all set to match ionisation of H, HeI, HeII (NIONS=3, NGROUPS=3) for a blackbody at 10 000 K.
+group_egy(NGROUPS): energy per photon in ev.
+
+If we want to make ionisation plus non-ionising photons, then NGROUPS=4, with the first index is for the IR/FUV photons. The idea is to have NGROUPS=4 with the first group for the stellar irradiation
+(FUV), that will be absorbed and reemitted into the FLD.
+
+********************WARNING RAMSES RT********************
+
+ALWAYS put rt_smooth to .true. in order to avoid operator splitting where photons are first propagated and then absorbed. Here the propagated photons are put in a source term in the thermochemistry. See Rosdahl et al. (2013) for details. The consequence of not doing rt_smooth is that the FLD energy injection is undershoted.
+
+In addition, smoothing is also much faster.
+
+### If you want to improve it : Changes were made regarding the following files, in comparison to the previous collapse patch ###
+- amr_step: call update_RT_feedback
+- init_hydro: use RT modules; read RT variables
+- output_amr: write group_egy, but it is not necessary
+- output_hydro: write RT variables
+- radiation_parameters: keyword "sublimation_kuiper" added to namelist, to mimic dust evaporation from Kuiper+10. Changes the opacities in planck_ana and rosseland_ana accordingly
+- radiative_transfer_bicg: use sink (required to get the stellar temperature) and RT modules (for coupling to RAMSES-RT); use Trad or Tgas as the photon temperature in the opacities, depending on the use of hybrid RT or not (if FLD, injection of Erad can be too high => use Temp; can use Trad with hybrid RT); protostellar_heating computed from the stellar radiation absorbed, used as source terms for internal energy and radiative energy accordingly (diffusion_cg and compute_residual_in_cell). Activated for Tstar>0
+- read_hydro_params: read hybrid RT keyword "rt_protostar_fld" to be set to false if doing hybrid RT; sublimation_kuiper (see above)
+- rt_cooling_module: use sink modules; replace kappaAbs by planck_ana computed at the stellar temperature
+- rt_init: add kw rt_protostar_m1, and condition on sink number to set rt_advect to .true.
+- rt_parameters: read hybrid RT keyword "rt_protostar_m1" 
+- units: scale_nH
+
+Rq: stellar radiation is absorbed locally by dense gas, so the hybrid RT "advantages" are partially lost
+### If you want the sink(s) cells to be optically thin: kw sinks_opt_thin, only for the sink#1, not tested for more  ###
+- cooling_fine: declaration of local in_sink array, add it as an argument for rt_solve_cooling
+- godunov_fine: add the in_sink argument when calling planck_ana
+- hydro_commons: declaration of in_sink array
+- init_hydro: initiate value of in_sink
+- radiation_parameters: add the in_sink argument in planck_ana and rosseland_ana; if true, the opacity is computed to match locally "min_optical_depth" (namelist, radiation params)
+- radiative_transfer_bicg: add the in_sink argument in every call of planck_ana and rosseland_ana
+- rt_cooling_module: add the in_sink argument in every call of planck_ana and rosseland_ana

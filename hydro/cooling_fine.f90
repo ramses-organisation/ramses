@@ -510,7 +510,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
         endif
         call rt_solve_cooling(T2_new, xion, Np, Fp, p_gas, dNpdt, dFpdt  &
                              ,nH, cooling_on, Zsolar, dtcool, aexp_loc   &
-                             ,nleaf, insink, ilevel)
+                             ,nleaf, ilevel, insink)
 #endif
         delta_T2(1:nleaf) = T2_new(1:nleaf) - T2(1:nleaf)
      endif
