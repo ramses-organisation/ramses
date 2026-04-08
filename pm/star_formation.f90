@@ -565,7 +565,8 @@ subroutine star_formation(ilevel)
                  call poissdev(localseed,PoissMean,nstar(i))
               else
                  ! this is useful for the test suite only
-                 nstar(i)=PoissMean
+                 ! NB: SF testing is made easier by extreme boosting of SF as below:
+                 nstar(i)=PoissMeanMult*PoissMean
               endif
               ! Compute depleted gas mass
               mgas=nstar(i)*mstar

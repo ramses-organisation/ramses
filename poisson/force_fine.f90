@@ -52,10 +52,36 @@ subroutine force_fine(ilevel,icount)
      if(ndim>2)xc(ind,3)=(dble(iz)-0.5D0)*dx
   end do
 
+  !------------------------------
+  ! Compute gradient of potential
+  !------------------------------
+   if (self_gravity.or.gravity_rho_ana_type>0)then
+     ! Update physical boundaries
+     call make_boundary_phi(ilevel)
+
+     ! Loop over myid grids by vector sweeps
+     ncache=active(ilevel)%ngrid
+     do igrid=1,ncache,nvector
+        ngrid=MIN(nvector,ncache-igrid+1)
+        do i=1,ngrid
+           ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
+        end do
+        ! Compute gradient of potential
+        call gradient_phi(ind_grid,ngrid,ilevel,icount)
+     end do
+     ! End loop over grids
+
+#if NDIM==3
+     if (sink)then
+        call f_gas_sink(ilevel)
+     end if
+#endif
+  endif
+
   !-------------------------------------
-  ! Compute analytical gravity force
+  ! Add analytical gravity force
   !-------------------------------------
-  if(gravity_type>0)then
+  if(gravity_force_ana_type>0)then
 
      ! Loop over myid grids by vector sweeps
      ncache=active(ilevel)%ngrid
@@ -85,12 +111,20 @@ subroutine force_fine(ilevel,icount)
            ! Call analytical gravity routine
            call gravana(xx,ff,dx_loc,ngrid)
 
-           ! Scatter variables
-           do idim=1,ndim
-              do i=1,ngrid
-                 f(ind_cell(i),idim)=ff(i,idim)
+           ! Scatter variables (check needed because f is not reset to 0 but overwritten)
+           if(self_gravity.or.gravity_rho_ana_type>0)then
+              do idim=1,ndim
+                 do i=1,ngrid
+                    f(ind_cell(i),idim)=f(ind_cell(i),idim)+ff(i,idim)
+                 end do
               end do
-           end do
+           else
+              do idim=1,ndim
+                 do i=1,ngrid
+                    f(ind_cell(i),idim)=ff(i,idim)
+                 end do
+              end do
+           end if
 
         end do
         ! End loop over cells
@@ -98,43 +132,13 @@ subroutine force_fine(ilevel,icount)
      end do
      ! End loop over grids
 
-     ! Update boundaries
-     do idim=1,ndim
-        call make_virtual_fine_dp(f(1,idim),ilevel)
-     end do
-     if(simple_boundary)call make_boundary_force(ilevel)
+  end if
 
-  !------------------------------
-  ! Compute gradient of potential
-  !------------------------------
-  else
-     ! Update physical boundaries
-     call make_boundary_phi(ilevel)
-
-     ! Loop over myid grids by vector sweeps
-     ncache=active(ilevel)%ngrid
-     do igrid=1,ncache,nvector
-        ngrid=MIN(nvector,ncache-igrid+1)
-        do i=1,ngrid
-           ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
-        end do
-        ! Compute gradient of potential
-        call gradient_phi(ind_grid,ngrid,ilevel,icount)
-     end do
-     ! End loop over grids
-
-#if NDIM==3
-     if (sink)then
-        call f_gas_sink(ilevel)
-     end if
-#endif
-     ! Update boundaries
-     do idim=1,ndim
-        call make_virtual_fine_dp(f(1,idim),ilevel)
-     end do
-     if(simple_boundary)call make_boundary_force(ilevel)
-
-  endif
+  ! Update boundaries
+  do idim=1,ndim
+     call make_virtual_fine_dp(f(1,idim),ilevel)
+  end do
+  if(simple_boundary)call make_boundary_force(ilevel)
 
   !----------------------------------------------
   ! Compute gravity potential and maximum density

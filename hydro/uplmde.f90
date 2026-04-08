@@ -37,7 +37,7 @@ end subroutine cmp_sound_speed
 !###########################################################
 !###########################################################
 !###########################################################
-subroutine tracex(q,dq,qm,qp,dx,dt,ngrid)
+subroutine tracex(q,qm,qp,dx,dt,ngrid)
   use amr_parameters
   use hydro_parameters
   use const
@@ -47,7 +47,7 @@ subroutine tracex(q,dq,qm,qp,dx,dt,ngrid)
   real(dp)::dx, dt
 
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::dq
+  real(dp),dimension(1:nvector,1:nvar,1:ndim)::dq
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qm
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qp
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),save::c
@@ -83,6 +83,8 @@ subroutine tracex(q,dq,qm,qp,dx,dt,ngrid)
   do k = klo, khi
      do j = jlo, jhi
         do i = ilo, ihi
+           call uslope(q,dq,dtdx,i,j,k,ngrid)
+
            do l = 1, ngrid
 
               ! Cell centered values
@@ -93,9 +95,9 @@ subroutine tracex(q,dq,qm,qp,dx,dt,ngrid)
               csq = gamma*p/r
 
               ! TVD slopes in X direction
-              drx = dq(l,i,j,k,ir,1)
-              dux = dq(l,i,j,k,iu,1)
-              dpx = dq(l,i,j,k,ip,1)
+              drx = dq(l,ir,1)
+              dux = dq(l,iu,1)
+              dpx = dq(l,ip,1)
 
               ! Supersonic fix for high-velocity gradients
               ccc = cc
@@ -141,19 +143,13 @@ subroutine tracex(q,dq,qm,qp,dx,dt,ngrid)
               qm(l,i,j,k,ir,1) = max(smallr, qm(l,i,j,k,ir,1))
 
            end do
-        end do
-     end do
-  end do
 
 #if NVAR > NHYDRO
-  do n = nhydro+1, nvar
-     do k = klo, khi
-        do j = jlo, jhi
-           do i = ilo, ihi
+           do n = nhydro+1, nvar
               do l = 1, ngrid
                  a   =  q(l,i,j,k,n)    ! Cell centered values
                  u   =  q(l,i,j,k,iu)
-                 dax = dq(l,i,j,k,n,1)  ! TVD slopes
+                 dax = dq(l,n,1)  ! TVD slopes
 
                  ! Right state
                  spzero=(u    )*dtdx
@@ -168,10 +164,10 @@ subroutine tracex(q,dq,qm,qp,dx,dt,ngrid)
                  qm(l,i,j,k,n,1) = a + azaleft
               end do
            end do
+#endif
         end do
      end do
   end do
-#endif
 
 end subroutine tracex
 !###########################################################
@@ -179,7 +175,7 @@ end subroutine tracex
 !###########################################################
 !###########################################################
 #if NDIM>1
-subroutine tracexy(q,dq,qm,qp,dx,dy,dt,ngrid)
+subroutine tracexy(q,qm,qp,dx,dy,dt,ngrid)
   use amr_parameters
   use hydro_parameters
   use const
@@ -189,7 +185,7 @@ subroutine tracexy(q,dq,qm,qp,dx,dy,dt,ngrid)
   real(dp)::dx, dy, dt
 
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::dq
+  real(dp),dimension(1:nvector,1:nvar,1:ndim)::dq
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qm
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qp
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2)::c
@@ -227,6 +223,8 @@ subroutine tracexy(q,dq,qm,qp,dx,dy,dt,ngrid)
   do k = klo, khi
      do j = jlo, jhi
         do i = ilo, ihi
+           call uslope(q,dq,dtdx,i,j,k,ngrid)
+
            do l = 1, ngrid
 
               ! cell centered values
@@ -238,15 +236,15 @@ subroutine tracexy(q,dq,qm,qp,dx,dy,dt,ngrid)
               csq = gamma*p/r
 
               ! TVD slopes in X and Y directions
-              drx = dq(l,i,j,k,ir,1)
-              dux = dq(l,i,j,k,iu,1)
-              dvx = dq(l,i,j,k,iv,1)
-              dpx = dq(l,i,j,k,ip,1)
+              drx = dq(l,ir,1)
+              dux = dq(l,iu,1)
+              dvx = dq(l,iv,1)
+              dpx = dq(l,ip,1)
 
-              dry = dq(l,i,j,k,ir,2)
-              duy = dq(l,i,j,k,iu,2)
-              dvy = dq(l,i,j,k,iv,2)
-              dpy = dq(l,i,j,k,ip,2)
+              dry = dq(l,ir,2)
+              duy = dq(l,iu,2)
+              dvy = dq(l,iv,2)
+              dpy = dq(l,ip,2)
 
               ! Transverse derivatives
               srx = half*dtdy*(-v*dry - (dvy)*r      )
@@ -356,22 +354,16 @@ subroutine tracexy(q,dq,qm,qp,dx,dy,dt,ngrid)
               qm(l,i,j,k,ir,2) = max(smallr, qm(l,i,j,k,ir,2))
 
            end do
-        end do
-     end do
-  end do
 
 #if NVAR > NHYDRO
   ! Passive scalars
-  do n = nhydro+1, nvar
-     do k = klo, khi
-        do j = jlo, jhi
-           do i = ilo, ihi
+           do n = nhydro+1, nvar
               do l = 1, ngrid
                  a = q(l,i,j,k,n)     ! Cell centered values
                  u = q(l,i,j,k,iu)
                  v = q(l,i,j,k,iv)
-                 dax = dq(l,i,j,k,n,1)    ! TVD slopes
-                 day = dq(l,i,j,k,n,2)
+                 dax = dq(l,n,1)    ! TVD slopes
+                 day = dq(l,n,2)
                  sax = half*dtdy*(-v*day) ! Transverse
                  say = half*dtdx*(-u*dax) ! derivatives
 
@@ -401,10 +393,10 @@ subroutine tracexy(q,dq,qm,qp,dx,dy,dt,ngrid)
 
               end do
            end do
+#endif
         end do
      end do
   end do
-#endif
 
 end subroutine tracexy
 #endif
@@ -413,7 +405,7 @@ end subroutine tracexy
 !###########################################################
 !###########################################################
 #if NDIM>2
-subroutine tracexyz(q,dq,qm,qp,dx,dy,dz,dt,ngrid)
+subroutine tracexyz(q,qm,qp,dx,dy,dz,dt,ngrid)
   use amr_parameters
   use hydro_parameters
   use const
@@ -423,7 +415,7 @@ subroutine tracexyz(q,dq,qm,qp,dx,dy,dz,dt,ngrid)
   real(dp)::dx,dy,dz, dt
 
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::dq
+  real(dp),dimension(1:nvector,1:nvar,1:ndim)::dq
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qm
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qp
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2)::c
@@ -463,6 +455,8 @@ subroutine tracexyz(q,dq,qm,qp,dx,dy,dz,dt,ngrid)
   do k = klo, khi
      do j = jlo, jhi
         do i = ilo, ihi
+           call uslope(q,dq,dtdx,i,j,k,ngrid)
+
            do l = 1, ngrid
 
               ! Cell centered values
@@ -475,23 +469,23 @@ subroutine tracexyz(q,dq,qm,qp,dx,dy,dz,dt,ngrid)
               csq = gamma*p/r
 
               ! TVD slopes in all 3 directions
-              drx = dq(l,i,j,k,ir,1)
-              dux = dq(l,i,j,k,iu,1)
-              dvx = dq(l,i,j,k,iv,1)
-              dwx = dq(l,i,j,k,iw,1)
-              dpx = dq(l,i,j,k,ip,1)
+              drx = dq(l,ir,1)
+              dux = dq(l,iu,1)
+              dvx = dq(l,iv,1)
+              dwx = dq(l,iw,1)
+              dpx = dq(l,ip,1)
 
-              dry = dq(l,i,j,k,ir,2)
-              duy = dq(l,i,j,k,iu,2)
-              dvy = dq(l,i,j,k,iv,2)
-              dwy = dq(l,i,j,k,iw,2)
-              dpy = dq(l,i,j,k,ip,2)
+              dry = dq(l,ir,2)
+              duy = dq(l,iu,2)
+              dvy = dq(l,iv,2)
+              dwy = dq(l,iw,2)
+              dpy = dq(l,ip,2)
 
-              drz = dq(l,i,j,k,ir,3)
-              duz = dq(l,i,j,k,iu,3)
-              dvz = dq(l,i,j,k,iv,3)
-              dwz = dq(l,i,j,k,iw,3)
-              dpz = dq(l,i,j,k,ip,3)
+              drz = dq(l,ir,3)
+              duz = dq(l,iu,3)
+              dvz = dq(l,iv,3)
+              dwz = dq(l,iw,3)
+              dpz = dq(l,ip,3)
 
               ! Transverse derivatives
               srx = half*dtdx*(-v*dry-w*drz - (dvy+dwz)*r      )
@@ -672,24 +666,17 @@ subroutine tracexyz(q,dq,qm,qp,dx,dy,dz,dt,ngrid)
               qm(l,i,j,k,ir,3) = max(smallr, qm(l,i,j,k,ir,3))
            end do
 
-        end do
-     end do
-  end do
-
 #if NVAR > NHYDRO
   ! Passive scalars
-  do n = nhydro+1, nvar
-     do k = klo, khi
-        do j = jlo, jhi
-           do i = ilo, ihi
+           do n = nhydro+1, nvar
               do l = 1, ngrid
                  a   =  q(l,i,j,k,n)    ! Cell centered values
                  u   =  q(l,i,j,k,iu)
                  v   =  q(l,i,j,k,iv)
                  w   =  q(l,i,j,k,iw)
-                 dax = dq(l,i,j,k,n,1)  ! TVD slopes
-                 day = dq(l,i,j,k,n,2)
-                 daz = dq(l,i,j,k,n,3)
+                 dax = dq(l,n,1)  ! TVD slopes
+                 day = dq(l,n,2)
+                 daz = dq(l,n,3)
                  sax = half*dtdx*(-v*day-w*daz) ! Transverse
                  say = half*dtdx*(-u*dax-w*daz) ! derivatives
                  saz = half*dtdx*(-v*day-u*dax) !
@@ -732,10 +719,10 @@ subroutine tracexyz(q,dq,qm,qp,dx,dy,dz,dt,ngrid)
                  qm(l,i,j,k,n,3) = a + azaleft + saz
               end do
            end do
+#endif
         end do
      end do
   end do
-#endif
 
 end subroutine tracexyz
 #endif

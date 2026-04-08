@@ -252,28 +252,17 @@ subroutine collapse_condinit(x,q,dx,nn)
   implicit none
   integer ::nn                              ! Number of cells
   real(dp)::dx                              ! Cell size
-  real(dp),dimension(1:nvector,1:nvar+3)::u ! Conservative variables
+  real(dp),dimension(1:nvector,1:nvar+3)::q ! Primitive variables
   real(dp),dimension(1:nvector,1:ndim)::x ! Cell center position.
   !================================================================
-  ! This routine generates initial conditions for RAMSES.
-  ! Positions are in user units:
-  ! x(i,1:3) are in [0,boxlen]**ndim.
-  ! U is the conservative variable vector. Conventions are here:
-  ! U(i,1): d, U(i,2:ndim+1): d.u,d.v,d.w and U(i,ndim+2): E.
-  ! Q is the primitive variable vector. Conventions are here:
-  ! Q(i,1): d, Q(i,2:ndim+1):u,v,w and Q(i,ndim+2): P.
-  ! If nvar >= ndim+3, remaining variables are treated as passive
-  ! scalars in the hydro solver.
-  ! U(:,:) and Q(:,:) are in user units.
+  ! This routine generates initial conditions of a collapsing core
   !================================================================
   integer :: i,j,k,id,iu,iv,iw,ip
   real(dp):: x0,y0,z0,rc,rs,xx,yy,zz,pi,r0,d0,B0,p0,omega0,mass_c_cu,scale_m
   integer :: ivar, np
-  real(dp),dimension(1:nvector,1:nvar+3)::q   ! Primitive variables
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   real(dp),dimension(1:3,1:3):: rot_M,rot_invM,rot_tilde
   real(dp):: theta_mag_radians
-
 
   logical,save:: first=.true.
   real(dp),dimension(1:3,1:100,1:100,1:100),save::q_idl
@@ -470,32 +459,6 @@ subroutine collapse_condinit(x,q,dx,nn)
        q(i,ip) = p0/100.
      ENDIF
   ENDDO
-
-  ! Convert primitive to conservative variables
-  ! density -> density
-  u(1:nn,1)=q(1:nn,1)
-  ! velocity -> momentum
-  u(1:nn,2)=q(1:nn,1)*q(1:nn,2)
-  u(1:nn,3)=q(1:nn,1)*q(1:nn,3)
-  u(1:nn,4)=q(1:nn,1)*q(1:nn,4)
-  ! kinetic energy
-  u(1:nn,5)=0.0d0
-  u(1:nn,5)=u(1:nn,5)+0.5*q(1:nn,1)*q(1:nn,2)**2
-  u(1:nn,5)=u(1:nn,5)+0.5*q(1:nn,1)*q(1:nn,3)**2
-  u(1:nn,5)=u(1:nn,5)+0.5*q(1:nn,1)*q(1:nn,4)**2
-  !kinetic + magnetic energy
-  u(1:nn,5)=u(1:nn,5)+0.125*(q(1:nn,6)+q(1:nn,nvar+1))**2
-  u(1:nn,5)=u(1:nn,5)+0.125*(q(1:nn,7)+q(1:nn,nvar+2))**2
-  u(1:nn,5)=u(1:nn,5)+0.125*(q(1:nn,8)+q(1:nn,nvar+3))**2
-  ! pressure -> total fluid energy
-  u(1:nn,5)=u(1:nn,5)+q(1:nn,5)/(gamma-1.0d0)
-  ! magnetic field
-  u(1:nn,6:8)=q(1:nn,6:8)
-  u(1:nn,nvar+1:nvar+3)=q(1:nn,nvar+1:nvar+3)
-  ! passive scalars
-  do ivar=9,nvar
-     u(1:nn,ivar)=q(1:nn,1)*q(1:nn,ivar)
-  end do
 
 end subroutine collapse_condinit
 !================================================================
