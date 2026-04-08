@@ -558,9 +558,9 @@ subroutine computdifmag(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
                rhoy=0.25d0*(u(l,i,j,k,   1)+u(l,i-1,j  ,k,   1)+u(l,i,j  ,k-1,   1)+u(l,i-1,j  ,k-1,   1))
                rhoz=0.25d0*(u(l,i,j,k,   1)+u(l,i-1,j  ,k,   1)+u(l,i,j-1,k  ,   1)+u(l,i-1,j-1,k  ,   1))
 
-               epsx=0.25d0*(u(l,i,j,k,5)+u(l,i  ,j-1,k,5)+u(l,i,j  ,k-1,5)+u(l,i  ,j-1,k-1,5))
-               epsy=0.25d0*(u(l,i,j,k,5)+u(l,i-1,j  ,k,5)+u(l,i,j  ,k-1,5)+u(l,i-1,j  ,k-1,5))
-               epsz=0.25d0*(u(l,i,j,k,5)+u(l,i-1,j  ,k,5)+u(l,i,j-1,k  ,5)+u(l,i-1,j-1,k  ,5))
+               epsx=0.25d0*(u(l,i,j,k,nvar)+u(l,i  ,j-1,k,nvar)+u(l,i,j  ,k-1,nvar)+u(l,i  ,j-1,k-1,nvar))
+               epsy=0.25d0*(u(l,i,j,k,nvar)+u(l,i-1,j  ,k,nvar)+u(l,i,j  ,k-1,nvar)+u(l,i-1,j  ,k-1,nvar))
+               epsz=0.25d0*(u(l,i,j,k,nvar)+u(l,i-1,j  ,k,nvar)+u(l,i,j-1,k  ,nvar)+u(l,i-1,j-1,k  ,nvar))
 
                bsquarex=bemfx(l,i,j,k,1)**2+bemfx(l,i,j,k,2)**2+bemfx(l,i,j,k,3)**2
                bsquarey=bemfy(l,i,j,k,1)**2+bemfy(l,i,j,k,2)**2+bemfy(l,i,j,k,3)**2
@@ -582,7 +582,7 @@ subroutine computdifmag(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
 
                do h = 1,3
                   rhof=0.5d0*(u(l,i,j,k,1)+u(l,i-index_i(h),j-index_j(h),k-index_k(h),1))
-                  epsf=0.5d0*(u(l,i,j,k,5)+u(l,i-index_i(h),j-index_j(h),k-index_k(h),5))
+                  epsf=0.5d0*(u(l,i,j,k,nvar)+u(l,i-index_i(h),j-index_j(h),k-index_k(h),nvar))
                   bsqf=bmagij(l,i,j,k,1,h)**2+bmagij(l,i,j,k,2,h)**2+bmagij(l,i,j,k,3,h)**2
 
                   ! Compute gas temperature in cgs
@@ -639,9 +639,9 @@ subroutine computambip(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,b
    emfambdiff=0d0
    fluxambdiff=0d0
 
-  florentzx=0d0
-  florentzy=0d0
-  florentzz=0d0
+   florentzx=0d0
+   florentzy=0d0
+   florentzz=0d0
 
    ! compute Loretz force
    do k=min(1,ku1+1),max(1,ku2-1)
@@ -678,7 +678,7 @@ subroutine computambip(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,b
 
                ! Compute gas temperature in cgs
 
-               call temperature_eos(u(l,i,j,k,1), u(l,i,j,k,5), tcell,ht)
+               call temperature_eos(u(l,i,j,k,1), u(l,i,j,k,nvar), tcell,ht)
 
                bsquarex=bemfx(l,i,j,k,1)**2+bemfx(l,i,j,k,2)**2+bemfx(l,i,j,k,3)**2
                bsquarey=bemfy(l,i,j,k,1)**2+bemfy(l,i,j,k,2)**2+bemfy(l,i,j,k,3)**2
