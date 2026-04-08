@@ -70,9 +70,9 @@ subroutine diffusion_cg (ilevel,Nsub)
   real(dp)::scale,dx,dx_loc
 
     real(dp)::ambi_heating,ohm_heating,nimhd_heating,protostellar_heating
-#if NIMHD==1
-  real(dp)::bcell2,bx,by,bz,jsquare,jx,jy,jz,etaohmdiss,betaad,ionisrate
-#endif
+!#if NIMHD==1
+!  real(dp)::bcell2,bx,by,bz,jsquare,jx,jy,jz,etaohmdiss,betaad,ionisrate
+!#endif
 
   real(dp)::scale_nH,scale_T2,scale_t,scale_v,scale_d,scale_l
 
@@ -617,27 +617,27 @@ subroutine diffusion_cg (ilevel,Nsub)
      ohm_heating=zero
      nimhd_heating=zero
      
-#if NIMHD==1
-     if(radiative_nimhdheating_in_cg)then
-        bx=0.5d0*(uold(liste_ind(i),6)+uold(liste_ind(i),nvar+1))
-        by=0.5d0*(uold(liste_ind(i),7)+uold(liste_ind(i),nvar+2))
-        bz=0.5d0*(uold(liste_ind(i),8)+uold(liste_ind(i),nvar+3))
-        bcell2=(bx**2+by**2+bz**2)
-        jx=uold(liste_ind(i),nvar-3)
-        jy=uold(liste_ind(i),nvar-2)
-        jz=uold(liste_ind(i),nvar-1)
-        jsquare=(jx**2+jy**2+jz**2)
-        ionisrate=default_ionisrate
-        
-        if(nmagdiffu .eq. 1 .or. nmagdiffu2 .eq. 1 )ohm_heating=jsquare*etaohmdiss(rho,bcell2,Told,ionisrate)*dt_imp
-        
-        if(nambipolar .eq. 1 .or. nambipolar2 .eq.1 )then
-           ambi_heating = (jy*bz-jz*by)**2+(jz*bx-jx*bz)**2+(jx*by-jy*bx)**2
-           ambi_heating = ambi_heating * betaad(rho,bcell2,Told,ionisrate)*dt_imp
-        endif
-        nimhd_heating=ambi_heating+ohm_heating
-     end if
-#endif  
+!#if NIMHD==1
+!     if(radiative_nimhdheating_in_cg)then
+!        bx=0.5d0*(uold(liste_ind(i),6)+uold(liste_ind(i),nvar+1))
+!        by=0.5d0*(uold(liste_ind(i),7)+uold(liste_ind(i),nvar+2))
+!        bz=0.5d0*(uold(liste_ind(i),8)+uold(liste_ind(i),nvar+3))
+!        bcell2=(bx**2+by**2+bz**2)
+!        jx=uold(liste_ind(i),nvar-3)
+!        jy=uold(liste_ind(i),nvar-2)
+!        jz=uold(liste_ind(i),nvar-1)
+!        jsquare=(jx**2+jy**2+jz**2)
+!        ionisrate=default_ionisrate
+!        
+!        if(nmagdiffu .eq. 1 .or. nmagdiffu2 .eq. 1 )ohm_heating=jsquare*etaohmdiss(rho,bcell2,Told,ionisrate)*dt_imp
+!        
+!        if(nambipolar .eq. 1 .or. nambipolar2 .eq.1 )then
+!           ambi_heating = (jy*bz-jz*by)**2+(jz*bx-jx*bz)**2+(jx*by-jy*bx)**2
+!           ambi_heating = ambi_heating * betaad(rho,bcell2,Told,ionisrate)*dt_imp
+!        endif
+!        nimhd_heating=ambi_heating+ohm_heating
+!     end if
+!#endif  
      
      rhs=zero
      lhs=zero
@@ -2462,9 +2462,9 @@ subroutine compute_residual_in_cell(i,vol_loc,residual,mat_residual)
   integer::igrp,igroup,im1
   real(dp),dimension(ngrp)::wdtB,wdtE,source,deriv
   real(dp)::ambi_heating,ohm_heating,nimhd_heating,protostellar_heating
-#if NIMHD==1
-  real(dp)::bcell2,bx,by,bz,jsquare,jx,jy,jz,etaohmdiss,betaad,ionisrate
-#endif
+!#if NIMHD==1
+!  real(dp)::bcell2,bx,by,bz,jsquare,jx,jy,jz,etaohmdiss,betaad,ionisrate
+!#endif
 #ifdef RT
   real(dp)::scale_Np,scale_Fp !hybrid RT
 #endif
@@ -2485,27 +2485,27 @@ subroutine compute_residual_in_cell(i,vol_loc,residual,mat_residual)
   ohm_heating=zero
   nimhd_heating=zero
 
-#if NIMHD==1
-  if(radiative_nimhdheating_in_cg)then
-     bx=0.5d0*(uold(i,6)+uold(i,nvar+1))
-     by=0.5d0*(uold(i,7)+uold(i,nvar+2))
-     bz=0.5d0*(uold(i,8)+uold(i,nvar+3))
-     bcell2=(bx**2+by**2+bz**2)
-     jx=uold(i,nvar-3)
-     jy=uold(i,nvar-2)
-     jz=uold(i,nvar-1)
-     jsquare=(jx**2+jy**2+jz**2)
-     ionisrate=default_ionisrate
-
-     if(nmagdiffu .eq. 1 .or. nmagdiffu2 .eq. 1 )ohm_heating=jsquare*etaohmdiss(rho,bcell2,Told,ionisrate)*dt_imp
-     
-     if(nambipolar .eq. 1 .or. nambipolar2 .eq.1 )then
-        ambi_heating = (jy*bz-jz*by)**2+(jz*bx-jx*bz)**2+(jx*by-jy*bx)**2
-        ambi_heating = ambi_heating * betaad(rho,bcell2,Told,ionisrate)*dt_imp
-     endif
-     nimhd_heating=ambi_heating+ohm_heating
-  end if
-#endif  
+!#if NIMHD==1
+!  if(radiative_nimhdheating_in_cg)then
+!     bx=0.5d0*(uold(i,6)+uold(i,nvar+1))
+!     by=0.5d0*(uold(i,7)+uold(i,nvar+2))
+!     bz=0.5d0*(uold(i,8)+uold(i,nvar+3))
+!     bcell2=(bx**2+by**2+bz**2)
+!     jx=uold(i,nvar-3)
+!     jy=uold(i,nvar-2)
+!     jz=uold(i,nvar-1)
+!     jsquare=(jx**2+jy**2+jz**2)
+!     ionisrate=default_ionisrate
+!
+!     if(nmagdiffu .eq. 1 .or. nmagdiffu2 .eq. 1 )ohm_heating=jsquare*etaohmdiss(rho,bcell2,Told,ionisrate)*dt_imp
+!     
+!     if(nambipolar .eq. 1 .or. nambipolar2 .eq.1 )then
+!        ambi_heating = (jy*bz-jz*by)**2+(jz*bx-jx*bz)**2+(jx*by-jy*bx)**2
+!        ambi_heating = ambi_heating * betaad(rho,bcell2,Told,ionisrate)*dt_imp
+!     endif
+!     nimhd_heating=ambi_heating+ohm_heating
+!  end if
+!#endif  
 
   lhs=zero
   rhs=zero
