@@ -154,7 +154,7 @@ subroutine read_hydro_params(nml_ok)
         & ,numin,numax,Tr_floor,robin,rad_trans_model,min_optical_depth,rt_feedback,Tray_min &
         & ,PMS_evol,Hosokawa_track,energy_fix,facc_star,facc_star_lum,valp_min,store_matrix,external_radiation_field &
         & ,rt_protostar_fld,sublimation_kuiper,lum_injection &
-        & ,sinks_opt_thin
+        & ,sinks_opt_thin, fit_semenov
 #endif
      
   ! Read namelist file

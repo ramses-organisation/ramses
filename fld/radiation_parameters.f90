@@ -47,6 +47,7 @@ module radiation_parameters
   ! Opacities
   character(len=12) :: opacity_type = 'grey'  ! 'grey' or 'multigroup'
   logical :: sublimation_kuiper=.false. ! Mimicks dust sublimation with decreasing d/g ratio, see Kuiper+10 ApJ 
+  logical :: fit_semenov=.false.     ! Use a fit of the Semenov et al. (2003) Rosseland anf Planck dust opacities
 
   ! Radiation solver parameters
   real(dp)::epsilon_diff=1d-6                        ! CG iteration break criteria
@@ -118,29 +119,35 @@ function planck_ana(dens,Tp,Tr,igroup,insink)
   ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
 
+  Tgd = Tp
   if(sublimation_kuiper) then
-     !# RMR #### Sublimation of dust grains as in kuiper+10 ApJ ####
-     !### The highest dust temperature is the evaporation temperature
-     !### Opacities are taken at this temperature
-     !### The input temperature is kept to compute the d/g ratio
-     Tgd = Tp
      Tevap = 2000.0d0*dens**0.0195  !! Evaporation temperature
      if(Tp .gt. Tevap) Tgd = Tevap
-  endif
-
-  if(sublimation_kuiper) then !! No dust grains above Tevap
-     planck_ana = planck_params(1)*(dens**planck_params(2))*(Tgd**planck_params(3))
-  else
-     planck_ana = planck_params(1)*(dens**planck_params(2))*(Tp**planck_params(3))
   endif  
 
-  if(sublimation_kuiper) then
-     !# RMR ## Sublimation mimicked by a d/g ratio that decreases as a arctan function centered on Tevap ##
-     planck_ana = planck_ana*(0.5d0 - 1./pi*atan(0.01d0*(Tp - Tevap) ) ) & !planck_ana contains the d/g ratio of 0.01
-          +dens*0.01d0*(1.0d0-0.01d0*(0.5d0 - 1./pi*atan(0.01d0*(Tp - Tevap) ) )) !=> quasi full gas
-  endif
+  if(fit_semenov)then
+     planck_ana = 0.5d0 * ( &
+         (1.d0 - tanh((Tgd - 145.d0)/2.d0)) * 0.001d0 * Tgd**((10.d0 - Tgd)/750.d0 + 2.d0) + &
+         (1.d0 + tanh((Tgd - 145.d0)/2.d0)) * &
+         (2.25d0 - 1.8d0 * tanh((Tgd - 1250.d0)/50.d0)))
+  else   
+     planck_ana = planck_params(1)*(dens**planck_params(2))*(Tgd**planck_params(3))
+  endif  
 
-  if (sinks_opt_thin .and. insink) planck_ana = min_optical_depth/(0.5D0**nlevelmax*boxlen*scale_l)
+if(sublimation_kuiper) then
+   !# RMR #### Sublimation of dust grains as in kuiper+10 ApJ ####
+   !### The highest dust temperature is the evaporation temperature
+   !### Opacities are taken at this temperature
+   !### The input temperature is kept to compute the d/g ratio
+   !# RMR ## Sublimation mimicked by a d/g ratio that decreases as a arctan function centered on Tevap ##
+   planck_ana = planck_ana*(0.5d0 - 1./pi*atan(0.01d0*(Tp - Tevap) ) ) & !planck_ana contains the d/g ratio of 0.01
+        +dens*0.01d0*(1.0d0-0.01d0*(0.5d0 - 1./pi*atan(0.01d0*(Tp - Tevap) ) )) !=> quasi full gas
+endif  
+
+if (sinks_opt_thin .and. insink) planck_ana = min_optical_depth/(0.5D0**nlevelmax*boxlen*scale_l)
+
+print*, dens,Tp,Tr,igroup,insink
+stop
 
 end function planck_ana
 
@@ -169,27 +176,31 @@ function rosseland_ana(dens,Tp,Tr,igroup,insink)
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
-
+  
+  Tgd = Tp
   if(sublimation_kuiper) then
+     Tevap = 2000.0d0*dens**0.0195  !! Evaporation temperature
+     if(Tp .gt. Tevap) Tgd = Tevap
+  endif  
+
+  if(fit_semenov) then !! No dust grains above Tevap
+     rosseland_ana = 0.5d0 * ( &
+         (1.d0 - tanh((Tgd - 145.d0)/2.d0)) * 0.00022d0 * Tgd**2 + &
+         (1.d0 + tanh((Tgd - 145.d0)/2.d0)) * &
+         (1.51d0 - 1.5d0 * tanh((Tgd - 1250.d0)/50.d0)))
+  else
+     rosseland_ana = rosseland_params(1)*(dens**rosseland_params(2))*(Tgd**rosseland_params(3))
+  endif
+
+  if(sublimation_kuiper) then !! No dust grains above Tevap
      !# RMR #### Sublimation of dust grains as in kuiper+10 ApJ ####
      !### The highest dust temperature is the evaporation temperature
      !### Opacities are taken at this temperature
      !### The input temperature is kept to compute the d/g ratio
-     Tgd = Tp
-     Tevap = 2000.0d0*dens**0.0195  !! Evaporation temperature
-     if(Tp .gt. Tevap) Tgd = Tevap
-  endif
-
-  if(sublimation_kuiper) then !! No dust grains above Tevap
-     rosseland_ana = rosseland_params(1)*(dens**rosseland_params(2))*(Tgd**rosseland_params(3))
-  else
-     rosseland_ana = rosseland_params(1)*(dens**rosseland_params(2))*(Tp**rosseland_params(3))
-  endif
-
-  if(sublimation_kuiper) then
+    
      !# RMR ## Sublimation mimicked by a d/g ratio that decreases as a arctan function centered on Tevap ##
      rosseland_ana = rosseland_ana*(0.5d0 - 1./pi*atan(0.01d0*(Tp - Tevap) ) ) & !ross_ana contains the d/g ratio of 0.01
-          +dens*0.01d0*(1.0d0-0.01d0*(0.5d0 - 1./pi*atan(0.01d0*(Tp - Tevap) ) )) !=> quasi full gas
+         +dens*0.01d0*(1.0d0-0.01d0*(0.5d0 - 1./pi*atan(0.01d0*(Tp - Tevap) ) )) !=> quasi full gas
   endif
 
   if (sinks_opt_thin .and. insink) rosseland_ana = min_optical_depth/(0.5D0**nlevelmax*boxlen*scale_l)
