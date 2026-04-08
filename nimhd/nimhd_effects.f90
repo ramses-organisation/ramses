@@ -1001,7 +1001,7 @@ double precision function gammaadbis(rhon,BBcell,BBcellold,temper)
    ! WARNING no mu_0 needed here
 
    rhoH=rhon*2.0d0*H2_fraction*scale_d/(mu_gas*mH) ! convert in H/cc
-   rhoH = max(rhoH, n_H_max)
+   rhoH = min(rhoH, n_H_max)
 
    ! TC: extrapolate from table[density,temperature,magnetic field]
    call interpolate_table(rhoH,temper,BBcellold,sigO,sigH,sigP) 
