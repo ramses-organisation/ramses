@@ -311,6 +311,9 @@ subroutine collapse_condinit(x,q,dx,nn)
   real(dp),save:: ind,seed1,seed2,seed3,xi,yi,zi,vx,vy,vz
   real(dp),save:: C_s,v_rms
   integer, save :: count_vrms
+#if USE_FLD==1
+  real(dp)::radiation_source
+#endif
 
   id=1; iu=2; iv=3; iw=4; ip=5
   x0=0.5*boxlen
@@ -507,7 +510,16 @@ subroutine collapse_condinit(x,q,dx,nn)
         q(i,8     ) = B0/100**(2./3.)
         q(i,nvar+3) = q(i,8     )
      ENDIF
-  ENDDO
+
+#if USE_FLD==1
+#if NGRP>0
+    do ivar=1,ngrp
+        q(i,firstindex_er+ivar) = radiation_source(T_eos,ivar)/(scale_d*scale_v**2)
+    enddo
+#endif     
+#endif
+
+  ENDDO 
 
 end subroutine collapse_condinit
 !================================================================
