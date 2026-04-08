@@ -3,6 +3,44 @@
 !=======================================================================
 !=======================================================================
 subroutine output_cone()
+  !=======================================================================!
+  ! The output_cone routine dumps the particles properties xp, vp         !
+  ! (plus the redshift computed from the comoving distance to the         !
+  ! observer) at each coarse timestep in a lightcone shell at light travel!
+  ! distance from the observer  (i.e. between coord_distance(z1,..) and   !
+  ! coord_distance(z2,..) where z1 corresponds to aexp from current coarse!
+  ! timestep and z2 to aexp_old from the last coarse time step).          !
+  ! The location of the observer is fixed to the center of the box at z=0 !
+  ! in this version. The direction of the lightcone is given              !
+  ! by theta and phi (caution: values are hard coded in this version)     !
+  ! Assuming the line of sight is along the x direction (after appropriate!
+  ! rotation), the base of the lightcone is a rectangle of half width     !
+  ! thetay and thetaz given in the namelist.                              !
+  ! The maximum redshift of the lightcone is given in the namelist by     !
+  ! zmax_cone.                                                            !
+  ! If thetay or thetaz are larger than the value 25.21 degrees (caution: !
+  ! hardcoded) the code switches to full sky lightcone.                   !
+  ! To avoid the central discontinuity or a too narrow lightcone          !
+  ! the center is treated  differently                                    !
+  ! Moreover if the cone extends beyond the box,                          !
+  ! replications are taken into account.                                  !
+  ! The particles selection is effectively performed in                   !
+  ! perform_my_selection.                                                 !
+  ! Two files are written per processus that contain  particles on the    !
+  ! lightcone (using "buffers" of size nstride):                          !
+  ! -a binary file cone*.outxxxxx (where xxxxx corresponds to myid) with  !
+  ! ncpu, nstride,npart, xp_out,vp_out,zp_out                             !
+  ! -an ascii file cone*.outxxxxx.txt with ncpu, nstride, npart_out (total!
+  ! number of selected particles in the processus), aexp_old, aexp        !
+  ! WARNING: It is important to note that if you restart after changing   !
+  ! nremap you need to properly erase the files written after the last    !
+  ! restart file. It is also important to note that the number of written !
+  ! files can be very high at high redshift near zmax                     !
+  ! of order nproc per coarse timestep(!).  For large run it is therefore !
+  ! adviced to use IOGROUPSIZECONE and to manage well the large amount    !
+  ! of inodes. First published use in Teyssier et al. 2009.               !
+  !=======================================================================!
+
   use amr_commons
   use pm_commons
   use mpi_mod
@@ -320,14 +358,17 @@ subroutine output_cone()
 
 contains
 
-    ! Extends (deallocates and reallocates) the arrays
-    ! posout, velout, varout, zout, xp_out, vp_out, mp_out and zp_out
-    ! after npout has been updated, so they can hold enough particles
-    !
-    ! Reallocation is done in chunks of size alloc_chunk_size, to avoid
-    ! reallocating too frequently.
+
 
     subroutine extend_arrays_if_needed()
+      !=======================================================================!
+      ! Extends (deallocates and reallocates) the arrays
+      ! posout, velout, varout, zout, xp_out, vp_out, mp_out and zp_out
+      ! after npout has been updated, so they can hold enough particles
+      !
+      ! Reallocation is done in chunks of size alloc_chunk_size, to avoid
+      ! reallocating too frequently.
+      !=======================================================================!
 
         ! Allocation chunk size
         integer, parameter :: alloc_chunk_size = 100
@@ -387,8 +428,8 @@ contains
         ! Resize posout, velout, varout, zout
         do idim=1,ndim
             tmparr(idim,1:nalloc1)=posout(idim,1:nalloc1)
-        deallocate(posout); allocate(posout(1:3,1:new_nalloc1))
         end do
+        deallocate(posout); allocate(posout(1:3,1:new_nalloc1))
         do idim=1,ndim
             posout(idim,1:nalloc1)=tmparr(idim,1:nalloc1)
         end do
@@ -427,7 +468,7 @@ subroutine perform_my_selection(justcount,z1,z2, &
      &                          pos,vel,var,npart, &
      &                          posout,velout,varout,zout,npartout,verbose)
   !===========================================================================
-  ! Lightcone selection performed in a standard matter dominated flat
+  ! Lightcone selection of the paticles performed in a standard matter dominated flat
   ! cosmology, om0in+omLin=1, where om0in is the total matter density
   ! parameter and omLin is the cosmological constant.
   !

@@ -1,0 +1,1 @@
+FLAGS: NDIM=3 NPSCAL=2 PATCH=../patch/init/dice/ SOLVER=hydro

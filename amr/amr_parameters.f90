@@ -120,6 +120,8 @@ module amr_parameters
   real(dp)::tout_next=HUGE(1.0D0)     ! next output time using delta_tout
   real(dp)::aout_next=HUGE(1.0D0)     ! next output expansion factor using delta_aout
   logical::output_to_log=.true.  ! write output to log for 1D runs
+  logical::write_conservative=.false. ! output conservative variables instead of primitive ones
+  logical::read_conservative=.false.  ! restart from an output which contains conservative variables
 
   ! Lightcone parameters
   real(dp)::thetay_cone=12.5d0
@@ -173,6 +175,7 @@ module amr_parameters
   real(dp)::sf_tdiss=0               ! Dissipation timescale for subgrid turbulence in units of turbulent crossing time
   integer::sf_model=3                ! Virial star formation model
   logical::randomize_sf=.true.       ! Use the poissdev stellar mass random drawing
+  real(dp)::PoissMeanMult=1.0        ! Poisson Mean Multiplier, applied only when randomize_sf=.false., in test context
   integer::nlevel_collapse=3         ! Number of levels to follow initial dark matter collapse (cosmo=.true. only)
   real(dp)::mass_star_max=120        ! Maximum mass of a star in solar mass
   real(dp)::mass_sne_min=10          ! Minimum mass of a single supernova in solar mass
