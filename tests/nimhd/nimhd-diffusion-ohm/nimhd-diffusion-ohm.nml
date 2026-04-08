@@ -29,6 +29,7 @@ p_region=1.0
 A_region=0.0
 B_region=0.0
 C_region=0.0
+condinit_kind='nimhd_diffusion'
 /
 
 &OUTPUT_PARAMS
