@@ -326,7 +326,7 @@ subroutine read_run_params(namelist_unit,nml_ok)
    & ,nrestart,ncontrol,nstepmax,nsubcycle,nremap,ordering &
    & ,bisec_tol,static,overload,cost_weighting,aton,nrestart_quad,restart_remap &
    & ,static_dm,static_gas,static_stars,convert_birth_times,use_proper_time,remap_pscalar &
-   & ,unbind,make_mergertree,stellar
+   & ,unbind,make_mergertree,stellar,fld
 
   ! Default passive scalar map
 #if NVAR>NHYDRO

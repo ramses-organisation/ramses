@@ -33,9 +33,53 @@ module hydro_parameters
   integer,parameter::nener=NENER
 #endif
   integer,parameter::inener=nhydro+1
+
+#if USE_FLD==1
+#ifndef NGRP
+  integer,parameter::ngrp=0   ! Number of radiative energy groups
+#else
+  integer,parameter::ngrp=NGRP
+#endif
+#if USE_M_1==0
+  integer,parameter::nrad=ngrp          ! Number of pure radiative variables (= radiative energies)
+  integer,parameter::nvar_bicg=nrad     ! Number of variables in BICG (= radiative variables)
+#endif
+#if USE_M_1==1
+  integer,parameter::nrad=(1+ndim)*ngrp  ! Number of pure radiative variables (= radiative energies + radiative fluxes)
+  integer,parameter::nvar_bicg=nrad+1    ! Number of variables in BICG (= temperature + radiative variables)
+#endif
+  integer,parameter::nvar_trad=nrad+1   ! Total number of radiative variables (= temperature + radiative energies)
+
+  ! Advect internal energy as a passive scalar, in a supplementary index
+#ifndef NPSCAL
+  integer,parameter::npscal=1
+#else
+  integer,parameter::npscal=NPSCAL
+#endif
+  integer,parameter::nent=nener-ngrp      ! Number of non-thermal energies
+#if USE_M_1==0
+  integer,parameter::nfr = 0              ! Number of radiative fluxes for M1
+#else
+  integer,parameter::nfr =ndim*ngrp       ! Number of radiative fluxes for M1
+#endif
+
+  ! First index of variables (in fact index just before the first index)
+  ! so that we can loop over 1,nener for instance
+  integer,parameter::firstindex_ent=nhydro     ! for non-thermal energies
+  integer,parameter::firstindex_er=nhydro+nent ! for radiative energies
+  integer,parameter::firstindex_fr=nhydro+nener ! for radiative fluxes (if M1)
+  integer,parameter::firstindex_extinct=nhydro+nent+nrad ! for extinction
+  integer,parameter::firstindex_pscal=nhydro+nent+nrad ! for passive scalars
+  integer::lastindex_pscal ! last index for passive scalars other than internal energy
+#endif
+
   ! total amount of variables
 #ifndef NVAR
+#if USE_FLD==0
   integer,parameter::nvar=nhydro+nener
+#else
+  integer,parameter::nvar=nhydro+nent+nrad+npscal
+#endif 
 #else
   integer,parameter::nvar=NVAR
 #endif
@@ -72,17 +116,39 @@ module hydro_parameters
   real(dp),dimension(1:MAXBOUND)::B_bound=0
   real(dp),dimension(1:MAXBOUND)::C_bound=0
 #endif
+#if USE_FLD==1
+  real(dp),dimension(1:MAXBOUND)::T_bound=0
+  real(dp),dimension(1:MAXBOUND,1:ngrp)::E_bound=0
+#ifdef SOLVERmhd
+  real(dp),dimension(1:MAXBOUND,1:ngrp)::fx_bound=0.0d0
+  real(dp),dimension(1:MAXBOUND,1:ngrp)::fy_bound=0.0d0
+  real(dp),dimension(1:MAXBOUND,1:ngrp)::fz_bound=0.0d0
+#endif
+#endif
   ! TODO allow other variables in inflow:
 #if NENER>0
   real(dp),dimension(1:MAXBOUND,1:NENER)::prad_bound=0
 #endif
+#if USE_FLD==0
 #if NVAR>NHYDRO+NENER
   real(dp),dimension(1:MAXBOUND,1:NVAR-NHYDRO-NENER)::var_bound=0
 #endif
+#else
+#if NPSCAL>0
+  real(dp),dimension(1:MAXBOUND,1:npscal)::var_bound=0
+#endif
+#endif
+
   ! Refinement parameters for hydro
   real(dp)::err_grad_d=-1.0d0  ! Density gradient
   real(dp)::err_grad_u=-1.0d0  ! Velocity gradient
   real(dp)::err_grad_p=-1.0d0  ! Pressure gradient
+#if USE_FLD==1
+  real(dp)::err_grad_E=-1.0d0  ! Radiative energy norm gradient
+#ifdef SOLVERmhd
+  real(dp)::err_grad_F=-1.0  ! Radiative flux norm gradient
+#endif
+#endif
   real(dp)::floor_d=1d-10     ! Density floor
   real(dp)::floor_u=1d-10     ! Velocity floor
   real(dp)::floor_p=1d-10     ! Pressure floor
@@ -99,13 +165,30 @@ module hydro_parameters
 #ifdef SOLVERrhd
   real(dp)::err_grad_lor=-1.0  ! Lorentz factor gradient
 #endif
+#if USE_FLD==1
+  real(dp)::floor_E=1.d-10    ! Radiative energy floor
+#ifdef SOLVERmhd
+  real(dp)::floor_F=1.d-10   ! Radiative flux floor
+#endif
+#endif
   real(dp)::mass_sph=0.0d0     ! mass_sph
   ! TODO allow for discontinuity-based refine on non-standard hydro vars:
 #if NENER>0
   real(dp),dimension(1:NENER)::err_grad_prad=-1
 #endif
+#if USE_FLD==0
 #if NVAR>NHYDRO+NENER
   real(dp),dimension(1:NVAR-NHYDRO-NENER)::err_grad_var=-1
+#endif
+#else
+#if NPSCAL>0
+#if USE_M_1==0
+  real(dp),dimension(1:NVAR-NHYDRO-NENER)::err_grad_var=-1
+#endif
+#if USE_M_1==1
+  real(dp),dimension(1:NVAR-NHYDRO-NENER-nfr)::err_grad_var=-1.0
+#endif
+#endif
 #endif
   real(dp),dimension(1:MAXLEVEL)::jeans_refine=-1
 
@@ -120,12 +203,28 @@ module hydro_parameters
   real(dp),dimension(1:MAXREGION)::B_region=0
   real(dp),dimension(1:MAXREGION)::C_region=0
 #endif
+#if USE_FLD==1
+  real(dp),dimension(1:MAXREGION)::T_region=0
+  real(dp),dimension(1:MAXREGION,1:ngrp)::E_region=0
+#ifdef SOLVERmhd
+  real(dp),dimension(1:MAXREGION,1:ngrp)::fx_region=0.0d0
+  real(dp),dimension(1:MAXREGION,1:ngrp)::fy_region=0.0d0
+  real(dp),dimension(1:MAXREGION,1:ngrp)::fz_region=0.0d0
+#endif
+#endif
 #if NENER>0
   real(dp),dimension(1:MAXREGION,1:NENER)::prad_region=0
 #endif
+#if USE_FLD==0
 #if NVAR>NHYDRO+NENER
   real(dp),dimension(1:MAXREGION,1:NVAR-NHYDRO-NENER)::var_region=0
 #endif
+#else
+#if NPSCAL>0
+  real(dp),dimension(1:MAXREGION,1:npscal)::var_region=0
+#endif
+#endif
+
   ! Hydro solver parameters
   integer ::niter_riemann=10
   integer ::slope_type=1
@@ -153,7 +252,7 @@ module hydro_parameters
 #ifdef SOLVERrhd
   character(LEN=10)::eos_rhd='constant'
 #endif
-
+  
   ! Interpolation parameters
   integer ::interpol_var=0
   integer ::interpol_type=1

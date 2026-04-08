@@ -12,7 +12,7 @@ subroutine make_boundary_hydro(ilevel)
   ! This routine set up boundary conditions for fine levels.
   ! -------------------------------------------------------------------
   integer::ibound,boundary_dir,idim,inbor=1
-  integer::i,ncache,ivar,igrid,ngrid,ind,iperp1=7,iperp2=8,iplane,icell
+  integer::i,ncache,ivar,igrid,ngrid,ind,iperp1=7,iperp2=8,iplane,icell,igrp
   integer::iskip,iskip_ref,iskip_normal,gdim=1,nx_loc,ix,iy,iz
   integer,dimension(1:8)::ind_ref,alt,ind_normal
   integer,dimension(1:4,1:2)::ind0
@@ -195,6 +195,18 @@ subroutine make_boundary_hydro(ilevel)
               do ivar=1,nvar+3
                  switch=1
                  if(ivar>1.and.ivar<neul)switch=gs(ivar-1)
+#if USE_M_1==1
+                 ! Reflection for the radiative flux
+                 ! [E_nener(1),E_nener(2),E_nener(3),E(1),E(2),Fx(1),Fx(2),Fy(1),Fy(2),Fz(1),Fz(2)]
+                 !
+                 ! ivar=8+nener-ngrp+igrp+idim*ngrp so ivar-9-nener+ngrp=igrp-1 + idim*ngrp
+                 ! so igrp-1=ivar-9-nener+ngrp [ngrp]
+                 if(ivar>8+nener.and.ivar<=8+nener+ndim*ngrp) then
+                    igrp=1+modulo(ivar-9-nener+ngrp,ngrp)
+                    idim=(ivar-8-nener+ngrp-igrp)/ngrp
+                    switch=gs(idim)
+                 endif
+#endif
                  if(ivar.ne.(5+gdim).and.ivar.ne.(nvar+gdim))then
                     do i=1,ngrid
                        uold(ind_cell(i),ivar)=uu(i,ivar)*switch

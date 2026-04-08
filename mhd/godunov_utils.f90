@@ -7,10 +7,13 @@ subroutine hydro_refine(ug,um,ud,ok,nn,ilevel)
   use hydro_parameters
   use amr_commons, ONLY: emag_tot
   use const
+#if USE_FLD==1
+  use constants, only:clight
+#endif
   implicit none
   ! dummy arguments
   integer nn,ilevel
-#if NENER>0
+#if NENER>0 || NVAR>8+NENER
   integer::irad
 #endif
   real(dp)::ug(1:nvector,1:nvar+3)
@@ -23,6 +26,11 @@ subroutine hydro_refine(ug,um,ud,ok,nn,ilevel)
   real(dp),dimension(1:nvector),save::emagg,emagm,emagd
   real(dp)::dg,dm,dd,pg,pm,pd,vg,vm,vd,cg,cm,cd,error,emag_loc,ethres
 
+#if USE_FLD==1
+  integer::j
+  real(dp)::Eg,Em,Ed,Fg,Fm,Fd
+#endif
+  
   ! Convert to primitive variables
   do k = 1,nn
      ug(k,1) = max(ug(k,1),smallr)
@@ -76,6 +84,7 @@ subroutine hydro_refine(ug,um,ud,ok,nn,ilevel)
      um(k,neul) = (gamma-one)*(um(k,neul)-ekinm(k)-emagm(k))
      ud(k,neul) = (gamma-one)*(ud(k,neul)-ekind(k)-emagd(k))
   end do
+#if USE_FLD==0
   ! Passive scalars
 #if NVAR>NHYDRO+NENER
   do idim = nhydro+1+nener,nvar
@@ -87,6 +96,19 @@ subroutine hydro_refine(ug,um,ud,ok,nn,ilevel)
   end do
 #endif
 
+#else
+  ! Passive scalars
+#if NPSCAL>0
+  do idim = 1,npscal
+     do k = 1,nn
+        ug(k,firstindex_pscal+idim) = ug(k,firstindex_pscal+idim)/ug(k,1)
+        um(k,firstindex_pscal+idim) = um(k,firstindex_pscal+idim)/um(k,1)
+        ud(k,firstindex_pscal+idim) = ud(k,firstindex_pscal+idim)/ud(k,1)
+     end do
+  end do
+#endif
+#endif
+  
   ! Compute errors
   if(err_grad_d >= 0.)then
      do k=1,nn
@@ -180,7 +202,69 @@ subroutine hydro_refine(ug,um,ud,ok,nn,ilevel)
         end do
      end do
   end if
+  
+#if USE_FLD==1
+  if(err_grad_E >= 0.)then
+     do k=1,nn
+        Eg=0.0D0 ; Em=0.0D0 ; Ed=0.0D0 ; 
+        do j=1,ngrp
+           Eg=Eg+ug(k,firstindex_er+j); Em=Em+um(k,firstindex_er+j); Ed=Ed+ud(k,firstindex_er+j)
+        end do
+        error=2.0d0*MAX( &
+             & ABS((Ed-Em)/(Ed+Em+floor_E)), &
+             & ABS((Em-Eg)/(Em+Eg+floor_E)) )
+        ok(k) = ok(k) .or. error > err_grad_E
+     end do
+  end if
 
+#if NENER>0
+   do irad = 1,nent
+      if(err_grad_prad(irad) >= 0.)then
+         do k=1,nn
+            pg=ug(k,8+irad); pm=um(k,8+irad); pd=ud(k,8+irad)
+            error=2.0d0*MAX( &
+                 & ABS((pd-pm)/(pd+pm+floor_p)), &
+                 & ABS((pm-pg)/(pm+pg+floor_p)) )
+            ok(k) = ok(k) .or. error > err_grad_prad(irad)
+         end do
+      end if
+   end do
+#endif
+
+#if NVAR>8+NENER
+   do irad = 9+nener,nvar
+      if(err_grad_var(irad-8-nener) >= 0.)then
+         do k=1,nn
+            pg=ug(k,irad); pm=um(k,irad); pd=ud(k,irad)
+            error=2.0d0*MAX( &
+                 & ABS((pd-pm)/(pd+pm+floor_p)), &
+                 & ABS((pm-pg)/(pm+pg+floor_p)) )
+            ok(k) = ok(k) .or. error > err_grad_var(irad-8-nener)
+         end do
+      end if
+   end do
+#endif
+
+
+#if USE_M_1==1
+  if(err_grad_F >= 0.)then
+     do idim=1,ndim
+        do k=1,nn
+           Fg=0.0D0 ; Fm=0.0D0 ; Fd=0.0D0 ; 
+           do j=1,ngrp
+              !warning normalization: F in rho*u^3 and E in rho*u^2
+              Fg=Fg+ug(k,firstindex_er+idim*ngrp+j)*ug(k,idim+1)/(clight*ug(k,firstindex_er+j)); Fm=Fm+um(k,firstindex_er+idim*ngrp+j)*um(k,idim+1)/(clight*um(k,firstindex_er+j)); Fd=Fd+ud(k,firstindex_er+idim*ngrp+j)*ud(k,idim+1)/(clight*ud(k,firstindex_er+j))
+           end do
+           error=2.0d0*MAX( &
+                & ABS((Fd-Fm)/(Fd+Fm+floor_F)), &
+                & ABS((Fm-Fg)/(Fm+Fg+floor_F)) )
+           ok(k) = ok(k) .or. error > err_grad_F
+        end do
+     enddo
+  end if
+#endif
+#endif
+  
   if(ischeme.eq.1)then
      if(m_refine(ilevel) >= 0.)then
         if(emag_tot==0.0)then
@@ -356,11 +440,24 @@ SUBROUTINE hlld(qleft,qright,fgdnv)
   Ptotl = Pl + emagl
   vdotBl= ul*A+vl*Bl+wl*cl
 #if NENER>0
+#if USE_FLD==0
   do irad = 1,nener
      eradl(irad) = qleft(nhydro+irad)/(gamma_rad(irad)-1.0d0)
      etotl = etotl + eradl(irad)
      Ptotl = Ptotl + qleft(nhydro+irad)
   end do
+#else
+  do irad = 1,nent
+     eradl(irad) = qleft(8+irad)/(gamma_rad(irad)-1.0d0)
+     etotl = etotl + eradl(irad)
+     Ptotl = Ptotl + qleft(8+irad)
+  end do
+  do irad = 1,ngrp
+     eradl(nent+irad) = qleft(firstindex_er+irad)
+     etotl = etotl + eradl(nent+irad)
+     Ptotl = Ptotl + qleft(firstindex_er+irad)*(gamma_rad(nent+irad)-1.0d0)
+  end do
+#endif
 #endif
   eintl=Pl*entho
 
@@ -373,11 +470,24 @@ SUBROUTINE hlld(qleft,qright,fgdnv)
   Ptotr = Pr + emagr
   vdotBr= ur*A+vr*Br+wr*Cr
 #if NENER>0
+#if USE_FLD==0
   do irad = 1,nener
      eradr(irad) = qright(nhydro+irad)/(gamma_rad(irad)-1.0d0)
      etotr = etotr + eradr(irad)
      Ptotr = Ptotr + qright(nhydro+irad)
   end do
+#else
+  do irad = 1,nent
+     eradr(irad) = qright(8+irad)/(gamma_rad(irad)-1.0d0)
+     etotr = etotr + eradr(irad)
+     Ptotr = Ptotr + qright(8+irad)
+  end do
+  do irad = 1,ngrp
+     eradr(nent+irad) = qright(firstindex_er+irad)
+     etotr = etotr + eradr(nent+irad)
+     Ptotr = Ptotr + qright(firstindex_er+irad)*(gamma_rad(nent+irad)-1.0d0)
+  end do
+#endif
 #endif
   eintr=Pr*entho
 
@@ -562,6 +672,9 @@ SUBROUTINE hlld(qleft,qright,fgdnv)
   end if
 
   ! Compute the Godunov flux
+#if USE_FLD==1
+  fgdnv    = zero
+#endif
   fgdnv(1) = ro*uo
   fgdnv(2) = (etoto+Ptoto)*uo-A*vdotBo
   fgdnv(3) = ro*uo*uo+Ptoto-A*A
@@ -570,11 +683,15 @@ SUBROUTINE hlld(qleft,qright,fgdnv)
   fgdnv(6) = Bo*uo-A*vo
   fgdnv(7) = ro*uo*wo-A*Co
   fgdnv(8) = Co*uo-A*wo
+#if USE_FLD==1
+  fgdnv(nvar) = einto*uo
+#endif
 #if NENER>0
   do irad = 1,nener
      fgdnv(nhydro+irad) = uo*erado(irad)
   end do
 #endif
+#if USE_FLD==0
 #if NVAR>NHYDRO+NENER
   do ivar = 9+nener,nvar
      if(fgdnv(1)>0)then
@@ -583,6 +700,30 @@ SUBROUTINE hlld(qleft,qright,fgdnv)
         fgdnv(ivar) = fgdnv(1)*qright(ivar)
      endif
   end do
+#endif
+#else
+!!! TO BE CHANGED : should be with frado(irad) for the fluxes
+#if USE_M_1==1
+  do j=1,nrad
+     if(fgdnv(1)>0)then
+        fgdnv(8+j) = uo*qleft (8+j)
+     else
+        fgdnv(8+j) = uo*qright(8+j)
+     endif
+  end do
+#endif
+
+!!! No flux for NEXTINCT
+
+#if NPSCAL>0
+  do ivar = 1,npscal
+     if(fgdnv(1)>0)then
+        fgdnv(firstindex_pscal+ivar) = fgdnv(1)*qleft (firstindex_pscal+ivar)
+     else
+        fgdnv(firstindex_pscal+ivar) = fgdnv(1)*qright(firstindex_pscal+ivar)
+     endif
+  end do
+#endif
 #endif
   !Thermal energy
   fgdnv(nvar+1) = uo*einto
@@ -619,10 +760,21 @@ SUBROUTINE find_mhd_flux(qvar,cvar,ff)
   etot = P*entho+ecin+emag
   Ptot = P + emag
 #if NENER>0
+#if USE_FLD==0
   do irad = 1,nener
      etot    = etot + qvar(nhydro+irad)/(gamma_rad(irad)-one)
      Ptot    = Ptot + qvar(nhydro+irad)
   end do
+#else
+  do irad = 1,nent
+     etot    = etot + qvar(8+irad)/(gamma_rad(irad)-one)
+     Ptot    = Ptot + qvar(8+irad)
+  end do
+  do irad = 1,ngrp
+     etot    = etot + qvar(firstindex_er+irad)
+     Ptot    = Ptot + qvar(firstindex_er+irad)*(gamma_rad(nent+irad)-one)
+  end do
+#endif
 #endif
 
   ! Compute conservative variables
@@ -634,6 +786,7 @@ SUBROUTINE find_mhd_flux(qvar,cvar,ff)
   cvar(6) = B
   cvar(7) = d*w
   cvar(8) = C
+#if USE_FLD==0
 #if NENER>0
   do irad = 1,nener
      cvar(nhydro+irad) = qvar(nhydro+irad)/(gamma_rad(irad)-one)
@@ -644,10 +797,28 @@ SUBROUTINE find_mhd_flux(qvar,cvar,ff)
      cvar(ivar) = d*qvar(ivar)
   end do
 #endif
+#else
+#if NENER>0
+  do irad = 1,nent
+     cvar(8+irad) = qvar(8+irad)/(gamma_rad(irad)-one)
+  end do
+  do irad = 1,ngrp
+     cvar(firstindex_er+irad) = qvar(firstindex_er+irad)
+  end do
+#endif
+#if NPSCAL>0
+  do ivar = 1,npscal
+     cvar(firstindex_pscal+ivar) = d*qvar(firstindex_pscal+ivar)
+  end do
+#endif
+#endif
   !Thermal energy
   cvar(nvar+1)=P*entho
 
   ! Compute fluxes
+#if USE_FLD==1
+  ff    = zero
+#endif
   ff(1) = d*u
   ff(2) = (etot+Ptot)*u-A*(A*u+B*v+C*w)
   ff(3) = d*u*u+Ptot-A*A
@@ -661,10 +832,18 @@ SUBROUTINE find_mhd_flux(qvar,cvar,ff)
      ff(nhydro+irad) = u*cvar(nhydro+irad)
   end do
 #endif
+#if USE_FLD==0
 #if NVAR>NHYDRO+NENER
   do ivar = 9+nener,nvar
      ff(ivar) = d*u*qvar(ivar)
   end do
+#endif
+#else
+#if NPSCAL>0
+  do ivar = 1,npscal
+     ff(firstindex_pscal+ivar) = d*u*qvar(firstindex_pscal+ivar)
+  end do
+#endif
 #endif
   ! Thermal energy
   ff(nvar+1)=P*entho*u
@@ -696,9 +875,18 @@ SUBROUTINE find_speed_info(qvar,vel_info)
   B2 = A*A+B*B+C*C
   c2 = gamma*P/d
 #if NENER>0
+#if USE_FLD==0
   do irad = 1,nener
      c2 = c2 + gamma_rad(irad)*qvar(nhydro+irad)/d
   end do
+#else
+  do irad = 1,nent
+     c2 = c2 + gamma_rad(irad)*qvar(8+irad)/d
+  end do
+  do irad = 1,ngrp
+     c2 = c2 + gamma_rad(nent+irad)*(gamma_rad(nent+irad)-1.0d0)*qvar(firstindex_er+irad)/d
+  end do
+#endif
 #endif
 
   d2 = half*(B2/d+c2)
@@ -731,9 +919,18 @@ SUBROUTINE find_speed_fast(qvar,vel_info)
   B2 = A*A+B*B+C*C
   c2 = gamma*P/d
 #if NENER>0
+#if USE_FLD==0
   do irad = 1,nener
      c2 = c2 + gamma_rad(irad)*qvar(nhydro+irad)/d
   end do
+#else
+  do irad = 1,nent
+     c2 = c2 + gamma_rad(irad)*qvar(8+irad)/d
+  end do
+  do irad = 1,ngrp
+     c2 = c2 + gamma_rad(nent+irad)*(gamma_rad(nent+irad)-1.0d0)*qvar(firstindex_er+irad)/d
+  end do
+#endif
 #endif
   d2 = half*(B2/d+c2)
   cf = sqrt( d2 + sqrt(d2**2-c2*A*A/d) )
