@@ -47,6 +47,7 @@ module radiation_parameters
   ! Opacities
   character(len=12) :: opacity_type = 'grey'  ! 'grey' or 'multigroup'
   logical :: sublimation_kuiper=.false. ! Mimicks dust sublimation with decreasing d/g ratio, see Kuiper+10 ApJ 
+  logical :: fit_semenov=.false.     ! Use a fit of the Semenov et al. (2003) Rosseland anf Planck dust opacities
 
   ! Radiation solver parameters
   real(dp)::epsilon_diff=1d-6                        ! CG iteration break criteria
