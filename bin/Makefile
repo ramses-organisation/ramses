@@ -56,7 +56,6 @@ ifeq ($(USE_FLD),1)
    NPSCAL := $(NPSCAL)+$(NIONS)+1
 endif
 NDUST=0
-NEXTINCT=0
 #
 
 # Compute NVAR
@@ -77,16 +76,15 @@ endif
 ## 6:8 magnetic field
 ## 9:9+ncr : cosmic rays energy density (ncr groups of energy)
 ## 9+ncr:9+nener : trapped photons (look at definitions in mhd/read_hydro_param)
-## 9+nener9+nener+1:9+nener+nextinct : for extinction (look at definition of firstindex_pscal in mhd/read_hydro_param)
-## 9+nener+nextinct+1 : 9+nener+nextinct+1+nions : the ions (rt_init, cooling_fine)
-## 9+nener+nextinct+nions+1:9+nener+nextinct+nions+ndust : dust species 
+## 9+nener+1 : 9+nener+1+nions : the ions (rt_init, cooling_fine)
+## 9+nener+nions+1:9+nener+nions+ndust : dust species 
 ## note defined through imetal=firstindex_pscal+1 in read_hydro_param then idelay=imetal ixion=idelay ichem=ixion 
 ## then in rt_init nvar_count=ichem-1 and iIons = nvar_count+1 (this is terrible, I know....)
 ## nvar-4:nvar-1 : current (used in godfine1 if IMHD==1) unew(....,nvar-4+idim)
 ## nvar-1:nvar : internal energy used in set_uold if (energy_fix)
 
 #if you want to add your own scalar this has to be done between : 
-#9+nener+nextinct+1+nions+1 and nvar-4
+#9+nener+1+nions+1 and nvar-4
 
 #then do not forget that within the code the magnetic variable are duplicated and stored
 #nvar+1:nvar+3

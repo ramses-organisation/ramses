@@ -713,8 +713,6 @@ SUBROUTINE hlld(qleft,qright,fgdnv)
   end do
 #endif
 
-!!! No flux for NEXTINCT
-
 #if NPSCAL>0
   do ivar = 1,npscal
      if(fgdnv(1)>0)then
