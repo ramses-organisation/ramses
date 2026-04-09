@@ -7,6 +7,7 @@ subroutine make_boundary_diffusion(ilevel,igroup)
   use hydro_commons
   use radiation_parameters
   use units_commons
+   use fld_commons, only:in_sink
   implicit none
   ! -------------------------------------------------------------------
   ! This routine set up boundary conditions for fine levels.

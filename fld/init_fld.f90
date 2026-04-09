@@ -2,7 +2,7 @@ subroutine init_fld
    use amr_commons, only:ncoarse
    use amr_parameters, only:twotondim,ngridmax,ndim
    use hydro_parameters, only:ngrp
-   use hydro_commons, only:in_sink
+   use fld_commons
    use radiation_parameters
    implicit none
    !------------------------------

@@ -4,6 +4,7 @@ subroutine diffusion_cg (ilevel,Nsub)
   use cooling_module,ONLY:kB,mH,clight
   use radiation_parameters
   use units_commons
+  use fld_commons
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'

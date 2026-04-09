@@ -3171,6 +3171,7 @@ subroutine fld_radiative_feedback_sink(ilevel)
   use radiation_parameters,only:stellar_photon,sinks_opt_thin
   use units_commons
   use constants, only: pi
+   use fld_commons, only:in_sink
 #ifdef RT
   use rt_hydro_commons
 #endif

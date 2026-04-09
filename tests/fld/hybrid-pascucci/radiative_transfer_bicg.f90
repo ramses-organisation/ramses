@@ -6,6 +6,7 @@ subroutine diffusion_cg (ilevel,Nsub)
   use radiation_parameters
   use const
   use units_commons
+  use fld_commons
 #ifdef RT
   use pm_commons !hybrid RT, needs sink quantities                                                  
   use rt_hydro_commons !hybrid RT

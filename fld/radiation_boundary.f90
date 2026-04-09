@@ -7,6 +7,7 @@ subroutine make_boundary_diffusion(ilevel,igroup)
   use hydro_commons
   use radiation_parameters
   use units_commons
+  use fld_commons
   implicit none
   ! -------------------------------------------------------------------
   ! This routine set up boundary conditions for fine levels.
@@ -216,6 +217,7 @@ subroutine make_boundary_diffusion_tot(ilevel)
   use radiation_parameters
   use const
   use units_commons
+  use fld_commons
   implicit none
   ! -------------------------------------------------------------------
   ! This routine set up boundary conditions for fine levels.
