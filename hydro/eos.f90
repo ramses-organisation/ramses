@@ -60,6 +60,7 @@ subroutine temperature_eos(rho_temp,Enint_temp,Teos,ht)
   use amr_parameters      ,only:dp,mu_gas
   use hydro_commons       ,only:gamma
   use constants           ,only:kB,mH
+  use cooling_module, only:barotropic_eos
   implicit none
   !--------------------------------------------------------------
   ! This routine computes the temperature from the density and 
