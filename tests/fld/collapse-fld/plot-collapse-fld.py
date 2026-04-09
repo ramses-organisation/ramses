@@ -202,7 +202,7 @@ ax6.set_xlim([xmin,xmax])
 ax6.set_ylim([ymin,ymax])
 
 #fig.subplots_adjust(wspace=0.25)
-fig.savefig('collapse-baro.pdf',bbox_inches='tight')
+fig.savefig('collapse-fld.pdf',bbox_inches='tight')
 
 # Check results against reference solution
-visu_ramses.check_solution(data["data"],'collapse-baro',overwrite=False)
+visu_ramses.check_solution(data["data"],'collapse-fld',overwrite=False)
