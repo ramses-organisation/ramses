@@ -5,7 +5,6 @@ subroutine init_sink
   use amr_parameters, only:levelmin
   use constants, only:M_sun
   use mpi_mod
-  use radiation_parameters,only:Tstar,rstar
   use cloud_module,only:PMS_evol,rt_feedback,rstar_init,mprotostar
   use constants,only:R_sun
   implicit none
@@ -136,7 +135,7 @@ subroutine init_sink
 
   allocate(lum_sink(1:nsinkmax),lum_sink_all(1:nsinkmax))
   allocate(rsink_star(1:nsinkmax),Teff_sink(1:nsinkmax))
-  rsink_star(1:nsinkmax) = rstar*R_sun/scale_l ! 2.5 Rsol
+  rsink_star(1:nsinkmax) = rstar_init*R_sun/scale_l ! 2.5 Rsol
   lum_sink_all(1:nsinkmax)=0.0d0
   lum_sink(1:nsinkmax)=0.0d0
   Teff_sink(1:nsinkmax)=0.0d0
