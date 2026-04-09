@@ -46,10 +46,9 @@ subroutine init_hydro
 #if USE_FLD==1  
   if(fld)then
      allocate(rad_flux(1:ncell,1:nvar_bicg))
-     allocate(urad(1:ncell,1:nvar_bicg))
      allocate(frad(1:ncell,1:ndim))
      allocate(in_sink(1:ncell))
-     rad_flux=0.0d0; urad=0.0d0; frad=0.0d0; in_sink=.false.
+     rad_flux=0.0d0; frad=0.0d0; in_sink=.false.
   endif
 #endif
   if(momentum_feedback>0)then

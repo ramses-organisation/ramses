@@ -4,7 +4,6 @@ module radiation_parameters
 
   ! DT adaptatif
   real(dp),allocatable,dimension(:,:)::rad_flux ! Flux entrant dans une cellule
-  real(dp),allocatable,dimension(:,:)::urad     ! Old values of Erg in NR iterations
   real(dp),allocatable,dimension(:,:)::frad     ! Radiative force  
   real(dp)::Tr_floor=10.0 ! Background radiation field temperature - WARNING: it affects the pressure_fix in set_uold.
   integer::ntp,nfr
@@ -40,7 +39,6 @@ module radiation_parameters
   logical :: split_groups_log=.true. ! Automatic splitting of group in log if true; if not use regular splitting
   logical :: extra_end_group=.false. ! The last group holds frequencies numax -> frequency_upperlimit if true
   logical :: grey_rad_transfer=.true.! Default: grey radiation transfer
-  logical :: external_radiation_field=.false. ! Default: No external radiation background (@ Tr_floor)
   logical :: stellar_photon=.false.  ! Stellar photons are treated as a separate group (igrp=1). No emission for this group (radiation_source=0)
   logical :: sinks_opt_thin=.false.  ! Optically-thin (min_optical_depth) sink volumes, relevant for hybrid RT
 

@@ -3161,7 +3161,7 @@ end subroutine synchronize_sink_info
 !##############################################################################
 !##############################################################################
 !##############################################################################
-subroutine radiative_feedback_sink(ilevel)
+subroutine fld_radiative_feedback_sink(ilevel)
   use pm_commons
   use amr_commons
   use hydro_commons
@@ -3328,7 +3328,7 @@ subroutine radiative_feedback_sink(ilevel)
      ! End loop over cells
   end do
   ! End loop over grids
-111 format('   Entering radiative_feedback_sink for level ',I2)
+111 format('   Entering fld_radiative_feedback_sink for level ',I2)
 
 
   !PH 29/12/2019 PH debug acc_rate
@@ -3345,13 +3345,13 @@ subroutine radiative_feedback_sink(ilevel)
   enddo
   
 
-end subroutine radiative_feedback_sink
+end subroutine fld_radiative_feedback_sink
 !################################################################
 !################################################################
 !################################################################
 !################################################################
 #else
-subroutine radiative_feedback_sink(ilevel)
+subroutine fld_radiative_feedback_sink(ilevel)
   implicit none
   integer::ilevel
 
@@ -3359,5 +3359,5 @@ subroutine radiative_feedback_sink(ilevel)
 
   return
   
-end subroutine radiative_feedback_sink
+end subroutine fld_radiative_feedback_sink
 #endif
