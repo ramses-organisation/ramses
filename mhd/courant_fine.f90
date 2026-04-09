@@ -403,7 +403,7 @@ subroutine cmpdt_nimhd(uu,dx,ncell,dtambdiff,dtohmdiss)
   
    do k = 1,ncell
       rho(k)=max(uu(k,1),smallr)
-      call temperature_eos(rho(k), uu(k,5), tcell(k),ht)
+      call temperature_eos(rho(k), uu(k,nvar), tcell(k),ht)
    end do
  
    do k = 1,ncell

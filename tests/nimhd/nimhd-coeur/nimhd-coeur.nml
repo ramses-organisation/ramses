@@ -2,7 +2,7 @@
 hydro=.true.
 poisson=.true.
 nrestart=0
-ncontrol=1
+ncontrol=10
 nremap=2
 nsubcycle=3*1,35*2
 verbose=.false.
@@ -10,18 +10,24 @@ verbose=.false.
 
 &AMR_PARAMS 
 levelmin=5
-levelmax=15
+levelmax=20
 ngridmax=100000
 nexpand=30*4
 boxlen=1.9140529831524967d-2
 /
 
 &INIT_PARAMS
-condinit_kind='coeur'
+condinit_kind='collapse'
+alpha_dense_core=0.1
+beta_dense_core =0.01
+crit_dense_core =0.1
+delta_rho=0.1
+theta_mag=0.0
+Mach=0.0d0
 /
 
 &OUTPUT_PARAMS
-tend=8.899d-5
+tend=3d-5!8.899d-5
 /
 
 &POISSON_PARAMS 
@@ -30,19 +36,19 @@ epsilon=1d-4
 /
 
 &HYDRO_PARAMS
-gamma=1.66666667
-courant_factor=0.7
+gamma=1.666667
+courant_factor=0.6
 slope_type=1
 scheme='muscl'
 riemann='hlld'
 riemann2d='hlld'
-pressure_fix=.false.
+pressure_fix=.true.
 /
 
 &UNITS_PARAMS
-units_density= 3.83584509e-24      ! so that density in code units is equal to density in part/cc
-units_length= 3.0856776e+18        ! 1 pc in cm
-units_time= 1.9769994708456518e15  ! so that G=1 in code units
+units_density= 3.83460000000000E-24   ! so that density in code units is equal to density in part/cc
+units_length=3.08000000000000E+18        ! 1 pc in cm
+units_time= 1.97732040946880E+15 ! so that G=1 in code units
 /
 
 &COOLING_PARAMS
@@ -56,19 +62,20 @@ mu_gas=2.31d0                          ! molecular weight
 
 &REFINE_PARAMS 
 jeans_refine=30*8.
-interpol_var=1
-interpol_type=0
+interpol_var=0
+interpol_type=1
 /
 
 &NONIDEALMHD_PARAMS
 nambipolar=.true.
-nmagdiffu=.true.
+nmagdiffu=.false.
 nminitimestep=.true.
 resistivity_method=2
 coefad=0.1d0
-coefalfven=0.3
+coefalfven=0.5
 rho_threshold=1d5
 coefdtohm=0.2d0
+gammaAD=3.5d13 
 /
 
 

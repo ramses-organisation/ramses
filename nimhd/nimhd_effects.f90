@@ -566,9 +566,9 @@ subroutine computdifmag(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
                bsquarey=bemfy(l,i,j,k,1)**2+bemfy(l,i,j,k,2)**2+bemfy(l,i,j,k,3)**2
                bsquarez=bemfz(l,i,j,k,1)**2+bemfz(l,i,j,k,2)**2+bemfz(l,i,j,k,3)**2
 
-               call temperature_eos(rhox, epsx, tcellx,ht)
-               call temperature_eos(rhoy, epsy, tcelly,ht)
-               call temperature_eos(rhoz, epsz, tcellz,ht)
+               call temperature_eos(rhox, epsx, tcellx, ht)
+               call temperature_eos(rhoy, epsy, tcelly, ht)
+               call temperature_eos(rhoz, epsz, tcellz, ht)
 
                etaod2x=etaohmdiss(rhox,bsquarex,tcellx,dt,dx,.true.)
                etaod2y=etaohmdiss(rhoy,bsquarey,tcelly,dt,dx,.true.)
@@ -586,7 +586,7 @@ subroutine computdifmag(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
                   bsqf=bmagij(l,i,j,k,1,h)**2+bmagij(l,i,j,k,2,h)**2+bmagij(l,i,j,k,3,h)**2
 
                   ! Compute gas temperature in cgs
-                  call temperature_eos(rhof, epsf, tcellf,ht)
+                  call temperature_eos(rhof, epsf, tcellf, ht)
                      
                   etaod2=etaohmdiss(rhof,bsqf,tcellf,0d0,0d0,.false.)
                   fluxohm(l,i,j,k,h)=etaod2*fluxmd(l,i,j,k,h)
@@ -679,7 +679,7 @@ subroutine computambip(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,b
                ! Compute gas temperature in cgs
 
                call temperature_eos(u(l,i,j,k,1), u(l,i,j,k,nvar), tcell,ht)
-
+               
                bsquarex=bemfx(l,i,j,k,1)**2+bemfx(l,i,j,k,2)**2+bemfx(l,i,j,k,3)**2
                bsquarey=bemfy(l,i,j,k,1)**2+bemfy(l,i,j,k,2)**2+bemfy(l,i,j,k,3)**2
                bsquarez=bemfz(l,i,j,k,1)**2+bemfz(l,i,j,k,2)**2+bemfz(l,i,j,k,3)**2

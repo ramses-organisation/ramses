@@ -75,9 +75,12 @@ subroutine temperature_eos(rho_temp,Enint_temp,Teos,ht)
 
   rho   = rho_temp*scale_d
   Enint = Enint_temp*scale_d*scale_v**2 
-
-  Teos = Enint/(rho*kB/(mu_gas*mH*(gamma-1.0d0)))
-
+  if (barotropic_eos) then
+      call barotropic_eos_temperature(rho_temp, Teos)
+      Teos = Teos*mu_gas
+  else
+      Teos = Enint/(rho*kB/(mu_gas*mH*(gamma-1.0d0)))
+  endif
   ht=1
 
   return

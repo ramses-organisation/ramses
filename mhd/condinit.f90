@@ -435,18 +435,6 @@ subroutine collapse_condinit(x,q,dx,nn)
      rc=sqrt(xx**2+yy**2)
      rs=sqrt(xx**2+yy**2+zz**2)
 
-     !Bx component
-     q(i,6     ) = 0.
-     q(i,nvar+1) = 0.
-
-     !By component
-     q(i,7     ) = 0.
-     q(i,nvar+2) = 0.
-
-     !Bz component
-     q(i,8     ) = B0
-     q(i,nvar+3) = B0
-
      q(i,iu) = 0.
      q(i,iv) = 0.
      q(i,iw) = 0.
@@ -480,6 +468,17 @@ subroutine collapse_condinit(x,q,dx,nn)
           q(i,iu:iw) = q(i,iu:iw) + matmul(rot_invM,omega0*matmul(rot_tilde,matmul(rot_M,(/xx,yy,zz/))))
         ! endif
        q(i,ip) = p0
+       !Bx component
+        q(i,6     ) = 0.
+        q(i,nvar+1) = 0.
+
+        !By component
+        q(i,7     ) = 0.
+        q(i,nvar+2) = 0.
+
+        !Bz component
+        q(i,8     ) = B0
+        q(i,nvar+3) = q(i,8     )
      ELSE
        q(i,id) = d0/100.
        xx = r0 * xx / rc
@@ -496,6 +495,17 @@ subroutine collapse_condinit(x,q,dx,nn)
       !  q(i,iw) = 0.0
 
        q(i,ip) = p0/100.
+        !Bx component
+        q(i,6     ) = 0.
+        q(i,nvar+1) = 0.
+
+        !By component
+        q(i,7     ) = 0.
+        q(i,nvar+2) = 0.
+
+        !Bz component
+        q(i,8     ) = B0/100**(2./3.)
+        q(i,nvar+3) = q(i,8     )
      ENDIF
   ENDDO
 
