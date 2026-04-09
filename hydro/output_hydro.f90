@@ -4,6 +4,7 @@ subroutine backup_hydro(filename, filename_desc)
   use dump_utils, only : dump_header_info, generic_dump, dim_keys
 #ifdef RT
   use rt_hydro_commons, only: nRTvar, nGroups, iGroups, rtuold
+  use rt_parameters, only: output_rtvar_in_hydro
 #endif
   use mpi_mod
   implicit none
@@ -325,6 +326,7 @@ subroutine backup_hydro(filename, filename_desc)
               endif
 
 #ifdef RT
+              if(output_rtvar_in_hydro) then
               do ivar=1,nGroups
                  do i=1,ncache
                     xdp(i)=rtuold(ind_grid(i)+iskip,iGroups(ivar))!*rt_c
@@ -340,6 +342,7 @@ subroutine backup_hydro(filename, filename_desc)
                     call generic_dump(field_name, info_var_count, xdp, unit_out, dump_info_flag, unit_info)
                  enddo
               end do
+              endif
 #endif
 
               ! We did one output, deactivate dumping of variables

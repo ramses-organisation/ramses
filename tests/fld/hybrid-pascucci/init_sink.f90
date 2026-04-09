@@ -255,10 +255,28 @@ subroutine init_sink
         filename='ic_sink_restart'
         INQUIRE(FILE=filename, EXIST=ic_sink)
      end if
+     !raph: to recompute the values of lum sink if restart
+     rsink_star(1) = rstar_init*R_sun/scale_l
+     lum_sink(1)=(5.67d-5*(Teff_sink(1)**4))*4.0d0*3.1415d0*(rstar_init*6.96d10)**2/(scale_d*(scale_l)**2*(scale_v)**3)
+     int_lum(1)=lum_sink(1) ! lum_sink = sigma R2 T4 = E/t donc adim = d * l**3 * v**2 / t = d * l**2 * v**3
+     !raph
   else
      nsink=0
      nindsink=0
      nsinkold=0
+     !!!!!!------------!!!!!!!!!
+     nsink=1
+     xsink(1,1:3)=boxlen/2.
+     msink(1)=1.d-10
+     rsink_star(1) = rstar_init*R_sun/scale_l
+     Teff_sink(1)=Tstar
+     lum_sink(1)=(5.67d-5*(Teff_sink(1)**4))*4.0d0*3.1415d0*(rstar_init*6.96d10)**2/(scale_d*(scale_l)**2*(scale_v)**3)
+     int_lum(1)=lum_sink(1)
+     print*,'================================================================'
+     print*,nsink,xsink(1,:),lum_sink(1)                                           
+     idsink(1)=1
+     new_born(1)=.true.
+     !!!!!!!-----------!!!!!!!!!
      if(TRIM(initfile(levelmin)).NE.' ')then
         filename=TRIM(initfile(levelmin))//'/ic_sink'
      else
