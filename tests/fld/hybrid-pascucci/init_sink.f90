@@ -8,6 +8,7 @@ subroutine init_sink
   use radiation_parameters,only:Tstar,rstar
   use cloud_module,only:PMS_evol,rt_feedback,rstar_init,mprotostar
   use constants,only:R_sun
+  use sink_feedback_parameters, only: nstellar
   implicit none
 #ifndef WITHOUTMPI
   integer,parameter::tag=1112,tag2=1113
@@ -265,6 +266,7 @@ subroutine init_sink
      nindsink=0
      nsinkold=0
      !!!!!!------------!!!!!!!!!
+     nstellar=1 !to have rt_advect=.true. in sink_RT_feedback
      nsink=1
      xsink(1,1:3)=boxlen/2.
      msink(1)=1.d-10

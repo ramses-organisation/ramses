@@ -414,7 +414,7 @@ subroutine diffusion_cg (ilevel,Nsub)
   ! MAIN ITERATION LOOP
   !====================   
 
-  iter=0; itermax=5000
+  iter=0; itermax=200000
 
   error_ini=sqrt(rhs_norm1)
   error=error_ini
