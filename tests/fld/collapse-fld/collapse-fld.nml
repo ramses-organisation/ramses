@@ -4,16 +4,16 @@
 hydro=.true.
 poisson=.true.
 nrestart=0
-ncontrol=10
+ncontrol=1
 nremap=2
 nsubcycle=2*1,35*2
-verbose=.true.
+verbose=.false.
 fld=.true.
 /
 
 &AMR_PARAMS
 levelmin=5
-levelmax=5
+levelmax=10
 ngridtot=100000
 nexpand=30*2
 boxlen=0.191405298315250E-01 ! to be changed is alpha_dense_core changes in order to always have in code units the cloud radius r0=boxlen/4
@@ -26,7 +26,7 @@ boxlen=0.191405298315250E-01 ! to be changed is alpha_dense_core changes in orde
 condinit_kind ='collapse'
 alpha_dense_core=0.1
 beta_dense_core=0.01d0
-crit_dense_core=0.0
+crit_dense_core=0.08
 delta_rho=0.1d0
 /
 

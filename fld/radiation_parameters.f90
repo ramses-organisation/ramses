@@ -126,10 +126,10 @@ function planck_ana(dens,Tp,Tr,igroup,insink)
   endif
 
   if(fit_semenov)then
-     planck_ana = 0.5d0 * ( &
-         (1.d0 - tanh((Tgd - 145.d0)/2.d0)) * 0.001d0 * Tgd**((10.d0 - Tgd)/750.d0 + 2.d0) + &
-         (1.d0 + tanh((Tgd - 145.d0)/2.d0)) * &
-         (2.25d0 - 1.8d0 * tanh((Tgd - 1250.d0)/50.d0)))
+     planck_ana = dens*0.5d0 * ( &
+         (1.d0 - dtanh((Tgd - 145.d0)/2.d0)) * 0.001d0 * Tgd**((10.d0 - Tgd)/750.d0 + 2.d0) + &
+         (1.d0 + dtanh((Tgd - 145.d0)/2.d0)) * &
+         (2.25d0 - 1.8d0 * dtanh((Tgd - 1250.d0)/50.d0)))
   else 
      planck_ana = planck_params(1)*(dens**planck_params(2))*(Tgd**planck_params(3))
   endif  
@@ -145,9 +145,6 @@ function planck_ana(dens,Tp,Tr,igroup,insink)
   endif
 
   if (sinks_opt_thin .and. insink) planck_ana = min_optical_depth/(0.5D0**nlevelmax*boxlen*scale_l)
-
-!print*, dens,Tp,Tr,igroup,insink
-!stop
 
 end function planck_ana
 
@@ -184,10 +181,10 @@ function rosseland_ana(dens,Tp,Tr,igroup,insink)
   endif  
 
   if(fit_semenov) then !! No dust grains above Tevap
-     rosseland_ana = 0.5d0 * ( &
-         (1.d0 - tanh((Tgd - 145.d0)/2.d0)) * 0.00022d0 * Tgd**2 + &
-         (1.d0 + tanh((Tgd - 145.d0)/2.d0)) * &
-         (1.51d0 - 1.5d0 * tanh((Tgd - 1250.d0)/50.d0)))
+     rosseland_ana = dens*0.5d0 * ( &
+         (1.d0 - dtanh((Tgd - 145.d0)/2.d0)) * 0.00022d0 * Tgd**2 + &
+         (1.d0 + dtanh((Tgd - 145.d0)/2.d0)) * &
+         (1.51d0 - 1.5d0 * dtanh((Tgd - 1250.d0)/50.d0)))
   else
      rosseland_ana = rosseland_params(1)*(dens**rosseland_params(2))*(Tgd**rosseland_params(3))
   endif
