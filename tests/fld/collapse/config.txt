@@ -1,2 +1,0 @@
-QUICK: 0
-FLAGS: NDIM=3 SOLVER=mhd
