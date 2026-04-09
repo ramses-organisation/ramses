@@ -295,7 +295,7 @@ TURBOBJ = turb_force_utils.o read_turb_params.o init_turb.o mpi_share_turb_field
           turb_next_field.o turb_check_time.o write_turb_fields.o read_turb_fields.o \
           add_turb_forcing.o
 # FLD objects
-FLDOBJ  = read_fld_params.o init_fld.o m1_utils.o multigroup.o radiation_boundary.o radiative_transfer_bicg.o
+FLDOBJ  = read_fld_params.o init_fld.o fld_opacities.o m1_utils.o multigroup.o radiation_boundary.o radiative_transfer_bicg.o
 # Patch objects
 sinclude $(PATCH)/Makefile
 
