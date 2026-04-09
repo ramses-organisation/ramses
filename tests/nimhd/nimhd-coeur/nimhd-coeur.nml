@@ -18,11 +18,12 @@ boxlen=1.9140529831524967d-2
 
 &INIT_PARAMS
 condinit_kind='collapse'
-alpha_dense_core=0.1
-beta_dense_core =0.01
-crit_dense_core =0.1
-delta_rho=0.1
-theta_mag=0.0
+mass_c=1.0d0
+alpha_dense_core=0.1d0
+beta_dense_core =0.01d0
+crit_dense_core =0.1d0
+delta_rho=0.1d0
+theta_mag=0.0d0
 Mach=0.0d0
 /
 
@@ -46,9 +47,9 @@ pressure_fix=.true.
 /
 
 &UNITS_PARAMS
-units_density= 3.83460000000000E-24   ! so that density in code units is equal to density in part/cc
+units_density= 3.83460000000000E-24      ! so that density in code units is equal to density in part/cc
 units_length=3.08000000000000E+18        ! 1 pc in cm
-units_time= 1.97732040946880E+15 ! so that G=1 in code units
+units_time= 1.97732040946880E+15         ! so that G=1 in code units
 /
 
 &COOLING_PARAMS
