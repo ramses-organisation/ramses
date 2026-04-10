@@ -2338,6 +2338,7 @@ subroutine cmp_energy(Etype)
   use radiation_parameters
   use const
   use units_commons
+  use fld_commons
   implicit none
   integer,intent(in) :: Etype ! Etype=1 : beginning ; Etype=2 : end
   integer ::i,idim,this,ivar,igroup,irad
@@ -2487,6 +2488,7 @@ subroutine compute_residual_in_cell(i,ilevel,vol_loc,residual,mat_residual)
   use units_commons
   use const
   use constants, only: eV2erg
+  use fld_commons
 #ifdef RT
   use pm_commons !hybrid RT, needs sink quantities
   use rt_hydro_commons !hybrid RT
@@ -2606,7 +2608,8 @@ subroutine compute_coeff_left_right_in_cell(i,idim,cell_left,cell_right,nbor_ile
   use units_commons
   use const
   use cloud_module, only : rt_feedback !hybrid RT
-  
+  use fld_commons
+
   implicit none
   integer,intent(in)::i,idim,cell_left,cell_right
   integer,dimension(2*ndim),intent(in)::nbor_ilevel
