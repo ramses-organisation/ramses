@@ -568,6 +568,7 @@ if $all_tests_ok ; then
 else
    echo "There were some failed tests" | tee -a $LOGFILE;
 fi
+if ! $DRYRUN; then 
 if ${DELDATA} ; then
    for ((i=0;i<$ntests;i++)); do
       n=${testnum[i]};
@@ -587,6 +588,7 @@ if ${DELDATA} ; then
       make clean >> $LOGFILE 2>&1;
    fi
    rm -f ${EXECNAME}*d;
+fi
 fi
 
 if $all_tests_ok ; then
