@@ -43,7 +43,7 @@ d_bound=1,1,1,1,1,1
 &OUTPUT_PARAMS
 foutput=100000
 noutput=2
-tout=0,1d-8 !5d-8
+tout=0,5d-8
 /
 
 &POISSON_PARAMS 
