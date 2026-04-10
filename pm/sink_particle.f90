@@ -3331,34 +3331,6 @@ subroutine set_uold_sink(ilevel)
 111 format('   Entering set_uold_sink for level ',i2)
 
 end subroutine set_uold_sink
-#endif
-!##############################################################################
-!##############################################################################
-!##############################################################################
-!##############################################################################
-#ifndef WITHOUTMPI
-subroutine synchronize_sink_info
-  use pm_commons
-  use mpi_mod
-  implicit none
-  !----------------------------------------------------------------------------
-  ! This routine syncronizes sink variables across all CPUs if MPI is used.
-  ! This is done to prevent roundoff errors.
-  !----------------------------------------------------------------------------
-  integer::info
-
-  call MPI_BCAST(msink,      nsinkmax, MPI_DOUBLE_PRECISION, 1, MPI_COMM_WORLD, info)
-  call MPI_BCAST(msmbh,      nsinkmax, MPI_DOUBLE_PRECISION, 1, MPI_COMM_WORLD, info)
-  call MPI_BCAST(dmfsink,    nsinkmax, MPI_DOUBLE_PRECISION, 1, MPI_COMM_WORLD, info)
-  call MPI_BCAST(xsink,    3*nsinkmax, MPI_DOUBLE_PRECISION, 1, MPI_COMM_WORLD, info)
-  call MPI_BCAST(vsink,    3*nsinkmax, MPI_DOUBLE_PRECISION, 1, MPI_COMM_WORLD, info)
-  call MPI_BCAST(lsink,    3*nsinkmax, MPI_DOUBLE_PRECISION, 1, MPI_COMM_WORLD, info)
-  call MPI_BCAST(delta_mass, nsinkmax, MPI_DOUBLE_PRECISION, 1, MPI_COMM_WORLD, info)
-  call MPI_BCAST(idsink,     nsinkmax, MPI_INTEGER,          1, MPI_COMM_WORLD, info)
-  call MPI_BCAST(tsink,      nsinkmax, MPI_DOUBLE_PRECISION, 1, MPI_COMM_WORLD, info)
-  call MPI_BCAST(new_born,   nsinkmax, MPI_LOGICAL,          1, MPI_COMM_WORLD, info)
-
-end subroutine synchronize_sink_info
 !##############################################################################
 !##############################################################################
 !##############################################################################
@@ -3572,3 +3544,35 @@ subroutine fld_radiative_feedback_sink(ilevel)
   
 end subroutine fld_radiative_feedback_sink
 #endif
+!##############################################################################
+!##############################################################################
+!##############################################################################
+!##############################################################################
+#ifndef WITHOUTMPI
+subroutine synchronize_sink_info
+  use pm_commons
+  use mpi_mod
+  implicit none
+  !----------------------------------------------------------------------------
+  ! This routine syncronizes sink variables across all CPUs if MPI is used.
+  ! This is done to prevent roundoff errors.
+  !----------------------------------------------------------------------------
+  integer::info
+
+  call MPI_BCAST(msink,      nsinkmax, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, info)
+  call MPI_BCAST(msmbh,      nsinkmax, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, info)
+  call MPI_BCAST(dmfsink,    nsinkmax, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, info)
+  call MPI_BCAST(xsink,    3*nsinkmax, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, info)
+  call MPI_BCAST(vsink,    3*nsinkmax, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, info)
+  call MPI_BCAST(lsink,    3*nsinkmax, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, info)
+  call MPI_BCAST(delta_mass, nsinkmax, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, info)
+  call MPI_BCAST(idsink,     nsinkmax, MPI_INTEGER,          0, MPI_COMM_WORLD, info)
+  call MPI_BCAST(tsink,      nsinkmax, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, info)
+  call MPI_BCAST(new_born,   nsinkmax, MPI_LOGICAL,          0, MPI_COMM_WORLD, info)
+
+end subroutine synchronize_sink_info
+#endif
+!##############################################################################
+!##############################################################################
+!##############################################################################
+!##############################################################################

@@ -151,7 +151,12 @@ END SUBROUTINE update_UVrates
 
 !XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 SUBROUTINE rt_solve_cooling(T2, xion, Np, Fp, p_gas, dNpdt, dFpdt        &
-                           ,nH, c_switch, Zsolar, dt, a_exp, nCell,ilevel, insink)
+                           ,nH, c_switch, Zsolar, dt, a_exp, nCell,ilevel &
+#if USE_FLD==0
+                           )
+#else
+                           ,insink)
+#endif
 ! Semi-implicitly solve for new temperature, ionization states,
 ! photon density/flux, and gas velocity in a number of cells.
 ! Parameters:
