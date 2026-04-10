@@ -6,6 +6,7 @@ subroutine diffusion_cg (ilevel,Nsub)
   use radiation_parameters
   use const
   use units_commons
+  use fld_commons
 #ifdef RT
   use pm_commons !hybrid RT, needs sink quantities                                                  
   use rt_hydro_commons !hybrid RT
@@ -2342,11 +2343,7 @@ subroutine cmp_energy(Etype)
   integer ::i,idim,this,ivar,igroup,irad
   real(dp)::usquare,Cv,eps,ekin,emag,rho,erad_loc
   real(dp)::tp_loc,cmp_temp
-  
-  real(dp)::sum_dust
-#if NDUST>0  
-  integer::idust
-#endif
+
   do i=1,nb_ind
      this = liste_ind(i)
      rho   = uold(this,1)
@@ -2425,10 +2422,6 @@ function cmp_temp(this)
   integer ::idim,ivar,igrp,ht
   real(dp)::usquare,eps,ekin,emag,rho,erad_loc
   real(dp)::cmp_temp
-  real(dp) :: sum_dust
-#if NDUST>0
-  integer :: idust
-#endif  
   rho   = uold(this,1)
 !!$  Cv    = rho*kB/(mu_gas*mH*(gamma-one))/scale_v**2
 
@@ -2452,16 +2445,8 @@ function cmp_temp(this)
   enddo
   eps = uold(this,5)-ekin-emag-erad_loc
   if(energy_fix)eps = uold(this,nvar) ! use energy fix for collapse
-
-
-  sum_dust =0.0d0
-#if NDUST>0
-  do idust = 1, ndust
-     sum_dust = sum_dust + uold(this,firstindex_ndust+idust)/uold(this,1)
-  end do
-#endif
   
-  call temperature_eos((1.0d0-sum_dust)*rho,eps,cmp_temp,ht)
+  call temperature_eos(rho,eps,cmp_temp,ht)
 
   return
 

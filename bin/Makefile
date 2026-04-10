@@ -55,9 +55,6 @@ ifeq ($(USE_FLD),1)
    # for internal energy
    NPSCAL := $(NPSCAL)+$(NIONS)+1
 endif
-NDUST=0
-NEXTINCT=0
-#
 
 # Compute NVAR
 NHYDRO = 2+$(NDIM)
@@ -77,16 +74,14 @@ endif
 ## 6:8 magnetic field
 ## 9:9+ncr : cosmic rays energy density (ncr groups of energy)
 ## 9+ncr:9+nener : trapped photons (look at definitions in mhd/read_hydro_param)
-## 9+nener9+nener+1:9+nener+nextinct : for extinction (look at definition of firstindex_pscal in mhd/read_hydro_param)
-## 9+nener+nextinct+1 : 9+nener+nextinct+1+nions : the ions (rt_init, cooling_fine)
-## 9+nener+nextinct+nions+1:9+nener+nextinct+nions+ndust : dust species 
+## 9+nener+1 : 9+nener+1+nions : the ions (rt_init, cooling_fine)
 ## note defined through imetal=firstindex_pscal+1 in read_hydro_param then idelay=imetal ixion=idelay ichem=ixion 
 ## then in rt_init nvar_count=ichem-1 and iIons = nvar_count+1 (this is terrible, I know....)
 ## nvar-4:nvar-1 : current (used in godfine1 if IMHD==1) unew(....,nvar-4+idim)
 ## nvar-1:nvar : internal energy used in set_uold if (energy_fix)
 
 #if you want to add your own scalar this has to be done between : 
-#9+nener+nextinct+1+nions+1 and nvar-4
+#9+nener+1+nions+1 and nvar-4
 
 #then do not forget that within the code the magnetic variable are duplicated and stored
 #nvar+1:nvar+3
@@ -264,7 +259,7 @@ ifeq ($(USE_TURB),1)
    MODOBJ += turb_parameters.o turb_commons.o
 endif
 ifeq ($(USE_FLD),1)
-   MODOBJ += radiation_parameters.o cloud_module.o
+   MODOBJ += radiation_parameters.o fld_commons.o cloud_module.o
 endif
 
 AMROBJ = read_params.o init_amr.o init_time.o init_refine.o tracer_utils.o adaptive_loop.o \
@@ -300,7 +295,7 @@ TURBOBJ = turb_force_utils.o read_turb_params.o init_turb.o mpi_share_turb_field
           turb_next_field.o turb_check_time.o write_turb_fields.o read_turb_fields.o \
           add_turb_forcing.o
 # FLD objects
-FLDOBJ  = m1_utils.o multigroup.o radiation_boundary.o radiative_transfer_bicg.o
+FLDOBJ  = read_fld_params.o init_fld.o fld_opacities.o m1_utils.o multigroup.o radiation_boundary.o radiative_transfer_bicg.o
 # Patch objects
 sinclude $(PATCH)/Makefile
 

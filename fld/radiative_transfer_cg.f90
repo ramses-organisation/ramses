@@ -4,6 +4,7 @@ subroutine diffusion_cg (ilevel,Nsub)
   use cooling_module,ONLY:kB,mH,clight
   use radiation_parameters
   use units_commons
+  use fld_commons
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'
@@ -1264,10 +1265,6 @@ function cmp_temp(this)
   real(dp) :: dd,ee
   integer  :: ht
   
-  real(dp)::sum_dust
-#if NDUST>0  
-  integer::idust
-#endif
   rho   = uold(this,1)
 !!$  Cv    = rho*kB/(mu_gas*mH*(gamma-1.0d0))/scale_v**2
 
@@ -1291,15 +1288,8 @@ function cmp_temp(this)
   enddo
   eps = (uold(this,5)-ekin-emag-erad_loc)
   if(energy_fix)eps = (uold(this,nvar)) !neil : comment this for radiative shock
-     
-  sum_dust =0.0d0
-#if NDUST>0
-  do idust = 1, ndust
-     sum_dust = sum_dust + uold(this,firstindex_ndust+idust)/uold(this,1)
-  end do
-#endif
   
-  call temperature_eos((1.0d0-sum_dust)*rho,eps,cmp_temp,ht)
+  call temperature_eos(rho,eps,cmp_temp,ht)
 
   return
 

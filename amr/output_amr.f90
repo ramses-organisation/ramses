@@ -470,7 +470,6 @@ subroutine output_info(filename)
   write(ilun,'("ngrp        =",I11)')ngrp
   write(ilun,'("nent        =",I11)')nent
   write(ilun,'("npscal      =",I11)')npscal
-!  write(ilun,'("nextinct    =",I11)')nextinct
 #endif
   write(ilun,*)
 
