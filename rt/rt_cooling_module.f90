@@ -388,13 +388,15 @@ contains
     ss_factor=1d0                    ! UV background self_shielding factor
     if(self_shielding) ss_factor = exp(-nH(icell)/1d-2)
     rho = nH(icell) / X * mH
-    !! if hybrid RT : M1 abs opacity is Planck's mean at Tstar                                    
-    if (nsink .gt. 0 .and. Teff_sink(1) .gt. 0.0d0 .and. rt_protostar_m1 &
-         & .and. ngrp==1) then
-       kappaAbs = planck_ana(rho, TK, Teff_sink(1), 1,insink(icell))/rho
-    else
-       kappaAbs = 0.0d0 !doesn't matter because no M1 photons in principle                                
-    endif
+    if(rt_protostar_m1)then
+       !! if hybrid RT : M1 abs opacity is Planck's mean at Tstar                                    
+       if (nsink .gt. 0 .and. Teff_sink(1) .gt. 0.0d0 .and. rt_protostar_m1 &
+            & .and. ngrp==1) then
+         kappaAbs = planck_ana(rho, TK, Teff_sink(1), 1,insink(icell))/rho
+      else
+          kappaAbs = 0.0d0 !doesn't matter because no M1 photons in principle                                
+      endif
+   endif
 
 #if NGROUPS>0
     ! Set dust opacities--------------------------------------------------
