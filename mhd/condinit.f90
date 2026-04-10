@@ -323,7 +323,7 @@ subroutine collapse_condinit(x,q,dx,nn)
 
   ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
-  scale_m=scale_d*scale_l**ndim
+  scale_m=scale_d*scale_l**3
 
   ! cloud mass (warning mass_c should not be changed, because condinit called not just once)
   ! mass_c    is in solar mass
@@ -339,12 +339,11 @@ subroutine collapse_condinit(x,q,dx,nn)
   omega0 = sqrt(beta_dense_core*4.*pi*d0)
 
   ! cloud pressure ! remember that G=1 in code units
-  p0 = alpha_dense_core*d0*d0*r0*r0*8.*pi/15.
+  C_s = sqrt(kB*T_eos/(mu_gas*mH))/scale_v
 
+  p0 = d0*c_s**2
   ! vertical magnetic field ! remember that G=1 in code units (and that B as a factor 1/sqrt(4pi) between SI and Gaussian units)
   B0 = sqrt(4.*pi/5.)/0.53*crit_dense_core*d0*r0
-  ! B0 could be defined equivalently as
-  !B0 = mass_c_cu*3./sqrt(5.)/0.53*crit_dense_core/r0**2/sqrt(4.*pi)
 
   ! angle between the rotation axis and the magnetic field
   theta_mag_radians= theta_mag/180.0d0*pi
@@ -363,9 +362,8 @@ subroutine collapse_condinit(x,q,dx,nn)
 
   if(first) then
     ! sound speed
-    C_s = sqrt(kB*T_eos/(mu_gas*mH))/scale_v
     !C_s could be defined equivalently as sqrt( T_eos / (mu_gas*scale_T2) )
-
+    
     vx_tot=0.d0
     vy_tot=0.d0
     vz_tot=0.d0
@@ -438,9 +436,9 @@ subroutine collapse_condinit(x,q,dx,nn)
      rc=sqrt(xx**2+yy**2)
      rs=sqrt(xx**2+yy**2+zz**2)
 
-     q(i,iu) = 0.
-     q(i,iv) = 0.
-     q(i,iw) = 0.
+     q(i,iu) = 0.0d0
+     q(i,iv) = 0.0d0
+     q(i,iw) = 0.0d0
      if(Mach .ne. 0)then
       !initialise the turbulent velocity field
       !make a zero order interpolation (should be improved)
@@ -472,12 +470,12 @@ subroutine collapse_condinit(x,q,dx,nn)
         ! endif
        q(i,ip) = p0
        !Bx component
-        q(i,6     ) = 0.
-        q(i,nvar+1) = 0.
+        q(i,6     ) = 0.0d0
+        q(i,nvar+1) = 0.0d0
 
         !By component
-        q(i,7     ) = 0.
-        q(i,nvar+2) = 0.
+        q(i,7     ) = 0.0d0
+        q(i,nvar+2) = 0.0d0
 
         !Bz component
         q(i,8     ) = B0
@@ -497,17 +495,17 @@ subroutine collapse_condinit(x,q,dx,nn)
       !  q(i,iv) = 0.0!-omega0 * xx
       !  q(i,iw) = 0.0
 
-       q(i,ip) = p0/100.
+       q(i,ip) = p0/100.d0
         !Bx component
-        q(i,6     ) = 0.
-        q(i,nvar+1) = 0.
+        q(i,6     ) = 0.0d0
+        q(i,nvar+1) = 0.0d0
 
         !By component
-        q(i,7     ) = 0.
-        q(i,nvar+2) = 0.
+        q(i,7     ) = 0.0d0
+        q(i,nvar+2) = 0.0d0
 
         !Bz component
-        q(i,8     ) = B0/100**(2./3.)
+        q(i,8     ) = B0
         q(i,nvar+3) = q(i,8     )
      ENDIF
 
