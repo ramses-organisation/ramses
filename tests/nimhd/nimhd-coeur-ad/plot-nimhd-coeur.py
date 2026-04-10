@@ -9,7 +9,7 @@ fig, ax = plt.subplots(nrows=2, ncols=3, figsize=(12, 6))
 ax = ax.flatten()
 
 # Load RAMSES output
-data = visu_ramses.load_snapshot(2)
+data = visu_ramses.load_snapshot(23)
 
 # Fundamental constants
 G = 6.67259e-8 #cm^3 g^-1 s^-2             # gravitational constant
@@ -24,9 +24,9 @@ au = 1.5e13
 
 data["boxlen"] = 1.9140529831524967e-2
 
-scale_d = 2.31*1.6605390e-24
-scale_l = 3.08e18
-scale_t = 1.0/np.sqrt(6.67e-8*scale_d)
+scale_d= 3.83460000000000E-24   
+scale_l=3.08000000000000E+18    
+scale_t= 1.97732040946880E+15 
 scale_b = np.sqrt(4.0*np.pi*scale_d*(scale_l/scale_t)**2)
 x    = data["data"]["x"]*scale_l/au
 y    = data["data"]["y"]*scale_l/au
@@ -42,8 +42,8 @@ by   = 0.5*(data["data"]["B_y_left"]+data["data"]["B_y_right"])*scale_b
 bz   = 0.5*(data["data"]["B_z_left"]+data["data"]["B_z_right"])*scale_b
 B    = np.log10(np.sqrt(bx**2 + by**2 + bz**2))
 cs2 = (data["data"]["pressure"]/data["data"]["density"]) * (scale_l/scale_t)**2
-T = np.log10(cs2 * 2.37 * MH /KB)
-
+T = np.log10(cs2 * 2.31 * MH /KB)
+print(B)
 dmin = -19.5
 dmax = -9.0
 tmin = 0.8
