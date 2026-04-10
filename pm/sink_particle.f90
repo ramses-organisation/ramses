@@ -1185,7 +1185,9 @@ subroutine compute_accretion_rate(write_sinks)
   use pm_commons
   use amr_commons
   use hydro_commons
+#if USE_FLD==1
   use cloud_module
+#endif
   use constants, only: pi, twopi, c_cgs, factG_in_cgs, M_sun, mH, sigma_T, M_sun, R_sun, L_sun, yr2sec
   use mpi_mod
   implicit none
@@ -1198,7 +1200,6 @@ subroutine compute_accretion_rate(write_sinks)
   !----------------------------------------------------------------------------
 
   integer::i,nx_loc,isink
-  integer::imdot,im1,im2
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,scale_m
   real(dp)::factG,d_star,boost
   real(dp)::vrel2,c2,density,volume,ethermal,dx_min,scale,mgas,v_bondi
@@ -1207,8 +1208,11 @@ subroutine compute_accretion_rate(write_sinks)
   real(dp),dimension(1:nsinkmax)::dMEDoverdt,r2,rho_inf
   real(dp),dimension(1:nsinkmax)::dMEDoverdt_smbh
   real(dp)::T2_gas,delta_mass_min
+#if USE_FLD==1
+  integer::imdot,im1,im2
   real(dp)::mass,log_mdot,mean_mdot,mass_reduced,star_mass
   real(dp)::de1,de2,dd1,dd2,mass_table,Lum,radius,mdot_real,y1,y2,z2,z1,a,b,surface
+#endif
 
   ! Gravitational constant
   factG=1d0
@@ -1313,7 +1317,7 @@ subroutine compute_accretion_rate(write_sinks)
      if(msink(isink).ge.max_mass_nsc*M_sun/scale_m.and.mass_smbh_seed>0.0)dMsink_overdt(isink)=0.0
 
   end do
-
+#if USE_FLD==1
     if(PMS_evol .and. rt_feedback)then
      if(Hosokawa_track)then
         ! Compute internal luminosity from Hosokawa PMS tracks
@@ -1511,6 +1515,7 @@ subroutine compute_accretion_rate(write_sinks)
         end do
      end if
   end if
+#endif
 
   if (write_sinks)then
      call print_sink_properties(dMEDoverdt,dMEDoverdt_smbh,rho_inf,r2)
@@ -3335,6 +3340,7 @@ end subroutine set_uold_sink
 !##############################################################################
 !##############################################################################
 !##############################################################################
+#if USE_FLD==1
 subroutine fld_radiative_feedback_sink(ilevel)
   use pm_commons
   use amr_commons
