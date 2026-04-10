@@ -76,7 +76,7 @@ subroutine  condinit(x,u,dx,nn)
 
 
   if (test=='pascucci') then
-     boxlen = 2000.0d0
+     boxlen = 100.d0 !test 100 instead of 2000 for test suite
   else if (test=='pinte') then
      boxlen = 800.0d0
   endif

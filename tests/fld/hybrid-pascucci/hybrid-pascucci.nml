@@ -17,7 +17,7 @@ static_gas=.true.
 
 &AMR_PARAMS 
 levelmin=5
-levelmax=13 !13
+levelmax=11 !13
 ngridmax=800000
 npartmax=5000
 nexpand=30*2
