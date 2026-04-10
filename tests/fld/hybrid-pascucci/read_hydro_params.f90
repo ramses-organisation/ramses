@@ -154,7 +154,7 @@ subroutine read_hydro_params(nml_ok)
         & ,rosseland_params,planck_params,epsilon_diff,fld_limiter &
         & ,freqs_in_Hz,read_groups,split_groups_log,extra_end_group  &
         & ,numin,numax,Tr_floor,robin,rad_trans_model,min_optical_depth,rt_feedback,Tray_min &
-        & ,PMS_evol,Hosokawa_track,energy_fix,facc_star,facc_star_lum,valp_min,store_matrix,external_radiation_field &
+        & ,PMS_evol,Hosokawa_track,energy_fix,facc_star,facc_star_lum,valp_min,store_matrix &
         & ,rt_protostar_fld,sublimation_kuiper,lum_injection &
         & ,sinks_opt_thin,opacity_type,stellar_photon,Tstar,rstar,test,rho_disk0,Rin,isoscat
 #endif
