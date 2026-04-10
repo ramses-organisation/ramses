@@ -107,3 +107,29 @@ function rosseland_ana(dens,Tp,Tr,igroup,insink)
   if (sinks_opt_thin .and. insink) rosseland_ana = min_optical_depth/(0.5D0**nlevelmax*boxlen*scale_l)
 
 end function rosseland_ana
+
+!##################################################################################################
+!##################################################################################################
+!##################################################################################################
+!##################################################################################################
+
+!  Function SCATTERING_ANA:
+!
+!> This routine computes the scattering opacity kappa_s*rho
+!! as a function of density and temperature.
+!! Units are supposed to be in cgs here (as in units.f90)
+!<
+function scattering_ana(dens,Tp,Tr,igroup)
+
+  use amr_commons
+  use const
+
+  implicit none
+
+  integer ,intent(in)    :: igroup
+  real(dp),intent(in)    :: dens,Tp,Tr
+  real(dp)               :: scattering_ana
+  
+  scattering_ana = zero
+
+end function scattering_ana
