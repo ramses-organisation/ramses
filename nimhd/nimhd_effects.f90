@@ -1084,17 +1084,14 @@ double precision function etaohmdiss(rhon,BBcell,temper,dt,dx,limit)
       rhoH=rhon*2.0d0*H2_fraction*scale_d/(mu_gas*mH) ! convert in H/cc
       rhoH = MAX(rhoH,rho_threshold)
       rhoH = MIN(rhoH,n_H_max)
-
       ! extrapolate from table[density,temperature,magnetic field]
       call interpolate_table(rhoH,temper,BBcell,sigO,sigH,sigP) 
       eta_ohm_chimie = (1d0 / sigP) * c_cgs * c_cgs / (4.0_dp*pi)
-
       ! Ad-hoc modification to ensure that the ohmic resistivity falls to zero when the density exceeds 1.0e15
       ! when alkali metals are ionized.
       eta_ohm_chimie = max(eta_ohm_chimie * (1.0d0-tanh(rhoH/1.0d15)), 1d-36)
-
       ! convert to code units
-      etaohmdiss=etaohmdiss*scale_t/(scale_l)**2
+      etaohmdiss=eta_ohm_chimie*scale_t/(scale_l)**2
 
       ! if the timestep was limited in courant fine, we need to adjust the resistivity to make things consistent.
       if(limit.and.nminitimestep) then
