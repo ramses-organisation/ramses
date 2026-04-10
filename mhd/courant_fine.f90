@@ -548,11 +548,7 @@ subroutine velocity_fine(ilevel)
            A=0.5*(uold(ind_cell(i),6)+uold(ind_cell(i),nvar+1))
            B=0.5*(uold(ind_cell(i),7)+uold(ind_cell(i),nvar+2))
            C=0.5*(uold(ind_cell(i),8)+uold(ind_cell(i),nvar+3))
-#if USE_FLD==1
            uold(ind_cell(i),neul)=1.0/(gamma-1.)+0.5*d*(u**2+v**2+w**2)+0.5*(A**2+B**2+C**2)
-#else
-           uold(ind_cell(i),neul)=1.0+0.5*d*(u**2+v**2+w**2)+0.5*(A**2+B**2+C**2)
-#endif
         end do
 
      end do
