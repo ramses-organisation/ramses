@@ -20,6 +20,9 @@ module constants
   real(dp),parameter ::c_cgs        = 2.9979246d+10 ! Speed of light [cm s-1]; SI
   real(dp),parameter ::a_r          = 7.5657233d-15 ! Radiation density const. [erg cm-3 K-4]; SI (derived)
   real(dp),parameter ::mH           = 1.6605390d-24 ! H atom mass [g] = amu, i.e. atomic mass unit; NIST
+  real(dp),parameter ::M_sun        = 1.9891000d+33 ! Solar Mass [g]; IAU
+  real(dp),parameter ::L_sun        = 3.8280000d+33 ! Solar Lum [erg s-1]; IAU
+  real(dp),parameter ::R_sun        = 6.9570000d+10 ! Solar Radius [cm]; IAU
 #else 
   ! take the ramses-ism values for getting automatic tests cases passed
   real(dp),parameter ::pi           = acos(-1.0d0)!twopi/2d0
@@ -31,12 +34,12 @@ module constants
   real(dp),parameter ::a_r          = 7.5657d-15 !7.5657233d-15 ! Radiation density const. [erg cm-3 K-4]; SI (derived)
   real(dp),parameter:: aR=7.56591469318689378e-015_dp
   real(dp),parameter ::mH           = 1.6600000d-24 !1.6605390d-24 ! H atom mass [g] = amu, i.e. atomic mass unit; NIST
+  real(dp),parameter::M_sun         = 1.9889e33_dp  !Sun mass in g !TC: todo get rid of this
+  real(dp),parameter::R_sun         = 6.95508e10_dp !Sun radius in cm
+  real(dp),parameter::L_sun         = 3.846e33_dp   !Sun luminosity in erg/s
 #endif
   real(dp),parameter ::factG_in_cgs = 6.6740800d-08 ! Gravitational const. [cm3 g-1 s-2]; NIST
   real(dp),parameter ::sigma_T      = 6.6524587d-25 ! Thomson scattering cross-section [cm2]; NIST
-  real(dp),parameter ::M_sun        = 1.9891000d+33 ! Solar Mass [g]; IAU
-  real(dp),parameter ::L_sun        = 3.8280000d+33 ! Solar Lum [erg s-1]; IAU
-  real(dp),parameter ::R_sun        = 6.9570000d+10 ! Solar Radius [cm]; IAU
   real(dp),parameter ::rhoc         = 1.8800000d-29 ! Crit. density [g cm-3]
 
   ! Conversion factors - distance
