@@ -1,7 +1,7 @@
 &RUN_PARAMS  
 hydro=.true.
 poisson=.true.
-nrestart=16
+nrestart=0
 ncontrol=10
 nremap=2
 nsubcycle=20*1,35*2

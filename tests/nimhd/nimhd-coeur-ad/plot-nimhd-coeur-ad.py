@@ -9,7 +9,7 @@ fig, ax = plt.subplots(nrows=2, ncols=3, figsize=(12, 6))
 ax = ax.flatten()
 
 # Load RAMSES output
-data = visu_ramses.load_snapshot(23)
+data = visu_ramses.load_snapshot(2)
 
 # Fundamental constants
 G = 6.67259e-8 #cm^3 g^-1 s^-2             # gravitational constant
