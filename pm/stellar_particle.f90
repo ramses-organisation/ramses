@@ -130,11 +130,14 @@ subroutine create_stellar(ncreate, nbuf, id_new)
     ncreate_loc = ncreate
 #endif
 
-    ! Draw random masses from the IMF
-    call sample_powerlaw(mnew_loc, imf_low, imf_high, imf_index, ncreate_loc)
+    if (ncreate_loc > 0) then 
 
-    ! Compute lifetime
-    ltnew_loc(1:ncreate_loc) = lt_t0 * exp(lt_a * (log(lt_m0 / mnew_loc))**lt_b)
+        ! Draw random masses from the IMF
+        call sample_powerlaw(mnew_loc, imf_low, imf_high, imf_index, ncreate_loc)
+
+        ! Compute lifetime
+        ltnew_loc(1:ncreate_loc) = lt_t0 * exp(lt_a * (log(lt_m0 / mnew_loc(1:ncreate_loc)))**lt_b)
+    end if
 
     ! Communicate data
 #ifndef WITHOUTMPI
