@@ -2708,7 +2708,7 @@ subroutine read_sink_params()
      call clean_stop
   end if
 
-  if (nlevelmax_sink .eq. 0) then
+  if (nlevelmax_sink <= 0 .or. nlevelmax_sink > nlevelmax) then
      nlevelmax_sink = nlevelmax
   end if
 
