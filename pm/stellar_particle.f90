@@ -130,7 +130,7 @@ subroutine create_stellar(ncreate, nbuf, id_new)
     ncreate_loc = ncreate
 #endif
 
-    if (ncreate_loc > 0) then 
+    if (ncreate_loc > 0) then
 
         ! Draw random masses from the IMF
         call sample_powerlaw(mnew_loc, imf_low, imf_high, imf_index, ncreate_loc)
