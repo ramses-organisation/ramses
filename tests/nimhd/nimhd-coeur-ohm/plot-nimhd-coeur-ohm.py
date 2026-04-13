@@ -199,7 +199,7 @@ ax[5].set_aspect('equal')
 ax[5].set_xlim([xmin,xmax])
 ax[5].set_ylim([ymin,ymax])
 
-fig.savefig('nimhd-coeur.pdf',bbox_inches='tight')
+fig.savefig('nimhd-coeur-ohm.pdf',bbox_inches='tight')
 
 # Check results against reference solution
-visu_ramses.check_solution(data["data"],'nimhd-coeur', overwrite=True)
+visu_ramses.check_solution(data["data"],'nimhd-coeur-ohm', overwrite=True)
