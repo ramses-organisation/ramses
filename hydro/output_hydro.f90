@@ -441,7 +441,7 @@ subroutine calc_thermal_pressure_from_total_energy(ind_grid, iskip, pressure, nc
    ! which is stored in uold(:,neul)
    !--------------------------------------------------------------------------------------
    integer::i
-   real(dp)::d,energy
+   real(dp)::d,energy,pp
 #if NENER > 0
    integer :: irad
 #endif
@@ -476,7 +476,12 @@ subroutine calc_thermal_pressure_from_total_energy(ind_grid, iskip, pressure, nc
 #endif
 
       ! convert to pressure
-      pressure(i) = (gamma-1d0)*energy
+      if(eos)then
+         call pressure_eos(d,energy,pp)
+         pressure(i)=pp         
+      else
+         pressure(i) = (gamma-1d0)*energy
+      endif
    end do
 
 end subroutine calc_thermal_pressure_from_total_energy
