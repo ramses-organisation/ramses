@@ -23,6 +23,15 @@ module constants
   real(dp),parameter ::M_sun        = 1.9891000d+33 ! Solar Mass [g]; IAU
   real(dp),parameter ::L_sun        = 3.8280000d+33 ! Solar Lum [erg s-1]; IAU
   real(dp),parameter ::R_sun        = 6.9570000d+10 ! Solar Radius [cm]; IAU
+
+  ! Conversion factors - distance
+  ! IAU 2012 convention:
+  ! 1 pc = 648000 AU / pi
+  ! 1 AU = 14 959 787 070 000 cm
+  ! real(dp),parameter ::pc2cm        = 3.0856776d+18
+  ! real(dp),parameter ::kpc2cm       = 3.0856776d+21
+  ! real(dp),parameter ::Mpc2cm       = 3.0856776d+24
+  ! real(dp),parameter ::Gpc2cm       = 3.0856776d+27
 #else 
   ! take the ramses-ism values for getting automatic tests cases passed
   real(dp),parameter ::pi           = acos(-1.0d0)!twopi/2d0
@@ -37,6 +46,11 @@ module constants
   real(dp),parameter::M_sun         = 1.9889e33_dp  !Sun mass in g !TC: todo get rid of this
   real(dp),parameter::R_sun         = 6.95508e10_dp !Sun radius in cm
   real(dp),parameter::L_sun         = 3.846e33_dp   !Sun luminosity in erg/s
+
+  real(dp),parameter ::pc2cm        = 3.08d+18
+  real(dp),parameter ::kpc2cm       = 3.08d+21
+  real(dp),parameter ::Mpc2cm       = 3.08d+24
+  real(dp),parameter ::Gpc2cm       = 3.08d+27
 #endif
   real(dp),parameter ::factG_in_cgs = 6.6740800d-08 ! Gravitational const. [cm3 g-1 s-2]; NIST
   real(dp),parameter ::sigma_T      = 6.6524587d-25 ! Thomson scattering cross-section [cm2]; NIST
@@ -46,10 +60,10 @@ module constants
   ! IAU 2012 convention:
   ! 1 pc = 648000 AU / pi
   ! 1 AU = 14 959 787 070 000 cm
-  real(dp),parameter ::pc2cm        = 3.0856776d+18
-  real(dp),parameter ::kpc2cm       = 3.0856776d+21
-  real(dp),parameter ::Mpc2cm       = 3.0856776d+24
-  real(dp),parameter ::Gpc2cm       = 3.0856776d+27
+  ! real(dp),parameter ::pc2cm        = 3.0856776d+18
+  ! real(dp),parameter ::kpc2cm       = 3.0856776d+21
+  ! real(dp),parameter ::Mpc2cm       = 3.0856776d+24
+  ! real(dp),parameter ::Gpc2cm       = 3.0856776d+27
 
   ! Conversion factors - time
   ! Year definition follows IAU recommendation

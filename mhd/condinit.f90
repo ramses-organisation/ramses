@@ -73,7 +73,12 @@ subroutine  condinit(x,u,dx,nn)
   u(1:nn,neul)=u(1:nn,neul)+0.5*q(1:nn,1)*q(1:nn,3)**2
   u(1:nn,neul)=u(1:nn,neul)+0.5*q(1:nn,1)*q(1:nn,4)**2
   ! pressure -> total fluid energy
-  u(1:nn,neul)=u(1:nn,neul)+q(1:nn,neul)/(gamma-1.0d0)
+  select case(condinit_kind)
+    case('collapse')
+      u(1:nn,neul)=u(1:nn,neul)+q(1:nn,neul)
+    case DEFAULT
+      u(1:nn,neul)=u(1:nn,neul)+q(1:nn,neul)/(gamma-1.0d0)
+  end select
   ! magnetic energy -> total fluid energy
   u(1:nn,neul)=u(1:nn,neul)+0.125d0*(q(1:nn,6)+q(1:nn,nvar+1))**2
   u(1:nn,neul)=u(1:nn,neul)+0.125d0*(q(1:nn,7)+q(1:nn,nvar+2))**2
@@ -127,7 +132,12 @@ subroutine  condinit(x,u,dx,nn)
      u(1:nn,firstindex_pscal+ivar)=q(1:nn,1)*q(1:nn,firstindex_pscal+ivar)
   end do
   ! Internal energy
-  u(1:nn,nvar)=q(1:nn,5)/(gamma-1.0d0)
+  select case(condinit_kind)
+    case('collapse')
+       u(1:nn,nvar)=q(1:nn,5)
+    case DEFAULT
+      u(1:nn,nvar)=q(1:nn,5)/(gamma-1.0d0)
+  end select
 #endif
 #endif
 
@@ -208,7 +218,7 @@ subroutine collapse_condinit(x,q,dx,nn)
   integer :: ivar, np
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   real(dp),dimension(1:3,1:3):: rot_M,rot_invM,rot_tilde
-  real(dp):: theta_mag_radians
+  real(dp):: ee,theta_mag_radians
 
   logical,save:: first=.true.
   real(dp),dimension(1:3,1:100,1:100,1:100),save::q_idl
@@ -354,8 +364,13 @@ subroutine collapse_condinit(x,q,dx,nn)
      q(i,nvar+2) = 0.
 
      !Bz component
-     q(i,8     ) = B0
-     q(i,nvar+3) = B0
+     if(rc .le. r0)then
+      q(i,8     ) = B0
+      q(i,nvar+3) = B0
+     else
+      q(i,8     ) = B0/100.d0**(2./3.)
+      q(i,nvar+3) = B0/100.d0**(2./3.)
+     end if
 
      q(i,iu) = 0.
      q(i,iv) = 0.
@@ -408,6 +423,15 @@ subroutine collapse_condinit(x,q,dx,nn)
        q(i,ip) = p0/100.
      ENDIF
 
+    if(eos) then
+      call enerint_eos(q(i,1),T_eos,ee)
+      q(i,  ip) = ee
+      q(i,nvar) = ee
+    else
+      q(i,  ip) = q(i,1)* C_s**2/(gamma-1.0d0)
+      q(i,nvar) = q(i,ip)
+    endif
+ 
 #if USE_FLD==1
 #if NGRP>0
     do ivar=1,ngrp
