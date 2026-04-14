@@ -16,7 +16,7 @@ subroutine read_fld_params(namelist_unit,nml_ok)
    ! Reads the parameters for the flux-limited diffusion (FLD) radiation.
    !------------------------------------------------------------------------
 #if USE_FLD==1
-   integer::irad
+   integer::irad,i,j
    real(dp)::radiation_source
    character(len=2):: rad_trans_model='m1'
 #endif
@@ -110,6 +110,34 @@ subroutine read_fld_params(namelist_unit,nml_ok)
   ind_trad=ind_bicg
   norm_trad=norm_bicg
   is_radiative_energy(2:ngrp+1) = .true.
+#endif
+
+#if USE_FLD==1
+  ! Multigroup opacities initialization
+  if(fld)then
+     if((opacity_type == 'grey') .and. (ngrp > 1) .and. (.not.stellar_photon))then
+        if(myid == 1)then
+           write(*,*) 'WARNING! Trying to use grey opacity table with ngrp =',ngrp
+           write(*,*) 'Switching to multigroup opacities'
+        endif
+        opacity_type = 'multigroup'
+     endif
+     call init_opacities
+  end if
+ 
+  if(PMS_evol .and. rt_feedback .and. Hosokawa_track)then
+     open(101,file='Hosokawa_track.dat', status='old')
+     read(101,*)nmdot_PMS,nm_PMS,ndata_PMS
+     allocate(nb_ligne_PMS(nmdot_PMS))
+     allocate(data_PMS(nmdot_PMS,nm_PMS,ndata_PMS))
+     read(101,*)nb_ligne_PMS(1),nb_ligne_PMS(2),nb_ligne_PMS(3),nb_ligne_PMS(4),nb_ligne_PMS(5)
+     do i=1,nmdot_PMS
+        do j=1,nm_PMS
+           read(101,*)data_PMS(i,j,1),data_PMS(i,j,2),data_PMS(i,j,3),data_PMS(i,j,4) ! mdot,mass,luminosity,radius
+        end do
+     end do
+     close(101)
+  end if
 #endif
 
 end subroutine read_fld_params
