@@ -31,3 +31,10 @@ output.rst
 
 godunov.rst
 ```
+
+```{toctree}
+:maxdepth: `
+:caption: Cooling ... 
+
+cooling.rst
+```

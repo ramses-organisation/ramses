@@ -63,17 +63,6 @@ Interlude: More Things
 
 [TOC]
 
-Radiative Cooling (and photo-heating)
-=====================================
-
-.. warning::
-
-   More on cooling and heating in RAMSES can be found in `Rosdahl’s PhD
-   thesis <https://theses.fr/2012LYO10075>`__, or in the `RAMSES-RT
-   paper <https://ui.adsabs.harvard.edu/abs/2013MNRAS.436.2188R/abstract>`__.
-   A classical paper on the topic is `Katz, Weinberg, & Hernquist
-   (1996) <https://ui.adsabs.harvard.edu/abs/1996ApJS..105...19K/abstract>`__.
-
 .. warning::
 
    -  General picture, interface, units, implementation choices in
@@ -83,6 +72,14 @@ Radiative Cooling (and photo-heating)
    -  **EXERCISE:** set time step of simulation to resolve cooling time
       (use some analytic approx). Another possibility is to add a
       heating term.
+
+
+
+Radiative cooling and photo-heating
+===================================
+
+Overview
+----------
 
 In most astrophysical contexts, gas dissipates thermal energy through
 collisional processes, and this energy is carried away by radiation. Gas
@@ -97,7 +94,7 @@ cooling term :math:`\Lambda`:
    \frac{\partial E}{\partial t} + \nabla \cdot \left( (E + P) \boldsymbol{u} \right) = -\rho \boldsymbol{u} \cdot \nabla \phi + \Lambda(\rho, \varepsilon).
 
 Here, :math:`t` is time, :math:`E = \frac{1}{2}\rho u^2 + e` is the gas
-internal energy, :math:`P` is pressure, :math:`\boldsymbol{u}` is the
+total energy, :math:`e` is the internal energy, :math:`P` is pressure, :math:`\boldsymbol{u}` is the
 gas bulk velocity, :math:`\phi` is the gravitational potential, and
 :math:`\Lambda` is the net cooling term. The pressure is related to the
 internal energy through :math:`P = (\gamma -1)e`, where :math:`\gamma`
@@ -107,25 +104,138 @@ RAMSES uses **operator splitting** to solve the Euler equations in
 steps. In a first step, gravity is computed, and the gas is advected,
 basically solving the Euler equations with :math:`\Lambda = 0`. In a
 second **thermo-chemistry** step, the heating and cooling terms are
-computed, and the energy is updated. The thermo-chemistry involves the
-interaction of radiation and matter, and the implementation differs if
-the code is used in radiation-hydrodynamics (RHD) mode or in hydro (HD)
-mode. With RHD, the radiation is transfered accross the grid and the
-thermo-chemistry is computed on the fly. In the HD case, the
-thermo-chemistry is computed assuming the ionisation equilibrium
+computed, and the internal energy is updated with :math:`\dot{e} = \Lambda`. 
+This strategy is shown in the code  snippet below is from the main code loop ``amr_step``. 
+RAMSES first computes the hydrodynamics and updates ``uold`` with a call to ``godunov_fine``. 
+Then, RAMSES computes cooling on the updated state ``uold``.  
+
+.. code:: fortran
+
+   ! Hydro step: solve hydro and add source terms
+   if((hydro).and.(.not.static_gas))then 
+      call godunov_fine(ilevel)
+      ...
+   endif
+
+   ...
+   
+   ! Do RT/Chemistry step -> works on uold
+   if(hydro) then
+      if(neq_chem.or.cooling.or. ... )call cooling_fine(ilevel)
+   endif
+   
+The thermo-chemistry involves the interaction of radiation and matter, 
+and the implementation differs if the code is used in radiation-hydrodynamics (RHD) 
+mode or in hydro (HD) mode, as can be seen in the snippet above. With RHD, the 
+radiation is transfered accross the grid and the thermo-chemistry is computed on the fly. 
+In the HD case, the thermo-chemistry is computed assuming the ionisation equilibrium
 (possibly in the presence of a uniform UV background).
 
-There are a number of different cooling implementations in RAMSES: -
-equilibrium cooling with a UVB, using RAMSES (default). - equilibrium
-cooling with a UVB, using Grackle. - ISM cooling (with or without RHD).
-- non-equilibrium cooling without RHD. - non-equilibrium cooling with
-RHD.
+In the general case, RAMSES implements a **semi-implicit scheme to evolve the temperature**
+due to cooling during a timestep. 
+With :math:`\rho` the mass density, :math:`\gamma` the ratio of specific heats (usually given the
+value of :math:`5/3` in RAMSES, corresponding to monatomic gas),
+:math:`m_H` the proton mass, :math:`\kb` the Boltzmann constant,
+and :math:`\mu m_H` the average particle mass, one can write the internal energy as 
 
-Below, we will first focus on the default equilibrium cooling and then
-comment on the alternatives.
+.. math::
 
-Interface
----------
+     e = \frac{T}{\mu} \times \frac{\rho \kb}{(\gamma-1) m_H} ,
+
+It is clear here that after advection, when the density (and metallicity) is fixed, evolving the 
+internal energy is equivalent to evolving the ratio :math:`\Tmu \equiv T/\mu`. This is what is done
+in RAMSES, by solving the equation 
+
+.. math::
+
+     \frac{\partial \Tmu}{\partial t} =
+     \frac{(\gamma-1) \mh}{\rho \kb} \ \CH.
+
+
+Starting at time :math:`t` with temperature :math:`\Tmu^{t}`, we compute
+the evolved temperature :math:`\Tmu^{t+\Delta t}` with a semi-implicit 
+Euler formulation (See Press et al., 1992):
+
+.. math::
+
+   \Tmu^{t+\dt}= \Tmu^{t} + \frac{\CH K \dt}{1-\CHp K \dt},
+
+where :math:`K=\eTconv` is the conversion factor between :math:`e`
+and :math:`\Tmu` and
+:math:`\CHp \equiv \frac{\partial \Lambda}{\partial \Tmu}` can be
+estimated by finite-differencing the rate tables.
+
+There are a number of different cooling/heating implementations in RAMSES, 
+which make different approximations for :math:`\CH`:
+
+* equilibrium cooling with a UVB, using RAMSES (default).
+* equilibrium cooling with a UVB, using Grackle. 
+* ISM cooling (with or without RHD).
+* non-equilibrium cooling without RHD. 
+* non-equilibrium cooling with RHD.
+
+In what follows, we'll go step by step through the default implementation (HD 
+with equilibrium cooling), and through the non-equilibrium implementation (still for HD).
+
+.. admonition:: Further reading
+
+   Note that more information on cooling and heating in RAMSES can be found in `Rosdahl’s PhD
+   thesis <https://theses.fr/2012LYO10075>`__, or in the `RAMSES-RT
+   paper <https://ui.adsabs.harvard.edu/abs/2013MNRAS.436.2188R/abstract>`__.
+   A classical paper on the topic is `Katz, Weinberg, & Hernquist
+   (1996) <https://ui.adsabs.harvard.edu/abs/1996ApJS..105...19K/abstract>`__.
+
+
+Step by step *default cooling model*
+-------------------------------------
+
+General strategy 
+~~~~~~~~~~~~~~~~
+
+Cooling and heating rates of the gas are functions of temperature,
+density, redshift (via redshift-dependent UV background and CMB
+radiation), metallicity, and the abundances of each primordial ion
+species, :math:`\nhi`, :math:`\nhii`, :math:`\nhei`, :math:`\nheii`,
+:math:`\nheii`, and :math:`\nel`. However, the default cooling module
+assumes photoionization equilibrium (PIE), such that the primordial ion
+abundances are direct functions of temperature, density, and redshift,
+calculated with a simple iterative process that involves equating the
+rates of photo-ionization, collisional ionization and recombination
+(this is done in the ``cmp_chem_eq`` routine in
+``hydro/cooling_module.f90``). The cooling and heating rates in the
+equilibrium thermochemistry are then reduced to being functions only of
+temperature, density, redshift and metallicity, so that the cooling 
+function becomes :math:`\Lambda \simeq \Lambda(T,n_H, Z, z)`. The default 
+cooling method simplifies things further by assuming a linear dependence 
+with metallicity so that the cooling function becomes 
+:math:`\CH = (\Heat + \Cool + Z/\Zsun \, \CoolZ)\, \nh^2`, where
+
+* :math:`\Heat(\Tmu,\nh)` is the heating rate from the UV background at the current redshift. 
+* :math:`\Cool(\Tmu,\nh)` is the primordial cooling rate, i.e. the cooling rate of a mixture of H and He (and electrons) of primordial composition. 
+* :math:`\CoolZ(\Tmu,\nh)` is the cooling rate due to metals at solar metallicity. 
+
+
+These rates are pre-computed and stored in tables every coarse time-step
+for a range of :math:`(\Tmu,\nh)`-bins, where :math:`\nh=X\rho/m_H` is
+hydrogen number density and :math:`X` is the hydrogen mass fraction in
+the gas (a global constant, typically set to the value of :math:`0.76`).
+The reason for pre-computing and storing in tables is that these cooling
+and heating rates are numerically expensive to calculate on-the-fly
+(exponents, powers), and table interpolation is much faster. These tables 
+are recomputed every coarse time-step to follow the redshift evolution of
+the assumed UV background.
+
+Using :math:`\Tmu` and :math:`\nh` as look-up indexes, the following
+rates, all given in [:math:`\coolU`], are fetched on-the-fly from the
+precomputed tables: 
+
+* Heating rate :math:`\Heat(\Tmu,\nh)`: The heating contribution of the UV background at the current redshift. 
+* Primordial cooling rate :math:`\Cool(\Tmu,\nh)`, i.e. cooling rate of a mixture of H and He (and electrons) of primordial composition. 
+* Metal cooling rate contribution :math:`\CoolZ(\Tmu,\nh)`, containing the per-solar-metallicity cooling contribution of metals in the gas.
+
+
+Initialisations
+~~~~~~~~~~~~~~~~
 
 Some models require initialisations, and these are done in ``init_time``
 (in ``amr/init_time.f90``) which is called at the beginning of a
@@ -162,6 +272,7 @@ cells.
 the thermochemistry. Here the temperature-change of every cell in the
 vector is evolved, sub-cycling if needed with timestep lengths
 :math:`\dtcool\propto\frac{T}{\Lambda}`.
+
 
 How to evolve the photo-ionization equilibrium temperature of a single cell
 ---------------------------------------------------------------------------
@@ -425,3 +536,4 @@ Exercise: figure out how it works.
    :::
 
    -->
+
