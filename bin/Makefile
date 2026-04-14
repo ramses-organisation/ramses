@@ -63,7 +63,9 @@ ifeq ($(SOLVER),mhd)
 endif
 NVAR := $(NHYDRO)+$(NENER)+$(NPSCAL)+$(NMETALS)
 ifeq ($(RT),1)
-   NVAR := $(NVAR)+$(NIONS)
+   ifeq ($(USE_FLD),0) #else the NPSCAL already includes the NIONS
+      NVAR := $(NVAR)+$(NIONS)
+   endif
 endif
 
 ##note be vary careful with the variables allocation

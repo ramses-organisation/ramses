@@ -156,7 +156,7 @@ if $CLEAN_ALL ; then
          # rm_list=$(cat to_be_removed);
          # rm -f $rm_list;
          # rm to_be_removed;
-         $SHELL after_test.sh;
+         ${SHELL} after_test.sh;
       fi
    done
    $RETURN_TO_BIN;

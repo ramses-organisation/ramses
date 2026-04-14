@@ -280,7 +280,7 @@ subroutine backup_hydro(filename, filename_desc)
               
               ! Write internal energy
               do i=1,ncache
-                 xdp(i)=uold(ind_grid(i)+iskip,nvar) !warning with nions. if RT, nvar is not equal to firstindex_pscal+ivar.
+                 xdp(i)=uold(ind_grid(i)+iskip,nvar)
               end do
               field_name = 'internal_energy'
               call generic_dump(field_name, info_var_count, xdp, unit_out, dump_info_flag, unit_info)
