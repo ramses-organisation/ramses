@@ -1069,6 +1069,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
 
               if (threshold_accretion.and.d_sink>0.0)then
                  m_acc=c_acc*weight*(d-d_sink)
+                 m_acc_smbh = 0.
               end if
 
               if (agn_acc_method=='mass') then
