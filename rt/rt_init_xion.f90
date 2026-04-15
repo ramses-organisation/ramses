@@ -252,3 +252,50 @@ SUBROUTINE cmp_Equilibrium_Abundances(T2,nH,phI_rates,mu,nSpec,Zsolar)
   endif
 
 END SUBROUTINE cmp_Equilibrium_Abundances
+
+!XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+SUBROUTINE test_cmp_Equilibrium_Abundances()
+!-------------------------------------------------------------------------
+  use amr_commons,only:dp,z_ave
+  use rt_parameters,only:nIons
+  implicit none
+  integer,parameter::n=500
+  real(dp)::T2(n), T20, T21
+  real(dp),dimension(nIons)::phI_rates
+  real(dp) ::mu
+  real(dp),dimension(1:7)::nSpec
+  real(dp)::nH, xH2, xHI, xHII, nHe, xHeI, xHeII, xHeIII
+  integer::i
+
+! Test cmp_Equilibrium_Abundances routine and write the output to a file
+! Run for one gas density with no radiation field and zero metallicity
+! (this tends to be the setup most prone to non-convergence fot the
+! iterative calculation, due to the weak H2 formation rate at low T)
+!-------------------------------------------------------------------------
+  T20 = 1d0
+  T21 = 6d0
+  nH=1e0 ! 1 atom per cm3
+  phI_rates(:) = 0d0
+  ! Set up evently log-spaced temperatures from 10 to 10^7 K
+  do i = 1, n
+     T2(i) = T20 + (T21 - T20) * (i - 1) / (n - 1)
+  end do
+  T2 = 10.d0**T2
+
+  open(unit=10,file='eq-abundances.txt',form='formatted')
+
+  ! Calculate equilbrium ionisation states for all temperatures
+  do i = 1, n
+    call cmp_Equilibrium_Abundances(T2(i), nH, pHI_rates, mu, nSpec, z_ave)
+    xH2    = 2.*nSpec(2)/nH
+    xHI    = nSpec(3)/nH
+    xHII   = nSpec(4)/nH
+    nHe    = nSpec(5)+nSpec(6)+nSpec(7)
+    xHeI   = nSpec(5)/nHe
+    xHeII  = nSpec(6)/nHe
+    xHeIII = nSpec(7)/nHe
+    write(10,'(8(ES15.5E3,1x))') T2(i), xH2, xHI, xHII, xHeI, xHeII, xHeIII
+  end do
+  close(10)
+
+END SUBROUTINE test_cmp_Equilibrium_Abundances

@@ -38,6 +38,10 @@ subroutine rt_init_hydro
 
   call rt_init
 
+#ifdef TEST_CMP_EQUILIBRIUM_ABUNDANCES
+  if(myid==1) call test_cmp_Equilibrium_Abundances
+#endif
+
   if(nrestart .eq. 0) return
 
   if(rt_is_init_xion) then
