@@ -884,10 +884,10 @@ SUBROUTINE cmp_chem_eq(TK, nH, t_rad_spec, nSpec, nTot, mu, Zsol)
   real(dp)::b_H2HI=0, b_H2H2=0,  b_H3B,   b_HI=0,    b_HEI=0, b_HEII=0!Col
   real(dp)::C_HII=0,  C_H2=0,    D_H2=0,  f_HII=0,   f_H2=0  ! Cre & destr
   real(dp)::D_HEI=0,  C_HEIII=0, f_HeI=0, f_HeIII=0, f_dust=0! Cre & destr
-  real(dp)::err_nE, err_nH2, n_H2_old
+  real(dp)::err_nE, err_nH2, n_H2_old, n_H2_new, beta_H2
 !-------------------------------------------------------------------------
-
-  g_HI   = t_rad_spec(ixHII)                  !      Photoionization [s-1]
+  beta_H2 = 0.1                            ! Stabilising H2 damping factor
+  g_HI   = t_rad_spec(ixHII)               !         Photoionization [s-1]
   if(isH2) then
      g_H2   = t_rad_spec(ixHI)                !    Photodissociation [s-1]
      aZ_H2  = inp_coolrates_table(tbl_AlphaZ_H2, TK,.false.) ! Dust form [cm3 s-1]
@@ -932,8 +932,9 @@ SUBROUTINE cmp_chem_eq(TK, nH, t_rad_spec, nSpec, nTot, mu, Zsol)
                + b_H3B * n_HI * (n_HI + n_H2/ 8.)
         D_H2   = b_H2HI * n_HI + b_H2H2 * n_H2 + g_H2 ! H2 destr. (s-1)
         if(cosmic_rays) D_H2 = D_H2 + cosray_H2
-        f_H2   = C_H2 / max(D_H2,1d-50)         ! Cre/Destr [unitless]
-        n_H2   = nH / (2d0 + 1d0/f_H2 + f_HII/f_H2)
+        f_H2     = C_H2 / max(D_H2,1d-50)         ! Cre/Destr [unitless]
+        n_H2_new = nH / (2d0 + 1d0/f_H2 + f_HII/f_H2)
+        n_H2     = (1d0-beta_H2) * n_H2 + beta_H2 * n_H2_new
      endif ! if(isH2)
      n_HI  = nH / (1d0 + f_HII + 2d0*f_H2)
      n_HII = nH / (1d0 + 1d0/f_HII + 2d0*f_H2/f_HII)

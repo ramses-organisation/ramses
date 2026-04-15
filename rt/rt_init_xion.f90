@@ -223,7 +223,7 @@ SUBROUTINE cmp_Equilibrium_Abundances(T2,nH,phI_rates,mu,nSpec,Zsolar)
   real(dp),dimension(nIons)::phI_rates
   real(dp) ::mu,Zsolar
   real(dp),dimension(1:7)::nSpec!-----------------------------------------
-  real(dp) ::mu_old, err_mu, mu_left, mu_right, T, nTot
+  real(dp) ::mu_mid, err_mu, mu_left, mu_right, T, nTot
   integer :: niter
 !-------------------------------------------------------------------------
   ! Iteration to find mu                     ! n_E     = n_spec(1) ! e
@@ -232,21 +232,20 @@ SUBROUTINE cmp_Equilibrium_Abundances(T2,nH,phI_rates,mu,nSpec,Zsolar)
   mu_left=0.5                                ! n_HII   = n_spec(4) ! H+
   mu_right=2.3                               ! n_HEI   = n_spec(5) ! He
   niter=0                                    ! n_HEII  = n_spec(6) ! He+
-  do while (err_mu > 1d-4 .and. niter <= 50)! n_HEIII = n_spec(7) ! He++
-     mu_old=0.5*(mu_left+mu_right)
-     T = T2*mu_old
+                                             ! n_HEIII = n_spec(7) ! He++
+  do while (err_mu > 1d-4 .and. niter <= 50)
+     mu_mid=0.5*(mu_left+mu_right)
+     T = T2*mu_mid
      call cmp_chem_eq(T, nH, phI_rates, nSpec, nTot, mu, Zsolar)
-     err_mu = (mu-mu_old)/mu_old
-     if(err_mu>0.)then
-        mu_left =0.5*(mu_left+mu_right)
-        mu_right=mu_right
+     if(mu - mu_mid > 0.)then
+        mu_left = mu_mid
      else
-        mu_left =mu_left
-        mu_right=0.5*(mu_left+mu_right)
+        mu_right= mu_mid
      end if
-     err_mu=ABS(err_mu)
+     err_mu = ABS(mu_right-mu_left)/mu_mid
      niter=niter+1
   end do
+  mu=mu_mid
   if (niter > 50) then
      write(*,*) 'ERROR in cmp_Equilibrium_Abundances : too many iterations.'
      STOP
