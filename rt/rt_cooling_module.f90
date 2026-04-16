@@ -1015,7 +1015,7 @@ SUBROUTINE rt_evol_single_cell(astart,aend,dasura,h,omegab,omega0,omegaL &
 
   mu_dp = mu
   call cmp_Equilibrium_Abundances(                                       &
-          T2_com/aexp**2, nH_com/aexp**3, pHI_rates, mu_dp, n_Spec, 0.0)
+          T2_com/aexp**2, nH_com/aexp**3, pHI_rates, mu_dp, n_Spec, 0d0)
   ! Initialize cell state
   T2(1)=T2_com                                          !      Temperature
   if(isH2) xion(ixHI,1)=n_Spec(3)/(nH_com/aexp**3)      !   HI frac
