@@ -34,10 +34,10 @@ this is less costly).
 [TOC]
 
 1. Domain decomposition over MPI processes
-------------------------------------------
+==========================================
 
 1.1 Hilbert curve
-~~~~~~~~~~~~~~~~~
+-----------------
 
 Several recipes exist to divide the cells making up the computational
 box into individual domains to be assigned to MPI processes. The
@@ -81,7 +81,7 @@ of the array ``hilbert_key``:
    #endif
 
 2.2 CPU map
-~~~~~~~~~~~
+-----------
 
 To distribute the cells over the MPI domains, the Hilbert curve is then
 cut into “equal” part according to some recipe (see further).
@@ -104,7 +104,7 @@ defined in ``amr_commons`` and allocated in ``init_amr``
 They are used in the load balancing.
 
 2.3 Load balancing
-~~~~~~~~~~~~~~~~~~
+------------------
 
 Load balancing is the operation of redistributing the computational load
 between the MPI domains. The main routine ``load_balance`` can be found
@@ -128,7 +128,7 @@ numbers’. By default, :math:`a=80` and :math:`b=1` (i.e., an oct costs
 80 more than a particle).
 
 2. Ghost zones
---------------
+==============
 
 CORENTIN: example (Credits: Cadiou 2019) and of ghost zones
 
@@ -138,10 +138,10 @@ Example of ghost zones and corresponding tree stored on different MPI
 process (from Romain Teyssier lecture) |image2|
 
 3. Communication between MPI domains
-------------------------------------
+====================================
 
 3.1 Communicator variables
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+--------------------------
 
 RAMSES defines the derived type ``communicator``. Derived types in
 fortran are analogous to structs in C/C++. To access its members, use
@@ -183,7 +183,7 @@ to have a smaller memory imprint. They are used both for ghostzone and
 particle communication.
 
 3.2 Ghost zone communication
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+----------------------------
 
 To communicate the values of the different global arrays in the ghost
 zones, RAMSES uses the routines in *amr/virtual_boundaries.f90*.
@@ -227,14 +227,14 @@ and MPI_INTEGER respectively).
    :::spoiler **Solution** It is linked to ``set_unew``
 
 3.3 Particle communication
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+--------------------------
 
 Particles move freely in the computation domain, which means they can
 travel to other MPI domains. This is handeled by ``virtual_tree_fine``
 in *pm/particle_tree.f90*.
 
 3.4 When to communicate?
-~~~~~~~~~~~~~~~~~~~~~~~~
+------------------------
 
 Communications must be done each time a global array, e.g., ``uold``, is
 modified (i.e., after cooling or feedback), to inform the neighbor
