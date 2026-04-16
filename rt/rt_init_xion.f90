@@ -245,7 +245,6 @@ SUBROUTINE cmp_Equilibrium_Abundances(T2,nH,phI_rates,mu,nSpec,Zsolar)
      err_mu = ABS(mu_right-mu_left)/mu_mid
      niter=niter+1
   end do
-  mu=mu_mid
   if (niter > 50) then
      write(*,*) 'ERROR in cmp_Equilibrium_Abundances : too many iterations.'
      STOP
