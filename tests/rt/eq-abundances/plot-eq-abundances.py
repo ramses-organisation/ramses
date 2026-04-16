@@ -32,8 +32,10 @@ plt.savefig("eq-abundances.pdf", bbox_inches='tight')
 data = {"data": {}}
 
 data["data"]['T2']     = T2
+data["data"]['xH2']    = xH2
 data["data"]['xHI']    = xHI
 data["data"]['xHII']   = xHII
+data["data"]['xHeI']   = xHeI
 data["data"]['xHeII']  = xHeII
 data["data"]['xHeIII'] = xHeIII
 
