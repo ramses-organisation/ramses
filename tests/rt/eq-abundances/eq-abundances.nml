@@ -22,19 +22,18 @@ courant_factor=0.8
 /
 
 &INIT_PARAMS
-nregion=4
+nregion=1
 region_type='square'
-x_center=0.25, 0.75, 0.25, 0.75
-y_center=0.25, 0.25, 0.75, 0.75
-length_x=0.5, 0.5, 0.5, 0.5
-length_y=0.5, 0.5, 0.5, 0.5
+x_center=0.5
+y_center=0.5
+length_x=1.0
+length_y=1.0
 exp_region=10
-d_region=3d-2, 3d0, 3d-2, 3d0      ! cm-3
-p_region=  0.782814, 78.282,  2609.38, 260938.5    ! 3e3, 3e3, 1e7, 1e7 K
+d_region=3d0
+p_region=78.282 ! 3e3 K
 /
 
 &OUTPUT_PARAMS
-! 100 outputs, evenly log-spaced, ending at 500 myrs
 tout = 0.0003
 /
 
