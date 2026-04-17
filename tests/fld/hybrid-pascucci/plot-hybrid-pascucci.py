@@ -16,7 +16,7 @@ ax3 = fig.add_subplot(223)
 ax4 = fig.add_subplot(224)
 
 # Load RAMSES output
-data = visu_ramses.load_snapshot(2)
+data = visu_ramses.load_snapshot(2,read_rt=True)
 
 au = 1.5e13
 
