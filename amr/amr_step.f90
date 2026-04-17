@@ -29,7 +29,6 @@ recursive subroutine amr_step(ilevel,icount)
   integer::i,idim,ivar
   logical::ok_defrag,output_now_all
   logical,save::first_step=.true.
-  real(dp), parameter :: eps_a = 1d-10
 
   if(numbtot(1,ilevel)==0)return
 
@@ -143,7 +142,7 @@ recursive subroutine amr_step(ilevel,icount)
      if(foutput>0)then
      if(mod(nstep_coarse,foutput)==0 .or. &
         aexp>=aout(iout) - merge(eps_a,0.0d0,exact_output_time) .or. &
-        t>=tout(iout) .or. &
+        t>=tout(iout) - merge(eps_t,0.0d0,exact_output_time) .or. &
         aexp>=aout_next .or. &
         t>=tout_next .or. &
         output_now_all.EQV..true.) then

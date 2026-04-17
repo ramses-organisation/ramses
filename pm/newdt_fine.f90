@@ -39,7 +39,6 @@ subroutine newdt_fine(ilevel)
 #endif
   integer :: iout_frw
   real(dp) :: t_target, a_target
-  real(dp), parameter :: eps_t = 1.0d-12
 
   logical :: ok
   if(numbtot(1,ilevel)==0)return
@@ -184,24 +183,34 @@ subroutine newdt_fine(ilevel)
   if (exact_output_time) then
      if (ilevel == levelmin) then
         if (iout <= noutput) then
+           if (cosmo) then
+              ! --- cosmological case (use aout → interpolate t_target) ---
+              a_target = aout(iout)
 
-           a_target = aout(iout)
+              ! Find bracketing indices in aexp_frw
+              iout_frw = 1
+              do while (iout_frw <= n_frw)
+                 if (aexp_frw(iout_frw-1) >= a_target .and. a_target >= aexp_frw(iout_frw)) exit
+                 iout_frw = iout_frw + 1
+              end do
 
-           ! Find bracketing indices in aexp_frw
-           iout_frw = 1
-           do while (iout_frw <= n_frw)
-              if (aexp_frw(iout_frw-1) >= a_target .and. a_target >= aexp_frw(iout_frw)) exit
-              iout_frw = iout_frw + 1
-           end do
+              if (iout_frw <= n_frw) then
+                 ! Linear interpolation of target time
+                 t_target = tau_frw(iout_frw  ) * (a_target - aexp_frw(iout_frw-1)) / &
+                            (aexp_frw(iout_frw  ) - aexp_frw(iout_frw-1)) + &
+                            tau_frw(iout_frw-1) * (a_target - aexp_frw(iout_frw  )) / &
+                            (aexp_frw(iout_frw-1) - aexp_frw(iout_frw  ))
 
-           if (iout_frw <= n_frw) then
-              ! Linear interpolation of target time
-              t_target = tau_frw(iout_frw  ) * (a_target - aexp_frw(iout_frw-1)) / &
-                         (aexp_frw(iout_frw  ) - aexp_frw(iout_frw-1)) + &
-                         tau_frw(iout_frw-1) * (a_target - aexp_frw(iout_frw  )) / &
-                         (aexp_frw(iout_frw-1) - aexp_frw(iout_frw  ))
+                 ! Adjust timestep to hit the target output time exactly
+                 if (t < t_target - eps_t .and. t + dtnew(ilevel) >= t_target - eps_t) then
+                    dtnew(ilevel) = t_target - t
+                 end if
 
-              ! Adjust timestep to hit the target output time exactly
+              end if
+           else
+              ! --- non-cosmological case (use tout directly) ---
+              t_target = tout(iout)
+
               if (t < t_target - eps_t .and. t + dtnew(ilevel) >= t_target - eps_t) then
                  dtnew(ilevel) = t_target - t
               end if
