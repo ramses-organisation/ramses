@@ -59,7 +59,9 @@ subroutine read_hydro_params(nml_ok)
 #if NGRP>0
        & ,E_region &
 #endif
-       & ,omega_b,alpha_dense_core,beta_dense_core,crit_dense_core,delta_rho,theta_mag,mass_c,Mach
+       & ,omega_b,alpha_dense_core,beta_dense_core,crit_dense_core,delta_rho,theta_mag,mass_c,Mach &
+       & ,rap,cont,ff_sct,ff_rt,ff_act,ff_vct,bb_test &
+       & ,contrast,Mach,uniform_bmag,r0_box
 
   ! Hydro parameters
   namelist/hydro_params/gamma,courant_factor,smallr,smallc &
@@ -77,7 +79,7 @@ subroutine read_hydro_params(nml_ok)
 
   ! Refinement parameters
   namelist/refine_params/x_refine,y_refine,z_refine,r_refine &
-       & ,a_refine,b_refine,exp_refine,jeans_refine,mass_cut_refine &
+       & ,a_refine,b_refine,exp_refine,jeans_refine,iso_jeans,mass_cut_refine &
        & ,m_refine,mass_sph,err_grad_d,err_grad_p,err_grad_u &
        & ,floor_d,floor_u,floor_p,ivar_refine,var_cut_refine &
 #ifdef SOLVERmhd
@@ -381,6 +383,10 @@ subroutine read_hydro_params(nml_ok)
      if(myid==1)write(*,*)'Check ind_rsink'
      nml_ok=.false.
   end if
+
+  ! Compute the size of the box early,
+  ! to avoid problems in the initial build of the amr grid
+  if(condinit_kind=='collapse') call calc_boxlen
 
   !-------------------------------------------------
   ! This section deals with hydro boundary conditions

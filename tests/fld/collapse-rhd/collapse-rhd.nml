@@ -25,6 +25,7 @@ boxlen=1.9140529831524967E-02 ! to be changed is alpha_dense_core changes in ord
 
 &INIT_PARAMS
 condinit_kind ='collapse'
+bb_test=.true.
 alpha_dense_core=0.1
 beta_dense_core=0.01d0
 crit_dense_core=0.1

@@ -30,8 +30,7 @@ subroutine read_fld_params(namelist_unit,nml_ok)
         & ,numin,numax,Tr_floor,robin,rad_trans_model,min_optical_depth,rt_feedback,Tray_min &
         & ,PMS_evol,Hosokawa_track,energy_fix,facc_star,facc_star_lum,valp_min,store_matrix &
         & ,rt_protostar_fld,sublimation_kuiper,lum_injection &
-        & ,sinks_opt_thin, fit_semenov
-
+        & ,sinks_opt_thin, fit_semenov, opacity_type, stellar_photon      
    rewind(1)
    if(FLD)read(1,NML=radiation_params)
 
