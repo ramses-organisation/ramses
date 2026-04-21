@@ -18,7 +18,7 @@ ax5 = fig.add_subplot(235)
 ax6 = fig.add_subplot(236)
 
 # Load RAMSES output
-data = visu_ramses.load_snapshot(2)
+data = visu_ramses.load_snapshot(2,read_rt=True)
 
 au = 1.5e13
 
@@ -40,7 +40,8 @@ by   = 0.5*(data["data"]["B_y_left"]+data["data"]["B_y_right"])*scale_b
 bz   = 0.5*(data["data"]["B_z_left"]+data["data"]["B_z_right"])*scale_b
 B    = np.log10(np.sqrt(bx**2 + by**2 + bz**2))
 P    = np.log10(data["data"]["pressure"])
-T=np.log10(data["data"]["pressure"]/data["data"]["density"]*(scale_l/scale_t)**2*1.66e-24/1.38e-16)
+T    = np.log10(data["data"]["temperature"])
+#T=np.log10(data["data"]["pressure"]/data["data"]["density"]*(scale_l/scale_t)**2*1.66e-24/1.38e-16)
 #Warning isn't this T/mu and not T...
 
 dmin = -19.5
@@ -82,7 +83,8 @@ cont4 = ax4.contour (d_mesh,b_mesh,zb,colors='b',levels=[1.0])
 #cont1 = ax1.scatter(rho[::100],T[::100])
 
 ax1.set_xlabel('log(rho)')
-ax1.set_ylabel('log(T/mu)')
+#ax1.set_ylabel('log(T/mu)')
+ax1.set_ylabel('log(T)')
 ax4.set_xlabel('log(rho)')
 ax4.set_ylabel('log(B)')
 
@@ -129,7 +131,8 @@ vskip = 6
 vec = ax5.quiver(xpx[::vskip],ypx[::vskip],z3[::vskip,::vskip],z4[::vskip,::vskip],color="w")
 
 cb1 = plt.colorbar(im1,ax=ax2,label='log(Density)')
-cb2 = plt.colorbar(im2,ax=ax5,label='log(T/mu)')
+#cb2 = plt.colorbar(im2,ax=ax5,label='log(T/mu)')
+cb2 = plt.colorbar(im2,ax=ax5,label='log(T)')
 cb1.ax.yaxis.set_label_coords(-1.1,0.5)
 cb2.ax.yaxis.set_label_coords(-1.1,0.5)
 

@@ -13,8 +13,8 @@ sink=.true.
 verbose=.false.
 clumpfind=.true.
 pic=.true.
-radiative_nimhdheating_in_cg=.false.
-nimhdheating_in_eint=.false.
+!radiative_nimhdheating_in_cg=.false.
+!nimhdheating_in_eint=.false.
 /
 
 &AMR_PARAMS 
@@ -35,17 +35,24 @@ density_threshold=1.d10
 &SINK_PARAMS
 create_sinks=.true.
 accretion_scheme='threshold'
-jeans_accretion=.true.
+!jeans_accretion=.true.
 c_acc=0.1
+!rho_sink=7e-16
 mass_sink_direct_force=1.d0
 sink_soft=4
 ir_cloud_massive=4
 ir_cloud=4
 merging_timescale=1.d6
-facc_star_mom=1.
+!facc_star_mom=1.
+mass_sink_seed=1.e-10
+/
+
+&SF_PARAMS
+T2_star=10.
 /
 
 &INIT_PARAMS
+condinit_kind ='collapse'
 mass_c=100.   !in solar mass
 rap=1.        !axis ratio
 cont=100.     !density contrast
@@ -55,7 +62,7 @@ ff_act=0.4    !freefall time/Alfven crossing time
 ff_vct=0.0    !freefall time/Vrms crossing time
 theta_mag=0.0 !angle between magnetic field and rotation axis
 uniform_bmag=.true.
-crit=0.01
+crit_dense_core=0.01
 /
 
 &OUTPUT_PARAMS
@@ -76,16 +83,27 @@ slope_type=1
 scheme='muscl'
 riemann='hlld'
 riemann2d='hlld'
-switch_solv=100.
+switch_solv_dens=100.
 pressure_fix=.true.
 /
 
-&PHYSICS_PARAMS
+!&PHYSICS_PARAMS
+!!n_sink=-1.0d0
+!!ncell_racc=4
+!!ncell_rsoft=4
+!larson_lifetime=1.d6
+!/
+
+&UNITS_PARAMS
+units_density=0.383460000000000E-23
+units_time=1.97732040946880E+15 !1.9773204094687982E+15 
+units_length=3.08d18
+/
+
+&COOLING_PARAMS
 eos=.false.
-!n_sink=-1.0d0
-!ncell_racc=4
-!ncell_rsoft=4
-larson_lifetime=1.d6
+T_eos=10d0
+mu_gas=2.31d0
 z_ave=1.0d0
 /
 
