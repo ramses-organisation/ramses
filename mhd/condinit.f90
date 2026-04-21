@@ -205,6 +205,7 @@ subroutine collapse_condinit(x,q,dx,nn)
   use hydro_commons
   use poisson_parameters
   use constants, only:mH,kB,M_sun,pc2cm
+  use cloud_module
   implicit none
   integer ::nn                              ! Number of cells
   real(dp)::dx                              ! Cell size

@@ -6,8 +6,8 @@ subroutine read_hydro_params(nml_ok)
   use radiation_parameters
   use units_commons
   use constants
-  use cloud_module
 #endif
+  use cloud_module
 #if RT==1
   use rt_parameters,only:rt_protostar_m1
 #endif
@@ -314,6 +314,11 @@ subroutine read_hydro_params(nml_ok)
 #ifndef RT
   if(neq_chem) then
      if(myid==1)write(*,*) 'Error: non-equilibrium chemistry unavailable'
+     if(myid==1)write(*,*) 'Recompile with RT=True (or -DRT)'
+     nml_ok=.false.
+  endif
+  if(rt) then
+     if(myid==1)write(*,*) 'Error: RT unavailable'
      if(myid==1)write(*,*) 'Recompile with RT=True (or -DRT)'
      nml_ok=.false.
   endif

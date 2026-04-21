@@ -252,7 +252,7 @@ endif
 MODOBJ += poisson_commons.o hydro_parameters.o hydro_commons.o \
           cooling_module.o bisection.o sparse_mat.o clfind_commons.o \
           gadgetreadfile.o write_makefile.o write_patch.o write_gitinfo.o \
-          sink_sn_feedback.o
+          sink_sn_feedback.o cloud_module.o 
 ifeq ($(RT),1)
    MODOBJ += rt_parameters.o rt_hydro_commons.o coolrates_module.o \
              rt_spectra.o rt_cooling_module.o rt_flux_module.o
@@ -261,7 +261,7 @@ ifeq ($(USE_TURB),1)
    MODOBJ += turb_parameters.o turb_commons.o
 endif
 ifeq ($(USE_FLD),1)
-   MODOBJ += radiation_parameters.o fld_commons.o cloud_module.o
+   MODOBJ += radiation_parameters.o fld_commons.o
 endif
 
 AMROBJ = read_params.o init_amr.o init_time.o init_refine.o tracer_utils.o adaptive_loop.o \

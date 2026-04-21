@@ -28,10 +28,10 @@ module constants
   ! IAU 2012 convention:
   ! 1 pc = 648000 AU / pi
   ! 1 AU = 14 959 787 070 000 cm
-  ! real(dp),parameter ::pc2cm        = 3.0856776d+18
-  ! real(dp),parameter ::kpc2cm       = 3.0856776d+21
-  ! real(dp),parameter ::Mpc2cm       = 3.0856776d+24
-  ! real(dp),parameter ::Gpc2cm       = 3.0856776d+27
+  real(dp),parameter ::pc2cm        = 3.0856776d+18
+  real(dp),parameter ::kpc2cm       = 3.0856776d+21
+  real(dp),parameter ::Mpc2cm       = 3.0856776d+24
+  real(dp),parameter ::Gpc2cm       = 3.0856776d+27
 #else 
   ! take the ramses-ism values for getting automatic tests cases passed
   real(dp),parameter ::pi           = acos(-1.0d0)!twopi/2d0
