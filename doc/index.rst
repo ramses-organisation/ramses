@@ -40,11 +40,17 @@ Table of Contents
   :caption: Developer Documentation
   :maxdepth: 1
 
-  dev_docs/developer_guide.md
-  dev_docs/contributors.md
-  dev_docs/git.rst
-  dev_docs/docs.md
   dev_docs/lecture/lectures.md
+  dev_docs/git.rst
+  dev_docs/developer_guide.md
+  dev_docs/docs.md
+
+.. toctree::
+  :caption: Acknowledgements
+  :maxdepth: 1
+
+  dev_docs/contributors.md
+
 
 .. |github tag| image:: https://img.shields.io/badge/GitHub-black.svg?style=flat&logo=github
     :target: https://github.com/ramses-organisation/ramses

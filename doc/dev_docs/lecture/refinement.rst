@@ -1,4 +1,4 @@
-Lecture: Refinement schemes & implementation
+Refinement schemes & implementation
 ============================================
 
 .. container:: info
@@ -223,8 +223,6 @@ since this is used quite a bit here.
         end do
      end do
 
-You recognize the structure introduced in `section
-1.6 <https://codimd.math.cnrs.fr/Bbq-BQuHTZCDc28Okr9BSg?both#16-Iterating-through-cells>`__.
 
 Then, cells are flagged depending on the state of their childeren (if
 they have any). This is done in the ``test_flag`` subroutine. If
@@ -285,17 +283,19 @@ section.
    In cosmo runs, the whole level is prevented to refine in certain
    conditions.
 
-There are several subroutines for refinement criteria: - subroutine
+There are several subroutines for refinement criteria:
+- subroutine
 ``flag_utils.f90/poisson_refine()``: local Lagrangian and variable
 refinement criteria, based on the mass (or another variable) in each
 cell, using the parameters ``m_refine``, ``ivar_refine``,
-``var_cut_refine``: - subroutine ``godunov_utils.f90/hydro_refine()``:
+``var_cut_refine``:
+- subroutine ``godunov_utils.f90/hydro_refine()``:
 error on gradients (parameters ``err_grad_d``, ``err_grad_p``,
 ``err_grad_u``, ``rt_err_grad_xHII``, ``rt_err_grad_xHI``, as well as
 MHD variables ) - subroutine
 ``godunov_utils.f90/jeans_length_refine()``: refinement over the jeans
-length (parameter ``jeans_refine``) - subroutine ``rt_hydro_refine()``:
-refinement over ``rt_err_grad_cn``.
+length (parameter ``jeans_refine``)
+- subroutine ``rt_hydro_refine()``: refinement over ``rt_err_grad_cn``.
 
 After each of these routine, a bunch of new cell are flagged as to be
 refinable using the temporary array ``ok`` array. There is then an

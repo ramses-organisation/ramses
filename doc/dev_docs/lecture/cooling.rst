@@ -43,7 +43,7 @@
 Radiative cooling and heating
 =============================
 
-.. contents::  
+.. contents::
 
 .. admonition:: Further reading
 
@@ -69,10 +69,10 @@ gas bulk velocity, :math:`\phi` is the gravitational potential, :math:`E = \frac
 total energy, :math:`e` is the internal energy, and :math:`P = (\gamma -1)e`, with :math:`\gamma`
 the ratio of specific heats.
 
-The net cooling rate :math:`\Lambda` is a sum over many microscopic processes, involving collisions 
-between ions and electrons, photo-ionisations, etc. In principle, it is thus a function of the temperature and density of the gas, 
+The net cooling rate :math:`\Lambda` is a sum over many microscopic processes, involving collisions
+between ions and electrons, photo-ionisations, etc. In principle, it is thus a function of the temperature and density of the gas,
 of its detailed chemical composition and ionisation state, and of the local radiation field. The different cooling models implemented in RAMSES
-mostly differ on how they approximate this function. 
+mostly differ on how they approximate this function.
 
 The following approximations are available in RAMSES:
 
@@ -82,8 +82,8 @@ The following approximations are available in RAMSES:
 4. **Non-equilibrium cooling without RHD**: tracks ion fractions explicitly with a homogeneous UVB.
 5. **Non-equilibrium cooling with RHD**: full radiative transfer coupled to chemistry of H and He.
 
-Below, we will detail the implementation of the default model (equilibrium cooling) and 
-of the non-equilibrium cooling (with a UVB) as illustrative examples of all cooling models implementations. 
+Below, we will detail the implementation of the default model (equilibrium cooling) and
+of the non-equilibrium cooling (with a UVB) as illustrative examples of all cooling models implementations.
 
 Step by step *default cooling model*
 -------------------------------------
@@ -104,40 +104,40 @@ the aexp_ini namelist parameter).
 .. code:: fortran
 
    subroutine adaptive_loop
-      ... 
+      ...
       call init_time
       ...
       if(cooling) call set_table(dble(aexp))
-      ... 
+      ...
       do ! Main time loop
-         ... 
+         ...
          call amr_step(levelmin,1)
-         ... 
-      end do   
-      ... 
+         ...
+      end do
+      ...
    end subroutine adaptive_loop
 
 
 A second initialisation here is a call to ``set_table()`` (from ``hydro/cooling_module.f90``) before entering the
 main time-evolution loop of RAMSES (see above). This is a first computation of the cooling
-and heating rates tables. 
+and heating rates tables.
 
-Indeed, the default cooling module assumes photoionization equilibrium (PIE) with a redshift-dependent UVB. In such conditions, 
-the abundances of H and He ions are direct functions of temperature, density, and redshift only. In turn, 
+Indeed, the default cooling module assumes photoionization equilibrium (PIE) with a redshift-dependent UVB. In such conditions,
+the abundances of H and He ions are direct functions of temperature, density, and redshift only. In turn,
 the cooling and heating rates are also reduced to being functions only of
-temperature, density, redshift and metallicity, so that the cooling 
-function becomes :math:`\Lambda \simeq \Lambda(T,n_H, Z, z)`. The default 
-cooling method simplifies things further by assuming a linear dependence 
-with metallicity so that the cooling function becomes 
+temperature, density, redshift and metallicity, so that the cooling
+function becomes :math:`\Lambda \simeq \Lambda(T,n_H, Z, z)`. The default
+cooling method simplifies things further by assuming a linear dependence
+with metallicity so that the cooling function becomes
 :math:`\CH = (\Heat + \Cool + Z/\Zsun \, \CoolZ)\, \nh^2`, where
 
-* :math:`\Heat(\Tmu,\nh)` is the heating rate from the UV background at the current redshift. 
-* :math:`\Cool(\Tmu,\nh)` is the cooling rate due to H and He (and electrons) assuming PIE with the UVB at the current redshift. 
-* :math:`\CoolZ(\Tmu,\nh)` is the cooling rate due to metals, at solar metallicity, and assuming PIE with the UVB at the current redshift. 
+* :math:`\Heat(\Tmu,\nh)` is the heating rate from the UV background at the current redshift.
+* :math:`\Cool(\Tmu,\nh)` is the cooling rate due to H and He (and electrons) assuming PIE with the UVB at the current redshift.
+* :math:`\CoolZ(\Tmu,\nh)` is the cooling rate due to metals, at solar metallicity, and assuming PIE with the UVB at the current redshift.
 
 With only two dimensions to the problem, it is much more efficient to pre-compute these rates and use linear interpolations than to calculate them on-the-fly
-(exponents, powers). 
-The call to ``set_table`` computes and saves into tables these rates. As we'll see below, this is done at each coarse timestep to track the evolution of the UVB. 
+(exponents, powers).
+The call to ``set_table`` computes and saves into tables these rates. As we'll see below, this is done at each coarse timestep to track the evolution of the UVB.
 
 
 
@@ -148,7 +148,7 @@ Filling in the rate tables with ``set_table``
 rates of photo-ionization, collisional ionization and recombination
 (this is done in the ``cmp_chem_eq`` routine in
 ``hydro/cooling_module.f90``). Then the cooling and heating rates are computed and stored in tables
-for a range of :math:`(\Tmu,\nh)`-bins, where :math:`T_\mu=T/\mu` 
+for a range of :math:`(\Tmu,\nh)`-bins, where :math:`T_\mu=T/\mu`
 and :math:`\mu` is the mean particle mass in units of :math:`m_H`, :math:`\nh=X\rho/m_H` is
 hydrogen number density, and :math:`X` is the hydrogen mass fraction in
 the gas (a global constant, typically set to the value of :math:`0.76`).
@@ -230,15 +230,15 @@ where :math:`f` is a dimensionless analytic function that corrects for
 density :math:`\nh` and UV background photoionization at redshift
 :math:`z`.
 
-**Implementation:** 
-For the default cooling model, the implementation of these computations is all in ``hydro/cooling_module.f90``, 
-with the following structure. 
+**Implementation:**
+For the default cooling model, the implementation of these computations is all in ``hydro/cooling_module.f90``,
+with the following structure.
 
 .. code:: fortran
 
    subroutine set_table(aexp)
       ... ! define boundaries of tables in terms of nH and T
-      call cmp_table(nH_min,nH_max,T2_min,T2_max,nbin_n,nbin_T,aexp) ! compute the tables. 
+      call cmp_table(nH_min,nH_max,T2_min,T2_max,nbin_n,nbin_T,aexp) ! compute the tables.
    end subroutine set_table
 
    subroutine cmp_table(nH_min,nH_max,T2_min,T2_max,nbin_n,nbin_T,aexp)
@@ -263,10 +263,10 @@ with the following structure.
          table%cool_prime(i_n,i_T)=(log10(cool_tot_eps)-log10(cool_tot))/0.01d0   ! evaluate the derivative and store in _prime tables.
          ...
          ! Compute metal contribution for solar metallicity
-         call cmp_metals(T2,nH,mu,metal_tot,metal_prime,aexp) 
+         call cmp_metals(T2,nH,mu,metal_tot,metal_prime,aexp)
          ...
       end do
-   
+
    end subroutine iterate
 
    subroutine cmp_cooling(T2,nH,t_rad_spec,h_rad_spec,cool_tot,heat_tot,cool_com,heat_com,mu_out,aexp,n_spec)
@@ -274,7 +274,7 @@ with the following structure.
       ! Iteration to find mu (rates depend on T, but we only know T/mu)
       do while (error is too large)
          T = ... ! get T from T/mu and a guessed value of mu
-         call cmp_chem_eq(T,nH,t_rad_spec,n_spec,n_TOT,mu)   ! get equilibrium solution at fixed T, including mu. 
+         call cmp_chem_eq(T,nH,t_rad_spec,n_spec,n_TOT,mu)   ! get equilibrium solution at fixed T, including mu.
          ...
       end do
 
@@ -288,22 +288,22 @@ with the following structure.
       ...
       ! Ionization cooling
       ci1 = cool_ion(HI  ,T)*n_E*n_HI   /nH**2
-      ... etc ... 
+      ... etc ...
 
    end subroutine cmp_cooling
 
 
-Operator-splitting and temperature update 
+Operator-splitting and temperature update
 ~~~~~~~~~~~~~~~~
 
 For all cooling models, RAMSES uses **operator splitting** to solve the Euler equations in two
 steps. In a first step, gravity is computed, and the gas is advected,
 basically solving the Euler equations with :math:`\Lambda = 0`. In a
 second **thermo-chemistry** step, the heating and cooling terms are
-computed, and the internal energy is updated with :math:`\dot{e} = \Lambda`. 
-This strategy is shown in the code  snippet below taken from the main code loop ``amr_step``. 
-RAMSES first computes the hydrodynamics and updates ``uold`` with a call to ``godunov_fine``. 
-Then, RAMSES computes cooling on the updated state ``uold`` with a call to ``cooling_fine`` (more details below).  
+computed, and the internal energy is updated with :math:`\dot{e} = \Lambda`.
+This strategy is shown in the code  snippet below taken from the main code loop ``amr_step``.
+RAMSES first computes the hydrodynamics and updates ``uold`` with a call to ``godunov_fine``.
+Then, RAMSES computes cooling on the updated state ``uold`` with a call to ``cooling_fine`` (more details below).
 
 .. code:: fortran
 
@@ -311,30 +311,30 @@ Then, RAMSES computes cooling on the updated state ``uold`` with a call to ``coo
       ...
       call godunov_fine ! do the hydro and update uold.
       ...
-      call cooling_fine ! do the cooling and update uold. 
+      call cooling_fine ! do the cooling and update uold.
       ...
    end subroutine amr_step
 
 
-The thermo-chemistry involves the interaction of radiation and matter, 
-and the implementation differs if the code is used in radiation-hydrodynamics (RHD) 
-mode or in hydro (HD) mode illustrated above. With RHD, the 
-radiation is transfered accross the grid and the thermo-chemistry is computed on the fly. 
+The thermo-chemistry involves the interaction of radiation and matter,
+and the implementation differs if the code is used in radiation-hydrodynamics (RHD)
+mode or in hydro (HD) mode illustrated above. With RHD, the
+radiation is transfered accross the grid and the thermo-chemistry is computed on the fly.
 
 In the general case, RAMSES implements a **semi-implicit scheme to evolve the temperature**
-due to cooling during a timestep. 
+due to cooling during a timestep.
 With :math:`\rho` the mass density, :math:`\gamma` the ratio of specific heats (usually given the
 value of :math:`5/3` in RAMSES, corresponding to monatomic gas),
 :math:`m_H` the proton mass, :math:`\kb` the Boltzmann constant,
-and :math:`\mu m_H` the average particle mass, one can write the internal energy as 
+and :math:`\mu m_H` the average particle mass, one can write the internal energy as
 
 .. math::
 
      e = \frac{T}{\mu} \times \frac{\rho \kb}{(\gamma-1) m_H} ,
 
-It is clear here that after advection, when the density (and metallicity) is fixed, evolving the 
+It is clear here that after advection, when the density (and metallicity) is fixed, evolving the
 internal energy is equivalent to evolving the ratio :math:`\Tmu \equiv T/\mu`. This is what is done
-in RAMSES, by solving the equation 
+in RAMSES, by solving the equation
 
 .. math::
 
@@ -343,7 +343,7 @@ in RAMSES, by solving the equation
 
 
 Starting at time :math:`t` with temperature :math:`\Tmu^{t}`, we compute
-the evolved temperature :math:`\Tmu^{t+\Delta t}` with a semi-implicit 
+the evolved temperature :math:`\Tmu^{t+\Delta t}` with a semi-implicit
 Euler formulation (See Press et al., 1992):
 
 .. math::
@@ -370,19 +370,19 @@ Details of the ``cooling_fine`` subroutine.
 
 In ``cooling_fine()``, cells at the given level are collected into
 vectors of size ``NVECTOR`` and then each vector of cells is processed
-in ``coolfine1()``. This is a generic operation which is useful for 
-vectorisation efficiency, and we illustrate it in the snippet below. 
-Notice that at the end of ``cooling_fine``, we again call ``set_table`` 
-if we're at a coarse level (``ilevel==levelmin``) to prepare the next timestep.  
+in ``coolfine1()``. This is a generic operation which is useful for
+vectorisation efficiency, and we illustrate it in the snippet below.
+Notice that at the end of ``cooling_fine``, we again call ``set_table``
+if we're at a coarse level (``ilevel==levelmin``) to prepare the next timestep.
 
 .. code:: fortran
 
    subroutine cooling_fine(ilevel)
 
       ...
-      
+
       ! Operator splitting step for cooling source term
-      ! by vector sweeps 
+      ! by vector sweeps
       ncache=active(ilevel)%ngrid
       do igrid=1,ncache,nvector
          ngrid=MIN(nvector,ncache-igrid+1)
@@ -413,7 +413,7 @@ cells.
       from code units to CGS.
 
    2. **loop over cells from ind_grid list**
-   
+
       2.1. **Select leaf cells** — only cells with no children (``son == 0``)
       are processed. An index array ``ind_leaf`` is built; the routine
       returns immediately if ``nleaf == 0``.
@@ -456,15 +456,15 @@ cells.
            \right).
 
       This is a simple "poor man's" model: dense gas that would be
-      self-shielded sees a suppressed UVB. Note that since cooling/heating tables 
+      self-shielded sees a suppressed UVB. Note that since cooling/heating tables
       are already computed as a function of :math:`\Tmu` and :math:`n_H`, the boost
       is in fact applied to density. This is a good approximation, as the dependence
-      of cooling and heating on the radiation intensity is really through a term :math:`\Gamma/n_H`, 
+      of cooling and heating on the radiation intensity is really through a term :math:`\Gamma/n_H`,
       so decreasing :math:`\Gamma` or increasing :math:`n_H` by the same factor has the same effect.
 
-      2.5. **Polytrope and temperature floor** — A minimum thermal energy is in general included. This 
-      may be because ``barotropic_eos`` is true, or because ``jeans_ncells>0``, 
-      or because ``T2_star >0``. This energy is expressed as a temperature floor (``T2min``), 
+      2.5. **Polytrope and temperature floor** — A minimum thermal energy is in general included. This
+      may be because ``barotropic_eos`` is true, or because ``jeans_ncells>0``,
+      or because ``T2_star >0``. This energy is expressed as a temperature floor (``T2min``),
       and needs to be computed and subtracted from the thermal energy before computing cooling.
       It is then inserted back in step 2.8. below.
 
@@ -568,7 +568,7 @@ redshift-dependent trough the PIE ionization fractions).
 
 With non-equilibrium cooling, the homogeneous UV background is more
 flexible than the hardcoded variants in equilibrium cooling. It can be
-read from files
+read from files.
 
 .. raw:: html
 

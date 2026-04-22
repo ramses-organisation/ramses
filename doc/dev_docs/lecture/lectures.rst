@@ -16,8 +16,10 @@ This documentation is written in the style of lectures adressing specified topic
    amr
    particles
    mpi
+   cooling
    subgrid
    refinement
+
 
 .. toctree::
    :maxdepth: 1
@@ -32,9 +34,3 @@ This documentation is written in the style of lectures adressing specified topic
    :caption: Methods and algoritms:
 
    godunov
-
-.. toctree::
-   :maxdepth: 1
-   :caption: Cooling ... 
-
-   cooling
