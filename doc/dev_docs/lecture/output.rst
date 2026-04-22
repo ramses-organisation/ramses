@@ -1,7 +1,7 @@
 Outputting
 ------------
 
-In this chapter we cover 
+In this chapter we cover
 
 - How outputs are written, structured, and extended.
 - The link between I/O routines and the AMR (adaptive mesh refinement) hierarchy and MPI domain decomposition.
@@ -14,12 +14,12 @@ In this chapter we cover
 
 .. admonition:: **Exercise**
 
-   Look in a ramses output. What files are there? 
+   Look in a ramses output. What files are there?
    (If you have no outputs laying around,
    you can run one of the test suite cases with ``-d``, for example
    ``./run_test_suite.sh -t 1 -p 2 -d`` and look in the individual test
-   folders, e.g. *tests/hydro/advect*) 
-   
+   folders, e.g. *tests/hydro/advect*)
+
    .. admonition:: **Solution**
       :class: dropdown
 
@@ -28,37 +28,37 @@ In this chapter we cover
 
       * General simulation info:
 
-         * info_xxxxxx.txt: units, boxlen, output time, cosmological constants,… 
-         * info_rt_xxxxxx.txt: info on photon groups and chemistry 
-         * header_xxxxxx.txt: number of particles per family 
+         * info_xxxxxx.txt: units, boxlen, output time, cosmological constants,…
+         * info_rt_xxxxxx.txt: info on photon groups and chemistry
+         * header_xxxxxx.txt: number of particles per family
 
-      * Data outputted by each MPI process (yyyyy): 
+      * Data outputted by each MPI process (yyyyy):
 
-         * amr_xxxxx.outyyyyyy: the grid linked list variables, grid center position, octree variables, loadbalancing and refinement map 
-         * hydro_xxxxx.outyyyyyy: all hydro variables 
-         * rt_xxxxx.outyyyyyy: 
-         * grav_xxxxx.outyyyyyy: gravitational potential and acceleration \* part_xxxxx.outyyyyyy: particle fields 
+         * amr_xxxxx.outyyyyyy: the grid linked list variables, grid center position, octree variables, loadbalancing and refinement map
+         * hydro_xxxxx.outyyyyyy: all hydro variables
+         * rt_xxxxx.outyyyyyy:
+         * grav_xxxxx.outyyyyyy: gravitational potential and acceleration \* part_xxxxx.outyyyyyy: particle fields
 
-      * File descriptors: these files list which variables are outputted in the corresponding data files and in which order they are: 
+      * File descriptors: these files list which variables are outputted in the corresponding data files and in which order they are:
 
-         * hydro_file_descriptor.txt 
-         * rt_file_descriptor.txt 
-         * part_file_descriptor.txt 
+         * hydro_file_descriptor.txt
+         * rt_file_descriptor.txt
+         * part_file_descriptor.txt
 
-      * Data files outputted by cpu 0 only: 
+      * Data files outputted by cpu 0 only:
 
-         * sink_xxxxxx.csv 
+         * sink_xxxxxx.csv
          * stellar_xxxxxx.csv
 
-      * Information about the execution: 
+      * Information about the execution:
 
-         * namelist.txt: copy of the input namelist file 
-         * timer_xxxxxx.txt: execution time per module 
+         * namelist.txt: copy of the input namelist file
+         * timer_xxxxxx.txt: execution time per module
 
-      * Information about the compilation: 
+      * Information about the compilation:
 
-         * compilation.txt: date, commit hash, etc 
-         * makefile.txt: copy of the Makefile used 
+         * compilation.txt: date, commit hash, etc
+         * makefile.txt: copy of the Makefile used
          * patches.txt: copy of the content of any patch files
 
 2. The main output routine: ``dump_all``
@@ -79,8 +79,8 @@ The outputting of the AMR structure is handled by the routine
 ``backup_amr`` which can be found in ``amr/output_amr.f90``. It writes:
 
 * the grid linked list variables,
-* the grid center position, and the octree variables 
-* the loadbalancing map 
+* the grid center position, and the octree variables
+* the loadbalancing map
 * refinement map.
 
 Normally, there is no need to alter something here.
@@ -256,10 +256,10 @@ of your new particle array. Give the variable an informative name.
 ~~~~~~~~~~~~~~~
 
 Some other output files exist that do not follow the traditional rules.
-For example: 
+For example:
 
-* clumpfinder: ``write_clump_field`` in *pm/output_clump.f90* (writes clump field) 
-* sinks: ``output_sink_csv`` in *pm/output_sink.f90* 
+* clumpfinder: ``write_clump_field`` in *pm/output_clump.f90* (writes clump field)
+* sinks: ``output_sink_csv`` in *pm/output_sink.f90*
 * stellars: ``output_stellar_csv`` in *pm/output_stellar.f90*
 
 7. Restarts

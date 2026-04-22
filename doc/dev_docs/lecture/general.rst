@@ -177,16 +177,16 @@ more clear over the course of these lectures.
      ...
    end subroutine amr_step
 
-.. admonition:: **Exercise** 
+.. admonition:: **Exercise**
 
    Write down the calls to ``amr_step`` assuming there are
-   3 refinement levels. 
+   3 refinement levels.
       A) First assume there is no subcycling (nsubcycle(ilevel)==1 for all levels).
       B) Now assume you have subcycling for all levels.
-   
+
    .. admonition:: **Solution**
       :class: dropdown
-   
+
       If we split the
       computations done in amr_step into two parts: stuff done before the
       recursive call to amr_step and stuff done after

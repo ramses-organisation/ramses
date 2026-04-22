@@ -19,9 +19,9 @@ gravitational force is given by
 
 The steps for solving gravity are as followed:
 
-* determine the Poisson source term 
-* compute the gravitational potential by solving the Poisson equation 
-* calculate the gravitational force (or acceleration) by taking the gradient of the potential 
+* determine the Poisson source term
+* compute the gravitational potential by solving the Poisson equation
+* calculate the gravitational force (or acceleration) by taking the gradient of the potential
 * apply the force to the gas and particles.
 
 We will address each of these steps in more detail below.
@@ -52,10 +52,10 @@ and allocated in ``init_poisson``:
     allocate(f   (1:ncell,1:3))
     rho=0; phi=0; f=0
 
-They consist of 
+They consist of
 
-* the gravitational force ``f``, a vector with ``ndim`` dimensions, 
-* the gravitational potential ``phi`` and a copy of the old state ``phi_old``, 
+* the gravitational force ``f``, a vector with ``ndim`` dimensions,
+* the gravitational potential ``phi`` and a copy of the old state ``phi_old``,
 * the total density distribution ``rho``, including gas and particles.
 
 3. Computing the Poisson source term
@@ -145,7 +145,7 @@ gravitional acceleration is taken into account using a Velvet scheme
 
    .. admonition:: **Solution**
       :class: dropdown
-      
+
       The acceleration is added in four places, but
       with a subtile change of sign in one of the calls. Equation 13 in
       Teyssier (2002) is done with ``add_gravity_source_terms(ilevel)``
@@ -267,4 +267,3 @@ on Particles) when updating particle velocities. In summary, the force
 acting on the particle will be interpolated from the cells with which
 the particle “overlaps”. Once this is done, the particle velocities can
 be updated using the time-step of the level on which the particle lives.
-

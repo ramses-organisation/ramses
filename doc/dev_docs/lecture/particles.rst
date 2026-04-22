@@ -92,7 +92,7 @@ The ``family`` variable stores what the particle represent:
 
 
 
-In addition, six other values are used for *tracer* particles, mirroring values in the table above (e.g., ``-1`` for DM tracers, ``-2`` for star tracers, etc), as well as a ``FAM_TRACER_GAS=0`` value for gas tracer particles. 
+In addition, six other values are used for *tracer* particles, mirroring values in the table above (e.g., ``-1`` for DM tracers, ``-2`` for star tracers, etc), as well as a ``FAM_TRACER_GAS=0`` value for gas tracer particles.
 
 The particle tags are currently not commonly used, but allow flexibility to have different types of *the same kind* of particles. For example, one could decide to have Pop III stars and normal Pop II stars implemented at the same time: both would be considered as *stars* by the code (``FAM_STAR`` family), but still identified independently with their own tag. This can be useful either for post-processing (e.g., "make a map of all Pop III stars"), or even for specific physical models (e.g., Pop III stars could have a different radiative output or stellar evolution model).
 
@@ -351,7 +351,7 @@ In practice, the second part is done before the first: the sub-volumes are calcu
 3.2 Walking through ``cic_amr``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-To better understand how the CIC scheme is applied, let's look at the ``cic_amr`` routine that can be found in the ``pm/rho_fine.f90`` file. 
+To better understand how the CIC scheme is applied, let's look at the ``cic_amr`` routine that can be found in the ``pm/rho_fine.f90`` file.
 
 After some book-keeping, we recover the neighbouring father cells with
 
@@ -376,7 +376,7 @@ We then rescale all the positions at the current level to get the position of th
 
 This is then the time to get the particle properties that we may want to dump on the grid, for example the mass of non-tracer particles. This is done by reading the particle mass ``mp`` in the ``cic_amr`` routine, but we could do the same thing for other extensive quantities (e.g., metal mass).
 
-After some extra checks, we then compute ``dd`` and ``dg`` along each dimension. The volume of each of the sub-volumes is computed from the values of ``dg`` and ``dd``. For example, in two dimensions: 
+After some extra checks, we then compute ``dd`` and ``dg`` along each dimension. The volume of each of the sub-volumes is computed from the values of ``dg`` and ``dd``. For example, in two dimensions:
 
 .. code:: fortran
 
@@ -497,12 +497,12 @@ This is note done for non-DM particles: indeed, they are expected to "live" at t
 Second, we can also note that CIC is used in several places.
 
 - ``cic_amr`` called from ``rho_from_current_level``, itself called in ``rho_fine``, which calculates the density field of the particles.
-- ``cic_cell`` called from ``cic_from_multipole`` which represents the gas cells as *pseudo-particles* to calculate the gas density field (used as input for the gravity calculation) in the same way as the particles. This has some advantages. 
+- ``cic_cell`` called from ``cic_from_multipole`` which represents the gas cells as *pseudo-particles* to calculate the gas density field (used as input for the gravity calculation) in the same way as the particles. This has some advantages.
 - ``cic_only`` called from ``rho_only_level`` in the clumpfinder, to calculate the density field on which to perform the clump finding.
 
 While all these routines are pretty similar, this leads to a lot of code duplication, which can *sometimes* be hard to maintain. There is work being done on this, but it takes time.
 
-Also, RAMSES has an alternative to the CIC scheme that is in principle more accurate: the TSC scheme, for *triangular-shaped cloud*. This is a smoother, more expensive, assignment scheme. 
+Also, RAMSES has an alternative to the CIC scheme that is in principle more accurate: the TSC scheme, for *triangular-shaped cloud*. This is a smoother, more expensive, assignment scheme.
 
 .. admonition:: **Exercise**
 

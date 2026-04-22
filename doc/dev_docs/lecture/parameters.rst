@@ -106,7 +106,7 @@ process has access to all parameters.
 Each module or subsystem (e.g. AMR, hydrodynamics, gravity) is
 controlled by its own namelist definition and associated variables. The
 naming convention for namelists is ``<module>_params``. The namelist
-definitions can be found in one of the following places: 
+definitions can be found in one of the following places:
 
 * *amr/read_params.f90*, which contains:
 
@@ -114,31 +114,31 @@ definitions can be found in one of the following places:
    - ``amr_params``
    - ``output_params``
    - ``movie_params``
-   - ``lightcone_params`` 
-   - ``tracer_params`` 
+   - ``lightcone_params``
+   - ``tracer_params``
    - ``poisson_params``
 
 * *hydro/read_hydro_params.f90*, which contains:
 
-   - ``init_params`` 
-   - ``hydro_params`` 
+   - ``init_params``
+   - ``hydro_params``
    - ``refine_params``
-   - ``boundary_params`` 
-   - ``feedback_params`` 
-   - ``cooling_params`` 
-   - ``sf_params`` 
-   - ``units_params`` 
-   - ``grackle_params`` 
+   - ``boundary_params``
+   - ``feedback_params``
+   - ``cooling_params``
+   - ``sf_params``
+   - ``units_params``
+   - ``grackle_params``
    - ``physics_params`` (legacy)
 
 * the corresponding code module:
 
-   - ``clumpfind_params`` in *pm/clump_finder.f90* 
-   - ``mergertree_params`` in *pm/merger_tree.f90* 
-   - ``stellar_params`` in *pm/read_sink_feedback_params.f90* 
-   - ``sink_params`` in *pm/sink_particle.f90* 
-   - ``unbinding_params`` in *pm/unbinding.f90* 
-   - ``rt_params`` and ``rt_groups`` in *rt/rt_init.f90* 
+   - ``clumpfind_params`` in *pm/clump_finder.f90*
+   - ``mergertree_params`` in *pm/merger_tree.f90*
+   - ``stellar_params`` in *pm/read_sink_feedback_params.f90*
+   - ``sink_params`` in *pm/sink_particle.f90*
+   - ``unbinding_params`` in *pm/unbinding.f90*
+   - ``rt_params`` and ``rt_groups`` in *rt/rt_init.f90*
    - ``turb_params`` in *turb/read_turb_params.f90*
 
 Remark that recently dedicated subroutines have been created in
@@ -149,11 +149,11 @@ Remark that recently dedicated subroutines have been created in
 
 When introducing a new algorithm or making small modification to the
 code, you may need to add a new parameter to an existing namelist. The
-procedure is straightforward: 
+procedure is straightforward:
 
-- Step 1: Determine to which namelist the new variable belongs and add it to the namelist declaration. 
-- Step 2: Identify the module to which to add the new variable and declare it. A default value should be set, which will be used in case the parameter is not specified in the namelist file. This also ensures backward compatibility with existing namelist files. A comment should be added to describe what the variable represents. 
-- Step 3: Since the variable is added to an existing namelist, it will be automatically read when the corresponding namelist is parsed. Optionally, you can add checks to verify whether the user provided a sensible value. 
+- Step 1: Determine to which namelist the new variable belongs and add it to the namelist declaration.
+- Step 2: Identify the module to which to add the new variable and declare it. A default value should be set, which will be used in case the parameter is not specified in the namelist file. This also ensures backward compatibility with existing namelist files. A comment should be added to describe what the variable represents.
+- Step 3: Since the variable is added to an existing namelist, it will be automatically read when the corresponding namelist is parsed. Optionally, you can add checks to verify whether the user provided a sensible value.
 - Step 4: Document the new parameter. Add an entry to the markdown file listing the parameters of the altered namelist, which can be found in the folder
 *doc/wiki*.
 
@@ -164,7 +164,7 @@ procedure is straightforward:
    an additional heating source for which three models exist in the
    literature. By default, we want this source to be turned off. Test
    your code by printing the value of ``tuto_heating_model``.
-   
+
    .. admonition:: **Solution**
       :class: dropdown
 
@@ -249,9 +249,9 @@ needs to be updated.
    which contains two parameters: ``tuto_efficiency`` and
    ``tuto_timescale``. Both of these parameters have to be positive and
    cannot be zero. For simplicity, you can define the variables inside
-   the new subroutine. 
-   
-   
+   the new subroutine.
+
+
    .. admonition:: **Solution**
       :class: dropdown
 

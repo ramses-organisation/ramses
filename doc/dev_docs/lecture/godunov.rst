@@ -80,7 +80,7 @@ How source terms are treated will be discussed further.
 By default, RAMSES uses the MUSCL-Hancock scheme for computing the
 numerical fluxes across cell faces. This is a predictor-corrector
 extension of Godunov's method that allows for second-order accuracy by
-using 
+using
 
 * piecewise linear reconstruction of the cell states, in contrast to Godunov's original piecewise constant
 * a half step prediction for time evolution.
@@ -92,11 +92,11 @@ time, that is in one timestep. Transverse corrections are included. This
 approach avoids splitting errors, better preserves symmetry and is
 overall more accurate for multi-dimensional simulations.
 
-The steps for obtaining the flux are as follows. 
+The steps for obtaining the flux are as follows.
 
-* Convert conservative cell-centered variables to primitive variables (``ctoprim``) 
-* Calculate the limited slopes (TVD) for the primitive variables that will be used to reconstruct the state at the cell edges and evaluate space derivative for the time evolution below (MUSCL part, ``uslope``) 
-* Evolve (or ``trace``) the cell centered states forward in time for half a time step and then project on cell faces (Hancock part). 
+* Convert conservative cell-centered variables to primitive variables (``ctoprim``)
+* Calculate the limited slopes (TVD) for the primitive variables that will be used to reconstruct the state at the cell edges and evaluate space derivative for the time evolution below (MUSCL part, ``uslope``)
+* Evolve (or ``trace``) the cell centered states forward in time for half a time step and then project on cell faces (Hancock part).
 * Solve the Riemann problem at each interface using predicted left/right states to obtain the fluxes :math:`F_{i+1/2}` ``cmpflxm`` (“compute flux minus”, because only the left flux is calculated)
 
 These fluxes are then used to update the conserved variables. Below, we
@@ -218,7 +218,7 @@ update at fine-to-coarse boundary.
 .. admonition:: Exercise
 
    1. Find in the code where the coarse level is virtually refined. Does it imply some interpolation?
-   2. Find in the code where the coarse level update is done? What does it imply for conservative variable evolution? What about coarse-to-fine boundary? 
+   2. Find in the code where the coarse level update is done? What does it imply for conservative variable evolution? What about coarse-to-fine boundary?
 
    .. admonition:: **Solution**
       :class: dropdown

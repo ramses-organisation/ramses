@@ -13,12 +13,12 @@ RAMSES uses conservative variables that are updated with the conservative equati
 \frac{\partial \rho\textbf{u}}{\partial t}  + \nabla \cdot\left[\rho \textbf{u}\otimes \textbf{u} + P \mathbb{I} \right] = 0\\
 \frac{\partial E_\mathrm{T}}{\partial t} + \nabla\cdot \left[\textbf{u}\left( E_\mathrm{T} + P \right)\right] = 0,`
 
-with 
+with
 :math:`\rho` the density,
 :math:`\textbf{u}` the velocity,
 :math:`E_\mathrm{T}=e + 1/2\rho \textbf{u}^2` the total energy,
 :math:`e` the gas thermal energy, and
-:math:`P=(\gamma-1)e` the gas pressure. 
+:math:`P=(\gamma-1)e` the gas pressure.
 :math:`\gamma` is the adiabatic index.
 
 The system can be written in the canonical form
@@ -42,7 +42,7 @@ For practical reasons, RAMSES often switches to primitive variables
 \rho \\
 \textbf{u} \\
 P \\
-\end{array} \right].` 
+\end{array} \right].`
 
 Indeed, it is easier to use the dual space of the
 primitive variables in the integration of the hyperbolic solver. In
@@ -106,8 +106,8 @@ Number of hydro variables ``nvar``
 The total amount of independent variables stored on the AMR grid is set
 at compile time in the Makefile by the parameter ``nvar``. It includes
 
-* the Euler variables: density, velocity and pressure 
-* the magnetic field vector (on the left cell face), when compiled with MHD 
+* the Euler variables: density, velocity and pressure
+* the magnetic field vector (on the left cell face), when compiled with MHD
 * an optional number of non-thermal energies (``NENER``)
 * an optional number of passive scalars (``NMETALS`` and ``NPSCAL``)
 
@@ -152,7 +152,7 @@ over them:
 
    do i=1,nhydro
 
-We have 
+We have
 
 * for HYDRO: ``nhydro=neul``
 * for MHD: ``nhydro=neul+3=8``
@@ -162,9 +162,9 @@ very end of the variable array. This means that when following the
 evolution of magnetic fields, we store 6 additional variables. For
 convenience, the code defines the parameter ``nvar_all`` which, in
 addition to the independent ``nvar`` variables, includes the right
-magentic field. So we have 
+magentic field. So we have
 
-* for HYDRO: ``nvar_all = nvar`` 
+* for HYDRO: ``nvar_all = nvar``
 * for MHD: ``nvar_all = nvar+3``
 
 To compute the cell-center magnetic field, for example for outputting,
@@ -184,7 +184,7 @@ scalars are accessed through the indices ``imetal``, ``idelay``,
 different star formation recipes. In the hydro-solver, these are evolved
 as regular passive scalars.
 
-.. Admonition:: **Summary** 
+.. Admonition:: **Summary**
 
    To access the Euler variables in ``uold`` and ``unew``,
    use the indices:
@@ -194,14 +194,14 @@ as regular passive scalars.
    -  momentum or velocities (HYDRO case): ``2`` up to ``1+ndim``
    -  momentum or velocities (MHD case): ``2, 3, 4``
 
-   To access the magnetic field: 
-   
-   - on the left side of the cells: ``neul + 1``, ``neul+2``, ``neul+3`` 
+   To access the magnetic field:
+
+   - on the left side of the cells: ``neul + 1``, ``neul+2``, ``neul+3``
    - on the right side of the cells: ``nvar+1``, ``nvar+2``, ``nvar+3``
 
    Additional variables are stored after the left magnetic field in the
    following order:
-   
+
    - NENER: ``inener=nhydro+1`` up to ``nhydro+nener``
    - passive scalars: ``nhydro+nener+1`` up to ``nvar``
 
@@ -268,4 +268,3 @@ as regular passive scalars.
 
          endif
          ...
-

@@ -38,8 +38,8 @@ variables are then returned to ``init_flow_fine`` through the array
    Implement a new ``condinit_type`` that adds a
    sinusoidal perturbation on a uniform density background in 1D:
    :math:`\rho(x) = \rho_0 [1 + A \cos(\frac{2\pi x}{\lambda})]` The
-   pressure is set to the same value as the density. 
-   
+   pressure is set to the same value as the density.
+
    .. admonition:: **Solution**
       :class: dropdown
 

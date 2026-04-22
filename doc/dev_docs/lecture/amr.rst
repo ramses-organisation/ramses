@@ -58,8 +58,8 @@ A schematic example for two refinement levels in a 2D grid:
    Using the arrays defined above, how can you get the
    :math:`2 \times \texttt{ndim}` directly neighboring grids of a grid
    at index ``igrid``?
-   
-   
+
+
    .. admonition:: **Solution**
       :class: dropdown
 
@@ -127,7 +127,7 @@ neighbors, and the spatial order is irrelevant.
 
    Given the index of a cell ``icell``, how can we obtain
    the index of the grid to which it belongs?
-   
+
    .. admonition:: **Solution**
       :class: dropdown
 
@@ -169,7 +169,7 @@ its previous element to the next element. Remark that these are
 *grid*-based arrays.
 
 A linked list is stored for each MPI process (cpu) and AMR level. RAMSES
-keeps track of 
+keeps track of
 
 * ``headl``: the index of the head, i.e. the first element in the list
 * ``taill``: the index of the tail, i.e the last element in the list
@@ -463,8 +463,8 @@ where two configurations are possible:
    In the case of 1D, what are the steps to find
    the neighboring cells of a given cell? We want the center cell to be
    included in the list of neighbors. The input of the routine will be
-   the index of the cell. 
-   
+   the index of the cell.
+
    .. admonition:: **Solution**
       :class: dropdown
 
@@ -486,11 +486,11 @@ where two configurations are possible:
    purpose? Which routine could be used to get the neighboring cells in
    1D? Compare your (pseudo-)code to what is implemented in
    *nbor_utils.f90*
-   
-   
+
+
    .. admonition:: **Solution**
       :class: dropdown
-      
+
       The 1D case is a bit of a
       special case, because there is no distinction between getting the
       direct neighbors or also including diagonal neighbors (since there

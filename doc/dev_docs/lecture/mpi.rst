@@ -178,7 +178,7 @@ There are two versions of the ``make_virtual_fine`` and ``make_virtual_reverse``
 
    .. admonition:: **Solution**
       :class: dropdown
-      
+
       It is linked to ``set_unew``
 
 Particle communication
@@ -197,7 +197,5 @@ Communications must be done each time a global array, e.g., ``uold``, is modifie
 
    .. admonition:: **Solution**
       :class: dropdown
-      
+
       ``make_virtual_reverse`` in only needed when a flux in applied at a MPI domain boundary, or when a particle belonging to on MPI process deposit mass on a neighboring MPI domain. ``phi`` is used as temporary array in ``rho_fine.f90``.
-
-
