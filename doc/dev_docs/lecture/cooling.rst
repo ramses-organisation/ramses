@@ -38,98 +38,288 @@
    \newcommand{\xheiii} {x_{\rm{He \scriptscriptstyle III}}}
    \newcommand{\Zsun} {Z_{\odot}}       % Solar metallicity
 
-Interlude: More Things
-======================
-
--  Passive scalars (metallicity example, and refinement flag)
--  Cooling [Joki ?]
-
-   -  General picture, interface, units, implementation choices in
-      RAMSES (different options, …)
-   -  operator splitting, source term, timesteps … (galaxy vs
-      dense-core-collapse viewpoints…)
-   -  **EXERCISE:** set time step of simulation to resolve cooling time
-      (use some analytic approx).
-
-      -  add field to hydro variable (``ivar+n``)
-      -  store the cooling time
-      -  output it … (in well understood units…)
-
-   -  **EXERCISE:** introduce a source term evolving as t/tau…
-
--  ``NENER`` : what it is and what it can be used for.
--  Boundary conditions (review them)
--  Cosmology (:math:`a(t)`) [JS]
-
-[TOC]
-
-.. warning::
-
-   -  General picture, interface, units, implementation choices in
-      RAMSES (different options, …)
-   -  operator splitting, source term, timesteps … (galaxy vs
-      dense-core-collapse viewpoints…)
-   -  **EXERCISE:** set time step of simulation to resolve cooling time
-      (use some analytic approx). Another possibility is to add a
-      heating term.
 
 
+Radiative cooling and heating
+=============================
 
-Radiative cooling and photo-heating
-===================================
+.. contents::  
 
-Overview
-----------
+.. admonition:: Further reading
+
+   More information on cooling and heating in RAMSES can be found in `Rosdahl’s PhD
+   thesis <https://theses.fr/2012LYO10075>`__, or in the `RAMSES-RT
+   paper <https://ui.adsabs.harvard.edu/abs/2013MNRAS.436.2188R/abstract>`__.
+   A classical paper on the topic is `Katz, Weinberg, & Hernquist
+   (1996) <https://ui.adsabs.harvard.edu/abs/1996ApJS..105...19K/abstract>`__.
+
 
 In most astrophysical contexts, gas dissipates thermal energy through
 collisional processes, and this energy is carried away by radiation. Gas
 may also gain energy from radiation, for example through
 photo-ionisations. In RAMSES, these radiative cooling and heating terms
 are accounted for in the energy conservation equation with the net
-cooling term :math:`\Lambda`:
+cooling rate :math:`\Lambda`:
+
+.. math::
+   \frac{\partial E}{\partial t} + \nabla \cdot \left( (E + P) \boldsymbol{u} \right) = -\rho \boldsymbol{u} \cdot \nabla \phi + \Lambda(\rho, e).
+
+Here, :math:`t` is time, :math:`\boldsymbol{u}` is the
+gas bulk velocity, :math:`\phi` is the gravitational potential, :math:`E = \frac{1}{2}\rho u^2 + e` is the gas
+total energy, :math:`e` is the internal energy, and :math:`P = (\gamma -1)e`, with :math:`\gamma`
+the ratio of specific heats.
+
+The net cooling rate :math:`\Lambda` is a sum over many microscopic processes, involving collisions 
+between ions and electrons, photo-ionisations, etc. In principle, it is thus a function of the temperature and density of the gas, 
+of its detailed chemical composition and ionisation state, and of the local radiation field. The different cooling models implemented in RAMSES
+mostly differ on how they approximate this function. 
+
+The following approximations are available in RAMSES:
+
+1. **ISM cooling**: a simplified prescription for cold, dense interstellar medium conditions.
+2. **Equilibrium cooling with a UVB** (default): assumes photo-ionisation equilibrium with a redshift-dependent UV background.
+3. **Equilibrium cooling with Grackle**: same physical approximation using the external Grackle library.
+4. **Non-equilibrium cooling without RHD**: tracks ion fractions explicitly with a homogeneous UVB.
+5. **Non-equilibrium cooling with RHD**: full radiative transfer coupled to chemistry of H and He.
+
+Below, we will detail the implementation of the default model (equilibrium cooling) and 
+of the non-equilibrium cooling (with a UVB) as illustrative examples of all cooling models implementations. 
+
+Step by step *default cooling model*
+-------------------------------------
+
+initialisations
+~~~~~~~~~~~~~~~
+
+Some models require initialisations, and these are done in ``init_time``
+(in ``amr/init_time.f90``) which is called at the beginning of a
+simulation (see code snippet below). For the default cooling model, this involves a call to
+``set_model`` in ``hydro/cooling_module.f90``. The ``set_model`` routine
+does two things: a) it initialises UV background parameters, and b), for
+cosmological simulations, it computes the (homogeneous) temperature of
+the Universe at the starting redshift of the simulation (typically read
+from the cosmological initial conditions, but possible to override with
+the aexp_ini namelist parameter).
+
+.. code:: fortran
+
+   subroutine adaptive_loop
+      ... 
+      call init_time
+      ...
+      if(cooling) call set_table(dble(aexp))
+      ... 
+      do ! Main time loop
+         ... 
+         call amr_step(levelmin,1)
+         ... 
+      end do   
+      ... 
+   end subroutine adaptive_loop
+
+
+A second initialisation here is a call to ``set_table()`` (from ``hydro/cooling_module.f90``) before entering the
+main time-evolution loop of RAMSES (see above). This is a first computation of the cooling
+and heating rates tables. 
+
+Indeed, the default cooling module assumes photoionization equilibrium (PIE) with a redshift-dependent UVB. In such conditions, 
+the abundances of H and He ions are direct functions of temperature, density, and redshift only. In turn, 
+the cooling and heating rates are also reduced to being functions only of
+temperature, density, redshift and metallicity, so that the cooling 
+function becomes :math:`\Lambda \simeq \Lambda(T,n_H, Z, z)`. The default 
+cooling method simplifies things further by assuming a linear dependence 
+with metallicity so that the cooling function becomes 
+:math:`\CH = (\Heat + \Cool + Z/\Zsun \, \CoolZ)\, \nh^2`, where
+
+* :math:`\Heat(\Tmu,\nh)` is the heating rate from the UV background at the current redshift. 
+* :math:`\Cool(\Tmu,\nh)` is the cooling rate due to H and He (and electrons) assuming PIE with the UVB at the current redshift. 
+* :math:`\CoolZ(\Tmu,\nh)` is the cooling rate due to metals, at solar metallicity, and assuming PIE with the UVB at the current redshift. 
+
+With only two dimensions to the problem, it is much more efficient to pre-compute these rates and use linear interpolations than to calculate them on-the-fly
+(exponents, powers). 
+The call to ``set_table`` computes and saves into tables these rates. As we'll see below, this is done at each coarse timestep to track the evolution of the UVB. 
+
+
+
+Filling in the rate tables with ``set_table``
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+``set_table`` first computes the PIE ionisation state for H and He, with a simple iterative process that involves equating the
+rates of photo-ionization, collisional ionization and recombination
+(this is done in the ``cmp_chem_eq`` routine in
+``hydro/cooling_module.f90``). Then the cooling and heating rates are computed and stored in tables
+for a range of :math:`(\Tmu,\nh)`-bins, where :math:`T_\mu=T/\mu` 
+and :math:`\mu` is the mean particle mass in units of :math:`m_H`, :math:`\nh=X\rho/m_H` is
+hydrogen number density, and :math:`X` is the hydrogen mass fraction in
+the gas (a global constant, typically set to the value of :math:`0.76`).
+
+**The abundances table:**
+
+The abundances :math:`n_i`, of each of the 6
+primordial species (*e*, HI, HII, HeI, HeII, HeIII) are computed and stored for a range of
+(:math:`\Tmu, \nh`) values. Here, rates are used
+for all the possible interactions involving these species - these are
+functions of photoionization rates :math:`\Gamma_i`, :math:`T` and :math:`n_i`, and amount to
+a closed set of equations that are converged iteratively to an
+equilibrium solution, such that the creation rate equals the destruction
+rate for each species. The species abundances also give the value of
+:math:`\mu` per (:math:`\Tmu, \nh`)-bin, which can be retrieved by
+
+.. math::
+
+     \mu = \left[\, X(1+\xhii) + Y/4 (1+\xheii+2\xheiii) \, \right]^{-1},
+
+where :math:`Y=1-X` is the helium mass fraction,
+:math:`\xhii \equiv \nhii/\nh`, :math:`\xheii \equiv \nheii/\nhe` and
+:math:`\xheiii \equiv \nheiii/\nhe`. The tabulation of the abundances
+also provides a direct mapping between :math:`\Tmu` and :math:`T` which
+is useful in generating the rest of the tables.
+
+Note that these tables are written to each ramses output directory,
+allowing the user to easily extract the equilibrium ionisation fractions
+and :math:`\mu` in postprocessing (by performing the same kind of
+interpolation for every cell as is done in RAMSES).
+
+**The cooling rates table:**
+
+Given the abundances, it is then a straightforward matter to calculate
+and tabulate :math:`\Cool(\Tmu,\nh)` – the cooling rate is a sum of
+bremsstrahlung, collisional excitation, collisional ionization,
+recombination, dielectric recombination and Compton cooling rates,
+all fitted analytic functions of temperature and abundances, and fetched
+from various sources in the literature (e.g. Cen, 1992).
+
+**The heating rates table:**
+
+It is also straightforward to tabulate :math:`\Heat(\Tmu,\nh)`. Each bin
+contains
 
 .. math::
 
 
-   \frac{\partial E}{\partial t} + \nabla \cdot \left( (E + P) \boldsymbol{u} \right) = -\rho \boldsymbol{u} \cdot \nabla \phi + \Lambda(\rho, \varepsilon).
+     \Heat=\sum_i \Heat_i n_i,
 
-Here, :math:`t` is time, :math:`E = \frac{1}{2}\rho u^2 + e` is the gas
-total energy, :math:`e` is the internal energy, :math:`P` is pressure, :math:`\boldsymbol{u}` is the
-gas bulk velocity, :math:`\phi` is the gravitational potential, and
-:math:`\Lambda` is the net cooling term. The pressure is related to the
-internal energy through :math:`P = (\gamma -1)e`, where :math:`\gamma`
-is the ratio of specific heats.
+where the sum is over the primordial ion species, and :math:`\Heat_i`
+are photoheating rates for the individual species (:math:`\nhi`,
+:math:`\nhei`, :math:`\nheii`, and *e*).
 
-RAMSES uses **operator splitting** to solve the Euler equations in
+**The metal-cooling-contributions table:**
+
+RAMSES keeps a hard-coded table of a precomputed metal-cooling rate
+contribution, :math:`\Cool_{Z}^{CIE}(T)`, which is the difference
+between zero metallicity and solar metallicity cooling rates calculated
+assuming collisional ionization equilibrium (CIE, i.e. chemical
+equilibrium in zero ionizing radiation), with the CLOUDY software
+package (Ferland et al., 1998). That is,
+
+.. math::
+
+     \Cool_{Z}^{CIE}(T) \; = \; \Cool_{Z}^{Cloudy}(T, \, Z=Z_{\odot}, \,  UV=0)
+     \; - \; \Cool_{Z}^{Cloudy}(T, \, Z=0, \, UV=0).
+
+These rates are computed for a photoionization-free environment so they
+don’t depend on gas density. Using this, the photoionization equilibrium
+(PIE) metal-cooling rates are approximated and tabulated as
+
+.. math::
+
+     \CoolZ(\Tmu,\nh) \; = \; \Cool_{Z}^{CIE}(T)
+     \; \times \; f(T, \, \nh, \, z),
+
+where :math:`f` is a dimensionless analytic function that corrects for
+density :math:`\nh` and UV background photoionization at redshift
+:math:`z`.
+
+**Implementation:** 
+For the default cooling model, the implementation of these computations is all in ``hydro/cooling_module.f90``, 
+with the following structure. 
+
+.. code:: fortran
+
+   subroutine set_table(aexp)
+      ... ! define boundaries of tables in terms of nH and T
+      call cmp_table(nH_min,nH_max,T2_min,T2_max,nbin_n,nbin_T,aexp) ! compute the tables. 
+   end subroutine set_table
+
+   subroutine cmp_table(nH_min,nH_max,T2_min,T2_max,nbin_n,nbin_T,aexp)
+      ! Compute radiative ionization and heating rates
+      call set_rates(t_rad_spec,h_rad_spec,aexp)
+      ! Create the table
+      do i_n = myid,nbin_n,ncpu
+         call iterate(i_n,t_rad_spec,h_rad_spec,nbin_T,aexp) ! compute cooling/heating for a range of temperatures
+      end do
+   end subroutine cmp_table
+
+   subroutine iterate(i_n,t_rad_spec,h_rad_spec,nbin_T,aexp)
+      nH = ... ! define value of nH from i_n
+      do i_T = 1,nbin_T
+         ! Compute cooling, heating and mean molecular weight
+         T2=10d0**table%T2(i_T)      ! define the temperature of current bin
+         call cmp_cooling(T2,nH ...) ! compute equilibrium cooling solution
+         ...
+         ! Compute cooling and heating derivatives
+         T2_eps=10d0**(table%T2(i_T)+0.01d0)  ! define slightly larger temperature ("slightly = 0.01")
+         call cmp_cooling(T2_eps,nH, ...)
+         table%cool_prime(i_n,i_T)=(log10(cool_tot_eps)-log10(cool_tot))/0.01d0   ! evaluate the derivative and store in _prime tables.
+         ...
+         ! Compute metal contribution for solar metallicity
+         call cmp_metals(T2,nH,mu,metal_tot,metal_prime,aexp) 
+         ...
+      end do
+   
+   end subroutine iterate
+
+   subroutine cmp_cooling(T2,nH,t_rad_spec,h_rad_spec,cool_tot,heat_tot,cool_com,heat_com,mu_out,aexp,n_spec)
+
+      ! Iteration to find mu (rates depend on T, but we only know T/mu)
+      do while (error is too large)
+         T = ... ! get T from T/mu and a guessed value of mu
+         call cmp_chem_eq(T,nH,t_rad_spec,n_spec,n_TOT,mu)   ! get equilibrium solution at fixed T, including mu. 
+         ...
+      end do
+
+      ! Get equilibrium abundances
+      n_E     = n_spec(1) ! electrons
+      n_HI    = n_spec(2) ! H
+      n_HII   = n_spec(3) ! H+
+      ...
+      ! Bremstrahlung
+      cb1 = cool_bre(HI  ,T)*n_E*n_HII  /nH**2
+      ...
+      ! Ionization cooling
+      ci1 = cool_ion(HI  ,T)*n_E*n_HI   /nH**2
+      ... etc ... 
+
+   end subroutine cmp_cooling
+
+
+Operator-splitting and temperature update 
+~~~~~~~~~~~~~~~~
+
+For all cooling models, RAMSES uses **operator splitting** to solve the Euler equations in two
 steps. In a first step, gravity is computed, and the gas is advected,
 basically solving the Euler equations with :math:`\Lambda = 0`. In a
 second **thermo-chemistry** step, the heating and cooling terms are
 computed, and the internal energy is updated with :math:`\dot{e} = \Lambda`. 
-This strategy is shown in the code  snippet below is from the main code loop ``amr_step``. 
+This strategy is shown in the code  snippet below taken from the main code loop ``amr_step``. 
 RAMSES first computes the hydrodynamics and updates ``uold`` with a call to ``godunov_fine``. 
-Then, RAMSES computes cooling on the updated state ``uold``.  
+Then, RAMSES computes cooling on the updated state ``uold`` with a call to ``cooling_fine`` (more details below).  
 
 .. code:: fortran
 
-   ! Hydro step: solve hydro and add source terms
-   if((hydro).and.(.not.static_gas))then 
-      call godunov_fine(ilevel)
+   subroutine amr_step
       ...
-   endif
+      call godunov_fine ! do the hydro and update uold.
+      ...
+      call cooling_fine ! do the cooling and update uold. 
+      ...
+   end subroutine amr_step
 
-   ...
-   
-   ! Do RT/Chemistry step -> works on uold
-   if(hydro) then
-      if(neq_chem.or.cooling.or. ... )call cooling_fine(ilevel)
-   endif
-   
+
 The thermo-chemistry involves the interaction of radiation and matter, 
 and the implementation differs if the code is used in radiation-hydrodynamics (RHD) 
-mode or in hydro (HD) mode, as can be seen in the snippet above. With RHD, the 
+mode or in hydro (HD) mode illustrated above. With RHD, the 
 radiation is transfered accross the grid and the thermo-chemistry is computed on the fly. 
-In the HD case, the thermo-chemistry is computed assuming the ionisation equilibrium
-(possibly in the presence of a uniform UV background).
 
 In the general case, RAMSES implements a **semi-implicit scheme to evolve the temperature**
 due to cooling during a timestep. 
@@ -165,92 +355,8 @@ and :math:`\Tmu` and
 :math:`\CHp \equiv \frac{\partial \Lambda}{\partial \Tmu}` can be
 estimated by finite-differencing the rate tables.
 
-There are a number of different cooling/heating implementations in RAMSES, 
-which make different approximations for :math:`\CH`:
-
-* equilibrium cooling with a UVB, using RAMSES (default).
-* equilibrium cooling with a UVB, using Grackle. 
-* ISM cooling (with or without RHD).
-* non-equilibrium cooling without RHD. 
-* non-equilibrium cooling with RHD.
-
-In what follows, we'll go step by step through the default implementation (HD 
-with equilibrium cooling), and through the non-equilibrium implementation (still for HD).
-
-.. admonition:: Further reading
-
-   Note that more information on cooling and heating in RAMSES can be found in `Rosdahl’s PhD
-   thesis <https://theses.fr/2012LYO10075>`__, or in the `RAMSES-RT
-   paper <https://ui.adsabs.harvard.edu/abs/2013MNRAS.436.2188R/abstract>`__.
-   A classical paper on the topic is `Katz, Weinberg, & Hernquist
-   (1996) <https://ui.adsabs.harvard.edu/abs/1996ApJS..105...19K/abstract>`__.
 
 
-Step by step *default cooling model*
--------------------------------------
-
-General strategy 
-~~~~~~~~~~~~~~~~
-
-Cooling and heating rates of the gas are functions of temperature,
-density, redshift (via redshift-dependent UV background and CMB
-radiation), metallicity, and the abundances of each primordial ion
-species, :math:`\nhi`, :math:`\nhii`, :math:`\nhei`, :math:`\nheii`,
-:math:`\nheii`, and :math:`\nel`. However, the default cooling module
-assumes photoionization equilibrium (PIE), such that the primordial ion
-abundances are direct functions of temperature, density, and redshift,
-calculated with a simple iterative process that involves equating the
-rates of photo-ionization, collisional ionization and recombination
-(this is done in the ``cmp_chem_eq`` routine in
-``hydro/cooling_module.f90``). The cooling and heating rates in the
-equilibrium thermochemistry are then reduced to being functions only of
-temperature, density, redshift and metallicity, so that the cooling 
-function becomes :math:`\Lambda \simeq \Lambda(T,n_H, Z, z)`. The default 
-cooling method simplifies things further by assuming a linear dependence 
-with metallicity so that the cooling function becomes 
-:math:`\CH = (\Heat + \Cool + Z/\Zsun \, \CoolZ)\, \nh^2`, where
-
-* :math:`\Heat(\Tmu,\nh)` is the heating rate from the UV background at the current redshift. 
-* :math:`\Cool(\Tmu,\nh)` is the primordial cooling rate, i.e. the cooling rate of a mixture of H and He (and electrons) of primordial composition. 
-* :math:`\CoolZ(\Tmu,\nh)` is the cooling rate due to metals at solar metallicity. 
-
-
-These rates are pre-computed and stored in tables every coarse time-step
-for a range of :math:`(\Tmu,\nh)`-bins, where :math:`\nh=X\rho/m_H` is
-hydrogen number density and :math:`X` is the hydrogen mass fraction in
-the gas (a global constant, typically set to the value of :math:`0.76`).
-The reason for pre-computing and storing in tables is that these cooling
-and heating rates are numerically expensive to calculate on-the-fly
-(exponents, powers), and table interpolation is much faster. These tables 
-are recomputed every coarse time-step to follow the redshift evolution of
-the assumed UV background.
-
-Using :math:`\Tmu` and :math:`\nh` as look-up indexes, the following
-rates, all given in [:math:`\coolU`], are fetched on-the-fly from the
-precomputed tables: 
-
-* Heating rate :math:`\Heat(\Tmu,\nh)`: The heating contribution of the UV background at the current redshift. 
-* Primordial cooling rate :math:`\Cool(\Tmu,\nh)`, i.e. cooling rate of a mixture of H and He (and electrons) of primordial composition. 
-* Metal cooling rate contribution :math:`\CoolZ(\Tmu,\nh)`, containing the per-solar-metallicity cooling contribution of metals in the gas.
-
-
-Initialisations
-~~~~~~~~~~~~~~~~
-
-Some models require initialisations, and these are done in ``init_time``
-(in ``amr/init_time.f90``) which is called at the beginning of a
-simulation. For the default cooling model, this involves a call to
-``set_model`` in ``hydro/cooling_module.f90``. The ``set_model`` routine
-does two things: a) it initialises UV background parameters, and b), for
-cosmological simulations, it computes the (homogeneous) temperature of
-the Universe at the starting redshift of the simulation (typically read
-from the cosmological initial conditions, but possible to override with
-the aexp_ini namelist parameter).
-
-Furthermore, there is a call in ``adaptive_loop``, before entering the
-main time-evolution loop of RAMSES, to ``set_table()`` in the default
-``hydro/cooling_module.f90``. This is a first computation of the cooling
-and heating rates tables (see below).
 
 The thermochemistry is called in amr_step with a call to
 ``cooling_fine`` (in ``hydro/cooling_fine.f90)``, after the gravity
@@ -258,214 +364,162 @@ source term and hydro advection. This evolves the temperature of all
 cells at the given level, over the current hydrodynamical timestep
 length, :math:`\dthyd`.
 
+
+Details of the ``cooling_fine`` subroutine.
+~~~~~~~~~~~~~~~~~~~
+
 In ``cooling_fine()``, cells at the given level are collected into
 vectors of size ``NVECTOR`` and then each vector of cells is processed
-in ``coolfine1()``. Basically, this routine collects the density,
-temperature, and metallity for the cells, in CGS units, and then calls
+in ``coolfine1()``. This is a generic operation which is useful for 
+vectorisation efficiency, and we illustrate it in the snippet below. 
+Notice that at the end of ``cooling_fine``, we again call ``set_table`` 
+if we're at a coarse level (``ilevel==levelmin``) to prepare the next timestep.  
+
+.. code:: fortran
+
+   subroutine cooling_fine(ilevel)
+
+      ...
+      
+      ! Operator splitting step for cooling source term
+      ! by vector sweeps 
+      ncache=active(ilevel)%ngrid
+      do igrid=1,ncache,nvector
+         ngrid=MIN(nvector,ncache-igrid+1)
+         do i=1,ngrid
+            ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
+         end do
+         call coolfine1(ind_grid,ngrid,ilevel)
+      end do
+
+      if((cooling.and..not.neq_chem.and..not.cooling_ism).and.ilevel==levelmin.and.cosmo)then
+         call set_table(dble(aexp))
+      endif
+
+   end subroutine cooling_fine
+
+
+The ``coolfine1`` subroutine basically collects the density,
+temperature, and metallity for a batch of cells, in CGS units, and then calls
 ``solve_cooling()`` for those cells, which returns the (positive or
 negative) change in the temperature, in Kelvin, over :math:`\dthyd`.
 This is then converted back a change in internal energy densities, in
 code units, and then ``uold`` is updated accordingly for each of the
 cells.
 
-``solve_cooling`` in ``hydro/cooling_module.f90`` is really the heart of
+``coolfine1`` follows these steps in order:
+
+   1. **Unit conversion** — calls ``units()`` to obtain scale factors
+      from code units to CGS.
+
+   2. **loop over cells from ind_grid list**
+   
+      2.1. **Select leaf cells** — only cells with no children (``son == 0``)
+      are processed. An index array ``ind_leaf`` is built; the routine
+      returns immediately if ``nleaf == 0``.
+
+      2.2. **Extract physical quantities** — reads ``nH``, metallicity
+      ``Zsolar``, and total energy from ``uold``, using one loop per
+      quantity.
+
+      .. warning::
+
+         Do **not** combine multiple field extractions into a single
+         loop:
+
+         .. code-block:: fortran
+
+            ! BAD: hurts vectorisation
+            do i = 1, nleaf
+               nH(i)     = MAX(uold(ind_leaf(i), 1), smallr)
+               T2(i)     = uold(ind_leaf(i), neul)
+               Zsolar(i) = uold(ind_leaf(i), imetal) / nH(i) / 0.02d0
+            end do
+
+         Use a separate loop for each quantity so the compiler can
+         vectorise the inner loop efficiently.
+
+      2.3. **Compute thermal energy** — subtracts kinetic energy, radiation
+      energy (if ``NENER > 0``), and magnetic energy from the total to
+      isolate the thermal part. Converts to :math:`\Tmu` in Kelvin via
+      ``scale_T2``.
+
+      2.4. **Self-shielding** — if ``self_shielding`` is enabled, the UV
+      background factor is attenuated exponentially at high densities with a boost factor:
+
+      .. math::
+
+         \mathrm{boost}(i)
+         = \max\!\left(
+             \exp\!\left(-\frac{\nh}{0.01\,\mathrm{cm}^{-3}}\right),
+             10^{-20}
+           \right).
+
+      This is a simple "poor man's" model: dense gas that would be
+      self-shielded sees a suppressed UVB. Note that since cooling/heating tables 
+      are already computed as a function of :math:`\Tmu` and :math:`n_H`, the boost
+      is in fact applied to density. This is a good approximation, as the dependence
+      of cooling and heating on the radiation intensity is really through a term :math:`\Gamma/n_H`, 
+      so decreasing :math:`\Gamma` or increasing :math:`n_H` by the same factor has the same effect.
+
+      2.5. **Polytrope and temperature floor** — A minimum thermal energy is in general included. This 
+      may be because ``barotropic_eos`` is true, or because ``jeans_ncells>0``, 
+      or because ``T2_star >0``. This energy is expressed as a temperature floor (``T2min``), 
+      and needs to be computed and subtracted from the thermal energy before computing cooling.
+      It is then inserted back in step 2.8. below.
+
+      2.6. **Cooling integration** — calls ``solve_cooling``, which returns
+      ``delta_T2``, the change in :math:`\Tmu` over the hydro timestep.
+
+      2.7. **Delayed cooling** — if ``delayed_cooling`` is active, cooling
+      is suppressed in blast-wave regions. When the delay tracer scalar
+      (``idelay``) exceeds a threshold, ``delta_T2`` is clamped to zero
+      (no cooling applied).
+
+      2.8. **Energy update** — adds the polytrope floor energy back, as well as other energy terms (kinetic etc.) and
+       writes the updated total energy to ``uold``:
+
+       .. code-block:: fortran
+
+          uold(...) = T2(i) + T2min(i) + ekk(i) + err(i) + emag(i)
+
+
+The call to ``solve_cooling`` (in ``hydro/cooling_module.f90``) is really the heart of
 the thermochemistry. Here the temperature-change of every cell in the
 vector is evolved, sub-cycling if needed with timestep lengths
-:math:`\dtcool\propto\frac{T}{\Lambda}`.
+:math:`\dtcool\propto\frac{T}{\Lambda}`. Within each
+sub-step:
+
+   1. Obtain :math:`\CH` and :math:`\CHp` by bilinear interpolation in
+      the pre-computed 2D tables at the current :math:`(\Tmu, \nh)`.
+   2. Compute the sub-step size :math:`\delta t` from the local cooling
+      time :math:`\dtcool(\Tmu)`.
+   3. Apply the semi-implicit update:
+
+      .. math::
+
+         \Tmu^{t+\delta t}
+         = \Tmu^{t} + \frac{\CH K \delta t}{1 - \CHp K \delta t}.
+
+   4. Advance the cell clock: :math:`t_{\mathrm{cell}} \leftarrow t_{\mathrm{cell}} + \delta t`.
+      When :math:`t_{\mathrm{cell}} \geq \dthyd`, the cell is finished.
+
+   At the end, return
+   :math:`\Delta\Tmu = \Tmu^{\mathrm{final}} - \Tmu^{\mathrm{init}}`.
 
 
-How to evolve the photo-ionization equilibrium temperature of a single cell
----------------------------------------------------------------------------
-
-We take a cell of gas with a given internal energy density :math:`\eps`,
-mass density :math:`\rho` and metallicity :math:`Z`, and we want to
-update the cell energy over a time-step :math:`\Delta t`. :math:`Z` and
-:math:`\rho` are updated elsewhere (during the advection step) and can
-be taken as constants during the thermochemistry step. First, we convert
-the internal energy to a temperature. The temperature of the cell is
-given by
-
-.. math::
 
 
-     T = e \ \frac{(\gamma-1) m_H}{\rho \kb} \ \mu ,
-
-where :math:`\gamma` is the ratio of specific heats (usually given the
-value of :math:`5/3` in RAMSES, corresponding to monatomic gas),
-:math:`m_H` the proton mass, :math:`\kb` the Boltzmann constant and
-:math:`\mu` is the average mass per particle in the gas, in units of
-:math:`m_H`. Since the ion species are not stored when using the default
-cooling, :math:`\mu` is not readily available. Thus, the quantity that
-is really evolved is
-
-.. math::
 
 
-   \Tmu \equiv \frac{T}{\mu},
-
-which can be directly extracted from the variables stored in the cell.
-We start at time :math:`t` with temperature :math:`\Tmu^{t}` and wish to
-evolve it to :math:`\Tmu^{t+\Delta t}`, where the superscript is for
-denoting *when* :math:`\Tmu` is evaluated.
-
-Cooling and heating rates of the gas are functions of temperature,
-density, redshift (via redshift-dependent UV background and CMB
-radiation), metallicity, and the abundances of each primordial ion
-species, :math:`\nhi`, :math:`\nhii`, :math:`\nhei`, :math:`\nheii`,
-:math:`\nheii`, and :math:`\nel`. However, the default cooling module
-assumes photoionization equilibrium (PIE), such that the primordial ion
-abundances are direct functions of temperature, density, and redshift,
-calculated with a simple iterative process that involves equating the
-rates of photo-ionization, collisional ionization and recombination
-(this is done in the ``cmp_chem_eq`` routine in
-``hydro/cooling_module.f90``). The cooling and heating rates in the
-equilibrium thermochemistry are then reduced to being functions only of
-temperature, density, redshift and metallicity.
-
-These rates are pre-computed and stored in tables every coarse time-step
-for a range of :math:`(\Tmu,\nh)`-bins, where :math:`\nh=X\rho/m_H` is
-hydrogen number density and :math:`X` is the hydrogen mass fraction in
-the gas (a global constant, typically set to the value of :math:`0.76`).
-The reason for pre-computing and storing in tables is that these cooling
-and heating rates are numerically expensive to calculate on-the-fly
-(exponents, powers), and table interpolation is much faster. A
-redshift-dependent UV background of ionizing radiation is assumed, but
-since it is homogeneous, i.e. exactly the same in every cell, it
-suffices to recompute the cooling tables every coarse time-step, as the
-redshift changes. Hence, the main operation in the ``solve_cooling``
-routine is linear interpolation of tables that store logarithms of
-cooling and heating rates.
-
-Using :math:`\Tmu` and :math:`\nh` as look-up indexes, the following
-rates, all given in [:math:`\coolU`], are fetched on-the-fly from the
-precomputed tables: - Heating rate :math:`\Heat(\Tmu,\nh)`: The heating
-contribution of the UV background at the current redshift. - Primordial
-cooling rate :math:`\Cool(\Tmu,\nh)`, i.e. cooling rate of a mixture of
-H and He (and electrons) of primordial composition. - Metal cooling rate
-contribution :math:`\CoolZ(\Tmu,\nh)`, containing the
-per-solar-metallicity cooling contribution of metals in the gas.
-
-With these three rates in hand the temperature is updated by solving:
-
-.. math::
 
 
-     \frac{\partial \Tmu}{\partial t} =
-     \frac{(\gamma-1) \mh}{\rho \kb} \ \CH,
-
-where
-:math:`\CH\equiv\dot{e}=(\Heat + \Cool + Z/\Zsun \, \CoolZ)\, \nh^2`.
-The update is done with a semi-implicit Euler formulation (See Press et
-al., 1992):
-
-.. math::
 
 
-   \Tmu^{t+\dt}= \Tmu^{t} + \frac{\CH K \dt}{1-\CHp K \dt},
-
-where :math:`K=\eTconv` is the conversion factor between :math:`\eps`
-and :math:`\Tmu` and
-:math:`\CHp \equiv \frac{\partial \Lambda}{\partial \Tmu}` can be
-estimated by finite-differencing the rate tables.
-
-So the integration of :math:`\Tmu` over the time-step is quick and
-painless, and basically just involves interpolations of the rate-tables
-to retrieve :math:`\Cool`, :math:`\Heat` and :math:`\CoolZ` for the
-given temperature and density. The expensive calculations happen between
-the time-steps, where the rate tables are updated, the advantage being
-they are done a lot less frequently than if they were done on-the-fly
-for every cell.
-
-Filling in the rate tables
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-First photoionization rates :math:`\Gamma_i \; [\sm]` and photoheating
-rates :math:`\Heat_i \; [\ergs]` are calculated for HI, HeI, HeII and
-*e* (Compton heating in the case of electrons). These rates depend
-*only* on the UV background, so they are homogeneous functions of
-redshift, i.e. apply to every cell.
-
-The abundances table:
-^^^^^^^^^^^^^^^^^^^^^
-
-Then, since PIE is assumed, calculation and tabulation is performed per
-(:math:`\Tmu, \nh`)-bin of the abundances :math:`n_i`, of each of the 6
-primordial species (*e*, HI, HII, HeI, HeII, HeIII). Here rates are used
-for all the possible interactions involving these species - these are
-functions of :math:`\Gamma_i`, :math:`T` and :math:`n_i`, and amount to
-a closed set of equations that are converged iteratively to an
-equilibrium solution, such that the creation rate equals the destruction
-rate for each species. The species abundances also give the value of
-:math:`\mu` per (:math:`\Tmu, \nh`)-bin, which can be retrieved by
-
-.. math::
-
-     \mu = \left[\, X(1+\xhii) + Y/4 (1+\xheii+2\xheiii) \, \right]^{-1},
-
-where :math:`Y=1-X` is the helium mass fraction,
-:math:`\xhii \equiv \nhii/\nh`, :math:`\xheii \equiv \nheii/\nhe` and
-:math:`\xheiii \equiv \nheiii/\nhe`. The tabulation of the abundances
-also provides a direct mapping between :math:`\Tmu` and :math:`T` which
-is useful in generating the rest of the tables.
-
-Note that these tables are written to each ramses output directory,
-allowing the user to easily extract the equilibrium ionisation fractions
-and :math:`\mu` in postprocessing (by performing the same kind of
-interpolation for every cell as is done in RAMSES).
-
-The cooling rates table:
-^^^^^^^^^^^^^^^^^^^^^^^^
-
-Given the abundances, it is then a straightforward matter to calculate
-and tabulate :math:`\Cool(\Tmu,\nh)` – the cooling rate is a sum of
-bremsstrahlung-, collisional excitation-, collisional ionization-,
-recombination-, dielectric recombination- and Compton- cooling rates,
-all fitted analytic functions of temperature and abundances, and fetched
-from various sources in the literature (e.g. Cen, 1992).
-
-The heating rates table:
-^^^^^^^^^^^^^^^^^^^^^^^^
-
-It is also straightforward to tabulate :math:`\Heat(\Tmu,\nh)`. Each bin
-contains
-
-.. math::
 
 
-     \Heat=\sum_i \Heat_i n_i,
+------------
 
-where the sum is over the primordial ion species, and :math:`\Heat_i`
-are photoheating rates for the individual species (:math:`\nhi`,
-:math:`\nhei`, :math:`\nheii`, and *e*).
-
-The metal-cooling-contributions table:
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-RAMSES keeps a hard-coded table of a precomputed metal-cooling rate
-contribution, :math:`\Cool_{Z}^{CIE}(T)`, which is the difference
-between zero metallicity and solar metallicity cooling rates calculated
-assuming collisional ionization equilibrium (CIE, i.e. chemical
-equilibrium in zero ionizing radiation), with the CLOUDY software
-package (Ferland et al., 1998). That is,
-
-.. math::
-
-
-     \Cool_{Z}^{CIE}(T) \; = \; \Cool_{Z}^{Cloudy}(T, \, Z=Z_{\odot}, \,  UV=0)
-     \; - \; \Cool_{Z}^{Cloudy}(T, \, Z=0, \, UV=0).
-
-These rates are computed for a photoionization-free environment so they
-don’t depend on gas density. Using this, the photoionization equilibrium
-(PIE) metal-cooling rates are approximated and tabulated as
-
-.. math::
-
-     \CoolZ(\Tmu,\nh) \; = \; \Cool_{Z}^{CIE}(T)
-     \; \times \; f(T, \, \nh, \, z),
-
-where :math:`f` is a dimensionless analytic function that corrects for
-density :math:`\nh` and UV background photoionization at redshift
-:math:`z`.
 
 Non-equilibrium cooling
 -----------------------
@@ -536,4 +590,3 @@ Exercise: figure out how it works.
    :::
 
    -->
-
