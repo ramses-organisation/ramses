@@ -470,7 +470,8 @@ subroutine read_output_params(namelist_unit,nml_ok)
 
    ! Parameters to specify when to write an output
    namelist/output_params/noutput,foutput,aout,tout &
-   & ,tend,delta_tout,aend,delta_aout,gadget_output,walltime_hrs,minutes_dump,output_to_log
+   & ,tend,delta_tout,aend,delta_aout,gadget_output,walltime_hrs,minutes_dump &
+   & ,output_to_log,write_conservative,read_conservative
 
    ! Go to the beginning of the file
    rewind(namelist_unit)
@@ -642,7 +643,8 @@ subroutine read_poisson_params(namelist_unit,nml_ok)
    integer::nml_err
 
    namelist/poisson_params/epsilon,gravity_type,gravity_params &
-   & ,cg_levelmin,cic_levelmax
+   & ,cg_levelmin,cic_levelmax,self_gravity,gravity_rho_ana_type,gravity_force_ana_type &
+   & ,gravity_rho_ana_params,gravity_force_ana_params
 
    ! Go to the beginning of the file
    rewind(namelist_unit)
@@ -652,6 +654,28 @@ subroutine read_poisson_params(namelist_unit,nml_ok)
 
    if(nml_err>0)then
       if(myid==1)write(*,*)'Error reading namelist &POISSON_PARAMS. Check formatting.'
+      nml_ok=.false.
+   endif
+
+   ! check for deprecated gravity_type parameter and apply old behaviour if needed
+   if(gravity_type.ne.0)then
+      if(myid==1)write(*,*)'Warning: gravity_type is now deprecated. Please use self_gravity, gravity_rho_ana_type and gravity_force_ana_type instead.'
+      if(gravity_type<0)then
+         self_gravity=.true.
+         gravity_rho_ana_type=-gravity_type
+         gravity_force_ana_type=0
+         gravity_rho_ana_params=gravity_params
+      else if(gravity_type>0)then
+         self_gravity=.false.
+         gravity_rho_ana_type=0
+         gravity_force_ana_type=gravity_type
+         gravity_force_ana_params=gravity_params
+      endif
+   endif
+
+   ! Currently you cannot have both, since then it is unclear what to do with the gravity_params input array
+   if(gravity_rho_ana_type>0.and.gravity_force_ana_type>0)then
+      if(myid==1)write(*,*)'Error: you cannot have both gravity_rho_ana_type and gravity_force_ana_type > 0 at the same time.'
       nml_ok=.false.
    endif
 

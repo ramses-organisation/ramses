@@ -15,7 +15,6 @@ subroutine init_hydro
   integer ,dimension(:),allocatable::ind_grid
   real(dp),dimension(:),allocatable::xx
   real(dp)::gamma2
-  real(dp)::d
   character(LEN=80)::fileloc
   character(LEN=5)::nchar,ncharcpu
   integer,parameter::tag=1108
@@ -152,74 +151,54 @@ subroutine init_hydro
                  iskip=ncoarse+(ind-1)*ngridmax
 
                  ! Loop over conservative variables
-                 ! Read density and velocities --> density and momenta
-                 do ivar=1,neul-1
+                 ! Read density (no conversion needed)
+                 read(ilun)xx
+                 call scatter_conservative_to_uold(ind_grid, iskip, 1, xx, ncache)
+                 ! Read velocities --> momenta
+                 do ivar=2,neul-1
                     read(ilun)xx
-                    if(ivar==1)then ! Read density
-                       do i=1,ncache
-                          uold(ind_grid(i)+iskip,1)=xx(i)
-                       end do
-                    else  ! Read velocity field
-                       do i=1,ncache
-                          uold(ind_grid(i)+iskip,ivar)=xx(i)*max(uold(ind_grid(i)+iskip,1),smallr)
-                       end do
-                    end if
+                    if (read_conservative) then
+                       call scatter_conservative_to_uold(ind_grid, iskip, ivar, xx, ncache)
+                    else
+                       call scatter_primitive_to_uold(ind_grid, iskip, ivar, xx, ncache)
+                    endif
                  end do
 #ifdef SOLVERmhd
-                 do ivar=6,8 ! Read left B field
+                 ! Read left magnetic field (no conversion needed)
+                 do ivar=6,8
                     read(ilun)xx
-                    do i=1,ncache
-                       uold(ind_grid(i)+iskip,ivar)=xx(i)
-                    end do
+                    call scatter_conservative_to_uold(ind_grid, iskip, ivar, xx, ncache)
                  end do
-                 do ivar=nvar+1,nvar+3 ! Read right B field
+                 ! Read right magnetic field (no conversion needed)
+                 do ivar=nvar+1,nvar+3
                     read(ilun)xx
-                    do i=1,ncache
-                       uold(ind_grid(i)+iskip,ivar)=xx(i)
-                    end do
+                    call scatter_conservative_to_uold(ind_grid, iskip, ivar, xx, ncache)
                  end do
 #endif
 #if NENER>0
                  ! Read non-thermal pressures --> non-thermal energies
                  do ivar=nhydro+1,nhydro+nener
                     if(remap_pscalar(ivar-nhydro).gt.-1) read(ilun)xx
-                    do i=1,ncache
-                       if(remap_pscalar(ivar-nhydro).gt.0) then
-                          uold(ind_grid(i)+iskip,remap_pscalar(ivar-nhydro))=xx(i)/(gamma_rad(ivar-nhydro)-1d0)
-                       else if(remap_pscalar(ivar-nhydro).lt.0) then
-                          uold(ind_grid(i)+iskip,abs(remap_pscalar(ivar-nhydro)))=0d0
+                    if(remap_pscalar(ivar-nhydro).gt.0) then
+                       if (read_conservative) then
+                          call scatter_conservative_to_uold(ind_grid, iskip, remap_pscalar(ivar-nhydro), xx, ncache)
+                       else
+                          call scatter_primitive_to_uold(ind_grid, iskip, remap_pscalar(ivar-nhydro), xx, ncache)
                        endif
-                    end do
+                    else if(remap_pscalar(ivar-nhydro).lt.0) then
+                       do i=1,ncache
+                          uold(ind_grid(i)+iskip,abs(remap_pscalar(ivar-nhydro)))=0d0
+                       end do
+                    endif
                  end do
 #endif
                  ! Read thermal pressure --> total fluid energy
                  read(ilun)xx
-                 do i=1,ncache
-                    xx(i)=xx(i)/(gamma-1d0)
-                    if (uold(ind_grid(i)+iskip,1)>0.)then
-                    d=max(uold(ind_grid(i)+iskip,1),smallr)
-                    xx(i)=xx(i)+0.5d0*uold(ind_grid(i)+iskip,2)**2/d
-#if NDIM>1 || SOLVERmhd
-                    xx(i)=xx(i)+0.5d0*uold(ind_grid(i)+iskip,3)**2/d
-#endif
-#if NDIM>2 || SOLVERmhd
-                    xx(i)=xx(i)+0.5d0*uold(ind_grid(i)+iskip,4)**2/d
-#endif
-#ifdef SOLVERmhd
-                    xx(i)=xx(i)+0.125d0*(uold(ind_grid(i)+iskip,6)+uold(ind_grid(i)+iskip,nvar+1))**2
-                    xx(i)=xx(i)+0.125d0*(uold(ind_grid(i)+iskip,7)+uold(ind_grid(i)+iskip,nvar+2))**2
-                    xx(i)=xx(i)+0.125d0*(uold(ind_grid(i)+iskip,8)+uold(ind_grid(i)+iskip,nvar+3))**2
-#endif
-#if NENER>0
-                    do irad=1,nener
-                       xx(i)=xx(i)+uold(ind_grid(i)+iskip,nhydro+irad)
-                    end do
-#endif
-                    else
-                    xx(i)=0
-                    end if
-                    uold(ind_grid(i)+iskip,neul)=xx(i)
-                 end do
+                 if (read_conservative) then
+                    call scatter_conservative_to_uold(ind_grid, iskip, neul, xx, ncache)
+                 else
+                    call calc_total_energy_from_thermal_pressure(ind_grid, iskip, xx, ncache)
+                 endif
 #if NVAR>NHYDRO+NENER
                  ! Read passive scalars if any
                  do ivar=nhydro+1+nener,max(nvar2,nvar)
@@ -227,13 +206,17 @@ subroutine init_hydro
                     if(ivar.gt.nvar)then
                        continue
                     endif
-                    do i=1,ncache
-                       if(remap_pscalar(ivar-nhydro).gt.0)then
-                          uold(ind_grid(i)+iskip,remap_pscalar(ivar-nhydro))=xx(i)*max(uold(ind_grid(i)+iskip,1),smallr)
-                       else if(remap_pscalar(ivar-nhydro).lt.0) then
-                          uold(ind_grid(i)+iskip,abs(remap_pscalar(ivar-nhydro)))=0d0
+                    if(remap_pscalar(ivar-nhydro).gt.0)then
+                       if (read_conservative) then
+                          call scatter_conservative_to_uold(ind_grid, iskip, remap_pscalar(ivar-nhydro), xx, ncache)
+                       else
+                          call scatter_primitive_to_uold(ind_grid, iskip, remap_pscalar(ivar-nhydro), xx, ncache)
                        endif
-                    end do
+                    else if(remap_pscalar(ivar-nhydro).lt.0) then
+                       do i=1,ncache
+                          uold(ind_grid(i)+iskip,abs(remap_pscalar(ivar-nhydro)))=0d0
+                       end do
+                    endif
                  end do
 #endif
                  ! Read equilibrium density and pressure profiles
@@ -274,3 +257,115 @@ subroutine init_hydro
   end if
 
 end subroutine init_hydro
+!#####################################################################
+!#####################################################################
+!#####################################################################
+subroutine scatter_conservative_to_uold(ind_grid, iskip, ivar, xx, ncache)
+   use amr_parameters, only:dp
+   use hydro_commons
+   implicit none
+   integer,intent(in)::ivar,iskip,ncache
+   integer, dimension(1:ncache),intent(in)::ind_grid
+   real(dp), dimension(1:ncache),intent(in)::xx
+   !----------------------------------------------------------------------
+   ! Scatter a variable from the array xx directly into uold at index ivar
+   ! (e.g. density, B_left, B_right)
+   !----------------------------------------------------------------------
+   integer::i
+
+   do i = 1, ncache
+      uold(ind_grid(i)+iskip, ivar) = xx(i)
+   end do
+
+end subroutine scatter_conservative_to_uold
+!#####################################################################
+!#####################################################################
+!#####################################################################
+subroutine scatter_primitive_to_uold(ind_grid, iskip, ivar, xx, ncache)
+   use amr_parameters, only:dp
+   use hydro_commons
+   implicit none
+   integer,intent(in)::ivar,iskip,ncache
+   integer, dimension(1:ncache),intent(in)::ind_grid
+   real(dp), dimension(1:ncache),intent(in)::xx
+   !-----------------------------------------------------------------------
+   ! Scatter a primitive variable from the array xx into index ivar of uold
+   ! (which contains conservative quantities)
+   ! (e.g. velocity to momentum)
+   !-----------------------------------------------------------------------
+   integer::i
+
+   select case(ivar)
+
+#if NENER > 0
+   case(nhydro+1:nhydro+nener)
+      ! non-thermal pressures
+      do i = 1, ncache
+         uold(ind_grid(i)+iskip,ivar)=xx(i)/(gamma_rad(ivar-nhydro)-1d0)
+      end do
+#endif
+
+   case default
+      do i = 1, ncache
+         uold(ind_grid(i)+iskip,ivar)=xx(i)*max(uold(ind_grid(i)+iskip,1),smallr)
+      end do
+
+   end select
+
+end subroutine scatter_primitive_to_uold
+!#####################################################################
+!#####################################################################
+!#####################################################################
+subroutine calc_total_energy_from_thermal_pressure(ind_grid, iskip, pressure, ncache)
+   use amr_parameters, only:dp
+   use hydro_commons
+   implicit none
+   integer,intent(in)::iskip,ncache
+   integer, dimension(1:ncache),intent(in)::ind_grid
+   real(dp), dimension(1:ncache),intent(in)::pressure
+   !--------------------------------------------------------------------------------------
+   ! Calculate the total energy from the thermal and store it in uold(:,neul)
+   !--------------------------------------------------------------------------------------
+   integer::i
+#if NENER > 0
+   integer :: irad
+#endif
+   real(dp) :: d,energy
+#ifdef SOLVERmhd
+   real(dp) :: A, B, C
+#endif
+
+   do i=1,ncache
+      d = max(uold(ind_grid(i)+iskip,1),smallr)
+      ! convert thermal pressure to thermal energy
+      energy=pressure(i)/(gamma-1d0)
+      ! add kinetic energy
+      if (uold(ind_grid(i)+iskip,1)>0.)then
+         energy = energy + 0.5d0*uold(ind_grid(i)+iskip,2)**2/d
+#if NDIM>1 || SOLVERmhd
+         energy = energy + 0.5d0*uold(ind_grid(i)+iskip,3)**2/d
+#endif
+#if NDIM>2 || SOLVERmhd
+         energy = energy + 0.5d0*uold(ind_grid(i)+iskip,4)**2/d
+#endif
+#ifdef SOLVERmhd
+         ! add magnetic energy
+         A = 0.5d0*(uold(ind_grid(i)+iskip, 6)+uold(ind_grid(i)+iskip, nvar+1))
+         B = 0.5d0*(uold(ind_grid(i)+iskip, 7)+uold(ind_grid(i)+iskip, nvar+2))
+         C = 0.5d0*(uold(ind_grid(i)+iskip, 8)+uold(ind_grid(i)+iskip, nvar+3))
+         energy = energy + 0.5*(A**2+B**2+C**2)
+#endif
+#if NENER>0
+         ! add non-thermal energies
+         do irad=1,nener
+            energy = energy + uold(ind_grid(i)+iskip,nhydro+irad)
+         end do
+#endif
+      else
+          energy=0
+      end if
+      ! Store the total energy
+      uold(ind_grid(i)+iskip, neul) = energy
+   end do
+
+end subroutine calc_total_energy_from_thermal_pressure

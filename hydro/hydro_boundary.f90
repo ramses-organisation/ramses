@@ -185,7 +185,7 @@ subroutine make_boundary_hydro(ilevel)
               ! Only for highly subsonic flows
 !!$              ! Enforce hydrostatic equilibrium
 !!$              ! for constant gravity vector only
-!!$              if(poisson.and.gravity_type==1)then
+!!$              if(poisson.and.gravity_force_ana_type==1)then
 !!$                 ivar=ndim+2
 !!$                 do i=1,ngrid
 !!$                    uu(i,ivar)=uold(ind_cell_ref(i),ivar)
