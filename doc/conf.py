@@ -33,6 +33,7 @@ extensions = [
     "nbsphinx",
     "sphinx_copybutton",
     'sphinx_simplepdf',
+    "sphinx_togglebutton",
 ]
 
 # Enable myst extensions
