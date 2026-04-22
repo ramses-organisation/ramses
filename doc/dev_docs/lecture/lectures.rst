@@ -6,7 +6,7 @@ This section of the documentation discusses the structure of the code and the im
 This documentation is written in the style of lectures adressing
 specified topics and includes exercises. Its first version was
 written in 2025 for the first RAMSES developer school organised by the
-`RAMSES SNO <https://ramses.cnrs.fr>`__ (see credits below). 
+`RAMSES SNO <https://ramses.cnrs.fr>`__ (see credits below).
 
 
 
@@ -45,7 +45,7 @@ Credits
 
 The general organization and conception of the first RAMSES Developer
 School was done by: J. Blaizot (Coord.), N. Brucy, C. Cadiou, T. Colman, B. Commerçon, M. Farcy, M. Gonzalez
-Rey, J. Rosdahl, J. Sorce, M. Trebitsch. The lecture notes were written by 
+Rey, J. Rosdahl, J. Sorce, M. Trebitsch. The lecture notes were written by
 **J. Blaizot** (How to use Git, Radiative cooling and
 heating, subgrid modelling utilities), **N. Brucy** (Refinement schemes and
 implementation), **C. Cadiou** (MPI communications), **T. Colman** (overview of the code, hydrodynamics,
