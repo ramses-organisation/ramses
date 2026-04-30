@@ -5,7 +5,7 @@ hydro=.true.
 poisson=.true.
 nrestart=0
 ncontrol=10
-nremap=2
+nremap=10
 nsubcycle=2*1,35*2
 verbose=.false.
 /
