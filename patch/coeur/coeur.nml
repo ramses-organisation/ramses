@@ -39,6 +39,8 @@ barotropic_eos_form='double_polytrope'
 T_eos=4.29
 polytrope_index=2
 polytrope_rho=1.660539d-14 ! g/cm3 = 1d10 H/cc
+X=1d0
+Y=0d0
 /
 
 &UNIT_PARAMS
