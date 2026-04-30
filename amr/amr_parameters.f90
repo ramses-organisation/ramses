@@ -110,6 +110,9 @@ module amr_parameters
   integer::foutput=1000000       ! Frequency of outputs
   logical::gadget_output=.false. ! Output in gadget format
   logical::output_now=.false.    ! write output next step
+  logical::exact_output_time=.false. ! enforce outputs at exact requested times
+  real(dp),parameter::eps_a=1d-10 ! Small tolerance to account for floating-point errors when comparing aexp to aout
+  real(dp),parameter::eps_t=1d-10 ! Small tolerance to account for floating-point errors when comparing t to tout
   real(dp)::walltime_hrs=-1      ! Wallclock time for submitted job
   real(dp)::minutes_dump=1       ! Dump an output minutes before walltime ends
   logical::finish_run=.false.! trigger cleanup after walltime end dump
