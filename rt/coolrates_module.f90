@@ -269,7 +269,7 @@ SUBROUTINE comp_table_rates(iT, aexp)
   ! Gas phase formation rate rate for H2 on H- [cm3 s-1] assuming---------
   ! equilibrium abundances for H-, as explained in the Appendix of
   ! McKee and Krumholz (2012)
-  tbl_alphaGP_H2%rates(iT)  = 8.0d-19*(T/1000.0)**0.88
+  tbl_alphaGP_H2%rates(iT)  = 1.83d-18*T**0.88
   tbl_alphaGP_H2%primes(iT) = 0.88                                       &
                             * log(10d0) * tbl_alphaGP_H2%rates(iT)
   ! Case A rec. coefficient [cm3 s-1] for HII (Hui&Gnedin'97)-------------
