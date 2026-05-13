@@ -1,6 +1,7 @@
 subroutine read_hydro_params(nml_ok)
   use amr_commons
   use hydro_commons
+  use cooling_module, only:X,Y
   use mpi_mod
   implicit none
   logical::nml_ok
@@ -84,12 +85,13 @@ subroutine read_hydro_params(nml_ok)
   namelist/cooling_params/cooling,metal,isothermal,haardt_madau,J21 &
        & ,barotropic_eos,barotropic_eos_form,polytrope_rho,polytrope_index,T_eos,mu_gas &
        & ,a_spec,self_shielding,z_ave,z_reion,ind_rsink,T2max,neq_chem &
-       & ,cooling_ism
+       & ,cooling_ism,X,Y
 
   ! Star formation parameters
   namelist/sf_params/m_star,n_star,T2_star,g_star,del_star &
        & ,eps_star,jeans_ncells,sf_virial,sf_trelax,sf_tdiss,sf_model&
-       & ,sf_log_properties,sf_imf,sf_compressive,randomize_sf
+       & ,sf_log_properties,sf_imf,sf_compressive,randomize_sf&
+       & ,PoissMeanMult
 
   ! Units parameters
   namelist/units_params/units_density,units_time,units_length

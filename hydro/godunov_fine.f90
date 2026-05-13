@@ -58,7 +58,7 @@ subroutine set_unew(ilevel)
   ! Set unew to uold for myid cells
   do ind=1,twotondim
      iskip=ncoarse+(ind-1)*ngridmax
-     do ivar=1,nvar
+     do ivar=1,nvar_all
         do i=1,active(ilevel)%ngrid
            unew(active(ilevel)%igrid(i)+iskip,ivar) = uold(active(ilevel)%igrid(i)+iskip,ivar)
         end do
@@ -93,7 +93,7 @@ subroutine set_unew(ilevel)
   do icpu=1,ncpu
   do ind=1,twotondim
      iskip=ncoarse+(ind-1)*ngridmax
-     do ivar=1,nvar
+     do ivar=1,nvar_all
         do i=1,reception(icpu,ilevel)%ngrid
 #ifdef LIGHT_MPI_COMM
            unew(reception(icpu,ilevel)%pcomm%igrid(i)+iskip,ivar)=0
@@ -179,7 +179,7 @@ subroutine set_uold(ilevel)
 #endif
      ! -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-     do ivar=1,nvar
+     do ivar=1,nvar_all
         do i=1,active(ilevel)%ngrid
            uold(active(ilevel)%igrid(i)+iskip,ivar) = unew(active(ilevel)%igrid(i)+iskip,ivar)
         end do

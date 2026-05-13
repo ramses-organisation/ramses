@@ -31,7 +31,10 @@ subroutine dump_all
   call write_screen
   call title(ifout,nchar)
   ifout=ifout+1
-  if(t>=tout(iout).or.aexp>=aout(iout))iout=iout+1
+  if(t >= tout(iout) - merge(eps_t,0.0d0,exact_output_time) .or. &
+     aexp >= aout(iout) - merge(eps_a,0.0d0,exact_output_time)) then
+     iout = iout + 1
+  endif
   if(t>=tout_next)tout_next=tout_next+delta_tout
   if(aexp>=aout_next)aout_next=aout_next+delta_aout
   output_done=.true.
