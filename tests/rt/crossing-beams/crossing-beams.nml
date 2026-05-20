@@ -3,6 +3,7 @@ nrestart=0                      ! Restart from some snapshot
 hydro=.true.                    ! Baryons included? (Must be for RT)
 rt=.true.                       ! Activate radiative transfer
 static=.true.                   ! Deactivate hydrodynamics (RHD if false)
+ncontrol=100
 /
 
 &AMR_PARAMS

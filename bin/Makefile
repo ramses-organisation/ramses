@@ -91,6 +91,8 @@ endif
 ifeq ($(OPENMP),1)
    DEFINES += -DOPENMP
 endif
+# Add any user-provided flags from the command line
+DEFINES += $(USER_FLAGS)
 #############################################################################
 LIBS =
 # Compiler command for regular compilation (mpi or serial)

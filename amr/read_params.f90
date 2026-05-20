@@ -475,7 +475,7 @@ subroutine read_output_params(namelist_unit,nml_ok)
    ! Parameters to specify when to write an output
    namelist/output_params/noutput,foutput,aout,tout &
    & ,tend,delta_tout,aend,delta_aout,gadget_output,walltime_hrs,minutes_dump &
-   & ,output_to_log,write_conservative,read_conservative
+   & ,output_to_log,write_conservative,read_conservative,exact_output_time
 
    ! Go to the beginning of the file
    rewind(namelist_unit)
