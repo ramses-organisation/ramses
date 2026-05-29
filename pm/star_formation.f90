@@ -530,10 +530,17 @@ subroutine star_formation(ilevel)
               if(d<=d0)ok(i)=.false.
            end do
            ! Temperature criterion
+           if(jeans_ncells > 0)then
+              polytropic_constant=factG_in_cgs*(boxlen*jeans_ncells*0.5d0**dble(nlevelmax)*scale_l/aexp)**2/ pi / gamma
+           endif
            do i=1,ngrid
               T2=uold(ind_cell(i),5)*scale_T2*(gamma-1.0d0)
               nH=max(uold(ind_cell(i),1),smallr)*scale_nH
-              T_poly=T2_star*(nH/nISM)**(g_star-1.0d0)
+              if(jeans_ncells > 0)then
+                 T_poly=nH*polytropic_constant*mH**2/XH/kB
+              else
+                 T_poly=T2_star*(nH/nISM)**(g_star-1.0d0)
+              endif
               T2=T2-T_poly
               if(T2>2d4)ok(i)=.false.
            end do
