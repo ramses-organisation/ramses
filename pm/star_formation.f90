@@ -5,7 +5,7 @@ subroutine star_formation(ilevel)
   use hydro_commons
   use poisson_commons
   use cooling_module, ONLY: XH=>X
-  use constants, only: Myr2sec, Gyr2sec, mH, pi, rhoc, twopi
+  use constants, only: Myr2sec, Gyr2sec, mH, pi, rhoc, twopi, kB, factG_in_cgs
   use random
   use mpi_mod
   implicit none
@@ -49,6 +49,7 @@ subroutine star_formation(ilevel)
   real(dp)::dx,dx_loc,scale,vol_loc,dx_min,vol_min,d1,d2,d3,d4,d5,d6
   real(dp)::mdebris
   real(dp),dimension(1:nvector)::sfr_ff
+  real(dp)::polytropic_constant
   integer ,dimension(1:ncpu,1:IRandNumSize)::allseed
   integer ,dimension(1:nvector),save::ind_grid,ind_cell,ind_cell2,nstar
   integer ,dimension(1:nvector),save::ind_grid_new,ind_cell_new,ind_part
