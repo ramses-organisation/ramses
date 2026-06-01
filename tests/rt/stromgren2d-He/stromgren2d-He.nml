@@ -3,7 +3,7 @@ nrestart=0                      ! Restart from some snapshot
 hydro=.true.                    ! Baryons included? (Must be for RT)
 rt=.true.                       ! Activate radiative transfer
 static=.false.                   ! Deactivate hydrodynamics (RHD if false)
-ncontrol=10
+ncontrol=100
 /
 
 &AMR_PARAMS
@@ -68,7 +68,7 @@ rt_c_fraction=0.001             ! Light speed fraction
 rt_smooth=.true.                ! Smoothed RT to battle operator splitting
 rt_nsubcycle=1                  ! Maximum number of RT steps per hydro step
 rt_otsa=.true.                  ! On-the-spot approximation?
-rt_output_coolstats=.true.      ! Output thermochemistry stats in log
+rt_output_coolstats=.false.     ! Output thermochemistry stats in log
 rt_err_grad_cn=0.4              ! Photon density refinement criterion
 rt_floor_cn=3d-4                ! Refinement floor
 rt_nsource=3                    !--Idealized radiation sources------------

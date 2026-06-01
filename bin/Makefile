@@ -129,6 +129,8 @@ ifeq ($(USE_FLD),1)
 DEFINES += -DUSE_FLD=$(USE_FLD)
 endif
 
+# Add any user-provided flags from the command line
+DEFINES += $(USER_FLAGS)
 #############################################################################
 # Compiler command for regular compilation (mpi or serial)
 F90 =

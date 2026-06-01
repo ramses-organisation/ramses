@@ -37,6 +37,8 @@ subroutine newdt_fine(ilevel)
 #ifdef RT
   real(dp)::dt_rt
 #endif
+  integer :: iout_frw
+  real(dp) :: t_target, a_target
 
   logical :: ok
   if(numbtot(1,ilevel)==0)return
@@ -173,6 +175,50 @@ subroutine newdt_fine(ilevel)
   end if
 
   if(hydro)call courant_fine(ilevel)
+
+  !------------------------------------------------------------
+  ! Adjust timestep to ensure outputs occur exactly at target a
+  ! Target time is obtained via interpolation of FRW table
+  !------------------------------------------------------------
+  if (exact_output_time) then
+     if (ilevel == levelmin) then
+        if (iout <= noutput) then
+           if (cosmo) then
+              ! --- cosmological case (use aout → interpolate t_target) ---
+              a_target = aout(iout)
+
+              ! Find bracketing indices in aexp_frw
+              iout_frw = 1
+              do while (iout_frw <= n_frw)
+                 if (aexp_frw(iout_frw-1) >= a_target .and. a_target >= aexp_frw(iout_frw)) exit
+                 iout_frw = iout_frw + 1
+              end do
+
+              if (iout_frw <= n_frw) then
+                 ! Linear interpolation of target time
+                 t_target = tau_frw(iout_frw  ) * (a_target - aexp_frw(iout_frw-1)) / &
+                            (aexp_frw(iout_frw  ) - aexp_frw(iout_frw-1)) + &
+                            tau_frw(iout_frw-1) * (a_target - aexp_frw(iout_frw  )) / &
+                            (aexp_frw(iout_frw-1) - aexp_frw(iout_frw  ))
+
+                 ! Adjust timestep to hit the target output time exactly
+                 if (t < t_target - eps_t .and. t + dtnew(ilevel) >= t_target - eps_t) then
+                    dtnew(ilevel) = t_target - t
+                 end if
+
+              end if
+           else
+              ! --- non-cosmological case (use tout directly) ---
+              t_target = tout(iout)
+
+              if (t < t_target - eps_t .and. t + dtnew(ilevel) >= t_target - eps_t) then
+                 dtnew(ilevel) = t_target - t
+              end if
+
+           end if
+        end if
+     end if
+  end if
 
 111 format('   Entering newdt_fine for level ',I2)
 
