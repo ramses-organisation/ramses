@@ -9,7 +9,7 @@ subroutine read_nimhd_params(nml_ok)
   !--------------------------------------------------
   namelist/nonidealmhd_params/nambipolar,gammaAD &
         & ,nmagdiffu,etaMD,resistivity_method &
-        & ,coefad, nminitimestep, coefalfven,coefdtohm, rho_threshold
+        & ,coefad, nminitimestep, coefalfven,coefdtohm, rho_threshold,nimhdheating_in_flux,nimhdheating_source_term
 
   ! Checks on non-ideal MHD parameters
   rewind(1)
@@ -17,10 +17,12 @@ subroutine read_nimhd_params(nml_ok)
 
   if(nambipolar.or.nmagdiffu)then
     use_nonideal_mhd = .true.
+    if(nimhdheating_in_flux.eqv..false.) nimhdheating_source_term = .true.
+    if(nimhdheating_source_term.eqv..true.)  nimhdheating_in_flux     = .false.
   else
     use_nonideal_mhd = .false.
   endif
-
+  
   if(.not.use_nonideal_mhd) return
   
   if(myid==1) then

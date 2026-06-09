@@ -579,19 +579,19 @@ subroutine computdifmag(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
                emfohmdiss(l,i,j,k,nxx)=-etaod2x*jemfx(l,i,j,k,1)
                emfohmdiss(l,i,j,k,nyy)=-etaod2y*jemfy(l,i,j,k,2)
                emfohmdiss(l,i,j,k,nzz)=-etaod2z*jemfz(l,i,j,k,3)
+               if(nimhdheating_in_flux) then 
+                  do h = 1,3
+                     rhof=0.5d0*(u(l,i,j,k,1)+u(l,i-index_i(h),j-index_j(h),k-index_k(h),1))
+                     epsf=0.5d0*(u(l,i,j,k,nvar)+u(l,i-index_i(h),j-index_j(h),k-index_k(h),nvar))
+                     bsqf=bmagij(l,i,j,k,1,h)**2+bmagij(l,i,j,k,2,h)**2+bmagij(l,i,j,k,3,h)**2
 
-               do h = 1,3
-                  rhof=0.5d0*(u(l,i,j,k,1)+u(l,i-index_i(h),j-index_j(h),k-index_k(h),1))
-                  epsf=0.5d0*(u(l,i,j,k,nvar)+u(l,i-index_i(h),j-index_j(h),k-index_k(h),nvar))
-                  bsqf=bmagij(l,i,j,k,1,h)**2+bmagij(l,i,j,k,2,h)**2+bmagij(l,i,j,k,3,h)**2
-
-                  ! Compute gas temperature in cgs
-                  call temperature_eos(rhof, epsf, tcellf, ht)
-                     
-                  etaod2=etaohmdiss(rhof,bsqf,tcellf,0d0,0d0,.false.)
-                  fluxohm(l,i,j,k,h)=etaod2*fluxmd(l,i,j,k,h)
-               enddo
-
+                     ! Compute gas temperature in cgs
+                     call temperature_eos(rhof, epsf, tcellf, ht)
+                        
+                     etaod2=etaohmdiss(rhof,bsqf,tcellf,0d0,0d0,.false.)
+                     fluxohm(l,i,j,k,h)=etaod2*fluxmd(l,i,j,k,h)
+                  enddo
+               endif
             end do
          end do
       end do
@@ -731,21 +731,21 @@ subroutine computambip(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,b
                rhoz=0.25d0*(u(l,i,j,k,1)+u(l,i-1,j,k,1)+u(l,i,j-1,k,1)+u(l,i-1,j-1,k,1))
                betaad2=betaad(rhocell,rhoz,dt,bcell,bcell,dx,tcell,.true.)
                emfambdiff(l,i,j,k,3)=emfambdiff(l,i,j,k,3)*betaad2
+               if(nimhdheating_in_flux) then
+                  ! energy flux on faces
 
-               ! energy flux on faces
+                  rhofx=0.5d0*(u(l,i,j,k,1)+u(l,i-1,j,k,1))
+                  betaad2=betaad(rhocell,rhofx,dt,bcell,bcell,dx,tcell,.true.)
+                  fluxambdiff(l,i,j,k,1)=-betaad2*fluxad(l,i,j,k,1)
 
-               rhofx=0.5d0*(u(l,i,j,k,1)+u(l,i-1,j,k,1))
-               betaad2=betaad(rhocell,rhofx,dt,bcell,bcell,dx,tcell,.true.)
-               fluxambdiff(l,i,j,k,1)=-betaad2*fluxad(l,i,j,k,1)
+                  rhofy=0.5d0*(u(l,i,j,k,1)+u(l,i,j-1,k,1))
+                  betaad2=betaad(rhocell,rhofy,dt,bcell,bcell,dx,tcell,.true.) !TC:dy?
+                  fluxambdiff(l,i,j,k,2)=-betaad2*fluxad(l,i,j,k,2)
 
-               rhofy=0.5d0*(u(l,i,j,k,1)+u(l,i,j-1,k,1))
-               betaad2=betaad(rhocell,rhofy,dt,bcell,bcell,dx,tcell,.true.) !TC:dy?
-               fluxambdiff(l,i,j,k,2)=-betaad2*fluxad(l,i,j,k,2)
-
-               rhofz=0.5d0*(u(l,i,j,k,1)+u(l,i,j,k-1,1))
-               betaad2=betaad(rhocell,rhofz,dt,bcell,bcell,dx,tcell,.true.) !TC: dz?
-               fluxambdiff(l,i,j,k,3)=-betaad2*fluxad(l,i,j,k,3)
-
+                  rhofz=0.5d0*(u(l,i,j,k,1)+u(l,i,j,k-1,1))
+                  betaad2=betaad(rhocell,rhofz,dt,bcell,bcell,dx,tcell,.true.) !TC: dz?
+                  fluxambdiff(l,i,j,k,3)=-betaad2*fluxad(l,i,j,k,3)
+               endif 
             end do
          end do
       end do

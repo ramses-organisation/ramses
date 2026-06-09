@@ -21,7 +21,6 @@ PC = 3.0857e18 #cm                         # 1 parsec
 AU = 1.49597871e13 #cm                     # 1 astronomical unit
 
 au = 1.5e13
-
 data["boxlen"] = 1.9140529831524967e-2
 
 scale_d= 3.83460000000000E-24   

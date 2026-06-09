@@ -9,6 +9,7 @@ fig, ax = plt.subplots(nrows=2, ncols=3, figsize=(12, 6))
 ax = ax.flatten()
 
 # Load RAMSES output
+
 data = visu_ramses.load_snapshot(2)
 
 # Fundamental constants

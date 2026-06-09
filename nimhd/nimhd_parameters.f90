@@ -8,6 +8,9 @@ module nimhd_parameters
 
   logical :: nambipolar = .false. ! flag to activate ambipolar diffusion
   logical :: nmagdiffu  = .false. ! flag to activate magnetic  diffusion
+  logical :: nimhdheating_in_flux = .true. ! flag to activate the non-ideal mhd energy fluxes
+  logical :: nimhdheating_source_term = .false. ! flag to activate the non-ideal mhd heating as a source term
+
   logical :: use_nonideal_mhd     ! true if any of the non-ideal MHD effects is used
 
   ! Resistivity parameters

@@ -10,30 +10,33 @@ verbose=.false.
 
 &AMR_PARAMS 
 levelmin=5
-levelmax=20
+levelmax=18
 ngridmax=100000
-nexpand=30*4
+nexpand=30*2
 boxlen=1.9140529831524967d-2
 /
 
 &INIT_PARAMS
 condinit_kind='collapse'
-mass_c=1.0d0
-alpha_dense_core=0.1d0
+mass_c=1.
+alpha_dense_core=0.1
 beta_dense_core =0.01d0
-crit_dense_core =0.1d0
+crit_dense_core =0.1
 delta_rho=0.1d0
-theta_mag=0.0d0
+theta_mag=0.0
 Mach=0.0d0
 /
 
 &OUTPUT_PARAMS
-tend=3d-5!8.899d-5
+foutput=1000000
+noutput=2
+tout=0,8.99e-05
 /
 
 &POISSON_PARAMS 
 gravity_type=0
 epsilon=1d-4
+cg_levelmin=7
 /
 
 &HYDRO_PARAMS
@@ -68,13 +71,13 @@ interpol_type=1
 /
 
 &NONIDEALMHD_PARAMS
-nambipolar=.true.
-nmagdiffu=.false.
+nambipolar=.false.
+nmagdiffu=.true.
 nminitimestep=.true.
 resistivity_method=2
 coefad=0.1d0
 coefalfven=0.5
-rho_threshold=1d5
+rho_threshold=5d5
 coefdtohm=0.2d0
 gammaAD=3.5d13 
 /

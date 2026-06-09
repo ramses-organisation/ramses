@@ -10,6 +10,9 @@ module hydro_commons
   real(dp)::ana_xmi,ana_xma,ana_ymi,ana_yma,ana_zmi,ana_zma
   integer::nbins
 
+#if NIMHD==1 
+  real(dp),allocatable,dimension(:,:)::electric_current ! Electric current
+#endif 
 #if USE_FLD==1
   integer,allocatable,dimension(:)::liste_ind
   integer::nb_ind
