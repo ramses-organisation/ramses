@@ -23,6 +23,11 @@ SOLVER = hydro
 PATCH =
 # Use RT? 1=Yes, 0=No
 RT = 0
+# Cosmic rays: number of CR groups (0 = compiled out). Requires SOLVER=mhd.
+# NENER is deliberately NOT tied to NCR (difference from ramses_cral).
+NCR = 0
+# Two-moment CR transport (E_cr + F_cr per group)
+CRFLX = 1
 # Use turbulence? 1=Yes, 0=No (requires fftw3)
 USE_TURB = 0
 # Use MPI? 1=Yes, 0=No
@@ -79,6 +84,12 @@ ifeq ($(OLD_MPI_SUPPORT),1)
 endif
 ifeq ($(RT),1)
    DEFINES += -DRT -DNIONS=$(NIONS) -DNGROUPS=$(NGROUPS)
+endif
+ifneq ($(NCR),0)
+   DEFINES += -DNCR=$(NCR)
+   ifeq ($(CRFLX),1)
+      DEFINES += -DCRFLX
+   endif
 endif
 ifeq ($(USE_TURB),1)
    DEFINES += -DUSE_TURB
@@ -189,6 +200,9 @@ VPATH = $(PATCH):../$(SOLVER):../aton:
 ifeq ($(RT),1)
    VPATH += ../rt:
 endif
+ifneq ($(NCR),0)
+   VPATH += ../cr:
+endif
 ifeq ($(USE_TURB),1)
    VPATH += ../turb:
 endif
@@ -207,6 +221,9 @@ MODOBJ += poisson_commons.o hydro_parameters.o hydro_commons.o \
 ifeq ($(RT),1)
    MODOBJ += rt_parameters.o rt_hydro_commons.o coolrates_module.o \
              rt_spectra.o rt_cooling_module.o rt_flux_module.o
+endif
+ifneq ($(NCR),0)
+   MODOBJ += cr_parameters.o cr_hydro_commons.o
 endif
 ifeq ($(USE_TURB),1)
    MODOBJ += turb_parameters.o turb_commons.o
@@ -240,6 +257,8 @@ RTOBJ = rt_init_hydro.o rt_init_xion.o rt_init.o rt_init_flow_fine.o \
         rt_output_hydro.o rt_godunov_fine.o rt_interpol_hydro.o \
         rt_godunov_utils.o rt_condinit.o rt_hydro_flag.o rt_hydro_boundary.o \
         rt_boundana.o rt_units.o
+# Cosmic-ray objects
+CROBJ = cr_init.o cr_init_hydro.o cr_godunov_fine.o cr_output_hydro.o
 # Turbulence objects
 TURBOBJ = turb_force_utils.o read_turb_params.o init_turb.o mpi_share_turb_fields.o \
           turb_next_field.o turb_check_time.o write_turb_fields.o read_turb_fields.o \
@@ -251,6 +270,9 @@ sinclude $(PATCH)/Makefile
 AMRLIB = $(AMROBJ) $(HYDROOBJ) $(PMOBJ) $(POISSONOBJ)
 ifeq ($(RT),1)
    AMRLIB += $(RTOBJ)
+endif
+ifneq ($(NCR),0)
+   AMRLIB += $(CROBJ)
 endif
 ifeq ($(USE_TURB),1)
    AMRLIB += $(TURBOBJ)
