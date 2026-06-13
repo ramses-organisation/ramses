@@ -78,6 +78,7 @@ recursive subroutine amr_step(ilevel,icount)
                  do ivar=1,ncrvars
                     call make_virtual_fine_dp(cruold(1,ivar),i)
                  end do
+                 if(simple_boundary)call cr_make_boundary_hydro(i)
               end if
 #endif
               if(poisson)then
