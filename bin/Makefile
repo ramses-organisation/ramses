@@ -223,7 +223,7 @@ ifeq ($(RT),1)
              rt_spectra.o rt_cooling_module.o rt_flux_module.o
 endif
 ifneq ($(NCR),0)
-   MODOBJ += cr_parameters.o cr_hydro_commons.o
+   MODOBJ += cr_parameters.o cr_hydro_commons.o cr_flux_module.o
 endif
 ifeq ($(USE_TURB),1)
    MODOBJ += turb_parameters.o turb_commons.o
