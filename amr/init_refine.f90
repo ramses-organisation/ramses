@@ -5,6 +5,9 @@
 subroutine init_refine
   use amr_commons
   use pm_commons
+#if NCR>0
+  use cr_parameters, only: cr_advect
+#endif
   implicit none
   !-------------------------------------------
   ! This routine builds the initial AMR grid
@@ -27,6 +30,9 @@ subroutine init_refine
 #ifdef RT
      if(rt)call rt_init_flow
 #endif
+#if NCR>0
+     if(cr_advect)call cr_init_flow
+#endif
      if(ivar_refine==0)call init_refmap
      call flag
      call refine
@@ -39,6 +45,9 @@ subroutine init_refine
   if(hydro)call init_flow
 #ifdef RT
   if(rt)call rt_init_flow
+#endif
+#if NCR>0
+  if(cr_advect)call cr_init_flow
 #endif
 
 end subroutine init_refine
@@ -55,6 +64,9 @@ subroutine init_refine_2
   use hydro_commons
 #ifdef RT
   use rt_hydro_commons
+#endif
+#if NCR>0
+  use cr_parameters, only: cr_advect
 #endif
   use pm_commons
   use poisson_commons
@@ -73,6 +85,9 @@ subroutine init_refine_2
            if(hydro)call init_flow_fine(ilevel)
 #ifdef RT
            if(rt)call rt_init_flow_fine(ilevel)
+#endif
+#if NCR>0
+           if(cr_advect)call cr_init_flow_fine(ilevel)
 #endif
         end do
 
