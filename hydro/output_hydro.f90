@@ -2,6 +2,10 @@ subroutine backup_hydro(filename, filename_desc)
   use amr_commons
   use hydro_commons
   use dump_utils, only : dump_header_info, generic_dump, dim_keys
+#if NCR>0
+  use cr_parameters
+  use cr_hydro_commons
+#endif
   use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
@@ -20,6 +24,9 @@ subroutine backup_hydro(filename, filename_desc)
   logical :: dump_info_flag
   integer :: info_var_count
   character(len=100) :: field_name
+#if NCR>0
+  integer :: igroup, idim2, ncrdump
+#endif
 
   if (verbose) write(*,*)'Entering backup_hydro'
 
@@ -48,11 +55,21 @@ subroutine backup_hydro(filename, filename_desc)
   end if
 
   write(unit_out) ncpu
+#if NCR>0
+  ncrdump=0
+  if(cr_legacy_output) ncrdump=ncrvars
+  if(strict_equilibrium>0)then
+     write(unit_out) nvar_all+2+ncrdump
+  else
+     write(unit_out) nvar_all+ncrdump
+  endif
+#else
   if(strict_equilibrium>0)then
      write(unit_out) nvar_all+2
   else
      write(unit_out) nvar_all
   endif
+#endif
   write(unit_out) ndim
   write(unit_out) nlevelmax
   write(unit_out) nboundary
@@ -167,6 +184,26 @@ subroutine backup_hydro(filename, filename_desc)
                  field_name = 'equilibrium_pressure'
                  call generic_dump(field_name, info_var_count, xdp, unit_out, dump_info_flag, unit_info)
               endif
+#if NCR>0
+              if(cr_legacy_output)then
+                 ! Append cosmic-ray columns, cral-compatible field names,
+                 ! so cral-era analysis tooling reads sno outputs unmodified
+                 do igroup = 1, ncr
+                    do i = 1, ncache
+                       xdp(i) = cruold(ind_grid(i)+iskip, iCRu+(ndim+1)*(igroup-1))
+                    end do
+                    write(field_name, '("CRegy_", i0.2)') igroup
+                    call generic_dump(field_name, info_var_count, xdp, unit_out, dump_info_flag, unit_info)
+                    do idim2 = 1, ndim
+                       do i = 1, ncache
+                          xdp(i) = cruold(ind_grid(i)+iskip, iCRu+(ndim+1)*(igroup-1)+idim2)
+                       end do
+                       write(field_name, '("CRflx_", i0.2, "_", a1)') igroup, dim_keys(idim2)
+                       call generic_dump(field_name, info_var_count, xdp, unit_out, dump_info_flag, unit_info)
+                    end do
+                 end do
+              end if
+#endif
               ! We did one output, deactivate dumping of variables
               dump_info_flag = .false.
            end do
