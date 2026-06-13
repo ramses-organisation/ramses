@@ -70,6 +70,7 @@ module cr_parameters
   real(dp)::c_cu=0d0                        ! Light speed in code units
   real(dp),dimension(1:ncr)::DCR_code=0d0   ! Dcr in code units
   real(dp)::DCRmax_code=0d0                 ! DCRmax in code units
+  real(dp)::smalldcr=1d-25                  ! Floor on DCR_code (cral default)
   real(dp)::ecrs_tot=0d0                    ! Total CR energy (log diagnostic)
 
 end module cr_parameters
