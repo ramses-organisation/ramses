@@ -6,6 +6,11 @@ subroutine courant_fine(ilevel)
 #if USE_TURB==1
   use turb_commons
 #endif
+#if NCR>0
+#ifdef CRFLX
+  use cr_parameters, only: cr_advect,cr_vmax,c_cu,cr_nsubcycle
+#endif
+#endif
   implicit none
 #ifndef WITHOUTMPI
   integer::info
@@ -25,6 +30,11 @@ subroutine courant_fine(ilevel)
   real(kind=8)::mass_all,ekin_all,eint_all,emag_all,dt_all
   real(dp),dimension(1:nvector,1:nvar_all),save::uu
   real(dp),dimension(1:nvector,1:ndim),save::gg
+#if NCR>0
+#ifdef CRFLX
+  real(dp)::dt_cr
+#endif
+#endif
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
@@ -175,6 +185,22 @@ subroutine courant_fine(ilevel)
   eint_tot=eint_tot+eint_all
   emag_tot=emag_tot+emag_all
   dtnew(ilevel)=MIN(dtnew(ilevel),dt_all)
+
+#if NCR>0
+#ifdef CRFLX
+  ! Maximum time step for cosmic-ray moment flux, from the Courant
+  ! condition on cr_vmax (ported from cral mhd/courant_fine.f90:203-246,
+  ! timestep-limit block only). Refresh cr_vmax/DCR_code in code units
+  ! and cap at c. The adaptive cr_varvmax branch and the CR sound-speed
+  ! coupling to the gas Courant are deferred to Phase 2.
+  if(cr_advect)then
+     call update_cr_vmax_and_Dcr_code(cr_vmax(ilevel))
+     if(cr_vmax(ilevel) .gt. c_cu) cr_vmax(ilevel)=c_cu
+     call get_crmom_courant(dt_cr,ilevel)
+     dtnew(ilevel) = MIN(dtnew(ilevel), dt_cr * cr_nsubcycle*0.99999d0)
+  endif
+#endif
+#endif
 
 111 format('   Entering courant_fine for level ',I2)
 
