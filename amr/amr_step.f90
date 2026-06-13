@@ -11,6 +11,10 @@ recursive subroutine amr_step(ilevel,icount)
   use coolrates_module, only: update_coolrates_tables
   use rt_cooling_module, only: update_UVrates
 #endif
+#if NCR>0
+  use cr_parameters
+  use cr_hydro_commons
+#endif
   use sink_feedback_parameters, only: sn_feedback_sink
 #if USE_TURB==1
   use turb_commons
@@ -67,6 +71,13 @@ recursive subroutine amr_step(ilevel,icount)
                     call make_virtual_fine_dp(rtuold(1,ivar),i)
                  end do
                  if(simple_boundary)call rt_make_boundary_hydro(i)
+              end if
+#endif
+#if NCR>0
+              if(cr_advect)then
+                 do ivar=1,ncrvars
+                    call make_virtual_fine_dp(cruold(1,ivar),i)
+                 end do
               end if
 #endif
               if(poisson)then
@@ -409,6 +420,22 @@ recursive subroutine amr_step(ilevel,icount)
      if(pressure_fix.OR.nener>0)then
         call add_pdv_source_terms(ilevel)
      endif
+
+#ifdef CRFLX
+     if(cr_advect)then
+        call upload_fine(ilevel)
+        ! Update boundaries on gas and CR variables
+        do ivar=1,nvar_all
+           call make_virtual_fine_dp(uold(1,ivar),ilevel)
+        end do
+        do ivar=1,ncrvars
+           call make_virtual_fine_dp(cruold(1,ivar),ilevel)
+        end do
+        ! Hyperbolic solver for cosmic rays
+        call timer('cosmic rays','start')
+        call crmom_step(ilevel)
+     endif
+#endif
 
      ! Set uold equal to unew
                                call timer('hydro - set uold','start')
