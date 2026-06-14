@@ -1,11 +1,12 @@
 !###############################################################
 !###############################################################
 subroutine crmom_step(ilevel)
-  ! Two-moment cosmic-ray HYPERBOLIC transport driver: subcycled
-  ! free-streaming P1/M1 advection, ported from ramses_cral feat/CR_tests
-  ! cr/cr_godunov_fine.f90:875-950 (crmom_step). SOURCE TERMS and cooling
-  ! are deferred to Phase 2: cral's add_cr_source_terms (line 922) and
-  ! cr_cooling_fine (line 926) are NOT called here.
+  ! Two-moment cosmic-ray transport driver: subcycled free-streaming P1/M1
+  ! advection followed by the implicit scattering/streaming source terms,
+  ! ported from ramses_cral feat/CR_tests cr/cr_godunov_fine.f90:875-950
+  ! (crmom_step). add_cr_source_terms (cral line 932) IS called here, between
+  ! transport and cr_set_uold; cr_cooling_fine (cral line 926) is deferred to
+  ! Phase 4 and is NOT called here.
   !
   ! Either do one transport step on ilevel, with CR field updates in the
   ! coarser-level neighbours, or, if cr_nsubcycle>1, do many substeps in
@@ -64,6 +65,14 @@ subroutine crmom_step(ilevel)
         end do
      endif
 
+     ! Implicit scattering/streaming source terms: relax (E_cr,F_cr) on
+     ! crunew by sigma=1/Dcr_code (and write the gas back-reaction to
+     ! unew(2:5) when .not.static_gas). Mirrors cral's call at
+     ! cr/cr_godunov_fine.f90:932, after the reverse-comm and before
+     ! cr_set_uold. Without it the two-moment flux is unrelaxed and the
+     ! scheme is unstable.
+     call add_cr_source_terms(ilevel)
+
      ! Set cruold equal to crunew, but only for the CR vars
      call cr_set_uold(ilevel)
 
@@ -93,6 +102,388 @@ subroutine crmom_step(ilevel)
          1pe9.2,' cr_c_fraction=',1pe9.2,',  dt_cr=',1pe9.2)
 
 end subroutine crmom_step
+
+!##########################################################################
+!##########################################################################
+subroutine add_cr_source_terms(ilevel)
+  ! Implicit per-cell cosmic-ray scattering/streaming source terms, ported
+  ! from ramses_cral feat/CR_tests cr/cr_godunov_fine.f90:502-868
+  ! (add_cr_source_terms). It runs inside crmom_step between cr_godunov_fine
+  ! (explicit transport, which writes crunew) and cr_set_uold.
+  !
+  ! Central transformation vs cral (which embeds CR in uold/unew at icrU=nvar+4):
+  !   * the post-transport CR state read/written here lives in crunew (iCRu=1);
+  !   * the CR-gradient stencil (pcrg/pcrd) reads the OLD CR energy from cruold;
+  !   * gas (rho/momentum/B) is read from uold and the gas back-reaction is
+  !     written to unew(2:5) exactly as cral, INCLUDING the
+  !     .not.static_gas .and. .not.static guards (skipped for jiang-414);
+  !   * cral's two #if NENER>0 blocks (radiation) are removed; err is kept
+  !     (initialised to 0, used by the thermal floor).
+  !
+  ! For each cell the implicit solve relaxes (E_cr,F_cr) by the scattering
+  ! coefficient sigma=1/Dcr_code(iGrp) via a 4x4 coefficient matrix reduced
+  ! with a Schur complement on E_cr; the flux is rotated onto the local B
+  ! field with rotatevec and back with invrotatevec.
+  !---------------------------------------------------------
+  use amr_commons
+  use hydro_commons
+  use cr_hydro_commons
+  use cr_parameters
+  use cr_flux_module, only: rotatevec, invrotatevec
+  implicit none
+  integer::ilevel
+  !---------------------------------------------------------
+  ! This routine adds the cosmic ray source term .
+  !---------------------------------------------------------
+  integer::i,ind,iskip,nx_loc
+  integer::ncache,igrid,ngrid,idim,id1,ig1,ih1,id2,ig2,ih2
+  integer,dimension(1:3,1:2,1:8)::iii,jjj
+  real(dp)::scale,dx,dx_loc,B_field(3),dt
+
+  integer ,dimension(1:nvector),save::ind_grid,ind_cell
+  integer ,dimension(1:nvector,0:twondim),save::igridn
+  integer ,dimension(1:nvector,1:ndim),save::ind_left,ind_right
+  real(dp),dimension(1:nvector,1:ndim),save::dx_g,dx_d
+  real(dp),dimension(1:nvector,1:ndim,1:ncr),save::gradEcr_loc,gradpcr_loc
+  real(dp),dimension(1:nvector,1:3),save::B_field_loc
+  real(dp),dimension(1:nvector),save::bdotgradE_loc,bdotgradp_loc
+  real(dp),dimension(1:nvector,1:3),save::vs_loc
+  real(dp),dimension(1:nvector),save::va_loc
+  real(dp)::norm,frotx,froty,frotz,bxby,cosp,sinp,cost,sint
+  real(dp)::f1,f2,f3
+  integer::j,iGrp,icrE
+  real(dp),dimension(1:nvector,1:ndim,1:ncr),save::pcrg,pcrd
+  real(dp)::coef_11, coef_12, coef_13, coef_14, coef_21, coef_22
+  real(dp)::coef_31, coef_33, coef_41, coef_44
+  real(dp)::e_coef, new_ec, old_ec, sigma_x, sigma_y, sigma_z, sigma_stream
+  real(dp)::rhs1, rhs2, rhs3, rhs4, fred, sqrt3
+  real(dp)::v1, v2, v3, vtot1, vtot2, vtot3
+  real(dp)::mom_change
+  real(dp)::etherm, ekin, emag, err, f_decouple, smallp
+
+  dt=dtnew(ilevel)
+
+  if(numbtot(1,ilevel)==0)return
+  if(verbose)write(*,111)ilevel
+
+  smallp = smallc**2/gamma
+
+  nx_loc=icoarse_max-icoarse_min+1
+  scale=boxlen/dble(nx_loc)
+  dx=0.5d0**ilevel
+  dx_loc=dx*scale
+
+  if(isotropic_pressure)then
+     sqrt3=sqrt(3d0)
+  else
+     sqrt3=1.0d0
+  endif
+
+  iii(1,1,1:8)=(/1,0,1,0,1,0,1,0/); jjj(1,1,1:8)=(/2,1,4,3,6,5,8,7/)
+  iii(1,2,1:8)=(/0,2,0,2,0,2,0,2/); jjj(1,2,1:8)=(/2,1,4,3,6,5,8,7/)
+  iii(2,1,1:8)=(/3,3,0,0,3,3,0,0/); jjj(2,1,1:8)=(/3,4,1,2,7,8,5,6/)
+  iii(2,2,1:8)=(/0,0,4,4,0,0,4,4/); jjj(2,2,1:8)=(/3,4,1,2,7,8,5,6/)
+  iii(3,1,1:8)=(/5,5,5,5,0,0,0,0/); jjj(3,1,1:8)=(/5,6,7,8,1,2,3,4/)
+  iii(3,2,1:8)=(/0,0,0,0,6,6,6,6/); jjj(3,2,1:8)=(/5,6,7,8,1,2,3,4/)
+
+  ! Loop over myid grids by vector sweeps
+  ncache=active(ilevel)%ngrid
+  do igrid=1,ncache,nvector
+
+     ! Gather nvector grids
+     ngrid=MIN(nvector,ncache-igrid+1)
+     do i=1,ngrid
+        ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
+     end do
+
+     ! Gather neighboring grids
+     do i=1,ngrid
+        igridn(i,0)=ind_grid(i)
+     end do
+     do idim=1,ndim
+        do i=1,ngrid
+           ind_left (i,idim)=nbor(ind_grid(i),2*idim-1)
+           ind_right(i,idim)=nbor(ind_grid(i),2*idim  )
+           igridn(i,2*idim-1)=son(ind_left (i,idim))
+           igridn(i,2*idim  )=son(ind_right(i,idim))
+        end do
+     end do
+
+     ! Loop over cells
+     do ind=1,twotondim
+
+        ! Compute central cell index
+        iskip=ncoarse+(ind-1)*ngridmax
+        do i=1,ngrid
+           ind_cell(i)=iskip+ind_grid(i)
+        end do
+
+        ! Gather all neighboring CR energies
+        do idim=1,ndim
+           id1=jjj(idim,1,ind); ig1=iii(idim,1,ind)
+           ih1=ncoarse+(id1-1)*ngridmax
+           do i=1,ngrid
+           do iGrp=1,ncr
+              icrE = iCRu+(ndim+1)*(iGrp-1)  ! starting index of cr variables
+              if(igridn(i,ig1)>0)then
+                  pcrg(i,idim,iGrp)   = max(cruold(igridn(i,ig1)+ih1,icrE),smallcr)
+                  dx_g(i,idim) = dx_loc
+              else
+                  pcrg(i,idim,iGrp)   = max(cruold(ind_left(i,idim),icrE),smallcr)
+                  dx_g(i,idim) = dx_loc*1.5_dp
+              end if
+           enddo
+           enddo
+           id2=jjj(idim,2,ind); ig2=iii(idim,2,ind)
+           ih2=ncoarse+(id2-1)*ngridmax
+           do i=1,ngrid
+           do iGrp=1,ncr
+              icrE = iCRu+(ndim+1)*(iGrp-1)  ! starting index of cr variables
+              if(igridn(i,ig2)>0)then
+                  pcrd(i,idim,iGrp)  = max(cruold(igridn(i,ig2)+ih2,icrE),smallcr)
+                  dx_d(i,idim)=dx_loc
+              else
+                  pcrd(i,idim,iGrp)  = max(cruold(ind_right(i,idim),icrE),smallcr)
+                  dx_d(i,idim)=dx_loc*1.5_dp
+              end if
+           enddo
+           enddo
+        end do
+        ! End loop over dimensions
+
+        do i=1,ngrid
+        do iGrp=1,ncr
+           do idim=1,ndim
+              gradEcr_loc(i,idim,iGrp) = (pcrd(i,idim,iGrp)-pcrg(i,idim,iGrp)) &
+                   &                    / (dx_g(i,idim)     +dx_d(i,idim))
+              gradpcr_loc(i,idim,iGrp) = gradEcr_loc(i,idim,iGrp)*(gamma_cr(iGrp)-1.)
+           enddo
+           vs_loc(i,:)=0.
+           va_loc(i)=0.
+           do idim=1,3
+              B_field_loc(i,idim) = 0.5 * (uold(ind_cell(i), 5+idim) + uold(ind_cell(i), nvar+idim) )
+              vs_loc(i,idim) = B_field_loc(i,idim)/sqrt(uold(ind_cell(i),1))
+              va_loc(i) = va_loc(i) + vs_loc(i,idim)**2
+           enddo
+           va_loc(i) = sqrt(va_loc(i))
+
+           if(v_alfven.gt.0.) then
+              vs_loc(i,:) = 0.
+              vs_loc(i,1) = v_alfven
+              va_loc(i) = v_alfven
+           endif
+
+           bdotgradE_loc(i)=0.
+           ! bdotgrade is needed for eq 3 in Jiang & Oh
+           do idim=1,ndim
+              bdotgradE_loc(i) = bdotgradE_loc(i) + B_field_loc(i,idim)*gradEcr_loc(i,idim,iGrp)
+           enddo
+           ! Local streaming velocity, needed for eq 18 in Jiang & Oh
+           vs_loc(i,:) = -vs_loc(i,:)  * bdotgradE_loc(i)/max(1d-50,abs(bdotgradE_loc(i))) !! eq 3 in PO17
+
+           ! Source term, eq 18 in Jiang & Oh 2017
+
+            icrE = iCRu+(ndim+1)*(iGrp-1)  ! starting index of cr variables
+            norm=0.
+            do j=1,3
+               B_field(j) = 0.5 * (uold(ind_cell(i), 5+j) + uold(ind_cell(i), nvar+j) )
+               norm = norm + B_field(j)**2
+            end do
+            norm = max(sqrt(norm), 1d-30)
+
+            bxby = sqrt(B_field(1)**2+B_field(2)**2)
+            if(norm.gt.1e-10) then
+               sint = bxby/norm
+               cost = B_field(3)/norm
+            else
+               sint = 1d0
+               cost = 0d0
+            endif
+            if(bxby.gt.1e-10) then
+               sinp = B_field(2)/bxby
+               cosp = B_field(1)/bxby
+            else
+               sinp = 0d0
+               cosp = 1d0
+            endif
+            !B_field = B_field/norm
+
+            rhs1 = max(crunew(ind_cell(i),icrE),smallcr)
+
+            ! Flux update ... first rotate flux vector onto B-field,
+            ! i.e. describing the flux in the B coordinate system
+            f2=0. ; f3=0.
+            f1 = crunew(ind_cell(i),icrE+1)
+#if NDIM>1
+            f2 = crunew(ind_cell(i),icrE+2)
+#endif
+#if NDIM>2
+            f3 = crunew(ind_cell(i),icrE+3)
+#endif
+
+            ! Make sure that |F|<=cE/sqrt3 (sqrt3=1 or sqrt(3) for M1 or P1 resp.)
+            fred = sqrt(f1**2+f2**2+f3**2)/(cr_vmax(ilevel)*rhs1)*sqrt3
+            if(fred .gt. 1d0) then
+               f1 = f1/fred ; f2 = f2/fred ; f3 = f3/fred
+            endif
+
+            frotx=f1; froty=f2; frotz=f3
+            call rotatevec(sint, cost, sinp, cosp, frotx, froty, frotz)
+            v1=0. ; v2=0. ; v3=0.
+            v1 = uold(ind_cell(i),2)/uold(ind_cell(i),1)
+#if NDIM>1
+            v2 = uold(ind_cell(i),3)/uold(ind_cell(i),1)
+#endif
+#if NDIM>2
+            v3 = uold(ind_cell(i),4)/uold(ind_cell(i),1)
+#endif
+            vtot1 = v1 ; vtot2 = v2 ; vtot3 = v3
+            if(mom_streaming_heating) then
+               vtot1 = vtot1+vs_loc(i,1)
+               vtot2 = vtot2+vs_loc(i,2)
+               vtot3 = vtot3+vs_loc(i,3)
+            endif
+
+            ! Rotate velocity
+            call rotatevec(sint, cost, sinp, cosp, v1, v2, v3)
+            ! Rotate streaming velocity
+            call rotatevec(sint, cost, sinp, cosp, vtot1, vtot2, vtot3)
+
+            rhs2 = frotx
+            rhs3 = froty
+            rhs4 = frotz
+            if(abs(rhs2).lt.1e-10*smallcr) rhs2=0d0
+            if(abs(rhs3).lt.1e-10*smallcr) rhs3=0d0
+            if(abs(rhs4).lt.1e-10*smallcr) rhs4=0d0
+
+            ! Factor for decoupling CRs from gas at low densities
+            f_decouple = MAX(exp(-smallr*cr_smallr_decouple/uold(ind_cell(i),1)),1d-10)
+
+            sigma_stream = max(1./DCRmax_code &
+               & ,abs(bdotgradE_loc(i))/3d0 / norm / va_loc(i) / gamma_cr(iGrp) / max(crunew(ind_cell(i),icrE),smallcr))
+            if(mom_streaming_diffusion) then
+               sigma_x = 1./(Dcr_code(iGrp) + 1./sigma_stream)
+            else
+               sigma_x = 1./Dcr_code(iGrp)
+            endif
+            sigma_y = 1./(Dcr_code(iGrp)*Dcr_perp_factor(iGrp))
+            sigma_z = 1./(Dcr_code(iGrp)*Dcr_perp_factor(iGrp))
+
+            coef_11 = 1.0 - dt * sigma_x * vtot1 * v1 * gamma_cr(iGrp) *3d0*(gamma_cr(iGrp)-1d0)   &
+                          - dt * sigma_y * vtot2 * v2 * gamma_cr(iGrp) *3d0*(gamma_cr(iGrp)-1d0)   &
+                          - dt * sigma_z * vtot3 * v3 * gamma_cr(iGrp) *3d0*(gamma_cr(iGrp)-1d0)
+            coef_12 = dt * sigma_x * vtot1 *3d0*(gamma_cr(iGrp)-1d0)
+            coef_13 = dt * sigma_y * vtot2 *3d0*(gamma_cr(iGrp)-1d0)
+            coef_14 = dt * sigma_z * vtot3 *3d0*(gamma_cr(iGrp)-1d0)
+
+            coef_21 = -dt * v1 * sigma_x * gamma_cr(iGrp) * cr_vmax(ilevel)**2
+            coef_22 = 1.0 + dt * sigma_x * cr_vmax(ilevel)**2
+
+            coef_31 = -dt * v2 * sigma_y * gamma_cr(iGrp) * cr_vmax(ilevel)**2
+            coef_33 = 1.0 + dt * sigma_y * cr_vmax(ilevel)**2
+
+            coef_41 = -dt * v3 * sigma_z * gamma_cr(iGrp) * cr_vmax(ilevel)**2
+            coef_44 = 1.0 + dt * sigma_z * cr_vmax(ilevel)**2
+
+            ! newfr1 = (rhs2 - coef21 * newEc)/coef22
+            ! newfr2= (rhs3 - coef31 * newEc)/coef33
+            ! newfr3 = (rhs4 - coef41 * newEc)/coef44
+            ! coef11 - coef21 * coef12 /coef22 - coef13 * coef31 /coef33 - coef41 * coef14 /coef44)* newec
+            !    =rhs1 - coef12 *rhs2/coef22 - coef13 * rhs3/coef33 - coef14 * rhs4/coef44
+
+            e_coef = coef_11 - coef_12 * coef_21/coef_22 - coef_13 * coef_31/coef_33 &
+                            - coef_14 * coef_41/coef_44
+            new_ec = rhs1 - coef_12 * rhs2/coef_22 - coef_13 * rhs3/coef_33 &
+                         - coef_14 * rhs4/coef_44
+            new_ec = new_ec / e_coef
+
+            old_ec = crunew(ind_cell(i),icrE)
+            crunew(ind_cell(i),icrE) = crunew(ind_cell(i),icrE) + (new_ec-old_ec) * f_decouple
+
+            ! Floor the CR energy and update total energy if necessary
+            if ( crunew(ind_cell(i),icrE) .lt. smallcr ) crunew(ind_cell(i),icrE) = smallcr
+            ! Thermal energy update:
+            if(.not. static_gas .and. .not. static) then
+               unew(ind_cell(i),5) = unew(ind_cell(i),5) - (crunew(ind_cell(i),icrE) - old_ec)*f_decouple
+               unew(ind_cell(i),5) = max(smallp*uold(ind_cell(i),1), unew(ind_cell(i),5))
+            endif
+            frotx = (rhs2 - coef_21 * new_ec)/coef_22
+            froty = (rhs3 - coef_31 * new_ec)/coef_33
+            frotz = (rhs4 - coef_41 * new_ec)/coef_44
+
+            ! Make sure that |F|<=cE/sqrt3 (sqrt3=1 or sqrt(3) for M1 or P1 resp.)
+            fred = sqrt(frotx**2+froty**2+frotz**2)/(cr_vmax(ilevel)*new_ec)*sqrt3
+            if(fred .gt. 1d0) then
+               !print*,'maybe a problem with fred'
+               frotx = frotx/fred ; froty = froty/fred ; frotz = frotz/fred
+            endif
+
+            ! We are missing the perpendicular energy source term which is done here in Athena!!!
+            ! Rotate the flux back to the simulation coordinate system
+            call invrotatevec(sint, cost, sinp, cosp, frotx, froty, frotz)
+
+            crunew(ind_cell(i),icrE+1) = frotx
+            ! Momentum update
+            if(.not. static_gas .and. .not. static) then
+               if (gradpcr_mom) then
+                  mom_change = -gradpcr_loc(i,1,iGrp)*dt
+               else
+                  mom_change = ( f1 - crunew(ind_cell(i),icrE+1) ) / cr_vmax(ilevel)**2
+               endif
+               unew(ind_cell(i),2) = unew(ind_cell(i),2) + mom_change*f_decouple
+            endif
+#if NDIM>1
+            crunew(ind_cell(i),icrE+2) = froty
+            if(.not. static_gas .and. .not. static) then
+               if (gradpcr_mom) then
+                  mom_change = -gradpcr_loc(i,2,iGrp)*dt
+               else
+                  mom_change = ( f2 - crunew(ind_cell(i),icrE+2) ) / cr_vmax(ilevel)**2
+               endif
+               unew(ind_cell(i),3) = unew(ind_cell(i),3) + mom_change*f_decouple
+            endif
+#endif
+#if NDIM>2
+            crunew(ind_cell(i),icrE+3) = frotz
+            if(.not. static_gas .and. .not. static) then
+               if (gradpcr_mom) then
+                  mom_change = -gradpcr_loc(i,3,iGrp)*dt
+               else
+                  mom_change = ( f3 - crunew(ind_cell(i),icrE+3) ) / cr_vmax(ilevel)**2
+               endif
+               unew(ind_cell(i),4) = unew(ind_cell(i),4) + mom_change*f_decouple
+            endif
+#endif
+
+        end do ! ncr
+
+            ekin=0d0
+            do idim=1,ndim
+               ekin = ekin + 0.5d0*unew(ind_cell(i),idim+1)**2/unew(ind_cell(i),1)
+            end do
+            err=0d0
+            emag=0d0
+            do idim=1,ndim
+               emag = emag + 0.125d0*(unew(ind_cell(i),idim+5)+unew(ind_cell(i),idim+nvar))**2
+            end do
+
+            etherm = unew(ind_cell(i),5) - ekin - emag - err
+            if(etherm .lt. smallp*uold(ind_cell(i),1)) then
+               unew(ind_cell(i),5) = ekin + emag + err + smallp*uold(ind_cell(i),1)
+               if(myid.eq.1) print*,'Noooooo negative energy!!'
+               !call clean_stop
+            endif
+
+        end do ! ncache
+
+     enddo
+     ! End loop over cells
+  end do
+  ! End loop over grids
+
+111 format('   Entering add_cr_source_terms for level ',i2)
+
+end subroutine add_cr_source_terms
 
 !************************************************************************
 SUBROUTINE cr_godunov_fine(ilevel)
@@ -214,8 +605,10 @@ SUBROUTINE cr_set_uold(ilevel)
    ! Transport-robustness floor: the per-group CR energy is floored at
    ! smallcr after the update (mirroring rt_set_uold's max(...,smallNp)
    ! "prevent beam induced crash" fix in rt/rt_godunov_fine.f90). In cral
-   ! this floor lives in add_cr_source_terms, which Phase 1 omits; without
-   ! it the explicit transport of a degenerate state can drive E_cr slightly
+   ! this floor lives in add_cr_source_terms (which now also runs in
+   ! crmom_step, after this routine); keeping it here too is harmless and
+   ! makes the explicit transport robust on its own -- without it the
+   ! explicit transport of a degenerate state can drive E_cr slightly
    ! negative and trip the Ecr<0 guard in cmp_cr_flux_tensors. This is pure
    ! transport robustness -- no scattering/streaming/cooling source physics.
    !--------------------------------------------------------------------------
@@ -285,8 +678,8 @@ SUBROUTINE cr_godfine1(ind_grid, ncache, ilevel)
 ! stencils -- uin_gas(...,1:nvar+3) gathered from uold (rho/vel/B, needed by
 ! the M1 closure), and uin_cr(...,1:ncrvars) gathered from cruold (E,F with
 ! iCRu=1). The conservative update writes crunew(:,1:ncrvars); there are NO
-! gas writes (gas momentum/energy back-reaction lives only in the omitted
-! add_cr_source_terms). The buffer-neighbour gather uses the same
+! gas writes here (the gas momentum/energy back-reaction lives in
+! add_cr_source_terms, called next in crmom_step). The buffer-neighbour gather uses the same
 ! get3cubefather/getnborfather/interpol machinery as gas: gas via
 ! interpol_hydro, CR via the local cr_interpol_hydro (mirroring RT).
 !
