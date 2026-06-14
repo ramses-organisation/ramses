@@ -76,6 +76,10 @@ subroutine crmom_step(ilevel)
      ! Set cruold equal to crunew, but only for the CR vars
      call cr_set_uold(ilevel)
 
+     ! Collisional CR cooling (Coulomb/hadronic losses), on cruold.
+     ! Mirrors cral's call at cr/cr_godunov_fine.f90:926, after cr_set_uold.
+     if(cr_cooling)call cr_cooling_fine(ilevel)
+
      do ivar=1,ncrvars
         call make_virtual_fine_dp(cruold(1,ivar),ilevel)
      end do
