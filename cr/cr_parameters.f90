@@ -43,7 +43,7 @@ module cr_parameters
   logical::cr_varvmax_vdvs=.false.          ! Include diff/stream speeds in vmax
   ! Scattering / streaming source terms (used from phase 2)
   real(dp),dimension(1:ncr)::Dcr=1.0d29     ! Diffusion coefficient [cm^2/s]
-  real(dp)::DCRmax=0d0                      ! Max diffusion coefficient [cm^2/s]
+  real(dp)::DCRmax=1d30                     ! Max CR streaming diffusion coeff [cm^2/s] (cral amr_parameters default; 0 would disable streaming diffusion via 1/DCRmax_code=Inf)
   real(dp),dimension(1:ncr)::Dcr_perp_factor=1d-6 ! Perpendicular suppression
   logical::mom_streaming_diffusion=.false.  ! Streaming term in sigma
   logical::mom_streaming_heating=.false.    ! Streaming heating of gas

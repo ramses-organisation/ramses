@@ -1,0 +1,76 @@
+! Jiang & Oh (2018) 4.1.1 -- 1D Gaussian CR-energy pulse (pure diffusion/advection).
+! Ported from ramses_cral tests/cr/jiang_411/jiang_411.nml: CR keys moved from
+! &MHD_PARAMS to the separated-CR &CR_PARAMS, cr_legacy_output enabled so the
+! osyris notebook reads CR fields from the hydro files. NDIM=1 build.
+&RUN_PARAMS
+hydro=.true.
+nremap=0
+ncontrol=100
+nsubcycle=20*2,
+static_gas=.true.
+/
+
+&AMR_PARAMS
+levelmin=9
+levelmax=9
+ngridmax=10000
+nexpand=1
+boxlen=2.0
+/
+
+&BOUNDARY_PARAMS
+nboundary=2
+ibound_min=-1,+1
+ibound_max=-1,+1
+bound_type= 2, 2
+/
+
+&CR_PARAMS
+jiang_test='411'
+Dcr=1e-8
+cr_c_fraction=3.3356409297285193e-9   ! reduced light speed = 100
+mom_streaming_heating=.false.
+mom_streaming_diffusion=.true.
+cr_varvmax=.false.
+cr_nsubcycle=1
+cr_f_taucell=1.0
+v_alfven=1.0
+cr_advect=.true.
+cr_legacy_output=.true.
+/
+
+&INIT_PARAMS
+nregion=1
+region_type(1)='square'
+x_center=1.0
+length_x=10.0
+d_region=1.0
+u_region=0.0
+v_region=0.0
+w_region=0.0
+p_region=1.0
+A_region=1.0
+B_region=0.0
+C_region=0.0
+/
+
+&OUTPUT_PARAMS
+noutput=2
+tout=0.05,0.1
+/
+
+&HYDRO_PARAMS
+gamma=1.666667
+courant_factor=0.8
+slope_type=2
+riemann='hlld'
+pressure_fix=.true.
+/
+
+&REFINE_PARAMS
+err_grad_d=0.01
+err_grad_u=0.0
+err_grad_p=0.05
+interpol_var=0
+interpol_type=1
+/
