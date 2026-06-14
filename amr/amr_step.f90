@@ -382,7 +382,12 @@ recursive subroutine amr_step(ilevel,icount)
   !-----------
   ! Hydro step
   !-----------
-  if((hydro).and.(.not.static_gas))then
+  if(hydro)then
+
+   ! Gas hyperbolic update: skipped for static_gas. The CR transport block
+   ! below must still run with frozen gas (e.g. Jiang static-gas tests), so
+   ! only the gas pieces are gated by .not.static_gas, not the CR block.
+   if(.not.static_gas)then
 
      ! Hyperbolic solver
                                call timer('hydro - godunov','start')
@@ -422,6 +427,8 @@ recursive subroutine amr_step(ilevel,icount)
         call add_pdv_source_terms(ilevel)
      endif
 
+   endif ! .not.static_gas (gas hyperbolic update)
+
 #ifdef CRFLX
      if(cr_advect)then
         call upload_fine(ilevel)
@@ -437,6 +444,8 @@ recursive subroutine amr_step(ilevel,icount)
         call crmom_step(ilevel)
      endif
 #endif
+
+   if(.not.static_gas)then
 
      ! Set uold equal to unew
                                call timer('hydro - set uold','start')
@@ -460,7 +469,9 @@ recursive subroutine amr_step(ilevel,icount)
                                call timer('hydro upload fine','start')
      call upload_fine(ilevel)
 
-  endif
+   endif ! .not.static_gas (gas set_uold / restriction)
+
+  endif ! hydro
 
   !---------------------
   ! Do RT/Chemistry step
