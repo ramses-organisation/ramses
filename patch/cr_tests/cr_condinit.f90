@@ -19,7 +19,7 @@
 ! is not needed in this CR-only buffer; flux is set to zero, identical to cral
 ! for these tests.
 !
-!   1D tests covered here: 411  413  414  421  424
+!   1D tests covered here: 411  411_triangular  413  414  421  424
 !================================================================
 subroutine cr_condinit(x,u,dx,nn,ilevel)
   use amr_parameters
@@ -59,6 +59,17 @@ subroutine cr_condinit(x,u,dx,nn,ilevel)
      tmp(1:nn)=(x(1:nn,1)-boxlen*0.5d0)**2
      do i=1,nn
         u(i,iCRu)=exp(-40d0*tmp(i))
+     end do
+
+  case('411_triangular')                     ! Triangular CR-energy profile
+     ! cral: u(:,icrU)=E0-slope*|x-boxlen/2| (E0=2,slope=1); the advective flux
+     ! u(:,icrU+1)=4/3*v_gas*E_cr is zero here because the gas is static
+     ! (u_region=0), so it stays at the default-zero set above. The streaming
+     ! wave is driven entirely by the time-dependent analytic boundary
+     ! (cr_boundana, bound_type=3). E0/slope match jiang_cr_init('411_triangular').
+     tmp(1:nn)=(x(1:nn,1)-boxlen*0.5d0)**2
+     do i=1,nn
+        u(i,iCRu)=2d0-1d0*sqrt(tmp(i))
      end do
 
   case('421')                                ! Sinusoidal CR-energy profile
