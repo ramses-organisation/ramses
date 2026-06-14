@@ -19,7 +19,14 @@
 ! is not needed in this CR-only buffer; flux is set to zero, identical to cral
 ! for these tests.
 !
-!   1D tests covered here: 411  411_triangular  413  414  421  424
+! Test '422' (colliding flow) takes its CR ENERGY from crmom_region per region
+! geometry -- cral does this in region_condinit, which the separated CR module
+! does not call -- so cr_region_condinit below replicates region_condinit's
+! square-region geometry into the CR buffer, then the '422' branch sets the CR
+! advective flux F = 4/3 v_gas E_cr from the namelist region velocity u_region
+! (= the gas velocity q(:,2) cral reads), giving the identical CR state.
+!
+!   1D tests covered here: 411  411_triangular  413  414  421  422  424
 !================================================================
 subroutine cr_condinit(x,u,dx,nn,ilevel)
   use amr_parameters
@@ -85,9 +92,139 @@ subroutine cr_condinit(x,u,dx,nn,ilevel)
         u(i,iCRu+1:iCRu+ndim)=0d0
      end do
 
+  case('422')                                ! CR energy from crmom_region; flux from gas velocity
+     ! cral: region_condinit fills the CR energy E_cr=crmom_region(k,1) inside
+     ! each region (here crmom_region(:,1)=50,50); then jiang_cr_init sets the
+     ! CR advective flux u(:,icrU+1)=4/3 q(:,2) E_cr from the gas velocity q(:,2).
+     ! The separated CR module never calls region_condinit, so we replicate its
+     ! square-region geometry: cr_region_condinit fills E_cr (and any crmom flux),
+     ! then we overwrite the x-flux with 4/3 u_region(k) E_cr per region. Inside
+     ! each region q(:,2)=u_region(k) (region_condinit), so this matches cral.
+     call cr_region_condinit(x,u,dx,nn)
+     call cr_flux_from_region_velocity(x,u,dx,nn)
+
   case default
      write(*,*)'cr_condinit: unknown jiang_test = "'//trim(jiang_test)//'"'
      call clean_stop
   end select
 
 end subroutine cr_condinit
+!================================================================
+!================================================================
+!================================================================
+!================================================================
+subroutine cr_region_condinit(x,u,dx,nn)
+  ! Fill the separated CR buffer u(1:nn,1:ncrvars) from the namelist
+  ! crmom_region per region geometry. Faithful port of the CR-handling part
+  ! of ramses_cral mhd/init_flow_fine.f90 region_condinit (the square/point
+  ! region loop), keeping ONLY the CR slots: cral wrote q(i,icru+ivar-1) with
+  ! icru=nvar+4; here we write u(i,ivar) with the separated layout (iCRu=1),
+  ! ivar=1..ncrvars maps energy + ndim fluxes per group identically.
+  ! Default (no region covers a cell) leaves the smallcr floor / zero flux
+  ! that cr_condinit set before calling this routine; cral's default is 0,
+  ! but every 422 cell is covered by a region so the difference never shows.
+  use amr_parameters
+  use cr_parameters
+  implicit none
+  integer ::nn
+  real(dp)::dx
+  real(dp),dimension(1:nvector,1:ncrvars)::u
+  real(dp),dimension(1:nvector,1:ndim  )::x
+  integer::i,k,ivar
+  real(dp)::vol,r,xn,yn,zn,en
+
+  ! Loop over initial conditions regions
+  do k=1,nregion
+
+     ! For "square" regions only:
+     if(region_type(k) .eq. 'square')then
+        en=exp_region(k)
+        do i=1,nn
+           xn=0.0d0; yn=0.0d0; zn=0.0d0
+           xn=2.0d0*abs(x(i,1)-x_center(k))/length_x(k)
+#if NDIM>1
+           yn=2.0d0*abs(x(i,2)-y_center(k))/length_y(k)
+#endif
+#if NDIM>2
+           zn=2.0d0*abs(x(i,3)-z_center(k))/length_z(k)
+#endif
+           if(exp_region(k)<10)then
+              r=(xn**en+yn**en+zn**en)**(1.0/en)
+           else
+              r=max(xn,yn,zn)
+           end if
+           ! If cell lies within region, REPLACE CR variables by region values
+           if(r<1.0)then
+              do ivar=1,ncrvars
+                 u(i,ivar)=crmom_region(k,ivar)
+              end do
+           end if
+        end do
+     end if
+
+     ! For "point" regions only:
+     if(region_type(k) .eq. 'point')then
+        vol=dx**ndim
+        do i=1,nn
+           xn=1.0; yn=1.0; zn=1.0
+           xn=max(1.0-abs(x(i,1)-x_center(k))/dx,0.0_dp)
+#if NDIM>1
+           yn=max(1.0-abs(x(i,2)-y_center(k))/dx,0.0_dp)
+#endif
+#if NDIM>2
+           zn=max(1.0-abs(x(i,3)-z_center(k))/dx,0.0_dp)
+#endif
+           r=xn*yn*zn
+           ! ADD region CR energy density (cral adds crmom_region(k,1)*r/vol)
+           u(i,iCRu)=u(i,iCRu)+crmom_region(k,1)*r/vol
+        end do
+     end if
+  end do
+
+end subroutine cr_region_condinit
+!================================================================
+!================================================================
+!================================================================
+!================================================================
+subroutine cr_flux_from_region_velocity(x,u,dx,nn)
+  ! jiang_test='422': set the CR advective flux F = 4/3 v_gas E_cr from the gas
+  ! velocity. cral does u(:,icrU+1)=4/3*q(:,2)*u(:,icrU) where q(:,2) is the gas
+  ! x-velocity = u_region(k) inside region k (region_condinit). The separated CR
+  ! buffer has no gas state, so we recover the same per-region velocity from the
+  ! namelist region geometry (identical square/point test as region_condinit).
+  ! Only the first CR group's x-flux is set, matching jiang_cr_init('422').
+  use amr_parameters
+  use cr_parameters
+  use hydro_parameters, only: u_region
+  implicit none
+  integer ::nn
+  real(dp)::dx
+  real(dp),dimension(1:nvector,1:ncrvars)::u
+  real(dp),dimension(1:nvector,1:ndim  )::x
+  integer::i,k
+  real(dp)::r,xn,yn,zn,en
+
+  do k=1,nregion
+     if(region_type(k) .ne. 'square')cycle
+     en=exp_region(k)
+     do i=1,nn
+        xn=0.0d0; yn=0.0d0; zn=0.0d0
+        xn=2.0d0*abs(x(i,1)-x_center(k))/length_x(k)
+#if NDIM>1
+        yn=2.0d0*abs(x(i,2)-y_center(k))/length_y(k)
+#endif
+#if NDIM>2
+        zn=2.0d0*abs(x(i,3)-z_center(k))/length_z(k)
+#endif
+        if(exp_region(k)<10)then
+           r=(xn**en+yn**en+zn**en)**(1.0/en)
+        else
+           r=max(xn,yn,zn)
+        end if
+        if(r<1.0)then
+           u(i,iCRu+1)=4d0/3d0*u_region(k)*u(i,iCRu)
+        end if
+     end do
+  end do
+
+end subroutine cr_flux_from_region_velocity

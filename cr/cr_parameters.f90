@@ -58,6 +58,11 @@ module cr_parameters
   ! Boundaries / tests
   real(dp)::cr_bound_floor=-1d0             ! >=0: E_cr in reflexive boundaries
   character(LEN=32)::jiang_test=''          ! Jiang & Oh test IC/BC dispatch
+  ! Region-based CR initial conditions (per &init_params region geometry).
+  ! crmom_region(k,1)=E_cr, crmom_region(k,2:ncrvars)=CR flux in region k.
+  ! Mirrors ramses_cral mhd/hydro_parameters.f90; the CR region init in
+  ! cr_condinit replicates region_condinit's geometry to fill these in.
+  real(dp),dimension(1:MAXREGION,1:ncrvars)::crmom_region=0d0
   ! Refinement
   real(dp),dimension(1:ncrvars)::err_grad_crmom=-1d0 ! CR gradient refinement
   ! Output

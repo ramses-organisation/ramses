@@ -1,0 +1,2 @@
+test_name:jiang-422
+ndim:1
