@@ -226,23 +226,14 @@ subroutine cr_region_condinit(x,u,dx,nn)
         end do
      end if
 
-     ! For "point" regions only:
-     if(region_type(k) .eq. 'point')then
-        vol=dx**ndim
-        do i=1,nn
-           xn=1.0; yn=1.0; zn=1.0
-           xn=max(1.0-abs(x(i,1)-x_center(k))/dx,0.0_dp)
-#if NDIM>1
-           yn=max(1.0-abs(x(i,2)-y_center(k))/dx,0.0_dp)
-#endif
-#if NDIM>2
-           zn=max(1.0-abs(x(i,3)-z_center(k))/dx,0.0_dp)
-#endif
-           r=xn*yn*zn
-           ! ADD region CR energy density (cral adds crmom_region(k,1)*r/vol)
-           u(i,iCRu)=u(i,iCRu)+crmom_region(k,1)*r/vol
-        end do
-     end if
+     ! For "point" regions only: cral's region_condinit point branch updates
+     ! ONLY the gas primitives (density/velocity/pressure/NENER) and never
+     ! touches the CR slots (mhd/init_flow_fine.f90:612-645). Faithful port =>
+     ! the CR buffer is left untouched here, keeping whatever the enclosing
+     ! 'square' region (or the smallcr floor) set. 423's point region has
+     ! crmom_region(2,1)=0 so this was already a numerical no-op, but matching
+     ! cral exactly avoids any CR injection if a future test uses a point region
+     ! with nonzero crmom_region.
   end do
 
 end subroutine cr_region_condinit

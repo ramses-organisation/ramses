@@ -91,9 +91,12 @@ subroutine crmom_step(ilevel)
   dtnew(ilevel)=dt_hydro                     ! Restore hydro timestep length
   t=t_save        ! Restore original time (otherwise tiny roundoff error)
 
-  ! Restriction operator to update this level split cells (gas only;
-  ! gas is frozen in Phase 1 so this is a no-op restriction on it).
+  ! Restriction operator to update this level split cells. upload_fine
+  ! restricts the gas array; cr_upload_fine restricts the SEPARATED CR field
+  ! cruold fine->coarse (the generic upload_fine never touches cruold).
+  ! cral's embedded CR is restricted by its single upload_fine (crmom_step:941).
   call upload_fine(ilevel)
+  call cr_upload_fine(ilevel)
 
   if(myid==1 .and. mod(nstep_coarse,ncontrol)==0)then
      call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)

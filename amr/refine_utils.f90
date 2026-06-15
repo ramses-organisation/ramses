@@ -596,6 +596,12 @@ subroutine make_grid_fine(ind_grid,ind_cell,ind,ilevel,nn,ibound,boundary_region
 #ifdef RT
   use rt_hydro_commons
 #endif
+#if NCR>0
+#ifdef CRFLX
+  use cr_hydro_commons, ONLY:cruold
+  use cr_parameters, ONLY:ncrvars,cr_advect
+#endif
+#endif
 #ifdef ATON
   use radiation_commons, ONLY:Erad
 #endif
@@ -631,6 +637,12 @@ subroutine make_grid_fine(ind_grid,ind_cell,ind,ilevel,nn,ibound,boundary_region
 #ifdef RT
   real(dp),dimension(1:nvector,0:twondim  ,1:nrtvar),save::urt1
   real(dp),dimension(1:nvector,1:twotondim,1:nrtvar),save::urt2
+#endif
+#if NCR>0
+#ifdef CRFLX
+  real(dp),dimension(1:nvector,0:twondim  ,1:ncrvars),save::ucr1
+  real(dp),dimension(1:nvector,1:twotondim,1:ncrvars),save::ucr2
+#endif
 #endif
   real(dp),dimension(1:nvector,1:ndim),save::xx
   integer ,dimension(1:nvector),save::cc
@@ -883,6 +895,38 @@ subroutine make_grid_fine(ind_grid,ind_cell,ind,ilevel,nn,ibound,boundary_region
            end do
         enddo
      end if
+#endif
+#if NCR>0
+#ifdef CRFLX
+     !============================
+     ! Interpolate CR variables
+     !============================
+     ! Prolongate the separated CR buffer cruold(:,1:ncrvars) onto freshly
+     ! created children, mirroring the gas interpol_hydro / RT rt_interpol_hydro
+     ! blocks above. Without this, new fine cells get the smallcr floor instead
+     ! of the parent CR energy/flux, so the CR pressure gradient (and the gas
+     ! back-reaction) vanish on refined levels -- breaking the non-static-gas
+     ! AMR test 424. cr_interpol_hydro is the same cell-centred slope-limited
+     ! prolongation cr_godfine1 uses for the stencil buffer cells.
+     if(hydro .and. cr_advect)then
+        do j=0,twondim
+           do ivar=1,ncrvars
+              do i=1,nn
+                 ucr1(i,j,ivar)=cruold(ind_fathers(i,j),ivar)
+              end do
+           end do
+        end do
+        call cr_interpol_hydro(ucr1,ucr2,nn)
+        do j=1,twotondim
+           iskip=ncoarse+(j-1)*ngridmax
+           do ivar=1,ncrvars
+              do i=1,nn
+                 cruold(iskip+ind_grid_son(i),ivar)=ucr2(i,j,ivar)
+              end do
+           end do
+        enddo
+     end if
+#endif
 #endif
      !=============================
      ! Interpolate stellar momentum

@@ -432,6 +432,12 @@ recursive subroutine amr_step(ilevel,icount)
 #ifdef CRFLX
      if(cr_advect)then
         call upload_fine(ilevel)
+        ! Restrict the SEPARATED CR field fine->coarse as well: the generic
+        ! upload_fine only touches the gas array uold. Without this the coarse
+        ! cells under refined regions keep stale CR values, so the prolongation
+        ! back to fine cells injects oct-scale noise (cral's embedded CR is
+        ! restricted automatically by upload_fine). Mirrors cral amr_step:420.
+        call cr_upload_fine(ilevel)
         ! Update boundaries on gas and CR variables
         do ivar=1,nvar_all
            call make_virtual_fine_dp(uold(1,ivar),ilevel)
@@ -468,6 +474,12 @@ recursive subroutine amr_step(ilevel,icount)
      ! Restriction operator
                                call timer('hydro upload fine','start')
      call upload_fine(ilevel)
+#ifdef CRFLX
+     ! Restrict the separated CR field too (cral's upload_fine at amr_step:442
+     ! restricts the embedded CR). Keeps coarse CR cells current before the next
+     ! step's refine/derefine so prolongation never injects a stale value.
+     if(cr_advect)call cr_upload_fine(ilevel)
+#endif
 
    endif ! .not.static_gas (gas set_uold / restriction)
 

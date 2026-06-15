@@ -4,6 +4,12 @@ subroutine hydro_flag(ilevel)
 #ifdef RT
   use rt_parameters
 #endif
+#if NCR>0
+#ifdef CRFLX
+  use cr_parameters, only: cr_advect,ncr,ncrvars,iCRu,err_grad_crmom
+  use cr_hydro_commons, only: cruold
+#endif
+#endif
   implicit none
   integer::ilevel
   ! -------------------------------------------------------------------
@@ -24,6 +30,15 @@ subroutine hydro_flag(ilevel)
   real(dp),dimension(1:twotondim,1:3)::xc
   real(dp),dimension(1:nvector,1:ndim),save::xx
   real(dp),dimension(1:nvector,1:nvar_all),save::uug,uum,uud
+#if NCR>0
+#ifdef CRFLX
+  real(dp),dimension(1:nvector,1:ncrvars),save::ucrg,ucrm,ucrd
+  real(dp)::pcrg,pcrm,pcrd,errcr
+  integer::icr,icrE
+  ! Matches cral's floor_prad in the CR-gradient denominator (mhd/godunov_utils:381)
+  real(dp),parameter::floor_crmom=1d-10
+#endif
+#endif
 
   if(ilevel==nlevelmax)return
   if(numbtot(1,ilevel)==0)return
@@ -126,6 +141,35 @@ subroutine hydro_flag(ilevel)
            call hydro_refine(uug,uum,uud,ok,ngrid,ilevel)
 #else
            call hydro_refine(uug,uum,uud,ok,ngrid)
+#endif
+
+#if NCR>0
+#ifdef CRFLX
+           ! CR-energy gradient refinement (err_grad_crmom). cral evaluates this
+           ! inside hydro_refine on the embedded CR slots ug/um/ud(nvar+3+irad);
+           ! the separated module reads the CR energy from cruold here. Without
+           ! it the CR front (e.g. the boundary-injected wave in 424) is never
+           ! refined, so the AMR grid tracks only the gas density step.
+           if(cr_advect)then
+              do icr=1,ncr
+                 if(err_grad_crmom(icr) >= 0.)then
+                    icrE=iCRu+(ndim+1)*(icr-1)
+                    do i=1,ngrid
+                       ucrg(i,icrE)=cruold(indn(i,2*idim-1),icrE)
+                       ucrm(i,icrE)=cruold(ind_cell(i     ),icrE)
+                       ucrd(i,icrE)=cruold(indn(i,2*idim  ),icrE)
+                    end do
+                    do i=1,ngrid
+                       pcrg=ucrg(i,icrE); pcrm=ucrm(i,icrE); pcrd=ucrd(i,icrE)
+                       errcr=2.0d0*MAX( &
+                            & ABS((pcrd-pcrm)/(pcrd+pcrm+floor_crmom)), &
+                            & ABS((pcrm-pcrg)/(pcrm+pcrg+floor_crmom)) )
+                       ok(i) = ok(i) .or. errcr > err_grad_crmom(icr)
+                    end do
+                 end if
+              end do
+           endif
+#endif
 #endif
         end do
 

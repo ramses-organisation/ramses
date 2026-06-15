@@ -8,7 +8,10 @@ subroutine courant_fine(ilevel)
 #endif
 #if NCR>0
 #ifdef CRFLX
-  use cr_parameters, only: cr_advect,cr_vmax,c_cu,cr_nsubcycle
+  use cr_parameters, only: cr_advect,cr_vmax,c_cu,cr_nsubcycle, &
+       & cr_varvmax,cr_varvmax_fudge,cr_varvmax_vdvs, &
+       & cr_va_max,cr_vgas_max,gamma_cr,Dcr_code,mom_streaming_diffusion,ncr,iCRu
+  use cr_hydro_commons, only: cruold
 #endif
 #endif
   implicit none
@@ -33,6 +36,8 @@ subroutine courant_fine(ilevel)
 #if NCR>0
 #ifdef CRFLX
   real(dp)::dt_cr
+  integer::igrp
+  real(dp),dimension(1:nvector,1:ncr),save::crecr
 #endif
 #endif
 
@@ -43,6 +48,12 @@ subroutine courant_fine(ilevel)
   ekin_all=0.0d0; ekin_loc=0.0d0
   emag_all=0.0d0; emag_loc=0.0d0
   eint_all=0.0d0; eint_loc=0.0d0
+#if NCR>0
+#ifdef CRFLX
+  cr_vgas_max=0.0d0
+  cr_va_max=0.0d0
+#endif
+#endif
   dt_all=dtnew(ilevel); dt_loc=dt_all
 
   ! Mesh spacing at that level
@@ -89,6 +100,22 @@ subroutine courant_fine(ilevel)
               uu(i,ivar)=uold(ind_leaf(i),ivar)
            end do
         end do
+
+#if NCR>0
+#ifdef CRFLX
+        ! Gather CR energy (from the separate cruold buffer, iCRu=1) so cmpdt
+        ! can add the CR pressure to the gas sound speed and accumulate
+        ! cr_vgas_max/cr_va_max. cral reads these from the embedded uold;
+        ! the separated module passes them as an extra argument.
+        if(cr_advect)then
+           do igrp=1,ncr
+              do i=1,nleaf
+                 crecr(i,igrp)=cruold(ind_leaf(i),iCRu+(ndim+1)*(igrp-1))
+              end do
+           end do
+        endif
+#endif
+#endif
 
         ! Gather gravitational acceleration
         gg=0.0d0
@@ -147,7 +174,15 @@ subroutine courant_fine(ilevel)
 
         ! Compute CFL time-step
         if(nleaf>0)then
+#if NCR>0
+#ifdef CRFLX
+           call cmpdt(uu,gg,dx,dt_lev,nleaf,crecr)
+#else
            call cmpdt(uu,gg,dx,dt_lev,nleaf)
+#endif
+#else
+           call cmpdt(uu,gg,dx,dt_lev,nleaf)
+#endif
            dt_loc=min(dt_loc,dt_lev)
         end if
 
@@ -189,13 +224,35 @@ subroutine courant_fine(ilevel)
 #if NCR>0
 #ifdef CRFLX
   ! Maximum time step for cosmic-ray moment flux, from the Courant
-  ! condition on cr_vmax (ported from cral mhd/courant_fine.f90:203-246,
-  ! timestep-limit block only). Refresh cr_vmax/DCR_code in code units
-  ! and cap at c. The adaptive cr_varvmax branch and the CR sound-speed
-  ! coupling to the gas Courant are deferred to Phase 2.
+  ! condition on cr_vmax (ported faithfully from cral
+  ! mhd/courant_fine.f90:203-246). Refresh cr_vmax/DCR_code in code units.
   if(cr_advect)then
      call update_cr_vmax_and_Dcr_code(cr_vmax(ilevel))
+
+     ! Adaptive reduced light speed (cr_varvmax): keep cr_vmax at least
+     ! cr_varvmax_fudge times larger than the gas signal speed dx/3/dt so the
+     ! CR wave always outruns the moving gas. Essential for the non-static-gas
+     ! tests (424/423); inert when cr_varvmax=.false. (all other 1D tests).
+     ! cral mhd/courant_fine.f90:206-237 (single-CPU: the MPI_ALLREDUCEs are
+     ! no-ops here). cr_vgas_max/cr_va_max are the per-cell gas/Alfven speed
+     ! maxima; the cr_varvmax_vdvs branch (off in every current test) uses them.
+     if(cr_varvmax .and. cr_advect)then
+        cr_vmax(ilevel) = max(cr_vmax(ilevel), dx/3d0/dtnew(ilevel) * cr_varvmax_fudge)
+        if(cr_varvmax_vdvs)then
+           if(mom_streaming_diffusion)then
+              do igrp=1,ncr
+                 cr_vmax(ilevel) = max(cr_vmax(ilevel), gamma_cr(igrp)*cr_va_max * cr_varvmax_fudge)
+              end do
+           endif
+           do igrp=1,ncr
+              cr_vmax(ilevel) = max(cr_vmax(ilevel), Dcr_code(igrp)/dx * (gamma_cr(igrp)-1d0) * cr_varvmax_fudge)
+           end do
+        endif
+     endif
+
+     ! Finally, make sure vmax <= c
      if(cr_vmax(ilevel) .gt. c_cu) cr_vmax(ilevel)=c_cu
+
      call get_crmom_courant(dt_cr,ilevel)
      dtnew(ilevel) = MIN(dtnew(ilevel), dt_cr * cr_nsubcycle*0.99999d0)
   endif
@@ -209,16 +266,38 @@ end subroutine courant_fine
 !###########################################################
 !###########################################################
 !###########################################################
+#if NCR>0
+#ifdef CRFLX
+subroutine cmpdt(uu,gg,dx,dt,ncell,crecr)
+#else
 subroutine cmpdt(uu,gg,dx,dt,ncell)
+#endif
+#else
+subroutine cmpdt(uu,gg,dx,dt,ncell)
+#endif
   use amr_parameters
   use hydro_parameters
   use const
+#if NCR>0
+#ifdef CRFLX
+  use cr_parameters, only: cr_advect,ncr,gamma_cr,cr_smallr_decouple, &
+       & cr_varvmax,cr_varvmax_vdvs,cr_vgas_max,cr_va_max,mom_streaming_diffusion
+#endif
+#endif
   implicit none
   integer::ncell
   real(dp)::dx,dt
   real(dp),dimension(1:nvector,1:nvar+3)::uu
   real(dp),dimension(1:nvector,1:ndim)::gg
   real(dp),dimension(1:nvector),save::a2,B2,rho,ctot
+#if NCR>0
+#ifdef CRFLX
+  real(dp),dimension(1:nvector,1:ncr)::crecr
+  real(dp),dimension(1:nvector),save::cr_cs
+  integer::icr
+  real(dp)::vgas,BNva
+#endif
+#endif
 
   real(dp)::dtcell,smallp,cf,cc,bc,bn
   integer::k,idim
@@ -269,6 +348,31 @@ subroutine cmpdt(uu,gg,dx,dt,ncell)
      end do
   end do
 #endif
+#if NCR>0
+#ifdef CRFLX
+  ! Add the CR pressure to the gas sound speed (cral mhd/godunov_utils.f90:71-89).
+  ! In the separated module the CR energy is gathered into crecr(:,1:ncr) by the
+  ! caller (cral reads it from the embedded uold). This couples the CR pressure
+  ! into the gas Courant condition -- essential on the refined levels at the CR
+  ! front, where it tightens the gas dt and lets cr_varvmax raise cr_vmax.
+  if(cr_advect)then
+     do k = 1, ncell
+        cr_cs(k)=zero
+     end do
+     do icr = 1,ncr
+        do k = 1, ncell
+           cr_cs(k)=cr_cs(k) + crecr(k,icr) * gamma_cr(icr)*(gamma_cr(icr)-1.0d0)
+        end do
+     end do
+     do k = 1, ncell
+        cr_cs(k)=cr_cs(k)/uu(k,1)
+        ! Only consider CR sound speed where rho is not tiny
+        if(uu(k,1) .gt. smallr*cr_smallr_decouple) &
+             a2(k) = a2(k) + cr_cs(k)
+     end do
+  endif
+#endif
+#endif
 
   ! Compute maximum wave speed (fast magnetosonic)
   do k = 1, ncell
@@ -311,6 +415,32 @@ subroutine cmpdt(uu,gg,dx,dt,ncell)
      dtcell=dx/ctot(k)*(sqrt(one+two*courant_factor*rho(k))-one)/rho(k)
      dt = min(dt,dtcell)
   end do
+
+#if NCR>0
+#ifdef CRFLX
+  ! Store maximum gas and Alfven speeds on level for the adaptive cr_vmax
+  ! (cral mhd/godunov_utils.f90:133-157). Only used by the cr_varvmax_vdvs
+  ! branch in courant_fine (off in every current test) but kept for fidelity.
+  if(cr_advect .and. cr_varvmax)then
+     do k = 1, ncell
+        vgas=0d0
+        do idim = 1,ndim
+           vgas = vgas + uu(k,idim+1)**2
+        end do
+        cr_vgas_max=max(cr_vgas_max, sqrt(vgas))
+     end do
+     if(cr_varvmax_vdvs .and. mom_streaming_diffusion)then
+        do k = 1, ncell
+           BNva=0d0
+           do idim=1,3
+              BNva = BNva + (half*(uu(k,5+idim)+uu(k,nvar+idim)))**2
+           end do
+           cr_va_max=max(cr_va_max, sqrt(BNva/uu(k,1)))
+        end do
+     endif
+  endif
+#endif
+#endif
 
 end subroutine cmpdt
 !#########################################################
