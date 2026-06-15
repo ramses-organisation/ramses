@@ -1,0 +1,96 @@
+! Jiang & Oh (2018) 4.2.3 -- 2D CR-blast / Sedov-type explosion with AMR.
+! Region-based (no condinit override): an ambient medium ('square' region filling
+! the box) plus a central 'point' over-pressure region; the CR state comes from
+! crmom_region (E_cr=1d-10 uniform, zero flux), replicated by cr_region_condinit
+! in patch/cr_tests/cr_condinit.f90 for the separated CR module. Exercises 2D AMR
+! CR interpolation as the blast wave sweeps the CR floor.
+! Ported from ramses_cral tests/cr/jiang_423/jiang_423.nml: &MHD_PARAMS ->
+! &CR_PARAMS, add cr_legacy_output (so osyris reads CR from the hydro files),
+! strip epsilon_diff (cral one-moment-diffusion key, not in sno &cr_params),
+! move crmom_region from &init_params to &cr_params (sno reads it there), and
+! move err_grad_crmom from &refine_params to &cr_params (CR refinement lives in
+! &cr_params). NDIM=2 build.
+&RUN_PARAMS
+hydro=.true.
+nremap=0
+ncontrol=1
+nsubcycle=4*2,
+static_gas=.false.
+/
+
+&AMR_PARAMS
+levelmin=6
+levelmax=7
+ngridmax=100000
+nexpand=1
+boxlen=1.0
+/
+
+&BOUNDARY_PARAMS
+nboundary=4
+ibound_min=-1,+1,-1,-1
+ibound_max=-1,+1,+1,+1
+jbound_min= 0, 0,+1,-1
+jbound_max= 0, 0,+1,-1
+bound_type= 2, 2, 2, 2
+/
+
+&CR_PARAMS
+jiang_test='423'
+Dcr=0.1
+cr_c_fraction=1e-8
+cr_advect=.true.
+mom_streaming_heating=.false.
+mom_streaming_diffusion=.true.
+cr_f_taucell=1.0
+cr_nsubcycle=10
+cr_varvmax=.true.
+v_alfven=1.0d-1
+DCRmax=1d5
+cr_legacy_output=.true.
+err_grad_crmom(1)=0.05   ! moved from &refine_params (CR refinement lives in &cr_params)
+! CR energy+flux per region (cral region_condinit reads this); replicated by
+! cr_region_condinit in patch/cr_tests/cr_condinit.f90 for the separated module.
+crmom_region(:,1)=1d-10,0.0d0
+! [stripped: epsilon_diff=1d-4 -- cral one-moment-diffusion key, not in sno reader]
+/
+
+&INIT_PARAMS
+nregion=2
+region_type(1)='square'
+region_type(2)='point'
+x_center=0.5,0.5
+y_center=0.5,0.5
+length_x=10.0,1.0
+length_y=10.0,1.0
+exp_region=10.0,10.0
+d_region=1.0,0.0
+u_region=0.0,0.0
+v_region=0.0,0.0
+w_region=0.0,0.0
+p_region=1e-4,0.6666666667d0
+A_region=1d-15,0.0d0
+B_region=0.0,0.0
+C_region=0.0,0.0
+! [crmom_region moved to &CR_PARAMS: sno reads it there, not in &init_params]
+/
+
+&OUTPUT_PARAMS
+foutput=10
+noutput=1
+tout=0.1
+/
+
+&HYDRO_PARAMS
+gamma=1.66667
+courant_factor=0.8
+slope_type=2
+riemann='hlld'
+/
+
+&REFINE_PARAMS
+err_grad_d=0.05
+err_grad_p=0.05
+interpol_var=0
+interpol_type=1
+/

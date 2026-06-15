@@ -33,6 +33,7 @@
 !
 !   1D tests covered here: 411  411_triangular  413  414  421  422  424  TP_1D_shock
 !   2D tests covered here: 412 (2D Gaussian CR pulse)  415 (magnetic-loop arc)
+!                          423 (2D CR blast / Sedov, region-based, AMR)
 !================================================================
 subroutine cr_condinit(x,u,dx,nn,ilevel)
   use amr_parameters
@@ -149,16 +150,21 @@ subroutine cr_condinit(x,u,dx,nn,ilevel)
      call cr_region_condinit(x,u,dx,nn)
      call cr_flux_from_region_velocity(x,u,dx,nn)
 
-  case('TP_1D_shock')                        ! Two-pressure shock tube: CR energy+flux from crmom_region
+  case('TP_1D_shock','423')                  ! Region-based: CR energy+flux from crmom_region
      ! cral: a region-based test with NO condinit override -- jiang_cr_init is a
-     ! no-op; the entire CR state comes from region_condinit reading crmom_region
-     ! (here crmom_region(:,1)=3,1 for the energy and crmom_region(:,2)=0,0 for
-     ! the x-flux), giving a CR-energy contact discontinuity (3|1) across x=5 with
-     ! zero initial flux. The separated CR module never calls region_condinit, so
-     ! cr_region_condinit replicates its square-region geometry into the CR buffer
-     ! (filling BOTH the energy at iCRu and the flux at iCRu+1 from crmom_region),
-     ! giving the identical CR state. No gas-velocity flux is needed: u_region=0,
-     ! so cral's flux would be zero anyway, and crmom_region(:,2)=0 sets it here.
+     ! no-op; the entire CR state comes from region_condinit reading crmom_region.
+     ! TP_1D_shock: crmom_region(:,1)=3,1 (energy) and crmom_region(:,2)=0,0
+     ! (x-flux), giving a CR-energy contact discontinuity (3|1) across x=5 with
+     ! zero initial flux. 423 (2D CR blast/Sedov): a box-filling 'square' region
+     ! sets E_cr=crmom_region(1,1)=1d-10 (zero flux) everywhere, plus a central
+     ! 'point' over-pressure region for the gas blast; cral's point region does
+     ! NOT touch CR (crmom_region(2,1)=0 anyway), so the CR start is a uniform
+     ! E_cr=1d-10 floor that the gas shock then sweeps. The separated CR module
+     ! never calls region_condinit, so cr_region_condinit replicates its square/
+     ! point geometry into the CR buffer (energy at iCRu, fluxes after it, all
+     ! from crmom_region), giving the identical CR state. No gas-velocity flux is
+     ! needed: u_region=0, so cral's flux would be zero, and crmom_region(:,2:)=0
+     ! sets it here. (For the point region crmom_region(k,1)*r/vol=0, a no-op.)
      call cr_region_condinit(x,u,dx,nn)
 
   case default
