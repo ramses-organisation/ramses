@@ -1,0 +1,79 @@
+! Jiang & Oh (2018) 4.1.2 -- 2D Gaussian CR-energy pulse + advective flux.
+! Ported from ramses_cral tests/cr/jiang_412/jiang_412.nml: CR keys moved from
+! &MHD_PARAMS to the separated-CR &CR_PARAMS, cr_legacy_output enabled so the
+! osyris notebook reads CR fields from the hydro files. First 2D test --
+! exercises the j-direction CR fluxes. NDIM=2 build.
+&RUN_PARAMS
+hydro=.true.
+nremap=0
+ncontrol=100
+nsubcycle=4*1,
+static_gas=.true.
+/
+
+&AMR_PARAMS
+levelmin=7
+levelmax=7
+ngridmax=100000
+nexpand=1
+boxlen=2.0
+/
+
+&BOUNDARY_PARAMS
+nboundary=4
+ibound_min=-1,+1,-1,-1
+ibound_max=-1,+1,+1,+1
+jbound_min= 0, 0,+1,-1
+jbound_max= 0, 0,+1,-1
+bound_type= 2, 2, 2, 2
+/
+
+&CR_PARAMS
+jiang_test='412'
+Dcr=1e-8
+cr_c_fraction=3.3356409297285193e-9   ! reduced light speed = 100
+mom_streaming_heating=.true.
+mom_streaming_diffusion=.true.
+cr_f_taucell=1.0
+cr_varvmax=.false.
+cr_nsubcycle=1
+cr_advect=.true.
+cr_legacy_output=.true.
+/
+
+&INIT_PARAMS
+nregion=1
+region_type(1)='square'
+x_center=0.5
+y_center=0.5
+length_x=100.0
+length_y=100.0
+d_region=2.0
+u_region=0.0
+v_region=0.0
+w_region=0.0
+p_region=2.0
+A_region=1.0
+B_region=1.0
+C_region=0.0
+/
+
+&OUTPUT_PARAMS
+noutput=2
+tout=0.05, 0.1
+/
+
+&HYDRO_PARAMS
+gamma=1.666667
+courant_factor=0.8
+slope_type=1
+riemann='hlld'
+/
+
+&REFINE_PARAMS
+err_grad_d=0.01
+err_grad_u=0.05
+err_grad_p=0.05
+interpol_var=0
+interpol_type=1
+/

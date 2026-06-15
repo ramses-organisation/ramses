@@ -32,6 +32,7 @@
 ! the gas velocity), so cr_region_condinit alone reproduces cral's region_condinit.
 !
 !   1D tests covered here: 411  411_triangular  413  414  421  422  424  TP_1D_shock
+!   2D tests covered here: 412 (2D Gaussian CR pulse)
 !================================================================
 subroutine cr_condinit(x,u,dx,nn,ilevel)
   use amr_parameters
@@ -69,6 +70,20 @@ subroutine cr_condinit(x,u,dx,nn,ilevel)
   case('411','414')                          ! Gaussian CR-energy pulse
      ! cral: u(:,icrU)=exp(-40*(x-boxlen/2)^2); flux=4/3*v_gas*E_cr=0 (static gas).
      tmp(1:nn)=(x(1:nn,1)-boxlen*0.5d0)**2
+     do i=1,nn
+        u(i,iCRu)=exp(-40d0*tmp(i))
+     end do
+
+  case('412')                                ! 2D Gaussian CR-energy pulse
+     ! cral: u(:,icrU)=exp(-40*((x-bc)^2+(y-bc)^2)); the advective flux
+     ! u(:,icrU+1)=4/3*v_gas_x*E_cr is zero here because the gas is static
+     ! (static_gas=.true., u_region=0), so it stays at the default-zero set
+     ! above -- identical to cral. First 2D test: exercises the j-direction CR
+     ! fluxes. Gaussian matches jiang_cr_init('412').
+     tmp(1:nn)=(x(1:nn,1)-boxlen*0.5d0)**2
+#if NDIM>1
+     tmp(1:nn)=tmp(1:nn)+(x(1:nn,2)-boxlen*0.5d0)**2
+#endif
      do i=1,nn
         u(i,iCRu)=exp(-40d0*tmp(i))
      end do
