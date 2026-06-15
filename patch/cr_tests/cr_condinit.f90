@@ -26,7 +26,12 @@
 ! advective flux F = 4/3 v_gas E_cr from the namelist region velocity u_region
 ! (= the gas velocity q(:,2) cral reads), giving the identical CR state.
 !
-!   1D tests covered here: 411  411_triangular  413  414  421  422  424
+! Test 'TP_1D_shock' (two-pressure shock tube) is also region-based: like 422 the
+! CR ENERGY (and here the zero flux) come from crmom_region per region geometry,
+! but unlike 422 the CR flux is taken DIRECTLY from crmom_region(:,2)=0 (not from
+! the gas velocity), so cr_region_condinit alone reproduces cral's region_condinit.
+!
+!   1D tests covered here: 411  411_triangular  413  414  421  422  424  TP_1D_shock
 !================================================================
 subroutine cr_condinit(x,u,dx,nn,ilevel)
   use amr_parameters
@@ -102,6 +107,18 @@ subroutine cr_condinit(x,u,dx,nn,ilevel)
      ! each region q(:,2)=u_region(k) (region_condinit), so this matches cral.
      call cr_region_condinit(x,u,dx,nn)
      call cr_flux_from_region_velocity(x,u,dx,nn)
+
+  case('TP_1D_shock')                        ! Two-pressure shock tube: CR energy+flux from crmom_region
+     ! cral: a region-based test with NO condinit override -- jiang_cr_init is a
+     ! no-op; the entire CR state comes from region_condinit reading crmom_region
+     ! (here crmom_region(:,1)=3,1 for the energy and crmom_region(:,2)=0,0 for
+     ! the x-flux), giving a CR-energy contact discontinuity (3|1) across x=5 with
+     ! zero initial flux. The separated CR module never calls region_condinit, so
+     ! cr_region_condinit replicates its square-region geometry into the CR buffer
+     ! (filling BOTH the energy at iCRu and the flux at iCRu+1 from crmom_region),
+     ! giving the identical CR state. No gas-velocity flux is needed: u_region=0,
+     ! so cral's flux would be zero anyway, and crmom_region(:,2)=0 sets it here.
+     call cr_region_condinit(x,u,dx,nn)
 
   case default
      write(*,*)'cr_condinit: unknown jiang_test = "'//trim(jiang_test)//'"'
