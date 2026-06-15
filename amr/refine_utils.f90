@@ -987,6 +987,10 @@ subroutine kill_grid(ind_cell,ilevel,nn,ibound,boundary_region)
   use rt_hydro_commons
   use rt_parameters
 #endif
+#if NCR>0
+  use cr_parameters, ONLY:cr_advect,ncrvars
+  use cr_hydro_commons, ONLY:cruold,crunew
+#endif
 #ifdef ATON
   use radiation_commons, ONLY:Erad
 #endif
@@ -1160,6 +1164,22 @@ subroutine kill_grid(ind_cell,ilevel,nn,ibound,boundary_region)
            do i=1,nn
               rtuold(ind_cell_son(i),ivar)=0.0D0
               rtunew(ind_cell_son(i),ivar)=0.0D0
+           end do
+        end do
+     end if
+#endif
+#if NCR>0
+     ! SEPARATED CR variables. cral carries the CR in uold(:,nvar+3+1:nvar+3+ncrvars)
+     ! so the hydro loop above zeroes its embedded CR on oct destruction; for the
+     ! separated cruold/crunew this is the faithful analog. Without it a destroyed
+     ! oct returns to the free list still holding stale CR (e.g. the cr_bound_floor
+     ! injection value), which a later re-refinement can read back into interior
+     ! coarse cells at coarse-fine boundaries.
+     if(cr_advect)then
+        do ivar=1,ncrvars
+           do i=1,nn
+              cruold(ind_cell_son(i),ivar)=0.0D0
+              crunew(ind_cell_son(i),ivar)=0.0D0
            end do
         end do
      end if

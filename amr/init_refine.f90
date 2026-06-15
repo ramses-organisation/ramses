@@ -66,7 +66,8 @@ subroutine init_refine_2
   use rt_hydro_commons
 #endif
 #if NCR>0
-  use cr_parameters, only: cr_advect
+  use cr_parameters, only: cr_advect,ncrvars
+  use cr_hydro_commons, only: cruold
 #endif
   use pm_commons
   use poisson_commons
@@ -118,6 +119,22 @@ subroutine init_refine_2
                  call make_virtual_fine_dp(rtuold(1,ivar),ilevel)
               end do
               if(simple_boundary)call rt_make_boundary_hydro(ilevel)
+           end if
+#endif
+#if NCR>0
+           ! Restrict the SEPARATED CR field fine->coarse in this initial-grid
+           ! restriction sweep, mirroring the gas (upload_fine) and RT blocks
+           ! above. cral's embedded CR rides uold so it is restricted by the
+           ! generic upload_fine here; for the separated cruold this is the
+           ! faithful analog. Without it the coarse cells under refined regions
+           ! keep stale CR (e.g. the reflexive cr_bound_floor injected near the
+           ! boundary leaks into interior coarse cells at coarse-fine borders).
+           if(cr_advect)then
+              call cr_upload_fine(ilevel)
+              do ivar=1,ncrvars
+                 call make_virtual_fine_dp(cruold(1,ivar),ilevel)
+              end do
+              if(simple_boundary)call cr_make_boundary_hydro(ilevel)
            end if
 #endif
         end do

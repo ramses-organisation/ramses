@@ -7,6 +7,10 @@ subroutine adaptive_loop
 #ifdef RT
   use rt_hydro_commons
 #endif
+#if NCR>0
+  use cr_parameters, only: cr_advect,ncrvars
+  use cr_hydro_commons, only: cruold
+#endif
 #if USE_TURB==1
   use turb_commons
 #endif
@@ -118,6 +122,18 @@ subroutine adaptive_loop
               if(simple_boundary)call rt_make_boundary_hydro(ilevel)
            endif
 #endif
+#if NCR>0
+           ! Coarse-refinement book-keeping for the SEPARATED CR field, mirroring
+           ! the gas/RT blocks above: communicate cruold and refresh the CR
+           ! boundaries on the freshly refined coarse levels. cral's embedded CR
+           ! is carried in this loop's uold make_virtual_fine_dp sweep.
+           if(cr_advect)then
+              do ivar=1,ncrvars
+                 call make_virtual_fine_dp(cruold(1,ivar),ilevel)
+              end do
+              if(simple_boundary)call cr_make_boundary_hydro(ilevel)
+           endif
+#endif
            if(poisson)then
               call make_virtual_fine_dp(phi(1),ilevel)
               do idim=1,ndim
@@ -159,6 +175,19 @@ subroutine adaptive_loop
                  call make_virtual_fine_dp(rtuold(1,ivar),ilevel)
               end do
               if(simple_boundary)call rt_make_boundary_hydro(ilevel)
+           end if
+#endif
+#if NCR>0
+           ! Cosmic-ray book-keeping for the SEPARATED CR field, mirroring the
+           ! gas/RT blocks: restrict cruold fine->coarse, communicate it, refresh
+           ! CR boundaries. cral restricts its embedded CR via upload_fine here;
+           ! without this the coarse levels keep stale CR after derefinement.
+           if(cr_advect)then
+              call cr_upload_fine(ilevel)
+              do ivar=1,ncrvars
+                 call make_virtual_fine_dp(cruold(1,ivar),ilevel)
+              end do
+              if(simple_boundary)call cr_make_boundary_hydro(ilevel)
            end if
 #endif
            ! Gravity book-keeping
