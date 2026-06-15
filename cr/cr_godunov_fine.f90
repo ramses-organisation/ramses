@@ -584,7 +584,11 @@ SUBROUTINE cr_set_unew(ilevel)
       iskip=ncoarse+(ind-1)*ngridmax
       do ivar=1,ncrvars
          do i=1,reception(icpu,ilevel)%ngrid
+#ifdef LIGHT_MPI_COMM
+            crunew(reception(icpu,ilevel)%pcomm%igrid(i)+iskip,ivar)=0.0
+#else
             crunew(reception(icpu,ilevel)%igrid(i)+iskip,ivar)=0.0
+#endif
          end do
       end do
    end do

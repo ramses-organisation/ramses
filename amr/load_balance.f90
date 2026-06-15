@@ -12,6 +12,10 @@ subroutine load_balance
 #ifdef RT
   use rt_hydro_commons, ONLY: nrtvar, rtuold
 #endif
+#if NCR>0
+  use cr_parameters, ONLY: cr_advect, ncrvars
+  use cr_hydro_commons, ONLY: cruold
+#endif
 #endif
   use bisection
   use mpi_mod
@@ -95,6 +99,23 @@ subroutine load_balance
         end do
         if(simple_boundary)then
            call rt_make_boundary_hydro(ilevel)
+        end if
+     endif
+#endif
+#if NCR>0
+     ! Refresh the SEPARATED CR field before the oct remap, mirroring the
+     ! gas/RT blocks above: communicate cruold virtual cells and refresh the
+     ! CR physical boundaries. cral carries its EMBEDDED CR in this loop's
+     ! uold make_virtual_fine_dp sweep (do ivar=1,nvar+3+ncrvars) and in
+     ! make_boundary_hydro, so it needs no separate hook; the separated
+     ! cruold does. Without it a nremap>0 load balance would remap octs with
+     ! stale CR virtual/boundary cells.
+     if(cr_advect)then
+        do ivar=1,ncrvars
+           call make_virtual_fine_dp(cruold(1,ivar),ilevel)
+        end do
+        if(simple_boundary)then
+           call cr_make_boundary_hydro(ilevel)
         end if
      endif
 #endif
