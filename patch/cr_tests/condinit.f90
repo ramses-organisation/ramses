@@ -68,6 +68,16 @@ subroutine  condinit(x,u,dx,nn)
 
   first_call = .false.
 
+  ! Jiang & Oh (2018) 4.1.5: 2D CR transport along a magnetic loop. PRE-conversion
+  ! primitive override of the uniform static gas and the current-loop B-field
+  ! (B = curl A, A_z = A0*max(R0-r,-boxlen)). Mirrors cral
+  ! patch/jiang_tests/condinit.f90 jiang_loop_primitives, called BEFORE the
+  ! prim->cons conversion so the magnetic energy enters the total energy below.
+  ! (cr_condinit sets the separated CR energy enhancement on the arc.)
+#if NDIM>1
+  if(trim(jiang_test)=='415') call jiang_loop_primitives(x,q,dx,nn)
+#endif
+
   ! Convert primitive to conservative variables
   ! density -> density
   u(1:nn,1)=q(1:nn,1)
@@ -117,6 +127,63 @@ subroutine  condinit(x,u,dx,nn)
   end select
 
 end subroutine condinit
+#if NDIM>1
+!================================================================
+!================================================================
+!================================================================
+!================================================================
+subroutine jiang_loop_primitives(x,q,dx,nn)
+  !--------------------------------------------------------------
+  ! Jiang & Oh (2018) 4.1.5: CR transport along a magnetic loop. Uniform static
+  ! gas threaded by a current-loop B-field from a vector potential A_z, set as
+  ! PRIMITIVE variables before the prim->cons conversion. Faithful port of cral
+  ! patch/jiang_tests/condinit.f90 jiang_loop_primitives, keeping ONLY the gas
+  ! and B-field: the separated CR module sets the CR-energy arc in cr_condinit,
+  ! so the cral q(i,icrU)=12/10 line is omitted here (icrU is not in this gas
+  ! buffer). atan2 (not atan(y/x)) avoids a divide-by-zero FPE at xx=0.
+  use amr_parameters
+  use hydro_parameters
+  implicit none
+  integer ::nn
+  real(dp)::dx
+  real(dp),dimension(1:nvector,1:nvar+3)::q
+  real(dp),dimension(1:nvector,1:ndim)::x
+  integer::i
+  real(dp)::xx,yy,zz,R0,A0,xl,xr,yl,yr,Al,Ar,xcenter
+
+  xcenter=boxlen*0.5d0
+  R0=0.3d0
+  A0=1d-3
+  zz=0d0
+
+  q(1:nn,1)=1d0          ! uniform density
+  q(1:nn,2:4)=0d0        ! static gas
+  q(1:nn,5)=1d-2         ! uniform pressure
+
+  do i=1,nn
+     ! Magnetic loop around the z-axis: B = curl A, with A_z = A0*max(R0-r,-boxlen)
+     xl=x(i,1)-0.5d0*dx-xcenter
+     xr=x(i,1)+0.5d0*dx-xcenter
+     yl=x(i,2)-0.5d0*dx-xcenter
+     yr=x(i,2)+0.5d0*dx-xcenter
+     Ar=A0*max(R0-sqrt(xl**2+yr**2),-boxlen)
+     Al=A0*max(R0-sqrt(xl**2+yl**2),-boxlen)
+     q(i,6)=(Ar-Al)/dx
+     Ar=A0*max(R0-sqrt(xr**2+yr**2),-boxlen)
+     Al=A0*max(R0-sqrt(xr**2+yl**2),-boxlen)
+     q(i,nvar+1)=(Ar-Al)/dx
+     Ar=A0*max(R0-sqrt(xr**2+yl**2),-boxlen)
+     Al=A0*max(R0-sqrt(xl**2+yl**2),-boxlen)
+     q(i,7)=(Al-Ar)/dx
+     Ar=A0*max(R0-sqrt(xr**2+yr**2),-boxlen)
+     Al=A0*max(R0-sqrt(xl**2+yr**2),-boxlen)
+     q(i,nvar+2)=(Al-Ar)/dx
+     q(i,8)=0d0
+     q(i,nvar+3)=0d0
+  enddo
+
+end subroutine jiang_loop_primitives
+#endif
 !================================================================
 !================================================================
 !================================================================

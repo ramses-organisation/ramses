@@ -32,7 +32,7 @@
 ! the gas velocity), so cr_region_condinit alone reproduces cral's region_condinit.
 !
 !   1D tests covered here: 411  411_triangular  413  414  421  422  424  TP_1D_shock
-!   2D tests covered here: 412 (2D Gaussian CR pulse)
+!   2D tests covered here: 412 (2D Gaussian CR pulse)  415 (magnetic-loop arc)
 !================================================================
 subroutine cr_condinit(x,u,dx,nn,ilevel)
   use amr_parameters
@@ -51,6 +51,9 @@ subroutine cr_condinit(x,u,dx,nn,ilevel)
   integer::i,igrp,icrE
   real(dp),dimension(1:nvector)::tmp
   real(dp)::pi
+#if NDIM>1
+  real(dp)::xx,yy,rr,theta
+#endif
 
   ! Default for every group: energy floor, zero flux. Test branches below
   ! overwrite the first group's energy (and, where applicable, flux).
@@ -111,6 +114,29 @@ subroutine cr_condinit(x,u,dx,nn,ilevel)
         u(i,iCRu)=1d-6
         u(i,iCRu+1:iCRu+ndim)=0d0
      end do
+
+#if NDIM>1
+  case('415')                                ! 2D magnetic loop: CR-energy arc enhancement
+     ! cral jiang_loop_primitives writes the CR energy into the primitive vector
+     ! q(:,icrU)=12 on one arc of the loop, =10 elsewhere; in the separated design
+     ! the gas/B-field part is set in condinit (jiang_loop_primitives) and the CR
+     ! energy here. Arc: 0.25 box < r < 0.35 box, theta in [-pi/12,pi/12], xx>0.
+     ! atan2 (not atan(yy/xx)) avoids a divide-by-zero FPE at xx=0; identical in
+     ! the xx>0 region the arc selects. Flux left at default zero (static gas).
+     pi=acos(-1d0)
+     do i=1,nn
+        xx=x(i,1)-boxlen*0.5d0
+        yy=x(i,2)-boxlen*0.5d0
+        rr=sqrt(xx**2+yy**2)
+        theta=atan2(yy,xx)
+        if(rr>0.25d0*boxlen .and. rr<0.35d0*boxlen .and. theta>-pi/12d0 .and. &
+             & theta<pi/12d0 .and. xx>0d0)then
+           u(i,iCRu)=1.2d1
+        else
+           u(i,iCRu)=1.0d1
+        endif
+     end do
+#endif
 
   case('422')                                ! CR energy from crmom_region; flux from gas velocity
      ! cral: region_condinit fills the CR energy E_cr=crmom_region(k,1) inside
