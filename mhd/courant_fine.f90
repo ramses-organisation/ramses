@@ -6,15 +6,17 @@ subroutine courant_fine(ilevel)
 #if USE_TURB==1
   use turb_commons
 #endif
-#if NCR>0
 #ifdef CRFLX
   use cr_parameters, only: cr_advect,cr_vmax,c_cu,cr_nsubcycle, &
        & cr_varvmax,cr_varvmax_fudge,cr_varvmax_vdvs, &
-       & cr_va_max,cr_vgas_max,gamma_cr,Dcr_code,mom_streaming_diffusion,ncr,iCRu
+       & cr_va_max,cr_vgas_max,gamma_cr,Dcr_code,mom_streaming_diffusion,ncr,iCRu, &
+       & ecrs_tot,crecr
   use cr_hydro_commons, only: cruold
 #endif
-#endif
   implicit none
+#ifdef CRFLX
+  real(kind=8)::ecrs_loc,ecrs_all
+#endif
 #ifndef WITHOUTMPI
   integer::info
   real(kind=8),dimension(4)::comm_buffin,comm_buffout
@@ -33,12 +35,9 @@ subroutine courant_fine(ilevel)
   real(kind=8)::mass_all,ekin_all,eint_all,emag_all,dt_all
   real(dp),dimension(1:nvector,1:nvar_all),save::uu
   real(dp),dimension(1:nvector,1:ndim),save::gg
-#if NCR>0
 #ifdef CRFLX
   real(dp)::dt_cr
   integer::igrp
-  real(dp),dimension(1:nvector,1:ncr),save::crecr
-#endif
 #endif
 
   if(numbtot(1,ilevel)==0)return
@@ -48,11 +47,10 @@ subroutine courant_fine(ilevel)
   ekin_all=0.0d0; ekin_loc=0.0d0
   emag_all=0.0d0; emag_loc=0.0d0
   eint_all=0.0d0; eint_loc=0.0d0
-#if NCR>0
 #ifdef CRFLX
+  ecrs_all=0.0d0; ecrs_loc=0.0d0
   cr_vgas_max=0.0d0
   cr_va_max=0.0d0
-#endif
 #endif
   dt_all=dtnew(ilevel); dt_loc=dt_all
 
@@ -101,7 +99,6 @@ subroutine courant_fine(ilevel)
            end do
         end do
 
-#if NCR>0
 #ifdef CRFLX
         ! Gather CR energy (from the separate cruold buffer, iCRu=1) so cmpdt
         ! can add the CR pressure to the gas sound speed and accumulate
@@ -114,7 +111,6 @@ subroutine courant_fine(ilevel)
               end do
            end do
         endif
-#endif
 #endif
 
         ! Gather gravitational acceleration
@@ -172,17 +168,19 @@ subroutine courant_fine(ilevel)
         end do
 #endif
 
+#ifdef CRFLX
+        ! Compute cosmic rays energy (pure diagnostic; from the separated
+        ! cruold buffer, not uold). cral mhd/courant_fine.f90:142-149.
+        do igrp=1,ncr
+           do i=1,nleaf
+              ecrs_loc=ecrs_loc+cruold(ind_leaf(i),iCRu+(ndim+1)*(igrp-1))*vol
+           end do
+        end do
+#endif
+
         ! Compute CFL time-step
         if(nleaf>0)then
-#if NCR>0
-#ifdef CRFLX
-           call cmpdt(uu,gg,dx,dt_lev,nleaf,crecr)
-#else
            call cmpdt(uu,gg,dx,dt_lev,nleaf)
-#endif
-#else
-           call cmpdt(uu,gg,dx,dt_lev,nleaf)
-#endif
            dt_loc=min(dt_loc,dt_lev)
         end if
 
@@ -206,12 +204,21 @@ subroutine courant_fine(ilevel)
   ekin_all=comm_buffout(2)
   eint_all=comm_buffout(3)
   emag_all=comm_buffout(4)
+#ifdef CRFLX
+  ! Separate all-reduce for the CR-energy diagnostic, so the shared
+  ! mass/ekin/eint/emag buffer stays byte-identical to the no-CR (dev) build.
+  call MPI_ALLREDUCE(ecrs_loc,ecrs_all,1,MPI_DOUBLE_PRECISION,MPI_SUM,&
+       &MPI_COMM_WORLD,info)
+#endif
 #endif
 #ifdef WITHOUTMPI
   mass_all=mass_loc
   ekin_all=ekin_loc
   eint_all=eint_loc
   emag_all=emag_loc
+#ifdef CRFLX
+  ecrs_all=ecrs_loc
+#endif
   dt_all=dt_loc
 #endif
 
@@ -219,9 +226,11 @@ subroutine courant_fine(ilevel)
   ekin_tot=ekin_tot+ekin_all
   eint_tot=eint_tot+eint_all
   emag_tot=emag_tot+emag_all
+#ifdef CRFLX
+  ecrs_tot=ecrs_tot+ecrs_all
+#endif
   dtnew(ilevel)=MIN(dtnew(ilevel),dt_all)
 
-#if NCR>0
 #ifdef CRFLX
   ! Maximum time step for cosmic-ray moment flux, from the Courant
   ! condition on cr_vmax (ported faithfully from cral
@@ -257,7 +266,6 @@ subroutine courant_fine(ilevel)
      dtnew(ilevel) = MIN(dtnew(ilevel), dt_cr * cr_nsubcycle*0.99999d0)
   endif
 #endif
-#endif
 
 111 format('   Entering courant_fine for level ',I2)
 
@@ -266,23 +274,14 @@ end subroutine courant_fine
 !###########################################################
 !###########################################################
 !###########################################################
-#if NCR>0
-#ifdef CRFLX
-subroutine cmpdt(uu,gg,dx,dt,ncell,crecr)
-#else
 subroutine cmpdt(uu,gg,dx,dt,ncell)
-#endif
-#else
-subroutine cmpdt(uu,gg,dx,dt,ncell)
-#endif
   use amr_parameters
   use hydro_parameters
   use const
-#if NCR>0
 #ifdef CRFLX
   use cr_parameters, only: cr_advect,ncr,gamma_cr,cr_smallr_decouple, &
-       & cr_varvmax,cr_varvmax_vdvs,cr_vgas_max,cr_va_max,mom_streaming_diffusion
-#endif
+       & cr_varvmax,cr_varvmax_vdvs,cr_vgas_max,cr_va_max,mom_streaming_diffusion, &
+       & crecr
 #endif
   implicit none
   integer::ncell
@@ -290,13 +289,10 @@ subroutine cmpdt(uu,gg,dx,dt,ncell)
   real(dp),dimension(1:nvector,1:nvar+3)::uu
   real(dp),dimension(1:nvector,1:ndim)::gg
   real(dp),dimension(1:nvector),save::a2,B2,rho,ctot
-#if NCR>0
 #ifdef CRFLX
-  real(dp),dimension(1:nvector,1:ncr)::crecr
   real(dp),dimension(1:nvector),save::cr_cs
   integer::icr
   real(dp)::vgas,BNva
-#endif
 #endif
 
   real(dp)::dtcell,smallp,cf,cc,bc,bn
@@ -348,7 +344,6 @@ subroutine cmpdt(uu,gg,dx,dt,ncell)
      end do
   end do
 #endif
-#if NCR>0
 #ifdef CRFLX
   ! Add the CR pressure to the gas sound speed (cral mhd/godunov_utils.f90:71-89).
   ! In the separated module the CR energy is gathered into crecr(:,1:ncr) by the
@@ -371,7 +366,6 @@ subroutine cmpdt(uu,gg,dx,dt,ncell)
              a2(k) = a2(k) + cr_cs(k)
      end do
   endif
-#endif
 #endif
 
   ! Compute maximum wave speed (fast magnetosonic)
@@ -416,7 +410,6 @@ subroutine cmpdt(uu,gg,dx,dt,ncell)
      dt = min(dt,dtcell)
   end do
 
-#if NCR>0
 #ifdef CRFLX
   ! Store maximum gas and Alfven speeds on level for the adaptive cr_vmax
   ! (cral mhd/godunov_utils.f90:133-157). Only used by the cr_varvmax_vdvs
@@ -439,7 +432,6 @@ subroutine cmpdt(uu,gg,dx,dt,ncell)
         end do
      endif
   endif
-#endif
 #endif
 
 end subroutine cmpdt

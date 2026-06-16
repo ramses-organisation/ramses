@@ -11,6 +11,9 @@ subroutine adaptive_loop
   use cr_parameters, only: cr_advect,ncrvars
   use cr_hydro_commons, only: cruold
 #endif
+#ifdef CRFLX
+  use cr_parameters, only: ecrs_tot
+#endif
 #if USE_TURB==1
   use turb_commons
 #endif
@@ -97,6 +100,9 @@ subroutine adaptive_loop
      eint_tot=0.0D0  ! Reset total internal energy
 #ifdef SOLVERmhd
      emag_tot=0.0D0  ! Reset total magnetic energy
+#endif
+#ifdef CRFLX
+     ecrs_tot=0.0D0  ! Reset total cosmic rays energy
 #endif
 
      ! Make new refinements

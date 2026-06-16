@@ -77,5 +77,10 @@ module cr_parameters
   real(dp)::DCRmax_code=0d0                 ! DCRmax in code units
   real(dp)::smalldcr=1d-25                  ! Floor on DCR_code (cral default)
   real(dp)::ecrs_tot=0d0                    ! Total CR energy (log diagnostic)
+  ! Per-cell CR-energy gather buffer for cmpdt's CR-pressure term: filled by
+  ! courant_fine, read by cmpdt. Module-level so cmpdt takes no extra argument
+  ! and its call/signature stay the no-CR (dev) form (mirrors how
+  ! cr_vgas_max/cr_va_max already flow between courant_fine and cmpdt).
+  real(dp),dimension(1:nvector,1:ncr)::crecr=0d0
 
 end module cr_parameters
