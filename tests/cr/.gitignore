@@ -1,0 +1,4 @@
+# Local CR-test artifacts — regenerable, not committed
+*.pdf
+*.png
+*.ipynb

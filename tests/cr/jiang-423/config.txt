@@ -1,2 +1,1 @@
-test_name:jiang-423
-ndim:2
+FLAGS: NDIM=2 SOLVER=mhd NCR=1 CRFLX=1 PATCH=../patch/cr_tests
