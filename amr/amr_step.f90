@@ -339,6 +339,16 @@ recursive subroutine amr_step(ilevel,icount)
   if(rt)call rt_set_unew(ilevel)
 #endif
 
+#ifdef CRFLX
+  ! Set crunew equal to cruold before the recursive descent, so the finer
+  ! level's coarse-fine flux correction accumulates into crunew at this level
+  ! (mirrors set_unew / rt_set_unew). NOTE: currently a no-op -- the
+  ! unconditional cr_set_unew at the top of crmom_step re-initialises crunew on
+  ! substep 1 and overwrites this. Removing that internal reset is a separate,
+  ! deliberate step.
+  if(cr_advect)call cr_set_unew(ilevel)
+#endif
+
   !---------------------------
   ! Recursive call to amr_step
   !---------------------------
