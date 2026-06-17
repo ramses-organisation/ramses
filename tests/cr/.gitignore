@@ -3,3 +3,5 @@
 *.png
 *.ipynb
 *.tex
+# osyris plotting aid (for inspecting results), not test cases
+notebooks/
