@@ -40,3 +40,7 @@ plt.subplots_adjust(hspace=0.08)
 fig.savefig(title + ".pdf", bbox_inches="tight")
 fig.savefig(title + ".png", dpi=110, bbox_inches="tight")
 print("wrote %s.pdf  (output mode: %s, %d snapshots)" % (title, mode, len(snaps)))
+
+# regression check (mirror RT): final-snapshot sums vs committed <title>-ref.dat
+visu_ramses.check_solution(data["data"], title, tolerance={"all": 1e-8},
+                           overwrite=(os.environ.get("CR_REF_OVERWRITE") == "1"))

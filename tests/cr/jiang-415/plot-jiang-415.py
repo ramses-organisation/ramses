@@ -39,3 +39,7 @@ fig.tight_layout()
 fig.savefig(title + ".pdf", bbox_inches="tight")
 fig.savefig(title + ".png", dpi=110, bbox_inches="tight")
 print("wrote %s.pdf  (output mode: %s, snapshots used: %s)" % (title, mode, use))
+
+# regression check (mirror RT): final-snapshot sums vs committed <title>-ref.dat
+visu_ramses.check_solution(data["data"], title, tolerance={"all": 3e-6},
+                           overwrite=(os.environ.get("CR_REF_OVERWRITE") == "1"))
