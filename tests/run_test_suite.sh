@@ -129,7 +129,11 @@ testsegs_all=( $s1 );
 nseg_all=${#testsegs_all[@]};
 testlist="";
 for ((m=0;m<$nseg_all;m++)); do
-   testlist="${testlist} ${testsegs_all[m]}/*";
+   # Only real tests: directories that contain a config.txt. This skips
+   # helper folders (e.g. cr/notebooks, a plotting aid) that are not tests.
+   for testdir in ${testsegs_all[m]}/*; do
+      [ -f "${testdir}/config.txt" ] && testlist="${testlist} ${testdir}";
+   done
 done
 
 # Count number of tests
