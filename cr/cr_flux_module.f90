@@ -52,14 +52,12 @@ subroutine cmp_cr_flux_tensors(uin_gas, uin_cr, iGrp, nGrid, ftens, vmax, bfield
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nDim+1,1:ndim)::ftens
   integer::iGrp, nGrid!---------------------------------------------------
   real(dp),dimension(1:ndim)::crflux
-  real(dp)::Ecr, vmax, nedge
-  integer::i, j, k, idim, jdim, n, icrE
+  real(dp)::Ecr, vmax
+  integer::i, j, k, idim, jdim, n, icrE, nedge
   real(dp)::mu1,mu2,chi,b_norm2,crflux_norm
   real(dp),dimension(nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:ndim)::bfield
   real(dp)::vmax2,Ecr2,aniso_term
   !------------------------------------------------------------------------
-
-  vmax2=vmax**2
 
   icrE = iCRu+(ndim+1)*(iGrp-1) ! starting index of cr variables (base 1)
   ! Loop 6X6X6 cells in grid, from -1 to 4.
@@ -90,6 +88,7 @@ subroutine cmp_cr_flux_tensors(uin_gas, uin_cr, iGrp, nGrid, ftens, vmax, bfield
            enddo
         else
            ! M1 closure
+           vmax2=vmax**2
            Ecr2=Ecr**2
            b_norm2    =SUM(bfield(n,i,j,k,1:ndim)**2)
            crflux_norm=SUM(crflux**2)
@@ -360,7 +359,6 @@ SUBROUTINE cmp_cr_faces(uin_gas,uin_cr,iFlx,dx,dt,iGrp,ngrid,ilevel)
   implicit none
   real(dp),dimension(nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar+3)::uin_gas
   real(dp),dimension(nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:ncrvars)::uin_cr
-  real(dp),dimension(nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:ncrvars)::cru
   real(dp),dimension(nvector,if1:if2,jf1:jf2,kf1:kf2,1:ncrvars,1:ndim)::iFlx
   real(dp)::dx, dt
   integer,intent(in)::iGrp, nGrid, ilevel
@@ -376,22 +374,22 @@ SUBROUTINE cmp_cr_faces(uin_gas,uin_cr,iFlx,dx,dt,iGrp,ngrid,ilevel)
   integer ::i, j, k, n
   real(dp),dimension(ndim+1),save::slopeLM,slopeRM,slopeM
   real(dp),dimension(ndim+1),save::slopeLL,slopeL
-  real(dp),save::vslopeLM,vslopeRM,vslopeM
-  real(dp),save::vslopeLL,vslopeL,vprod
   real(dp):: vup,vdn,meanadv,meandiffv,aup,adn
-  REAL(dp)::fred, fred_dn, fred_up, c_tilde
   real(dp),dimension(nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:ndim)::bfield
   integer::idim
 !------------------------------------------------------------------------
   iP0 = 1+(iGrp-1)*(ndim+1)            ! Index of CR group energy density
   iP1 = iP0+nDim
   ! In sno CR lives in the separate stencil uin_cr (iCRu=1), so the whole
-  ! per-group block already starts at iP0; copy it wholesale.
-  cru(:,:,:,:,1:ncrvars) = uin_cr(:,:,:,:,1:ncrvars)
-  ! Magnetic field, needed for M1
-  do idim=1,ndim
-     bfield(:,:,:,:,idim) = 0.5*(uin_gas(:,:,:,:,5+idim)+uin_gas(:,:,:,:,nvar+idim))
-  end do
+  ! per-group block already starts at iP0; uin_cr is intent(in) and never
+  ! modified here, so downstream reads use it directly (no scratch copy).
+  ! Magnetic field, needed for M1; in the default P1 path (isotropic_pressure)
+  ! cmp_cr_flux_tensors never reads bfield, so skip building the full stencil.
+  if(.not.isotropic_pressure) then
+     do idim=1,ndim
+        bfield(:,:,:,:,idim) = 0.5*(uin_gas(:,:,:,:,5+idim)+uin_gas(:,:,:,:,nvar+idim))
+     end do
+  endif
 
   ! compute flux tensors for all the cells with correction
   call cmp_cr_flux_tensors(uin_gas, uin_cr, iGrp, ngrid, cFlx, cr_vmax(ilevel),bfield)!  flux tensors
@@ -410,8 +408,8 @@ SUBROUTINE cmp_cr_faces(uin_gas,uin_cr,iFlx,dx,dt,iGrp,ngrid,ilevel)
      do n=1,ngrid                              ! <- buffer of grids
         fdn = cFlx(n,  i-1, j, k, :, 1    )    !
         fup = cFlx(n,  i,   j, k, :, 1    )    !  upwards and downwards
-        udn = cru( n,  i-1, j, k, iP0:iP1 )    !  conditions
-        uup = cru( n,  i,   j, k, iP0:iP1 )    !
+        udn = uin_cr( n,  i-1, j, k, iP0:iP1 ) !  conditions
+        uup = uin_cr( n,  i,   j, k, iP0:iP1 ) !
         vdn  = uin_gas( n,  i-1, j, k, 2) / uin_gas(n,i-1,j,k,1) ! left velocity
         vup  = uin_gas( n,  i,   j, k, 2) / uin_gas(n,i  ,j,k,1) ! right velocity
 
@@ -431,29 +429,16 @@ SUBROUTINE cmp_cr_faces(uin_gas,uin_cr,iFlx,dx,dt,iGrp,ngrid,ilevel)
 
         ! interpolation of F
         slopeLM = (uup-udn)/dx
-        slopeRM = (cru(n, i+1, j, k, iP0:iP1) - uup)/dx
+        slopeRM = (uin_cr(n, i+1, j, k, iP0:iP1) - uup)/dx
         prod = slopeLM*slopeRM
         slopeM=0.
         where(prod.gt.0) slopeM=2.*prod/(slopeLM+slopeRM)
-        slopeLL = (udn - cru(n, i-2, j, k, iP0:iP1 ))/dx
+        slopeLL = (udn - uin_cr(n, i-2, j, k, iP0:iP1 ))/dx
         prod = slopeLL*slopeLM
         slopeL=0.
         where(prod.gt.0.) slopeL=2.*prod/(slopeLL+slopeLM)
         udn = udn+slopeL*0.5d0*dx
         uup = uup-slopeM*0.5d0*dx
-
-        ! interpolation of velocities
-        vslopeLM = (vup-vdn)/dx
-        vslopeRM = (uin_gas(n,i+1,j,k,2)/uin_gas(n,i+1,j,k,1) - vup)/dx
-        vprod = vslopeLM*vslopeRM
-        vslopeM=0.
-        if(vprod.gt.0) vslopeM=2.*vprod/(vslopeLM+vslopeRM)
-        vslopeLL = (vdn - uin_gas(n,i-2,j,k,2)/uin_gas(n,i-2,j,k,1))/dx
-        vprod = vslopeLL*vslopeLM
-        vslopeL=0.
-        if(vprod.gt.0.) vslopeL=2.*vprod/(vslopeLL+vslopeLM)
-        !vdn = vdn+vslopeL*0.5d0*dx
-        !vup = vup-vslopeM*0.5d0*dx
 
         else if(cr_use_minmod) then ! Second-order interpolation with using minmod slope Limiter
             slopeLM = (fup-fdn)/dx
@@ -465,20 +450,12 @@ SUBROUTINE cmp_cr_faces(uin_gas,uin_cr,iFlx,dx,dt,iGrp,ngrid,ilevel)
             fup = fup-slopeM*0.5d0*dx
 
             slopeLM = (uup-udn)/dx
-            slopeRM = (cru(n, i+1, j, k, iP0:iP1) - uup)/dx
+            slopeRM = (uin_cr(n, i+1, j, k, iP0:iP1) - uup)/dx
             slopeM  = minmod(slopeLM,slopeRM)
-            slopeLL = (udn - cru(n, i-2, j, k, iP0:iP1 ))/dx
+            slopeLL = (udn - uin_cr(n, i-2, j, k, iP0:iP1 ))/dx
             slopeL  = minmod(slopeLL,slopeLM)
             udn = udn+slopeL*0.5d0*dx
             uup = uup-slopeM*0.5d0*dx
-
-            vslopeLM = (vup-vdn)/dx
-            vslopeRM = (uin_gas(n,i+1,j,k,2)/uin_gas(n,i+1,j,k,1) - vup)/dx
-            vslopeM  = vminmod(vslopeLM,vslopeRM)
-            vslopeLL = (vdn - uin_gas(n,i-2,j,k,2)/uin_gas(n,i-2,j,k,1))/dx
-            vslopeL  = vminmod(vslopeLL,vslopeLM)
-            !vdn = vdn+vslopeL*0.5d0*dx
-            !vup = vup-vslopeM*0.5d0*dx
         endif
         meanadv = 0.5*(vdn+vup)
         meandiffv = 0.5*( lmax(n,i-1,j,k,1) + lmax(n,i,j,k,1) )
@@ -491,16 +468,6 @@ SUBROUTINE cmp_cr_faces(uin_gas,uin_cr,iFlx,dx,dt,iGrp,ngrid,ilevel)
 
         iFlx(n, i, j, k, iP0:iP1, 1)=&
              cmp_cr_face( fdn, fup, udn, uup, lminus, lplus)*dtdx
-
-        if (reduced_CR_flux_correction) then
-          fred = 1.0
-          c_tilde = MIN(ABS(lplus), ABS(lminus))
-          fred_dn = sqrt(sum(udn(2:2+ndim-1)**2)) / (c_tilde * udn(1))
-          fred_up = sqrt(sum(uup(2:2+ndim-1)**2)) / (c_tilde * uup(1))
-          fred = max(fred_dn, fred_up, 1.0)
-          fup(1) = fup(1) / fred; uup(2:2+ndim-1) = uup(2:2+ndim-1) / fred
-          fdn(1) = fdn(1) / fred; udn(2:2+ndim-1) = udn(2:2+ndim-1) / fred
-        endif
      end do
   end do
   end do
@@ -517,8 +484,8 @@ SUBROUTINE cmp_cr_faces(uin_gas,uin_cr,iFlx,dx,dt,iGrp,ngrid,ilevel)
      do n=1,ngrid
            fdn = cFlx(n,  i, j-1, k, :, 2    )
            fup = cFlx(n,  i, j,   k, :, 2    )
-           udn = cru( n,  i, j-1, k, iP0:iP1 )
-           uup = cru( n,  i, j,   k, iP0:iP1 )
+           udn = uin_cr( n,  i, j-1, k, iP0:iP1 )
+           uup = uin_cr( n,  i, j,   k, iP0:iP1 )
            vdn  = uin_gas( n,  i, j-1, k,3) / uin_gas(n,i,j-1,k,1) ! left velocity
            vup  = uin_gas( n,  i ,j,   k,3) / uin_gas(n,i,j,  k,1) ! right velocity
 
@@ -538,29 +505,16 @@ SUBROUTINE cmp_cr_faces(uin_gas,uin_cr,iFlx,dx,dt,iGrp,ngrid,ilevel)
 
            ! interpolation of F
            slopeLM = (uup-udn)/dx
-           slopeRM = (cru(n, i, j+1, k, iP0:iP1) - uup)/dx
+           slopeRM = (uin_cr(n, i, j+1, k, iP0:iP1) - uup)/dx
            prod = slopeLM*slopeRM
            slopeM=0.
            where(prod.gt.0) slopeM=2.*prod/(slopeLM+slopeRM)
-           slopeLL = (udn - cru(n, i, j-2, k, iP0:iP1 ))/dx
+           slopeLL = (udn - uin_cr(n, i, j-2, k, iP0:iP1 ))/dx
            prod = slopeLL*slopeLM
            slopeL=0.
            where(prod.gt.0.) slopeL=2.*prod/(slopeLL+slopeLM)
            udn = udn+slopeL*0.5d0*dx
            uup = uup-slopeM*0.5d0*dx
-
-           ! interpolation of velocities
-           vslopeLM = (vup-vdn)/dx
-           vslopeRM = (uin_gas(n,i,j+1,k,3)/uin_gas(n,i,j+1,k,1) - vup)/dx
-           vprod = vslopeLM*vslopeRM
-           vslopeM=0.
-           if(vprod.gt.0) vslopeM=2.*vprod/(vslopeLM+vslopeRM)
-           vslopeLL = (vdn - uin_gas(n,i,j-2,k,3)/uin_gas(n,i,j-2,k,1))/dx
-           vprod = vslopeLL*vslopeLM
-           vslopeL=0.
-           if(vprod.gt.0.) vslopeL=2.*vprod/(vslopeLL+vslopeLM)
-           !vdn = vdn+vslopeL*0.5d0*dx
-           !vup = vup-vslopeM*0.5d0*dx
 
            else if(cr_use_minmod) then ! Second-order interpolation with using minmod slope Limiter
               slopeLM = (fup-fdn)/dx
@@ -572,20 +526,12 @@ SUBROUTINE cmp_cr_faces(uin_gas,uin_cr,iFlx,dx,dt,iGrp,ngrid,ilevel)
               fup = fup-slopeM*0.5d0*dx
 
               slopeLM = (uup-udn)/dx
-              slopeRM = (cru(n, i, j+1, k, iP0:iP1) - uup)/dx
+              slopeRM = (uin_cr(n, i, j+1, k, iP0:iP1) - uup)/dx
               slopeM  = minmod(slopeLM,slopeRM)
-              slopeLL = (udn - cru(n, i, j-2, k, iP0:iP1))/dx
+              slopeLL = (udn - uin_cr(n, i, j-2, k, iP0:iP1))/dx
               slopeL  = minmod(slopeLL,slopeLM)
               udn = udn+slopeL*0.5d0*dx
               uup = uup-slopeM*0.5d0*dx
-
-              vslopeLM = (vup-vdn)/dx
-              vslopeRM = (uin_gas(n,i,j+1,k,3)/uin_gas(n,i,j+1,k,1) - vup)/dx
-              vslopeM  = vminmod(vslopeLM,vslopeRM)
-              vslopeLL = (vdn - uin_gas(n,i,j-2,k,3)/uin_gas(n,i,j-2,k,1))/dx
-              vslopeL  = vminmod(vslopeLL,vslopeLM)
-              !vdn = vdn+vslopeL*0.5d0*dx
-              !vup = vup-vslopeM*0.5d0*dx
            endif
            meanadv = 0.5*(vdn+vup)
            meandiffv = 0.5*( lmax(n,i,j-1,k,2) + lmax(n,i,j,k,2) )
@@ -598,16 +544,6 @@ SUBROUTINE cmp_cr_faces(uin_gas,uin_cr,iFlx,dx,dt,iGrp,ngrid,ilevel)
 
            iFlx(n, i, j, k, iP0:iP1, 2)=&
                 cmp_cr_face( fdn, fup, udn, uup, lminus, lplus)*dtdx
-
-           if (reduced_CR_flux_correction) then
-              fred = 1.0
-              c_tilde = MIN(ABS(lplus), ABS(lminus))
-              fred_dn = sqrt(sum(udn(2:2+ndim-1)**2)) / (c_tilde * udn(1))
-              fred_up = sqrt(sum(uup(2:2+ndim-1)**2)) / (c_tilde * uup(1))
-              fred = max(fred_dn, fred_up, 1.0)
-              fup(1) = fup(1) / fred; uup(2:2+ndim-1) = uup(2:2+ndim-1) / fred
-              fdn(1) = fdn(1) / fred; udn(2:2+ndim-1) = udn(2:2+ndim-1) / fred
-           endif
      end do
   end do
   end do
@@ -624,8 +560,8 @@ SUBROUTINE cmp_cr_faces(uin_gas,uin_cr,iFlx,dx,dt,iGrp,ngrid,ilevel)
      do n=1,ngrid
            fdn = cFlx(n,  i, j, k-1, :, 3    )
            fup = cFlx(n,  i, j, k,   :, 3    )
-           udn = cru( n,  i, j, k-1, iP0:iP1 )
-           uup = cru( n,  i, j, k,   iP0:iP1 )
+           udn = uin_cr( n,  i, j, k-1, iP0:iP1 )
+           uup = uin_cr( n,  i, j, k,   iP0:iP1 )
            vdn  = uin_gas( n,  i, j, k-1, 4) / uin_gas(n,i,  j,k-1,1) ! left velocity
            vup  = uin_gas( n,  i ,j, k,   4) / uin_gas(n,i  ,j,k,  1) ! right velocity
 
@@ -645,29 +581,16 @@ SUBROUTINE cmp_cr_faces(uin_gas,uin_cr,iFlx,dx,dt,iGrp,ngrid,ilevel)
 
            ! interpolation of F
            slopeLM = (uup-udn)/dx
-           slopeRM = (cru(n, i, j, k+1, iP0:iP1) - uup)/dx
+           slopeRM = (uin_cr(n, i, j, k+1, iP0:iP1) - uup)/dx
            prod = slopeLM*slopeRM
            slopeM=0.
            where(prod.gt.0) slopeM=2.*prod/(slopeLM+slopeRM)
-           slopeLL = (udn - cru(n, i, j, k-2, iP0:iP1 ))/dx
+           slopeLL = (udn - uin_cr(n, i, j, k-2, iP0:iP1 ))/dx
            prod = slopeLL*slopeLM
            slopeL=0.
            where(prod.gt.0.) slopeL=2.*prod/(slopeLL+slopeLM)
            udn = udn+slopeL*0.5d0*dx
            uup = uup-slopeM*0.5d0*dx
-
-           ! interpolation of velocities
-           vslopeLM = (vup-vdn)/dx
-           vslopeRM = (uin_gas(n,i,j,k+1,4)/uin_gas(n,i,j,k+1,1) - vup)/dx
-           vprod = vslopeLM*vslopeRM
-           vslopeM=0.
-           if(vprod.gt.0) vslopeM=2.*vprod/(vslopeLM+vslopeRM)
-           vslopeLL = (vdn - uin_gas(n,i,j,k-2,4)/uin_gas(n,i,j,k-2,1))/dx
-           vprod = vslopeLL*vslopeLM
-           vslopeL=0.
-           if(vprod.gt.0.) vslopeL=2.*vprod/(vslopeLL+vslopeLM)
-           !vdn = vdn+vslopeL*0.5d0*dx
-           !vup = vup-vslopeM*0.5d0*dx
 
            else if(cr_use_minmod) then ! Second-order interpolation with using minmod slope Limiter
               slopeLM = (fup-fdn)/dx
@@ -679,20 +602,12 @@ SUBROUTINE cmp_cr_faces(uin_gas,uin_cr,iFlx,dx,dt,iGrp,ngrid,ilevel)
               fup = fup-slopeM*0.5d0*dx
 
               slopeLM = (uup-udn)/dx
-              slopeRM = (cru(n, i, j, k+1, iP0:iP1) - uup)/dx
+              slopeRM = (uin_cr(n, i, j, k+1, iP0:iP1) - uup)/dx
               slopeM  = minmod(slopeLM,slopeRM)
-              slopeLL = (udn - cru(n, i, j, k-2, iP0:iP1))/dx
+              slopeLL = (udn - uin_cr(n, i, j, k-2, iP0:iP1))/dx
               slopeL  = minmod(slopeLL,slopeLM)
               udn = udn+slopeL*0.5d0*dx
               uup = uup-slopeM*0.5d0*dx
-
-              vslopeLM = (vup-vdn)/dx
-              vslopeRM = (uin_gas(n,i,j,k+1,4)/uin_gas(n,i,j,k+1,1) - vup)/dx
-              vslopeM  = vminmod(vslopeLM,vslopeRM)
-              vslopeLL = (vdn - uin_gas(n,i,j,k-2,4)/uin_gas(n,i,j,k-2,1))/dx
-              vslopeL  = vminmod(vslopeLL,vslopeLM)
-              !vdn = vdn+vslopeL*0.5d0*dx
-              !vup = vup-vslopeM*0.5d0*dx
            endif
 
            meanadv = 0.5*(vdn+vup)
@@ -706,16 +621,6 @@ SUBROUTINE cmp_cr_faces(uin_gas,uin_cr,iFlx,dx,dt,iGrp,ngrid,ilevel)
 
            iFlx(n, i, j, k, iP0:iP1, 3)=&
                 cmp_cr_face( fdn, fup, udn, uup, lminus, lplus)*dtdx
-
-           if (reduced_CR_flux_correction) then
-              fred = 1.0
-              c_tilde = MIN(ABS(lplus), ABS(lminus))
-              fred_dn = sqrt(sum(udn(2:2+ndim-1)**2)) / (c_tilde * udn(1))
-              fred_up = sqrt(sum(uup(2:2+ndim-1)**2)) / (c_tilde * uup(1))
-              fred = max(fred_dn, fred_up, 1.0)
-              fup(1) = fup(1) / fred; uup(2:2+ndim-1) = uup(2:2+ndim-1) / fred
-              fdn(1) = fdn(1) / fred; udn(2:2+ndim-1) = udn(2:2+ndim-1) / fred
-           endif
       end do
   end do
   end do
@@ -725,7 +630,7 @@ SUBROUTINE cmp_cr_faces(uin_gas,uin_cr,iFlx,dx,dt,iGrp,ngrid,ilevel)
 end subroutine cmp_cr_faces
 
 !************************************************************************
-SUBROUTINE rotatevec(sint, cost, sinp, cosp, v1, v2, v3)
+PURE SUBROUTINE rotatevec(sint, cost, sinp, cosp, v1, v2, v3)
   !  Rotate vector v by t=theta and p=phi
   !  i.e. rotate to the local coordinate system from theta, phi.
   !  Hence the x-component of the result is the component of v parallel
@@ -747,7 +652,7 @@ SUBROUTINE rotatevec(sint, cost, sinp, cosp, v1, v2, v3)
 END SUBROUTINE rotatevec
 
 !************************************************************************
-SUBROUTINE invrotatevec(sint, cost, sinp, cosp, v1, v2, v3)
+PURE SUBROUTINE invrotatevec(sint, cost, sinp, cosp, v1, v2, v3)
   !  Inverse-rotate vector v by t=theta and p=phi,
   !  i.e. rotate v onto theta, pi
   !

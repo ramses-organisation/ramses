@@ -153,7 +153,7 @@ subroutine add_cr_source_terms(ilevel)
   real(dp),dimension(1:nvector,1:ndim),save::dx_g,dx_d
   real(dp),dimension(1:nvector,1:ndim,1:ncr),save::gradEcr_loc,gradpcr_loc
   real(dp),dimension(1:nvector,1:3),save::B_field_loc
-  real(dp),dimension(1:nvector),save::bdotgradE_loc,bdotgradp_loc
+  real(dp),dimension(1:nvector),save::bdotgradE_loc
   real(dp),dimension(1:nvector,1:3),save::vs_loc
   real(dp),dimension(1:nvector),save::va_loc
   real(dp)::norm,frotx,froty,frotz,bxby,cosp,sinp,cost,sint
@@ -293,7 +293,9 @@ subroutine add_cr_source_terms(ilevel)
             icrE = iCRu+(ndim+1)*(iGrp-1)  ! starting index of cr variables
             norm=0.
             do j=1,3
-               B_field(j) = 0.5 * (uold(ind_cell(i), 5+j) + uold(ind_cell(i), nvar+j) )
+               ! Reuse the face-averaged B already stored in B_field_loc(i,:)
+               ! at the top of this i/iGrp iteration (identical expression).
+               B_field(j) = B_field_loc(i,j)
                norm = norm + B_field(j)**2
             end do
             norm = max(sqrt(norm), 1d-30)

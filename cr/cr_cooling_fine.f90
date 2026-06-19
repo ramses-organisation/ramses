@@ -16,7 +16,7 @@ SUBROUTINE cr_cooling_fine(ilevel)
   !---------------------------------------------------------
   integer::i,ind,iskip,igrid,ngrid,ncache,nleaf,il,iGrp,icrE
   integer,dimension(1:nvector),save::ind_grid,ind_cell,ind_leaf
-  real(dp)::dtcool,lambda_cr
+  real(dp)::dtcool,lambda_cr,decay
   real(dp)::scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2
   real(kind=8),dimension(1:nvector),save::nH
 
@@ -61,10 +61,19 @@ SUBROUTINE cr_cooling_fine(ilevel)
            icrE=iCRu+(ndim+1)*(iGrp-1)
            do i=1,nleaf
               il=ind_leaf(i)
-              cruold(il,icrE)=cruold(il,icrE) &
-                   *EXP(-lambda_cr*nH(i)*dtcool)
-              cruold(il,icrE+1:icrE+ndim)=cruold(il,icrE+1:icrE+ndim) &
-                   *EXP(-lambda_cr*nH(i)*dtcool*cr_c_fraction**2)
+              if(cr_c_fraction==1.0d0)then
+                 ! At cr_c_fraction==1, cr_c_fraction**2==1 and x*1d0==x
+                 ! exactly, so the flux exponent equals the energy exponent:
+                 ! compute the decay factor once and reuse for both.
+                 decay=EXP(-lambda_cr*nH(i)*dtcool)
+                 cruold(il,icrE)=cruold(il,icrE)*decay
+                 cruold(il,icrE+1:icrE+ndim)=cruold(il,icrE+1:icrE+ndim)*decay
+              else
+                 cruold(il,icrE)=cruold(il,icrE) &
+                      *EXP(-lambda_cr*nH(i)*dtcool)
+                 cruold(il,icrE+1:icrE+ndim)=cruold(il,icrE+1:icrE+ndim) &
+                      *EXP(-lambda_cr*nH(i)*dtcool*cr_c_fraction**2)
+              endif
            end do
         end do
      end do
