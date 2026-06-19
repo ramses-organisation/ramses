@@ -7,11 +7,11 @@ subroutine adaptive_loop
 #ifdef RT
   use rt_hydro_commons
 #endif
-#if NCR>0
+#ifdef CRPHYS
   use cr_parameters, only: cr_advect,ncrvars
   use cr_hydro_commons, only: cruold
 #endif
-#ifdef CRFLX
+#ifdef CRPHYS
   use cr_parameters, only: ecrs_tot
 #endif
 #if USE_TURB==1
@@ -42,7 +42,7 @@ subroutine adaptive_loop
 #ifdef RT
   if(rt.or.neq_chem) call rt_init_hydro ! Initialize radiation variables
 #endif
-#if NCR>0
+#ifdef CRPHYS
   call cr_init_hydro                 ! Allocate cosmic-ray variables
 #endif
   if(poisson)call init_poisson       ! Initialize poisson variables
@@ -101,7 +101,7 @@ subroutine adaptive_loop
 #ifdef SOLVERmhd
      emag_tot=0.0D0  ! Reset total magnetic energy
 #endif
-#ifdef CRFLX
+#ifdef CRPHYS
      ecrs_tot=0.0D0  ! Reset total cosmic rays energy
 #endif
 
@@ -128,7 +128,7 @@ subroutine adaptive_loop
               if(simple_boundary)call rt_make_boundary_hydro(ilevel)
            endif
 #endif
-#if NCR>0
+#ifdef CRPHYS
            ! Coarse-refinement book-keeping for the SEPARATED CR field, mirroring
            ! the gas/RT blocks above: communicate cruold and refresh the CR
            ! boundaries on the freshly refined coarse levels. cral's embedded CR
@@ -183,7 +183,7 @@ subroutine adaptive_loop
               if(simple_boundary)call rt_make_boundary_hydro(ilevel)
            end if
 #endif
-#if NCR>0
+#ifdef CRPHYS
            ! Cosmic-ray book-keeping for the SEPARATED CR field, mirroring the
            ! gas/RT blocks: restrict cruold fine->coarse, communicate it, refresh
            ! CR boundaries. cral restricts its embedded CR via upload_fine here;

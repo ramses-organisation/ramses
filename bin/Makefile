@@ -23,11 +23,12 @@ SOLVER = hydro
 PATCH =
 # Use RT? 1=Yes, 0=No
 RT = 0
-# Cosmic rays: number of CR groups (0 = compiled out). Requires SOLVER=mhd.
-# NENER is deliberately NOT tied to NCR (difference from ramses_cral).
-NCR = 0
-# Two-moment CR transport (E_cr + F_cr per group)
-CRFLX = 1
+# Cosmic-ray physics: 1=on, 0=off. Two-moment CR transport (E_cr + F_cr per
+# group); requires SOLVER=mhd. NENER is deliberately NOT tied to CR (difference
+# from ramses_cral).
+CRPHYS = 0
+# Number of CR groups (>=1 required when CRPHYS=1)
+NCR_GROUPS = 1
 # Use turbulence? 1=Yes, 0=No (requires fftw3)
 USE_TURB = 0
 # Use MPI? 1=Yes, 0=No
@@ -85,11 +86,11 @@ endif
 ifeq ($(RT),1)
    DEFINES += -DRT -DNIONS=$(NIONS) -DNGROUPS=$(NGROUPS)
 endif
-ifneq ($(NCR),0)
-   DEFINES += -DNCR=$(NCR)
-   ifeq ($(CRFLX),1)
-      DEFINES += -DCRFLX
+ifeq ($(CRPHYS),1)
+   ifeq ($(NCR_GROUPS),0)
+      $(error CRPHYS=1 requires NCR_GROUPS>=1)
    endif
+   DEFINES += -DCRPHYS -DNCR_GROUPS=$(NCR_GROUPS)
 endif
 ifeq ($(USE_TURB),1)
    DEFINES += -DUSE_TURB
@@ -200,7 +201,7 @@ VPATH = $(PATCH):../$(SOLVER):../aton:
 ifeq ($(RT),1)
    VPATH += ../rt:
 endif
-ifneq ($(NCR),0)
+ifeq ($(CRPHYS),1)
    VPATH += ../cr:
 endif
 ifeq ($(USE_TURB),1)
@@ -222,7 +223,7 @@ ifeq ($(RT),1)
    MODOBJ += rt_parameters.o rt_hydro_commons.o coolrates_module.o \
              rt_spectra.o rt_cooling_module.o rt_flux_module.o
 endif
-ifneq ($(NCR),0)
+ifeq ($(CRPHYS),1)
    MODOBJ += cr_parameters.o cr_hydro_commons.o cr_flux_module.o
 endif
 ifeq ($(USE_TURB),1)
@@ -273,7 +274,7 @@ AMRLIB = $(AMROBJ) $(HYDROOBJ) $(PMOBJ) $(POISSONOBJ)
 ifeq ($(RT),1)
    AMRLIB += $(RTOBJ)
 endif
-ifneq ($(NCR),0)
+ifeq ($(CRPHYS),1)
    AMRLIB += $(CROBJ)
 endif
 ifeq ($(USE_TURB),1)

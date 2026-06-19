@@ -5,18 +5,18 @@ module cr_parameters
   ! feat/CR_tests (mhd/hydro_parameters.f90) so cral namelists port directly.
   use amr_parameters
 
-  ! Compile-time guards: this file is only compiled when NCR>0
-#ifndef NCR
-#error "cr/ sources require -DNCR=<ngroups>: set NCR in bin/Makefile"
+  ! Compile-time guards: this file is only compiled when CRPHYS is enabled
+#ifndef CRPHYS
+#error "cr/ sources require -DCRPHYS: set CRPHYS=1 in bin/Makefile"
 #endif
-#ifndef CRFLX
-#error "the CR module is two-moment only: NCR>0 requires CRFLX=1 in bin/Makefile"
+#ifndef NCR_GROUPS
+#error "cr/ sources require -DNCR_GROUPS=<ngroups>: set NCR_GROUPS in bin/Makefile"
 #endif
 #ifndef SOLVERmhd
 #error "the CR module requires SOLVER=mhd (closure and source terms need B)"
 #endif
 
-  integer,parameter::ncr=NCR                ! Number of CR groups
+  integer,parameter::ncr=NCR_GROUPS         ! Number of CR groups
   integer,parameter::ncrvars=ncr*(ndim+1)   ! Per group: E_cr + ndim fluxes
   ! CR base index in cruold/crunew. Group g: energy at iCRu+(ndim+1)*(g-1),
   ! fluxes in the ndim slots after it. Never reference nvar in CR indexing.

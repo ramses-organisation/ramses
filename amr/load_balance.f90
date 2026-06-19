@@ -12,7 +12,7 @@ subroutine load_balance
 #ifdef RT
   use rt_hydro_commons, ONLY: nrtvar, rtuold
 #endif
-#if NCR>0
+#ifdef CRPHYS
   use cr_parameters, ONLY: cr_advect, ncrvars
   use cr_hydro_commons, ONLY: cruold
 #endif
@@ -102,7 +102,7 @@ subroutine load_balance
         end if
      endif
 #endif
-#if NCR>0
+#ifdef CRPHYS
      ! Refresh the SEPARATED CR field before the oct remap, mirroring the
      ! gas/RT blocks above: communicate cruold virtual cells and refresh the
      ! CR physical boundaries. cral carries its EMBEDDED CR in this loop's
@@ -1086,7 +1086,7 @@ subroutine defrag
 #ifdef RT
   use rt_hydro_commons
 #endif
-#if NCR>0
+#ifdef CRPHYS
   use cr_parameters, ONLY: cr_advect,ncrvars
   use cr_hydro_commons, ONLY: cruold
 #endif
@@ -1581,7 +1581,7 @@ subroutine defrag
   end if
 #endif
 
-#if NCR>0
+#ifdef CRPHYS
   ! Reorder the SEPARATED CR field cruold(:,1:ncrvars) along the same oct
   ! permutation (cpu_map2) applied to the gas array above. cral carries the CR
   ! in uold(:,nvar+3+1:nvar+3+ncrvars), so its defrag oct shuffle (the

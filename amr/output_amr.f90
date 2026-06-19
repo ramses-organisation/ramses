@@ -15,7 +15,7 @@ subroutine dump_all
 #endif
   use mpi_mod
   use buildinfo
-#if NCR>0
+#ifdef CRPHYS
   use cr_parameters, only: cr_legacy_output
 #endif
   implicit none
@@ -148,7 +148,7 @@ subroutine dump_all
   endif
 #endif
 
-#if NCR>0
+#ifdef CRPHYS
   if(.not.cr_legacy_output)then
      if(myid==1.and.print_when_io) write(*,*)'Start backup cr'
      filename=TRIM(filedir)//'cr_'//TRIM(nchar)//'.out'

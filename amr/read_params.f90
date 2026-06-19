@@ -139,7 +139,7 @@ subroutine read_params
 #ifdef RT
   call read_rt_params(nml_ok)
 #endif
-#if NCR>0
+#ifdef CRPHYS
   call read_cr_params(nml_ok)
 #endif
 #if NDIM==3

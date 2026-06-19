@@ -2,7 +2,7 @@ subroutine backup_hydro(filename, filename_desc)
   use amr_commons
   use hydro_commons
   use dump_utils, only : dump_header_info, generic_dump, dim_keys
-#if NCR>0
+#ifdef CRPHYS
   use cr_parameters
   use cr_hydro_commons
 #endif
@@ -24,7 +24,7 @@ subroutine backup_hydro(filename, filename_desc)
   logical :: dump_info_flag
   integer :: info_var_count
   character(len=100) :: field_name
-#if NCR>0
+#ifdef CRPHYS
   integer :: igroup, idim2, ncrdump
 #endif
 
@@ -55,7 +55,7 @@ subroutine backup_hydro(filename, filename_desc)
   end if
 
   write(unit_out) ncpu
-#if NCR>0
+#ifdef CRPHYS
   ncrdump=0
   if(cr_legacy_output) ncrdump=ncrvars
   if(strict_equilibrium>0)then
@@ -184,7 +184,7 @@ subroutine backup_hydro(filename, filename_desc)
                  field_name = 'equilibrium_pressure'
                  call generic_dump(field_name, info_var_count, xdp, unit_out, dump_info_flag, unit_info)
               endif
-#if NCR>0
+#ifdef CRPHYS
               if(cr_legacy_output)then
                  ! Append cosmic-ray columns, cral-compatible field names,
                  ! so cral-era analysis tooling reads sno outputs unmodified

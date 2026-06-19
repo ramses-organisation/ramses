@@ -11,7 +11,7 @@ recursive subroutine amr_step(ilevel,icount)
   use coolrates_module, only: update_coolrates_tables
   use rt_cooling_module, only: update_UVrates
 #endif
-#if NCR>0
+#ifdef CRPHYS
   use cr_parameters
   use cr_hydro_commons
 #endif
@@ -73,7 +73,7 @@ recursive subroutine amr_step(ilevel,icount)
                  if(simple_boundary)call rt_make_boundary_hydro(i)
               end if
 #endif
-#if NCR>0
+#ifdef CRPHYS
               if(cr_advect)then
                  do ivar=1,ncrvars
                     call make_virtual_fine_dp(cruold(1,ivar),i)
@@ -339,7 +339,7 @@ recursive subroutine amr_step(ilevel,icount)
   if(rt)call rt_set_unew(ilevel)
 #endif
 
-#ifdef CRFLX
+#ifdef CRPHYS
   ! Set crunew equal to cruold before the recursive descent, so the finer
   ! level's coarse-fine flux correction accumulates into crunew at this level
   ! (mirrors set_unew / rt_set_unew). NOTE: currently a no-op -- the
@@ -439,7 +439,7 @@ recursive subroutine amr_step(ilevel,icount)
 
    endif ! .not.static_gas (gas hyperbolic update)
 
-#ifdef CRFLX
+#ifdef CRPHYS
      if(cr_advect)then
         call upload_fine(ilevel)
         ! Restrict the SEPARATED CR field fine->coarse as well: the generic
@@ -484,7 +484,7 @@ recursive subroutine amr_step(ilevel,icount)
      ! Restriction operator
                                call timer('hydro upload fine','start')
      call upload_fine(ilevel)
-#ifdef CRFLX
+#ifdef CRPHYS
      ! Restrict the separated CR field too (cral's upload_fine at amr_step:442
      ! restricts the embedded CR). Keeps coarse CR cells current before the next
      ! step's refine/derefine so prolongation never injects a stale value.

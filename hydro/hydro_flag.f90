@@ -4,11 +4,9 @@ subroutine hydro_flag(ilevel)
 #ifdef RT
   use rt_parameters
 #endif
-#if NCR>0
-#ifdef CRFLX
+#ifdef CRPHYS
   use cr_parameters, only: cr_advect,ncr,ncrvars,iCRu,err_grad_crmom
   use cr_hydro_commons, only: cruold
-#endif
 #endif
   implicit none
   integer::ilevel
@@ -30,14 +28,12 @@ subroutine hydro_flag(ilevel)
   real(dp),dimension(1:twotondim,1:3)::xc
   real(dp),dimension(1:nvector,1:ndim),save::xx
   real(dp),dimension(1:nvector,1:nvar_all),save::uug,uum,uud
-#if NCR>0
-#ifdef CRFLX
+#ifdef CRPHYS
   real(dp),dimension(1:nvector,1:ncrvars),save::ucrg,ucrm,ucrd
   real(dp)::pcrg,pcrm,pcrd,errcr
   integer::icr,icrE
   ! Matches cral's floor_prad in the CR-gradient denominator (mhd/godunov_utils:381)
   real(dp),parameter::floor_crmom=1d-10
-#endif
 #endif
 
   if(ilevel==nlevelmax)return
@@ -143,8 +139,7 @@ subroutine hydro_flag(ilevel)
            call hydro_refine(uug,uum,uud,ok,ngrid)
 #endif
 
-#if NCR>0
-#ifdef CRFLX
+#ifdef CRPHYS
            ! CR-energy gradient refinement (err_grad_crmom). cral evaluates this
            ! inside hydro_refine on the embedded CR slots ug/um/ud(nvar+3+irad);
            ! the separated module reads the CR energy from cruold here. Without
@@ -169,7 +164,6 @@ subroutine hydro_flag(ilevel)
                  end if
               end do
            endif
-#endif
 #endif
         end do
 

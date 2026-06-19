@@ -6,7 +6,7 @@ subroutine courant_fine(ilevel)
 #if USE_TURB==1
   use turb_commons
 #endif
-#ifdef CRFLX
+#ifdef CRPHYS
   use cr_parameters, only: cr_advect,cr_vmax,c_cu,cr_nsubcycle, &
        & cr_varvmax,cr_varvmax_fudge,cr_varvmax_vdvs, &
        & cr_va_max,cr_vgas_max,gamma_cr,Dcr_code,mom_streaming_diffusion,ncr,iCRu, &
@@ -14,7 +14,7 @@ subroutine courant_fine(ilevel)
   use cr_hydro_commons, only: cruold
 #endif
   implicit none
-#ifdef CRFLX
+#ifdef CRPHYS
   real(kind=8)::ecrs_loc,ecrs_all
 #endif
 #ifndef WITHOUTMPI
@@ -35,7 +35,7 @@ subroutine courant_fine(ilevel)
   real(kind=8)::mass_all,ekin_all,eint_all,emag_all,dt_all
   real(dp),dimension(1:nvector,1:nvar_all),save::uu
   real(dp),dimension(1:nvector,1:ndim),save::gg
-#ifdef CRFLX
+#ifdef CRPHYS
   real(dp)::dt_cr
   integer::igrp
 #endif
@@ -47,7 +47,7 @@ subroutine courant_fine(ilevel)
   ekin_all=0.0d0; ekin_loc=0.0d0
   emag_all=0.0d0; emag_loc=0.0d0
   eint_all=0.0d0; eint_loc=0.0d0
-#ifdef CRFLX
+#ifdef CRPHYS
   ecrs_all=0.0d0; ecrs_loc=0.0d0
   cr_vgas_max=0.0d0
   cr_va_max=0.0d0
@@ -99,7 +99,7 @@ subroutine courant_fine(ilevel)
            end do
         end do
 
-#ifdef CRFLX
+#ifdef CRPHYS
         ! Gather CR energy (from the separate cruold buffer, iCRu=1) so cmpdt
         ! can add the CR pressure to the gas sound speed and accumulate
         ! cr_vgas_max/cr_va_max. cral reads these from the embedded uold;
@@ -168,7 +168,7 @@ subroutine courant_fine(ilevel)
         end do
 #endif
 
-#ifdef CRFLX
+#ifdef CRPHYS
         ! Compute cosmic rays energy (pure diagnostic; from the separated
         ! cruold buffer, not uold). cral mhd/courant_fine.f90:142-149.
         do igrp=1,ncr
@@ -204,7 +204,7 @@ subroutine courant_fine(ilevel)
   ekin_all=comm_buffout(2)
   eint_all=comm_buffout(3)
   emag_all=comm_buffout(4)
-#ifdef CRFLX
+#ifdef CRPHYS
   ! Separate all-reduce for the CR-energy diagnostic, so the shared
   ! mass/ekin/eint/emag buffer stays byte-identical to the no-CR (dev) build.
   call MPI_ALLREDUCE(ecrs_loc,ecrs_all,1,MPI_DOUBLE_PRECISION,MPI_SUM,&
@@ -216,7 +216,7 @@ subroutine courant_fine(ilevel)
   ekin_all=ekin_loc
   eint_all=eint_loc
   emag_all=emag_loc
-#ifdef CRFLX
+#ifdef CRPHYS
   ecrs_all=ecrs_loc
 #endif
   dt_all=dt_loc
@@ -226,12 +226,12 @@ subroutine courant_fine(ilevel)
   ekin_tot=ekin_tot+ekin_all
   eint_tot=eint_tot+eint_all
   emag_tot=emag_tot+emag_all
-#ifdef CRFLX
+#ifdef CRPHYS
   ecrs_tot=ecrs_tot+ecrs_all
 #endif
   dtnew(ilevel)=MIN(dtnew(ilevel),dt_all)
 
-#ifdef CRFLX
+#ifdef CRPHYS
   ! Maximum time step for cosmic-ray moment flux, from the Courant
   ! condition on cr_vmax (ported faithfully from cral
   ! mhd/courant_fine.f90:203-246). Refresh cr_vmax/DCR_code in code units.
@@ -278,7 +278,7 @@ subroutine cmpdt(uu,gg,dx,dt,ncell)
   use amr_parameters
   use hydro_parameters
   use const
-#ifdef CRFLX
+#ifdef CRPHYS
   use cr_parameters, only: cr_advect,ncr,gamma_cr,cr_smallr_decouple, &
        & cr_varvmax,cr_varvmax_vdvs,cr_vgas_max,cr_va_max,mom_streaming_diffusion, &
        & crecr
@@ -289,7 +289,7 @@ subroutine cmpdt(uu,gg,dx,dt,ncell)
   real(dp),dimension(1:nvector,1:nvar+3)::uu
   real(dp),dimension(1:nvector,1:ndim)::gg
   real(dp),dimension(1:nvector),save::a2,B2,rho,ctot
-#ifdef CRFLX
+#ifdef CRPHYS
   real(dp),dimension(1:nvector),save::cr_cs
   integer::icr
   real(dp)::vgas,BNva
@@ -344,7 +344,7 @@ subroutine cmpdt(uu,gg,dx,dt,ncell)
      end do
   end do
 #endif
-#ifdef CRFLX
+#ifdef CRPHYS
   ! Add the CR pressure to the gas sound speed (cral mhd/godunov_utils.f90:71-89).
   ! In the separated module the CR energy is gathered into crecr(:,1:ncr) by the
   ! caller (cral reads it from the embedded uold). This couples the CR pressure
@@ -410,7 +410,7 @@ subroutine cmpdt(uu,gg,dx,dt,ncell)
      dt = min(dt,dtcell)
   end do
 
-#ifdef CRFLX
+#ifdef CRPHYS
   ! Store maximum gas and Alfven speeds on level for the adaptive cr_vmax
   ! (cral mhd/godunov_utils.f90:133-157). Only used by the cr_varvmax_vdvs
   ! branch in courant_fine (off in every current test) but kept for fidelity.

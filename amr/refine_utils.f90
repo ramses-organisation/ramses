@@ -596,11 +596,9 @@ subroutine make_grid_fine(ind_grid,ind_cell,ind,ilevel,nn,ibound,boundary_region
 #ifdef RT
   use rt_hydro_commons
 #endif
-#if NCR>0
-#ifdef CRFLX
+#ifdef CRPHYS
   use cr_hydro_commons, ONLY:cruold
   use cr_parameters, ONLY:ncrvars,cr_advect
-#endif
 #endif
 #ifdef ATON
   use radiation_commons, ONLY:Erad
@@ -638,11 +636,9 @@ subroutine make_grid_fine(ind_grid,ind_cell,ind,ilevel,nn,ibound,boundary_region
   real(dp),dimension(1:nvector,0:twondim  ,1:nrtvar),save::urt1
   real(dp),dimension(1:nvector,1:twotondim,1:nrtvar),save::urt2
 #endif
-#if NCR>0
-#ifdef CRFLX
+#ifdef CRPHYS
   real(dp),dimension(1:nvector,0:twondim  ,1:ncrvars),save::ucr1
   real(dp),dimension(1:nvector,1:twotondim,1:ncrvars),save::ucr2
-#endif
 #endif
   real(dp),dimension(1:nvector,1:ndim),save::xx
   integer ,dimension(1:nvector),save::cc
@@ -896,8 +892,7 @@ subroutine make_grid_fine(ind_grid,ind_cell,ind,ilevel,nn,ibound,boundary_region
         enddo
      end if
 #endif
-#if NCR>0
-#ifdef CRFLX
+#ifdef CRPHYS
      !============================
      ! Interpolate CR variables
      !============================
@@ -926,7 +921,6 @@ subroutine make_grid_fine(ind_grid,ind_cell,ind,ilevel,nn,ibound,boundary_region
            end do
         enddo
      end if
-#endif
 #endif
      !=============================
      ! Interpolate stellar momentum
@@ -987,7 +981,7 @@ subroutine kill_grid(ind_cell,ilevel,nn,ibound,boundary_region)
   use rt_hydro_commons
   use rt_parameters
 #endif
-#if NCR>0
+#ifdef CRPHYS
   use cr_parameters, ONLY:cr_advect,ncrvars
   use cr_hydro_commons, ONLY:cruold,crunew
 #endif
@@ -1168,7 +1162,7 @@ subroutine kill_grid(ind_cell,ilevel,nn,ibound,boundary_region)
         end do
      end if
 #endif
-#if NCR>0
+#ifdef CRPHYS
      ! SEPARATED CR variables. cral carries the CR in uold(:,nvar+3+1:nvar+3+ncrvars)
      ! so the hydro loop above zeroes its embedded CR on oct destruction; for the
      ! separated cruold/crunew this is the faithful analog. Without it a destroyed

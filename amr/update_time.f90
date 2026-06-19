@@ -6,7 +6,7 @@ subroutine update_time(ilevel)
 #if USE_TURB==1
   use turb_commons
 #endif
-#ifdef CRFLX
+#ifdef CRPHYS
   use cr_parameters, only: ecrs_tot
 #endif
   use mpi_mod
@@ -107,7 +107,7 @@ subroutine update_time(ilevel)
               write(*,777)nstep_coarse,mcons,econs,epot_tot,ekin_tot
            end if
 #ifdef SOLVERmhd
-#ifdef CRFLX
+#ifdef CRPHYS
 555        format(' emag=',1pe9.2,'  ecrs=',1pe9.2)
            write(*,555) emag_tot, ecrs_tot
 #else
