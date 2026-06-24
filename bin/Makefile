@@ -259,7 +259,7 @@ RTOBJ = rt_init_hydro.o rt_init_xion.o rt_init.o rt_init_flow_fine.o \
         rt_godunov_utils.o rt_condinit.o rt_hydro_flag.o rt_hydro_boundary.o \
         rt_boundana.o rt_units.o
 # Cosmic-ray objects
-CROBJ = cr_init.o cr_init_hydro.o cr_godunov_utils.o cr_godunov_fine.o \
+CROBJ = cr_init.o cr_init_hydro.o cr_godunov_utils.o cr_courant_fine.o cr_godunov_fine.o \
         cr_hydro_boundary.o cr_boundana.o cr_condinit.o cr_init_flow_fine.o \
         cr_cooling_fine.o cr_output_hydro.o
 # Turbulence objects

@@ -7,9 +7,7 @@ subroutine courant_fine(ilevel)
   use turb_commons
 #endif
 #ifdef CRPHYS
-  use cr_parameters, only: cr_advect,cr_vmax,c_cu,cr_nsubcycle, &
-       & cr_varvmax,cr_varvmax_fudge,cr_varvmax_vdvs, &
-       & cr_va_max,cr_vgas_max,gamma_cr,Dcr_code,mom_streaming_diffusion,ncr,iCRu, &
+  use cr_parameters, only: cr_advect,cr_va_max,cr_vgas_max,ncr,iCRu, &
        & ecrs_tot,crecr
   use cr_hydro_commons, only: cruold
 #endif
@@ -36,7 +34,6 @@ subroutine courant_fine(ilevel)
   real(dp),dimension(1:nvector,1:nvar_all),save::uu
   real(dp),dimension(1:nvector,1:ndim),save::gg
 #ifdef CRPHYS
-  real(dp)::dt_cr
   integer::igrp
 #endif
 
@@ -232,39 +229,11 @@ subroutine courant_fine(ilevel)
   dtnew(ilevel)=MIN(dtnew(ilevel),dt_all)
 
 #ifdef CRPHYS
-  ! Maximum time step for cosmic-ray moment flux, from the Courant
-  ! condition on cr_vmax (ported faithfully from cral
-  ! mhd/courant_fine.f90:203-246). Refresh cr_vmax/DCR_code in code units.
-  if(cr_advect)then
-     call update_cr_vmax_and_Dcr_code(cr_vmax(ilevel))
-
-     ! Adaptive reduced light speed (cr_varvmax): keep cr_vmax at least
-     ! cr_varvmax_fudge times larger than the gas signal speed dx/3/dt so the
-     ! CR wave always outruns the moving gas. Essential for the non-static-gas
-     ! tests (424/423); inert when cr_varvmax=.false. (all other 1D tests).
-     ! cral mhd/courant_fine.f90:206-237 (single-CPU: the MPI_ALLREDUCEs are
-     ! no-ops here). cr_vgas_max/cr_va_max are the per-cell gas/Alfven speed
-     ! maxima; the cr_varvmax_vdvs branch (off in every current test) uses them.
-     if(cr_varvmax .and. cr_advect)then
-        cr_vmax(ilevel) = max(cr_vmax(ilevel), dx/3d0/dtnew(ilevel) * cr_varvmax_fudge)
-        if(cr_varvmax_vdvs)then
-           if(mom_streaming_diffusion)then
-              do igrp=1,ncr
-                 cr_vmax(ilevel) = max(cr_vmax(ilevel), gamma_cr(igrp)*cr_va_max * cr_varvmax_fudge)
-              end do
-           endif
-           do igrp=1,ncr
-              cr_vmax(ilevel) = max(cr_vmax(ilevel), Dcr_code(igrp)/dx * (gamma_cr(igrp)-1d0) * cr_varvmax_fudge)
-           end do
-        endif
-     endif
-
-     ! Finally, make sure vmax <= c
-     if(cr_vmax(ilevel) .gt. c_cu) cr_vmax(ilevel)=c_cu
-
-     call get_crmom_courant(dt_cr,ilevel)
-     dtnew(ilevel) = MIN(dtnew(ilevel), dt_cr * cr_nsubcycle*0.99999d0)
-  endif
+  ! Maximum time step for cosmic-ray moment transport (CR Courant condition
+  ! + adaptive cr_vmax). Body lives in cr/cr_courant_fine.f90; called here at
+  ! the tail of courant_fine because it reads dtnew(ilevel) at the gas
+  ! global-min and the cr_vgas_max/cr_va_max that cmpdt produced above.
+  if(cr_advect) call cr_courant_fine(ilevel)
 #endif
 
 111 format('   Entering courant_fine for level ',I2)
