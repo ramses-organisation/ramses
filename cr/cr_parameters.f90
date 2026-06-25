@@ -63,6 +63,24 @@ module cr_parameters
   ! Mirrors ramses_cral mhd/hydro_parameters.f90; the CR region init in
   ! cr_condinit replicates region_condinit's geometry to fill these in.
   real(dp),dimension(1:MAXREGION,1:ncrvars)::crmom_region=0d0
+  ! Per-boundary CR state for imposed (bound_type=3) boundaries: crmom_bound(b,1)=E_cr,
+  ! crmom_bound(b,2:ncrvars)=CR flux on boundary region b -- the per-boundary analogue
+  ! of crmom_region (cral kept it in &boundary_params; here it is a &cr_params array,
+  ! per the CR separation). Applied in cr_boundana for the tp_* two-pressure shock tests.
+  real(dp),dimension(1:MAXBOUND,1:ncrvars)::crmom_bound=0d0
+  ! CR-owned IC region geometry (mirror of rt_region_* in rt_parameters.f90).
+  ! Lets CR regions differ from gas regions; cr_reg_group selects the target
+  ! group (inert when NCR_GROUPS=1).
+  integer::cr_nregion=0
+  character(LEN=10),dimension(1:MAXREGION)::cr_region_type='square'
+  real(dp),dimension(1:MAXREGION)::cr_reg_x_center=0d0
+  real(dp),dimension(1:MAXREGION)::cr_reg_y_center=0d0
+  real(dp),dimension(1:MAXREGION)::cr_reg_z_center=0d0
+  real(dp),dimension(1:MAXREGION)::cr_reg_length_x=1d10
+  real(dp),dimension(1:MAXREGION)::cr_reg_length_y=1d10
+  real(dp),dimension(1:MAXREGION)::cr_reg_length_z=1d10
+  real(dp),dimension(1:MAXREGION)::cr_exp_region=2d0
+  integer,dimension(1:MAXREGION)::cr_reg_group=1
   ! Refinement
   real(dp),dimension(1:ncrvars)::err_grad_crmom=-1d0 ! CR gradient refinement
   ! Output

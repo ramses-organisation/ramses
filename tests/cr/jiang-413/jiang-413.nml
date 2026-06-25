@@ -35,6 +35,7 @@ mom_streaming_heating=.true.
 mom_streaming_diffusion=.true.
 cr_f_taucell=1.0
 cr_advect=.true.
+cr_nregion=0
 /
 
 &INIT_PARAMS

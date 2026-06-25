@@ -34,6 +34,10 @@ mom_streaming_heating=.false.
 mom_streaming_diffusion=.false.
 cr_advect=.true.
 cr_legacy_output=.true.
+cr_nregion=1
+cr_region_type='square'
+cr_reg_x_center=1.0
+cr_reg_length_x=100.0
 /
 
 &INIT_PARAMS

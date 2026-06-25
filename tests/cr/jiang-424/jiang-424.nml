@@ -40,6 +40,7 @@ cr_nsubcycle=10
 cr_varvmax=.true.
 reduced_CR_flux_correction=.true.
 err_grad_crmom(1)=0.05   ! moved from &refine_params (CR refinement lives in &cr_params)
+cr_nregion=0
 /
 
 &INIT_PARAMS

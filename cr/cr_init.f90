@@ -16,7 +16,9 @@ subroutine read_cr_params(nml_ok)
        & ,mom_streaming_heating,v_alfven,cr_f_taucell &
        & ,cr_cooling,zeta_cr,ne,fneut &
        & ,cr_bound_floor,jiang_test,err_grad_crmom,cr_legacy_output &
-       & ,crmom_region
+       & ,crmom_region,crmom_bound &
+       & ,cr_nregion,cr_region_type,cr_reg_x_center,cr_reg_y_center,cr_reg_z_center &
+       & ,cr_reg_length_x,cr_reg_length_y,cr_reg_length_z,cr_exp_region,cr_reg_group
 
   if(myid==1)write(*,'(A50)')"Reading cr_params namelist ..."
   rewind(1)

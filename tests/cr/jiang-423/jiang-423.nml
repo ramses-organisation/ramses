@@ -53,6 +53,13 @@ err_grad_crmom(1)=0.05   ! moved from &refine_params (CR refinement lives in &cr
 ! cr_region_condinit in patch/cr_tests/cr_condinit.f90 for the separated module.
 crmom_region(:,1)=1d-10,0.0d0
 ! [stripped: epsilon_diff=1d-4 -- cral one-moment-diffusion key, not in sno reader]
+cr_nregion=2
+cr_region_type='square','point'
+cr_reg_x_center=0.5,0.5
+cr_reg_y_center=0.5,0.5
+cr_reg_length_x=10.0,1.0
+cr_reg_length_y=10.0,1.0
+cr_exp_region=10.0,10.0
 /
 
 &INIT_PARAMS

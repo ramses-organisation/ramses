@@ -51,6 +51,10 @@ cr_varvmax=.false.
 ! CR energy per region (cral region_condinit reads this); replicated by
 ! cr_region_condinit in patch/cr_tests/cr_condinit.f90 for the separated module.
 crmom_region(:,1) = 50.,50.
+cr_nregion=2
+cr_region_type='square','square'
+cr_reg_x_center=2.5,7.5
+cr_reg_length_x=5,5
 /
 
 &INIT_PARAMS
