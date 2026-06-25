@@ -1,7 +1,7 @@
 subroutine units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
   use amr_commons
   use hydro_commons
-  use constants, only: Mpc2cm, mH, kB, rhoc
+  use constants, only: Mpc2cm, mH, kB, rhoc, pc2cm
   use cooling_module, only: X
 #if USE_FLD==1
   use units_commons, only : scale_kappa
@@ -9,6 +9,8 @@ subroutine units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
   implicit none
 
   real(dp)::scale_nH,scale_T2,scale_t,scale_v,scale_d,scale_l
+  real(dp)::Grav=6.67e-08_dp   !Gravitational constant
+
   !-----------------------------------------------------------------------
   ! Conversion factors from user units into cgs units
   ! For gravity runs, make sure that G=1 in user units.
@@ -33,6 +35,9 @@ subroutine units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
   scale_T2 = mH/kB * scale_v**2
 #if USE_FLD==1
   scale_T2 = 1.0_dp ! T0 !scale_v**2 * mu_gas
+
+  if(condinit_kind == 'collapse') scale_T2 = mu_gas**2 * mH**2 * pc2cm**2 * Grav / kb
+
   scale_kappa = 1.0_dp/scale_l
 !  scale_m = scale_d*scale_l**3
 #endif

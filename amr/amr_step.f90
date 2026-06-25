@@ -517,7 +517,7 @@ recursive subroutine amr_step(ilevel,icount)
 #if USE_FLD==1
   ! Compute radiative feedback if radiative transfer with FLD on
   if(FLD)then
-     if(rt_feedback .and. sink .and. nsink .gt. 0)call radiative_feedback_sink(ilevel)
+     if(rt_feedback .and. sink .and. nsink .gt. 0)call fld_radiative_feedback_sink(ilevel)
   end if
 #endif
 
@@ -699,7 +699,7 @@ subroutine rt_step(ilevel)
      if(rt_sink) call sink_RT_feedback(ilevel,dtnew(ilevel))
 #endif
 #if USE_FLD==1
-     if(rt_protostar_m1 .and. sink) call radiative_feedback_sink(ilevel)
+     if(rt_protostar_m1 .and. sink) call fld_radiative_feedback_sink(ilevel)
 #endif
 
      ! Hyperbolic solver

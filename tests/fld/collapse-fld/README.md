@@ -1,5 +1,5 @@
-* Test name: `collapse-baro'
+* Test name: `collapse-fld'
 * Dimension: `3`
 * Solver: `mhd`
-* Purpose: Testing the MHD + gravity implementation
-* Keywords: mhd, collapse, barotrop
+* Purpose: Testing the FLD implementation in a more realistic setup
+* Keywords: mhd, collapse, FLD

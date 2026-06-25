@@ -65,6 +65,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
   use constants, only: a_r, Myr2sec
 #if USE_FLD==1
   use radiation_parameters,only:sinks_opt_thin
+   use fld_commons, only:in_sink
 #endif
 #endif
   use mpi_mod

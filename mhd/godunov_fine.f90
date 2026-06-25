@@ -430,6 +430,7 @@ subroutine add_pdv_source_terms(ilevel)
   use radiation_parameters!,ONLY:eray_min,nu_min_hz,nu_max_hz,stellar_photon
   use constants, only:clight
   use units_commons, only:scale_kappa
+   use fld_commons, only:in_sink
 #endif
   implicit none
   integer::ilevel
@@ -1878,6 +1879,7 @@ subroutine rad_force_fine(ilevel)
   use radiation_parameters,ONLY:Tr_floor,eray_min,nu_min_hz,nu_max_hz,frad
   use const
   use units_commons
+   use fld_commons
   implicit none
 #ifndef WITHOUTMPI
   include 'mpif.h'

@@ -556,3 +556,174 @@ end subroutine boundary_frig
 !#########################################################
 !#########################################################
 !#########################################################
+subroutine calc_boxlen
+  use amr_commons
+  use hydro_commons
+  use poisson_parameters
+  !use radiation_parameters
+  use constants,ONLY:kB,mH
+  !use units_commons
+  use cloud_module
+  
+  implicit none
+  !================================================================
+  !this routine calculate boxlen
+  !================================================================
+  integer :: i
+  real(dp):: pi
+  real(dp):: d_c,zeta,mass_c_cu
+  real(dp):: res_int,r_0,C_s
+  integer::  np
+  logical,save:: first=.true.
+
+  real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,scale_m
+
+  if (first) then
+
+    if (myid == 1) then 
+      write(*,*) ''
+      write(*,*) ' !!!!! ***** WARNING *****'
+      write(*,*) ' !!!!! boxlen is recomputed whatever the value of boxlen in the nml...'
+      write(*,*) ' !!!!! ***** ******* *****'
+      write(*,*) ''
+    endif
+
+    ! Conversion factor from user units to cgs units
+    call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
+    scale_m=scale_d*scale_l**ndim
+
+
+    pi=acos(-1.0d0)
+
+    !calculate the mass in code units (Msolar / Mparticle / pc^3
+    mass_c_cu = mass_c * (M_sun / scale_m )
+
+    !calculate the sound speed
+    C_s = sqrt( T_eos / scale_T2 )
+
+    
+    if(bb_test)then
+       r_0 = (alpha_dense_core*2.*6.67d-8*mass_c_cu*mu_gas*mH/(5.*kB*T_eos))/scale_l* scale_m 
+       boxlen = r_0 * r0_box
+       
+       if (myid == 1) then 
+          write(*,*) '** Cloud parameters estimated in calc-boxlen **' 
+          write(*,*) 'inner radius (pc) ', r_0
+          write(*,*) 'total box length (pc) ', boxlen
+          write(*,*) 'cloud mass (code units) ', mass_c_cu
+          write(*,*) 
+       endif
+   
+     !print*,'r0=',r_0,alpha_dense_core, mass_c,scale_m,mu_gas,mH,Tr_floor,scale_l,sum_dust
+     !print*,(alpha_dense_core*2.*6.67d-8*mass_c/scale_m*scale_m*mu_gas*mH/(5.*kB*Tr_floor))/scale_l *scale_m
+  !   stop
+  
+
+    else
+       !calculate  zeta=r_ext/r_0
+       zeta = sqrt(cont - 1.)
+       
+       !calculate an integral used to compute the cloud radius 
+       np=1000
+       res_int=0.
+       do i=1,np
+          res_int = res_int + log(1.+(zeta/np*i)**2) * zeta/np
+       enddo
+       res_int = zeta*log(1.+zeta**2) - res_int
+       
+       !now we determine the central density and the external cloud radius
+       !we have mass = 2 pi rho_c r_0^2 z_0 * res_int
+       !which results from the integration of rho = dc/(1.+(x^2+y^2)/r_O^2+z^2/z_0^2)
+       !for (x^2+y^2)/r_O^2+z^2/z_0^2 < zeta
+       !we also have ff_sct = sqrt(3. pi / 32 / G / d_c) C_s / (r_0) 
+       !which just state the ratio of freefall time over sound crossing time 
+       !from these 2 formula, rho_c and r_0 are found to be:
+       
+       
+       
+       r_0 = mass_c_cu / (2.*pi*rap*res_int) * (ff_sct)**2 / (3.*pi/32.) / C_s**2
+
+       d_c = mass_c_cu / (2.*pi*rap*res_int) / r_0**3
+       
+       !it is equal to twice the length of the major axis
+       boxlen = r_0 * zeta * max(rap,1.) * 4.
+       
+       if (myid == 1) then 
+          write(*,*) '** Cloud parameters estimated in calc-boxlen **' 
+          write(*,*) 'inner radius (pc) ', r_0 
+          write(*,*) 'peak density (cc) ', d_c
+          write(*,*) 'total box length (pc) ', boxlen
+          write(*,*) 'cloud mass (code units) ', mass_c_cu
+          write(*,*) 
+       endif
+       
+    endif
+       
+    first=.false.
+ endif
+
+end subroutine calc_boxlen  
+!#########################################################
+!#########################################################
+!#########################################################
+!#########################################################
+function compute_db()
+  use hydro_commons
+  !use radiation_parameters
+  use constants,ONLY:kB,mH
+  !use units_commons
+  use cloud_module
+  
+  implicit none
+
+  integer::i
+  real(dp)::res_int,d0,r0,pi,c_s,zeta,compute_db,mass_c_cu
+  real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,scale_m
+
+  ! Conversion factor from user units to cgs units
+  call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
+  scale_m=scale_d*scale_l**ndim
+
+
+  C_s = sqrt( T_eos / scale_T2 )
+  pi=acos(-1.0d0)
+
+  !calculate  zeta=r_ext/r_0
+  zeta = sqrt(cont - 1.)
+  mass_c_cu = mass_c * (M_sun / scale_m )     
+
+  if(bb_test)then
+     pi=2.0d0*asin(1.0d0)
+     r0=(alpha_dense_core*2.*6.67d-8*mass_c_cu*scale_m*mu_gas*mH/(5.*kB*T_eos))/scale_l
+     d0 = 3.0d0*mass_c_cu/(4.0d0*pi*r0**3.)
+     compute_db=d0/contrast
+     
+  else
+     !calculate an integral used to compute the cloud radius 
+     res_int=0.
+     do i=1,1000
+        res_int = res_int + log(1.+(zeta/1000.*i)**2) * zeta/1000.
+      enddo
+     res_int = zeta*log(1.+zeta**2) - res_int
+     
+
+     !now we determine the central density and the external cloud radius
+     !we have mass = 2 pi rho_c r_0^2 z_0 * res_int
+     !which results from the integration of rho = dc/(1.+(x^2+y^2)/r_O^2+z^2/z_0^2)
+     !for (x^2+y^2)/r_O^2+z^2/z_0^2 < zeta
+     !we also have ff_sct = sqrt(3. pi / 32 / G / d_c) C_s / (r_0 ) 
+     !which just state the ratio of freefall time over sound crossing time 
+     !from these 2 formula, rho_c and r_0 are found to be:
+     
+     !ph 01/09 new definition entails r_0 instead of r_0 * zeta, the external radius
+     r0 = mass_c_cu / (2.*pi*rap*res_int) * (ff_sct)**2 / (3.*pi/32.) / C_s**2
+               
+     d0 = mass_c_cu / (2.*pi*rap*res_int) / r0**3
+
+     compute_db=d0 / cont / 10.
+     
+  end if
+  
+  return
+  
+end function compute_db

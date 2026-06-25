@@ -68,7 +68,6 @@ module hydro_parameters
   integer,parameter::firstindex_ent=nhydro     ! for non-thermal energies
   integer,parameter::firstindex_er=nhydro+nent ! for radiative energies
   integer,parameter::firstindex_fr=nhydro+nener ! for radiative fluxes (if M1)
-  integer,parameter::firstindex_extinct=nhydro+nent+nrad ! for extinction
   integer,parameter::firstindex_pscal=nhydro+nent+nrad ! for passive scalars
   integer::lastindex_pscal ! last index for passive scalars other than internal energy
 #endif
@@ -89,6 +88,10 @@ module hydro_parameters
 #else
   integer,parameter::nvar_all=nvar
 #endif
+
+  ! EOS parameters
+  integer  :: nRho,nEnergy,nTemp
+  real(dp) :: rhomin,rhomax,Emax,emin,yHe,Tmax,Tmin
 
   ! Size of hydro kernel
   integer,parameter::iu1=-1

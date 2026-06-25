@@ -48,7 +48,7 @@ dmax = -9.0
 tmin = 0.5
 tmax = 3
 bmin = -4.0
-bmax = -1.0
+bmax =  1.0
 
 nx = 129
 # Construct some edge specifiers for the histogram2d function call

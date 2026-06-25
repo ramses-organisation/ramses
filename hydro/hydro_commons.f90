@@ -10,15 +10,10 @@ module hydro_commons
   real(dp)::ana_xmi,ana_xma,ana_ymi,ana_yma,ana_zmi,ana_zma
   integer::nbins
 
-#if NIMHD==1 
-  real(dp),allocatable,dimension(:,:)::electric_current ! Electric current
-#endif 
-#if USE_FLD==1
-  integer,allocatable,dimension(:)::liste_ind
-  integer::nb_ind
-  real(dp)   ::dt_imp                            ! Implicit timestep               
-  logical,allocatable,dimension(:)::in_sink !false -> true if cell within sink radius
-#endif
+  ! EOS tables
+  real(dp),allocatable,dimension(:,:)::Rho_eos,Ener_eos,Temp_eos,P_eos,Cs_eos,S_eos,eint_eos
+  real(dp),allocatable,dimension(:,:)::xH_eos, xH2_eos, xHe_eos,xHep_eos,Cv_eos,Dc_eos
+
 end module hydro_commons
 
 module const
@@ -41,11 +36,3 @@ module const
   real(dp)::forth = 1/4d0
   real(dp)::sixth = 1/6d0
 end module const
-
-#if USE_FLD==1
-! Units
-module units_commons
-  use amr_parameters, only : dp
-  real(dp):: scale_E0,scale_kappa,scale_m,P_cal,C_cal
-end module units_commons
-#endif

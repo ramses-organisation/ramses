@@ -4,7 +4,6 @@ module radiation_parameters
 
   ! DT adaptatif
   real(dp),allocatable,dimension(:,:)::rad_flux ! Flux entrant dans une cellule
-  real(dp),allocatable,dimension(:,:)::urad     ! Old values of Erg in NR iterations
   real(dp),allocatable,dimension(:,:)::frad     ! Radiative force  
   real(dp)::Tr_floor=10.0 ! Background radiation field temperature - WARNING: it affects the pressure_fix in set_uold.
   integer::ntp,nfr
@@ -40,7 +39,6 @@ module radiation_parameters
   logical :: split_groups_log=.true. ! Automatic splitting of group in log if true; if not use regular splitting
   logical :: extra_end_group=.false. ! The last group holds frequencies numax -> frequency_upperlimit if true
   logical :: grey_rad_transfer=.true.! Default: grey radiation transfer
-  logical :: external_radiation_field=.false. ! Default: No external radiation background (@ Tr_floor)
   logical :: stellar_photon=.false.  ! Stellar photons are treated as a separate group (igrp=1). No emission for this group (radiation_source=0)
   logical :: sinks_opt_thin=.false.  ! Optically-thin (min_optical_depth) sink volumes, relevant for hybrid RT
 
@@ -85,6 +83,14 @@ module radiation_parameters
 
   logical::store_matrix=.true.
 
+  real(dp)::Tstar        = 5000.
+  real(dp)::rstar        = 1.
+  character(LEN=8)::test = ''
+  real(dp)::rho_disk0    = 2.874d-18
+  real(dp)::Rin          = 0.1d0
+  real(dp)::dtmax        = 1.d32
+  logical ::isoscat      = .false.
+
 #if USE_FLD==1 && NGRP == 1
   logical, parameter :: bicg_to_cg = .true.
 #else
@@ -92,79 +98,3 @@ module radiation_parameters
 #endif
 
 end module radiation_parameters
-
-!##################################################################################################
-!##################################################################################################
-!##################################################################################################
-!##################################################################################################
-
-!  Function PLANCK_ANA:
-!
-!> Compute Planck average opacity.
-!<
-function planck_ana(dens,Tp,Tr,igroup,insink)
-
-  use amr_commons
-  use radiation_parameters
-
-  implicit none
-
-  integer ,intent(in)    :: igroup
-  real(dp),intent(in)    :: dens,Tp,Tr
-  logical, intent(in)    :: insink
-  real(dp)               :: planck_ana
-  
-  planck_ana = planck_params(1)*(dens**planck_params(2))*(Tp**planck_params(3))
-
-end function planck_ana
-
-!##################################################################################################
-!##################################################################################################
-!##################################################################################################
-!##################################################################################################
-
-!  Function ROSSELAND_ANA:
-!
-!> Compute Rosseland mean opacity.
-!<
-function rosseland_ana(dens,Tp,Tr,igroup,insink)
-
-  use amr_commons
-  use radiation_parameters
-
-  implicit none
-
-  integer ,intent(in)    :: igroup
-  real(dp),intent(in)    :: dens,Tp,Tr
-  logical, intent(in)    :: insink
-  real(dp)               :: rosseland_ana
-  
-  rosseland_ana = rosseland_params(1)*(dens**rosseland_params(2))*(Tp**rosseland_params(3))
-
-end function rosseland_ana
-
-!##################################################################################################
-!##################################################################################################
-!##################################################################################################
-!##################################################################################################
-
-!  Function SCATTERING_ANA:
-!
-!> This routine computes the scattering opacity kappa_s*rho
-!! as a function of density and temperature.
-!! Units are supposed to be in cgs here (as in units.f90)
-!<
-function scattering_ana(dens,Tp,Tr,igroup)
-
-  use amr_commons
-  use const
-
-  implicit none
-
-  integer ,intent(in)    :: igroup
-  real(dp),intent(in)    :: dens,Tp,Tr
-  real(dp)               :: scattering_ana
-  
-  scattering_ana = zero
-
-end function scattering_ana
