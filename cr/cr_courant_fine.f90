@@ -9,7 +9,7 @@ SUBROUTINE cr_courant_fine(ilevel)
    ! apply the adaptive reduced-light-speed cap (cr_varvmax), clamp to c,
    ! and reduce dtnew(ilevel) by the CR Courant condition. Called from the
    ! tail of courant_fine so dtnew(ilevel) already holds the gas global-min
-   ! that the cr_varvmax cap reads, and cr_vgas_max/cr_va_max already hold
+   ! that the cr_varvmax cap reads, and cr_va_max already holds
    ! the values cmpdt produced during the gas sweep. (This CR<->gas-Courant
    ! ordering is why CR is unlike the gas-independent RT timestep.)
    !-------------------------------------------------------------------------

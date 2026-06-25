@@ -70,7 +70,6 @@ module cr_parameters
 
   ! --- Derived / bookkeeping (not in the namelist) ----------------------
   real(dp),dimension(1:MAXLEVEL)::cr_vmax=0d0 ! Reduced light speed, code units
-  real(dp)::cr_vgas_max=0d0                 ! Max gas speed (adaptive cr_vmax)
   real(dp)::cr_va_max=0d0                   ! Max Alfven speed (adaptive cr_vmax)
   real(dp)::c_cu=0d0                        ! Light speed in code units
   real(dp),dimension(1:ncr)::DCR_code=0d0   ! Dcr in code units
@@ -80,7 +79,7 @@ module cr_parameters
   ! Per-cell CR-energy gather buffer for cmpdt's CR-pressure term: filled by
   ! courant_fine, read by cmpdt. Module-level so cmpdt takes no extra argument
   ! and its call/signature stay the no-CR (dev) form (mirrors how
-  ! cr_vgas_max/cr_va_max already flow between courant_fine and cmpdt).
+  ! cr_va_max already flows between courant_fine and cmpdt).
   real(dp),dimension(1:nvector,1:ncr)::crecr=0d0
 
 end module cr_parameters

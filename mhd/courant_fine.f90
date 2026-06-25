@@ -7,7 +7,7 @@ subroutine courant_fine(ilevel)
   use turb_commons
 #endif
 #ifdef CRPHYS
-  use cr_parameters, only: cr_advect,cr_va_max,cr_vgas_max,ncr,iCRu, &
+  use cr_parameters, only: cr_advect,cr_va_max,ncr,iCRu, &
        & ecrs_tot,crecr
   use cr_hydro_commons, only: cruold
 #endif
@@ -18,6 +18,9 @@ subroutine courant_fine(ilevel)
 #ifndef WITHOUTMPI
   integer::info
   real(kind=8),dimension(4)::comm_buffin,comm_buffout
+#ifdef CRPHYS
+  real(kind=8)::cr_va_max_all
+#endif
 #endif
   integer::ilevel
   !----------------------------------------------------------------------
@@ -46,7 +49,6 @@ subroutine courant_fine(ilevel)
   eint_all=0.0d0; eint_loc=0.0d0
 #ifdef CRPHYS
   ecrs_all=0.0d0; ecrs_loc=0.0d0
-  cr_vgas_max=0.0d0
   cr_va_max=0.0d0
 #endif
   dt_all=dtnew(ilevel); dt_loc=dt_all
@@ -99,7 +101,7 @@ subroutine courant_fine(ilevel)
 #ifdef CRPHYS
         ! Gather CR energy (from the separate cruold buffer, iCRu=1) so cmpdt
         ! can add the CR pressure to the gas sound speed and accumulate
-        ! cr_vgas_max/cr_va_max. cral reads these from the embedded uold;
+        ! cr_va_max. cral reads these from the embedded uold;
         ! the separated module passes them as an extra argument.
         if(cr_advect)then
            do igrp=1,ncr
@@ -206,6 +208,11 @@ subroutine courant_fine(ilevel)
   ! mass/ekin/eint/emag buffer stays byte-identical to the no-CR (dev) build.
   call MPI_ALLREDUCE(ecrs_loc,ecrs_all,1,MPI_DOUBLE_PRECISION,MPI_SUM,&
        &MPI_COMM_WORLD,info)
+  ! Global max of the per-rank Alfven-speed maximum so the cr_varvmax_vdvs
+  ! cap in cr_courant_fine is decomposition-independent (cral pattern).
+  call MPI_ALLREDUCE(cr_va_max,cr_va_max_all,1,MPI_DOUBLE_PRECISION,MPI_MAX,&
+       &MPI_COMM_WORLD,info)
+  cr_va_max=cr_va_max_all
 #endif
 #endif
 #ifdef WITHOUTMPI
@@ -232,7 +239,7 @@ subroutine courant_fine(ilevel)
   ! Maximum time step for cosmic-ray moment transport (CR Courant condition
   ! + adaptive cr_vmax). Body lives in cr/cr_courant_fine.f90; called here at
   ! the tail of courant_fine because it reads dtnew(ilevel) at the gas
-  ! global-min and the cr_vgas_max/cr_va_max that cmpdt produced above.
+  ! global-min and the cr_va_max that cmpdt produced above.
   if(cr_advect) call cr_courant_fine(ilevel)
 #endif
 
@@ -249,7 +256,7 @@ subroutine cmpdt(uu,gg,dx,dt,ncell)
   use const
 #ifdef CRPHYS
   use cr_parameters, only: cr_advect,ncr,gamma_cr,cr_smallr_decouple, &
-       & cr_varvmax,cr_varvmax_vdvs,cr_vgas_max,cr_va_max,mom_streaming_diffusion, &
+       & cr_varvmax,cr_varvmax_vdvs,cr_va_max,mom_streaming_diffusion, &
        & crecr
 #endif
   implicit none
@@ -261,7 +268,7 @@ subroutine cmpdt(uu,gg,dx,dt,ncell)
 #ifdef CRPHYS
   real(dp),dimension(1:nvector),save::cr_cs
   integer::icr
-  real(dp)::vgas,BNva
+  real(dp)::BNva
 #endif
 
   real(dp)::dtcell,smallp,cf,cc,bc,bn
@@ -380,26 +387,19 @@ subroutine cmpdt(uu,gg,dx,dt,ncell)
   end do
 
 #ifdef CRPHYS
-  ! Store maximum gas and Alfven speeds on level for the adaptive cr_vmax
-  ! (cral mhd/godunov_utils.f90:133-157). Only used by the cr_varvmax_vdvs
-  ! branch in courant_fine (off in every current test) but kept for fidelity.
-  if(cr_advect .and. cr_varvmax)then
+  ! Store the maximum Alfven speed on the level for the adaptive cr_vmax
+  ! (cral mhd/godunov_utils.f90:133-157). Used only by the cr_varvmax_vdvs
+  ! branch in cr_courant_fine (off in every current test); cr_va_max is
+  ! all-reduced (MPI_MAX) in courant_fine so the cap is decomposition-
+  ! independent.
+  if(cr_advect .and. cr_varvmax .and. cr_varvmax_vdvs .and. mom_streaming_diffusion)then
      do k = 1, ncell
-        vgas=0d0
-        do idim = 1,ndim
-           vgas = vgas + uu(k,idim+1)**2
+        BNva=0d0
+        do idim=1,3
+           BNva = BNva + (half*(uu(k,5+idim)+uu(k,nvar+idim)))**2
         end do
-        cr_vgas_max=max(cr_vgas_max, sqrt(vgas))
+        cr_va_max=max(cr_va_max, sqrt(BNva/uu(k,1)))
      end do
-     if(cr_varvmax_vdvs .and. mom_streaming_diffusion)then
-        do k = 1, ncell
-           BNva=0d0
-           do idim=1,3
-              BNva = BNva + (half*(uu(k,5+idim)+uu(k,nvar+idim)))**2
-           end do
-           cr_va_max=max(cr_va_max, sqrt(BNva/uu(k,1)))
-        end do
-     endif
   endif
 #endif
 
