@@ -110,6 +110,9 @@ module amr_parameters
   integer::foutput=1000000       ! Frequency of outputs
   logical::gadget_output=.false. ! Output in gadget format
   logical::output_now=.false.    ! write output next step
+  logical::exact_output_time=.false. ! enforce outputs at exact requested times
+  real(dp),parameter::eps_a=1d-10 ! Small tolerance to account for floating-point errors when comparing aexp to aout
+  real(dp),parameter::eps_t=1d-10 ! Small tolerance to account for floating-point errors when comparing t to tout
   real(dp)::walltime_hrs=-1      ! Wallclock time for submitted job
   real(dp)::minutes_dump=1       ! Dump an output minutes before walltime ends
   logical::finish_run=.false.! trigger cleanup after walltime end dump
@@ -226,11 +229,12 @@ module amr_parameters
                                         !'isothermal': constant temperature T0
                                         !'polytrope': T = T0*(rho/rho0)**(gamma-1) or P ~ rho**gamma for ideal gas
                                         !'double_polytrope': isothermal with T0 below rho0 and polytropic with gamma above
+                                        !'2nd_collapse': Functional form for 2nd Larson core formation
                                         !'custom': for patching your own eos
                                         !'legacy': same as polytrop but using the old n_star, g_star and T2_star
-  real(dp)::polytrope_rho=1.0d50        ! sets rho0 in EOS = density normalisation or knee-density, in g/cm3
-  real(dp)::polytrope_rho_cu=1.0d50     ! rho0 in code units
-  real(dp)::polytrope_index=1.0d0       ! sets gamma in EOS = polytropic index
+  real(dp),dimension(5)::polytrope_rho=1.0d50     ! array of normalisation or knee-density densities for EOS, in g/cm3
+  real(dp),dimension(5)::polytrope_n              ! polytrope_rho in H/cc for calculation
+  real(dp),dimension(5)::polytrope_index=1.0d0    ! sets gamma in EOS = polytropic index
   real(dp)::T_eos=10                    ! sets T0 in EOS: isothermal temperature or temperature normalisation, in K
   real(dp)::mu_gas=1d0                  ! molecular weight
   real(dp)::T2_eos=10                   ! = T/mu, used in the computations

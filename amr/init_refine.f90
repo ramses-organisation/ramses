@@ -119,7 +119,7 @@ subroutine init_refine_2
 
 #ifdef RT
   if(neq_chem .and. rt_is_init_xion) then
-     if(myid==1) write(*,*) 'Initializing ionization states from T profile'
+     if(myid==1) write(*,*) 'Initializing ionization states from cell temperatures'
      do ilevel=nlevelmax,1,-1
         call rt_init_xion(ilevel)
         call upload_fine(ilevel)

@@ -1,0 +1,56 @@
+This is the RAMSES parameter file for the non-equilibrium cooling module test.
+It is a 2D run with 2*2 (i.e. four) cells, without a UV background, and hydro-static
+so there is no flow between the cells and the only evolution is therefore the radiative
+cooling in each cell.
+
+&RUN_PARAMS
+hydro=.true.
+static_gas=.true.
+ncontrol=50000
+/
+
+&AMR_PARAMS
+levelmin=1
+levelmax=1
+ngridmax=100
+boxlen=1
+/
+
+&HYDRO_PARAMS
+gamma=1.666667
+courant_factor=0.8
+/
+
+&INIT_PARAMS
+nregion=1
+region_type='square'
+x_center=0.5
+y_center=0.5
+length_x=1.0
+length_y=1.0
+exp_region=10
+d_region=3d0
+p_region=78.282 ! 3e3 K
+/
+
+&OUTPUT_PARAMS
+tout = 0.0003
+/
+
+&UNITS_PARAMS
+units_density=2.18492d-24 ! 1 H/cc
+units_time=3.156d13       ! 1 Myr
+units_length=3.0857d18    ! 1 pc
+/
+
+&COOLING_PARAMS
+cooling=.true.
+neq_chem=.true.
+z_ave=0.0
+/
+
+&RT_PARAMS
+isHe=.true.
+isH2=.true.
+rt_is_init_xion=.true.
+/

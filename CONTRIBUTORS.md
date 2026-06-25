@@ -1,44 +1,4 @@
-
-# Contributors and user roles
-
-
-## Current members
-
-### Administrators
-
-> <details>
->  <summary>Role</summary>
->  Have full access to all repositories and can manage the  organisation (`admin` role on GitHub). They are in charge of administrating the GitHub organisation. This includes notably creating/deleting repositories, managing user permissions, configuring default branches and protections on those.
->  </details>
-
-- Romain Teyssier
-- Corentin Cadiou
-
-### Maintainers
-
-> <details>
->  <summary>Role</summary>
->  Have write access to the repositories and can merge pull requests (`maintain` role on GitHub). They are responsible for the day-to-day management of the repositories. This includes notably merging pull requests and closing solved issues.
->  </details>
-
-- Tine Colman
-- Noé Brucy
-
-### Contributors
-
->  <details>
->  <summary>Role</summary>
->  Can manage issues and pull requests (`triage` role on GitHub). They are in charge of reviewing pull requests, suggest changes and approve pull requests, as well as answering issues.
->  </details>
-
-- Robel Geda
-
-## Changes to member list
-
-+ *1/11/2024* added Romain Teyssier (administrator)
-    > Main author of Ramses
-
-## Acknowledgements
+# Acknowledgements
 
 The development of the RAMSES  code has been initiated and coordinated
 by the main author, Romain Teyssier. The main author would  like to thank all co-authors who
