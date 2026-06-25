@@ -1,8 +1,4 @@
 ! Jiang & Oh (2018) 4.1.2 -- 2D Gaussian CR-energy pulse + advective flux.
-! Ported from ramses_cral tests/cr/jiang_412/jiang_412.nml: CR keys moved from
-! &MHD_PARAMS to the separated-CR &CR_PARAMS, cr_legacy_output enabled so the
-! osyris notebook reads CR fields from the hydro files. First 2D test --
-! exercises the j-direction CR fluxes. NDIM=2 build.
 &RUN_PARAMS
 hydro=.true.
 nremap=0

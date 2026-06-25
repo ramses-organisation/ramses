@@ -1,20 +1,7 @@
-!************************************************************************
-! CR AMR averaging: restriction (cr_upload_fine/cr_upl) and prolongation
-! (cr_interpol_hydro) for the SEPARATE CR variables cruold(:,1:ncrvars) only --
-! the cosmic-ray counterpart of rt/rt_interpol_hydro.f90, which bundles the
-! analogous rt_upload_fine / rt_upl / rt_interpol_hydro for the rtuold array.
-! Relocated verbatim from cr/cr_init_flow_fine.f90 (cr_upload_fine, cr_upl) and
-! cr/cr_godunov_fine.f90 (cr_interpol_hydro) so the CR AMR-averaging lives in
-! its own file, exactly as RT keeps it in rt_interpol_hydro.f90. Behaviour is
-! unchanged (pure relocation of file-scope external subroutines).
-!************************************************************************
+! CR AMR averaging for cruold(:,1:ncrvars): restriction (cr_upload_fine/cr_upl)
+! and prolongation (cr_interpol_hydro).
 SUBROUTINE cr_upload_fine(ilevel)
-! Restriction operator (averaging down) for the SEPARATE CR variables only.
-! Faithful analog of rt/rt_interpol_hydro.f90's rt_upload_fine (the
-! separate-array sibling of the generic upload_fine, which restricts the gas
-! array uold alone). Central transformation vs RT: CR state lives in
-! cruold(:,1:ncrvars) with iCRu=1, so the variable loop runs over 1:ncrvars
-! and the RT photon-tracer (NTRACEGROUPS) branches have no CR analog.
+! Restriction (averaging down) of the CR variables cruold(:,1:ncrvars).
 !------------------------------------------------------------------------
   use amr_commons
   use cr_parameters
@@ -82,10 +69,8 @@ END SUBROUTINE cr_upload_fine
 !################################################################
 !################################################################
 SUBROUTINE cr_upl(ind_cell,ncell)
-! Restriction operation (averaging down) for the CR variables only:
-! average each coarse split cell's 2^ndim children into the parent over
-! 1:ncrvars. Faithful analog of rt_upl (rt/rt_interpol_hydro.f90:66-130)
-! with cruold in place of rtuold and no photon-tracer normalisation.
+! Average each coarse split cell's 2^ndim children into the parent,
+! over the CR variables 1:ncrvars.
 !------------------------------------------------------------------------
   use amr_commons
   use cr_parameters
@@ -130,11 +115,7 @@ END SUBROUTINE cr_upl
 !################################################################
 SUBROUTINE cr_interpol_hydro(u1,u2,nn)
 ! Interpolate the CR buffer (E,F over 1:ncrvars) from a coarse father cell to
-! its 2^ndim children, treating every CR variable as a cell-centered scalar
-! with the chosen slope limiter. This mirrors rt/rt_interpol_hydro.f90 (the
-! separate-array analog) and reproduces the CR block of cral's combined
-! interpol_hydro (mhd/interpol_hydro.f90:686-713), which the sno split
-! stencil cannot route through interpol_hydro (sized 1:nvar+3).
+! its 2^ndim children as cell-centered scalars with the chosen slope limiter.
 !------------------------------------------------------------------------
   use amr_commons
   use cr_parameters

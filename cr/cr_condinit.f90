@@ -12,22 +12,11 @@ subroutine cr_condinit(x,u,dx,nn,ilevel)
   real(dp),dimension(1:nvector,1:ncrvars)::u ! CR conservative variables
   real(dp),dimension(1:nvector,1:ndim  )::x ! Cell center position.
   !================================================================
-  ! This routine generates CR initial conditions for RAMSES.
-  ! Positions are in user units:
-  ! x(i,1:3) are in [0,boxlen]**ndim.
-  ! u(i,1:ncrvars) is the CR conservative vector for group g:
-  !   energy at iCRu+(ndim+1)*(g-1), the ndim fluxes in the slots after it.
-  !   (iCRu=1; CR indexing never references nvar.)
-  ! u(:,:) are in user units.
-  !
-  ! Default: set every CR energy to the smallcr floor and every CR flux to
-  ! zero. Test-specific CR initial states (e.g. the Jiang & Oh Gaussian
-  ! pulse) override this in the patch version of this file selected via
-  ! PATCH=.
+  ! Generate CR initial conditions; u holds per-group [energy, ndim fluxes].
+  ! Default: energy = smallcr floor, flux = 0; test ICs override via PATCH.
   !================================================================
   integer::i,igrp,icrE
 
-  ! Built-in default CR initial condition: energy floor, zero flux.
   do i=1,nn
      do igrp=1,ncr
         icrE=iCRu+(ndim+1)*(igrp-1)

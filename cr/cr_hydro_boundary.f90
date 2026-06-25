@@ -9,19 +9,12 @@ subroutine cr_make_boundary_hydro(ilevel)
   implicit none
   integer::ilevel
   ! -------------------------------------------------------------------
-  ! Boundary conditions for the separated CR arrays cruold(:,1:ncrvars).
-  ! Ported from the CR-handling part of the cral mhd/hydro_boundary.f90
-  ! make_boundary_hydro (reflexive/free/imposed branches), but operating
-  ! on cruold instead of uold: rho/v/B/MHD bookkeeping is gas-only and is
-  ! handled by the gas make_boundary_hydro, so none of it appears here.
-  !
-  ! CR layout (iCRu=1): for group g, energy is at iCRu+(ndim+1)*(g-1) and
-  ! the ndim fluxes follow it. Reflexive walls flip the sign of every CR
-  ! flux component normal to the boundary (energy is unchanged), mirroring
-  ! the velocity/B sign-flip RAMSES uses for gas. cr_bound_floor>=0 injects
-  ! a fixed E_cr into reflexive cells (Jiang & Oh tests 413/424; default
-  ! -1 leaves it inert). Periodic boundaries never reach this routine -
-  ! they are served by the virtual-cell exchange of cruold.
+  ! Boundary conditions for the separated CR arrays cruold(:,1:ncrvars). Gas
+  ! rho/v/B/MHD bookkeeping is handled by the gas make_boundary_hydro, not here.
+  ! Reflexive walls flip the sign of each CR flux component normal to the
+  ! boundary (energy unchanged); cr_bound_floor>=0 injects a fixed E_cr into
+  ! reflexive cells (Jiang & Oh tests 413/424; default -1 inert). Periodic
+  ! boundaries never reach this routine (served by the cruold virtual-cell exchange).
   ! -------------------------------------------------------------------
   integer::ibound,boundary_dir,idim,inbor
   integer::i,ncache,ivar,igrid,ngrid,ind

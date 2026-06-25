@@ -1,6 +1,4 @@
 ! Jiang & Oh (2018) 4.2.2 -- 1D colliding flow (u = +10 / -10) with cosmic rays.
-! CR energy comes from crmom_region per region geometry; the CR flux is set from
-! the gas velocity in cr_condinit (F = 4/3 v_gas E_cr). NDIM=1 build.
 &RUN_PARAMS
 hydro=.true.
 nremap=0
@@ -30,10 +28,6 @@ p_bound=1,1
 A_bound=1.,1.
 B_bound=0.,0.
 C_bound=0.,0.
-! [stripped: crmom_bound not in sno &boundary_params; unused for reflexive
-!  (bound_type=2) walls, which copy CR energy + flip flux -- never read in cral]
-! crmom_bound(:,1) = 50.,50.
-! crmom_bound(:,2) = 666.666667, -666.666667
 /
 
 &CR_PARAMS

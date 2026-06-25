@@ -1,17 +1,7 @@
 MODULE cr_flux_module
 
   ! Two-moment cosmic-ray closure and intercell-flux module.
-  ! Ported from ramses_cral feat/CR_tests cr/cr_flux_module.f90 (741 lines).
   ! This is a PURE flux/closure module: no source terms, no NENER.
-  !
-  ! Central transformation vs cral: cral embeds CR in uold at iCRu=nvar+4 and
-  ! gathers a single stencil uin(...,1:nvar+3+ncrvars). Here CR lives in the
-  ! separate cruold/crunew arrays (iCRu=1, from cr_parameters), so the stencil
-  ! is SPLIT into two buffers: uin_gas(...,1:nvar+3) holds rho/vel/B gathered
-  ! from uold, and uin_cr(...,1:ncrvars) holds E_cr/F_cr gathered from cruold.
-  ! Gas reads (rho at index 1, vel 2:4, B at 5+idim and nvar+idim) come from
-  ! uin_gas; CR reads (energy/flux at icrE_loc = iCRu+(ndim+1)*(iGrp-1)) come
-  ! from uin_cr. No CR index expression contains nvar.
 
   use amr_commons
   use hydro_commons
@@ -21,9 +11,7 @@ MODULE cr_flux_module
 
   private   ! default
 
-  ! CR-specific stencil-loop bounds used by cmp_cr_wavespeeds. In cral these
-  ! live in mhd/hydro_parameters.f90; in sno they are CR-only constants so we
-  ! keep them local to this module (sno hydro_parameters has no ifcr1 etc.).
+  ! CR-specific stencil-loop bounds used by cmp_cr_wavespeeds.
   integer,parameter::ifcr1=0
   integer,parameter::jfcr1=1-ndim/2
   integer,parameter::kfcr1=1-ndim/3
@@ -380,9 +368,6 @@ SUBROUTINE cmp_cr_faces(uin_gas,uin_cr,iFlx,dx,dt,iGrp,ngrid,ilevel)
 !------------------------------------------------------------------------
   iP0 = 1+(iGrp-1)*(ndim+1)            ! Index of CR group energy density
   iP1 = iP0+nDim
-  ! In sno CR lives in the separate stencil uin_cr (iCRu=1), so the whole
-  ! per-group block already starts at iP0; uin_cr is intent(in) and never
-  ! modified here, so downstream reads use it directly (no scratch copy).
   ! Magnetic field, needed for M1; in the default P1 path (isotropic_pressure)
   ! cmp_cr_flux_tensors never reads bfield, so skip building the full stencil.
   if(.not.isotropic_pressure) then

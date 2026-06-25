@@ -4,10 +4,6 @@
 SUBROUTINE get_crmom_courant(dt,ilevel)
 
    ! Determine the coarse CR timestep length set by the Courant condition
-   ! Ported from ramses_cral feat/CR_tests cr/cr_godunov_fine.f90:955-970.
-   ! In sno the reduced CR light speed cr_vmax lives in cr_parameters
-   ! (cral had it in hydro_parameters); courant_factor stays in
-   ! hydro_parameters, boxlen/icoarse_* in amr_parameters.
    !-------------------------------------------------------------------------
      use amr_parameters
      use cr_parameters, only: cr_vmax
@@ -31,10 +27,6 @@ SUBROUTINE update_cr_vmax_and_Dcr_code(crvmax)
 ! This cannot be just a constant, since scale_v changes with time in
 ! cosmological simulations.
 ! Additionally update diffusion coefficient in code units.
-! Ported from ramses_cral feat/CR_tests mhd/courant_fine.f90:253-284.
-! In sno c_cgs comes from the constants module and the CR parameters
-! (cr_c_fraction,c_cu,DCR_code,DCRmax_code,DCRmax,DCR,ncr,smalldcr)
-! from cr_parameters.
 !-------------------------------------------------------------------------
    use constants, only: c_cgs
    use cr_parameters

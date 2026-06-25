@@ -1,6 +1,4 @@
 ! Jiang & Oh (2018) 4.1.3 -- 1D CR streaming/diffusion into a dense slab.
-! Density step set in condinit; CR energy injected at the reflexive left
-! boundary via cr_bound_floor. NDIM=1 build.
 &RUN_PARAMS
 hydro=.true.
 nremap=0

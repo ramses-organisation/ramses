@@ -1,12 +1,5 @@
-! CR refinement pass -- the cosmic-ray counterpart of rt_hydro_flag
-! (rt/rt_hydro_flag.f90). Flags cells whose CR energy gradient exceeds
-! err_grad_crmom, run as a SEPARATE pass after hydro_flag and OR-ing into the
-! shared set-once flag1 (exactly as RT runs rt_hydro_flag separately). The grid/
-! neighbour machinery mirrors rt_hydro_flag; the errcr gradient block and the
-! floor_crmom constant are ported VERBATIM from the former #ifdef CRPHYS block in
-! hydro/hydro_flag.f90, so the gas refinement routine stays CR-free and the
-! refinement decision (hence the AMR grid) is byte-identical: flag1 is a 0/1
-! set-once flag and A.or.B is order-independent across the two passes.
+! CR refinement pass: flags cells whose CR energy gradient exceeds
+! err_grad_crmom, OR-ing the result into the shared flag1.
 subroutine cr_hydro_flag(ilevel)
   use amr_commons
   use cr_parameters, only: ncr,ncrvars,iCRu,err_grad_crmom
@@ -28,12 +21,12 @@ subroutine cr_hydro_flag(ilevel)
   real(dp),dimension(1:nvector,1:ncrvars),save::ucrg,ucrm,ucrd
   real(dp)::pcrg,pcrm,pcrd,errcr
   integer::icr,icrE
-  ! Matches cral's floor_prad in the CR-gradient denominator (mhd/godunov_utils:381)
+  ! Floor in the CR-gradient denominator (avoids divide-by-zero)
   real(dp),parameter::floor_crmom=1d-10
 
   if(ilevel==nlevelmax)return
   if(numbtot(1,ilevel)==0)return
-  ! No CR refinement requested -> nothing to do (analogue of rt_err_grad_cn==-1).
+  ! No CR refinement requested -> nothing to do.
   if(all(err_grad_crmom(1:ncr) < 0d0))return
 
   ! Loop over active grids
@@ -77,10 +70,7 @@ subroutine cr_hydro_flag(ilevel)
 
         ! Loop over dimensions
         do idim=1,ndim
-           ! CR-energy gradient refinement (err_grad_crmom). Ported verbatim
-           ! from the former CR block in hydro/hydro_flag.f90: cral evaluates
-           ! this inside hydro_refine on the embedded CR slots; the separated
-           ! module reads the CR energy from cruold here.
+           ! CR-energy gradient refinement (err_grad_crmom).
            do icr=1,ncr
               if(err_grad_crmom(icr) >= 0.)then
                  icrE=iCRu+(ndim+1)*(icr-1)

@@ -1,5 +1,4 @@
-! Jiang & Oh (2018) 4.2.1 -- 1D sinusoidal CR-energy profile, streaming +
-! diffusion in a periodic box (bound_type=0 => periodic). NDIM=1 build.
+! Jiang & Oh (2018) 4.2.1 -- 1D sinusoidal CR-energy profile, streaming + diffusion in a periodic box.
 &RUN_PARAMS
 hydro=.true.
 nremap=0
@@ -34,8 +33,6 @@ v_alfven=1.0
 cr_f_taucell=0.5
 cr_nsubcycle=10
 cr_varvmax=.false.
-! [stripped: not in sno &cr_params] cooling_cr=.false.
-! [stripped: not in sno &cr_params] epsilon_diff=1d-4
 cr_advect=.true.
 cr_nregion=1
 cr_region_type='square'

@@ -1,7 +1,4 @@
-! Jiang & Oh (2018) 4.2.4 -- 1D CR-driven outflow with AMR and a variable CR
-! light-speed. Density step in condinit; CR injected at the reflexive left
-! boundary via cr_bound_floor. reduced_CR_flux_correction replaces the reference
-! cr_godunov_fine.f90 patch (it is a namelist flag in this code). NDIM=1 build.
+! Jiang & Oh (2018) 4.2.4 -- 1D CR-driven outflow with AMR and a variable CR light-speed.
 &RUN_PARAMS
 hydro=.true.
 nremap=0

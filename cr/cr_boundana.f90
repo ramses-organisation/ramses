@@ -12,19 +12,11 @@ subroutine cr_boundana(x,u,dx,ibound,ncell)
   real(dp),dimension(1:nvector,1:ncrvars)::u ! CR conservative variables
   real(dp),dimension(1:nvector,1:ndim)::x   ! Cell center position.
   !================================================================
-  ! Analytic boundary state for the separated CR variables.
-  ! Positions are in user units: x(i,1:3) are in [0,boxlen]**ndim.
-  ! u(i,1:ncrvars) is the CR conservative vector for group g:
-  !   energy at iCRu+(ndim+1)*(g-1), the ndim fluxes in the slots after it.
-  ! ibound is the namelist boundary-region index.
-  !
-  ! Default: impose the CR energy floor smallcr and zero flux. Test-specific
-  ! imposed boundaries (e.g. the Jiang & Oh streaming waves) override this in
-  ! the patch version of this file selected via PATCH=.
+  ! Analytic CR boundary state; u holds per-group [energy, ndim fluxes],
+  ! ibound = boundary-region index. Default: energy = smallcr floor, flux = 0.
   !================================================================
   integer::i,igrp,icrE
 
-  ! Default imposed CR boundary: energy floor, zero flux.
   do i=1,ncell
      do igrp=1,ncr
         icrE=iCRu+(ndim+1)*(igrp-1)

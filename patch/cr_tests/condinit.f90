@@ -3,13 +3,8 @@
 !================================================================
 !================================================================
 subroutine  condinit(x,u,dx,nn)
-  ! patch/cr_tests gas IC override. Identical to the standard condinit except
-  ! for the Jiang & Oh density-step tests (jiang_test='413'/'424'), where the
-  ! gas density is overwritten with a tanh density step after the prim->cons
-  ! conversion -- mirroring ramses_cral patch/jiang_tests/condinit.f90
-  ! jiang_cr_init. (cr_condinit handles the separated-CR variables.) The step
-  ! sets the Alfven speed va=B/sqrt(rho) that drives CR streaming; without it
-  ! the streaming front propagates at the wrong speed (jiang-413/424).
+  ! patch/cr_tests gas IC override: standard condinit, plus a tanh density step
+  ! for jiang_test='413'/'424' that sets va=B/sqrt(rho) for CR streaming.
   use amr_commons
   use hydro_parameters
   use cr_parameters, only: jiang_test
@@ -68,12 +63,8 @@ subroutine  condinit(x,u,dx,nn)
 
   first_call = .false.
 
-  ! Jiang & Oh (2018) 4.1.5: 2D CR transport along a magnetic loop. PRE-conversion
-  ! primitive override of the uniform static gas and the current-loop B-field
-  ! (B = curl A, A_z = A0*max(R0-r,-boxlen)). Mirrors cral
-  ! patch/jiang_tests/condinit.f90 jiang_loop_primitives, called BEFORE the
-  ! prim->cons conversion so the magnetic energy enters the total energy below.
-  ! (cr_condinit sets the separated CR energy enhancement on the arc.)
+  ! jiang_test='415' (Jiang & Oh 4.1.5): pre-conversion override of the gas + loop
+  ! B-field (B=curl A), set BEFORE prim->cons so the magnetic energy enters E below.
 #if NDIM>1
   if(trim(jiang_test)=='415') call jiang_loop_primitives(x,q,dx,nn)
 #endif
@@ -113,10 +104,8 @@ subroutine  condinit(x,u,dx,nn)
   end do
 #endif
 
-  ! Jiang & Oh density-step tests: overwrite the conservative gas density with
-  ! a tanh step (gas is static in these tests, so momentum stays 0 and the
-  ! total energy -- pressure + magnetic -- is unchanged by the density). The
-  ! step sets va=B/sqrt(rho) for CR streaming. Ported from cral jiang_cr_init.
+  ! Jiang & Oh density-step tests: overwrite the conservative gas density with a
+  ! tanh step (gas is static, so momentum/energy are unchanged); sets va=B/sqrt(rho).
   select case(trim(jiang_test))
   case('413')                            ! density step 0.1 -> 1.0 at x=200
      u(1:nn,1)=0.1d0+(1d0-0.1d0)*(1d0+tanh((x(1:nn,1)-200d0)/25d0)) &
@@ -134,13 +123,8 @@ end subroutine condinit
 !================================================================
 subroutine jiang_loop_primitives(x,q,dx,nn)
   !--------------------------------------------------------------
-  ! Jiang & Oh (2018) 4.1.5: CR transport along a magnetic loop. Uniform static
-  ! gas threaded by a current-loop B-field from a vector potential A_z, set as
-  ! PRIMITIVE variables before the prim->cons conversion. Faithful port of cral
-  ! patch/jiang_tests/condinit.f90 jiang_loop_primitives, keeping ONLY the gas
-  ! and B-field: the separated CR module sets the CR-energy arc in cr_condinit,
-  ! so the cral q(i,icrU)=12/10 line is omitted here (icrU is not in this gas
-  ! buffer). atan2 (not atan(y/x)) avoids a divide-by-zero FPE at xx=0.
+  ! Jiang & Oh (2018) 4.1.5 magnetic loop: uniform static gas threaded by a
+  ! current-loop B-field from vector potential A_z (set as primitives, pre-cons).
   use amr_parameters
   use hydro_parameters
   implicit none

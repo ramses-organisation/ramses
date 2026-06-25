@@ -3,15 +3,10 @@
 !###########################################################
 SUBROUTINE cr_courant_fine(ilevel)
 
-   ! Cosmic-ray moment-transport contribution to the level timestep.
-   ! Extracted verbatim from mhd/courant_fine.f90 (the #ifdef CRPHYS block
-   ! formerly at lines 234-268): refresh cr_vmax/Dcr_code in code units,
-   ! apply the adaptive reduced-light-speed cap (cr_varvmax), clamp to c,
-   ! and reduce dtnew(ilevel) by the CR Courant condition. Called from the
-   ! tail of courant_fine so dtnew(ilevel) already holds the gas global-min
-   ! that the cr_varvmax cap reads, and cr_va_max already holds
-   ! the values cmpdt produced during the gas sweep. (This CR<->gas-Courant
-   ! ordering is why CR is unlike the gas-independent RT timestep.)
+   ! Cosmic-ray moment-transport contribution to the level timestep: refresh
+   ! cr_vmax/Dcr_code, apply the cr_varvmax cap, clamp to c, reduce dtnew by the
+   ! CR Courant condition. Must run at the tail of courant_fine, after the gas
+   ! sweep has set dtnew(ilevel) (gas global-min) and cr_va_max that the cap reads.
    !-------------------------------------------------------------------------
    use amr_commons
    use cr_parameters, only: cr_vmax,c_cu,cr_nsubcycle,cr_varvmax, &
@@ -22,7 +17,7 @@ SUBROUTINE cr_courant_fine(ilevel)
    real(dp)::dt_cr,dx,scale
    integer::nx_loc,igrp
    !-------------------------------------------------------------------------
-   ! Mesh spacing at this level (matches courant_fine:57-60)
+   ! Mesh spacing at this level
    nx_loc=icoarse_max-icoarse_min+1
    scale=boxlen/dble(nx_loc)
    dx=0.5D0**ilevel*scale

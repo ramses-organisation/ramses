@@ -1,8 +1,4 @@
-! Jiang & Oh (2018) 4.1.1 variant -- 1D triangular CR-energy profile with a
-! time-dependent analytic streaming-wave boundary (bound_type=3 => cr_boundana).
-! Ported from ramses_cral tests/cr/jiang_411_triangular/jiang_411_triangular.nml:
-! CR keys moved from &MHD_PARAMS to the separated-CR &CR_PARAMS, cr_legacy_output
-! enabled so the osyris notebook reads CR fields from the hydro files. NDIM=1 build.
+! Jiang & Oh (2018) 4.1.1 variant -- 1D triangular CR-energy profile with a time-dependent analytic streaming-wave boundary.
 &RUN_PARAMS
 hydro=.true.
 nremap=0

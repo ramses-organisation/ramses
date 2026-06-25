@@ -1,8 +1,6 @@
 module cr_parameters
   ! Cosmic-ray module compile-time configuration, namelist parameters and
   ! global bookkeeping. Leaf module: may only use amr_parameters.
-  ! Parameter names and defaults are kept verbatim from ramses_cral
-  ! feat/CR_tests (mhd/hydro_parameters.f90) so cral namelists port directly.
   use amr_parameters
 
   ! Compile-time guards: this file is only compiled when CRPHYS is enabled
@@ -18,8 +16,7 @@ module cr_parameters
 
   integer,parameter::ncr=NCR_GROUPS         ! Number of CR groups
   integer,parameter::ncrvars=ncr*(ndim+1)   ! Per group: E_cr + ndim fluxes
-  ! CR base index in cruold/crunew. Group g: energy at iCRu+(ndim+1)*(g-1),
-  ! fluxes in the ndim slots after it. Never reference nvar in CR indexing.
+  ! CR base index in cruold/crunew; group g energy at iCRu+(ndim+1)*(g-1)
   integer,parameter::iCRu=1
 
   ! --- &cr_params namelist ---------------------------------------------
@@ -43,14 +40,13 @@ module cr_parameters
   logical::cr_varvmax_vdvs=.false.          ! Include diff/stream speeds in vmax
   ! Scattering / streaming source terms (used from phase 2)
   real(dp),dimension(1:ncr)::Dcr=1.0d29     ! Diffusion coefficient [cm^2/s]
-  real(dp)::DCRmax=1d30                     ! Max CR streaming diffusion coeff [cm^2/s] (cral amr_parameters default; 0 would disable streaming diffusion via 1/DCRmax_code=Inf)
+  real(dp)::DCRmax=1d30                     ! Max CR streaming diffusion coeff [cm^2/s] (0 would disable streaming diffusion via 1/DCRmax_code=Inf)
   real(dp),dimension(1:ncr)::Dcr_perp_factor=1d-6 ! Perpendicular suppression
   logical::mom_streaming_diffusion=.false.  ! Streaming term in sigma
   logical::mom_streaming_heating=.false.    ! Streaming heating of gas
   real(dp)::v_alfven=0d0                    ! Imposed Alfven speed (tests)
   real(dp)::cr_f_taucell=1d0                ! Cell optical-depth stability factor
-  ! Cooling: Fitz Axen et al. 2024, as implemented in cral cr_cooling_fine.f90
-  ! (used from phase 4)
+  ! Cooling: Fitz Axen et al. 2024 (used from phase 4)
   logical::cr_cooling=.false.               ! CR collisional cooling
   real(dp)::zeta_cr=7.51d-16                ! Coulomb loss rate coefficient
   real(dp)::ne=1d-3                         ! Free electrons per H nucleus
@@ -60,17 +56,13 @@ module cr_parameters
   character(LEN=32)::jiang_test=''          ! Jiang & Oh test IC/BC dispatch
   ! Region-based CR initial conditions (per &init_params region geometry).
   ! crmom_region(k,1)=E_cr, crmom_region(k,2:ncrvars)=CR flux in region k.
-  ! Mirrors ramses_cral mhd/hydro_parameters.f90; the CR region init in
-  ! cr_condinit replicates region_condinit's geometry to fill these in.
   real(dp),dimension(1:MAXREGION,1:ncrvars)::crmom_region=0d0
   ! Per-boundary CR state for imposed (bound_type=3) boundaries: crmom_bound(b,1)=E_cr,
-  ! crmom_bound(b,2:ncrvars)=CR flux on boundary region b -- the per-boundary analogue
-  ! of crmom_region (cral kept it in &boundary_params; here it is a &cr_params array,
-  ! per the CR separation). Applied in cr_boundana for the tp_* two-pressure shock tests.
+  ! crmom_bound(b,2:ncrvars)=CR flux on boundary region b. Applied in cr_boundana
+  ! for the tp_* two-pressure shock tests.
   real(dp),dimension(1:MAXBOUND,1:ncrvars)::crmom_bound=0d0
-  ! CR-owned IC region geometry (mirror of rt_region_* in rt_parameters.f90).
-  ! Lets CR regions differ from gas regions; cr_reg_group selects the target
-  ! group (inert when NCR_GROUPS=1).
+  ! CR-owned IC region geometry: lets CR regions differ from gas regions;
+  ! cr_reg_group selects the target group (inert when NCR_GROUPS=1).
   integer::cr_nregion=0
   character(LEN=10),dimension(1:MAXREGION)::cr_region_type='square'
   real(dp),dimension(1:MAXREGION)::cr_reg_x_center=0d0
@@ -92,12 +84,10 @@ module cr_parameters
   real(dp)::c_cu=0d0                        ! Light speed in code units
   real(dp),dimension(1:ncr)::DCR_code=0d0   ! Dcr in code units
   real(dp)::DCRmax_code=0d0                 ! DCRmax in code units
-  real(dp)::smalldcr=1d-25                  ! Floor on DCR_code (cral default)
+  real(dp)::smalldcr=1d-25                  ! Floor on DCR_code
   real(dp)::ecrs_tot=0d0                    ! Total CR energy (log diagnostic)
   ! Per-cell CR-energy gather buffer for cmpdt's CR-pressure term: filled by
-  ! courant_fine, read by cmpdt. Module-level so cmpdt takes no extra argument
-  ! and its call/signature stay the no-CR (dev) form (mirrors how
-  ! cr_va_max already flows between courant_fine and cmpdt).
+  ! courant_fine, read by cmpdt. Module-level so cmpdt takes no extra argument.
   real(dp),dimension(1:nvector,1:ncr)::crecr=0d0
 
 end module cr_parameters

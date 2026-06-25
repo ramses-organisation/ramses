@@ -1,7 +1,4 @@
 ! Jiang & Oh (2018) 4.1.1 -- 1D Gaussian CR-energy pulse (pure diffusion/advection).
-! Ported from ramses_cral tests/cr/jiang_411/jiang_411.nml: CR keys moved from
-! &MHD_PARAMS to the separated-CR &CR_PARAMS, cr_legacy_output enabled so the
-! osyris notebook reads CR fields from the hydro files. NDIM=1 build.
 &RUN_PARAMS
 hydro=.true.
 nremap=0

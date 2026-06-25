@@ -1,15 +1,4 @@
 ! Jiang & Oh (2018) 4.2.3 -- 2D CR-blast / Sedov-type explosion with AMR.
-! Region-based (no condinit override): an ambient medium ('square' region filling
-! the box) plus a central 'point' over-pressure region; the CR state comes from
-! crmom_region (E_cr=1d-10 uniform, zero flux), replicated by cr_region_condinit
-! in patch/cr_tests/cr_condinit.f90 for the separated CR module. Exercises 2D AMR
-! CR interpolation as the blast wave sweeps the CR floor.
-! Ported from ramses_cral tests/cr/jiang_423/jiang_423.nml: &MHD_PARAMS ->
-! &CR_PARAMS, add cr_legacy_output (so osyris reads CR from the hydro files),
-! strip epsilon_diff (cral one-moment-diffusion key, not in sno &cr_params),
-! move crmom_region from &init_params to &cr_params (sno reads it there), and
-! move err_grad_crmom from &refine_params to &cr_params (CR refinement lives in
-! &cr_params). NDIM=2 build.
 &RUN_PARAMS
 hydro=.true.
 nremap=0
@@ -52,7 +41,6 @@ err_grad_crmom(1)=0.05   ! moved from &refine_params (CR refinement lives in &cr
 ! CR energy+flux per region (cral region_condinit reads this); replicated by
 ! cr_region_condinit in patch/cr_tests/cr_condinit.f90 for the separated module.
 crmom_region(:,1)=1d-10,0.0d0
-! [stripped: epsilon_diff=1d-4 -- cral one-moment-diffusion key, not in sno reader]
 cr_nregion=2
 cr_region_type='square','point'
 cr_reg_x_center=0.5,0.5

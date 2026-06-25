@@ -1,39 +1,6 @@
 !================================================================
-! Jiang & Oh (2018) cosmic-ray test suite -- CR initial conditions patch.
-!
-! Patch override of cr/cr_condinit.f90 for the separated-CR module: it sets
-! ONLY the CR conservative variables u(1:nn,1:ncrvars) (energy at iCRu=1, the
-! ndim fluxes in the slots after it). The gas and magnetic field come from the
-! region-based &INIT_PARAMS block in the namelist (region_condinit, unchanged),
-! so no gas condinit override is needed for the region-based tests.
-!
-! The test is chosen at run time with the namelist string jiang_test (in
-! &CR_PARAMS). jiang_test='' reproduces the default cr_condinit (smallcr energy
-! floor, zero flux), so this patch is inert for non-test runs.
-!
-! Ported from ramses_cral patch/jiang_tests/condinit.f90 (the jiang_cr_init CR
-! block), applying the central transformation: cral wrote the CR variables into
-! the embedded u(:,icrU...) with icrU=nvar+4; here we write the separated CR
-! buffer u(:,iCRu...) with iCRu=1. The CR advective flux F = 4/3 v_gas E_cr is
-! zero for the static-gas region tests below (u_region=0), so the gas velocity
-! is not needed in this CR-only buffer; flux is set to zero, identical to cral
-! for these tests.
-!
-! Test '422' (colliding flow) takes its CR ENERGY from crmom_region per region
-! geometry -- cral does this in region_condinit, which the separated CR module
-! does not call -- so cr_region_condinit below replicates region_condinit's
-! square-region geometry into the CR buffer, then the '422' branch sets the CR
-! advective flux F = 4/3 v_gas E_cr from the namelist region velocity u_region
-! (= the gas velocity q(:,2) cral reads), giving the identical CR state.
-!
-! Test 'TP_1D_shock' (two-pressure shock tube) is also region-based: like 422 the
-! CR ENERGY (and here the zero flux) come from crmom_region per region geometry,
-! but unlike 422 the CR flux is taken DIRECTLY from crmom_region(:,2)=0 (not from
-! the gas velocity), so cr_region_condinit alone reproduces cral's region_condinit.
-!
-!   1D tests covered here: 411  411_triangular  413  414  421  422  424  TP_1D_shock
-!   2D tests covered here: 412 (2D Gaussian CR pulse)  415 (magnetic-loop arc)
-!                          423 (2D CR blast / Sedov, region-based, AMR)
+! Jiang & Oh (2018) CR test suite -- CR initial conditions patch: sets only the
+! CR conservative variables u(1:nn,1:ncrvars); test chosen by namelist jiang_test.
 !================================================================
 subroutine cr_condinit(x,u,dx,nn,ilevel)
   use amr_parameters
@@ -47,7 +14,6 @@ subroutine cr_condinit(x,u,dx,nn,ilevel)
   !----------------------------------------------------------------
   ! u(i,1:ncrvars) is the CR conservative vector for group g:
   !   energy at iCRu+(ndim+1)*(g-1), the ndim fluxes in the slots after it.
-  !   (iCRu=1; CR indexing never references nvar.)
   !----------------------------------------------------------------
   integer::i,igrp,icrE
   real(dp),dimension(1:nvector)::tmp
@@ -72,18 +38,14 @@ subroutine cr_condinit(x,u,dx,nn,ilevel)
      ! No override: pure default (smallcr floor, zero flux).
 
   case('411','414')                          ! Gaussian CR-energy pulse
-     ! cral: u(:,icrU)=exp(-40*(x-boxlen/2)^2); flux=4/3*v_gas*E_cr=0 (static gas).
+     ! exp(-40*(x-boxlen/2)^2) pulse; flux=4/3*v_gas*E_cr=0 (static gas).
      tmp(1:nn)=(x(1:nn,1)-boxlen*0.5d0)**2
      do i=1,nn
         u(i,iCRu)=exp(-40d0*tmp(i))
      end do
 
   case('412')                                ! 2D Gaussian CR-energy pulse
-     ! cral: u(:,icrU)=exp(-40*((x-bc)^2+(y-bc)^2)); the advective flux
-     ! u(:,icrU+1)=4/3*v_gas_x*E_cr is zero here because the gas is static
-     ! (static_gas=.true., u_region=0), so it stays at the default-zero set
-     ! above -- identical to cral. First 2D test: exercises the j-direction CR
-     ! fluxes. Gaussian matches jiang_cr_init('412').
+     ! exp(-40*((x-bc)^2+(y-bc)^2)) pulse; flux=0 (static gas, u_region=0).
      tmp(1:nn)=(x(1:nn,1)-boxlen*0.5d0)**2
 #if NDIM>1
      tmp(1:nn)=tmp(1:nn)+(x(1:nn,2)-boxlen*0.5d0)**2
@@ -93,11 +55,8 @@ subroutine cr_condinit(x,u,dx,nn,ilevel)
      end do
 
   case('411_triangular')                     ! Triangular CR-energy profile
-     ! cral: u(:,icrU)=E0-slope*|x-boxlen/2| (E0=2,slope=1); the advective flux
-     ! u(:,icrU+1)=4/3*v_gas*E_cr is zero here because the gas is static
-     ! (u_region=0), so it stays at the default-zero set above. The streaming
-     ! wave is driven entirely by the time-dependent analytic boundary
-     ! (cr_boundana, bound_type=3). E0/slope match jiang_cr_init('411_triangular').
+     ! E0-slope*|x-boxlen/2| (E0=2,slope=1); flux=0 (static gas). The streaming
+     ! wave is driven by the time-dependent analytic boundary (cr_boundana, bound_type=3).
      tmp(1:nn)=(x(1:nn,1)-boxlen*0.5d0)**2
      do i=1,nn
         u(i,iCRu)=2d0-1d0*sqrt(tmp(i))
@@ -118,12 +77,9 @@ subroutine cr_condinit(x,u,dx,nn,ilevel)
 
 #if NDIM>1
   case('415')                                ! 2D magnetic loop: CR-energy arc enhancement
-     ! cral jiang_loop_primitives writes the CR energy into the primitive vector
-     ! q(:,icrU)=12 on one arc of the loop, =10 elsewhere; in the separated design
-     ! the gas/B-field part is set in condinit (jiang_loop_primitives) and the CR
-     ! energy here. Arc: 0.25 box < r < 0.35 box, theta in [-pi/12,pi/12], xx>0.
-     ! atan2 (not atan(yy/xx)) avoids a divide-by-zero FPE at xx=0; identical in
-     ! the xx>0 region the arc selects. Flux left at default zero (static gas).
+     ! CR energy =12 on the loop arc (0.25 box < r < 0.35 box, theta in
+     ! [-pi/12,pi/12], xx>0), =10 elsewhere. atan2 (not atan(yy/xx)) avoids
+     ! a divide-by-zero FPE at xx=0.
      pi=acos(-1d0)
      do i=1,nn
         xx=x(i,1)-boxlen*0.5d0
@@ -140,31 +96,14 @@ subroutine cr_condinit(x,u,dx,nn,ilevel)
 #endif
 
   case('422')                                ! CR energy from crmom_region; flux from gas velocity
-     ! cral: region_condinit fills the CR energy E_cr=crmom_region(k,1) inside
-     ! each region (here crmom_region(:,1)=50,50); then jiang_cr_init sets the
-     ! CR advective flux u(:,icrU+1)=4/3 q(:,2) E_cr from the gas velocity q(:,2).
-     ! The separated CR module never calls region_condinit, so we replicate its
-     ! square-region geometry: cr_region_condinit fills E_cr (and any crmom flux),
-     ! then we overwrite the x-flux with 4/3 u_region(k) E_cr per region. Inside
-     ! each region q(:,2)=u_region(k) (region_condinit), so this matches cral.
+     ! E_cr from crmom_region (square regions); x-flux = 4/3 u_region(k) E_cr.
      call cr_region_condinit(x,u,dx,nn,ilevel)
      call cr_flux_from_region_velocity(x,u,dx,nn)
 
   case('tp_nostream','tp_stream_va075', 'tp_stream_va15', '423')                  ! Region-based: CR energy+flux from crmom_region
-     ! cral: a region-based test with NO condinit override -- jiang_cr_init is a
-     ! no-op; the entire CR state comes from region_condinit reading crmom_region.
-     ! TP_1D_shock: crmom_region(:,1)=3,1 (energy) and crmom_region(:,2)=0,0
-     ! (x-flux), giving a CR-energy contact discontinuity (3|1) across x=5 with
-     ! zero initial flux. 423 (2D CR blast/Sedov): a box-filling 'square' region
-     ! sets E_cr=crmom_region(1,1)=1d-10 (zero flux) everywhere, plus a central
-     ! 'point' over-pressure region for the gas blast; cral's point region does
-     ! NOT touch CR (crmom_region(2,1)=0 anyway), so the CR start is a uniform
-     ! E_cr=1d-10 floor that the gas shock then sweeps. The separated CR module
-     ! never calls region_condinit, so cr_region_condinit replicates its square/
-     ! point geometry into the CR buffer (energy at iCRu, fluxes after it, all
-     ! from crmom_region), giving the identical CR state. No gas-velocity flux is
-     ! needed: u_region=0, so cral's flux would be zero, and crmom_region(:,2:)=0
-     ! sets it here. (For the point region crmom_region(k,1)*r/vol=0, a no-op.)
+     ! Entire CR state comes from crmom_region (energy at iCRu, fluxes after).
+     ! TP_1D_shock: E_cr contact discontinuity (3|1) across x=5, zero flux.
+     ! 423 (2D CR blast/Sedov): uniform E_cr=1d-10 floor, gas blast sweeps it.
      call cr_region_condinit(x,u,dx,nn,ilevel)
 
   case default
@@ -177,28 +116,15 @@ end subroutine cr_condinit
 !================================================================
 !================================================================
 !================================================================
-! cr_region_condinit now lives in core cr/cr_init_flow_fine.f90 (mirroring
-! rt_region_condinit in rt/rt_init_flow_fine.f90): it reads the CR-owned
-! region geometry (cr_nregion / cr_reg_*) and is called from cr_condinit above
-! with the ilevel argument. Keeping a second definition here would create a
-! duplicate symbol at link (both cr_condinit.o and cr_init_flow_fine.o are in
-! AMRLIB via CROBJ), so the routine is intentionally absent from this patch.
+! cr_region_condinit lives in core cr/cr_init_flow_fine.f90; defining it here too
+! would be a duplicate symbol at link (both are in AMRLIB), so it is omitted here.
 !================================================================
 !================================================================
 !================================================================
 !================================================================
 subroutine cr_flux_from_region_velocity(x,u,dx,nn)
-  ! jiang_test='422': set the CR advective flux F = 4/3 v_gas E_cr from the gas
-  ! velocity. cral does u(:,icrU+1)=4/3*q(:,2)*u(:,icrU) where q(:,2) is the gas
-  ! x-velocity = u_region(k) inside region k (region_condinit). The separated CR
-  ! buffer has no gas state, so we recover the same per-region velocity u_region
-  ! from the GAS namelist (the injected velocity STAYS gas-based -- it is a
-  ! gas->CR coupling, not CR IC geometry). The region-MEMBERSHIP test, however,
-  ! uses the CR-owned geometry (cr_nregion / cr_reg_*), in lock-step with
-  ! cr_region_condinit so the flux is written on exactly the same cells the CR
-  ! energy was. This is bit-identical for 422 (its only caller), where
-  ! cr_nregion==nregion==2 and cr_reg_*==the gas geometry. Only the first CR
-  ! group's x-flux is set, matching jiang_cr_init('422').
+  ! jiang_test='422': set the first CR group's x-flux F = 4/3 u_region(k) E_cr
+  ! (gas region velocity) on the same square regions cr_region_condinit filled.
   use amr_parameters
   use cr_parameters
   use hydro_parameters, only: u_region

@@ -3,9 +3,6 @@ SUBROUTINE cr_cooling_fine(ilevel)
   ! Armillotta et al. 2021, 2024; Fitz Axen et al. 2024. Exponential decay
   ! of the CR energy and flux at the rate lambda_cr * n_H.
   !
-  ! Ported from ramses_cral feat/CR_tests cr/cr_cooling_fine.f90. Central
-  ! transformation: CR state lives in the separate array cruold (iCRu=1),
-  ! not embedded in uold at nvar+4; gas density is still read from uold(:,1).
   ! Called from crmom_step (after cr_set_uold) when cr_cooling=.true.
   use amr_commons
   use hydro_commons              ! gas uold, smallr

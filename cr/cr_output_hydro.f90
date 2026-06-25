@@ -1,6 +1,4 @@
 ! Outputting of cosmic-ray variables: separate cr_NNNNN.out mode.
-! Field names (CRegy_XX, CRflx_XX_d) match ramses_cral outputs so the
-! cral osyris notebooks read sno data unmodified.
 !************************************************************************
 subroutine cr_backup_hydro(filename, filename_desc)
 !------------------------------------------------------------------------

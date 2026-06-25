@@ -2,21 +2,12 @@
 !###############################################################
 subroutine crmom_step(ilevel)
   ! Two-moment cosmic-ray transport driver: subcycled free-streaming P1/M1
-  ! advection followed by the implicit scattering/streaming source terms,
-  ! ported from ramses_cral feat/CR_tests cr/cr_godunov_fine.f90:875-950
-  ! (crmom_step). add_cr_source_terms (cral line 932) IS called here, between
-  ! transport and cr_set_uold; cr_cooling_fine (cral line 926) is deferred to
-  ! Phase 4 and is NOT called here.
+  ! advection followed by the implicit scattering/streaming source terms.
   !
   ! Either do one transport step on ilevel, with CR field updates in the
   ! coarser-level neighbours, or, if cr_nsubcycle>1, do many substeps in
   ! ilevel only, using Dirichlet boundary conditions for the level
   ! boundaries.
-  !
-  ! Central transformation vs cral: CR state lives in the separate arrays
-  ! cruold/crunew(1:ncell,1:ncrvars) with iCRu=1 (cral embedded it in
-  ! uold/unew at nvar+4). Virtual-boundary exchange loops therefore run
-  ! over 1:ncrvars on crunew/cruold, never over nvar+3+1..nvar+3+ncrvars.
   use amr_commons
   use cr_parameters
   use cr_hydro_commons
@@ -38,8 +29,6 @@ subroutine crmom_step(ilevel)
   t_save=t ; t=t-t_left
 
   ! Initialise crunew=cruold for the first subcycle (zeroes virtual cells).
-  ! In cral this was the external cr_set_unew call in amr_step right after
-  ! set_unew; sno has no such call, so it is done here once before the loop.
   call cr_set_unew(ilevel)
 
   call get_crmom_courant(dt_cr,ilevel)
@@ -67,17 +56,14 @@ subroutine crmom_step(ilevel)
 
      ! Implicit scattering/streaming source terms: relax (E_cr,F_cr) on
      ! crunew by sigma=1/Dcr_code (and write the gas back-reaction to
-     ! unew(2:5) when .not.static_gas). Mirrors cral's call at
-     ! cr/cr_godunov_fine.f90:932, after the reverse-comm and before
-     ! cr_set_uold. Without it the two-moment flux is unrelaxed and the
-     ! scheme is unstable.
+     ! unew(2:5) when .not.static_gas). Without it the two-moment flux is
+     ! unrelaxed and the scheme is unstable.
      call add_cr_source_terms(ilevel)
 
      ! Set cruold equal to crunew, but only for the CR vars
      call cr_set_uold(ilevel)
 
      ! Collisional CR cooling (Coulomb/hadronic losses), on cruold.
-     ! Mirrors cral's call at cr/cr_godunov_fine.f90:926, after cr_set_uold.
      if(cr_cooling)call cr_cooling_fine(ilevel)
 
      do ivar=1,ncrvars
@@ -94,7 +80,6 @@ subroutine crmom_step(ilevel)
   ! Restriction operator to update this level split cells. upload_fine
   ! restricts the gas array; cr_upload_fine restricts the SEPARATED CR field
   ! cruold fine->coarse (the generic upload_fine never touches cruold).
-  ! cral's embedded CR is restricted by its single upload_fine (crmom_step:941).
   call upload_fine(ilevel)
   call cr_upload_fine(ilevel)
 
@@ -113,19 +98,9 @@ end subroutine crmom_step
 !##########################################################################
 !##########################################################################
 subroutine add_cr_source_terms(ilevel)
-  ! Implicit per-cell cosmic-ray scattering/streaming source terms, ported
-  ! from ramses_cral feat/CR_tests cr/cr_godunov_fine.f90:502-868
-  ! (add_cr_source_terms). It runs inside crmom_step between cr_godunov_fine
+  ! Implicit per-cell cosmic-ray scattering/streaming source terms.
+  ! It runs inside crmom_step between cr_godunov_fine
   ! (explicit transport, which writes crunew) and cr_set_uold.
-  !
-  ! Central transformation vs cral (which embeds CR in uold/unew at icrU=nvar+4):
-  !   * the post-transport CR state read/written here lives in crunew (iCRu=1);
-  !   * the CR-gradient stencil (pcrg/pcrd) reads the OLD CR energy from cruold;
-  !   * gas (rho/momentum/B) is read from uold and the gas back-reaction is
-  !     written to unew(2:5) exactly as cral, INCLUDING the
-  !     .not.static_gas .and. .not.static guards (skipped for jiang-414);
-  !   * cral's two #if NENER>0 blocks (radiation) are removed; err is kept
-  !     (initialised to 0, used by the thermal floor).
   !
   ! For each cell the implicit solve relaxes (E_cr,F_cr) by the scattering
   ! coefficient sigma=1/Dcr_code(iGrp) via a 4x4 coefficient matrix reduced
@@ -500,7 +475,7 @@ SUBROUTINE cr_godunov_fine(ilevel)
 ! This routine is a wrapper to the grid solver for cosmic-ray transport.
 ! Small grids (2x2x2) are gathered from level ilevel and sent to the CR
 ! solver. On entry, CR variables are gathered from array cruold. On exit,
-! crunew has been updated. Ported from cral cr/cr_godunov_fine.f90:2-33.
+! crunew has been updated.
 !------------------------------------------------------------------------
    use amr_commons
    use cr_hydro_commons
@@ -541,8 +516,7 @@ SUBROUTINE cr_set_unew(ilevel)
    !--------------------------------------------------------------------------
    ! This routine sets array crunew to its initial value cruold before
    ! calling the CR advection scheme. crunew is set to zero in virtual
-   ! boundaries. Ported from cral cr/cr_godunov_fine.f90:39-96, operating on
-   ! the separate cruold/crunew arrays (iCRu=1) over 1:ncrvars.
+   ! boundaries.
    !--------------------------------------------------------------------------
    integer::i,ivar,ind,icpu,iskip
    real(dp)::fred,sqrt3
@@ -612,18 +586,14 @@ SUBROUTINE cr_set_uold(ilevel)
    integer::ilevel
    !--------------------------------------------------------------------------
    ! This routine sets array cruold to its new value crunew after the CR
-   ! step. Ported from cral cr/cr_godunov_fine.f90:102-148, operating on the
-   ! separate cruold/crunew arrays (iCRu=1) over 1:ncrvars.
+   ! step.
    !
    ! Transport-robustness floor: the per-group CR energy is floored at
-   ! smallcr after the update (mirroring rt_set_uold's max(...,smallNp)
-   ! "prevent beam induced crash" fix in rt/rt_godunov_fine.f90). In cral
-   ! this floor lives in add_cr_source_terms (which now also runs in
-   ! crmom_step, after this routine); keeping it here too is harmless and
-   ! makes the explicit transport robust on its own -- without it the
-   ! explicit transport of a degenerate state can drive E_cr slightly
-   ! negative and trip the Ecr<0 guard in cmp_cr_flux_tensors. This is pure
-   ! transport robustness -- no scattering/streaming/cooling source physics.
+   ! smallcr after the update. This makes the explicit transport robust on
+   ! its own -- without it the explicit transport of a degenerate state can
+   ! drive E_cr slightly negative and trip the Ecr<0 guard in
+   ! cmp_cr_flux_tensors. This is pure transport robustness -- no
+   ! scattering/streaming/cooling source physics.
    !--------------------------------------------------------------------------
    integer::i,ivar,ind,iskip,iGrp,icrE
    real(dp)::fred,sqrt3
@@ -660,8 +630,7 @@ SUBROUTINE cr_set_uold(ilevel)
          end do
       end do
 
-      ! Floor each group's CR energy at smallcr (no negative CR densities),
-      ! mirroring the rt_set_uold photon-density fix.
+      ! Floor each group's CR energy at smallcr (no negative CR densities).
       do iGrp=1,ncr
          icrE=iCRu+(ndim+1)*(iGrp-1)
          do i=1,active(ilevel)%ngrid
@@ -685,16 +654,6 @@ SUBROUTINE cr_godfine1(ind_grid, ncache, ilevel)
 ! finer levels has already been taken into account. Conservative variables
 ! are updated and stored in array crunew(:), both at the current level and at
 ! the coarser level if necessary.
-!
-! Ported from cral cr/cr_godunov_fine.f90:151-495. Central transformation:
-! the single embedded uloc(...,1:nvar+3+ncrvars) stencil is split into TWO
-! stencils -- uin_gas(...,1:nvar+3) gathered from uold (rho/vel/B, needed by
-! the M1 closure), and uin_cr(...,1:ncrvars) gathered from cruold (E,F with
-! iCRu=1). The conservative update writes crunew(:,1:ncrvars); there are NO
-! gas writes here (the gas momentum/energy back-reaction lives in
-! add_cr_source_terms, called next in crmom_step). The buffer-neighbour gather uses the same
-! get3cubefather/getnborfather/interpol machinery as gas: gas via
-! interpol_hydro, CR via the local cr_interpol_hydro (mirroring RT).
 !
 ! in ind_grid: Indexes of grids/octs to solve in
 ! in ncache:   Length of ind_grid (i.e. number of grids)

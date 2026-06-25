@@ -1,8 +1,4 @@
-! Jiang & Oh (2018) 4.1.4 -- 1D uniform magnetized gas with an advecting CR
-! Gaussian pulse (periodic box; bound_type=0 => periodic). NDIM=1 build.
-! Ported from ramses_cral tests/cr/jiang_414/jiang_414.nml: the CR keys move
-! from &MHD_PARAMS to the separated-CR &CR_PARAMS block, and cr_legacy_output
-! is enabled so the osyris notebook reads CR fields from the hydro files.
+! Jiang & Oh (2018) 4.1.4 -- 1D uniform magnetized gas with an advecting CR Gaussian pulse (periodic box).
 &RUN_PARAMS
 hydro=.true.
 nremap=0
