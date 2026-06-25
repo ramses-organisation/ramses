@@ -559,6 +559,19 @@ recursive subroutine amr_step(ilevel,icount)
      if(simple_boundary)call make_boundary_hydro(ilevel)
   endif
 
+#ifdef CRPHYS
+  ! Refresh CR ghost cells before the refinement map (flag_fine -> cr_hydro_flag),
+  ! mirroring the gas uold sync above, so err_grad_crmom reads valid cruold at
+  ! rank boundaries. make_virtual_fine_dp is a no-op without MPI (byte-identical
+  ! in serial); with MPI it removes the rank-count dependence of the CR AMR grid.
+  if(cr_advect)then
+     do ivar=1,ncrvars
+        call make_virtual_fine_dp(cruold(1,ivar),ilevel)
+     end do
+     if(simple_boundary)call cr_make_boundary_hydro(ilevel)
+  endif
+#endif
+
 #ifdef SOLVERmhd
   ! Magnetic diffusion step
   if((hydro).and.(.not.static_gas))then
