@@ -150,7 +150,7 @@ subroutine cr_condinit(x,u,dx,nn,ilevel)
      call cr_region_condinit(x,u,dx,nn)
      call cr_flux_from_region_velocity(x,u,dx,nn)
 
-  case('TP_1D_shock','423')                  ! Region-based: CR energy+flux from crmom_region
+  case('tp_nostream','tp_stream_va075', 'tp_stream_va15', '423')                  ! Region-based: CR energy+flux from crmom_region
      ! cral: a region-based test with NO condinit override -- jiang_cr_init is a
      ! no-op; the entire CR state comes from region_condinit reading crmom_region.
      ! TP_1D_shock: crmom_region(:,1)=3,1 (energy) and crmom_region(:,2)=0,0
