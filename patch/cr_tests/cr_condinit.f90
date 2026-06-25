@@ -147,7 +147,7 @@ subroutine cr_condinit(x,u,dx,nn,ilevel)
      ! square-region geometry: cr_region_condinit fills E_cr (and any crmom flux),
      ! then we overwrite the x-flux with 4/3 u_region(k) E_cr per region. Inside
      ! each region q(:,2)=u_region(k) (region_condinit), so this matches cral.
-     call cr_region_condinit(x,u,dx,nn)
+     call cr_region_condinit(x,u,dx,nn,ilevel)
      call cr_flux_from_region_velocity(x,u,dx,nn)
 
   case('tp_nostream','tp_stream_va075', 'tp_stream_va15', '423')                  ! Region-based: CR energy+flux from crmom_region
@@ -165,7 +165,7 @@ subroutine cr_condinit(x,u,dx,nn,ilevel)
      ! from crmom_region), giving the identical CR state. No gas-velocity flux is
      ! needed: u_region=0, so cral's flux would be zero, and crmom_region(:,2:)=0
      ! sets it here. (For the point region crmom_region(k,1)*r/vol=0, a no-op.)
-     call cr_region_condinit(x,u,dx,nn)
+     call cr_region_condinit(x,u,dx,nn,ilevel)
 
   case default
      write(*,*)'cr_condinit: unknown jiang_test = "'//trim(jiang_test)//'"'
@@ -177,66 +177,12 @@ end subroutine cr_condinit
 !================================================================
 !================================================================
 !================================================================
-subroutine cr_region_condinit(x,u,dx,nn)
-  ! Fill the separated CR buffer u(1:nn,1:ncrvars) from the namelist
-  ! crmom_region per region geometry. Faithful port of the CR-handling part
-  ! of ramses_cral mhd/init_flow_fine.f90 region_condinit (the square/point
-  ! region loop), keeping ONLY the CR slots: cral wrote q(i,icru+ivar-1) with
-  ! icru=nvar+4; here we write u(i,ivar) with the separated layout (iCRu=1),
-  ! ivar=1..ncrvars maps energy + ndim fluxes per group identically.
-  ! Default (no region covers a cell) leaves the smallcr floor / zero flux
-  ! that cr_condinit set before calling this routine; cral's default is 0,
-  ! but every 422 cell is covered by a region so the difference never shows.
-  use amr_parameters
-  use cr_parameters
-  implicit none
-  integer ::nn
-  real(dp)::dx
-  real(dp),dimension(1:nvector,1:ncrvars)::u
-  real(dp),dimension(1:nvector,1:ndim  )::x
-  integer::i,k,ivar
-  real(dp)::vol,r,xn,yn,zn,en
-
-  ! Loop over initial conditions regions
-  do k=1,nregion
-
-     ! For "square" regions only:
-     if(region_type(k) .eq. 'square')then
-        en=exp_region(k)
-        do i=1,nn
-           xn=0.0d0; yn=0.0d0; zn=0.0d0
-           xn=2.0d0*abs(x(i,1)-x_center(k))/length_x(k)
-#if NDIM>1
-           yn=2.0d0*abs(x(i,2)-y_center(k))/length_y(k)
-#endif
-#if NDIM>2
-           zn=2.0d0*abs(x(i,3)-z_center(k))/length_z(k)
-#endif
-           if(exp_region(k)<10)then
-              r=(xn**en+yn**en+zn**en)**(1.0/en)
-           else
-              r=max(xn,yn,zn)
-           end if
-           ! If cell lies within region, REPLACE CR variables by region values
-           if(r<1.0)then
-              do ivar=1,ncrvars
-                 u(i,ivar)=crmom_region(k,ivar)
-              end do
-           end if
-        end do
-     end if
-
-     ! For "point" regions only: cral's region_condinit point branch updates
-     ! ONLY the gas primitives (density/velocity/pressure/NENER) and never
-     ! touches the CR slots (mhd/init_flow_fine.f90:612-645). Faithful port =>
-     ! the CR buffer is left untouched here, keeping whatever the enclosing
-     ! 'square' region (or the smallcr floor) set. 423's point region has
-     ! crmom_region(2,1)=0 so this was already a numerical no-op, but matching
-     ! cral exactly avoids any CR injection if a future test uses a point region
-     ! with nonzero crmom_region.
-  end do
-
-end subroutine cr_region_condinit
+! cr_region_condinit now lives in core cr/cr_init_flow_fine.f90 (mirroring
+! rt_region_condinit in rt/rt_init_flow_fine.f90): it reads the CR-owned
+! region geometry (cr_nregion / cr_reg_*) and is called from cr_condinit above
+! with the ilevel argument. Keeping a second definition here would create a
+! duplicate symbol at link (both cr_condinit.o and cr_init_flow_fine.o are in
+! AMRLIB via CROBJ), so the routine is intentionally absent from this patch.
 !================================================================
 !================================================================
 !================================================================
@@ -245,9 +191,14 @@ subroutine cr_flux_from_region_velocity(x,u,dx,nn)
   ! jiang_test='422': set the CR advective flux F = 4/3 v_gas E_cr from the gas
   ! velocity. cral does u(:,icrU+1)=4/3*q(:,2)*u(:,icrU) where q(:,2) is the gas
   ! x-velocity = u_region(k) inside region k (region_condinit). The separated CR
-  ! buffer has no gas state, so we recover the same per-region velocity from the
-  ! namelist region geometry (identical square/point test as region_condinit).
-  ! Only the first CR group's x-flux is set, matching jiang_cr_init('422').
+  ! buffer has no gas state, so we recover the same per-region velocity u_region
+  ! from the GAS namelist (the injected velocity STAYS gas-based -- it is a
+  ! gas->CR coupling, not CR IC geometry). The region-MEMBERSHIP test, however,
+  ! uses the CR-owned geometry (cr_nregion / cr_reg_*), in lock-step with
+  ! cr_region_condinit so the flux is written on exactly the same cells the CR
+  ! energy was. This is bit-identical for 422 (its only caller), where
+  ! cr_nregion==nregion==2 and cr_reg_*==the gas geometry. Only the first CR
+  ! group's x-flux is set, matching jiang_cr_init('422').
   use amr_parameters
   use cr_parameters
   use hydro_parameters, only: u_region
@@ -259,19 +210,19 @@ subroutine cr_flux_from_region_velocity(x,u,dx,nn)
   integer::i,k
   real(dp)::r,xn,yn,zn,en
 
-  do k=1,nregion
-     if(region_type(k) .ne. 'square')cycle
-     en=exp_region(k)
+  do k=1,cr_nregion
+     if(cr_region_type(k) .ne. 'square')cycle
+     en=cr_exp_region(k)
      do i=1,nn
         xn=0.0d0; yn=0.0d0; zn=0.0d0
-        xn=2.0d0*abs(x(i,1)-x_center(k))/length_x(k)
+        xn=2.0d0*abs(x(i,1)-cr_reg_x_center(k))/cr_reg_length_x(k)
 #if NDIM>1
-        yn=2.0d0*abs(x(i,2)-y_center(k))/length_y(k)
+        yn=2.0d0*abs(x(i,2)-cr_reg_y_center(k))/cr_reg_length_y(k)
 #endif
 #if NDIM>2
-        zn=2.0d0*abs(x(i,3)-z_center(k))/length_z(k)
+        zn=2.0d0*abs(x(i,3)-cr_reg_z_center(k))/cr_reg_length_z(k)
 #endif
-        if(exp_region(k)<10)then
+        if(cr_exp_region(k)<10)then
            r=(xn**en+yn**en+zn**en)**(1.0/en)
         else
            r=max(xn,yn,zn)
