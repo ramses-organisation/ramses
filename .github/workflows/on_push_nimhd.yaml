@@ -1,0 +1,16 @@
+name: Verify NIMHD
+
+on:
+  push:
+    branches:
+      - combo_fld_nimhd
+
+concurrency:
+  group: nimhd-${{github.ref}}
+  cancel-in-progress: true
+
+jobs:
+
+  tests:
+    name: Test Ramses NIMHD
+    uses: ./.github/workflows/tests-nimhd.yaml
