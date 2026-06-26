@@ -12,7 +12,7 @@ module constants
   ! * PCAD - http://www.astro.wisc.edu/~dolan/constants.html
   ! * NIST - National Institute of Standards and Technology
   ! * IAU - Internatonal Astronomical Union resolution
-#if USE_FLD==0
+#if RAMSES_ISM==0
   real(dp),parameter ::pi           = twopi/2d0
   real(dp),parameter ::hplanck      = 6.6260702d-27 ! Planck const. [erg s]; SI
   real(dp),parameter ::eV2erg       = 1.6021766d-12 ! Electronvolt [erg]; SI
@@ -20,7 +20,6 @@ module constants
   real(dp),parameter ::c_cgs        = 2.9979246d+10 ! Speed of light [cm s-1]; SI
   real(dp),parameter ::a_r          = 7.5657233d-15 ! Radiation density const. [erg cm-3 K-4]; SI (derived)
   real(dp),parameter ::mH           = 1.6605390d-24 ! H atom mass [g] = amu, i.e. atomic mass unit; NIST
-
 #else 
   ! take the ramses-ism values for getting automatic tests cases passed
   real(dp),parameter ::pi           = acos(-1.0d0)!twopi/2d0

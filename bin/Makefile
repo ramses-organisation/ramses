@@ -54,6 +54,7 @@ NHYDRO = 2+$(NDIM)
 ifeq ($(SOLVER),mhd)
    NHYDRO = 8
 endif
+RAMSES_ISM=0
 # current is treated as a passive scalar?
 ifeq ($(NIMHD),1)
    NPSCAL := $(NPSCAL)+4
@@ -99,7 +100,7 @@ GITREPO = $(shell git config --get remote.$(GITREMOTE).url)
 BUILDDATE = $(shell date +"%D-%T")
 BUILDCOMMAND =${MAKE} ${MAKEFLAGS}
 DEFINES = -DNVECTOR=$(NVECTOR) -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DNENER=$(NENER) \
-          -DNVAR=$(NVAR) -DNHYDRO=$(NHYDRO) -DSOLVER$(SOLVER)
+          -DNVAR=$(NVAR) -DNHYDRO=$(NHYDRO) -DSOLVER$(SOLVER) -DRAMSES_ISM$(RAMSES_ISM)
 ifeq ($(ATON),1)
    DEFINES += -DATON
 endif

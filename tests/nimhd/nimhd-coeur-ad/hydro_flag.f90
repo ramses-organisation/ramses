@@ -58,9 +58,6 @@ subroutine hydro_flag(ilevel)
        & err_grad_C==-1.0.and.&
        & err_grad_B2==-1.0.and.&
 #endif
-#if USE_FLD==1
-       & err_grad_E==-1.0.and.&
-#endif
        & jeans_refine(ilevel)==-1.0 )return
 
 #ifdef RT
@@ -177,139 +174,14 @@ end subroutine hydro_flag
 !#####################################################################
 !#####################################################################
 !#####################################################################
-
-
-
-! subroutine jeans_length_refine(ind_cell,ok,ncell,ilevel)
-!   use amr_commons
-!   use pm_commons
-!   use hydro_commons
-!   use poisson_commons
-!   use constants, only: pi
-!   implicit none
-!   integer::ncell,ilevel
-!   integer,dimension(1:nvector)::ind_cell
-!   logical,dimension(1:nvector)::ok
-!   !-------------------------------------------------
-!   ! This routine sets flag1 to 1 if cell statisfy
-!   ! user-defined physical criterion for refinement.
-!   ! P. Hennebelle 03/11/2005
-!   !-------------------------------------------------
-!   integer::i,indi
-!   real(dp)::lamb_jeans,tail_pix,n_jeans
-!   real(dp)::dens,tempe,etherm,factG
-!   real(dp)::iso_etherm,iso_cs,iso_cs2,rho_star,rho_iso,tempe2
-! #if NENER>0
-!   integer::irad
-! #endif
-! #ifdef SOLVERmhd
-!   real(dp)::emag
-! #endif
-
-! !#if USE_FLD==1
-!   real(dp)::scale_nH,scale_T2,scale_t,scale_v,scale_d,scale_l
-!   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
-! !#endif
-  
-!   rho_iso  = 1.0e-08_dp
-!   rho_star = 1.0e-05_dp
-
-!   factG=1.0d0
-!   if(cosmo)factG=3d0/8d0/pi*omega_m*aexp
-!   n_jeans = jeans_refine(ilevel)
-!   ! compute the size of the pixel
-!   tail_pix = boxlen / (2d0)**ilevel
-!   do i=1,ncell
-!      indi = ind_cell(i)
-!      ! the thermal energy
-!      dens = max(uold(indi,1),smallr)
-!      etherm = uold(indi,neul)
-!      etherm = etherm - 0.5d0*uold(indi,2)**2/dens
-! #if NDIM > 1 || SOLVERmhd
-!      etherm = etherm - 0.5d0*uold(indi,3)**2/dens
-! #endif
-! #if NDIM > 2 || SOLVERmhd
-!      etherm = etherm - 0.5d0*uold(indi,4)**2/dens
-! #endif
-! #ifdef SOLVERmhd
-!      ! the magnetic energy
-!      emag =        (uold(indi,6)+uold(indi,nvar+1))**2
-!      emag = emag + (uold(indi,7)+uold(indi,nvar+2))**2
-!      emag = emag + (uold(indi,8)+uold(indi,nvar+3))**2
-!      emag = emag / 8d0
-!      etherm = (etherm - emag)
-! #endif
-! #if NENER>0
-!      do irad=1,nener
-!         etherm=etherm-uold(indi,nhydro+irad)
-!      end do
-! #endif
-!      ! the temperature
-!      tempe =  etherm / dens * (gamma - 1.0d0)
-! !#if USE_FLD==1
-!      call soundspeed_eos(dens,etherm,tempe)
-!      tempe=tempe**2
-! !#endif
-!      ! prevent numerical crash due to negative temperature
-!      tempe = max(tempe,smallc**2)
-! #if USE_FLD==1
-!      tempe2 = tempe
-!      if(iso_jeans .and. (dens*scale_d .lt. rho_star)) then
-!         ! Isothermal spound speed based jeans criterion (quite expensive....)
-!         call enerint_eos(dens,Tp_jeans,iso_etherm)
-!         call soundspeed_eos(dens,iso_etherm,iso_cs)
-! !        iso_cs=iso_cs**2
-! !        tempe=min(tempe,iso_cs)
-!         iso_cs2=iso_cs**2
-!         tempe=min(tempe,iso_cs2)
-! !       if(dens*scale_d .gt. 1.d-8)then
-! !           ! Here we increase back the sound speed once 2nd collapse has started
-! !           ! Cs_eos does not depend so much on density, so we start back at cs_iso
-! !           call soundspeed_eos(dens,etherm,tempe)
-! !           dens_max=1.d-8/scale_d
-! !           call soundspeed_eos(dens_max,etherm,tempe2)
-! !           iso_cs=iso_cs+(tempe-tempe2)
-! !           iso_cs2=iso_cs**2
-! !           tempe=iso_cs2
-! !        end if
-!         if(dens*scale_d .gt. rho_iso)then
-!            ! Here we increase back the sound speed once 2nd collapse has started
-!            ! Cs_eos does not depend so much on density, so we start back at cs_iso
-!            !!call soundspeed_eos(dens,etherm,tempe)
-! !           dens_max=1.d-8/scale_d
-! !           call soundspeed_eos(dens_max,etherm,tempe2)
-!            iso_cs=10.0_dp**(log10(tempe2) - (log10(tempe2)-log10(iso_cs))*((log10(rho_star) - log10(dens*scale_d))/(log10(rho_star) - log10(rho_iso))))
-!            iso_cs2=iso_cs**2
-!            tempe=iso_cs2
-!         end if
-!      endif
-! #endif
-!      ! compute the Jeans length (remember G=1)
-!      lamb_jeans = sqrt( tempe * pi / dens / factG )
-!      ! the Jeans length must be smaller
-!      ! than n_jeans times the size of the pixel
-!      ok(i) = ok(i) .or. ( n_jeans*tail_pix >= lamb_jeans )
-!   end do
-
-! end subroutine jeans_length_refine
-
 subroutine jeans_length_refine(ind_cell,ok,ncell,ilevel)
   use amr_commons
   use pm_commons
   use hydro_commons
   use poisson_commons
-  use constants, ONLY: pi
+  use constants, only: pi
   implicit none
   integer::ncell,ilevel
-#if NENER>0
-  integer::irad
-#endif
-
- real(dp)::sum_dust
-#if NDUST>0
-  integer::idust
-#endif
-  
   integer,dimension(1:nvector)::ind_cell
   logical,dimension(1:nvector)::ok
   !-------------------------------------------------
@@ -319,36 +191,48 @@ subroutine jeans_length_refine(ind_cell,ok,ncell,ilevel)
   !-------------------------------------------------
   integer::i,indi
   real(dp)::lamb_jeans,tail_pix,n_jeans
-  real(dp)::dens,tempe,emag,etherm,factG
+  real(dp)::dens,tempe,etherm,factG
   real(dp)::iso_etherm,iso_cs,iso_cs2,rho_star,rho_iso,tempe2
+#if NENER>0
+  integer::irad
+#endif
+#ifdef SOLVERmhd
+  real(dp)::emag
+#endif
 
   real(dp)::scale_nH,scale_T2,scale_t,scale_v,scale_d,scale_l
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
   rho_iso  = 1.0e-08_dp
   rho_star = 1.0e-05_dp
   
-  factG=1.0d0
+  factG=1
   if(cosmo)factG=3d0/8d0/pi*omega_m*aexp
   n_jeans = jeans_refine(ilevel)
   ! compute the size of the pixel
-  tail_pix = boxlen / (2.d0)**ilevel
+  tail_pix = boxlen / (2d0)**ilevel
   do i=1,ncell
      indi = ind_cell(i)
      ! the thermal energy
      dens = max(uold(indi,1),smallr)
-     etherm = uold(indi,5)
+     etherm = uold(indi,neul)
      etherm = etherm - 0.5d0*uold(indi,2)**2/dens
+#if NDIM > 1 || SOLVERmhd
      etherm = etherm - 0.5d0*uold(indi,3)**2/dens
+#endif
+#if NDIM > 2 || SOLVERmhd
      etherm = etherm - 0.5d0*uold(indi,4)**2/dens
+#endif
+#ifdef SOLVERmhd
      ! the magnetic energy
      emag =        (uold(indi,6)+uold(indi,nvar+1))**2
      emag = emag + (uold(indi,7)+uold(indi,nvar+2))**2
      emag = emag + (uold(indi,8)+uold(indi,nvar+3))**2
-     emag = emag / 8.d0
+     emag = emag / 8d0
      etherm = (etherm - emag)
+#endif
 #if NENER>0
      do irad=1,nener
-        etherm=etherm-uold(indi,8+irad)
+        etherm=etherm-uold(indi,nhydro+irad)
      end do
 #endif
      ! the temperature
@@ -363,8 +247,6 @@ subroutine jeans_length_refine(ind_cell,ok,ncell,ilevel)
         ! Isothermal spound speed based jeans criterion (quite expensive....)
         call enerint_eos(dens,Tp_jeans,iso_etherm)
         call soundspeed_eos(dens,iso_etherm,iso_cs)
-!        iso_cs=iso_cs**2
-!        tempe=min(tempe,iso_cs)
         iso_cs2=iso_cs**2
         tempe=min(tempe,iso_cs2)
 !       if(dens*scale_d .gt. 1.d-8)then

@@ -64,6 +64,10 @@ T_eos=10d0                             ! sets T0 in EOS, in K
 mu_gas=2.31d0                          ! molecular weight
 /
 
+&RT_PARAMS
+X=0.433d0  !hack to avoid setting scale_nh=1 in patch
+/
+
 &REFINE_PARAMS 
 jeans_refine=30*8.
 interpol_var=0
