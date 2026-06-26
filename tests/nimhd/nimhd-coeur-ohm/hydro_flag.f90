@@ -353,22 +353,16 @@ subroutine jeans_length_refine(ind_cell,ok,ncell,ilevel)
 #endif
      ! the temperature
      !     tempe =  etherm / dens * (gamma -1.0)
-     sum_dust= 0.0d0
-#if NDUST>0
-     do idust=1,ndust
-       sum_dust= sum_dust+ uold(indi,firstindex_ndust+idust)/dens
-     enddo
 
-#endif
-     call soundspeed_eos((1.0d0-sum_dust)*dens,etherm,tempe)     
+     call soundspeed_eos(dens,etherm,tempe)     
      tempe=tempe**2
      ! prevent numerical crash due to negative temperature
      tempe = max(tempe,smallc**2)
      tempe2 = tempe
      if(iso_jeans .and. (dens*scale_d .lt. rho_star)) then
         ! Isothermal spound speed based jeans criterion (quite expensive....)
-        call enerint_eos((1.0d0-sum_dust)*dens,Tp_jeans,iso_etherm)
-        call soundspeed_eos((1.0d0-sum_dust)*dens,iso_etherm,iso_cs)
+        call enerint_eos(dens,Tp_jeans,iso_etherm)
+        call soundspeed_eos(dens,iso_etherm,iso_cs)
 !        iso_cs=iso_cs**2
 !        tempe=min(tempe,iso_cs)
         iso_cs2=iso_cs**2
