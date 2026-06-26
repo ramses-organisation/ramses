@@ -1,0 +1,50 @@
+name: Test NIMHD
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+
+    run:
+        name: "Tests nimhd"
+        runs-on: ubuntu-latest
+
+        steps:
+        - name: Checkout repository
+          uses: actions/checkout@v4
+
+        - name: Install OpenMPI
+          run: sudo apt-get install -y openmpi-bin libopenmpi-dev
+
+        - name: Setup python
+          uses: actions/setup-python@v5
+          with:
+            python-version: '3.13'
+            cache: 'pip' # caching pip dependencies
+
+        - name: Install python dependencies
+          run: pip install -r .github/workflows/requirements.txt
+
+        - name: Setup tectonic
+          uses: wtfjoke/setup-tectonic@v3
+          with:
+            tectonic-version: 0.15.0
+
+        - name: Run tests nimhd
+          run: |
+            cd tests
+            bash run_test_suite.sh -p 2 -v -t nimhd
+
+        - name: Upload artifacts
+          uses: actions/upload-artifact@v4
+          if: always()
+          with:
+            name: "test-results-nimhd"
+            path: |
+              tests/test_results.pdf
+              tests/test_suite.log
