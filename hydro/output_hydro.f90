@@ -156,29 +156,31 @@ subroutine backup_hydro(filename, filename_desc)
               call generic_dump(field_name, info_var_count, xdp, unit_out, dump_info_flag, unit_info)
 #if NVAR > NHYDRO+NENER
 #ifdef NIMHD
-! output current
-! we want to keep it in hydro files to limit the number of files.
-! add option to also output it in the case of ideal mhd
-! add option to output velocity of the ions
-              do ivar = nhydro+1+nener, nvar-3 ! Write passive scalars if any
-                 do i = 1, ncache
-                    xdp(i) = uold(ind_grid(i)+iskip, ivar)/max(uold(ind_grid(i)+iskip, 1), smallr)
-                 end do
-                 write(field_name, '("scalar_", i0.2)') ivar - nhydro - 1 - nener - 3
-                 call generic_dump(field_name, info_var_count, xdp, unit_out, dump_info_flag, unit_info)
-              end do
-
-              do ivar=nvar-2,nvar ! Write current
-                 do i = 1, ncache
-                    xdp(i) = uold(ind_grid(i)+iskip, ivar)
-                 end do
-                 field_name = 'current_' // dim_keys(ivar - nvar + 3)
-                 call generic_dump(field_name, info_var_count, xdp, unit_out, dump_info_flag, unit_info)
-              end do
-#endif
+!! output current
+!! we want to keep it in hydro files to limit the number of files.
+!! add option to also output it in the case of ideal mhd
+!! add option to output velocity of the ions
+! skip 3 current + Eint stored at the back of uold
+              do ivar = nhydro+1+nener, nvar-4 ! Write passive scalars if any
+!                 do i = 1, ncache
+!                    xdp(i) = uold(ind_grid(i)+iskip, ivar)/max(uold(ind_grid(i)+iskip, 1), smallr)
+!                 end do
+!                 write(field_name, '("scalar_", i0.2)') ivar - nhydro - 1 - nener - 3
+!                 call generic_dump(field_name, info_var_count, xdp, unit_out, dump_info_flag, unit_info)
+!              end do
+!
+!              do ivar=nvar-2,nvar ! Write current
+!                 do i = 1, ncache
+!                    xdp(i) = uold(ind_grid(i)+iskip, ivar)
+!                 end do
+!                 field_name = 'current_' // dim_keys(ivar - nvar + 3)
+!                 call generic_dump(field_name, info_var_count, xdp, unit_out, dump_info_flag, unit_info)
+!              end do
+!#endif
 #else
               ! Write passive scalars if any
               do ivar = nhydro+1+nener, nvar
+#endif
                  if(write_conservative) then
                     if (metal .and. imetal == ivar) then
                        field_name = 'metal_density'
