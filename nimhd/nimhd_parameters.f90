@@ -18,6 +18,7 @@ module nimhd_parameters
                                       ! resistivity_method=0  -> use fixed value
                                       ! resistivity_method=1  -> use analytical model
                                       ! resistivity_method=2  -> use tabulated values from resnh.dat
+  character(LEN=80) :: resistivity_file="resnh.dat"
   ! Mellon & Li 2009 (?) or Hennebelle & Teyssier 2007
   ! WARNING this value is in CGS. The connection with user units
   ! is made in function gammaadbis

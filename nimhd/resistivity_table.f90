@@ -36,7 +36,7 @@ subroutine read_resistivities
    call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
 
    ! read header: get the number of bins for rho and temperature, as well as number of chemical species included
-   open(42,file='resnh.dat', status='old')
+   open(42,file=resistivity_file, status='old')
    read(42,*) nchimie, tchimie, nvarchimie
    read(42,*)
    read(42,*)

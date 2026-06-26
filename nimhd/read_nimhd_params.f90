@@ -8,7 +8,7 @@ subroutine read_nimhd_params(nml_ok)
   ! Namelist definitions
   !--------------------------------------------------
   namelist/nonidealmhd_params/nambipolar,gammaAD &
-        & ,nmagdiffu,etaMD,resistivity_method &
+        & ,nmagdiffu,etaMD,resistivity_method,resistivity_file &
         & ,coefad, nminitimestep, coefalfven,coefdtohm, rho_threshold,nimhdheating_in_flux,nimhdheating_source_term
 
   ! Checks on non-ideal MHD parameters
