@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - combo_fld_nimhd
+      - isolate_nimhd_from_fld
 
 jobs:
 
