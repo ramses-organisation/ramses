@@ -310,21 +310,12 @@ subroutine read_hydro_params(nml_ok)
     T2_eos = T_eos/mu_gas
   endif
 
-  if(eos)then
-    call init_eos
-  endif
- 
   !--------------------------------------------------
   ! Check whether illegally trying non-eq chemistry
   !--------------------------------------------------
 #ifndef RT
   if(neq_chem) then
      if(myid==1)write(*,*) 'Error: non-equilibrium chemistry unavailable'
-     if(myid==1)write(*,*) 'Recompile with RT=True (or -DRT)'
-     nml_ok=.false.
-  endif
-  if(rt) then
-     if(myid==1)write(*,*) 'Error: RT unavailable'
      if(myid==1)write(*,*) 'Recompile with RT=True (or -DRT)'
      nml_ok=.false.
   endif
@@ -387,10 +378,6 @@ subroutine read_hydro_params(nml_ok)
      if(myid==1)write(*,*)'Check ind_rsink'
      nml_ok=.false.
   end if
-
-  ! Compute the size of the box early,
-  ! to avoid problems in the initial build of the amr grid
-  if(condinit_kind=='collapse') call calc_boxlen
 
   !-------------------------------------------------
   ! This section deals with hydro boundary conditions
