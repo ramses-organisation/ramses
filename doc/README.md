@@ -39,9 +39,8 @@ If you are navigating using the GitHub webpage for a quick look at the markdown 
 4. Boundary conditions
 5. External gravity sources
 6. External thermal sources
-7. [Radiation Hydrodynamics with M1](./wiki/RHD.md)
-8. [Radiation Hydrodynamics with FLD](./wiki/FLD.md)
-9. Particle families
+7. [Radiation Hydrodynamics](./wiki/RHD.md)
+8. Particle families
 # Chapter 5. Post-processing utilities
 1. Maps and profiles
 2. Making Movies

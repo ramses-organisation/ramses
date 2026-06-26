@@ -6,9 +6,6 @@ module pm_commons
 
   implicit none
 
-  !introduced by PH 07/2016 to record the feedback from the sink
-  real(kind=8),allocatable,dimension(:)::Eioni
-
   ! Sink particle related arrays
   real(dp),allocatable,dimension(:)    ::msink,xmsink
   real(dp),allocatable,dimension(:)    ::msink_new,msink_all
@@ -25,8 +22,6 @@ module pm_commons
   real(dp),allocatable,dimension(:,:)  ::wmom,wmom_new
   real(dp),allocatable,dimension(:,:)  ::vsink,vsink_new,vsink_all
   real(dp),allocatable,dimension(:,:)  ::fsink,fsink_new,fsink_all
-  real(dp),allocatable,dimension(:)::msink_star,rsink_star,sink_star_accrate,tsink_star
-  real(dp),allocatable,dimension(:)::mseed,mseed_new,mseed_all
   real(dp),allocatable,dimension(:,:,:)::vsnew,vsold
   real(dp),allocatable,dimension(:,:,:)::fsink_partial,sink_jump
   real(dp),allocatable,dimension(:,:)  ::lsink,lsink_new,lsink_all
@@ -42,20 +37,10 @@ module pm_commons
   logical,allocatable,dimension(:)     ::direct_force_sink
   logical,allocatable,dimension(:)     ::new_born,new_born_all,new_born_new
   integer,allocatable,dimension(:)     ::idsink_sort
-  real(dp),allocatable,dimension(:)::dt_acc                ! maximum timestep allowed by the sink
-  logical,allocatable,dimension(:,:)::level_sink,level_sink_new
-
-  logical,allocatable,dimension(:)::ok_jet
-
   integer::ncloud_sink,ncloud_sink_massive
   integer::nindsink=0
   integer::sinkint_level=0         ! maximum level currently active is where the global sink variables are updated
   real(dp)::ssoft                  ! sink softening lenght in code units
-
-  real(dp),allocatable,dimension(:)::lum_sink,lum_sink_new,lum_sink_all !sink luminosity
-  real(dp),allocatable,dimension(:)::Teff_sink !sink stellar effective temperature
-  real(dp),allocatable,dimension(:)::acc_rate,acc_lum,int_lum !sink accretion rate and luminosity
-  integer,allocatable,dimension(:)::nburst
 
   ! Particles related arrays
   real(dp),allocatable,dimension(:,:)  ::xp       ! Positions
@@ -66,7 +51,6 @@ module pm_commons
   real(dp),allocatable,dimension(:)    ::ptcl_phi ! Potential of particle added by AP for output purposes
 #endif
   real(dp),allocatable,dimension(:)    ::tp       ! Birth epoch
-  real(dp),allocatable,dimension(:,:)  ::weightp  ! weight of cloud parts for sink accretion only
   real(dp),allocatable,dimension(:)    ::zp       ! Birth metallicity
   integer,  allocatable, dimension(:)  :: itmpp    ! Working array
   integer,  allocatable, dimension(:)  :: partp    ! Particle parent (for tracers only)

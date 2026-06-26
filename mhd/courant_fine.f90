@@ -3,9 +3,6 @@ subroutine courant_fine(ilevel)
   use hydro_commons
   use poisson_commons
   use mpi_mod
-#if USE_FLD==1
-  use radiation_parameters,only:frad,dtdiff_params
-#endif
 #if USE_TURB==1
   use turb_commons
 #endif
@@ -110,17 +107,6 @@ subroutine courant_fine(ilevel)
               end do
            end do
         end if
-
-        ! Gather radiative force
-#if USE_FLD==1 || USE_M_1==1
-        if(fld)then
-           do idim=1,ndim
-              do i=1,nleaf
-                 gg(i,idim)=gg(i,idim)+frad(ind_leaf(i),idim)
-              end do
-           end do
-        end if
-#endif
 
 #if USE_TURB==1
         if (turb .AND. turb_type/=3) then
@@ -262,10 +248,6 @@ subroutine courant_fine(ilevel)
      endif
      dtnew(ilevel)=MIN(dtnew(ilevel),tmag2)
    end if
-#endif
-
-#if USE_FLD==1
-  if(dt_control)dtnew(ilevel)=dtdiff_params(1)*dtdiff_params(2)**nstep_coarse
 #endif
   
 111 format('   Entering courant_fine for level ',I2)

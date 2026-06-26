@@ -473,12 +473,6 @@ subroutine output_info(filename)
   write(ilun,'("unit_l      =",E23.15)')scale_l
   write(ilun,'("unit_d      =",E23.15)')scale_d
   write(ilun,'("unit_t      =",E23.15)')scale_t
-#if USE_FLD==1
-  write(ilun,'("mu_gas      =",E23.15)')mu_gas
-  write(ilun,'("ngrp        =",I11)')ngrp
-  write(ilun,'("nent        =",I11)')nent
-  write(ilun,'("npscal      =",I11)')npscal
-#endif
   write(ilun,*)
 
   ! Write ordering information
@@ -497,21 +491,6 @@ subroutine output_info(filename)
      end do
   endif
 
-#if USE_FLD==1
-  write(ilun,*)
-  write(ilun,'("ir_cloud    =",I11)')ir_cloud
-  if(eos) then
-     write(ilun,'("eos         =",I11)')1
-  else
-     write(ilun,'("eos         =",I11)')0
-  endif
-  if(write_conservative) then
-     write(ilun,'("write_cons  =",I11)')1
-  else
-     write(ilun,'("write_cons  =",I11)')0
-  endif
-#endif
-  
   close(ilun)
 
 end subroutine output_info

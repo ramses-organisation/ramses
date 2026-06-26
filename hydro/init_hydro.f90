@@ -1,13 +1,8 @@
 subroutine init_hydro
   use amr_commons
   use hydro_commons
-  use mpi_mod
-#if USE_FLD==1
-  use radiation_parameters
-  use amr_parameters,only:eos
-#endif
 #ifdef RT
-  use rt_parameters,only: convert_birth_times, nGroups, nRTvar
+  use rt_parameters,only: convert_birth_times
 #endif
   use mpi_mod
   implicit none
@@ -26,9 +21,6 @@ subroutine init_hydro
 #if NENER>0
   integer::irad
 #endif
-#if USE_FLD==1
-  real(dp)::A,B,C,d,e,u,v,w
-#endif
 
   if(verbose)write(*,*)'Entering init_hydro'
 
@@ -43,7 +35,6 @@ subroutine init_hydro
      allocate(fluxes(1:ncell,1:twondim))
      fluxes(1:ncell,1:twondim)=0.0d0
   end if
-  
   if(momentum_feedback>0)then
      allocate(pstarold(1:ncell))
      allocate(pstarnew(1:ncell))
@@ -94,9 +85,6 @@ subroutine init_hydro
 #ifdef SOLVERmhd
      nvar2=nvar2-3
 #endif
-#if USE_FLD==1
-     nvar2=nvar2-1
-#endif
      read(ilun)ndim2
      read(ilun)nlevelmax2
      read(ilun)nboundary2
@@ -116,15 +104,15 @@ subroutine init_hydro
         write(*,'(A50)')"__________________________________________________"
      endif
 #ifdef RT
-     if((neq_chem.or.rt).and.nvar2.lt.nvar+nRTvar)then ! OK to add ionization fraction vars
+     if((neq_chem.or.rt).and.nvar2.lt.nvar)then ! OK to add ionization fraction vars
         ! Convert birth times for RT postprocessing:
         if(rt.and.static) convert_birth_times=.true.
         if(myid==1) write(*,*)'File hydro.tmp is not compatible'
         if(myid==1) write(*,*)'Found nvar2  =',nvar2
-        if(myid==1) write(*,*)'Expected=',nvar+nRTvar
+        if(myid==1) write(*,*)'Expected=',nvar
         if(myid==1) write(*,*)'..so only reading available variables and setting the rest to zero'
      end if
-     if((neq_chem.or.rt).and.nvar2.gt.nvar+nRTvar)then ! Not OK to drop variables
+     if((neq_chem.or.rt).and.nvar2.gt.nvar)then ! Not OK to drop variables
 #else
      if(nvar2.ne.(nvar))then
 #endif
@@ -213,75 +201,13 @@ subroutine init_hydro
                     call calc_total_energy_from_thermal_pressure(ind_grid, iskip, xx, ncache)
                  endif
 #else
-   ! TODO clean this up
-#if NENER>NGRP
-                 if(write_conservative) then
-                    ! Read non-thermal energies
-                    do ivar=9,8+nent
-                       read(ilun)xx
-                       do i=1,ncache
-                          uold(ind_grid(i)+iskip,ivar)=xx(i)
-                       end do
-                    end do
-                 else
-                    ! Read non-thermal pressures --> non-thermal energies
-                    do ivar=9,8+nent
-                       read(ilun)xx
-                       do i=1,ncache
-                          uold(ind_grid(i)+iskip,ivar)=xx(i)/(gamma_rad(ivar-8)-1.0d0)
-                       end do
-                    end do
-                 endif
-#endif
-
-                 if(write_conservative) then
-                    read(ilun)xx ! Read total energy
-                    do i=1,ncache
-                       uold(ind_grid(i)+iskip,5)=xx(i)
-                    enddo
-                 else
-                    read(ilun)xx ! Read pressure
-                    if(.not.eos) then
-                       do i=1,ncache
-                          e=xx(i)/(gamma-1d0)
-                          d=max(uold(ind_grid(i)+iskip,1),smallr)
-                          u=uold(ind_grid(i)+iskip,2)/d
-                          v=uold(ind_grid(i)+iskip,3)/d
-                          w=uold(ind_grid(i)+iskip,4)/d
-                          A=0.5*(uold(ind_grid(i)+iskip,6)+uold(ind_grid(i)+iskip,nvar+1))
-                          B=0.5*(uold(ind_grid(i)+iskip,7)+uold(ind_grid(i)+iskip,nvar+2))
-                          C=0.5*(uold(ind_grid(i)+iskip,8)+uold(ind_grid(i)+iskip,nvar+3))
-                          uold(ind_grid(i)+iskip,5)=e+0.5*d*(u**2+v**2+w**2)+0.5*(A**2+B**2+C**2)
-                       end do
-                    endif
-                 endif
-
-#if USE_FLD==1
-                 do ivar=1,ngrp
-                    read(ilun)xx ! Read radiative energy if any
-                    do i=1,ncache
-                       uold(ind_grid(i)+iskip,firstindex_er+ivar) = xx(i)
-                    end do
-                 end do
-#endif
-#if USE_M_1==1
-                 do ivar=1,nfr
-                    read(ilun)xx ! Read radiative flux if any
-                    do i=1,ncache
-                       uold(ind_grid(i)+iskip,firstindex_fr+ivar) = xx(i)
-                    end do
-                 end do
-#endif
+   ! TODO clean this u
 
 #if NPSCAL>0
 #if NIMHD==1
                  if(write_conservative) then
-#ifdef RT
-                    do ivar=firstindex_pscal+1,min(nvar,nvar2-4-NGroups*(ndim+1))-4 ! Read conservative passive scalars if any
-#else
                     !do ivar=1,npscal-4 ! Read conservative passive scalars if any
                     do ivar=firstindex_pscal+1,min(nvar,nvar2-4)-4 ! Read conservative passive scalars if any
-#endif
                        read(ilun)xx
                        do i=1,ncache
                           !uold(ind_grid(i)+iskip,firstindex_pscal+ivar)=xx(i)
@@ -289,12 +215,8 @@ subroutine init_hydro
                        end do
                     end do
                  else
-#ifdef RT
-                    do ivar=firstindex_pscal+1,min(nvar,nvar2-4-NGroups*(ndim+1))-4 ! Read passive scalars if any
-#else
                     !do ivar=1,npscal-4 ! Read passive scalars if any
                     do ivar=firstindex_pscal+1,min(nvar,nvar2-4)-4 ! Read passive scalars if any
-#endif
                        read(ilun)xx
                        do i=1,ncache
                           !uold(ind_grid(i)+iskip,firstindex_pscal+ivar)=xx(i)*max(uold(ind_grid(i)+iskip,1),smallr)
@@ -303,12 +225,8 @@ subroutine init_hydro
                     end do
                  endif
 
-#ifdef RT
-                 do ivar=min(nvar,nvar2-4)-3,min(nvar,nvar2-4-NGroups*(ndim+1))-1 ! Read current
-#else
                  !do ivar=npscal-3,npscal-1 ! Read current
                  do ivar=min(nvar,nvar2)-3,min(nvar,nvar2-4)-1 ! Read current
-#endif
                     read(ilun)xx
                     do i=1,ncache
                        !uold(ind_grid(i)+iskip,firstindex_pscal+ivar)=xx(i)
@@ -317,12 +235,8 @@ subroutine init_hydro
                  end do                 
 #else
                  if(write_conservative) then
-#ifdef RT
-                    do ivar=firstindex_pscal+1,min(nvar,nvar2-4-NGroups*(ndim+1))-1 ! Read conservative passive scalars if any
-#else
                     !do ivar=1,npscal-1 ! Read conservative passive scalars if any
                     do ivar=firstindex_pscal+1,min(nvar,nvar2-4)-1 ! Read conservative passive scalars if any
-#endif
                        read(ilun)xx
                        do i=1,ncache
                           !uold(ind_grid(i)+iskip,firstindex_pscal+ivar)=xx(i)
@@ -330,12 +244,8 @@ subroutine init_hydro
                        end do
                     end do
                  else
-#ifdef RT
-                    do ivar=firstindex_pscal+1,min(nvar,nvar2-4-NGroups*(ndim+1))-1 ! Read passive scalars if any
-#else
                     !do ivar=1,npscal-1 ! Read passive scalars if any
                     do ivar=firstindex_pscal+1,min(nvar,nvar2-4)-1 ! Read passive scalars if any
-#endif
                        read(ilun)xx
                        do i=1,ncache
                           !uold(ind_grid(i)+iskip,firstindex_pscal+ivar)=xx(i)*max(uold(ind_grid(i)+iskip,1),smallr)
@@ -416,16 +326,6 @@ subroutine init_hydro
                        p_eq(ind_grid(i)+iskip)=xx(i)
                     end do
                  endif
-
-#ifdef RT
-                 ! Read-only
-                 do ivar=1,nGroups
-                    read(ilun)xx
-                    do idim=1,ndim
-                       read(ilun)xx
-                    enddo
-                 end do
-#endif
 
               end do
               deallocate(ind_grid,xx)

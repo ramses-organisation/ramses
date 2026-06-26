@@ -76,10 +76,6 @@ module amr_parameters
   logical::unbind=.false.     ! Enable particle unbinding for the clump finder
   logical::make_mergertree=.false. ! Make on the fly mergertrees
   logical::aton=.false.       ! Enable ATON coarse grid radiation transfer
-  logical::FLD=.false.        ! Enable FLD module
-#if USE_FLD==1
-  logical ::dt_control=.false.! Impose a time step using dtdiff_params in FLD module
-#endif
 
   ! Mesh parameters
   integer::nx=1,ny=1,nz=1                  ! Number of coarse cells in each dimension
@@ -227,9 +223,7 @@ module amr_parameters
   logical ::sf_compressive=.false.      ! Advect compressive and solenoidal turbulence terms separately
   logical ::cooling_ism = .false.      ! Use cooling module from Audit & Hennebelle 2005 (non-RT)
                                         ! instead of ramses classical cooling
-  logical ::racc_refine=.true.          ! Refine the grid around the sink to the maximum level of refinement
-  logical ::clump_jeans=.false.         ! Clump finder on cells violating Jeans criterion only
-  real(dp)::larson_lifetime=5000         ! lifetime of first larson core in years
+
   logical ::iso_jeans=.false.            ! activate isothermal sound speed Jeans length refinement criterion
   real(dp)::Tp_jeans = 10.0d0            ! Default temperature to activate iso_jeans
 

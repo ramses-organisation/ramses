@@ -49,15 +49,6 @@ NPSCAL = 0
 # Light MPI communicator structure (for > 10k MPI processes)
 LIGHT_MPI_COMM = 0
 
-# FLD stuff
-USE_FLD=0
-NGRP=0
-NENER:=$(NENER)+$(NGRP)
-ifeq ($(USE_FLD),1)
-   # for internal energy
-   NPSCAL := $(NPSCAL)+$(NIONS)+1
-endif
-
 # Compute NVAR
 NHYDRO = 2+$(NDIM)
 ifeq ($(SOLVER),mhd)
@@ -70,9 +61,7 @@ ifeq ($(NIMHD),1)
 endif
 NVAR := $(NHYDRO)+$(NENER)+$(NPSCAL)+$(NMETALS)
 ifeq ($(RT),1)
-   ifeq ($(USE_FLD),0) #else the NPSCAL already includes the NIONS
-      NVAR := $(NVAR)+$(NIONS)
-   endif
+   NVAR := $(NVAR)+$(NIONS)
 endif
 
 ##note be vary careful with the variables allocation
@@ -114,9 +103,6 @@ DEFINES = -DNVECTOR=$(NVECTOR) -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DNENER=$(NENER) \
 ifeq ($(ATON),1)
    DEFINES += -DATON
 endif
-ifeq ($(USE_FLD),1)
-     DEFINES := $(DEFINES) -DNGRP=$(NGRP) -DNPSCAL=$(NPSCAL)
-endif
 ifeq ($(GRACKLE),1)
    DEFINES += -Dgrackle
 endif
@@ -135,10 +121,6 @@ endif
 ifeq ($(LIGHT_MPI_COMM), 1)
    DEFINES += -DLIGHT_MPI_COMM
 endif
-ifeq ($(USE_FLD),1)
-DEFINES += -DUSE_FLD=$(USE_FLD)
-endif
-
 # Add any user-provided flags from the command line
 DEFINES += $(USER_FLAGS)
 #############################################################################
@@ -235,12 +217,7 @@ ifeq ($(USE_TURB),1)
    LIBS_TURB = -L$(HOME)/local/lib -lfftw3
    LIBS_OBJ_TURB = -I$(HOME)/local/include -lfftw3
 endif
-
-# if USE_FLD and NGRP>1, Add Lapack
-ifneq ($(NGRP),$(filter $(NGRP),0 1))
-LIBS_FLD = -llapack
-endif
-LIBS = $(LIBMPI) $(LIBS_GRACKLE) $(LIBS_TURB) $(LIBS_FLD)
+LIBS = $(LIBMPI) $(LIBS_GRACKLE) $(LIBS_TURB)
 #############################################################################
 # Sources directories are searched in this exact order
 VPATH = $(PATCH):../$(SOLVER):../aton:
@@ -253,10 +230,7 @@ endif
 ifeq ($(USE_TURB),1)
    VPATH += ../turb:
 endif
-VPATH += ../hydro:../pm:../poisson:../amr:../io:
-ifeq ($(USE_FLD),1)
-   VPATH += ../fld:
-endif
+VPATH += ../hydro:../pm:../poisson:../amr:../io
 #############################################################################
 # All objects
 MODOBJ = mpi_mod.o amr_parameters.o amr_commons.o amr_constants.o random.o pm_parameters.o sink_feedback_parameters.o \
@@ -277,9 +251,6 @@ ifeq ($(NIMHD),1)
 endif
 ifeq ($(USE_TURB),1)
    MODOBJ += turb_parameters.o turb_commons.o
-endif
-ifeq ($(USE_FLD),1)
-   MODOBJ += radiation_parameters.o fld_commons.o
 endif
    MODOBJ += cloud_module.o
 
@@ -317,8 +288,6 @@ NIMHDOBJ = resistivity_table.o read_nimhd_params.o nimhd_effects.o
 TURBOBJ = turb_force_utils.o read_turb_params.o init_turb.o mpi_share_turb_fields.o \
           turb_next_field.o turb_check_time.o write_turb_fields.o read_turb_fields.o \
           add_turb_forcing.o
-# FLD objects
-FLDOBJ  = read_fld_params.o init_fld.o fld_opacities.o m1_utils.o multigroup.o radiation_boundary.o radiative_transfer_bicg.o
 # Patch objects
 sinclude $(PATCH)/Makefile
 
@@ -332,9 +301,6 @@ ifeq ($(NIMHD),1)
 endif
 ifeq ($(USE_TURB),1)
    AMRLIB += $(TURBOBJ)
-endif
-ifeq ($(USE_FLD),1)
-   AMRLIB += $(FLDOBJ)
 endif
 # ATON objects
 ATON_MODOBJ = timing.o radiation_commons.o rad_step.o
