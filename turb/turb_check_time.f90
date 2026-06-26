@@ -3,8 +3,7 @@ subroutine turb_check_time
    use turb_commons
    implicit none
 
-   real(kind=dp) :: turb_last_tfrac        ! Time fraction since last
-   real(kind=dp) :: turb_next_tfrac        ! Time fraction until next
+   real(kind=dp) :: turb_tfrac
 
    if (turb_type == 3) then
       ! decaying turbulence
@@ -31,10 +30,11 @@ subroutine turb_check_time
          end if
       end do
 
-      turb_last_tfrac = real((t - turb_last_time) / turb_dt, dp)
-      turb_next_tfrac = 1.0_dp - turb_last_tfrac
+      ! Time fraction since last turbulence field evaluation
+      turb_tfrac = real((t - turb_last_time) / turb_dt, dp)
 
-      afield_now = turb_last_tfrac*afield_last + turb_next_tfrac*afield_next
+      ! interpolate for current time between last and next turb field
+      afield_now = (1.0_dp - turb_tfrac)*afield_last + turb_tfrac*afield_next
    end if
 
 end subroutine turb_check_time
