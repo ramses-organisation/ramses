@@ -24,7 +24,7 @@ PATCH =
 # Use RT? 1=Yes, 0=No
 RT = 0
 # Use non-ideal MHD? 1=Yes, 0=No
-NIMHD=0
+NIMHD = 0
 # Use turbulence? 1=Yes, 0=No (requires fftw3)
 USE_TURB = 0
 # Use MPI? 1=Yes, 0=No
@@ -64,31 +64,6 @@ NVAR := $(NHYDRO)+$(NENER)+$(NPSCAL)+$(NMETALS)
 ifeq ($(RT),1)
    NVAR := $(NVAR)+$(NIONS)
 endif
-
-##note be vary careful with the variables allocation
-## for now it is assumed that
-## 1  is density
-## 2:4 velocity
-## 5 pressure
-## 6:8 magnetic field
-## 9:9+ncr : cosmic rays energy density (ncr groups of energy)
-## 9+ncr:9+nener : trapped photons (look at definitions in mhd/read_hydro_param)
-## 9+nener+1 : 9+nener+1+nions : the ions (rt_init, cooling_fine)
-## note defined through imetal=firstindex_pscal+1 in read_hydro_param then idelay=imetal ixion=idelay ichem=ixion 
-## then in rt_init nvar_count=ichem-1 and iIons = nvar_count+1 (this is terrible, I know....)
-## nvar-4:nvar-1 : current (used in godfine1 if IMHD==1) unew(....,nvar-4+idim)
-## nvar-1:nvar : internal energy used in set_uold if (energy_fix)
-
-#if you want to add your own scalar this has to be done between : 
-#9+nener+1+nions+1 and nvar-4
-
-#then do not forget that within the code the magnetic variable are duplicated and stored
-#nvar+1:nvar+3
-
-#finally note that ichem, idelay and imetal have not been checked carefully
-
-
-
 
 # Set to one to use 'include "mpif.h"' instead of more recent "use mpi"
 OLD_MPI_SUPPORT = 0

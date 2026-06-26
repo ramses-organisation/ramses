@@ -9,7 +9,7 @@ subroutine init_hydro
 #ifndef WITHOUTMPI
   integer::info,info2,dummy_io
 #endif
-  integer::ncell,ncache,iskip,igrid,i,ilevel,ind,ivar,idim
+  integer::ncell,ncache,iskip,igrid,i,ilevel,ind,ivar
   integer::nvar2,ilevel2,numbl2,ilun,ibound,istart
   integer::ncpu2,ndim2,nlevelmax2,nboundary2
   integer ,dimension(:),allocatable::ind_grid
@@ -175,7 +175,6 @@ subroutine init_hydro
                     call scatter_conservative_to_uold(ind_grid, iskip, ivar, xx, ncache)
                  end do
 #endif
-#if USE_FLD==0
 #if NENER>0
                  ! Read non-thermal pressures --> non-thermal energies
                  do ivar=nhydro+1,nhydro+nener
@@ -200,101 +199,6 @@ subroutine init_hydro
                  else
                     call calc_total_energy_from_thermal_pressure(ind_grid, iskip, xx, ncache)
                  endif
-#else
-   ! TODO clean this u
-
-#if NPSCAL>0
-#if NIMHD==1
-                 if(write_conservative) then
-                    !do ivar=1,npscal-4 ! Read conservative passive scalars if any
-                    do ivar=firstindex_pscal+1,min(nvar,nvar2-4)-4 ! Read conservative passive scalars if any
-                       read(ilun)xx
-                       do i=1,ncache
-                          !uold(ind_grid(i)+iskip,firstindex_pscal+ivar)=xx(i)
-                          uold(ind_grid(i)+iskip,ivar)=xx(i)
-                       end do
-                    end do
-                 else
-                    !do ivar=1,npscal-4 ! Read passive scalars if any
-                    do ivar=firstindex_pscal+1,min(nvar,nvar2-4)-4 ! Read passive scalars if any
-                       read(ilun)xx
-                       do i=1,ncache
-                          !uold(ind_grid(i)+iskip,firstindex_pscal+ivar)=xx(i)*max(uold(ind_grid(i)+iskip,1),smallr)
-                          uold(ind_grid(i)+iskip,ivar)=xx(i)*max(uold(ind_grid(i)+iskip,1),smallr)
-                       end do
-                    end do
-                 endif
-
-                 !do ivar=npscal-3,npscal-1 ! Read current
-                 do ivar=min(nvar,nvar2)-3,min(nvar,nvar2-4)-1 ! Read current
-                    read(ilun)xx
-                    do i=1,ncache
-                       !uold(ind_grid(i)+iskip,firstindex_pscal+ivar)=xx(i)
-                       uold(ind_grid(i)+iskip,ivar)=xx(i)
-                    end do
-                 end do                 
-#else
-                 if(write_conservative) then
-                    !do ivar=1,npscal-1 ! Read conservative passive scalars if any
-                    do ivar=firstindex_pscal+1,min(nvar,nvar2-4)-1 ! Read conservative passive scalars if any
-                       read(ilun)xx
-                       do i=1,ncache
-                          !uold(ind_grid(i)+iskip,firstindex_pscal+ivar)=xx(i)
-                          uold(ind_grid(i)+iskip,ivar)=xx(i)
-                       end do
-                    end do
-                 else
-                    !do ivar=1,npscal-1 ! Read passive scalars if any
-                    do ivar=firstindex_pscal+1,min(nvar,nvar2-4)-1 ! Read passive scalars if any
-                       read(ilun)xx
-                       do i=1,ncache
-                          !uold(ind_grid(i)+iskip,firstindex_pscal+ivar)=xx(i)*max(uold(ind_grid(i)+iskip,1),smallr)
-                          uold(ind_grid(i)+iskip,ivar)=xx(i)*max(uold(ind_grid(i)+iskip,1),smallr)
-                       end do
-                    end do
-                 endif
-#endif
-
-                 ! Read internal energy
-                 read(ilun)xx
-                 do i=1,ncache
-                    uold(ind_grid(i)+iskip,firstindex_pscal+npscal)=xx(i)
-                 end do
-
-#endif
-
-                 ! Read in the temperature
-                 read(ilun)xx
-                 if(.not.write_conservative) then
-                    if(eos) then
-                       !if eos, update the total energy
-                       do i=1,ncache
-                          d=max(uold(ind_grid(i)+iskip,1),smallr)
-                          if(energy_fix) then
-                             e=uold(ind_grid(i)+iskip,nvar)
-                          else
-                             call enerint_eos(d,xx(i),e)
-                          endif
-                          u=uold(ind_grid(i)+iskip,2)/d
-                          v=uold(ind_grid(i)+iskip,3)/d
-                          w=uold(ind_grid(i)+iskip,4)/d
-                          A=0.5*(uold(ind_grid(i)+iskip,6)+uold(ind_grid(i)+iskip,nvar+1))
-                          B=0.5*(uold(ind_grid(i)+iskip,7)+uold(ind_grid(i)+iskip,nvar+2))
-                          C=0.5*(uold(ind_grid(i)+iskip,8)+uold(ind_grid(i)+iskip,nvar+3))
-                          uold(ind_grid(i)+iskip,5)=e+0.5*d*(u**2+v**2+w**2)+0.5*(A**2+B**2+C**2)
-                       end do
-                    endif
-
-#if NENER>0
-                    do i=1,ncache
-                       do irad=1,nener
-                          uold(ind_grid(i)+iskip,5)=uold(ind_grid(i)+iskip,5)+uold(ind_grid(i)+iskip,8+irad)
-                       end do
-                    end do
-#endif
-                 endif
-#endif
-
 #if NVAR>NHYDRO+NENER
                  ! Read passive scalars if any
                  do ivar=nhydro+1+nener,max(nvar2,nvar)

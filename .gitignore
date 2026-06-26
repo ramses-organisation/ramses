@@ -6,12 +6,6 @@ ramses1d
 ramses2d
 ramses3d
 .DS_Store
-.mmat
-output_00*
-*.tex
-*.dat
-*.pdf
-test_exe_3d
 amr2cylprof
 amr2map
 amr2prof

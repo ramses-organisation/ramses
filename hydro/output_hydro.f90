@@ -2,10 +2,6 @@ subroutine backup_hydro(filename, filename_desc)
   use amr_commons
   use hydro_commons
   use dump_utils, only : dump_header_info, generic_dump, dim_keys
-#ifdef RT
-  use rt_hydro_commons, only: nRTvar, nGroups, iGroups, rtuold
-  use rt_parameters, only: output_rtvar_in_hydro
-#endif
   use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
@@ -14,7 +10,7 @@ subroutine backup_hydro(filename, filename_desc)
 
   character(len=80), intent(in) :: filename, filename_desc
 
-  integer :: i, ivar, ncache, ind, ilevel, igrid, iskip, istart, ibound, idim
+  integer :: i, ivar, ncache, ind, ilevel, igrid, iskip, istart, ibound
   integer :: unit_out, unit_info
   integer, allocatable, dimension(:) :: ind_grid
   real(dp), allocatable, dimension(:) :: xdp
@@ -24,14 +20,6 @@ subroutine backup_hydro(filename, filename_desc)
   logical :: dump_info_flag
   integer :: info_var_count
   character(len=100) :: field_name
-
-!#if USE_FLD==1
-  real(dp)::cmp_temp,p
-  integer::ht,irad
-!#endif
-#if USE_FLD==1
-  real(dp)::A,B,C,d,e,u,v,w
-#endif
 
   if (verbose) write(*,*)'Entering backup_hydro'
 
@@ -299,7 +287,7 @@ subroutine calc_thermal_pressure_from_total_energy(ind_grid, iskip, pressure, nc
    ! which is stored in uold(:,neul)
    !--------------------------------------------------------------------------------------
    integer::i
-   real(dp)::d,energy,pp
+   real(dp)::d,energy
 #if NENER > 0
    integer :: irad
 #endif
@@ -334,12 +322,7 @@ subroutine calc_thermal_pressure_from_total_energy(ind_grid, iskip, pressure, nc
 #endif
 
       ! convert to pressure
-      if(eos)then
-         call pressure_eos(d,energy,pp)
-         pressure(i)=pp         
-      else
-         pressure(i) = (gamma-1d0)*energy
-      endif
+      pressure(i) = (gamma-1d0)*energy
    end do
 
 end subroutine calc_thermal_pressure_from_total_energy
