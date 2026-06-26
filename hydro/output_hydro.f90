@@ -4,6 +4,7 @@ subroutine backup_hydro(filename, filename_desc)
   use dump_utils, only : dump_header_info, generic_dump, dim_keys
 #ifdef RT
   use rt_hydro_commons, only: nRTvar, nGroups, iGroups, rtuold
+  use rt_parameters, only: output_rtvar_in_hydro
 #endif
   use mpi_mod
   implicit none
@@ -303,7 +304,7 @@ subroutine backup_hydro(filename, filename_desc)
               
               ! Write internal energy
               do i=1,ncache
-                 xdp(i)=uold(ind_grid(i)+iskip,firstindex_pscal+npscal)
+                 xdp(i)=uold(ind_grid(i)+iskip,nvar)
               end do
               field_name = 'internal_energy'
               call generic_dump(field_name, info_var_count, xdp, unit_out, dump_info_flag, unit_info)
@@ -349,6 +350,7 @@ subroutine backup_hydro(filename, filename_desc)
               endif
 
 #ifdef RT
+              if(output_rtvar_in_hydro) then
               do ivar=1,nGroups
                  do i=1,ncache
                     xdp(i)=rtuold(ind_grid(i)+iskip,iGroups(ivar))!*rt_c
@@ -364,6 +366,7 @@ subroutine backup_hydro(filename, filename_desc)
                     call generic_dump(field_name, info_var_count, xdp, unit_out, dump_info_flag, unit_info)
                  enddo
               end do
+              endif
 #endif
 
               ! We did one output, deactivate dumping of variables
@@ -462,7 +465,7 @@ subroutine calc_thermal_pressure_from_total_energy(ind_grid, iskip, pressure, nc
    ! which is stored in uold(:,neul)
    !--------------------------------------------------------------------------------------
    integer::i
-   real(dp)::d,energy
+   real(dp)::d,energy,pp
 #if NENER > 0
    integer :: irad
 #endif
@@ -497,7 +500,12 @@ subroutine calc_thermal_pressure_from_total_energy(ind_grid, iskip, pressure, nc
 #endif
 
       ! convert to pressure
-      pressure(i) = (gamma-1d0)*energy
+      if(eos)then
+         call pressure_eos(d,energy,pp)
+         pressure(i)=pp         
+      else
+         pressure(i) = (gamma-1d0)*energy
+      endif
    end do
 
 end subroutine calc_thermal_pressure_from_total_energy

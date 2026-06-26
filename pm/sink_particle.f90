@@ -1069,6 +1069,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
 
               if (threshold_accretion.and.d_sink>0.0)then
                  m_acc=c_acc*weight*(d-d_sink)
+                 m_acc_smbh = 0.
               end if
 
               if (agn_acc_method=='mass') then
@@ -1185,7 +1186,10 @@ subroutine compute_accretion_rate(write_sinks)
   use pm_commons
   use amr_commons
   use hydro_commons
-  use constants, only: pi, twopi, c_cgs, factG_in_cgs, M_sun, mH, sigma_T
+#if USE_FLD==1
+  use cloud_module
+#endif
+  use constants, only: pi, twopi, c_cgs, factG_in_cgs, M_sun, mH, sigma_T, M_sun, R_sun, L_sun, yr2sec
   use mpi_mod
   implicit none
   logical::write_sinks
@@ -1205,6 +1209,11 @@ subroutine compute_accretion_rate(write_sinks)
   real(dp),dimension(1:nsinkmax)::dMEDoverdt,r2,rho_inf
   real(dp),dimension(1:nsinkmax)::dMEDoverdt_smbh
   real(dp)::T2_gas,delta_mass_min
+#if USE_FLD==1
+  integer::imdot,im1,im2
+  real(dp)::mass,log_mdot,mean_mdot,mass_reduced,star_mass
+  real(dp)::de1,de2,dd1,dd2,mass_table,Lum,radius,mdot_real,y1,y2,z2,z1,a,b,surface
+#endif
 
   ! Gravitational constant
   factG=1d0
@@ -1309,6 +1318,205 @@ subroutine compute_accretion_rate(write_sinks)
      if(msink(isink).ge.max_mass_nsc*M_sun/scale_m.and.mass_smbh_seed>0.0)dMsink_overdt(isink)=0.0
 
   end do
+#if USE_FLD==1
+    if(PMS_evol .and. rt_feedback)then
+     if(Hosokawa_track)then
+        ! Compute internal luminosity from Hosokawa PMS tracks
+        do isink=1,nsink
+           star_mass=facc_star*msink(isink)
+!           if((star_mass*scale_m/M_sun) .gt. 1.d-2)then! .and. (t-tsink(isink))*(scale_t/yr2sec) .gt. larson_lifetime)then 
+              if(star_mass*scale_m/M_sun .gt. 7.1d-2)then
+                 mean_mdot = star_mass/(t-tsink(isink))*scale_m/M_sun &
+                      & /(scale_t/yr2sec) !in M_sun/year
+                 mass = star_mass*scale_m/M_sun
+                 
+                 mass=log10(mass)
+                 log_mdot = log10(mean_mdot)
+                 imdot = floor(log_mdot) + 8
+                 
+                 if(imdot .lt. 1)then
+                    imdot=1              
+                    mass_table=-10.0
+                    i=1
+                    do while(mass_table .lt. mass)
+                       if((i+1) .gt. nb_ligne_PMS(imdot))then
+                          lum = data_PMS(imdot,i+1,3)
+                          radius = data_PMS(imdot,i+1,4)
+                          GOTO 110
+                       end if
+                       i=i+1
+                       mass_table = data_PMS(imdot,i,1)
+                    end do
+  
+ !                   if(myid==1)print*,'imdot lt 1',i,imdot,star_mass*scale_m/M_sun
+                  
+                    z1 = data_PMS(imdot,i  ,3)
+                    z2 = data_PMS(imdot,i-1,3)
+                    
+                    y1 = data_PMS(imdot,i  ,1)
+                    y2 = data_PMS(imdot,i-1,1)
+                    
+                    a = (z2-z1)/(y2-y1)
+                    b=z2-a*y2
+                 
+                    lum = a*mass + b
+                    
+                    z1 = data_PMS(imdot,i  ,4)
+                    z2 = data_PMS(imdot,i-1,4)
+                    a = (z2-z1)/(y2-y1)
+                    b=z2-a*y2
+                    
+                    radius = a*mass + b
+                    
+                    
+ !          print*,'Luminosity=',lum,'Lsol',', mass=',mass,'Msol'
+                    
+                 else if(imdot .ge. 5)then
+                    imdot=5
+                    
+                    mass_table=-10.0
+                    i=1
+!                    if(myid==1)print*,i,mass_table,mass, nb_ligne_PMS(imdot),log_mdot
+                    do while(mass_table .lt. mass)
+                       if((i+1) .gt. nb_ligne_PMS(imdot))then
+                          lum = data_PMS(imdot,i+1,3)
+                          radius = data_PMS(imdot,i+1,4)
+                          GOTO 110
+                       end if
+                        i=i+1
+                        mass_table = data_PMS(imdot,i,1)
+                    end do
+!                    if(myid==1)print*,'imdot ge 5',i,imdot,star_mass*scale_m/M_sun
+                    z1 = data_PMS(imdot,i  ,3)
+                    z2 = data_PMS(imdot,i-1,3)
+                    
+                    y1 = data_PMS(imdot,i  ,1)
+                    y2 = data_PMS(imdot,i-1,1)
+                    
+                    a = (z2-z1)/(y2-y1)
+                    b=z2-a*y2
+                    
+                    lum = a*mass + b
+                    
+                    z1 = data_PMS(imdot,i  ,4)
+                    z2 = data_PMS(imdot,i-1,4)
+                    a = (z2-z1)/(y2-y1)
+                    b=z2-a*y2
+                    
+                    radius = a*mass + b
+                    
+                 else !if(imdot .gt. 1 .and. imdot .lt. 5)then
+                    mdot_real = float(imdot-8)
+                    
+                    !   mdot=log10(mdot)
+                    dd1 = log_mdot - (mdot_real)
+                    
+                    i=1
+                    mass_table = data_PMS(imdot,i,1)
+                    do while(mass_table .lt. mass)
+                       if((i+1) .gt. nb_ligne_PMS(imdot))then
+                          GOTO 130
+                       end if
+                       i=i+1
+                       mass_table = data_PMS(imdot,i,1)
+                    end do
+130                 dd2 = mass - mass_table
+                    im1=i
+                    
+                    i=1
+                    mass_table = data_PMS(imdot+1,i,1)
+                    do while(mass_table .lt. mass)
+                       dd2 = mass - mass_table      
+                       if((i+1) .gt. nb_ligne_PMS(imdot))then
+                          GOTO 140
+                       end if
+                       i=i+1
+                       mass_table = data_PMS(imdot+1,i,1)
+                    end do
+                    
+140                 im2=i
+                    
+                    de1 = 1.0d0 - dd1
+                    de2 = 1.0d0 - dd2
+                    Lum = 0.d0
+                    
+!if(myid==1)print*,im1,im2,imdot,star_mass*scale_m/M_sun
+                    Lum = Lum + de1*de2*data_PMS(imdot  ,im1  ,3)
+                    Lum = Lum + dd1*de2*data_PMS(imdot+1,im2  ,3)
+                    Lum = Lum + de1*dd2*data_PMS(imdot  ,im1-1,3)
+                    Lum = Lum + dd1*dd2*data_PMS(imdot+1,im2-1,3)
+                    
+                    radius = 0.d0
+                    
+                    radius = radius + de1*de2*data_PMS(imdot  ,im1  ,4)
+                    radius = radius + dd1*de2*data_PMS(imdot+1,im2  ,4)
+                    radius = radius + de1*dd2*data_PMS(imdot  ,im1-1,4)
+                    radius = radius + dd1*dd2*data_PMS(imdot+1,im2-1,4)
+                    
+                 end if
+                 
+110              int_lum(isink) = (10.0d0**(lum))*L_sun/(scale_d*scale_v**2*scale_l**3/scale_t)
+                 radius=(10.0d0**radius)*R_sun/scale_l
+ !             end ifs
+!              acc_lum(isink) = facc_star_lum*star_mass*star_mass/(t-tsink(isink))/radius!acc_rate(isink)/radiu
+              acc_lum(isink) = facc_star_lum*star_mass*facc_star*acc_rate(isink)/radius
+
+!              print*,'Acc_lum',facc_star_lum,star_mass,(t-tsink(isink)),radius!acc_rate(isink)/radius
+              lum_sink(isink)=acc_lum(isink)+int_lum(isink)
+              surface = 4.*pi*(radius*scale_l)**2 ! stellar surface in cgs
+              Teff_sink(isink) = (lum_sink(isink) *(scale_d*scale_v**2*scale_l**3/scale_t) /(5.6705d-5*surface))**0.25
+              rsink_star(isink) = radius
+           else
+              int_lum(isink)    = 0.0d0
+              acc_lum(isink)    = 0.0d0
+              lum_sink(isink)   = acc_lum(isink)+int_lum(isink)
+              Teff_sink(isink)  = 0.0d0
+           end if
+        end do
+     else ! compute luminosity following the empirical Mass-Luminosity relation (Cox & Giuli's book, p. 8) 
+        do isink=1,nsink
+           star_mass=facc_star*msink(isink)
+           if((star_mass*scale_m/M_sun) .gt. 1.d-2 .and. (t-tsink(isink))*(scale_t/yr2sec) .gt. 5000.)then 
+              lum = -10.
+              mass_reduced=star_mass*scale_m/M_sun
+              if((mass_reduced .gt. 2.d-1) .and. (mass_reduced .lt. 6.d-1)  )then
+                 lum=-0.59d0+2.64d0*log10(mass_reduced)
+              else if((mass_reduced .gt. 6.d-1) .and. (mass_reduced .lt. 2.5)  )then
+                 lum=-0.13d0+4.55d0*log10(mass_reduced)
+              else if((mass_reduced .gt. 2.5) .and. (mass_reduced .lt. 20.0d0)  )then
+                 lum=0.27d0+3.60d0*log10(mass_reduced)
+              end if
+              
+              if(lum .ne. -10)then
+                 int_lum(isink)=(10.0d0**(lum))*L_sun/(scale_d*scale_v**2*scale_l**3/scale_t)
+              else
+                 int_lum(isink)=0.0d0
+              end if
+              
+              acc_lum(isink) = 0.0d0
+              radius=-0.66d0 ! Lower limit form Cox book, ~ 0.2 R_sol
+              mass_reduced=star_mass*scale_m/M_sun
+              if((mass_reduced .gt. 2.d-1) .and. (mass_reduced .lt. 1.5)  )then
+                 radius=-0.03d0+0.9d0*log10(mass_reduced)
+              else if((mass_reduced .gt. 1.5d0) .and. (mass_reduced .lt. 5)  )then
+                 radius=0.05d0+0.51d0*log10(mass_reduced)
+              else if((mass_reduced .gt. 5.) .and. (mass_reduced .lt. 20.0d0)  )then
+                 radius=-0.13d0+0.78d0*log10(mass_reduced)
+              end if
+              radius=(10.0d0**radius)*R_sun/scale_l
+              acc_lum(isink) = facc_star_lum*star_mass*acc_rate(isink)/radius
+              
+              lum_sink(isink)=acc_lum(isink)+int_lum(isink)
+
+              surface = 4.*pi*(radius*scale_l)**2 ! stellar surface in cgs
+              Teff_sink(isink) = (lum_sink(isink) *(scale_d*scale_v**2*scale_l**3/scale_t) /(5.6705d-5*surface))**0.25
+              rsink_star(isink) = radius ! code units
+
+           end if
+        end do
+     end if
+  end if
+#endif
 
   if (write_sinks)then
      call print_sink_properties(dMEDoverdt,dMEDoverdt_smbh,rho_inf,r2)
@@ -2708,7 +2916,7 @@ subroutine read_sink_params()
      call clean_stop
   end if
 
-  if (nlevelmax_sink .eq. 0) then
+  if (nlevelmax_sink <= 0 .or. nlevelmax_sink > nlevelmax) then
      nlevelmax_sink = nlevelmax
   end if
 
@@ -3129,6 +3337,220 @@ subroutine set_uold_sink(ilevel)
 111 format('   Entering set_uold_sink for level ',i2)
 
 end subroutine set_uold_sink
+!##############################################################################
+!##############################################################################
+!##############################################################################
+!##############################################################################
+#if USE_FLD==1
+subroutine fld_radiative_feedback_sink(ilevel)
+  use pm_commons
+  use amr_commons
+  use hydro_commons
+  use cloud_module,only: lum_injection
+!  use rt_parameters,only: rt_protostar_m1 !hybrid RT
+  use cooling_module,only: clight
+  use radiation_parameters,only:stellar_photon,sinks_opt_thin
+  use units_commons
+  use constants, only: pi
+   use fld_commons, only:in_sink
+#ifdef RT
+  use rt_hydro_commons
+#endif
+  implicit none
+#ifndef WITHOUTMPI
+  include 'mpif.h'
+#endif
+  integer::ilevel
+  !------------------------------------------------------------------------
+  ! This routine performs radiative feedback from the sink. It vectorizes 
+  ! the loop over all sink cloud particles and calls accrete_sink as soon 
+  !as nvector particles are collected
+  !------------------------------------------------------------------------
+!!$  integer::igrid,jgrid,ipart,jpart,next_part,info,ix,iy,iz
+!!$  integer::ig,ip,npart1,npart2,icpu,lev,isink,ind
+!!$  integer,dimension(1:nvector)::ind_grid,ind_part,ind_grid_part
+  integer::isink,ind,ix,iy,iz,ngrid,iskip
+  integer::i,nx_loc,igrid,ncache,igrp
+  integer,dimension(1:nvector)::ind_grid,ind_cell
+  real(dp)::x,y,z,dx,dxx,dyy,dzz,drr,rr
+  real(dp)::scale,dx_loc,vol_loc,rmax2,rmax,vol_injection
+  real(dp)::q,h_loc,kernelvalue,weight,radiation_source, Tstar,Lum_group
+  real(dp),dimension(1:3)::skip_loc
+  real(dp),dimension(1:twotondim,1:3)::xc
+  logical ,dimension(1:nvector)::ok
+  real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
+
+  !pi=acos(-1.0d0)
+  if(.not.cosmo) call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
+
+  if(numbtot(1,ilevel)==0)return
+  if(verbose)write(*,111)ilevel
+
+  ! Mesh spacing in that level
+  nx_loc=(icoarse_max-icoarse_min+1)
+  skip_loc=(/0.0d0,0.0d0,0.0d0/)
+  if(ndim>0)skip_loc(1)=dble(icoarse_min)
+  if(ndim>1)skip_loc(2)=dble(jcoarse_min)
+  if(ndim>2)skip_loc(3)=dble(kcoarse_min)
+  scale=boxlen/dble(nx_loc)
+  
+  ! Computing local volume (important for averaging hydro quantities) 
+  dx=0.5D0**ilevel 
+  dx_loc=dx*scale
+  vol_loc=dx_loc**ndim
+  rmax = ir_cloud*dx_loc
+  rmax2=rmax**2
+  h_loc=rmax/2.0d0
+  ! Cells center position relative to grid center position
+  do ind=1,twotondim  
+     iz=(ind-1)/4
+     iy=(ind-1-4*iz)/2
+     ix=(ind-1-2*iy-4*iz)
+     xc(ind,1)=(dble(ix)-0.5D0)*dx
+     xc(ind,2)=(dble(iy)-0.5D0)*dx
+     xc(ind,3)=(dble(iz)-0.5D0)*dx
+  end do
+  
+  ! Loop over grids
+  ncache=active(ilevel)%ngrid
+  do igrid=1,ncache,nvector
+     ngrid=MIN(nvector,ncache-igrid+1)
+     do i=1,ngrid
+        ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
+     end do
+     
+     ! Loop over cells
+     do ind=1,twotondim  
+        iskip=ncoarse+(ind-1)*ngridmax
+        do i=1,ngrid
+           ind_cell(i)=iskip+ind_grid(i)
+        end do
+        
+           ! Flag leaf cells
+        do i=1,ngrid
+           ok(i)=son(ind_cell(i))==0
+        end do
+        
+        do i=1,ngrid
+           if(ok(i))then
+              ! Get gas cell position
+              in_sink(ind_cell(i))=.false. ! for optically-thin sink
+              x=(xg(ind_grid(i),1)+xc(ind,1)-skip_loc(1))*scale
+              y=(xg(ind_grid(i),2)+xc(ind,2)-skip_loc(2))*scale
+              z=(xg(ind_grid(i),3)+xc(ind,3)-skip_loc(3))*scale
+              do isink=1,nsink
+                 ! Check if the cell lies within the sink radius
+                 dxx=x-xsink(isink,1)
+                 if(dxx> 0.5*scale)then
+                    dxx=dxx-scale
+                 endif
+                 if(dxx<-0.5*scale)then
+                    dxx=dxx+scale
+                 endif
+                 dyy=y-xsink(isink,2)
+                 if(dyy> 0.5*scale)then
+                    dyy=dyy-scale
+                 endif
+                 if(dyy<-0.5*scale)then
+                    dyy=dyy+scale
+                 endif
+                 dzz=z-xsink(isink,3)
+                 if(dzz> 0.5*scale)then
+                    dzz=dzz-scale
+                 endif
+                 if(dzz<-0.5*scale)then
+                    dzz=dzz+scale
+                 endif
+                 drr=dxx*dxx+dyy*dyy+dzz*dzz
+                 rr=sqrt(drr)
+                 
+                 if(drr.lt.rmax2)then
+                    q = rr/h_loc
+                    !              
+                    ! Spread luminosity using a M4 spline truncated at 2*h_loc
+                    kernelvalue=0.0d0
+                    
+                    !if ((q.lt.1.0)) kernelvalue = 1.0d0-1.5d0*q**2+0.75d0*q**3 !=0.25d0*(2.0d0-q)**3-(1.0d0-q)**3
+                    !if ((q.ge.1.0)  .and.(q.lt.2.0)) kernelvalue = 0.25d0*(2.0d0-q)**3
+                    if(lum_injection==0)then ! uniform injection
+                       kernelvalue   = 1.0d0
+                       vol_injection = (4.0d0*pi*rmax**3)/3.0d0
+                    else if(lum_injection==1)then ! peaked injection (central oct)
+                       if (abs(dxx).le.0.5*h_loc .and. abs(dyy).le.0.5*h_loc .and. abs(dzz).le.0.5*h_loc) kernelvalue = 1.0d0
+                       if (q.gt.0.5) kernelvalue = 0.0d0
+                       vol_injection = 8.0d0*(rmax/4.0d0)**3
+                    endif
+                    weight = kernelvalue/vol_injection
+                    !weight =1.0d0 ! bypass wightin. Maybe to be reconsidered...
+                    Tstar = Teff_sink(isink)
+                    if(Tstar .gt. 0)then
+                       if(.not. rt_protostar_m1 .or. isink .gt. 1)then                       
+                          if(stellar_photon)then
+                             igrp=1    ! Put all stellar radiative flux in the first group
+                             uold(ind_cell(i),5     )=uold(ind_cell(i),5     ) + Lum_sink(isink)*weight*dtnew(ilevel)
+                             uold(ind_cell(i),8+igrp)=uold(ind_cell(i),8+igrp) + Lum_sink(isink)*weight*dtnew(ilevel)
+                          else
+                             do igrp=1,ngrp 
+                                Lum_group = radiation_source(Tstar,igrp)/(scale_d*scale_v**2)*(pi*rsink_star(isink)**2*clight/scale_v)
+                                uold(ind_cell(i),5     )=uold(ind_cell(i),5     ) + Lum_group*weight*dtnew(ilevel)
+                                uold(ind_cell(i),8+igrp)=uold(ind_cell(i),8+igrp) + Lum_group*weight*dtnew(ilevel)
+                             end do
+                          end if
+                       endif
+#ifdef RT
+                       if(rt_protostar_m1 .and. isink ==1)then
+                          ! We assume that energy is transported with M1 (rather than a number of photons with a mean energy groupe_egy).
+                          ! To be reconsidered when we will do Hii ionisation for later evolution.
+                          Lum_group = aR*(Tstar**4)/(scale_d*scale_v**2)*(pi*rsink_star(isink)**2*clight/scale_v)
+                          rtunew(ind_cell(i),1)=rtunew(ind_cell(i),1) + Lum_group*weight*dtnew(ilevel)/((group_egy(1)*ev2erg)/scale_d/scale_v**2)
+                          if(sinks_opt_thin) in_sink(ind_cell(i))=.true.
+                       end if
+#endif
+                    end if
+
+                 endif
+                 
+              end do
+           endif
+        end do
+        
+     end do
+     ! End loop over cells
+  end do
+  ! End loop over grids
+111 format('   Entering fld_radiative_feedback_sink for level ',I2)
+
+
+  !PH 29/12/2019 PH debug acc_rate
+!  acc_rate(1:nsink)=0.
+  !Now that the accretion luminosity has been damped, put the accreted mass to zero
+!  dmfsink(1:nsink)=0.
+!  dtdmsink(1:nsink)=0.
+
+
+  ! Update hydro quantities for split cells
+  call upload_fine(ilevel)
+  do igrp=1,nvar
+     call make_virtual_fine_dp(uold(1,igrp),ilevel)
+  enddo
+  
+
+end subroutine fld_radiative_feedback_sink
+#endif
+!################################################################
+!################################################################
+!################################################################
+!################################################################
+#else
+subroutine fld_radiative_feedback_sink(ilevel)
+  implicit none
+  integer::ilevel
+
+  write(*,*) 'You should not enter here with NDIM!=3...'
+
+  return
+  
+end subroutine fld_radiative_feedback_sink
 #endif
 !##############################################################################
 !##############################################################################
@@ -3145,16 +3567,16 @@ subroutine synchronize_sink_info
   !----------------------------------------------------------------------------
   integer::info
 
-  call MPI_BCAST(msink,      nsinkmax, MPI_DOUBLE_PRECISION, 1, MPI_COMM_WORLD, info)
-  call MPI_BCAST(msmbh,      nsinkmax, MPI_DOUBLE_PRECISION, 1, MPI_COMM_WORLD, info)
-  call MPI_BCAST(dmfsink,    nsinkmax, MPI_DOUBLE_PRECISION, 1, MPI_COMM_WORLD, info)
-  call MPI_BCAST(xsink,    3*nsinkmax, MPI_DOUBLE_PRECISION, 1, MPI_COMM_WORLD, info)
-  call MPI_BCAST(vsink,    3*nsinkmax, MPI_DOUBLE_PRECISION, 1, MPI_COMM_WORLD, info)
-  call MPI_BCAST(lsink,    3*nsinkmax, MPI_DOUBLE_PRECISION, 1, MPI_COMM_WORLD, info)
-  call MPI_BCAST(delta_mass, nsinkmax, MPI_DOUBLE_PRECISION, 1, MPI_COMM_WORLD, info)
-  call MPI_BCAST(idsink,     nsinkmax, MPI_INTEGER,          1, MPI_COMM_WORLD, info)
-  call MPI_BCAST(tsink,      nsinkmax, MPI_DOUBLE_PRECISION, 1, MPI_COMM_WORLD, info)
-  call MPI_BCAST(new_born,   nsinkmax, MPI_LOGICAL,          1, MPI_COMM_WORLD, info)
+  call MPI_BCAST(msink,      nsinkmax, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, info)
+  call MPI_BCAST(msmbh,      nsinkmax, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, info)
+  call MPI_BCAST(dmfsink,    nsinkmax, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, info)
+  call MPI_BCAST(xsink,    3*nsinkmax, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, info)
+  call MPI_BCAST(vsink,    3*nsinkmax, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, info)
+  call MPI_BCAST(lsink,    3*nsinkmax, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, info)
+  call MPI_BCAST(delta_mass, nsinkmax, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, info)
+  call MPI_BCAST(idsink,     nsinkmax, MPI_INTEGER,          0, MPI_COMM_WORLD, info)
+  call MPI_BCAST(tsink,      nsinkmax, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, info)
+  call MPI_BCAST(new_born,   nsinkmax, MPI_LOGICAL,          0, MPI_COMM_WORLD, info)
 
 end subroutine synchronize_sink_info
 #endif

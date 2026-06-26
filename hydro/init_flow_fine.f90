@@ -711,9 +711,6 @@ subroutine region_condinit(x,q,dx,nn)
            end do
 #endif
 #endif
-#if NEXTINCT>0
-           q(i,firstindex_extinct+1)=zero
-#endif
 #if NPSCAL>0
            do ivar=1,npscal
               q(i,firstindex_pscal+ivar)=var_region(k,ivar)

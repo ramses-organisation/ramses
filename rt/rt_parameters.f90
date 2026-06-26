@@ -153,5 +153,6 @@ module rt_parameters
 
   ! RT on sinks?
 !  logical::rt_protostar_m1=.false. ! Hybrid RT : M1 + FLD
+  logical::output_rtvar_in_hydro=.false. ! Output rt variable in hydro files for convenience (temporary)
 
 end module rt_parameters

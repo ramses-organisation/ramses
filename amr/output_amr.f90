@@ -19,10 +19,13 @@ subroutine dump_all
 #if ! defined (WITHOUTMPI) || defined (NOSYSTEM)
   integer::info
 #endif
-  character::nml_char
   character(LEN=5)::nchar,ncharcpu
   character(LEN=80)::filename,filename_desc,filedir
   integer::ierr
+
+  character(len=1), dimension(:), allocatable, save :: nml_char
+  integer, save :: nml_size
+  logical, save :: nml_loaded = .false.
 
   if(nstep_coarse==nstep_coarse_old.and.nstep_coarse>0)return
   if(nstep_coarse==0.and.nrestart>0)return
@@ -31,7 +34,10 @@ subroutine dump_all
   call write_screen
   call title(ifout,nchar)
   ifout=ifout+1
-  if(t>=tout(iout).or.aexp>=aout(iout))iout=iout+1
+  if(t >= tout(iout) - merge(eps_t,0.0d0,exact_output_time) .or. &
+     aexp >= aout(iout) - merge(eps_a,0.0d0,exact_output_time)) then
+     iout = iout + 1
+  endif
   if(t>=tout_next)tout_next=tout_next+delta_tout
   if(aexp>=aout_next)aout_next=aout_next+delta_aout
   output_done=.true.
@@ -85,15 +91,17 @@ subroutine dump_all
      end if
      ! Copy namelist file to output directory
      filename=TRIM(filedir)//'namelist.txt'
-     OPEN(10, FILE=namelist_file, ACCESS="STREAM", ACTION="READ")
-     OPEN(11, FILE=filename,      ACCESS="STREAM", ACTION="WRITE")
-     DO
-        READ(10, IOSTAT=IERR)nml_char
-        IF (IERR.NE.0) EXIT
+        if (nml_loaded .eqv. .false.) then
+            inquire(file=namelist_file, size=nml_size)
+            allocate(nml_char(nml_size))
+            OPEN(10, FILE=namelist_file, ACCESS="STREAM", ACTION="READ")
+            READ(10, IOSTAT=IERR)nml_char
+            CLOSE(10)
+            nml_loaded = .true.
+        end if
+        OPEN(11, FILE=filename,      ACCESS="STREAM", ACTION="WRITE")
         WRITE(11)nml_char
-     END DO
-     CLOSE(11)
-     CLOSE(10)
+        CLOSE(11)
      ! Copy compilation details to output directory
      filename=TRIM(filedir)//'compilation.txt'
      OPEN(UNIT=11, FILE=filename, FORM='formatted')
@@ -470,7 +478,6 @@ subroutine output_info(filename)
   write(ilun,'("ngrp        =",I11)')ngrp
   write(ilun,'("nent        =",I11)')nent
   write(ilun,'("npscal      =",I11)')npscal
-!  write(ilun,'("nextinct    =",I11)')nextinct
 #endif
   write(ilun,*)
 

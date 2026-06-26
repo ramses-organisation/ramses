@@ -7,6 +7,7 @@ subroutine make_boundary_diffusion(ilevel,igroup)
   use hydro_commons
   use radiation_parameters
   use units_commons
+  use fld_commons
   implicit none
   ! -------------------------------------------------------------------
   ! This routine set up boundary conditions for fine levels.
@@ -15,11 +16,6 @@ subroutine make_boundary_diffusion(ilevel,igroup)
   integer::ibound,boundary_dir,idim,inbor
   integer::i,ncache,ivar,igrid,ngrid,ind,ht
   integer::iskip,iskip_ref,nx_loc,ix,iy,iz,igrp
-  
-#if NDUST>0  
-  integer::idust
-#endif
-  real(dp)::sum_dust
   
   integer,dimension(1:8)::ind_ref
   integer,dimension(1:nvector),save::ind_grid,ind_grid_ref
@@ -176,13 +172,7 @@ subroutine make_boundary_diffusion(ilevel,igroup)
                     rho   = uu(i,1)
                     ekin  = rho*usquare*0.5_dp
                     eps   = (uu(i,5)-ekin-emag-erad_loc)
-                    sum_dust =0.0d0
-#if NDUST>0
-                    do idust = 1, ndust
-                       sum_dust = sum_dust + uu(i,firstindex_ndust+idust)/rho
-                    end do
-#endif           
-                    call temperature_eos((1.0d0-sum_dust)*rho,eps,t2,ht)                    
+                    call temperature_eos(rho,eps,t2,ht)                    
 !                     t2    = Tr_floor ! comment this for radiative shock
 
                     unew(ind_cell(i),nvar+3) = t2
@@ -195,7 +185,7 @@ subroutine make_boundary_diffusion(ilevel,igroup)
                     
                     ! Compute Rosseland opacity
                     t2r = cal_Teg(unew(ind_cell(i),firstindex_er+igroup)*scale_E0,igroup)
-                    divu(ind_cell(i))= rosseland_ana(dd*scale_d,t2,t2r,igroup,.false.)/scale_kappa
+                    divu(ind_cell(i))= rosseland_ana(dd*scale_d,t2,t2r,igroup,in_sink(ind_cell(i)))/scale_kappa
                     if(divu(ind_cell(i))*dx_loc .lt. min_optical_depth) divu(ind_cell(i))=min_optical_depth/dx_loc
                     
                  end if
@@ -227,6 +217,7 @@ subroutine make_boundary_diffusion_tot(ilevel)
   use radiation_parameters
   use const
   use units_commons
+  use fld_commons
   implicit none
   ! -------------------------------------------------------------------
   ! This routine set up boundary conditions for fine levels.
@@ -247,11 +238,6 @@ subroutine make_boundary_diffusion_tot(ilevel)
   real(dp),dimension(1:nvector,1:nvar+3),save::uu
   real(dp),dimension(1:nvector)::cond,relax
   real(dp)::dd,t2,t2r,cal_Teg,usquare,emag,erad_loc,eps,ekin,Cv,rho
-
-#if NDUST>0
-  integer::idust
-#endif
-  real(dp)::sum_dust
   
 #if USE_FLD==1
   real(dp)::scale_nH,scale_T2,scale_t,scale_v,scale_d,scale_l
@@ -405,13 +391,7 @@ subroutine make_boundary_diffusion_tot(ilevel)
                     ekin  = rho*usquare*half
                     eps   = (uu(i,5)-ekin-emag-erad_loc)
 
-                    sum_dust =0.0d0
-#if NDUST>0
-                    do idust = 1, ndust
-                       sum_dust = sum_dust + uu(i,firstindex_ndust+idust)/rho
-                    end do
-#endif       
-                    call temperature_eos((1.0_dp-sum_dust)*rho,eps,t2,ht)
+                    call temperature_eos(rho,eps,t2,ht)
                     
 #if NGRP>0
                     uu(i,ind_trad(1)) = t2
@@ -422,7 +402,7 @@ subroutine make_boundary_diffusion_tot(ilevel)
                     ! Compute Rosseland opacity
                     do igroup=1,ngrp
                        t2r = cal_Teg(uu(i,firstindex_er+igroup)*scale_d*scale_v**2,igroup)
-                       kappaR_bicg(ind_cell(i),igroup)= rosseland_ana(dd*scale_d,uu(i,ind_trad(1)),t2r,igroup,.false.)/scale_kappa
+                       kappaR_bicg(ind_cell(i),igroup)= rosseland_ana(dd*scale_d,uu(i,ind_trad(1)),t2r,igroup,in_sink(ind_cell(i)))/scale_kappa
                        if( kappaR_bicg(ind_cell(i),igroup)*dx_loc .lt. min_optical_depth)  kappaR_bicg(ind_cell(i),igroup)=min_optical_depth/dx_loc
                     enddo
 #endif

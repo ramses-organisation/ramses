@@ -5,12 +5,16 @@ subroutine init_sink
   use amr_parameters, only:levelmin
   use constants, only:M_sun
   use mpi_mod
+#if USE_FLD==1
+  use cloud_module,only:PMS_evol,rt_feedback,rstar_init,mprotostar
+  use constants,only:R_sun
+#endif
   implicit none
 #ifndef WITHOUTMPI
   integer,parameter::tag=1112,tag2=1113
   integer::dummy_io,info2
 #endif
-  real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
+  real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,scale_m
   integer::isink, nsinkold
   logical::eof,ic_sink=.false.
   character(LEN=80)::filename
@@ -31,6 +35,12 @@ subroutine init_sink
   allocate(dmfsink(1:nsinkmax))
   allocate(xsink(1:nsinkmax,1:ndim))
   msink=0d0; msmbh=0d0; dmfsink=0d0; xsink=boxlen/2
+#if USE_FLD==1
+  allocate(weightp(1:npartmax,1:twotondim))
+  weightp=0d0
+ !introduced by PH 07/2016 to record feedback around sink
+  allocate(Eioni(1:nsinkmax))
+#endif
 
   allocate(xsink_graddescent(1:nsinkmax,1:ndim))
   allocate(graddescent_over_dt(1:nsinkmax))
@@ -48,6 +58,7 @@ subroutine init_sink
   delta_mass=0d0; fsink_partial=0d0; fsink=0d0
 
   allocate(msum_overlap(1:nsinkmax))
+#if USE_FLD==1
   allocate(acc_rate(1:nsinkmax))
   acc_rate=0.
   allocate(acc_lum(1:nsinkmax))
@@ -55,6 +66,8 @@ subroutine init_sink
   allocate(int_lum(1:nsinkmax))
   int_lum=0.
   allocate(dt_acc(1:nsinkmax))
+  allocate(level_sink(1:nsinkmax,levelmin:nlevelmax))
+#endif
   allocate(rho_sink_tff(levelmin:nlevelmax))
   msum_overlap=0; rho_sink_tff=0d0
 
@@ -122,6 +135,25 @@ subroutine init_sink
   allocate(new_born(1:nsinkmax),new_born_all(1:nsinkmax),new_born_new(1:nsinkmax))
 
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
+#if USE_FLD==1
+  scale_m=scale_d*scale_l**ndim
+
+  allocate(lum_sink(1:nsinkmax),lum_sink_all(1:nsinkmax))
+  allocate(rsink_star(1:nsinkmax),Teff_sink(1:nsinkmax))
+  rsink_star(1:nsinkmax) = rstar_init*R_sun/scale_l ! 2.5 Rsol
+  lum_sink_all(1:nsinkmax)=0.0d0
+  lum_sink(1:nsinkmax)=0.0d0
+  Teff_sink(1:nsinkmax)=0.0d0
+  if(rt_feedback .and. PMS_evol)then
+     allocate(nburst(1:nsinkmax))
+     allocate(tsink_star(1:nsinkmax))
+     allocate(sink_star_accrate(1:nsinkmax),msink_star(1:nsinkmax))
+     nburst(1:nsinkmax)=0     
+     tsink_star(1:nsinkmax) = 0.0
+     sink_star_accrate(1:nsinkmax) = 0.0
+     msink_star(1:nsinkmax) = mprotostar / scale_m
+  end if
+#endif
 
   ! Loading sinks from the restart
   if(nrestart>0)then
@@ -206,6 +238,13 @@ subroutine init_sink
      endif
 #endif
 
+#if USE_FLD==1
+     if(ir_feedback)then
+        do isink=1,nsink
+           acc_lum(isink)=ir_eff*acc_rate(isink)*msink(isink)/(5*6.955d10/scale_l)
+        end do
+     end if
+#endif
   end if
 
   ! Loading sinks from the ICs (ic_sink or ic_sink_restart)

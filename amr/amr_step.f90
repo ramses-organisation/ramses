@@ -146,8 +146,12 @@ recursive subroutine amr_step(ilevel,icount)
      call MPI_ALLREDUCE(output_now,output_now_all,1,MPI_LOGICAL,MPI_LOR,MPI_COMM_WORLD,mpi_err)
 #endif
      if(foutput>0)then
-     if(mod(nstep_coarse,foutput)==0.or.aexp>=aout(iout).or.t>=tout(iout) &
-        &.or.aexp>=aout_next.or.t>=tout_next.or.output_now_all.EQV..true.)then
+     if(mod(nstep_coarse,foutput)==0 .or. &
+        aexp>=aout(iout) - merge(eps_a,0.0d0,exact_output_time) .or. &
+        t>=tout(iout) - merge(eps_t,0.0d0,exact_output_time) .or. &
+        aexp>=aout_next .or. &
+        t>=tout_next .or. &
+        output_now_all.EQV..true.) then
                                call timer('io','start')
         if(.not.ok_defrag)then
            call defrag
@@ -513,7 +517,7 @@ recursive subroutine amr_step(ilevel,icount)
 #if USE_FLD==1
   ! Compute radiative feedback if radiative transfer with FLD on
   if(FLD)then
-     if(rt_feedback .and. sink .and. nsink .gt. 0)call radiative_feedback_sink(ilevel)
+     if(rt_feedback .and. sink .and. nsink .gt. 0)call fld_radiative_feedback_sink(ilevel)
   end if
 #endif
 
@@ -695,7 +699,7 @@ subroutine rt_step(ilevel)
      if(rt_sink) call sink_RT_feedback(ilevel,dtnew(ilevel))
 #endif
 #if USE_FLD==1
-     if(rt_protostar_m1 .and. sink) call radiative_feedback_sink(ilevel)
+     if(rt_protostar_m1 .and. sink) call fld_radiative_feedback_sink(ilevel)
 #endif
 
      ! Hyperbolic solver

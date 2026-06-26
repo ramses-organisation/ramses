@@ -27,6 +27,8 @@
 #       ./run_test_suite.sh -s
 #   - Run tests with restart:
 #       ./run_test_suite.sh -r
+#   - Run dry run test suite (not run the tests, only make figures and global pdf):
+#       ./run_test_suite.sh -f
 #
 #######################################################################
 
@@ -45,7 +47,8 @@ COVERAGE=false;
 CLEAN_ALL=false;
 SELECTTEST=false;
 RESTART=false;
-while getopts "cdsp:qt:vr" OPTION; do
+DRYRUN=false;
+while getopts "cdsp:qt:vrf" OPTION; do
    case $OPTION in
       c)
          CLEAN_ALL=true;
@@ -70,6 +73,9 @@ while getopts "cdsp:qt:vr" OPTION; do
       ;;
       r)
          RESTART=true;
+      ;;
+      f)
+         DRYRUN=true;
       ;;
    esac
 done
@@ -142,6 +148,7 @@ all_tests_ok=true;
 # Clean all directories and exit
 #######################################################################
 if $CLEAN_ALL ; then
+   if ! $DRYRUN; then 
    for ((i=0;i<$ntests;i++)); do
       cd ${TEST_DIRECTORY}/${testname[i]};
       $DELETE_RESULTS;
@@ -149,13 +156,14 @@ if $CLEAN_ALL ; then
          # rm_list=$(cat to_be_removed);
          # rm -f $rm_list;
          # rm to_be_removed;
-         $SHELL after_test.sh;
+         ${SHELL} after_test.sh;
       fi
    done
    $RETURN_TO_BIN;
    make clean;
    rm -f ${EXECNAME}*d;
    exit;
+   fi
 fi
 
 #######################################################################
@@ -290,11 +298,13 @@ for ((i=0;i<$ntests;i++)); do
    # Initial cleanup
    $RETURN_TO_BIN;
    if ${make_clean[n]}; then
+      if ! $DRYRUN; then 
       echo "Cleanup" | tee -a $LOGFILE;
       if $VERBOSE ; then
          make clean 2>&1 | tee -a $LOGFILE;
       else
          make clean >> $LOGFILE 2>&1;
+      fi
       fi
    fi
 
@@ -304,15 +314,19 @@ for ((i=0;i<$ntests;i++)); do
    # if [ ${MPI} -eq 1 ]; then
    #    MAKESTRING="${MAKESTRING} -j ${NCPU}";
    # fi
+   if ! $DRYRUN; then 
    if $VERBOSE ; then
       $MAKESTRING 2>&1 | tee -a $LOGFILE;
    else
       $MAKESTRING >> $LOGFILE 2>&1;
    fi
+   fi
 
    # Run test
    cd ${TEST_DIRECTORY}/${testname[n]};
+   if ! $DRYRUN; then 
    $DELETE_RESULTS;
+   fi
 
    if $VERBOSE ; then
       function run_before_test
@@ -336,6 +350,7 @@ for ((i=0;i<$ntests;i++)); do
    echo "Running test:" | tee -a $LOGFILE;
    STARTTIME_TEST=$(python3 -c 'import time; print(int(time.time()*1000))');
 
+   if ! $DRYRUN; then 
    if [ -f ${BEFORETEST} ]; then
          run_before_test;
    fi
@@ -351,6 +366,7 @@ for ((i=0;i<$ntests;i++)); do
       python3 ../../run_with_restart.py -s 3 -t ${rawname[i]}  | tee -a $LOGFILE;
    else
       run_test;
+   fi
    fi
 
    # Record test time
@@ -552,6 +568,7 @@ if $all_tests_ok ; then
 else
    echo "There were some failed tests" | tee -a $LOGFILE;
 fi
+if ! $DRYRUN; then 
 if ${DELDATA} ; then
    for ((i=0;i<$ntests;i++)); do
       n=${testnum[i]};
@@ -571,6 +588,7 @@ if ${DELDATA} ; then
       make clean >> $LOGFILE 2>&1;
    fi
    rm -f ${EXECNAME}*d;
+fi
 fi
 
 if $all_tests_ok ; then
