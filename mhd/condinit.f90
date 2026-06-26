@@ -43,9 +43,6 @@ subroutine  condinit(x,u,dx,nn)
   case('orzag_tang')
      call orzag_tang_condinit(x, q, dx, nn)
 
-  case('coeur')
-     call coeur_condinit(x, q, dx, nn)
-
   case('ponomarenko')
       call ponomarenko_condinit(x, q, dx, nn)
 
