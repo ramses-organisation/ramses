@@ -205,8 +205,7 @@ subroutine courant_fine(ilevel)
   dtnew(ilevel)=MIN(dtnew(ilevel),dt_all)
 
 #ifdef NIMHD
-
-  ! Compute global quantities
+  ! Compute global NIMHD timesteps
 #ifndef WITHOUTMPI
   call MPI_ALLREDUCE(dtambdiff_loc,dtambdiff_all,1,MPI_DOUBLE_PRECISION,MPI_MIN,&
        &MPI_COMM_WORLD,info)

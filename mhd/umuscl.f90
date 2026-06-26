@@ -156,11 +156,11 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
        &       qp,iu1  ,iu2  ,ju1  ,ju2  ,ku1  ,ku2  , &
        &          ilo  ,ihi  ,jf1  ,jf2  ,klo  ,khi  , &
        &       3,2,4,7,6,8,flux,tmp,2,dtdx,ngrid)
+#ifdef NIMHD
   ! add nimhd
   do k=klo,khi
   do j=jf1,jf2
   do i=ilo,ihi
-#ifdef NIMHD
      ! Energy flux from ohmic term dB/dt=rot(-eta*J)
      if(use_nonideal_mhd) then  
         ivar=5
@@ -168,10 +168,10 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
            flux(l,i,j,k,ivar,2)=flux(l,i,j,k,ivar,2)+(fluxambdiff(l,i,j,k,2)+fluxohm(l,i,j,k,2))*dt/dy
         end do
      endif
+  end do
+  end do
+  end do
 #endif
-  end do
-  end do
-  end do
 #endif
 
   ! Solve for 1D flux in Z direction
@@ -180,11 +180,11 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
        &       qp,iu1  ,iu2  ,ju1  ,ju2  ,ku1  ,ku2  , &
        &          ilo  ,ihi  ,jlo  ,jhi  ,kf1  ,kf2  , &
        &       4,2,3,8,6,7,flux,tmp,3,dtdx,ngrid)
+#ifdef NIMHD
   ! add nimhd
   do k=kf1,kf2
   do j=jlo,jhi
   do i=ilo,ihi
-#ifdef NIMHD
      ! Energy flux from ohmic term dB/dt=rot(-eta*J)
      if(use_nonideal_mhd) then  
         ivar=5
@@ -192,10 +192,10 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
            flux(l,i,j,k,ivar,3)=flux(l,i,j,k,ivar,3)+(fluxambdiff(l,i,j,k,3)+fluxohm(l,i,j,k,3))*dt/dz
         end do
      endif
+  end do
+  end do
+  end do
 #endif
-  end do
-  end do
-  end do
 #endif
 
 #ifdef NIMHD

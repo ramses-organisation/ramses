@@ -1173,11 +1173,8 @@ subroutine velana_nimhd_diffusion(x,v,dx,t,ncell)
   ! v(i,1:3) is the imposed 3-velocity in user units.
   !================================================================
   integer::i
-  real(dp)::aa,twopi
 
   ! Add here, if you wish, some user-defined initial conditions
-  aa=1.0
-  twopi=2d0*ACOS(-1d0)
   v=0.0d0
 
 end subroutine velana_nimhd_diffusion
