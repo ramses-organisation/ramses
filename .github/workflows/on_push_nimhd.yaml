@@ -5,10 +5,6 @@ on:
     branches:
       - combo_fld_nimhd
 
-concurrency:
-  group: nimhd-${{github.ref}}
-  cancel-in-progress: true
-
 jobs:
 
   tests:
