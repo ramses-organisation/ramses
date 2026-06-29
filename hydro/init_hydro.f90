@@ -31,6 +31,12 @@ subroutine init_hydro
   allocate(uold(1:ncell,1:nvar_all))
   allocate(unew(1:ncell,1:nvar_all))
   uold=0.0d0; unew=0.0d0
+#ifdef SOLVERmhd
+  if(output_current) then
+     allocate(electric_current(1:ncell,1:3))
+     electric_current=0.0d0
+  end if
+#endif
   if(MC_tracer) then
      allocate(fluxes(1:ncell,1:twondim))
      fluxes(1:ncell,1:twondim)=0.0d0
@@ -84,6 +90,9 @@ subroutine init_hydro
      if(strict_equilibrium>0)nvar2=nvar2-2
 #ifdef SOLVERmhd
      nvar2=nvar2-3
+     if(input_current)then
+        nvar2=nvar2-3
+     end if
 #endif
      read(ilun)ndim2
      read(ilun)nlevelmax2
@@ -231,6 +240,14 @@ subroutine init_hydro
                     end do
                  endif
 
+                 ! Skip the electric current
+#ifdef SOLVERmhd
+                 if(input_current) then
+                    read(ilun)xx  ! discard J_x
+                    read(ilun)xx  ! discard J_y
+                    read(ilun)xx  ! discard J_z
+                 end if
+#endif
               end do
               deallocate(ind_grid,xx)
            end if

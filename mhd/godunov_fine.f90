@@ -950,6 +950,38 @@ subroutine godfine1(ind_grid,ncache,ilevel)
      end do
   end do
 
+  !-------------------------------------------------------
+  ! Compute and store the electric current at level ilevel
+  !-------------------------------------------------------
+#ifdef SOLVERmhd
+  if(output_current) then
+     ! J = curl(B) at cell centres, using face-centred B from uloc
+     ! uloc(:,:,:,:,6)=Bx at left x-face, 7=By at left y-face, 8=Bz at left z-face
+     do k2=k2min,k2max
+     do j2=j2min,j2max
+     do i2=i2min,i2max
+        ind_son=1+i2+2*j2+4*k2
+        iskip=ncoarse+(ind_son-1)*ngridmax
+        do i=1,ncache
+           ind_cell(i)=iskip+ind_grid(i)
+        end do
+        i3=1+i2
+        j3=1+j2
+        k3=1+k2
+        do i=1,ncache
+           electric_current(ind_cell(i),1) = (uloc(i,i3,j3+1,k3,8) - uloc(i,i3,j3,k3,8))/dx &
+                                           - (uloc(i,i3,j3,k3+1,7) - uloc(i,i3,j3,k3,7))/dx
+           electric_current(ind_cell(i),2) = (uloc(i,i3,j3,k3+1,6) - uloc(i,i3,j3,k3,6))/dx &
+                                           - (uloc(i,i3+1,j3,k3,8) - uloc(i,i3,j3,k3,8))/dx
+           electric_current(ind_cell(i),3) = (uloc(i,i3+1,j3,k3,7) - uloc(i,i3,j3,k3,7))/dx &
+                                           - (uloc(i,i3,j3+1,k3,6) - uloc(i,i3,j3,k3,6))/dx
+        end do
+     end do
+     end do
+     end do
+  end if
+#endif
+
   !---------------------------------------------------------
   ! Conservative update at level ilevel for induction system
   !---------------------------------------------------------
