@@ -955,8 +955,6 @@ subroutine godfine1(ind_grid,ncache,ilevel)
   !-------------------------------------------------------
 #ifdef SOLVERmhd
   if(output_current) then
-     ! J = curl(B) at cell centres, using face-centred B from uloc
-     ! uloc(:,:,:,:,6)=Bx at left x-face, 7=By at left y-face, 8=Bz at left z-face
      do k2=k2min,k2max
      do j2=j2min,j2max
      do i2=i2min,i2max
@@ -969,12 +967,23 @@ subroutine godfine1(ind_grid,ncache,ilevel)
         j3=1+j2
         k3=1+k2
         do i=1,ncache
-           electric_current(ind_cell(i),1) = (uloc(i,i3,j3+1,k3,8) - uloc(i,i3,j3,k3,8))/dx &
-                                           - (uloc(i,i3,j3,k3+1,7) - uloc(i,i3,j3,k3,7))/dx
-           electric_current(ind_cell(i),2) = (uloc(i,i3,j3,k3+1,6) - uloc(i,i3,j3,k3,6))/dx &
-                                           - (uloc(i,i3+1,j3,k3,8) - uloc(i,i3,j3,k3,8))/dx
-           electric_current(ind_cell(i),3) = (uloc(i,i3+1,j3,k3,7) - uloc(i,i3,j3,k3,7))/dx &
-                                           - (uloc(i,i3,j3+1,k3,6) - uloc(i,i3,j3,k3,6))/dx
+           ! J = curl(B): central difference of cell-centred B (avg of left+right face)
+           ! over two cells (2*dx), so the result is centred on the active cell
+           electric_current(ind_cell(i),1) = &
+              (0.5d0*(uloc(i,i3,j3+1,k3,8)+uloc(i,i3,j3+1,k3,nvar+3)) - &
+               0.5d0*(uloc(i,i3,j3-1,k3,8)+uloc(i,i3,j3-1,k3,nvar+3))) / (2.0d0*dx) &
+            - (0.5d0*(uloc(i,i3,j3,k3+1,7)+uloc(i,i3,j3,k3+1,nvar+2)) - &
+               0.5d0*(uloc(i,i3,j3,k3-1,7)+uloc(i,i3,j3,k3-1,nvar+2))) / (2.0d0*dx)
+           electric_current(ind_cell(i),2) = &
+              (0.5d0*(uloc(i,i3,j3,k3+1,6)+uloc(i,i3,j3,k3+1,nvar+1)) - &
+               0.5d0*(uloc(i,i3,j3,k3-1,6)+uloc(i,i3,j3,k3-1,nvar+1))) / (2.0d0*dx) &
+            - (0.5d0*(uloc(i,i3+1,j3,k3,8)+uloc(i,i3+1,j3,k3,nvar+3)) - &
+               0.5d0*(uloc(i,i3-1,j3,k3,8)+uloc(i,i3-1,j3,k3,nvar+3))) / (2.0d0*dx)
+           electric_current(ind_cell(i),3) = &
+              (0.5d0*(uloc(i,i3+1,j3,k3,7)+uloc(i,i3+1,j3,k3,nvar+2)) - &
+               0.5d0*(uloc(i,i3-1,j3,k3,7)+uloc(i,i3-1,j3,k3,nvar+2))) / (2.0d0*dx) &
+            - (0.5d0*(uloc(i,i3,j3+1,k3,6)+uloc(i,i3,j3+1,k3,nvar+1)) - &
+               0.5d0*(uloc(i,i3,j3-1,k3,6)+uloc(i,i3,j3-1,k3,nvar+1))) / (2.0d0*dx)
         end do
      end do
      end do
