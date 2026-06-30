@@ -73,7 +73,7 @@ module pm_parameters
   real(dp)::gamma_grad_descent=0.0d0        ! Step for the gradient descent
   real(dp)::fudge_graddescent=1.0d0         ! Fudge factor for the for the BB gradient descent
 
-  character(LEN=15)::agn_acc_method='mass'
+  character(LEN=15)::agn_acc_method='none'
   character(LEN=15)::agn_inj_method='volume'
 
   type part_t
