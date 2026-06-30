@@ -135,8 +135,8 @@ subroutine backup_hydro(filename, filename_desc)
               end if
               call generic_dump(field_name, info_var_count, xdp, unit_out, dump_info_flag, unit_info)
 #if NVAR > NHYDRO+NENER
-              ! Write passive scalars if any
-              do ivar = nhydro+1+nener, nvar
+              ! Write passive scalars if any (excluding internal energy scalar if energy_fix active)
+              do ivar = nhydro+1+nener, nvar - merge(1,0,energy_fix)
                  if(write_conservative) then
                     if (metal .and. imetal == ivar) then
                        field_name = 'metal_density'
@@ -154,6 +154,12 @@ subroutine backup_hydro(filename, filename_desc)
                  end if
                  call generic_dump(field_name, info_var_count, xdp, unit_out, dump_info_flag, unit_info)
               end do
+              ! Write internal energy, which is stored at the end of uold when energy_fix is active
+              if(energy_fix) then
+                 field_name = 'internal_energy'
+                 call gather_conservative_from_uold(ind_grid, iskip, nvar, xdp, ncache)
+                 call generic_dump(field_name, info_var_count, xdp, unit_out, dump_info_flag, unit_info)
+              end if
 #endif
               if(strict_equilibrium>0)then
                  do i = 1, ncache
