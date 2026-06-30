@@ -2089,7 +2089,7 @@ subroutine ctoprim(uin,q,bf,gravin,dt,ngrid)
            ! Compute thermal pressure through EOS
            if(energy_fix) then
               do l = 1, ngrid
-                 q(l,i,j,k,5)=MAX((gamma-one)*uin(l,i,j,k,nvar),smallp)
+                 q(l,i,j,k,5)=MAX((gamma-one)*uin(l,i,j,k,ieint),smallp)
               end do
            else
               do l = 1, ngrid

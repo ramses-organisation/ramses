@@ -306,7 +306,7 @@ subroutine set_uold(ilevel)
            end do
 #endif
            e_mag=0.5*(A**2+B**2+C**2)
-           uold(ind_cell,neul)=uold(ind_cell,nvar)+e_kin+e_mag
+           uold(ind_cell,neul)=uold(ind_cell,ieint)+e_kin+e_mag
         end do
      end if
   end do

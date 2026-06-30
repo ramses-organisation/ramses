@@ -885,7 +885,7 @@ subroutine ctoprim(uin,q,gravin,dt,ngrid)
         do j = ju1, ju2
            do i = iu1, iu2
               do l = 1, ngrid
-                 q(l,i,j,k,neul) = (gamma-one)*uin(l,i,j,k,nvar)
+                 q(l,i,j,k,neul) = (gamma-one)*uin(l,i,j,k,ieint)
               end do
            end do
         end do

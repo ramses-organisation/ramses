@@ -228,7 +228,7 @@ subroutine set_uold(ilevel)
               e_kin=e_kin+uold(ind_cell,nhydro+irad)
            end do
 #endif
-           uold(ind_cell,neul)=uold(ind_cell,nvar)+e_kin
+           uold(ind_cell,neul)=uold(ind_cell,ieint)+e_kin
         end do
      end if
   end do
