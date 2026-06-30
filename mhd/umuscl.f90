@@ -2090,6 +2090,7 @@ subroutine ctoprim(uin,q,bf,gravin,dt,ngrid)
            do l = 1, ngrid
               etot = uin(l,i,j,k,5) - emag(l) -erad(l)
               eint = etot/q(l,i,j,k,1)-eken(l)
+              if(energy_fix) eint=uin(l,i,j,k,nvar)/uin(l,i,j,k,1)
               q(l,i,j,k,5)=MAX((gamma-one)*q(l,i,j,k,1)*eint,smallp)
            end do
 

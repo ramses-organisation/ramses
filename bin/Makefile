@@ -44,6 +44,8 @@ NIONS = 0
 NGROUPS = 0
 # Number of passive scalars
 NPSCAL = 0
+# Use internal energy fix (stores e_int as passive scalar)? 1=Yes, 0=No
+ENERGY_FIX = 0
 # Light MPI communicator structure (for > 10k MPI processes)
 LIGHT_MPI_COMM = 0
 
@@ -51,6 +53,9 @@ LIGHT_MPI_COMM = 0
 NHYDRO = 2+$(NDIM)
 ifeq ($(SOLVER),mhd)
    NHYDRO = 8
+endif
+ifeq ($(ENERGY_FIX),1)
+   NPSCAL := $(NPSCAL)+1
 endif
 NVAR := $(NHYDRO)+$(NENER)+$(NPSCAL)+$(NMETALS)
 ifeq ($(RT),1)

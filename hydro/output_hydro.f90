@@ -252,7 +252,7 @@ end subroutine gather_primitive_from_uold
 !#####################################################################
 !#####################################################################
 subroutine calc_thermal_pressure_from_total_energy(ind_grid, iskip, pressure, ncache)
-   use amr_parameters, only:dp
+   use amr_parameters, only:dp,energy_fix
    use hydro_commons
    implicit none
    integer,intent(in)::iskip,ncache
@@ -272,33 +272,37 @@ subroutine calc_thermal_pressure_from_total_energy(ind_grid, iskip, pressure, nc
 #endif
 
    do i = 1, ncache
-      d = max(uold(ind_grid(i)+iskip, 1), smallr)
-      ! total energy
-      energy = uold(ind_grid(i)+iskip, neul)
-      ! subtract kinetic energy
-      energy = energy - 0.5d0*uold(ind_grid(i)+iskip, 2)**2/d
+      if(energy_fix) then
+         ! Use stored internal energy scalar directly (avoids cancellation errors)
+         pressure(i) = (gamma-1d0)*uold(ind_grid(i)+iskip, nvar)
+      else
+         d = max(uold(ind_grid(i)+iskip, 1), smallr)
+         ! total energy
+         energy = uold(ind_grid(i)+iskip, neul)
+         ! subtract kinetic energy
+         energy = energy - 0.5d0*uold(ind_grid(i)+iskip, 2)**2/d
 #if NDIM > 1 || SOLVERmhd
-      energy = energy - 0.5d0*uold(ind_grid(i)+iskip, 3)**2/d
+         energy = energy - 0.5d0*uold(ind_grid(i)+iskip, 3)**2/d
 #endif
 #if NDIM > 2 || SOLVERmhd
-      energy = energy - 0.5d0*uold(ind_grid(i)+iskip, 4)**2/d
+         energy = energy - 0.5d0*uold(ind_grid(i)+iskip, 4)**2/d
 #endif
 #ifdef SOLVERmhd
-      ! subtract magnetic energy
-      A = 0.5d0*(uold(ind_grid(i)+iskip, 6)+uold(ind_grid(i)+iskip, nvar+1))
-      B = 0.5d0*(uold(ind_grid(i)+iskip, 7)+uold(ind_grid(i)+iskip, nvar+2))
-      C = 0.5d0*(uold(ind_grid(i)+iskip, 8)+uold(ind_grid(i)+iskip, nvar+3))
-      energy = energy - 0.5*(A**2+B**2+C**2)
+         ! subtract magnetic energy
+         A = 0.5d0*(uold(ind_grid(i)+iskip, 6)+uold(ind_grid(i)+iskip, nvar+1))
+         B = 0.5d0*(uold(ind_grid(i)+iskip, 7)+uold(ind_grid(i)+iskip, nvar+2))
+         C = 0.5d0*(uold(ind_grid(i)+iskip, 8)+uold(ind_grid(i)+iskip, nvar+3))
+         energy = energy - 0.5*(A**2+B**2+C**2)
 #endif
 #if NENER > 0
-      ! subtract non-thermal energies
-      do irad = 1, nener
-         energy = energy-uold(ind_grid(i)+iskip, nhydro+irad)
-      end do
+         ! subtract non-thermal energies
+         do irad = 1, nener
+            energy = energy-uold(ind_grid(i)+iskip, nhydro+irad)
+         end do
 #endif
-
-      ! convert to pressure
-      pressure(i) = (gamma-1d0)*energy
+         ! convert to pressure
+         pressure(i) = (gamma-1d0)*energy
+      end if
    end do
 
 end subroutine calc_thermal_pressure_from_total_energy

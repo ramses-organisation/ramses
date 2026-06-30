@@ -860,6 +860,7 @@ subroutine ctoprim(uin,q,gravin,dt,ngrid)
 #endif
               ! Compute thermal pressure
               eint = MAX(uin(l,i,j,k,neul)*oneoverrho-eken-erad,smalle)
+              if(energy_fix) eint=uin(l,i,j,k,nvar)*oneoverrho
               q(l,i,j,k,neul) = (gamma-one)*rho_grid*eint
 
               ! Now, we store the density

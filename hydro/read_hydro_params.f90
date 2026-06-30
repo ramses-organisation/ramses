@@ -47,7 +47,7 @@ subroutine read_hydro_params(nml_ok)
        & ,allow_switch_solver, allow_switch_solver2D &
        & ,switch_solv_B,switch_solv_dens,switch_solv_min_dens &
 #endif
-       & ,pressure_fix,beta_fix,scheme,riemann &
+       & ,pressure_fix,beta_fix,energy_fix,scheme,riemann &
        & ,strict_equilibrium
 
   ! Refinement parameters
@@ -433,6 +433,7 @@ subroutine read_hydro_params(nml_ok)
      ek_bound=0.5d0*d_bound(i)*(u_bound(i)**2+v_bound(i)**2+w_bound(i)**2)
      em_bound=0.5d0*(A_bound(i)**2+B_bound(i)**2+C_bound(i)**2)
      boundary_var(i,5)=ek_bound+em_bound+P_bound(i)/(gamma-1.0d0)
+     if(energy_fix)boundary_var(i,nvar)=P_bound(i)/(gamma-1.0d0)
 #else
 #if NDIM>1
      boundary_var(i,3)=d_bound(i)*v_bound(i)
@@ -445,6 +446,7 @@ subroutine read_hydro_params(nml_ok)
         ek_bound=ek_bound+0.5d0*boundary_var(i,idim+1)**2/boundary_var(i,1)
      end do
      boundary_var(i,neul)=ek_bound+P_bound(i)/(gamma-1.0d0)
+     if(energy_fix)boundary_var(i,nvar)=P_bound(i)/(gamma-1.0d0)
 #endif
   end do
 
