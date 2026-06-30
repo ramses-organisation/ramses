@@ -83,6 +83,7 @@ subroutine condinit(x,u,dx,nn)
   do ivar=nhydro+1+nener,nvar
      u(1:nn,ivar)=q(1:nn,1)*q(1:nn,ivar)
   end do
+  if(energy_fix) u(1:nn,nvar)=q(1:nn,neul)/(gamma-1.0d0)
 #endif
 
 end subroutine condinit
