@@ -2087,12 +2087,17 @@ subroutine ctoprim(uin,q,bf,gravin,dt,ngrid)
 #endif
 
            ! Compute thermal pressure through EOS
-           do l = 1, ngrid
-              etot = uin(l,i,j,k,5) - emag(l) -erad(l)
-              eint = etot/q(l,i,j,k,1)-eken(l)
-              if(energy_fix) eint=uin(l,i,j,k,nvar)/uin(l,i,j,k,1)
-              q(l,i,j,k,5)=MAX((gamma-one)*q(l,i,j,k,1)*eint,smallp)
-           end do
+           if(energy_fix) then
+              do l = 1, ngrid
+                 q(l,i,j,k,5)=MAX((gamma-one)*uin(l,i,j,k,nvar),smallp)
+              end do
+           else
+              do l = 1, ngrid
+                 etot = uin(l,i,j,k,5) - emag(l) -erad(l)
+                 eint = etot/q(l,i,j,k,1)-eken(l)
+                 q(l,i,j,k,5)=MAX((gamma-one)*q(l,i,j,k,1)*eint,smallp)
+              end do
+           end if
 
            ! Gravity predictor step
            do idim = 1, ndim

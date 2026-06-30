@@ -271,11 +271,13 @@ subroutine calc_thermal_pressure_from_total_energy(ind_grid, iskip, pressure, nc
    real(dp) :: A, B, C
 #endif
 
-   do i = 1, ncache
-      if(energy_fix) then
+   if(energy_fix) then
+      do i = 1, ncache
          ! Use stored internal energy scalar directly (avoids cancellation errors)
          pressure(i) = (gamma-1d0)*uold(ind_grid(i)+iskip, nvar)
-      else
+      end do
+   else
+      do i = 1, ncache
          d = max(uold(ind_grid(i)+iskip, 1), smallr)
          ! total energy
          energy = uold(ind_grid(i)+iskip, neul)
@@ -302,7 +304,7 @@ subroutine calc_thermal_pressure_from_total_energy(ind_grid, iskip, pressure, nc
 #endif
          ! convert to pressure
          pressure(i) = (gamma-1d0)*energy
-      end if
-   end do
+      end do
+   end if
 
 end subroutine calc_thermal_pressure_from_total_energy
