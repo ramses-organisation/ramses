@@ -34,4 +34,3 @@ __pycache__
 *.log
 # IDEs files
 .vscode
-tests/*
