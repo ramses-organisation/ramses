@@ -9,6 +9,7 @@ subroutine rho_fine(ilevel,icount)
   use poisson_commons
   use cooling_module
   use mpi_mod
+  use dice_commons
   implicit none
 #ifndef WITHOUTMPI
   integer::info
@@ -43,6 +44,15 @@ subroutine rho_fine(ilevel,icount)
   !-------------------------------------------------------
   ! Initialize rho to analytical and baryon density field
   !-------------------------------------------------------
+#if NDIM==3
+  if(dice_init.and.amr_struct) then
+    if(hydro)call multipole_from_current_level(ilevel)
+    call cic_from_multipole(ilevel)
+    ! Update boundaries
+    call make_virtual_reverse_dp(rho(1),ilevel)
+    call make_virtual_fine_dp   (rho(1),ilevel)
+  else
+#endif
   if(ilevel==levelmin.or.icount>1)then
      do i=nlevelmax,ilevel,-1
         ! Compute mass multipole
@@ -54,7 +64,9 @@ subroutine rho_fine(ilevel,icount)
         call make_virtual_fine_dp   (rho(1),i)
      end do
   end if
-
+#if NDIM==3
+  endif
+#endif
   !--------------------------
   ! Initialize fields to zero
   !--------------------------
@@ -318,6 +330,198 @@ subroutine rho_from_current_level(ilevel)
   ! End loop over cpus
 
 end subroutine rho_from_current_level
+#if NDIM==3
+subroutine multipole_from_current_level(ilevel)
+  use amr_commons
+  use pm_commons
+  use hydro_commons
+  use poisson_commons
+  implicit none
+  integer::ilevel
+  !------------------------------------------------------------------
+  ! This routine computes the density field at level ilevel using
+  ! the CIC scheme from particles that are not entirely in
+  ! level ilevel (boundary particles).
+  ! Arrays flag1 and flag2 are used as temporary work space.
+  !------------------------------------------------------------------
+  integer::igrid,jgrid,ipart,jpart,idim,icpu,ind,iskip,ibound
+  integer::j,ig,ip,npart1,npart2,next_part
+  real(dp)::dx
+
+  integer,dimension(1:nvector),save::ind_grid,ind_cell
+  integer,dimension(1:nvector),save::ind_part,ind_grid_part
+  real(dp),dimension(1:nvector,1:ndim),save::x0
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!
+  integer ::nx_loc
+  real(dp),dimension(1:twotondim,1:3)::xc
+  integer ::ix,iy,iz
+  real(kind=8)::dx_loc,scale,vol_loc
+  real(dp),dimension(1:3)::skip_loc
+  ! Mesh spacing in that level
+  dx=0.5D0**ilevel
+  nx_loc=(icoarse_max-icoarse_min+1)
+  skip_loc=(/0.0d0,0.0d0,0.0d0/)
+  if(ndim>0)skip_loc(1)=dble(icoarse_min)
+  if(ndim>1)skip_loc(2)=dble(jcoarse_min)
+  if(ndim>2)skip_loc(3)=dble(kcoarse_min)
+  scale=boxlen/dble(nx_loc)
+  dx_loc=dx*scale
+  vol_loc=dx_loc**ndim
+  do ind=1,twotondim
+     iz=(ind-1)/4
+     iy=(ind-1-4*iz)/2
+     ix=(ind-1-2*iy-4*iz)
+     if(ndim>0)xc(ind,1)=(dble(ix)-0.5D0)*dx
+     if(ndim>1)xc(ind,2)=(dble(iy)-0.5D0)*dx
+     if(ndim>2)xc(ind,3)=(dble(iz)-0.5D0)*dx
+  end do
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+  if(verbose)write(*,111)ilevel
+  ! Mesh spacing in that level
+  dx=0.5D0**ilevel
+
+
+  ! Initialize unew field to zero
+  do icpu=1,ncpu
+     do ind=1,twotondim
+        iskip=ncoarse+(ind-1)*ngridmax
+        do idim=1,ndim+1
+           do j=1,reception(icpu,ilevel)%ngrid
+              unew(reception(icpu,ilevel)%igrid(j)+iskip,idim)=0.0D0
+           end do
+        end do
+     end do
+  end do
+  do ind=1,twotondim
+     iskip=ncoarse+(ind-1)*ngridmax
+     do idim=1,ndim+1
+        do j=1,active(ilevel)%ngrid
+           unew(active(ilevel)%igrid(j)+iskip,idim)=0.0D0
+        end do
+     end do
+  end do
+  ! Reset unew in physical boundaries
+  do ibound=1,nboundary
+     do ind=1,twotondim
+        iskip=ncoarse+(ind-1)*ngridmax
+        do idim=1,ndim+1
+           do j=1,boundary(ibound,ilevel)%ngrid
+              unew(boundary(ibound,ilevel)%igrid(j)+iskip,idim)=0.0
+           end do
+        end do
+     end do
+  end do
+
+  ! Loop over cpus
+  do icpu=1,ncpu
+     ! Loop over grids
+     igrid=headl(icpu,ilevel)
+     ig=0
+     ip=0
+     do jgrid=1,numbl(icpu,ilevel)
+        npart1=numbp(igrid)  ! Number of particles in the grid
+        npart2=0
+
+        ! Count gas particles
+        if(npart1>0)then
+           ipart=headp(igrid)
+           ! Loop over particles
+           do jpart=1,npart1
+              ! Save next particle   <--- Very important !!!
+              next_part=nextp(ipart)
+              if(idp(ipart).eq.1)then
+                 npart2=npart2+1
+              endif
+              ipart=next_part  ! Go to next particle
+           end do
+        endif
+
+        if(npart2>0)then
+           ig=ig+1
+           ind_grid(ig)=igrid
+           ipart=headp(igrid)
+           ! Loop over particles
+           do jpart=1,npart1
+              ! Save next particle   <--- Very important !!!
+              next_part=nextp(ipart)
+              ! Select only gas particles
+              if(idp(ipart).eq.1)then
+                 if(ig==0)then
+                    ig=1
+                    ind_grid(ig)=igrid
+                 end if
+                 ip=ip+1
+                 ind_part(ip)=ipart
+                 ind_grid_part(ip)=ig
+              endif
+              if(ip==nvector)then
+                 ! Lower left corner of 3x3x3 grid-cube
+                 do idim=1,ndim
+                    do j=1,ig
+                       x0(j,idim)=xg(ind_grid(j),idim)-3.0D0*dx
+                    end do
+                 end do
+                 do j=1,ig
+                    ind_cell(j)=father(ind_grid(j))
+                 end do
+                 call ngp_amr_gas(ind_cell,ind_part,ind_grid_part,x0,ig,ip,ilevel)
+                 ip=0
+                 ig=0
+              end if
+              ipart=next_part  ! Go to next particle
+           end do
+           ! End loop over particles
+        end if
+        igrid=next(igrid)   ! Go to next grid
+     end do
+     ! End loop over grids
+
+     if(ip>0)then
+        ! Lower left corner of 3x3x3 grid-cube
+        do idim=1,ndim
+           do j=1,ig
+              x0(j,idim)=xg(ind_grid(j),idim)-3.0D0*dx
+           end do
+        end do
+        do j=1,ig
+           ind_cell(j)=father(ind_grid(j))
+        end do
+        call ngp_amr_gas(ind_cell,ind_part,ind_grid_part,x0,ig,ip,ilevel)
+     end if
+
+  end do
+  ! End loop over cpus
+
+  ! Update boundaries
+  do idim=1,ndim+1
+     call make_virtual_reverse_dp(unew(1,idim),ilevel)
+     call make_virtual_fine_dp(unew(1,idim),ilevel)
+  end do
+
+  ! Check for over-refinement
+  do ind=1,twotondim
+     iskip=ncoarse+(ind-1)*ngridmax
+     do j=1,active(ilevel)%ngrid
+        if(unew(active(ilevel)%igrid(j)+iskip,1)==0d0) then
+           unew(active(ilevel)%igrid(j)+iskip,1)=smallr*vol_loc
+           do idim=1,ndim
+              unew(active(ilevel)%igrid(j)+iskip,idim+1)=(xg(active(ilevel)%igrid(j),idim)+xc(ind,idim)-skip_loc(idim))*scale &
+                 & *unew(active(ilevel)%igrid(j)+iskip,1)
+           end do
+        endif
+     end do
+  end do
+
+  do idim=1,ndim+1
+     call make_virtual_fine_dp(unew(1,idim),ilevel)
+  end do
+
+  111 format('   Entering multipole_from_current_level for level',i2)
+
+end subroutine multipole_from_current_level
+#endif
+
 !##############################################################################
 !##############################################################################
 !##############################################################################
@@ -327,6 +531,7 @@ subroutine cic_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
   use pm_commons
   use pm_parameters, only:nlevelmax_sink
   use poisson_commons
+  use dice_commons
   use hydro_commons, ONLY: mass_sph
   implicit none
   integer::ng,np,ilevel
@@ -548,6 +753,12 @@ subroutine cic_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
         ok(j)=(igrid(j,ind)>0).and.is_not_tracer(fam(j))
         vol2(j)=mmm(j)*vol(j,ind)/vol_loc
      end do
+
+     if (dice_init) then
+        do j=1,np
+           ok(j)=ok(j).and.(idp(ind_part(j)).ne.1)
+        end do
+     end if
 
      if(cic_levelmax==0.or.ilevel<=cic_levelmax)then
         do j=1,np
@@ -789,6 +1000,122 @@ subroutine multipole_fine(ilevel)
 111 format('   Entering multipole_fine for level',i2)
 
 end subroutine multipole_fine
+!###########################################################
+!###########################################################
+!###########################################################
+!###########################################################
+#if NDIM==3
+subroutine ngp_amr_gas(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
+  use amr_commons
+  use pm_commons
+  use hydro_commons
+  use poisson_commons
+  implicit none
+  integer::ng,np,ilevel
+  integer ,dimension(1:nvector)::ind_cell,ind_grid_part,ind_part
+  real(dp),dimension(1:nvector,1:ndim)::x0
+  !------------------------------------------------------------------
+  ! This routine computes the density field at level ilevel using
+  ! the CIC scheme. Only cells that are in level ilevel
+  ! are updated by the input particle list.
+  !------------------------------------------------------------------
+  integer::j,idim,nx_loc
+  real(dp)::dx,dx_loc,scale
+  ! Grid-based arrays
+  integer ,dimension(1:nvector,1:threetondim),save::nbors_father_cells
+  ! Particle-based arrays
+  logical ,dimension(1:nvector),save::ok
+  real(dp),dimension(1:nvector,1:ndim),save::x
+  integer ,dimension(1:nvector,1:ndim),save::id,igd,icd
+  integer ,dimension(1:nvector),save::igrid,icell,indp,kg
+  real(dp),dimension(1:3)::skip_loc
+  real(dp),dimension(1:nvector),save::vol_loc
+
+
+  ! Mesh spacing in that level
+  dx=0.5D0**ilevel
+  nx_loc=(icoarse_max-icoarse_min+1)
+  skip_loc=(/0.0d0,0.0d0,0.0d0/)
+  if(ndim>0)skip_loc(1)=dble(icoarse_min)
+  if(ndim>1)skip_loc(2)=dble(jcoarse_min)
+  if(ndim>2)skip_loc(3)=dble(kcoarse_min)
+  scale=boxlen/dble(nx_loc)
+  dx_loc=dx*scale
+  vol_loc(1:nvector)=dx_loc**ndim
+
+  call get3cubefather(ind_cell,nbors_father_cells,ng,ilevel)
+
+  ! Rescale position at level ilevel
+  do idim=1,ndim
+     do j=1,np
+        x(j,idim)=xp(ind_part(j),idim)/scale+skip_loc(idim)
+        x(j,idim)=x(j,idim)-x0(ind_grid_part(j),idim)
+        x(j,idim)=x(j,idim)/dx
+     end do
+  end do
+
+  ! NGP at level ilevel
+  do idim=1,ndim
+     do j=1,np
+        id(j,idim)=x(j,idim)
+     end do
+  end do
+
+   ! Compute parent grids
+  do idim=1,ndim
+     do j=1,np
+        igd(j,idim)=id(j,idim)/2
+     end do
+  end do
+  do j=1,np
+     kg(j)=1+igd(j,1)+3*igd(j,2)+9*igd(j,3)
+     igrid(j)=son(nbors_father_cells(ind_grid_part(j),kg(j)))
+  end do
+
+  ! Check if particles are entirely in level ilevel
+  ok(1:np)=.true.
+  do j=1,np
+     ok(j)=ok(j).and.igrid(j)>0
+  end do
+
+  ! Compute parent cell position
+  do idim=1,ndim
+     do j=1,np
+        if(ok(j)) then
+           icd(j,idim)=id(j,idim)-2*igd(j,idim)
+        endif
+     end do
+  end do
+
+  do j=1,np
+     if(ok(j)) then
+        icell(j)=1+icd(j,1)+2*icd(j,2)+4*icd(j,3)
+     endif
+  end do
+
+  ! Compute parent cell adresses
+  do j=1,np
+     if(ok(j))then
+        indp(j)=ncoarse+(icell(j)-1)*ngridmax+igrid(j)
+     else
+        indp(j) = nbors_father_cells(ind_grid_part(j),kg(j))
+     end if
+  end do
+
+  if(hydro)then
+     do j=1,np
+        unew(indp(j),1)=unew(indp(j),1)+mp(ind_part(j))
+     end do
+     do idim=1,ndim
+        do j=1,np
+           unew(indp(j),idim+1)=unew(indp(j),idim+1)+mp(ind_part(j))*xp(ind_part(j),idim)
+        end do
+     end do
+  endif
+
+
+end subroutine ngp_amr_gas
+#endif
 !###########################################################
 !###########################################################
 !###########################################################
