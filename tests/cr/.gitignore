@@ -1,7 +1,0 @@
-# Local CR-test artifacts — regenerable, not committed
-*.pdf
-*.png
-*.ipynb
-*.tex
-# osyris plotting aid (for inspecting results), not test cases
-notebooks/
