@@ -34,4 +34,4 @@ fig.tight_layout()
 fig.savefig(title + ".pdf", bbox_inches="tight")
 
 # regression check (mirror RT): final-snapshot sums vs committed <title>-ref.dat
-visu_ramses.check_solution(data["data"], title, tolerance={"all": 3e-6})
+visu_ramses.check_solution(data["data"], title, tolerance={"all": 3e-6}, overwrite=False)

@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import visu_ramses
 
 # ---- CONFIG (per test) ----
-title="jiang-424"; center=False; analytic=None
+title="jiang-424"; center=False;
 panels=[("density", r"$\rho$", True), ("pressure", r"$P_{\rm th}$", False), ("CRegy_01", r"$e_c$", False), ("CRflx_01_x", r"$F_c$", False), ("level", "level", False)]
 # ---------------------------
 
@@ -33,17 +33,11 @@ for i, si in enumerate(snaps):
         ax.set_ylabel(lab)
         if ylog:
             ax.set_yscale("log")
-    if analytic == "triangular" and t > 0:   # 411t: panels[0]=CRegy_01, panels[1]=CRflx_01_x
-        xa = np.linspace(x.min() - shift, x.max() - shift, 600)
-        Ea = 2.0 + 4.0/3.0*t - np.abs(xa)
-        xm = np.sqrt(16.0/9.0*t*(3.0+t)); Ea[np.abs(xa) < xm] = 2.0 + 4.0/3.0*t - xm
-        axes[0].plot(xa, Ea, "k--", lw=0.9, label="analytic")
-        Fa = np.zeros_like(xa); Fa[xa >= xm] = 4.0/3.0*Ea[xa >= xm]; Fa[xa <= -xm] = -4.0/3.0*Ea[xa <= -xm]
-        axes[1].plot(xa, Fa, "k--", lw=0.9)
+
 axes[0].legend(fontsize=8, framealpha=0.5); axes[-1].set_xlabel("x")
 axes[0].set_title(title)
 fig.tight_layout(); plt.subplots_adjust(hspace=0.08)
 fig.savefig(title + ".pdf", bbox_inches="tight")
 
 # regression check (mirror RT): final-snapshot sums vs committed <title>-ref.dat
-visu_ramses.check_solution(data["data"], title, tolerance={"all": 1e-8})
+visu_ramses.check_solution(data["data"], title, tolerance={"all": 1e-8}, overwrite=False)

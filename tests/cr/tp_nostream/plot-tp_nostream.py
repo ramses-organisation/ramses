@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import visu_ramses
 
 # ---- CONFIG (per test) ----
-title="tp_nostream"; center=False; analytic=None
+title="tp_nostream"; center=False;
 panels=[("density", r"$\rho$", False), ("velocity_x", r"$v$", False), ("pressure", r"$P_{\rm gas}$", False), ("P_CR", r"$P_{\rm CR}$", False), ("CRflx_01_x", r"$F_{\rm CR}$", False)]
 # ---------------------------
 
@@ -39,4 +39,4 @@ fig.tight_layout(); plt.subplots_adjust(hspace=0.08)
 fig.savefig(title + ".pdf", bbox_inches="tight")
 
 # regression check (mirror RT): final-snapshot sums vs committed <title>-ref.dat
-visu_ramses.check_solution(data["data"], title, tolerance={"all": 1e-8})
+visu_ramses.check_solution(data["data"], title, tolerance={"all": 1e-8}, overwrite=False)
