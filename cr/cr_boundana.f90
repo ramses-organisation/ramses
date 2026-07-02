@@ -13,14 +13,14 @@ subroutine cr_boundana(x,u,dx,ibound,ncell)
   real(dp),dimension(1:nvector,1:ndim)::x   ! Cell center position.
   !================================================================
   ! Analytic CR boundary state; u holds per-group [energy, ndim fluxes],
-  ! ibound = boundary-region index. Default: energy = smallcr floor, flux = 0.
+  ! ibound = boundary-region index. Default: energy = 0., flux = 0.
   !================================================================
   integer::i,igrp,icrE
 
   do i=1,ncell
      do igrp=1,ncr
         icrE=iCRu+(ndim+1)*(igrp-1)
-        u(i,icrE)=smallcr
+        u(i,icrE)=0d0
         u(i,icrE+1:icrE+ndim)=0d0
      end do
   end do
