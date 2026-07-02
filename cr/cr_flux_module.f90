@@ -60,7 +60,7 @@ subroutine cmp_cr_flux_tensors(uin_gas, uin_cr, iGrp, nGrid, ftens, vmax, bfield
      if(nedge.ge.2) cycle
 
      do n=1,ngrid
-        Ecr =   uin_cr(n, i, j, k, icrE)            ! CR density in cell
+        Ecr =   max(uin_cr(n, i, j, k, icrE), cr_efloor)   ! CR density (floored so 0 background is safe in M1)
         crflux = uin_cr(n,i,j,k,icrE+1 : icrE+ndim) ! CR flux vector
         if(Ecr .lt. 0d0) then
           write(*,*)'negative CR density in cmp_flux_tensors. -EXITING-'

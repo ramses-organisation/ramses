@@ -15,22 +15,16 @@ subroutine cr_condinit(x,u,dx,nn,ilevel)
   ! u(i,1:ncrvar) is the CR conservative vector for group g:
   !   energy at Ecr_idx(g), the ndim fluxes in the slots after it.
   !----------------------------------------------------------------
-  integer::i,igrp,icrE
+  integer::i
   real(dp),dimension(1:nvector)::tmp
   real(dp)::pi
 #if NDIM>1
   real(dp)::xx,yy,rr,theta
 #endif
 
-  ! Default for every group: energy floor, zero flux. Test branches below
-  ! overwrite the first group's energy (and, where applicable, flux).
-  do i=1,nn
-     do igrp=1,ncr_groups
-        icrE=Ecr_idx(igrp)
-        u(i,icrE)=cr_efloor
-        u(i,icrE+1:icrE+ndim)=0d0
-     end do
-  end do
+  ! Default for every group: zero. Test branches below overwrite the
+  ! first group's energy (and, where applicable, flux).
+  u(1:nn,1:ncrvar)=0d0
 
   select case(trim(jiang_test))
 
