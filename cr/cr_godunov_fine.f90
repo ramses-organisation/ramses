@@ -80,7 +80,7 @@ subroutine crmom_step(ilevel)
   ! Restriction operator to update this level split cells. upload_fine
   ! restricts the gas array; cr_upload_fine restricts the SEPARATED CR field
   ! cruold fine->coarse (the generic upload_fine never touches cruold).
-  call upload_fine(ilevel)
+!   call upload_fine(ilevel)
   call cr_upload_fine(ilevel)
 
   if(myid==1 .and. mod(nstep_coarse,ncontrol)==0)then

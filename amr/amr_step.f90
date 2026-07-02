@@ -340,12 +340,7 @@ recursive subroutine amr_step(ilevel,icount)
 #endif
 
 #ifdef CRPHYS
-  ! Set crunew equal to cruold before the recursive descent, so the finer
-  ! level's coarse-fine flux correction accumulates into crunew at this level
-  ! (mirrors set_unew / rt_set_unew). NOTE: currently a no-op -- the
-  ! unconditional cr_set_unew at the top of crmom_step re-initialises crunew on
-  ! substep 1 and overwrites this. Removing that internal reset is a separate,
-  ! deliberate step.
+                               call timer('cosmic rays - set unew','start')
   if(cr_advect)call cr_set_unew(ilevel)
 #endif
 
@@ -440,24 +435,9 @@ recursive subroutine amr_step(ilevel,icount)
    endif ! .not.static_gas (gas hyperbolic update)
 
 #ifdef CRPHYS
-     if(cr_advect)then
-        call upload_fine(ilevel)
-        ! Restrict the SEPARATED CR field fine->coarse as well: the generic
-        ! upload_fine only touches the gas array uold. Without this the coarse
-        ! cells under refined regions keep stale CR values, so the prolongation
-        ! back to fine cells injects oct-scale noise (cral's embedded CR is
-        ! restricted automatically by upload_fine). Mirrors cral amr_step:420.
-        call cr_upload_fine(ilevel)
-        ! Update boundaries on gas and CR variables
-        do ivar=1,nvar_all
-           call make_virtual_fine_dp(uold(1,ivar),ilevel)
-        end do
-        do ivar=1,ncrvars
-           call make_virtual_fine_dp(cruold(1,ivar),ilevel)
-        end do
-        ! Hyperbolic solver for cosmic rays
-        call timer('cosmic rays','start')
-        call crmom_step(ilevel)
+      if(cr_advect)then
+      call timer('cosmic rays','start')
+      call crmom_step(ilevel)
      endif
 #endif
 
@@ -485,9 +465,6 @@ recursive subroutine amr_step(ilevel,icount)
                                call timer('hydro upload fine','start')
      call upload_fine(ilevel)
 #ifdef CRPHYS
-     ! Restrict the separated CR field too (cral's upload_fine at amr_step:442
-     ! restricts the embedded CR). Keeps coarse CR cells current before the next
-     ! step's refine/derefine so prolongation never injects a stale value.
      if(cr_advect)call cr_upload_fine(ilevel)
 #endif
 
@@ -560,10 +537,6 @@ recursive subroutine amr_step(ilevel,icount)
   endif
 
 #ifdef CRPHYS
-  ! Refresh CR ghost cells before the refinement map (flag_fine -> cr_hydro_flag),
-  ! mirroring the gas uold sync above, so err_grad_crmom reads valid cruold at
-  ! rank boundaries. make_virtual_fine_dp is a no-op without MPI (byte-identical
-  ! in serial); with MPI it removes the rank-count dependence of the CR AMR grid.
   if(cr_advect)then
      do ivar=1,ncrvars
         call make_virtual_fine_dp(cruold(1,ivar),ilevel)
