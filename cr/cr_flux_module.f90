@@ -373,7 +373,6 @@ SUBROUTINE cmp_cr_faces(uin_gas,uin_cr,iFlx,dx,dt,iGrp,ngrid,ilevel)
         vdn  = uin_gas( n,  i-1, j, k, 2) / uin_gas(n,i-1,j,k,1) ! left velocity
         vup  = uin_gas( n,  i,   j, k, 2) / uin_gas(n,i  ,j,k,1) ! right velocity
 
-        if(cr_interpolation) then ! Second-order interpolation with using Van-Leer slope Limiter
         ! interpolation of U
         slopeLM = (fup-fdn)/dx
         slopeRM = (cFlx(n, i+1, j, k, :, 1) - fup)/dx
@@ -400,7 +399,6 @@ SUBROUTINE cmp_cr_faces(uin_gas,uin_cr,iFlx,dx,dt,iGrp,ngrid,ilevel)
         udn = udn+slopeL*0.5d0*dx
         uup = uup-slopeM*0.5d0*dx
 
-        endif
         meanadv = 0.5*(vdn+vup)
         meandiffv = 0.5*( lmax(n,i-1,j,k,1) + lmax(n,i,j,k,1) )
         adn = min(meanadv-meandiffv, vdn-lmax(n,i-1,j,k,1))
@@ -433,7 +431,6 @@ SUBROUTINE cmp_cr_faces(uin_gas,uin_cr,iFlx,dx,dt,iGrp,ngrid,ilevel)
            vdn  = uin_gas( n,  i, j-1, k,3) / uin_gas(n,i,j-1,k,1) ! left velocity
            vup  = uin_gas( n,  i ,j,   k,3) / uin_gas(n,i,j,  k,1) ! right velocity
 
-           if(cr_interpolation) then ! Second-order interpolation with using Van-Leer slope Limiter
            ! interpolation of U
            slopeLM = (fup-fdn)/dx
            slopeRM = (cFlx(n, i, j+1, k, :, 2) - fup)/dx
@@ -460,7 +457,6 @@ SUBROUTINE cmp_cr_faces(uin_gas,uin_cr,iFlx,dx,dt,iGrp,ngrid,ilevel)
            udn = udn+slopeL*0.5d0*dx
            uup = uup-slopeM*0.5d0*dx
 
-           endif
            meanadv = 0.5*(vdn+vup)
            meandiffv = 0.5*( lmax(n,i,j-1,k,2) + lmax(n,i,j,k,2) )
            adn = min(meanadv-meandiffv, vdn-lmax(n,i,j-1,k,2))
@@ -493,7 +489,6 @@ SUBROUTINE cmp_cr_faces(uin_gas,uin_cr,iFlx,dx,dt,iGrp,ngrid,ilevel)
            vdn  = uin_gas( n,  i, j, k-1, 4) / uin_gas(n,i,  j,k-1,1) ! left velocity
            vup  = uin_gas( n,  i ,j, k,   4) / uin_gas(n,i  ,j,k,  1) ! right velocity
 
-           if(cr_interpolation) then ! Second-order interpolation with using Van-Leer slope Limiter
            ! interpolation of U
            slopeLM = (fup-fdn)/dx
            slopeRM = (cFlx(n, i, j, k+1, :, 3) - fup)/dx
@@ -520,7 +515,6 @@ SUBROUTINE cmp_cr_faces(uin_gas,uin_cr,iFlx,dx,dt,iGrp,ngrid,ilevel)
            udn = udn+slopeL*0.5d0*dx
            uup = uup-slopeM*0.5d0*dx
 
-           endif
 
            meanadv = 0.5*(vdn+vup)
            meandiffv = 0.5*( lmax(n,i,j,k-1,3) + lmax(n,i,j,k,3) )
