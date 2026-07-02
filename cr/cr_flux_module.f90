@@ -288,31 +288,6 @@ FUNCTION cmp_cr_face(fdn, fup, udn, uup, lminus, lplus)
 END FUNCTION cmp_cr_face
 
 !************************************************************************
-FUNCTION minmod(left, right)
-
-! Minmod interpolation function for intercell fluxes
-  real(dp),dimension(ndim+1)::left,right,minmod
-  integer::i
-!------------------------------------------------------------------------
-  do i=1,ndim+1
-    if (abs(left(i) ) .gt. abs(right(i))) minmod(i)=right(i)
-    if (abs(right(i)) .ge. abs(left(i) )) minmod(i)=left(i)
-    if (left(i)*right(i) .le. 0.0d0     ) minmod(i)=0.0d0
-  end do
-END FUNCTION minmod
-
-!************************************************************************
-FUNCTION vminmod(left, right)
-
-! Minmod interpolation function for velocity
-  real(dp)::left,right,vminmod
-!------------------------------------------------------------------------
-  if (abs(left ) .gt. abs(right)) vminmod=right
-  if (abs(right) .ge. abs(left )) vminmod=left
-  if (left*right .le. 0.0d0     ) vminmod=0.0d0
-END FUNCTION vminmod
-
-!************************************************************************
 SUBROUTINE cmp_cr_faces(uin_gas,uin_cr,iFlx,dx,dt,iGrp,ngrid,ilevel)
 
 !  Compute intercell fluxes for one CR group in all dimensions,
@@ -425,22 +400,6 @@ SUBROUTINE cmp_cr_faces(uin_gas,uin_cr,iFlx,dx,dt,iGrp,ngrid,ilevel)
         udn = udn+slopeL*0.5d0*dx
         uup = uup-slopeM*0.5d0*dx
 
-        else if(cr_use_minmod) then ! Second-order interpolation with using minmod slope Limiter
-            slopeLM = (fup-fdn)/dx
-            slopeRM = (cFlx(n, i+1, j, k, :, 1) - fup)/dx
-            slopeM  = minmod(slopeLM,slopeRM)
-            slopeLL = (fdn - cFlx(n, i-2, j, k, :, 1))/dx
-            slopeL  = minmod(slopeLL,slopeLM)
-            fdn = fdn+slopeL*0.5d0*dx
-            fup = fup-slopeM*0.5d0*dx
-
-            slopeLM = (uup-udn)/dx
-            slopeRM = (uin_cr(n, i+1, j, k, iP0:iP1) - uup)/dx
-            slopeM  = minmod(slopeLM,slopeRM)
-            slopeLL = (udn - uin_cr(n, i-2, j, k, iP0:iP1 ))/dx
-            slopeL  = minmod(slopeLL,slopeLM)
-            udn = udn+slopeL*0.5d0*dx
-            uup = uup-slopeM*0.5d0*dx
         endif
         meanadv = 0.5*(vdn+vup)
         meandiffv = 0.5*( lmax(n,i-1,j,k,1) + lmax(n,i,j,k,1) )
@@ -501,22 +460,6 @@ SUBROUTINE cmp_cr_faces(uin_gas,uin_cr,iFlx,dx,dt,iGrp,ngrid,ilevel)
            udn = udn+slopeL*0.5d0*dx
            uup = uup-slopeM*0.5d0*dx
 
-           else if(cr_use_minmod) then ! Second-order interpolation with using minmod slope Limiter
-              slopeLM = (fup-fdn)/dx
-              slopeRM = (cFlx(n, i, j+1, k, :, 2) - fup)/dx
-              slopeM  = minmod(slopeLM,slopeRM)
-              slopeLL = (fdn - cFlx(n, i, j-2, k, :, 2))/dx
-              slopeL  = minmod(slopeLL,slopeLM)
-              fdn = fdn+slopeL*0.5d0*dx
-              fup = fup-slopeM*0.5d0*dx
-
-              slopeLM = (uup-udn)/dx
-              slopeRM = (uin_cr(n, i, j+1, k, iP0:iP1) - uup)/dx
-              slopeM  = minmod(slopeLM,slopeRM)
-              slopeLL = (udn - uin_cr(n, i, j-2, k, iP0:iP1))/dx
-              slopeL  = minmod(slopeLL,slopeLM)
-              udn = udn+slopeL*0.5d0*dx
-              uup = uup-slopeM*0.5d0*dx
            endif
            meanadv = 0.5*(vdn+vup)
            meandiffv = 0.5*( lmax(n,i,j-1,k,2) + lmax(n,i,j,k,2) )
@@ -577,22 +520,6 @@ SUBROUTINE cmp_cr_faces(uin_gas,uin_cr,iFlx,dx,dt,iGrp,ngrid,ilevel)
            udn = udn+slopeL*0.5d0*dx
            uup = uup-slopeM*0.5d0*dx
 
-           else if(cr_use_minmod) then ! Second-order interpolation with using minmod slope Limiter
-              slopeLM = (fup-fdn)/dx
-              slopeRM = (cFlx(n, i, j, k+1, :, 3) - fup)/dx
-              slopeM  = minmod(slopeLM,slopeRM)
-              slopeLL = (fdn - cFlx(n, i, j, k-2, :, 3))/dx
-              slopeL  = minmod(slopeLL,slopeLM)
-              fdn = fdn+slopeL*0.5d0*dx
-              fup = fup-slopeM*0.5d0*dx
-
-              slopeLM = (uup-udn)/dx
-              slopeRM = (uin_cr(n, i, j, k+1, iP0:iP1) - uup)/dx
-              slopeM  = minmod(slopeLM,slopeRM)
-              slopeLL = (udn - uin_cr(n, i, j, k-2, iP0:iP1))/dx
-              slopeL  = minmod(slopeLL,slopeLM)
-              udn = udn+slopeL*0.5d0*dx
-              uup = uup-slopeM*0.5d0*dx
            endif
 
            meanadv = 0.5*(vdn+vup)

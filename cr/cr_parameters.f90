@@ -23,7 +23,6 @@ module cr_parameters
   ! Master switch & scheme
   logical::cr_advect=.false.                ! Master CR transport switch
   logical::cr_HLLE=.true.                   ! HLLE Riemann solver for CR
-  logical::cr_use_minmod=.false.            ! Minmod slope limiter
   logical::cr_isotropic_pressure=.true.        ! .true.=P1 closure, .false.=M1
   logical::cr_flux_correction=.false. ! Rescale superluminal fluxes
   logical::cr_interpolation=.true.          ! Interpolate CR vars on AMR
