@@ -54,13 +54,7 @@ subroutine crmom_step(ilevel)
         end do
      endif
 
-     ! Implicit scattering/streaming source terms: relax (E_cr,F_cr) on
-     ! crunew by sigma=1/Dcr_code (and write the gas back-reaction to
-     ! unew(2:5) when .not.static_gas). Without it the two-moment flux is
-     ! unrelaxed and the scheme is unstable.
      call add_cr_source_terms(ilevel)
-
-     ! Set cruold equal to crunew, but only for the CR vars
      call cr_set_uold(ilevel)
 
      ! Collisional CR cooling (Coulomb/hadronic losses), on cruold.
@@ -77,10 +71,6 @@ subroutine crmom_step(ilevel)
   dtnew(ilevel)=dt_hydro                     ! Restore hydro timestep length
   t=t_save        ! Restore original time (otherwise tiny roundoff error)
 
-  ! Restriction operator to update this level split cells. upload_fine
-  ! restricts the gas array; cr_upload_fine restricts the SEPARATED CR field
-  ! cruold fine->coarse (the generic upload_fine never touches cruold).
-!   call upload_fine(ilevel)
   call cr_upload_fine(ilevel)
 
   if(myid==1 .and. mod(nstep_coarse,ncontrol)==0)then
