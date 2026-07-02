@@ -13,14 +13,11 @@ subroutine courant_fine(ilevel)
 #endif
   implicit none
 #ifdef CRPHYS
-  real(kind=8)::ecrs_loc,ecrs_all
+  real(kind=8)::ecrs_loc,ecrs_all, cr_va_max_all
 #endif
 #ifndef WITHOUTMPI
   integer::info
   real(kind=8),dimension(4)::comm_buffin,comm_buffout
-#ifdef CRPHYS
-  real(kind=8)::cr_va_max_all
-#endif
 #endif
   integer::ilevel
   !----------------------------------------------------------------------
@@ -99,10 +96,6 @@ subroutine courant_fine(ilevel)
         end do
 
 #ifdef CRPHYS
-        ! Gather CR energy (from the separate cruold buffer, iCRu=1) so cmpdt
-        ! can add the CR pressure to the gas sound speed and accumulate
-        ! cr_va_max. cral reads these from the embedded uold;
-        ! the separated module passes them as an extra argument.
         if(cr_advect)then
            do igrp=1,ncr
               do i=1,nleaf
@@ -168,8 +161,6 @@ subroutine courant_fine(ilevel)
 #endif
 
 #ifdef CRPHYS
-        ! Compute cosmic rays energy (pure diagnostic; from the separated
-        ! cruold buffer, not uold). cral mhd/courant_fine.f90:142-149.
         do igrp=1,ncr
            do i=1,nleaf
               ecrs_loc=ecrs_loc+cruold(ind_leaf(i),iCRu+(ndim+1)*(igrp-1))*vol
@@ -204,12 +195,8 @@ subroutine courant_fine(ilevel)
   eint_all=comm_buffout(3)
   emag_all=comm_buffout(4)
 #ifdef CRPHYS
-  ! Separate all-reduce for the CR-energy diagnostic, so the shared
-  ! mass/ekin/eint/emag buffer stays byte-identical to the no-CR (dev) build.
   call MPI_ALLREDUCE(ecrs_loc,ecrs_all,1,MPI_DOUBLE_PRECISION,MPI_SUM,&
        &MPI_COMM_WORLD,info)
-  ! Global max of the per-rank Alfven-speed maximum so the cr_varvmax_vdvs
-  ! cap in cr_courant_fine is decomposition-independent (cral pattern).
   call MPI_ALLREDUCE(cr_va_max,cr_va_max_all,1,MPI_DOUBLE_PRECISION,MPI_MAX,&
        &MPI_COMM_WORLD,info)
   cr_va_max=cr_va_max_all
@@ -236,10 +223,6 @@ subroutine courant_fine(ilevel)
   dtnew(ilevel)=MIN(dtnew(ilevel),dt_all)
 
 #ifdef CRPHYS
-  ! Maximum time step for cosmic-ray moment transport (CR Courant condition
-  ! + adaptive cr_vmax). Body lives in cr/cr_courant_fine.f90; called here at
-  ! the tail of courant_fine because it reads dtnew(ilevel) at the gas
-  ! global-min and the cr_va_max that cmpdt produced above.
   if(cr_advect) call cr_courant_fine(ilevel)
 #endif
 
@@ -321,11 +304,6 @@ subroutine cmpdt(uu,gg,dx,dt,ncell)
   end do
 #endif
 #ifdef CRPHYS
-  ! Add the CR pressure to the gas sound speed (cral mhd/godunov_utils.f90:71-89).
-  ! In the separated module the CR energy is gathered into crecr(:,1:ncr) by the
-  ! caller (cral reads it from the embedded uold). This couples the CR pressure
-  ! into the gas Courant condition -- essential on the refined levels at the CR
-  ! front, where it tightens the gas dt and lets cr_varvmax raise cr_vmax.
   if(cr_advect)then
      do k = 1, ncell
         cr_cs(k)=zero
@@ -387,11 +365,6 @@ subroutine cmpdt(uu,gg,dx,dt,ncell)
   end do
 
 #ifdef CRPHYS
-  ! Store the maximum Alfven speed on the level for the adaptive cr_vmax
-  ! (cral mhd/godunov_utils.f90:133-157). Used only by the cr_varvmax_vdvs
-  ! branch in cr_courant_fine (off in every current test); cr_va_max is
-  ! all-reduced (MPI_MAX) in courant_fine so the cap is decomposition-
-  ! independent.
   if(cr_advect .and. cr_varvmax .and. cr_varvmax_vdvs .and. mom_streaming_diffusion)then
      do k = 1, ncell
         BNva=0d0
