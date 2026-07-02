@@ -29,8 +29,8 @@ jiang_test='413'
 cr_bound_floor=3.0
 Dcr=1d-6
 cr_c_fraction=3.3356409297285193e-9   ! reduced light speed = 100
-mom_streaming_heating=.true.
-mom_streaming_diffusion=.true.
+cr_streaming_heating=.true.
+cr_streaming_diffusion=.true.
 cr_f_taucell=1.0
 cr_advect=.true.
 cr_nregion=0

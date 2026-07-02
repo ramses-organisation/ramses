@@ -9,15 +9,15 @@ subroutine read_cr_params(nml_ok)
   logical::nml_ok
   integer::ig
 
-  namelist/cr_params/cr_advect,cr_HLLE,cr_use_minmod,isotropic_pressure &
-       & ,reduced_CR_flux_correction,cr_interpolation,gamma_cr,gradpcr_mom &
-       & ,cr_smallr_decouple,smallcr,cr_c_fraction,cr_nsubcycle &
+  namelist/cr_params/cr_advect,cr_HLLE,cr_use_minmod,cr_isotropic_pressure &
+       & ,cr_flux_correction,cr_interpolation,gamma_cr,cr_gradp_backreaction &
+       & ,cr_smallr_decouple,cr_efloor,cr_c_fraction,cr_nsubcycle &
        & ,cr_varvmax,cr_varvmax_fudge,cr_varvmax_vdvs &
-       & ,Dcr,DCRmax,Dcr_perp_factor,mom_streaming_diffusion &
-       & ,mom_streaming_heating,v_alfven,cr_f_taucell &
-       & ,cr_cooling,zeta_cr,ne,fneut &
-       & ,cr_bound_floor,jiang_test,err_grad_crmom,cr_legacy_output &
-       & ,crmom_region,crmom_bound &
+       & ,Dcr,DCRmax,Dcr_perp_factor,cr_streaming_diffusion &
+       & ,cr_streaming_heating,cr_v_alfven,cr_f_taucell &
+       & ,cr_cooling,zeta_cr,cr_ne,cr_fneut &
+       & ,cr_bound_floor,jiang_test,err_grad_cr,cr_legacy_output &
+       & ,cr_region_u,cr_boundary_u &
        & ,cr_nregion,cr_region_type,cr_reg_x_center,cr_reg_y_center,cr_reg_z_center &
        & ,cr_reg_length_x,cr_reg_length_y,cr_reg_length_z,cr_exp_region,cr_reg_group
 

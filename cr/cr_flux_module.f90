@@ -68,7 +68,7 @@ subroutine cmp_cr_flux_tensors(uin_gas, uin_cr, iGrp, nGrid, ftens, vmax, bfield
         endif
         ftens(n,i,j,k,1,1:ndim)= crflux  !   First row is CR flux
         ! Rest is Eddington tensor
-        if(isotropic_pressure) then
+        if(cr_isotropic_pressure) then
            ftens(n,i,j,k,2:ndim+1,1:ndim) = 0d0
            do idim = 1, ndim
               ftens(n,i,j,k,idim+1,idim) = &
@@ -181,8 +181,8 @@ SUBROUTINE cmp_cr_wavespeeds(uin_gas, uin_cr, iGrp, ngrid, lmax, ilevel, dt)
        B_field = B_field/norm
 
        va=0.
-       if(mom_streaming_diffusion) va=norm/sqrt(uin_gas(n,i,j,k,1))
-       if(mom_streaming_diffusion .and. v_alfven.gt.0.0) va = v_alfven
+       if(cr_streaming_diffusion) va=norm/sqrt(uin_gas(n,i,j,k,1))
+       if(cr_streaming_diffusion .and. cr_v_alfven.gt.0.0) va = cr_v_alfven
 
        ! Calculate grad Pcr
        gradEcr(1) = (uin_cr(n, i+1, j, k, icrE)-uin_cr(n, i-1, j, k, icrE)) &
@@ -204,9 +204,9 @@ SUBROUTINE cmp_cr_wavespeeds(uin_gas, uin_cr, iGrp, ngrid, lmax, ilevel, dt)
 
        ! Diffusion, eq 10 in JO17
        Dcr_vec = (/ DCR_code(igrp), DCR_code(igrp)*Dcr_perp_factor(iGrp), DCR_code(igrp)*Dcr_perp_factor(iGrp) /)
-       if(mom_streaming_diffusion) &
+       if(cr_streaming_diffusion) &
           Dcr_vec(1) = Dcr_vec(1) + &
-              min(DCRmax_code, 3./max(abs(bdotgradE),1d-50) * va * gamma_cr(iGrp) * max(Ecr,smallcr))
+              min(DCRmax_code, 3./max(abs(bdotgradE),1d-50) * va * gamma_cr(iGrp) * max(Ecr,cr_efloor))
 
        ! Rotate Dcr_vec so it is parallel with B, hence
        ! describing Dcr in the simulation coordinate system
@@ -252,7 +252,7 @@ FUNCTION cmp_cr_lmax(dx_loc, dcoeff, vmax, dt)
   else
     r_factor = sqrt((1.-exp(-min(tau,10.)**2))/min(tau,1e8)**2) ! Capital R on p 6 in YP17
   endif
-  if(isotropic_pressure) then
+  if(cr_isotropic_pressure) then
      cmp_cr_lmax = r_factor * vmax / sqrt(3d0)
   else
      cmp_cr_lmax = r_factor * vmax
@@ -368,9 +368,9 @@ SUBROUTINE cmp_cr_faces(uin_gas,uin_cr,iFlx,dx,dt,iGrp,ngrid,ilevel)
 !------------------------------------------------------------------------
   iP0 = 1+(iGrp-1)*(ndim+1)            ! Index of CR group energy density
   iP1 = iP0+nDim
-  ! Magnetic field, needed for M1; in the default P1 path (isotropic_pressure)
+  ! Magnetic field, needed for M1; in the default P1 path (cr_isotropic_pressure)
   ! cmp_cr_flux_tensors never reads bfield, so skip building the full stencil.
-  if(.not.isotropic_pressure) then
+  if(.not.cr_isotropic_pressure) then
      do idim=1,ndim
         bfield(:,:,:,:,idim) = 0.5*(uin_gas(:,:,:,:,5+idim)+uin_gas(:,:,:,:,nvar+idim))
      end do

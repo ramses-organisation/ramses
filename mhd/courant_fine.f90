@@ -8,7 +8,7 @@ subroutine courant_fine(ilevel)
 #endif
 #ifdef CRPHYS
   use cr_parameters, only: cr_advect,cr_va_max,ncr_groups,Ecr_idx, &
-       & ecrs_tot,crecr
+       & ecrs_tot,cr_egather
   use cr_hydro_commons, only: cruold
 #endif
   implicit none
@@ -99,7 +99,7 @@ subroutine courant_fine(ilevel)
         if(cr_advect)then
            do igrp=1,ncr_groups
               do i=1,nleaf
-                 crecr(i,igrp)=cruold(ind_leaf(i),Ecr_idx(igrp))
+                 cr_egather(i,igrp)=cruold(ind_leaf(i),Ecr_idx(igrp))
               end do
            end do
         endif
@@ -239,8 +239,8 @@ subroutine cmpdt(uu,gg,dx,dt,ncell)
   use const
 #ifdef CRPHYS
   use cr_parameters, only: cr_advect,ncr_groups,gamma_cr,cr_smallr_decouple, &
-       & cr_varvmax,cr_varvmax_vdvs,cr_va_max,mom_streaming_diffusion, &
-       & crecr
+       & cr_varvmax,cr_varvmax_vdvs,cr_va_max,cr_streaming_diffusion, &
+       & cr_egather
 #endif
   implicit none
   integer::ncell
@@ -310,7 +310,7 @@ subroutine cmpdt(uu,gg,dx,dt,ncell)
      end do
      do icr = 1,ncr_groups
         do k = 1, ncell
-           cr_cs(k)=cr_cs(k) + crecr(k,icr) * gamma_cr(icr)*(gamma_cr(icr)-1.0d0)
+           cr_cs(k)=cr_cs(k) + cr_egather(k,icr) * gamma_cr(icr)*(gamma_cr(icr)-1.0d0)
         end do
      end do
      do k = 1, ncell
@@ -365,7 +365,7 @@ subroutine cmpdt(uu,gg,dx,dt,ncell)
   end do
 
 #ifdef CRPHYS
-  if(cr_advect .and. cr_varvmax .and. cr_varvmax_vdvs .and. mom_streaming_diffusion)then
+  if(cr_advect .and. cr_varvmax .and. cr_varvmax_vdvs .and. cr_streaming_diffusion)then
      do k = 1, ncell
         BNva=0d0
         do idim=1,3

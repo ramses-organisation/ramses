@@ -130,13 +130,13 @@ end subroutine cr_init_flow_fine
 
 !************************************************************************
 SUBROUTINE cr_region_condinit(x,u,dx,nn,ilevel)
-  ! Fill the separated CR buffer u(1:nn,1:ncrvar) from namelist crmom_region
+  ! Fill the separated CR buffer u(1:nn,1:ncrvar) from namelist cr_region_u
   ! per CR-owned region geometry (cr_nregion / cr_region_type / cr_reg_* in &cr_params).
   use amr_parameters
   use cr_parameters, only: cr_nregion,cr_region_type,cr_reg_x_center &
        & ,cr_reg_y_center,cr_reg_z_center,cr_reg_length_x,cr_reg_length_y &
-       & ,cr_reg_length_z,cr_exp_region,cr_reg_group,crmom_region,ncrvar &
-       & ,Ecr_idx,smallcr
+       & ,cr_reg_length_z,cr_exp_region,cr_reg_group,cr_region_u,ncrvar &
+       & ,Ecr_idx,cr_efloor
   implicit none
   integer ::nn
   integer::ilevel
@@ -169,7 +169,7 @@ SUBROUTINE cr_region_condinit(x,u,dx,nn,ilevel)
            ! If cell lies within region, REPLACE CR variables by region values
            if(r<1.0)then
               do ivar=1,ncrvar
-                 u(i,ivar)=crmom_region(k,ivar)
+                 u(i,ivar)=cr_region_u(k,ivar)
               end do
            end if
         end do

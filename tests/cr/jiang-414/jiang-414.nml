@@ -26,8 +26,8 @@ bound_type= 0, 0
 jiang_test='414'
 Dcr=0.1
 cr_c_fraction=3.3356409297285193e-9   ! reduced light speed = 100
-mom_streaming_heating=.false.
-mom_streaming_diffusion=.false.
+cr_streaming_heating=.false.
+cr_streaming_diffusion=.false.
 cr_advect=.true.
 cr_legacy_output=.true.
 cr_nregion=1

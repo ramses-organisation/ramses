@@ -36,15 +36,15 @@ jiang_test='422'
 Dcr=0.1
 cr_c_fraction=3.3356409297285193e-9   ! reduced light speed = 100
 cr_advect=.true.
-mom_streaming_heating=.true.
-mom_streaming_diffusion=.true.
-v_alfven=1.0
+cr_streaming_heating=.true.
+cr_streaming_diffusion=.true.
+cr_v_alfven=1.0
 cr_f_taucell=1.0
 cr_nsubcycle=1
 cr_varvmax=.false.
 ! CR energy per region (cral region_condinit reads this); replicated by
 ! cr_region_condinit in patch/cr_tests/cr_condinit.f90 for the separated module.
-crmom_region(:,1) = 50.,50.
+cr_region_u(:,1) = 50.,50.
 cr_nregion=2
 cr_region_type='square','square'
 cr_reg_x_center=2.5,7.5

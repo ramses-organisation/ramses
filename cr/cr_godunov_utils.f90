@@ -37,7 +37,7 @@ SUBROUTINE update_cr_vmax_and_Dcr_code(crvmax)
 !-------------------------------------------------------------------------
     call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
     crvmax=c_cgs/scale_v * cr_c_fraction
-    c_cu = c_cgs/scale_v
+    cr_c_code = c_cgs/scale_v
 
     scale_kappa = scale_l**2/scale_t
     DCRmax_code=DCRmax/scale_kappa
@@ -48,7 +48,7 @@ SUBROUTINE update_cr_vmax_and_Dcr_code(crvmax)
        ! Here that means that our definition of DCR_code
        ! corresponds to DCR_code=1/sigma. That could be
        ! a bit confusing when going through the code.
-       DCR_code(igrp)=max(smalldcr,DCR(igrp)/scale_kappa*3d0)
+       DCR_code(igrp)=max(cr_smalld,DCR(igrp)/scale_kappa*3d0)
     end do
 
 END SUBROUTINE update_cr_vmax_and_Dcr_code

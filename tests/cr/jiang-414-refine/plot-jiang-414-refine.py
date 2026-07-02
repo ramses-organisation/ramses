@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import visu_ramses
 
 # Mirrors plot-jiang-414.py with an extra AMR `level` panel: 1D static CR pulse
-# refined by err_grad_crmom. CRegy_01 (e_c), CRflx_01_x (F_c) and the grid level
+# refined by err_grad_cr. CRegy_01 (e_c), CRflx_01_x (F_c) and the grid level
 # vs x, all snapshots overlaid.
 title  = "jiang-414-refine"
 panels = [("CRegy_01", r"$e_c$"), ("CRflx_01_x", r"$F_c$"), ("level", "level")]

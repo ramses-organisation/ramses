@@ -145,7 +145,7 @@ subroutine add_cr_source_terms(ilevel)
   dx=0.5d0**ilevel
   dx_loc=dx*scale
 
-  if(isotropic_pressure)then
+  if(cr_isotropic_pressure)then
      sqrt3=sqrt(3d0)
   else
      sqrt3=1.0d0
@@ -198,10 +198,10 @@ subroutine add_cr_source_terms(ilevel)
            do iGrp=1,ncr_groups
               icrE = Ecr_idx(iGrp)  ! starting index of cr variables
               if(igridn(i,ig1)>0)then
-                  pcrg(i,idim,iGrp)   = max(cruold(igridn(i,ig1)+ih1,icrE),smallcr)
+                  pcrg(i,idim,iGrp)   = max(cruold(igridn(i,ig1)+ih1,icrE),cr_efloor)
                   dx_g(i,idim) = dx_loc
               else
-                  pcrg(i,idim,iGrp)   = max(cruold(ind_left(i,idim),icrE),smallcr)
+                  pcrg(i,idim,iGrp)   = max(cruold(ind_left(i,idim),icrE),cr_efloor)
                   dx_g(i,idim) = dx_loc*1.5_dp
               end if
            enddo
@@ -212,10 +212,10 @@ subroutine add_cr_source_terms(ilevel)
            do iGrp=1,ncr_groups
               icrE = Ecr_idx(iGrp)  ! starting index of cr variables
               if(igridn(i,ig2)>0)then
-                  pcrd(i,idim,iGrp)  = max(cruold(igridn(i,ig2)+ih2,icrE),smallcr)
+                  pcrd(i,idim,iGrp)  = max(cruold(igridn(i,ig2)+ih2,icrE),cr_efloor)
                   dx_d(i,idim)=dx_loc
               else
-                  pcrd(i,idim,iGrp)  = max(cruold(ind_right(i,idim),icrE),smallcr)
+                  pcrd(i,idim,iGrp)  = max(cruold(ind_right(i,idim),icrE),cr_efloor)
                   dx_d(i,idim)=dx_loc*1.5_dp
               end if
            enddo
@@ -239,10 +239,10 @@ subroutine add_cr_source_terms(ilevel)
            enddo
            va_loc(i) = sqrt(va_loc(i))
 
-           if(v_alfven.gt.0.) then
+           if(cr_v_alfven.gt.0.) then
               vs_loc(i,:) = 0.
-              vs_loc(i,1) = v_alfven
-              va_loc(i) = v_alfven
+              vs_loc(i,1) = cr_v_alfven
+              va_loc(i) = cr_v_alfven
            endif
 
            bdotgradE_loc(i)=0.
@@ -282,7 +282,7 @@ subroutine add_cr_source_terms(ilevel)
             endif
             !B_field = B_field/norm
 
-            rhs1 = max(crunew(ind_cell(i),icrE),smallcr)
+            rhs1 = max(crunew(ind_cell(i),icrE),cr_efloor)
 
             ! Flux update ... first rotate flux vector onto B-field,
             ! i.e. describing the flux in the B coordinate system
@@ -312,7 +312,7 @@ subroutine add_cr_source_terms(ilevel)
             v3 = uold(ind_cell(i),4)/uold(ind_cell(i),1)
 #endif
             vtot1 = v1 ; vtot2 = v2 ; vtot3 = v3
-            if(mom_streaming_heating) then
+            if(cr_streaming_heating) then
                vtot1 = vtot1+vs_loc(i,1)
                vtot2 = vtot2+vs_loc(i,2)
                vtot3 = vtot3+vs_loc(i,3)
@@ -326,16 +326,16 @@ subroutine add_cr_source_terms(ilevel)
             rhs2 = frotx
             rhs3 = froty
             rhs4 = frotz
-            if(abs(rhs2).lt.1e-10*smallcr) rhs2=0d0
-            if(abs(rhs3).lt.1e-10*smallcr) rhs3=0d0
-            if(abs(rhs4).lt.1e-10*smallcr) rhs4=0d0
+            if(abs(rhs2).lt.1e-10*cr_efloor) rhs2=0d0
+            if(abs(rhs3).lt.1e-10*cr_efloor) rhs3=0d0
+            if(abs(rhs4).lt.1e-10*cr_efloor) rhs4=0d0
 
             ! Factor for decoupling CRs from gas at low densities
             f_decouple = MAX(exp(-smallr*cr_smallr_decouple/uold(ind_cell(i),1)),1d-10)
 
             sigma_stream = max(1./DCRmax_code &
-               & ,abs(bdotgradE_loc(i))/3d0 / norm / va_loc(i) / gamma_cr(iGrp) / max(crunew(ind_cell(i),icrE),smallcr))
-            if(mom_streaming_diffusion) then
+               & ,abs(bdotgradE_loc(i))/3d0 / norm / va_loc(i) / gamma_cr(iGrp) / max(crunew(ind_cell(i),icrE),cr_efloor))
+            if(cr_streaming_diffusion) then
                sigma_x = 1./(Dcr_code(iGrp) + 1./sigma_stream)
             else
                sigma_x = 1./Dcr_code(iGrp)
@@ -375,7 +375,7 @@ subroutine add_cr_source_terms(ilevel)
             crunew(ind_cell(i),icrE) = crunew(ind_cell(i),icrE) + (new_ec-old_ec) * f_decouple
 
             ! Floor the CR energy and update total energy if necessary
-            if ( crunew(ind_cell(i),icrE) .lt. smallcr ) crunew(ind_cell(i),icrE) = smallcr
+            if ( crunew(ind_cell(i),icrE) .lt. cr_efloor ) crunew(ind_cell(i),icrE) = cr_efloor
             ! Thermal energy update:
             if(.not. static_gas .and. .not. static) then
                unew(ind_cell(i),5) = unew(ind_cell(i),5) - (crunew(ind_cell(i),icrE) - old_ec)*f_decouple
@@ -399,7 +399,7 @@ subroutine add_cr_source_terms(ilevel)
             crunew(ind_cell(i),icrE+1) = frotx
             ! Momentum update
             if(.not. static_gas .and. .not. static) then
-               if (gradpcr_mom) then
+               if (cr_gradp_backreaction) then
                   mom_change = -gradpcr_loc(i,1,iGrp)*dt
                else
                   mom_change = ( f1 - crunew(ind_cell(i),icrE+1) ) / cr_vmax(ilevel)**2
@@ -409,7 +409,7 @@ subroutine add_cr_source_terms(ilevel)
 #if NDIM>1
             crunew(ind_cell(i),icrE+2) = froty
             if(.not. static_gas .and. .not. static) then
-               if (gradpcr_mom) then
+               if (cr_gradp_backreaction) then
                   mom_change = -gradpcr_loc(i,2,iGrp)*dt
                else
                   mom_change = ( f2 - crunew(ind_cell(i),icrE+2) ) / cr_vmax(ilevel)**2
@@ -420,7 +420,7 @@ subroutine add_cr_source_terms(ilevel)
 #if NDIM>2
             crunew(ind_cell(i),icrE+3) = frotz
             if(.not. static_gas .and. .not. static) then
-               if (gradpcr_mom) then
+               if (cr_gradp_backreaction) then
                   mom_change = -gradpcr_loc(i,3,iGrp)*dt
                else
                   mom_change = ( f3 - crunew(ind_cell(i),icrE+3) ) / cr_vmax(ilevel)**2
@@ -514,13 +514,13 @@ SUBROUTINE cr_set_unew(ilevel)
    if(numbtot(1,ilevel)==0)return
    if(verbose)write(*,111)ilevel
 
-   if(isotropic_pressure)then
+   if(cr_isotropic_pressure)then
       sqrt3=sqrt(3d0)
    else
       sqrt3=1.0d0
    endif
 
-   if(reduced_CR_flux_correction)then
+   if(cr_flux_correction)then
       do ind=1,twotondim
          iskip=ncoarse+(ind-1)*ngridmax
          do i=1,active(ilevel)%ngrid
@@ -579,7 +579,7 @@ SUBROUTINE cr_set_uold(ilevel)
    ! step.
    !
    ! Transport-robustness floor: the per-group CR energy is floored at
-   ! smallcr after the update. This makes the explicit transport robust on
+   ! cr_efloor after the update. This makes the explicit transport robust on
    ! its own -- without it the explicit transport of a degenerate state can
    ! drive E_cr slightly negative and trip the Ecr<0 guard in
    ! cmp_cr_flux_tensors. This is pure transport robustness -- no
@@ -591,13 +591,13 @@ SUBROUTINE cr_set_uold(ilevel)
    if(numbtot(1,ilevel)==0)return
    if(verbose)write(*,111)ilevel
 
-   if(isotropic_pressure)then
+   if(cr_isotropic_pressure)then
       sqrt3=sqrt(3d0)
    else
       sqrt3=1.0d0
    endif
 
-   if(reduced_CR_flux_correction)then
+   if(cr_flux_correction)then
       do ind=1,twotondim
          iskip=ncoarse+(ind-1)*ngridmax
          do i=1,active(ilevel)%ngrid
@@ -620,12 +620,12 @@ SUBROUTINE cr_set_uold(ilevel)
          end do
       end do
 
-      ! Floor each group's CR energy at smallcr (no negative CR densities).
+      ! Floor each group's CR energy at cr_efloor (no negative CR densities).
       do iGrp=1,ncr_groups
          icrE=Ecr_idx(iGrp)
          do i=1,active(ilevel)%ngrid
             cruold(active(ilevel)%igrid(i)+iskip,icrE)= &
-                 max(cruold(active(ilevel)%igrid(i)+iskip,icrE),smallcr)
+                 max(cruold(active(ilevel)%igrid(i)+iskip,icrE),cr_efloor)
          end do
       end do
    end do
@@ -690,7 +690,7 @@ SUBROUTINE cr_godfine1(ind_grid, ncache, ilevel)
    scale=boxlen/dble(nx_loc)           ! length per coarse oct (=boxlen)
    dx=0.5D0**ilevel*scale              ! length per oct/grid at ilevel
    dt=dtnew(ilevel)
-   if(isotropic_pressure)then
+   if(cr_isotropic_pressure)then
       sqrt3=sqrt(3d0)
    else
       sqrt3=1.0d0
@@ -754,7 +754,7 @@ SUBROUTINE cr_godfine1(ind_grid, ncache, ilevel)
          end do
          call interpol_hydro(u1_gas,ind1,u2_gas,nbuffer)
          call cr_interpol_hydro(u1_cr,u2_cr,nbuffer)
-         if(reduced_CR_flux_correction)then
+         if(cr_flux_correction)then
             do j=1,twotondim
                do i=1,nbuffer
                   ! F<e*c/sqrt(3) for P1 closure

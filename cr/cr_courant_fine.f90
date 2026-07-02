@@ -9,9 +9,9 @@ SUBROUTINE cr_courant_fine(ilevel)
    ! sweep has set dtnew(ilevel) (gas global-min) and cr_va_max that the cap reads.
    !-------------------------------------------------------------------------
    use amr_commons
-   use cr_parameters, only: cr_vmax,c_cu,cr_nsubcycle,cr_varvmax, &
+   use cr_parameters, only: cr_vmax,cr_c_code,cr_nsubcycle,cr_varvmax, &
         & cr_varvmax_fudge,cr_varvmax_vdvs,cr_va_max, &
-        & gamma_cr,Dcr_code,mom_streaming_diffusion,ncr_groups
+        & gamma_cr,Dcr_code,cr_streaming_diffusion,ncr_groups
    implicit none
    integer::ilevel
    real(dp)::dt_cr,dx,scale
@@ -30,7 +30,7 @@ SUBROUTINE cr_courant_fine(ilevel)
    if(cr_varvmax)then
       cr_vmax(ilevel) = max(cr_vmax(ilevel), dx/3d0/dtnew(ilevel) * cr_varvmax_fudge)
       if(cr_varvmax_vdvs)then
-         if(mom_streaming_diffusion)then
+         if(cr_streaming_diffusion)then
             do igrp=1,ncr_groups
                cr_vmax(ilevel) = max(cr_vmax(ilevel), gamma_cr(igrp)*cr_va_max * cr_varvmax_fudge)
             end do
@@ -42,7 +42,7 @@ SUBROUTINE cr_courant_fine(ilevel)
    endif
 
    ! Finally, make sure vmax <= c
-   if(cr_vmax(ilevel) .gt. c_cu) cr_vmax(ilevel)=c_cu
+   if(cr_vmax(ilevel) .gt. cr_c_code) cr_vmax(ilevel)=cr_c_code
 
    call get_crmom_courant(dt_cr,ilevel)
    dtnew(ilevel) = MIN(dtnew(ilevel), dt_cr * cr_nsubcycle*0.99999d0)

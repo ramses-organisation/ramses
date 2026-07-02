@@ -27,15 +27,15 @@ jiang_test='414'
 Dcr=0.1
 cr_nsubcycle=10
 cr_c_fraction=3.3356409297285193e-9   ! reduced light speed = 100
-mom_streaming_heating=.false.
-mom_streaming_diffusion=.false.
+cr_streaming_heating=.false.
+cr_streaming_diffusion=.false.
 cr_advect=.true.
 cr_legacy_output=.true.
 cr_nregion=1
 cr_region_type='square'
 cr_reg_x_center=1.0
 cr_reg_length_x=100.0
-err_grad_crmom(1)=0.03   ! CR-energy gradient refinement (lives in &cr_params)
+err_grad_cr(1)=0.03   ! CR-energy gradient refinement (lives in &cr_params)
 /
 
 &INIT_PARAMS

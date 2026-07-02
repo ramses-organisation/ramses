@@ -5,7 +5,7 @@
 subroutine cr_boundana(x,u,dx,ibound,ncell)
   use amr_parameters, ONLY: dp,ndim,nvector,boxlen
   use amr_commons,    ONLY: t
-  use cr_parameters,  ONLY: ncr_groups,ncrvar,Ecr_idx,smallcr,gamma_cr,jiang_test,crmom_bound
+  use cr_parameters,  ONLY: ncr_groups,ncrvar,Ecr_idx,cr_efloor,gamma_cr,jiang_test,cr_boundary_u
   implicit none
   integer ::ibound                          ! Index of boundary region
   integer ::ncell                           ! Number of active cells
@@ -22,7 +22,7 @@ subroutine cr_boundana(x,u,dx,ibound,ncell)
   do i=1,ncell
      do igrp=1,ncr_groups
         icrE=Ecr_idx(igrp)
-        u(i,icrE)=smallcr
+        u(i,icrE)=cr_efloor
         u(i,icrE+1:icrE+ndim)=0d0
      end do
   end do
@@ -43,11 +43,11 @@ subroutine cr_boundana(x,u,dx,ibound,ncell)
   endif
 
   ! Two-pressure shock (tp_*): imposed CR boundary held at the namelist
-  ! crmom_bound(ibound,:) -- energy at index 1, CR flux at 2:ncrvar.
+  ! cr_boundary_u(ibound,:) -- energy at index 1, CR flux at 2:ncrvar.
   if(trim(jiang_test)=='tp_nostream' .or. trim(jiang_test)=='tp_stream_va075' &
        & .or. trim(jiang_test)=='tp_stream_va15')then
      do i=1,ncell
-        u(i,1:ncrvar)=crmom_bound(ibound,1:ncrvar)
+        u(i,1:ncrvar)=cr_boundary_u(ibound,1:ncrvar)
      end do
   endif
 

@@ -27,9 +27,9 @@ cr_legacy_output=.true.
 jiang_test='421'
 Dcr=2.0
 cr_c_fraction=3.3356409297285193e-9   ! reduced light speed = 100
-mom_streaming_heating=.true.
-mom_streaming_diffusion=.true.
-v_alfven=1.0
+cr_streaming_heating=.true.
+cr_streaming_diffusion=.true.
+cr_v_alfven=1.0
 cr_f_taucell=0.5
 cr_nsubcycle=10
 cr_varvmax=.false.

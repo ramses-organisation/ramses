@@ -27,7 +27,7 @@ subroutine cr_condinit(x,u,dx,nn,ilevel)
   do i=1,nn
      do igrp=1,ncr_groups
         icrE=Ecr_idx(igrp)
-        u(i,icrE)=smallcr
+        u(i,icrE)=cr_efloor
         u(i,icrE+1:icrE+ndim)=0d0
      end do
   end do
@@ -35,7 +35,7 @@ subroutine cr_condinit(x,u,dx,nn,ilevel)
   select case(trim(jiang_test))
 
   case('')
-     ! No override: pure default (smallcr floor, zero flux).
+     ! No override: pure default (cr_efloor floor, zero flux).
 
   case('411','414')                          ! Gaussian CR-energy pulse
      ! exp(-40*(x-boxlen/2)^2) pulse; flux=4/3*v_gas*E_cr=0 (static gas).
@@ -95,13 +95,13 @@ subroutine cr_condinit(x,u,dx,nn,ilevel)
      end do
 #endif
 
-  case('422')                                ! CR energy from crmom_region; flux from gas velocity
-     ! E_cr from crmom_region (square regions); x-flux = 4/3 u_region(k) E_cr.
+  case('422')                                ! CR energy from cr_region_u; flux from gas velocity
+     ! E_cr from cr_region_u (square regions); x-flux = 4/3 u_region(k) E_cr.
      call cr_region_condinit(x,u,dx,nn,ilevel)
      call cr_flux_from_region_velocity(x,u,dx,nn)
 
-  case('tp_nostream','tp_stream_va075', 'tp_stream_va15', '423')                  ! Region-based: CR energy+flux from crmom_region
-     ! Entire CR state comes from crmom_region (energy at Ecr_idx(1), fluxes after).
+  case('tp_nostream','tp_stream_va075', 'tp_stream_va15', '423')                  ! Region-based: CR energy+flux from cr_region_u
+     ! Entire CR state comes from cr_region_u (energy at Ecr_idx(1), fluxes after).
      ! TP_1D_shock: E_cr contact discontinuity (3|1) across x=5, zero flux.
      ! 423 (2D CR blast/Sedov): uniform E_cr=1d-10 floor, gas blast sweeps it.
      call cr_region_condinit(x,u,dx,nn,ilevel)

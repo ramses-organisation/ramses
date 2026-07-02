@@ -6,7 +6,7 @@ SUBROUTINE cr_cooling_fine(ilevel)
   ! Called from crmom_step (after cr_set_uold) when cr_cooling=.true.
   use amr_commons
   use hydro_commons              ! gas uold, smallr
-  use cr_parameters              ! Ecr_idx, ncr_groups, zeta_cr, ne, fneut, cr_c_fraction
+  use cr_parameters              ! Ecr_idx, ncr_groups, zeta_cr, cr_ne, cr_fneut, cr_c_fraction
   use cr_hydro_commons           ! cruold
   implicit none
   integer::ilevel
@@ -22,7 +22,7 @@ SUBROUTINE cr_cooling_fine(ilevel)
 
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
   dtcool=dtnew(ilevel)*scale_t
-  lambda_cr=zeta_cr*(1d0+0.22d0*ne+0.125d0*fneut)   ! [cm^3 s^-1]
+  lambda_cr=zeta_cr*(1d0+0.22d0*cr_ne+0.125d0*cr_fneut)   ! [cm^3 s^-1]
 
   ! Loop over myid grids by vector sweeps
   ncache=active(ilevel)%ngrid

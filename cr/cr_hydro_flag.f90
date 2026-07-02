@@ -1,14 +1,14 @@
 ! CR refinement pass: flags cells whose CR energy gradient exceeds
-! err_grad_crmom, OR-ing the result into the shared flag1.
+! err_grad_cr, OR-ing the result into the shared flag1.
 subroutine cr_hydro_flag(ilevel)
   use amr_commons
-  use cr_parameters, only: ncr_groups,ncrvar,Ecr_idx,err_grad_crmom
+  use cr_parameters, only: ncr_groups,ncrvar,Ecr_idx,err_grad_cr
   use cr_hydro_commons, only: cruold
   implicit none
   integer::ilevel
   ! -------------------------------------------------------------------
   ! Flag for refinement cells whose CR energy gradient at level ilevel
-  ! exceeds err_grad_crmom. Separate pass; results OR into flag1.
+  ! exceeds err_grad_cr. Separate pass; results OR into flag1.
   ! -------------------------------------------------------------------
   integer::i,j,ncache,nok,iskip
   integer::igrid,ind,idim,ngrid
@@ -27,7 +27,7 @@ subroutine cr_hydro_flag(ilevel)
   if(ilevel==nlevelmax)return
   if(numbtot(1,ilevel)==0)return
   ! No CR refinement requested -> nothing to do.
-  if(all(err_grad_crmom(1:ncr_groups) < 0d0))return
+  if(all(err_grad_cr(1:ncr_groups) < 0d0))return
 
   ! Loop over active grids
   ncache=active(ilevel)%ngrid
@@ -70,9 +70,9 @@ subroutine cr_hydro_flag(ilevel)
 
         ! Loop over dimensions
         do idim=1,ndim
-           ! CR-energy gradient refinement (err_grad_crmom).
+           ! CR-energy gradient refinement (err_grad_cr).
            do icr=1,ncr_groups
-              if(err_grad_crmom(icr) >= 0.)then
+              if(err_grad_cr(icr) >= 0.)then
                  icrE=Ecr_idx(icr)
                  do i=1,ngrid
                     ucrg(i,icrE)=cruold(indn(i,2*idim-1),icrE)
@@ -84,7 +84,7 @@ subroutine cr_hydro_flag(ilevel)
                     errcr=2.0d0*MAX( &
                          & ABS((pcrd-pcrm)/(pcrd+pcrm+floor_crmom)), &
                          & ABS((pcrm-pcrg)/(pcrm+pcrg+floor_crmom)) )
-                    ok(i) = ok(i) .or. errcr > err_grad_crmom(icr)
+                    ok(i) = ok(i) .or. errcr > err_grad_cr(icr)
                  end do
               end if
            end do

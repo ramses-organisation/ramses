@@ -30,13 +30,13 @@ cr_bound_floor=3.0
 Dcr=1d-6
 cr_c_fraction=3.3356409297285193e-10   ! reduced light speed = 10
 cr_advect=.true.
-mom_streaming_heating=.true.
-mom_streaming_diffusion=.true.
+cr_streaming_heating=.true.
+cr_streaming_diffusion=.true.
 cr_f_taucell=0.5
 cr_nsubcycle=10
 cr_varvmax=.true.
-reduced_CR_flux_correction=.true.
-err_grad_crmom(1)=0.05   ! moved from &refine_params (CR refinement lives in &cr_params)
+cr_flux_correction=.true.
+err_grad_cr(1)=0.05   ! moved from &refine_params (CR refinement lives in &cr_params)
 cr_nregion=0
 /
 

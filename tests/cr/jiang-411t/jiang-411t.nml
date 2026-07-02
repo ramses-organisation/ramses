@@ -26,12 +26,12 @@ bound_type= 3, 3
 jiang_test='411_triangular'
 Dcr=1e-8
 cr_c_fraction=3.3356409297285193e-9   ! reduced light speed = 100
-mom_streaming_heating=.false.
-mom_streaming_diffusion=.true.
+cr_streaming_heating=.false.
+cr_streaming_diffusion=.true.
 cr_varvmax=.false.
 cr_nsubcycle=1
 cr_f_taucell=1.0
-v_alfven=1.0
+cr_v_alfven=1.0
 cr_advect=.true.
 cr_legacy_output=.true.
 cr_nregion=1

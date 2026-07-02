@@ -28,8 +28,8 @@ jiang_test='415_donut'
 Dcr=0.1
 cr_c_fraction=3.3356409297285193e-9   ! reduced light speed = 100
 cr_advect=.true.
-mom_streaming_heating=.false.
-mom_streaming_diffusion=.false.
+cr_streaming_heating=.false.
+cr_streaming_diffusion=.false.
 cr_legacy_output=.true.
 cr_nregion=1
 cr_region_type='square'
