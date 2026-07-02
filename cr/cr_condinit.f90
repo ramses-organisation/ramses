@@ -15,15 +15,8 @@ subroutine cr_condinit(x,u,dx,nn,ilevel)
   ! Generate CR initial conditions; u holds per-group [energy, ndim fluxes].
   ! Default: energy = 0., flux = 0; test ICs override via PATCH.
   !================================================================
-  integer::i,igrp,icrE
 
-  do i=1,nn
-     do igrp=1,ncr_groups
-        icrE=Ecr_idx(igrp)
-        u(i,icrE)=0d0
-        u(i,icrE+1:icrE+ndim)=0d0
-     end do
-  end do
+  u(1:nn,1:ncrvar)=0d0
 
   ! Add here, if you wish, some user-defined CR initial conditions
   ! ........
