@@ -190,13 +190,13 @@ subroutine backup_hydro(filename, filename_desc)
                  ! so cral-era analysis tooling reads sno outputs unmodified
                  do igroup = 1, ncr_groups
                     do i = 1, ncache
-                       xdp(i) = cruold(ind_grid(i)+iskip, iCRu+(ndim+1)*(igroup-1))
+                       xdp(i) = cruold(ind_grid(i)+iskip, Ecr_idx(igroup))
                     end do
                     write(field_name, '("CRegy_", i0.2)') igroup
                     call generic_dump(field_name, info_var_count, xdp, unit_out, dump_info_flag, unit_info)
                     do idim2 = 1, ndim
                        do i = 1, ncache
-                          xdp(i) = cruold(ind_grid(i)+iskip, iCRu+(ndim+1)*(igroup-1)+idim2)
+                          xdp(i) = cruold(ind_grid(i)+iskip, Ecr_idx(igroup)+idim2)
                        end do
                        write(field_name, '("CRflx_", i0.2, "_", a1)') igroup, dim_keys(idim2)
                        call generic_dump(field_name, info_var_count, xdp, unit_out, dump_info_flag, unit_info)

@@ -108,7 +108,7 @@ subroutine cr_make_boundary_hydro(ilevel)
               ! crType=0 -> CR energy (no flip); 1..ndim -> flux component.
               do ivar=1,ncrvar
                  switch=1
-                 crType=mod(ivar-iCRu,ndim+1)
+                 crType=mod(ivar-Ecr_idx(1),ndim+1)
                  if(crType.ne.0)switch=gs(crType)
                  do i=1,ngrid
                     cruold(ind_cell(i),ivar)=uu(i,ivar)*switch
@@ -119,7 +119,7 @@ subroutine cr_make_boundary_hydro(ilevel)
               ! 413/424). Inert unless cr_bound_floor>=0 (default -1).
               if(cr_bound_floor>=0d0)then
                  do i=1,ngrid
-                    cruold(ind_cell(i),iCRu)=cr_bound_floor
+                    cruold(ind_cell(i),Ecr_idx(1))=cr_bound_floor
                  end do
               end if
 

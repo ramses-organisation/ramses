@@ -6,7 +6,7 @@ MODULE cr_flux_module
   use amr_commons
   use hydro_commons
   use hydro_parameters         ! iu1..ku2, if1..kf2, nvar, smallr
-  use cr_parameters            ! ncr_groups, ncrvar, iCRu, gamma_cr, cr_vmax, ...
+  use cr_parameters            ! ncr_groups, ncrvar, Ecr_idx, gamma_cr, cr_vmax, ...
   implicit none
 
   private   ! default
@@ -47,7 +47,7 @@ subroutine cmp_cr_flux_tensors(uin_gas, uin_cr, iGrp, nGrid, ftens, vmax, bfield
   real(dp)::vmax2,Ecr2,aniso_term
   !------------------------------------------------------------------------
 
-  icrE = iCRu+(ndim+1)*(iGrp-1) ! starting index of cr variables (base 1)
+  icrE = Ecr_idx(iGrp) ! starting index of cr variables (base 1)
   ! Loop 6X6X6 cells in grid, from -1 to 4.
   do k = ku1, ku2
   do j = ju1, ju2
@@ -133,7 +133,7 @@ SUBROUTINE cmp_cr_wavespeeds(uin_gas, uin_cr, iGrp, ngrid, lmax, ilevel, dt)
     real(dp),dimension(1:3)::B_field, gradEcr, Dcr_vec
     real(dp)::norm,bdotgradE,cosp,sinp,cost,sint,bxby,Dcr_dir
   !------------------------------------------------------------------------
-    icrE = iCRu+(ndim+1)*(iGrp-1) ! starting index of cr variables (base 1)
+    icrE = Ecr_idx(iGrp) ! starting index of cr variables (base 1)
 
     ! Cell width in ilevel
     dx=0.5D0**ilevel

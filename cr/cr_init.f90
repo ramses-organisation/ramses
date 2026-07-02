@@ -7,6 +7,7 @@ subroutine read_cr_params(nml_ok)
   use cr_parameters
   implicit none
   logical::nml_ok
+  integer::ig
 
   namelist/cr_params/cr_advect,cr_HLLE,cr_use_minmod,isotropic_pressure &
        & ,reduced_CR_flux_correction,cr_interpolation,gamma_cr,gradpcr_mom &
@@ -24,6 +25,11 @@ subroutine read_cr_params(nml_ok)
   rewind(1)
   read(1,NML=cr_params,END=101)
 101 continue
+
+  ! Energy index of each CR group in cruold/crunew (mirror rt_init iGroups)
+  do ig=1,ncr_groups
+     Ecr_idx(ig)=1+(ndim+1)*(ig-1)
+  end do
 
   ! Sanity checks
   if(cr_nsubcycle<1)then

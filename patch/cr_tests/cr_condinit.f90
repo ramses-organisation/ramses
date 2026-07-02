@@ -13,7 +13,7 @@ subroutine cr_condinit(x,u,dx,nn,ilevel)
   real(dp),dimension(1:nvector,1:ndim  )::x ! Cell center position in [0,boxlen]**ndim
   !----------------------------------------------------------------
   ! u(i,1:ncrvar) is the CR conservative vector for group g:
-  !   energy at iCRu+(ndim+1)*(g-1), the ndim fluxes in the slots after it.
+  !   energy at Ecr_idx(g), the ndim fluxes in the slots after it.
   !----------------------------------------------------------------
   integer::i,igrp,icrE
   real(dp),dimension(1:nvector)::tmp
@@ -26,7 +26,7 @@ subroutine cr_condinit(x,u,dx,nn,ilevel)
   ! overwrite the first group's energy (and, where applicable, flux).
   do i=1,nn
      do igrp=1,ncr_groups
-        icrE=iCRu+(ndim+1)*(igrp-1)
+        icrE=Ecr_idx(igrp)
         u(i,icrE)=smallcr
         u(i,icrE+1:icrE+ndim)=0d0
      end do
@@ -41,7 +41,7 @@ subroutine cr_condinit(x,u,dx,nn,ilevel)
      ! exp(-40*(x-boxlen/2)^2) pulse; flux=4/3*v_gas*E_cr=0 (static gas).
      tmp(1:nn)=(x(1:nn,1)-boxlen*0.5d0)**2
      do i=1,nn
-        u(i,iCRu)=exp(-40d0*tmp(i))
+        u(i,Ecr_idx(1))=exp(-40d0*tmp(i))
      end do
 
   case('412')                                ! 2D Gaussian CR-energy pulse
@@ -51,7 +51,7 @@ subroutine cr_condinit(x,u,dx,nn,ilevel)
      tmp(1:nn)=tmp(1:nn)+(x(1:nn,2)-boxlen*0.5d0)**2
 #endif
      do i=1,nn
-        u(i,iCRu)=exp(-40d0*tmp(i))
+        u(i,Ecr_idx(1))=exp(-40d0*tmp(i))
      end do
 
   case('411_triangular')                     ! Triangular CR-energy profile
@@ -59,20 +59,20 @@ subroutine cr_condinit(x,u,dx,nn,ilevel)
      ! wave is driven by the time-dependent analytic boundary (cr_boundana, bound_type=3).
      tmp(1:nn)=(x(1:nn,1)-boxlen*0.5d0)**2
      do i=1,nn
-        u(i,iCRu)=2d0-1d0*sqrt(tmp(i))
+        u(i,Ecr_idx(1))=2d0-1d0*sqrt(tmp(i))
      end do
 
   case('421')                                ! Sinusoidal CR-energy profile
      pi=acos(-1d0)
      do i=1,nn
-        u(i,iCRu)=20d0+10d0*sin(pi*(x(i,1)-boxlen*0.5d0))
+        u(i,Ecr_idx(1))=20d0+10d0*sin(pi*(x(i,1)-boxlen*0.5d0))
      end do
 
   case('413','424')                          ! CR floor (CR injected at reflexive BC)
      ! Density step is part of the GAS state (region/condinit); here CR only.
      do i=1,nn
-        u(i,iCRu)=1d-6
-        u(i,iCRu+1:iCRu+ndim)=0d0
+        u(i,Ecr_idx(1))=1d-6
+        u(i,Ecr_idx(1)+1:Ecr_idx(1)+ndim)=0d0
      end do
 
 #if NDIM>1
@@ -88,9 +88,9 @@ subroutine cr_condinit(x,u,dx,nn,ilevel)
         theta=atan2(yy,xx)
         if(rr>0.25d0*boxlen .and. rr<0.35d0*boxlen .and. theta>-pi/12d0 .and. &
              & theta<pi/12d0 .and. xx>0d0)then
-           u(i,iCRu)=1.2d1
+           u(i,Ecr_idx(1))=1.2d1
         else
-           u(i,iCRu)=1.0d1
+           u(i,Ecr_idx(1))=1.0d1
         endif
      end do
 #endif
@@ -101,7 +101,7 @@ subroutine cr_condinit(x,u,dx,nn,ilevel)
      call cr_flux_from_region_velocity(x,u,dx,nn)
 
   case('tp_nostream','tp_stream_va075', 'tp_stream_va15', '423')                  ! Region-based: CR energy+flux from crmom_region
-     ! Entire CR state comes from crmom_region (energy at iCRu, fluxes after).
+     ! Entire CR state comes from crmom_region (energy at Ecr_idx(1), fluxes after).
      ! TP_1D_shock: E_cr contact discontinuity (3|1) across x=5, zero flux.
      ! 423 (2D CR blast/Sedov): uniform E_cr=1d-10 floor, gas blast sweeps it.
      call cr_region_condinit(x,u,dx,nn,ilevel)
@@ -154,7 +154,7 @@ subroutine cr_flux_from_region_velocity(x,u,dx,nn)
            r=max(xn,yn,zn)
         end if
         if(r<1.0)then
-           u(i,iCRu+1)=4d0/3d0*u_region(k)*u(i,iCRu)
+           u(i,Ecr_idx(1)+1)=4d0/3d0*u_region(k)*u(i,Ecr_idx(1))
         end if
      end do
   end do

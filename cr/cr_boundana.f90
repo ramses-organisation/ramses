@@ -4,7 +4,7 @@
 !############################################################
 subroutine cr_boundana(x,u,dx,ibound,ncell)
   use amr_parameters, ONLY: dp,ndim,nvector
-  use cr_parameters, ONLY: ncr_groups,ncrvar,iCRu,smallcr
+  use cr_parameters, ONLY: ncr_groups,ncrvar,Ecr_idx,smallcr
   implicit none
   integer ::ibound                          ! Index of boundary region
   integer ::ncell                           ! Number of active cells
@@ -19,7 +19,7 @@ subroutine cr_boundana(x,u,dx,ibound,ncell)
 
   do i=1,ncell
      do igrp=1,ncr_groups
-        icrE=iCRu+(ndim+1)*(igrp-1)
+        icrE=Ecr_idx(igrp)
         u(i,icrE)=0d0
         u(i,icrE+1:icrE+ndim)=0d0
      end do

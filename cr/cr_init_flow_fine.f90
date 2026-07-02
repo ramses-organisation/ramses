@@ -136,7 +136,7 @@ SUBROUTINE cr_region_condinit(x,u,dx,nn,ilevel)
   use cr_parameters, only: cr_nregion,cr_region_type,cr_reg_x_center &
        & ,cr_reg_y_center,cr_reg_z_center,cr_reg_length_x,cr_reg_length_y &
        & ,cr_reg_length_z,cr_exp_region,cr_reg_group,crmom_region,ncrvar &
-       & ,iCRu,smallcr
+       & ,Ecr_idx,smallcr
   implicit none
   integer ::nn
   integer::ilevel

@@ -19,7 +19,7 @@ subroutine cr_condinit(x,u,dx,nn,ilevel)
 
   do i=1,nn
      do igrp=1,ncr_groups
-        icrE=iCRu+(ndim+1)*(igrp-1)
+        icrE=Ecr_idx(igrp)
         u(i,icrE)=0d0
         u(i,icrE+1:icrE+ndim)=0d0
      end do

@@ -196,7 +196,7 @@ subroutine add_cr_source_terms(ilevel)
            ih1=ncoarse+(id1-1)*ngridmax
            do i=1,ngrid
            do iGrp=1,ncr_groups
-              icrE = iCRu+(ndim+1)*(iGrp-1)  ! starting index of cr variables
+              icrE = Ecr_idx(iGrp)  ! starting index of cr variables
               if(igridn(i,ig1)>0)then
                   pcrg(i,idim,iGrp)   = max(cruold(igridn(i,ig1)+ih1,icrE),smallcr)
                   dx_g(i,idim) = dx_loc
@@ -210,7 +210,7 @@ subroutine add_cr_source_terms(ilevel)
            ih2=ncoarse+(id2-1)*ngridmax
            do i=1,ngrid
            do iGrp=1,ncr_groups
-              icrE = iCRu+(ndim+1)*(iGrp-1)  ! starting index of cr variables
+              icrE = Ecr_idx(iGrp)  ! starting index of cr variables
               if(igridn(i,ig2)>0)then
                   pcrd(i,idim,iGrp)  = max(cruold(igridn(i,ig2)+ih2,icrE),smallcr)
                   dx_d(i,idim)=dx_loc
@@ -255,7 +255,7 @@ subroutine add_cr_source_terms(ilevel)
 
            ! Source term, eq 18 in Jiang & Oh 2017
 
-            icrE = iCRu+(ndim+1)*(iGrp-1)  ! starting index of cr variables
+            icrE = Ecr_idx(iGrp)  ! starting index of cr variables
             norm=0.
             do j=1,3
                ! Reuse the face-averaged B already stored in B_field_loc(i,:)
@@ -524,11 +524,11 @@ SUBROUTINE cr_set_unew(ilevel)
       do ind=1,twotondim
          iskip=ncoarse+(ind-1)*ngridmax
          do i=1,active(ilevel)%ngrid
-            fred=sqrt(sum(cruold(active(ilevel)%igrid(i)+iskip,iCRu+1:iCRu+ndim)**2)) &
-                 /(cr_vmax(ilevel)*cruold(active(ilevel)%igrid(i)+iskip,iCRu))*sqrt3
+            fred=sqrt(sum(cruold(active(ilevel)%igrid(i)+iskip,Ecr_idx(1)+1:Ecr_idx(1)+ndim)**2)) &
+                 /(cr_vmax(ilevel)*cruold(active(ilevel)%igrid(i)+iskip,Ecr_idx(1)))*sqrt3
             if(fred>1.0)then
-               cruold(active(ilevel)%igrid(i)+iskip,iCRu+1:iCRu+ndim) = &
-                    cruold(active(ilevel)%igrid(i)+iskip,iCRu+1:iCRu+ndim)/fred
+               cruold(active(ilevel)%igrid(i)+iskip,Ecr_idx(1)+1:Ecr_idx(1)+ndim) = &
+                    cruold(active(ilevel)%igrid(i)+iskip,Ecr_idx(1)+1:Ecr_idx(1)+ndim)/fred
             endif
          end do
       end do
@@ -601,11 +601,11 @@ SUBROUTINE cr_set_uold(ilevel)
       do ind=1,twotondim
          iskip=ncoarse+(ind-1)*ngridmax
          do i=1,active(ilevel)%ngrid
-            fred=sqrt(sum(crunew(active(ilevel)%igrid(i)+iskip,iCRu+1:iCRu+ndim)**2)) &
-                 /(cr_vmax(ilevel)*crunew(active(ilevel)%igrid(i)+iskip,iCRu))*sqrt3
+            fred=sqrt(sum(crunew(active(ilevel)%igrid(i)+iskip,Ecr_idx(1)+1:Ecr_idx(1)+ndim)**2)) &
+                 /(cr_vmax(ilevel)*crunew(active(ilevel)%igrid(i)+iskip,Ecr_idx(1)))*sqrt3
             if(fred>1.0)then
-               crunew(active(ilevel)%igrid(i)+iskip,iCRu+1:iCRu+ndim) = &
-                    crunew(active(ilevel)%igrid(i)+iskip,iCRu+1:iCRu+ndim)/fred
+               crunew(active(ilevel)%igrid(i)+iskip,Ecr_idx(1)+1:Ecr_idx(1)+ndim) = &
+                    crunew(active(ilevel)%igrid(i)+iskip,Ecr_idx(1)+1:Ecr_idx(1)+ndim)/fred
             endif
          end do
       end do
@@ -622,7 +622,7 @@ SUBROUTINE cr_set_uold(ilevel)
 
       ! Floor each group's CR energy at smallcr (no negative CR densities).
       do iGrp=1,ncr_groups
-         icrE=iCRu+(ndim+1)*(iGrp-1)
+         icrE=Ecr_idx(iGrp)
          do i=1,active(ilevel)%ngrid
             cruold(active(ilevel)%igrid(i)+iskip,icrE)= &
                  max(cruold(active(ilevel)%igrid(i)+iskip,icrE),smallcr)
@@ -758,10 +758,10 @@ SUBROUTINE cr_godfine1(ind_grid, ncache, ilevel)
             do j=1,twotondim
                do i=1,nbuffer
                   ! F<e*c/sqrt(3) for P1 closure
-                  fred=sqrt(sum(u2_cr(i,j,iCRu+1:iCRu+ndim)**2)) &
-                       /(cr_vmax(ilevel)*u2_cr(i,j,iCRu))*sqrt3
+                  fred=sqrt(sum(u2_cr(i,j,Ecr_idx(1)+1:Ecr_idx(1)+ndim)**2)) &
+                       /(cr_vmax(ilevel)*u2_cr(i,j,Ecr_idx(1)))*sqrt3
                   if(fred.gt.1.0)then
-                     u2_cr(i,j,iCRu+1:iCRu+ndim)=u2_cr(i,j,iCRu+1:iCRu+ndim)/fred
+                     u2_cr(i,j,Ecr_idx(1)+1:Ecr_idx(1)+ndim)=u2_cr(i,j,Ecr_idx(1)+1:Ecr_idx(1)+ndim)/fred
                   endif
                end do
             end do

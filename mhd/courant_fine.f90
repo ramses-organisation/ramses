@@ -7,7 +7,7 @@ subroutine courant_fine(ilevel)
   use turb_commons
 #endif
 #ifdef CRPHYS
-  use cr_parameters, only: cr_advect,cr_va_max,ncr_groups,iCRu, &
+  use cr_parameters, only: cr_advect,cr_va_max,ncr_groups,Ecr_idx, &
        & ecrs_tot,crecr
   use cr_hydro_commons, only: cruold
 #endif
@@ -99,7 +99,7 @@ subroutine courant_fine(ilevel)
         if(cr_advect)then
            do igrp=1,ncr_groups
               do i=1,nleaf
-                 crecr(i,igrp)=cruold(ind_leaf(i),iCRu+(ndim+1)*(igrp-1))
+                 crecr(i,igrp)=cruold(ind_leaf(i),Ecr_idx(igrp))
               end do
            end do
         endif
@@ -163,7 +163,7 @@ subroutine courant_fine(ilevel)
 #ifdef CRPHYS
         do igrp=1,ncr_groups
            do i=1,nleaf
-              ecrs_loc=ecrs_loc+cruold(ind_leaf(i),iCRu+(ndim+1)*(igrp-1))*vol
+              ecrs_loc=ecrs_loc+cruold(ind_leaf(i),Ecr_idx(igrp))*vol
            end do
         end do
 #endif

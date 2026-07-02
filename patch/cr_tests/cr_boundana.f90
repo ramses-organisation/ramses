@@ -5,7 +5,7 @@
 subroutine cr_boundana(x,u,dx,ibound,ncell)
   use amr_parameters, ONLY: dp,ndim,nvector,boxlen
   use amr_commons,    ONLY: t
-  use cr_parameters,  ONLY: ncr_groups,ncrvar,iCRu,smallcr,gamma_cr,jiang_test,crmom_bound
+  use cr_parameters,  ONLY: ncr_groups,ncrvar,Ecr_idx,smallcr,gamma_cr,jiang_test,crmom_bound
   implicit none
   integer ::ibound                          ! Index of boundary region
   integer ::ncell                           ! Number of active cells
@@ -21,7 +21,7 @@ subroutine cr_boundana(x,u,dx,ibound,ncell)
   ! Default imposed CR boundary: energy floor, zero flux.
   do i=1,ncell
      do igrp=1,ncr_groups
-        icrE=iCRu+(ndim+1)*(igrp-1)
+        icrE=Ecr_idx(igrp)
         u(i,icrE)=smallcr
         u(i,icrE+1:icrE+ndim)=0d0
      end do
@@ -32,13 +32,13 @@ subroutine cr_boundana(x,u,dx,ibound,ncell)
   ! (flux points inward on each side). Higher flux components vanish.
   if(trim(jiang_test)=='411_triangular')then
      do i=1,ncell
-        u(i,iCRu)=2d0+gamma_cr(1)*t-abs(x(i,1)-boxlen*0.5d0)
+        u(i,Ecr_idx(1))=2d0+gamma_cr(1)*t-abs(x(i,1)-boxlen*0.5d0)
         if(x(i,1)<boxlen*0.5d0)then
-           u(i,iCRu+1)=-gamma_cr(1)*u(i,iCRu)
+           u(i,Ecr_idx(1)+1)=-gamma_cr(1)*u(i,Ecr_idx(1))
         else
-           u(i,iCRu+1)= gamma_cr(1)*u(i,iCRu)
+           u(i,Ecr_idx(1)+1)= gamma_cr(1)*u(i,Ecr_idx(1))
         endif
-        if(ncrvar>2) u(i,iCRu+2:iCRu+ncrvar-1)=0d0
+        if(ncrvar>2) u(i,Ecr_idx(1)+2:Ecr_idx(1)+ncrvar-1)=0d0
      end do
   endif
 

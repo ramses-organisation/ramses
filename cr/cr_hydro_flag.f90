@@ -2,7 +2,7 @@
 ! err_grad_crmom, OR-ing the result into the shared flag1.
 subroutine cr_hydro_flag(ilevel)
   use amr_commons
-  use cr_parameters, only: ncr_groups,ncrvar,iCRu,err_grad_crmom
+  use cr_parameters, only: ncr_groups,ncrvar,Ecr_idx,err_grad_crmom
   use cr_hydro_commons, only: cruold
   implicit none
   integer::ilevel
@@ -73,7 +73,7 @@ subroutine cr_hydro_flag(ilevel)
            ! CR-energy gradient refinement (err_grad_crmom).
            do icr=1,ncr_groups
               if(err_grad_crmom(icr) >= 0.)then
-                 icrE=iCRu+(ndim+1)*(icr-1)
+                 icrE=Ecr_idx(icr)
                  do i=1,ngrid
                     ucrg(i,icrE)=cruold(indn(i,2*idim-1),icrE)
                     ucrm(i,icrE)=cruold(ind_cell(i     ),icrE)
