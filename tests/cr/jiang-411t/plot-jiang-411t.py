@@ -23,7 +23,7 @@ if len(panels) == 1:
     axes = [axes]
 cols = plt.cm.viridis(np.linspace(0.0, 0.82, len(snaps)))
 for i, si in enumerate(snaps):
-    data = visu_ramses.load_snapshot(si)
+    data = visu_ramses.load_snapshot(si, read_cr=True)
     d = data["data"]
     t = float(data["info"]["time"])
     x = q(d, "position_x"); srt = np.argsort(x)

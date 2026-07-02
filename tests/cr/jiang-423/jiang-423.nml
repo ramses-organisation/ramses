@@ -35,7 +35,6 @@ cr_f_taucell=1.0
 cr_nsubcycle=10
 cr_varvmax=.true.
 DCRmax=1d5
-cr_legacy_output=.true.
 err_grad_cr(1)=0.05
 cr_region_u(:,1)=1d-10,0.0d0
 cr_nregion=2

@@ -18,7 +18,7 @@ nrm = LogNorm(vmin=vmin, vmax=vmax) if scale == "log" else Normalize(vmin=vmin, 
 fig, axes = plt.subplots(1, len(use), figsize=(4.2 * len(use), 3.6), squeeze=False)
 axes = axes[0]
 for ax, si in zip(axes, use):
-    data = visu_ramses.load_snapshot(si)
+    data = visu_ramses.load_snapshot(si, read_cr=True)
     d = data["data"]
     t = float(data["info"]["time"])
     x, y, cr = d["x"], d["y"], d["CRegy_01"]

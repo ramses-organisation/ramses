@@ -50,7 +50,6 @@ cr_varvmax=.false.
 cr_v_alfven = 0.0
 cr_f_taucell = 1.0
 cr_nsubcycle=1
-cr_legacy_output=.true.
 cr_hlle=.false.
 reduced_cr_flux_correction=.true.
 cr_nregion=2

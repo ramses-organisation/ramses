@@ -18,7 +18,7 @@ snaps = sorted(int(os.path.basename(d).split("_")[-1])
                for d in glob.glob("output_?????") if os.path.isdir(d))
 si = snaps[-1]
 
-data = visu_ramses.load_snapshot(si)
+data = visu_ramses.load_snapshot(si, read_cr=True)
 d = data["data"]
 t = float(data["info"]["time"])
 x, y = d["x"], d["y"]

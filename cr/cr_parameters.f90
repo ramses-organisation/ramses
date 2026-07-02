@@ -74,7 +74,6 @@ module cr_parameters
   ! Refinement
   real(dp),dimension(1:ncrvar)::err_grad_cr=-1d0 ! CR gradient refinement
   ! Output
-  logical::cr_legacy_output=.false.         ! .true.: CR columns in hydro files
 
   ! --- Derived / bookkeeping (not in the namelist) ----------------------
   real(dp),dimension(1:MAXLEVEL)::cr_vmax=0d0 ! Reduced light speed, code units

@@ -17,7 +17,7 @@ snaps = sorted(int(os.path.basename(d).split("_")[-1])
 fig, axes = plt.subplots(len(panels), 1, figsize=(5.2, 1.9 * len(panels)), sharex=True)
 cols = plt.cm.viridis(np.linspace(0.0, 0.82, len(snaps)))
 for i, si in enumerate(snaps):
-    data = visu_ramses.load_snapshot(si)
+    data = visu_ramses.load_snapshot(si, read_cr=True)
     d = data["data"]
     t = data["info"]["time"]
     x = d["x"]

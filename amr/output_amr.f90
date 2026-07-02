@@ -15,9 +15,6 @@ subroutine dump_all
 #endif
   use mpi_mod
   use buildinfo
-#ifdef CRPHYS
-  use cr_parameters, only: cr_legacy_output
-#endif
   implicit none
 #if ! defined (WITHOUTMPI) || defined (NOSYSTEM)
   integer::info
@@ -149,16 +146,14 @@ subroutine dump_all
 #endif
 
 #ifdef CRPHYS
-  if(.not.cr_legacy_output)then
-     if(myid==1.and.print_when_io) write(*,*)'Start backup cr'
-     filename=TRIM(filedir)//'cr_'//TRIM(nchar)//'.out'
-     filename_desc = trim(filedir) // 'cr_file_descriptor.txt'
-     call cr_backup_hydro(filename, filename_desc)
+  if(myid==1.and.print_when_io) write(*,*)'Start backup cr'
+  filename=TRIM(filedir)//'cr_'//TRIM(nchar)//'.out'
+  filename_desc = trim(filedir) // 'cr_file_descriptor.txt'
+  call cr_backup_hydro(filename, filename_desc)
 #ifndef WITHOUTMPI
-     if(synchro_when_io) call MPI_BARRIER(MPI_COMM_WORLD,info)
+  if(synchro_when_io) call MPI_BARRIER(MPI_COMM_WORLD,info)
 #endif
-     if(myid==1.and.print_when_io) write(*,*)'End backup cr'
-  endif
+  if(myid==1.and.print_when_io) write(*,*)'End backup cr'
 #endif
 
   if(pic)then

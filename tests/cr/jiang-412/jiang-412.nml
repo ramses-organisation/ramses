@@ -34,7 +34,6 @@ cr_f_taucell=1.0
 cr_varvmax=.false.
 cr_nsubcycle=1
 cr_advect=.true.
-cr_legacy_output=.true.
 cr_nregion=1
 cr_region_type='square'
 cr_reg_x_center=0.5
