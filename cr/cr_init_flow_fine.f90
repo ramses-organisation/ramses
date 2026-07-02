@@ -175,8 +175,22 @@ SUBROUTINE cr_region_condinit(x,u,dx,nn,ilevel)
         end do
      end if
 
-     ! Point regions are a CR no-op: they update only the gas primitives and
-     ! never touch the CR slots, so the CR buffer is left untouched here.
+     ! For "point" regions: CIC-add the CR conservative vector (mirror gas)
+     if(cr_region_type(k) .eq. 'point')then
+        vol=dx**ndim
+        do i=1,nn
+           xn=1d0; yn=1d0; zn=1d0
+           xn=max(1d0-abs(x(i,1)-cr_reg_x_center(k))/dx, 0.0_dp)
+#if NDIM>1
+           yn=max(1d0-abs(x(i,2)-cr_reg_y_center(k))/dx, 0.0_dp)
+#endif
+#if NDIM>2
+           zn=max(1d0-abs(x(i,3)-cr_reg_z_center(k))/dx, 0.0_dp)
+#endif
+           r=xn*yn*zn
+           u(i,1:ncrvar)=u(i,1:ncrvar)+cr_region_u(k,1:ncrvar)*r/vol
+        end do
+     end if
   end do
 
 END SUBROUTINE cr_region_condinit
