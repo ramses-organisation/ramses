@@ -50,7 +50,7 @@ subroutine cr_backup_hydro(filename, filename_desc)
   fileloc = TRIM(filename)//TRIM(nchar)
   open(newunit=unit_out, file=fileloc, form='unformatted')
   write(unit_out) ncpu
-  write(unit_out) ncrvars
+  write(unit_out) ncrvar
   write(unit_out) ndim
   write(unit_out) nlevelmax
   write(unit_out) nboundary
@@ -77,7 +77,7 @@ subroutine cr_backup_hydro(filename, filename_desc)
            ! Loop over cells
            do ind = 1, twotondim
               iskip = ncoarse+(ind-1)*ngridmax
-              do igroup = 1, ncr
+              do igroup = 1, ncr_groups
                  ! CR energy density of group igroup
                  do i = 1, ncache
                     xdp(i) = cruold(ind_grid(i)+iskip, iCRu+(ndim+1)*(igroup-1))

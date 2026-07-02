@@ -49,7 +49,7 @@ subroutine crmom_step(ilevel)
      ! Pull in updates from finer level on other cpus -- only needed when
      ! updating coarser level (i.e. not subcycling).
      if(cr_nsubcycle==1)then
-        do ivar=1,ncrvars
+        do ivar=1,ncrvar
            call make_virtual_reverse_dp(crunew(1,ivar),ilevel)
         end do
      endif
@@ -60,7 +60,7 @@ subroutine crmom_step(ilevel)
      ! Collisional CR cooling (Coulomb/hadronic losses), on cruold.
      if(cr_cooling)call cr_cooling_fine(ilevel)
 
-     do ivar=1,ncrvars
+     do ivar=1,ncrvar
         call make_virtual_fine_dp(cruold(1,ivar),ilevel)
      end do
 
@@ -116,7 +116,7 @@ subroutine add_cr_source_terms(ilevel)
   integer ,dimension(1:nvector,0:twondim),save::igridn
   integer ,dimension(1:nvector,1:ndim),save::ind_left,ind_right
   real(dp),dimension(1:nvector,1:ndim),save::dx_g,dx_d
-  real(dp),dimension(1:nvector,1:ndim,1:ncr),save::gradEcr_loc,gradpcr_loc
+  real(dp),dimension(1:nvector,1:ndim,1:ncr_groups),save::gradEcr_loc,gradpcr_loc
   real(dp),dimension(1:nvector,1:3),save::B_field_loc
   real(dp),dimension(1:nvector),save::bdotgradE_loc
   real(dp),dimension(1:nvector,1:3),save::vs_loc
@@ -124,7 +124,7 @@ subroutine add_cr_source_terms(ilevel)
   real(dp)::norm,frotx,froty,frotz,bxby,cosp,sinp,cost,sint
   real(dp)::f1,f2,f3
   integer::j,iGrp,icrE
-  real(dp),dimension(1:nvector,1:ndim,1:ncr),save::pcrg,pcrd
+  real(dp),dimension(1:nvector,1:ndim,1:ncr_groups),save::pcrg,pcrd
   real(dp)::coef_11, coef_12, coef_13, coef_14, coef_21, coef_22
   real(dp)::coef_31, coef_33, coef_41, coef_44
   real(dp)::e_coef, new_ec, old_ec, sigma_x, sigma_y, sigma_z, sigma_stream
@@ -195,7 +195,7 @@ subroutine add_cr_source_terms(ilevel)
            id1=jjj(idim,1,ind); ig1=iii(idim,1,ind)
            ih1=ncoarse+(id1-1)*ngridmax
            do i=1,ngrid
-           do iGrp=1,ncr
+           do iGrp=1,ncr_groups
               icrE = iCRu+(ndim+1)*(iGrp-1)  ! starting index of cr variables
               if(igridn(i,ig1)>0)then
                   pcrg(i,idim,iGrp)   = max(cruold(igridn(i,ig1)+ih1,icrE),smallcr)
@@ -209,7 +209,7 @@ subroutine add_cr_source_terms(ilevel)
            id2=jjj(idim,2,ind); ig2=iii(idim,2,ind)
            ih2=ncoarse+(id2-1)*ngridmax
            do i=1,ngrid
-           do iGrp=1,ncr
+           do iGrp=1,ncr_groups
               icrE = iCRu+(ndim+1)*(iGrp-1)  ! starting index of cr variables
               if(igridn(i,ig2)>0)then
                   pcrd(i,idim,iGrp)  = max(cruold(igridn(i,ig2)+ih2,icrE),smallcr)
@@ -224,7 +224,7 @@ subroutine add_cr_source_terms(ilevel)
         ! End loop over dimensions
 
         do i=1,ngrid
-        do iGrp=1,ncr
+        do iGrp=1,ncr_groups
            do idim=1,ndim
               gradEcr_loc(i,idim,iGrp) = (pcrd(i,idim,iGrp)-pcrg(i,idim,iGrp)) &
                    &                    / (dx_g(i,idim)     +dx_d(i,idim))
@@ -429,7 +429,7 @@ subroutine add_cr_source_terms(ilevel)
             endif
 #endif
 
-        end do ! ncr
+        end do ! ncr_groups
 
             ekin=0d0
             do idim=1,ndim
@@ -537,7 +537,7 @@ SUBROUTINE cr_set_unew(ilevel)
    ! Set crunew to cruold for myid cells
    do ind=1,twotondim
       iskip=ncoarse+(ind-1)*ngridmax
-      do ivar=1,ncrvars
+      do ivar=1,ncrvar
          do i=1,active(ilevel)%ngrid
             crunew(active(ilevel)%igrid(i)+iskip,ivar)=cruold(active(ilevel)%igrid(i)+iskip,ivar)
          end do
@@ -548,7 +548,7 @@ SUBROUTINE cr_set_unew(ilevel)
    do icpu=1,ncpu
    do ind=1,twotondim
       iskip=ncoarse+(ind-1)*ngridmax
-      do ivar=1,ncrvars
+      do ivar=1,ncrvar
          do i=1,reception(icpu,ilevel)%ngrid
 #ifdef LIGHT_MPI_COMM
             crunew(reception(icpu,ilevel)%pcomm%igrid(i)+iskip,ivar)=0.0
@@ -614,14 +614,14 @@ SUBROUTINE cr_set_uold(ilevel)
    ! Set cruold to crunew for myid cells
    do ind=1,twotondim
       iskip=ncoarse+(ind-1)*ngridmax
-      do ivar=1,ncrvars
+      do ivar=1,ncrvar
          do i=1,active(ilevel)%ngrid
             cruold(active(ilevel)%igrid(i)+iskip,ivar)=crunew(active(ilevel)%igrid(i)+iskip,ivar)
          end do
       end do
 
       ! Floor each group's CR energy at smallcr (no negative CR densities).
-      do iGrp=1,ncr
+      do iGrp=1,ncr_groups
          icrE=iCRu+(ndim+1)*(iGrp-1)
          do i=1,active(ilevel)%ngrid
             cruold(active(ilevel)%igrid(i)+iskip,icrE)= &
@@ -667,13 +667,13 @@ SUBROUTINE cr_godfine1(ind_grid, ncache, ilevel)
    ! Split buffers for the coarser-level neighbour interpolation:
    real(dp),dimension(1:nvector,0:twondim  ,1:nvar+3),save::u1_gas
    real(dp),dimension(1:nvector,1:twotondim,1:nvar+3),save::u2_gas
-   real(dp),dimension(1:nvector,0:twondim  ,1:ncrvars),save::u1_cr
-   real(dp),dimension(1:nvector,1:twotondim,1:ncrvars),save::u2_cr
+   real(dp),dimension(1:nvector,0:twondim  ,1:ncrvar),save::u1_cr
+   real(dp),dimension(1:nvector,1:twotondim,1:ncrvar),save::u2_cr
 
    ! Split 6x6x6 stencils:
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar+3),save::uin_gas
-   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:ncrvars),save::uin_cr
-   real(dp),dimension(1:nvector,if1:if2,jf1:jf2,kf1:kf2,1:ncrvars,1:ndim),save::flux
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:ncrvar),save::uin_cr
+   real(dp),dimension(1:nvector,if1:if2,jf1:jf2,kf1:kf2,1:ncrvar,1:ndim),save::flux
    logical,dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),save::ok
    integer,dimension(1:nvector),save::igrid_nbor,ind_cell,ind_buffer
    integer,dimension(1:nvector),save::ind_exist,ind_nexist
@@ -743,7 +743,7 @@ SUBROUTINE cr_godfine1(ind_grid, ncache, ilevel)
                end do
             end do
             ! CR (E,F) from cruold, interpolated as cell-centered scalars.
-            do ivar=1,ncrvars
+            do ivar=1,ncrvar
                do i=1,nbuffer
                   u1_cr(i,j,ivar)=cruold(ibuffer_father(i,j),ivar)
                end do
@@ -795,7 +795,7 @@ SUBROUTINE cr_godfine1(ind_grid, ncache, ilevel)
          end do
 
          ! Gather CR variables (E,F) from cruold into uin_cr
-         do ivar=1,ncrvars
+         do ivar=1,ncrvar
             do i=1,nexist
                uin_cr(ind_exist(i),i3,j3,k3,ivar)=cruold(ind_cell(i),ivar)
             end do
@@ -825,7 +825,7 @@ SUBROUTINE cr_godfine1(ind_grid, ncache, ilevel)
    !----------------------------------------------------------------------
    ! Compute fluxes of each CR group, using the Eddington tensor
    !----------------------------------------------------------------------
-   do iGrp=1,ncr
+   do iGrp=1,ncr_groups
       call cmp_cr_faces(uin_gas,uin_cr,flux,dx,dt,iGrp,ncache,ilevel)
    end do
 
@@ -873,10 +873,10 @@ SUBROUTINE cr_godfine1(ind_grid, ncache, ilevel)
          k3=1+k2
          ! Update conservative CR variables (new state vector)
          do i=1,ncache
-            crunew(ind_cell(i),1:ncrvars)= &
-               crunew(ind_cell(i),1:ncrvars)   &
-               & +(flux(i,i3   ,j3   ,k3   ,1:ncrvars,idim)  &
-               & - flux(i,i3+i0,j3+j0,k3+k0,1:ncrvars,idim))
+            crunew(ind_cell(i),1:ncrvar)= &
+               crunew(ind_cell(i),1:ncrvar)   &
+               & +(flux(i,i3   ,j3   ,k3   ,1:ncrvar,idim)  &
+               & - flux(i,i3+i0,j3+j0,k3+k0,1:ncrvar,idim))
          end do
       end do
       end do
@@ -913,8 +913,8 @@ SUBROUTINE cr_godfine1(ind_grid, ncache, ilevel)
             do j3=j3min,j3max-j0 ! 1 to 1 if dim=2, 1 to 2 otherwise
                do i3=i3min,i3max-i0 ! 1 to 1 if dim=1, 1 to 2 otherwise
                   do i=1,nb_noneigh
-                     crunew(ind_buffer(i),1:ncrvars)= &
-                          crunew(ind_buffer(i),1:ncrvars)   &
+                     crunew(ind_buffer(i),1:ncrvar)= &
+                          crunew(ind_buffer(i),1:ncrvar)   &
                           & -flux(ind_cell(i),i3,j3,k3,:,idim)  &
                           & *oneontwotondim
                   end do
@@ -941,8 +941,8 @@ SUBROUTINE cr_godfine1(ind_grid, ncache, ilevel)
             do j3=j3min+j0,j3max
                do i3=i3min+i0,i3max
                   do i=1,nb_noneigh
-                     crunew(ind_buffer(i),1:ncrvars)= &
-                          crunew(ind_buffer(i),1:ncrvars)   &
+                     crunew(ind_buffer(i),1:ncrvar)= &
+                          crunew(ind_buffer(i),1:ncrvar)   &
                           & +flux(ind_cell(i),i3+i0,j3+j0,k3+k0,:,idim)  &
                           & *oneontwotondim
                   end do

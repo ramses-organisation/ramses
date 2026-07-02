@@ -11,7 +11,7 @@ SUBROUTINE cr_courant_fine(ilevel)
    use amr_commons
    use cr_parameters, only: cr_vmax,c_cu,cr_nsubcycle,cr_varvmax, &
         & cr_varvmax_fudge,cr_varvmax_vdvs,cr_va_max, &
-        & gamma_cr,Dcr_code,mom_streaming_diffusion,ncr
+        & gamma_cr,Dcr_code,mom_streaming_diffusion,ncr_groups
    implicit none
    integer::ilevel
    real(dp)::dt_cr,dx,scale
@@ -31,11 +31,11 @@ SUBROUTINE cr_courant_fine(ilevel)
       cr_vmax(ilevel) = max(cr_vmax(ilevel), dx/3d0/dtnew(ilevel) * cr_varvmax_fudge)
       if(cr_varvmax_vdvs)then
          if(mom_streaming_diffusion)then
-            do igrp=1,ncr
+            do igrp=1,ncr_groups
                cr_vmax(ilevel) = max(cr_vmax(ilevel), gamma_cr(igrp)*cr_va_max * cr_varvmax_fudge)
             end do
          endif
-         do igrp=1,ncr
+         do igrp=1,ncr_groups
             cr_vmax(ilevel) = max(cr_vmax(ilevel), Dcr_code(igrp)/dx * (gamma_cr(igrp)-1d0) * cr_varvmax_fudge)
          end do
       endif

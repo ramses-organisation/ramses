@@ -6,7 +6,7 @@ SUBROUTINE cr_cooling_fine(ilevel)
   ! Called from crmom_step (after cr_set_uold) when cr_cooling=.true.
   use amr_commons
   use hydro_commons              ! gas uold, smallr
-  use cr_parameters              ! iCRu, ncr, zeta_cr, ne, fneut, cr_c_fraction
+  use cr_parameters              ! iCRu, ncr_groups, zeta_cr, ne, fneut, cr_c_fraction
   use cr_hydro_commons           ! cruold
   implicit none
   integer::ilevel
@@ -54,7 +54,7 @@ SUBROUTINE cr_cooling_fine(ilevel)
         end do
 
         ! Exponential decay of E_cr and F_cr per group (Fitz Axen et al. 2024)
-        do iGrp=1,ncr
+        do iGrp=1,ncr_groups
            icrE=iCRu+(ndim+1)*(iGrp-1)
            do i=1,nleaf
               il=ind_leaf(i)

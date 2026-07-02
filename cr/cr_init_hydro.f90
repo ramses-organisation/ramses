@@ -11,10 +11,10 @@ subroutine cr_init_hydro
   if(verbose)write(*,*)'Entering cr_init_hydro'
 
   ncell=ncoarse+twotondim*ngridmax
-  allocate(cruold(1:ncell,1:ncrvars))
-  allocate(crunew(1:ncell,1:ncrvars))
+  allocate(cruold(1:ncell,1:ncrvar))
+  allocate(crunew(1:ncell,1:ncrvar))
   cruold=smallcr ; crunew=smallcr
 
-  if(verbose)write(*,*)'Allocate done for',ncrvars,'CR variables'
+  if(verbose)write(*,*)'Allocate done for',ncrvar,'CR variables'
 
 end subroutine cr_init_hydro

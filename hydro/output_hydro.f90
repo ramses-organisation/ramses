@@ -57,7 +57,7 @@ subroutine backup_hydro(filename, filename_desc)
   write(unit_out) ncpu
 #ifdef CRPHYS
   ncrdump=0
-  if(cr_legacy_output) ncrdump=ncrvars
+  if(cr_legacy_output) ncrdump=ncrvar
   if(strict_equilibrium>0)then
      write(unit_out) nvar_all+2+ncrdump
   else
@@ -188,7 +188,7 @@ subroutine backup_hydro(filename, filename_desc)
               if(cr_legacy_output)then
                  ! Append cosmic-ray columns, cral-compatible field names,
                  ! so cral-era analysis tooling reads sno outputs unmodified
-                 do igroup = 1, ncr
+                 do igroup = 1, ncr_groups
                     do i = 1, ncache
                        xdp(i) = cruold(ind_grid(i)+iskip, iCRu+(ndim+1)*(igroup-1))
                     end do

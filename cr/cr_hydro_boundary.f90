@@ -9,7 +9,7 @@ subroutine cr_make_boundary_hydro(ilevel)
   implicit none
   integer::ilevel
   ! -------------------------------------------------------------------
-  ! Boundary conditions for the separated CR arrays cruold(:,1:ncrvars). Gas
+  ! Boundary conditions for the separated CR arrays cruold(:,1:ncrvar). Gas
   ! rho/v/B/MHD bookkeeping is handled by the gas make_boundary_hydro, not here.
   ! Reflexive walls flip the sign of each CR flux component normal to the
   ! boundary (energy unchanged); cr_bound_floor>=0 injects a fixed E_cr into
@@ -28,7 +28,7 @@ subroutine cr_make_boundary_hydro(ilevel)
   real(dp),dimension(1:3)::gs,skip_loc
   real(dp),dimension(1:twotondim,1:3)::xc
   real(dp),dimension(1:nvector,1:ndim),save::xx
-  real(dp),dimension(1:nvector,1:ncrvars),save::uu
+  real(dp),dimension(1:nvector,1:ncrvar),save::uu
 
   if(.not. simple_boundary)return
   if(.not. cr_advect)return
@@ -98,7 +98,7 @@ subroutine cr_make_boundary_hydro(ilevel)
            if((boundary_type(ibound)/10).eq.0)then
 
               ! Gather reference CR variables
-              do ivar=1,ncrvars
+              do ivar=1,ncrvar
                  do i=1,ngrid
                     uu(i,ivar)=cruold(ind_cell_ref(i),ivar)
                  end do
@@ -106,7 +106,7 @@ subroutine cr_make_boundary_hydro(ilevel)
 
               ! Scatter to boundary region, flipping CR flux normal to wall.
               ! crType=0 -> CR energy (no flip); 1..ndim -> flux component.
-              do ivar=1,ncrvars
+              do ivar=1,ncrvar
                  switch=1
                  crType=mod(ivar-iCRu,ndim+1)
                  if(crType.ne.0)switch=gs(crType)
@@ -127,14 +127,14 @@ subroutine cr_make_boundary_hydro(ilevel)
            else if((boundary_type(ibound)/10).eq.1)then
 
               ! Gather reference CR variables
-              do ivar=1,ncrvars
+              do ivar=1,ncrvar
                  do i=1,ngrid
                     uu(i,ivar)=cruold(ind_cell_ref(i),ivar)
                  end do
               end do
 
               ! Scatter to boundary region (zero gradient: plain copy)
-              do ivar=1,ncrvars
+              do ivar=1,ncrvar
                  do i=1,ngrid
                     cruold(ind_cell(i),ivar)=uu(i,ivar)
                  end do
@@ -160,7 +160,7 @@ subroutine cr_make_boundary_hydro(ilevel)
               call cr_boundana(xx,uu,dx_loc,ibound,ngrid)
 
               ! Scatter variables
-              do ivar=1,ncrvars
+              do ivar=1,ncrvar
                  do i=1,ngrid
                     cruold(ind_cell(i),ivar)=uu(i,ivar)
                  end do

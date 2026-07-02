@@ -41,7 +41,7 @@ SUBROUTINE update_cr_vmax_and_Dcr_code(crvmax)
 
     scale_kappa = scale_l**2/scale_t
     DCRmax_code=DCRmax/scale_kappa
-    do igrp=1,ncr
+    do igrp=1,ncr_groups
        ! YD: I think the factor 3 should not appear there.
        ! It would be better to have it in cr_godunov_fine.f90
        ! in source term because sigma = 1/(3*kappa_E).

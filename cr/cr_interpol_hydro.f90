@@ -1,7 +1,7 @@
-! CR AMR averaging for cruold(:,1:ncrvars): restriction (cr_upload_fine/cr_upl)
+! CR AMR averaging for cruold(:,1:ncrvar): restriction (cr_upload_fine/cr_upl)
 ! and prolongation (cr_interpol_hydro).
 SUBROUTINE cr_upload_fine(ilevel)
-! Restriction (averaging down) of the CR variables cruold(:,1:ncrvars).
+! Restriction (averaging down) of the CR variables cruold(:,1:ncrvar).
 !------------------------------------------------------------------------
   use amr_commons
   use cr_parameters
@@ -70,7 +70,7 @@ END SUBROUTINE cr_upload_fine
 !################################################################
 SUBROUTINE cr_upl(ind_cell,ncell)
 ! Average each coarse split cell's 2^ndim children into the parent,
-! over the CR variables 1:ncrvars.
+! over the CR variables 1:ncrvar.
 !------------------------------------------------------------------------
   use amr_commons
   use cr_parameters
@@ -88,7 +88,7 @@ SUBROUTINE cr_upl(ind_cell,ncell)
   end do
 
   ! Loop over CR variables
-  do ivar=1,ncrvars
+  do ivar=1,ncrvar
      getx(1:ncell)=0.0d0
      do ind_son=1,twotondim
         iskip_son=ncoarse+(ind_son-1)*ngridmax
@@ -114,7 +114,7 @@ END SUBROUTINE cr_upl
 !################################################################
 !################################################################
 SUBROUTINE cr_interpol_hydro(u1,u2,nn)
-! Interpolate the CR buffer (E,F over 1:ncrvars) from a coarse father cell to
+! Interpolate the CR buffer (E,F over 1:ncrvar) from a coarse father cell to
 ! its 2^ndim children as cell-centered scalars with the chosen slope limiter.
 !------------------------------------------------------------------------
   use amr_commons
@@ -123,8 +123,8 @@ SUBROUTINE cr_interpol_hydro(u1,u2,nn)
   use hydro_parameters, only: interpol_type
   implicit none
   integer::nn
-  real(dp),dimension(1:nvector,0:twondim  ,1:ncrvars)::u1
-  real(dp),dimension(1:nvector,1:twotondim,1:ncrvars)::u2
+  real(dp),dimension(1:nvector,0:twondim  ,1:ncrvar)::u1
+  real(dp),dimension(1:nvector,1:twotondim,1:ncrvar)::u2
   integer::i,j,ivar,idim,ind,ix,iy,iz
 
   real(dp),dimension(1:twotondim,1:3)::xc
@@ -142,7 +142,7 @@ SUBROUTINE cr_interpol_hydro(u1,u2,nn)
   end do
 
   ! Loop over CR interpolation variables
-  do ivar=1,ncrvars
+  do ivar=1,ncrvar
 
      ! Load father variable
      do j=0,twondim

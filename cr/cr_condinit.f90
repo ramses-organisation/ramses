@@ -9,7 +9,7 @@ subroutine cr_condinit(x,u,dx,nn,ilevel)
   integer ::nn                              ! Number of cells
   integer:: ilevel                          ! Refinement level
   real(dp)::dx                              ! Cell size
-  real(dp),dimension(1:nvector,1:ncrvars)::u ! CR conservative variables
+  real(dp),dimension(1:nvector,1:ncrvar)::u ! CR conservative variables
   real(dp),dimension(1:nvector,1:ndim  )::x ! Cell center position.
   !================================================================
   ! Generate CR initial conditions; u holds per-group [energy, ndim fluxes].
@@ -18,7 +18,7 @@ subroutine cr_condinit(x,u,dx,nn,ilevel)
   integer::i,igrp,icrE
 
   do i=1,nn
-     do igrp=1,ncr
+     do igrp=1,ncr_groups
         icrE=iCRu+(ndim+1)*(igrp-1)
         u(i,icrE)=0d0
         u(i,icrE+1:icrE+ndim)=0d0

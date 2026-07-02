@@ -2,7 +2,7 @@
 ! err_grad_crmom, OR-ing the result into the shared flag1.
 subroutine cr_hydro_flag(ilevel)
   use amr_commons
-  use cr_parameters, only: ncr,ncrvars,iCRu,err_grad_crmom
+  use cr_parameters, only: ncr_groups,ncrvar,iCRu,err_grad_crmom
   use cr_hydro_commons, only: cruold
   implicit none
   integer::ilevel
@@ -18,7 +18,7 @@ subroutine cr_hydro_flag(ilevel)
 
   logical,dimension(1:nvector),save::ok
 
-  real(dp),dimension(1:nvector,1:ncrvars),save::ucrg,ucrm,ucrd
+  real(dp),dimension(1:nvector,1:ncrvar),save::ucrg,ucrm,ucrd
   real(dp)::pcrg,pcrm,pcrd,errcr
   integer::icr,icrE
   ! Floor in the CR-gradient denominator (avoids divide-by-zero)
@@ -27,7 +27,7 @@ subroutine cr_hydro_flag(ilevel)
   if(ilevel==nlevelmax)return
   if(numbtot(1,ilevel)==0)return
   ! No CR refinement requested -> nothing to do.
-  if(all(err_grad_crmom(1:ncr) < 0d0))return
+  if(all(err_grad_crmom(1:ncr_groups) < 0d0))return
 
   ! Loop over active grids
   ncache=active(ilevel)%ngrid
@@ -71,7 +71,7 @@ subroutine cr_hydro_flag(ilevel)
         ! Loop over dimensions
         do idim=1,ndim
            ! CR-energy gradient refinement (err_grad_crmom).
-           do icr=1,ncr
+           do icr=1,ncr_groups
               if(err_grad_crmom(icr) >= 0.)then
                  icrE=iCRu+(ndim+1)*(icr-1)
                  do i=1,ngrid

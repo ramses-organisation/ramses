@@ -3,7 +3,7 @@
 !################################################################
 !################################################################
 subroutine cr_init_flow
-  ! Initialise the separated cosmic-ray state arrays cruold(:,1:ncrvars)
+  ! Initialise the separated cosmic-ray state arrays cruold(:,1:ncrvar)
   ! on refinement. Inert unless cr_advect.
   use amr_commons
   use cr_parameters
@@ -16,10 +16,10 @@ subroutine cr_init_flow
   if(verbose)write(*,*)'Entering cr_init_flow'
   do ilevel=nlevelmax,1,-1
      if(ilevel>=levelmin)call cr_init_flow_fine(ilevel)
-     ! Restrict the separate CR array cruold(:,1:ncrvars) fine->coarse onto
+     ! Restrict the separate CR array cruold(:,1:ncrvar) fine->coarse onto
      ! coarse split cells (generic upload_fine restricts only the gas uold).
      call cr_upload_fine(ilevel)
-     do ivar=1,ncrvars
+     do ivar=1,ncrvar
         call make_virtual_fine_dp(cruold(1,ivar),ilevel)
      end do
      if(simple_boundary)call cr_make_boundary_hydro(ilevel)
@@ -33,7 +33,7 @@ end subroutine cr_init_flow
 !################################################################
 subroutine cr_init_flow_fine(ilevel)
   ! Per-level CR initialisation: gather new cell centre positions, call
-  ! cr_condinit, and scatter the result into cruold(:,1:ncrvars).
+  ! cr_condinit, and scatter the result into cruold(:,1:ncrvar).
   use amr_commons
   use cr_parameters
   use cr_hydro_commons
@@ -48,7 +48,7 @@ subroutine cr_init_flow_fine(ilevel)
   real(dp),dimension(1:3)::skip_loc
   real(dp),dimension(1:twotondim,1:3)::xc
   real(dp),dimension(1:nvector,1:ndim),save::xx
-  real(dp),dimension(1:nvector,1:ncrvars),save::uu
+  real(dp),dimension(1:nvector,1:ncrvar),save::uu
 
   if(.not.cr_advect)return
   if(numbtot(1,ilevel)==0)return
@@ -110,7 +110,7 @@ subroutine cr_init_flow_fine(ilevel)
         ! Call CR initial condition routine
         call cr_condinit(xx,uu,dx_loc,ngrid,ilevel)
         ! Scatter variables
-        do ivar=1,ncrvars
+        do ivar=1,ncrvar
            do i=1,ngrid
               cruold(ind_cell(i),ivar)=uu(i,ivar)
            end do
@@ -130,18 +130,18 @@ end subroutine cr_init_flow_fine
 
 !************************************************************************
 SUBROUTINE cr_region_condinit(x,u,dx,nn,ilevel)
-  ! Fill the separated CR buffer u(1:nn,1:ncrvars) from namelist crmom_region
+  ! Fill the separated CR buffer u(1:nn,1:ncrvar) from namelist crmom_region
   ! per CR-owned region geometry (cr_nregion / cr_region_type / cr_reg_* in &cr_params).
   use amr_parameters
   use cr_parameters, only: cr_nregion,cr_region_type,cr_reg_x_center &
        & ,cr_reg_y_center,cr_reg_z_center,cr_reg_length_x,cr_reg_length_y &
-       & ,cr_reg_length_z,cr_exp_region,cr_reg_group,crmom_region,ncrvars &
+       & ,cr_reg_length_z,cr_exp_region,cr_reg_group,crmom_region,ncrvar &
        & ,iCRu,smallcr
   implicit none
   integer ::nn
   integer::ilevel
   real(dp)::dx
-  real(dp),dimension(1:nvector,1:ncrvars)::u
+  real(dp),dimension(1:nvector,1:ncrvar)::u
   real(dp),dimension(1:nvector,1:ndim  )::x
   integer::i,k,ivar
   real(dp)::vol,r,xn,yn,zn,en
@@ -168,7 +168,7 @@ SUBROUTINE cr_region_condinit(x,u,dx,nn,ilevel)
            end if
            ! If cell lies within region, REPLACE CR variables by region values
            if(r<1.0)then
-              do ivar=1,ncrvars
+              do ivar=1,ncrvar
                  u(i,ivar)=crmom_region(k,ivar)
               end do
            end if

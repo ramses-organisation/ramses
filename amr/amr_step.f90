@@ -75,7 +75,7 @@ recursive subroutine amr_step(ilevel,icount)
 #endif
 #ifdef CRPHYS
               if(cr_advect)then
-                 do ivar=1,ncrvars
+                 do ivar=1,ncrvar
                     call make_virtual_fine_dp(cruold(1,ivar),i)
                  end do
                  if(simple_boundary)call cr_make_boundary_hydro(i)
@@ -538,7 +538,7 @@ recursive subroutine amr_step(ilevel,icount)
 
 #ifdef CRPHYS
   if(cr_advect)then
-     do ivar=1,ncrvars
+     do ivar=1,ncrvar
         call make_virtual_fine_dp(cruold(1,ivar),ilevel)
      end do
      if(simple_boundary)call cr_make_boundary_hydro(ilevel)

@@ -1,6 +1,6 @@
 !================================================================
 ! Jiang & Oh (2018) CR test suite -- CR initial conditions patch: sets only the
-! CR conservative variables u(1:nn,1:ncrvars); test chosen by namelist jiang_test.
+! CR conservative variables u(1:nn,1:ncrvar); test chosen by namelist jiang_test.
 !================================================================
 subroutine cr_condinit(x,u,dx,nn,ilevel)
   use amr_parameters
@@ -9,10 +9,10 @@ subroutine cr_condinit(x,u,dx,nn,ilevel)
   integer ::nn                              ! Number of cells
   integer:: ilevel                          ! Refinement level
   real(dp)::dx                              ! Cell size
-  real(dp),dimension(1:nvector,1:ncrvars)::u ! CR conservative variables
+  real(dp),dimension(1:nvector,1:ncrvar)::u ! CR conservative variables
   real(dp),dimension(1:nvector,1:ndim  )::x ! Cell center position in [0,boxlen]**ndim
   !----------------------------------------------------------------
-  ! u(i,1:ncrvars) is the CR conservative vector for group g:
+  ! u(i,1:ncrvar) is the CR conservative vector for group g:
   !   energy at iCRu+(ndim+1)*(g-1), the ndim fluxes in the slots after it.
   !----------------------------------------------------------------
   integer::i,igrp,icrE
@@ -25,7 +25,7 @@ subroutine cr_condinit(x,u,dx,nn,ilevel)
   ! Default for every group: energy floor, zero flux. Test branches below
   ! overwrite the first group's energy (and, where applicable, flux).
   do i=1,nn
-     do igrp=1,ncr
+     do igrp=1,ncr_groups
         icrE=iCRu+(ndim+1)*(igrp-1)
         u(i,icrE)=smallcr
         u(i,icrE+1:icrE+ndim)=0d0
@@ -131,7 +131,7 @@ subroutine cr_flux_from_region_velocity(x,u,dx,nn)
   implicit none
   integer ::nn
   real(dp)::dx
-  real(dp),dimension(1:nvector,1:ncrvars)::u
+  real(dp),dimension(1:nvector,1:ncrvar)::u
   real(dp),dimension(1:nvector,1:ndim  )::x
   integer::i,k
   real(dp)::r,xn,yn,zn,en

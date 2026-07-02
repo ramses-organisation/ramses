@@ -13,7 +13,7 @@ subroutine load_balance
   use rt_hydro_commons, ONLY: nrtvar, rtuold
 #endif
 #ifdef CRPHYS
-  use cr_parameters, ONLY: cr_advect, ncrvars
+  use cr_parameters, ONLY: cr_advect, ncrvar
   use cr_hydro_commons, ONLY: cruold
 #endif
 #endif
@@ -104,7 +104,7 @@ subroutine load_balance
 #endif
 #ifdef CRPHYS
      if(cr_advect)then
-        do ivar=1,ncrvars
+        do ivar=1,ncrvar
            call make_virtual_fine_dp(cruold(1,ivar),ilevel)
         end do
         if(simple_boundary)then
@@ -1080,7 +1080,7 @@ subroutine defrag
   use rt_hydro_commons
 #endif
 #ifdef CRPHYS
-  use cr_parameters, ONLY: cr_advect,ncrvars
+  use cr_parameters, ONLY: cr_advect,ncrvar
   use cr_hydro_commons, ONLY: cruold
 #endif
   implicit none
@@ -1577,7 +1577,7 @@ subroutine defrag
 #ifdef CRPHYS
   if(cr_advect)then
 
-  do ivar=1,ncrvars
+  do ivar=1,ncrvar
   do ind=1,twotondim
   iskip2=ncoarse+(ind-1)*ngridmax
   ngrid2=0

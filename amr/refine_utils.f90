@@ -598,7 +598,7 @@ subroutine make_grid_fine(ind_grid,ind_cell,ind,ilevel,nn,ibound,boundary_region
 #endif
 #ifdef CRPHYS
   use cr_hydro_commons, ONLY:cruold
-  use cr_parameters, ONLY:ncrvars,cr_advect
+  use cr_parameters, ONLY:ncrvar,cr_advect
 #endif
 #ifdef ATON
   use radiation_commons, ONLY:Erad
@@ -637,8 +637,8 @@ subroutine make_grid_fine(ind_grid,ind_cell,ind,ilevel,nn,ibound,boundary_region
   real(dp),dimension(1:nvector,1:twotondim,1:nrtvar),save::urt2
 #endif
 #ifdef CRPHYS
-  real(dp),dimension(1:nvector,0:twondim  ,1:ncrvars),save::ucr1
-  real(dp),dimension(1:nvector,1:twotondim,1:ncrvars),save::ucr2
+  real(dp),dimension(1:nvector,0:twondim  ,1:ncrvar),save::ucr1
+  real(dp),dimension(1:nvector,1:twotondim,1:ncrvar),save::ucr2
 #endif
   real(dp),dimension(1:nvector,1:ndim),save::xx
   integer ,dimension(1:nvector),save::cc
@@ -898,7 +898,7 @@ subroutine make_grid_fine(ind_grid,ind_cell,ind,ilevel,nn,ibound,boundary_region
      !============================
      if(hydro .and. cr_advect)then
         do j=0,twondim
-           do ivar=1,ncrvars
+           do ivar=1,ncrvar
               do i=1,nn
                  ucr1(i,j,ivar)=cruold(ind_fathers(i,j),ivar)
               end do
@@ -907,7 +907,7 @@ subroutine make_grid_fine(ind_grid,ind_cell,ind,ilevel,nn,ibound,boundary_region
         call cr_interpol_hydro(ucr1,ucr2,nn)
         do j=1,twotondim
            iskip=ncoarse+(j-1)*ngridmax
-           do ivar=1,ncrvars
+           do ivar=1,ncrvar
               do i=1,nn
                  cruold(iskip+ind_grid_son(i),ivar)=ucr2(i,j,ivar)
               end do
@@ -975,7 +975,7 @@ subroutine kill_grid(ind_cell,ilevel,nn,ibound,boundary_region)
   use rt_parameters
 #endif
 #ifdef CRPHYS
-  use cr_parameters, ONLY:cr_advect,ncrvars
+  use cr_parameters, ONLY:cr_advect,ncrvar
   use cr_hydro_commons, ONLY:cruold,crunew
 #endif
 #ifdef ATON
@@ -1157,7 +1157,7 @@ subroutine kill_grid(ind_cell,ilevel,nn,ibound,boundary_region)
 #endif
 #ifdef CRPHYS
      if(cr_advect)then
-        do ivar=1,ncrvars
+        do ivar=1,ncrvar
            do i=1,nn
               cruold(ind_cell_son(i),ivar)=0.0D0
               crunew(ind_cell_son(i),ivar)=0.0D0

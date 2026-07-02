@@ -6,7 +6,7 @@ MODULE cr_flux_module
   use amr_commons
   use hydro_commons
   use hydro_parameters         ! iu1..ku2, if1..kf2, nvar, smallr
-  use cr_parameters            ! ncr, ncrvars, iCRu, gamma_cr, cr_vmax, ...
+  use cr_parameters            ! ncr_groups, ncrvar, iCRu, gamma_cr, cr_vmax, ...
   implicit none
 
   private   ! default
@@ -36,7 +36,7 @@ subroutine cmp_cr_flux_tensors(uin_gas, uin_cr, iGrp, nGrid, ftens, vmax, bfield
 ! ftens     <=  Group flux tensors for all the cells.
 !------------------------------------------------------------------------
   real(dp),dimension(nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar+3)::uin_gas
-  real(dp),dimension(nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:ncrvars)::uin_cr
+  real(dp),dimension(nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:ncrvar)::uin_cr
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nDim+1,1:ndim)::ftens
   integer::iGrp, nGrid!---------------------------------------------------
   real(dp),dimension(1:ndim)::crflux
@@ -123,7 +123,7 @@ SUBROUTINE cmp_cr_wavespeeds(uin_gas, uin_cr, iGrp, ngrid, lmax, ilevel, dt)
   !------------------------------------------------------------------------
     real(dp),dimension(nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar+3), &
                                                             intent(in)::uin_gas
-    real(dp),dimension(nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:ncrvars), &
+    real(dp),dimension(nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:ncrvar), &
                                                             intent(in)::uin_cr
     real(dp),dimension(nvector,iu1:iu2,ju1:ju2,ku1:ku2,ndim)::   lmax
     integer,intent(in)::iGrp, ngrid, ilevel
@@ -346,8 +346,8 @@ SUBROUTINE cmp_cr_faces(uin_gas,uin_cr,iFlx,dx,dt,iGrp,ngrid,ilevel)
   use const
   implicit none
   real(dp),dimension(nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar+3)::uin_gas
-  real(dp),dimension(nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:ncrvars)::uin_cr
-  real(dp),dimension(nvector,if1:if2,jf1:jf2,kf1:kf2,1:ncrvars,1:ndim)::iFlx
+  real(dp),dimension(nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:ncrvar)::uin_cr
+  real(dp),dimension(nvector,if1:if2,jf1:jf2,kf1:kf2,1:ncrvar,1:ndim)::iFlx
   real(dp)::dx, dt
   integer,intent(in)::iGrp, nGrid, ilevel
   integer::iP0, iP1

@@ -66,7 +66,7 @@ subroutine init_refine_2
   use rt_hydro_commons
 #endif
 #ifdef CRPHYS
-  use cr_parameters, only: cr_advect,ncrvars
+  use cr_parameters, only: cr_advect,ncrvar
   use cr_hydro_commons, only: cruold
 #endif
   use pm_commons
@@ -124,7 +124,7 @@ subroutine init_refine_2
 #ifdef CRPHYS
            if(cr_advect)then
               call cr_upload_fine(ilevel)
-              do ivar=1,ncrvars
+              do ivar=1,ncrvar
                  call make_virtual_fine_dp(cruold(1,ivar),ilevel)
               end do
               if(simple_boundary)call cr_make_boundary_hydro(ilevel)

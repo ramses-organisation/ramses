@@ -8,7 +8,7 @@ subroutine adaptive_loop
   use rt_hydro_commons
 #endif
 #ifdef CRPHYS
-  use cr_parameters, only: cr_advect,ncrvars
+  use cr_parameters, only: cr_advect,ncrvar
   use cr_hydro_commons, only: cruold
 #endif
 #ifdef CRPHYS
@@ -130,7 +130,7 @@ subroutine adaptive_loop
 #endif
 #ifdef CRPHYS
            if(cr_advect)then
-              do ivar=1,ncrvars
+              do ivar=1,ncrvar
                  call make_virtual_fine_dp(cruold(1,ivar),ilevel)
               end do
               if(simple_boundary)call cr_make_boundary_hydro(ilevel)
@@ -182,7 +182,7 @@ subroutine adaptive_loop
 #ifdef CRPHYS
            if(cr_advect)then
               call cr_upload_fine(ilevel)
-              do ivar=1,ncrvars
+              do ivar=1,ncrvar
                  call make_virtual_fine_dp(cruold(1,ivar),ilevel)
               end do
               if(simple_boundary)call cr_make_boundary_hydro(ilevel)
