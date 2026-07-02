@@ -16,7 +16,7 @@ subroutine read_cr_params(nml_ok)
        & ,Dcr,DCRmax,Dcr_perp_factor,cr_streaming_diffusion &
        & ,cr_streaming_heating,cr_v_alfven,cr_f_taucell &
        & ,cr_cooling,zeta_cr,cr_ne,cr_fneut &
-       & ,cr_bound_floor,jiang_test,err_grad_cr,cr_legacy_output &
+       & ,jiang_test,err_grad_cr,cr_legacy_output &
        & ,cr_region_u,cr_boundary_u &
        & ,cr_nregion,cr_region_type,cr_reg_x_center,cr_reg_y_center,cr_reg_z_center &
        & ,cr_reg_length_x,cr_reg_length_y,cr_reg_length_z,cr_exp_region,cr_reg_group

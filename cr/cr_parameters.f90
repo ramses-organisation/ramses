@@ -51,7 +51,6 @@ module cr_parameters
   real(dp)::cr_ne=1d-3                         ! Free electrons per H nucleus
   real(dp)::cr_fneut=0.875d0                   ! Neutral gas fraction
   ! Boundaries / tests
-  real(dp)::cr_bound_floor=-1d0             ! >=0: E_cr in reflexive boundaries
   character(LEN=32)::jiang_test=''          ! Jiang & Oh test IC/BC dispatch
   ! Region-based CR initial conditions (per &init_params region geometry).
   ! cr_region_u(k,1)=E_cr, cr_region_u(k,2:ncrvar)=CR flux in region k.

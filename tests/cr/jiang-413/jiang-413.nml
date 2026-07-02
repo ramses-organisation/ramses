@@ -26,7 +26,6 @@ bound_type= 1, 2
 &CR_PARAMS
 cr_legacy_output=.true.
 jiang_test='413'
-cr_bound_floor=3.0
 Dcr=1d-6
 cr_c_fraction=3.3356409297285193e-9   ! reduced light speed = 100
 cr_streaming_heating=.true.
