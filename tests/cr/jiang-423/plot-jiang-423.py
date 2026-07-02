@@ -44,14 +44,4 @@ fig.suptitle("%s  t=%.3g  (snapshot %d)" % (title, t, si))
 fig.tight_layout()
 fig.savefig(title + ".pdf", bbox_inches="tight")
 
-# regression check (mirror RT): final-snapshot sums vs committed <title>-ref.dat.
-# 2D CR-AMR has a small grid-structure decomposition residual across MPI rank
-# counts: even with the amr_step cruold-sync fix, the leaf *count* converges
-# (11482 at np=2/4/8) but the refined *cell positions* still wander ~2e-5 (x/y
-# sums) -> CRegy ~1e-5. So "all" is loosened to 1e-4 (the bulk fields density/
-# pressure/velocity are ~1e-14 here, so real physics regressions are still caught).
-# The near-zero CR-flux sums (|F|~5e-7) are noise-amplified in relative error
-# (CRflx_01_x ~1.4e-2 on essentially zero net flux), so they get a loose per-key
-# tolerance. Verified PASS at np=2/4/8 (MPI=1).
-visu_ramses.check_solution(data["data"], title,
-                           tolerance={"all": 1e-4, "CRflx_01_x": 5e-2, "CRflx_01_y": 5e-2})
+visu_ramses.check_solution(data["data"], title, tolerance={"all": 1e-8}, overwrite=False)
