@@ -76,7 +76,7 @@ subroutine cr_condinit(x,u,dx,nn,ilevel)
      end do
 
 #if NDIM>1
-  case('415')                                ! 2D magnetic loop: CR-energy arc enhancement
+  case('415', '415_donut')                                ! 2D magnetic loop: CR-energy arc enhancement
      ! CR energy =12 on the loop arc (0.25 box < r < 0.35 box, theta in
      ! [-pi/12,pi/12], xx>0), =10 elsewhere. atan2 (not atan(yy/xx)) avoids
      ! a divide-by-zero FPE at xx=0.

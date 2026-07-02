@@ -66,7 +66,7 @@ subroutine  condinit(x,u,dx,nn)
   ! jiang_test='415' (Jiang & Oh 4.1.5): pre-conversion override of the gas + loop
   ! B-field (B=curl A), set BEFORE prim->cons so the magnetic energy enters E below.
 #if NDIM>1
-  if(trim(jiang_test)=='415') call jiang_loop_primitives(x,q,dx,nn)
+  if(trim(jiang_test)=='415' .or.trim(jiang_test)=='415_donut') call jiang_loop_primitives(x,q,dx,nn)
 #endif
 
   ! Convert primitive to conservative variables
