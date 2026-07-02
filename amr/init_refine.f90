@@ -72,42 +72,34 @@ subroutine init_refine_2
         write(*,'(A50)')"__________________________________________________"
      end if
      do i=levelmin,nlevelmax+1
-        ! DICE------
         do ilevel=levelmin-1,1,-1
            if(pic .and. dice_init)call merge_tree_fine(ilevel)
         enddo
-        ! ----------
         call refine_coarse
         do ilevel=1,nlevelmax
            call build_comm(ilevel)
            call make_virtual_fine_int(cpu_map(1),ilevel)
            call refine_fine(ilevel)
-           ! DICE------
            if(pic.and.dice_init)call make_tree_fine(ilevel)
-           ! ----------
            if(hydro)call init_flow_fine(ilevel)
-           ! DICE------
            if(pic.and.dice_init)then
               call kill_tree_fine(ilevel)
               call virtual_tree_fine(ilevel)
            endif
-           ! ----------
 #ifdef RT
            if(rt)call rt_init_flow_fine(ilevel)
 #endif
         end do
 
-        ! DICE------
         do ilevel=nlevelmax-1,levelmin,-1
            if(pic.and.dice_init)call merge_tree_fine(ilevel)
         enddo
-        ! ----------
         if(nremap>0)call load_balance
 
         do ilevel=levelmin,nlevelmax
            if(pic)call make_tree_fine(ilevel)
            if(poisson)call rho_fine(ilevel,2)
-           if(hydro.and.dice_init)call init_flow_fine(ilevel) !! DICE-----
+           if(hydro.and.dice_init)call init_flow_fine(ilevel)
            if(pic)then
               call kill_tree_fine(ilevel)
               call virtual_tree_fine(ilevel)
@@ -140,7 +132,6 @@ subroutine init_refine_2
         call flag_coarse
 
      end do
-     ! DICE------
 #if NDIM==3
      if(dice_init) then
         do ilevel=levelmin-1,1,-1
@@ -169,7 +160,6 @@ subroutine init_refine_2
         dice_init=.false.
      end if
 #endif
-  ! ----------
   endif ! if .not. 'grafic'
 
 

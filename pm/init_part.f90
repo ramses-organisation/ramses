@@ -2,10 +2,8 @@ subroutine init_part
   use amr_commons
   use pm_commons
   use clfind_commons
-  ! DICE patch
   use dice_commons
   use gadgetreadfilemod
-  ! DICE patch
 #ifdef RT
   use rt_parameters,only: convert_birth_times
 #endif
@@ -90,12 +88,11 @@ subroutine init_part
 #ifdef OUTPUT_PARTICLE_POTENTIAL
   allocate(ptcl_phi(npartmax))
 #endif
-  ! DICE patch
+  ! Define up array (and maskp) for DICE ICs
   allocate(up(npartmax))
   if(ic_mask_ptype.gt.-1)then
      allocate(maskp(npartmax))
   endif
-  ! DICE patch
   xp=0; vp=0; mp=0; levelp=0; idp=0
   typep(1:npartmax)%family=FAM_UNDEF; typep(1:npartmax)%tag=0
   if(star.or.sink)then
