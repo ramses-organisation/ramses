@@ -129,10 +129,6 @@ subroutine adaptive_loop
            endif
 #endif
 #ifdef CRPHYS
-           ! Coarse-refinement book-keeping for the SEPARATED CR field, mirroring
-           ! the gas/RT blocks above: communicate cruold and refresh the CR
-           ! boundaries on the freshly refined coarse levels. cral's embedded CR
-           ! is carried in this loop's uold make_virtual_fine_dp sweep.
            if(cr_advect)then
               do ivar=1,ncrvars
                  call make_virtual_fine_dp(cruold(1,ivar),ilevel)
@@ -184,10 +180,6 @@ subroutine adaptive_loop
            end if
 #endif
 #ifdef CRPHYS
-           ! Cosmic-ray book-keeping for the SEPARATED CR field, mirroring the
-           ! gas/RT blocks: restrict cruold fine->coarse, communicate it, refresh
-           ! CR boundaries. cral restricts its embedded CR via upload_fine here;
-           ! without this the coarse levels keep stale CR after derefinement.
            if(cr_advect)then
               call cr_upload_fine(ilevel)
               do ivar=1,ncrvars

@@ -1,6 +1,4 @@
 module cr_parameters
-  ! Cosmic-ray module compile-time configuration, namelist parameters and
-  ! global bookkeeping. Leaf module: may only use amr_parameters.
   use amr_parameters
 
   ! Compile-time guards: this file is only compiled when CRPHYS is enabled

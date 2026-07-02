@@ -103,13 +103,6 @@ subroutine load_balance
      endif
 #endif
 #ifdef CRPHYS
-     ! Refresh the SEPARATED CR field before the oct remap, mirroring the
-     ! gas/RT blocks above: communicate cruold virtual cells and refresh the
-     ! CR physical boundaries. cral carries its EMBEDDED CR in this loop's
-     ! uold make_virtual_fine_dp sweep (do ivar=1,nvar+3+ncrvars) and in
-     ! make_boundary_hydro, so it needs no separate hook; the separated
-     ! cruold does. Without it a nremap>0 load balance would remap octs with
-     ! stale CR virtual/boundary cells.
      if(cr_advect)then
         do ivar=1,ncrvars
            call make_virtual_fine_dp(cruold(1,ivar),ilevel)
@@ -1582,16 +1575,6 @@ subroutine defrag
 #endif
 
 #ifdef CRPHYS
-  ! Reorder the SEPARATED CR field cruold(:,1:ncrvars) along the same oct
-  ! permutation (cpu_map2) applied to the gas array above. cral carries the CR
-  ! in uold(:,nvar+3+1:nvar+3+ncrvars), so its defrag oct shuffle (the
-  ! do ivar=1,nvar+3+ncrvars loop) reorders the embedded CR for free; for the
-  ! separated cruold this block is the faithful analog. WITHOUT it, defrag moves
-  ! the octs (and uold) but leaves cruold in the old slots, so after the next
-  ! output the CR field is attached to the wrong cells -- e.g. the reflexive
-  ! cr_bound_floor value imprints on interior cells far from the boundary. Only
-  ! cruold is permuted (like uold/rtuold): crunew is a transient work array
-  ! rebuilt each step by set_unew, exactly as unew/rtunew are not reordered here.
   if(cr_advect)then
 
   do ivar=1,ncrvars

@@ -896,13 +896,6 @@ subroutine make_grid_fine(ind_grid,ind_cell,ind,ilevel,nn,ibound,boundary_region
      !============================
      ! Interpolate CR variables
      !============================
-     ! Prolongate the separated CR buffer cruold(:,1:ncrvars) onto freshly
-     ! created children, mirroring the gas interpol_hydro / RT rt_interpol_hydro
-     ! blocks above. Without this, new fine cells get the smallcr floor instead
-     ! of the parent CR energy/flux, so the CR pressure gradient (and the gas
-     ! back-reaction) vanish on refined levels -- breaking the non-static-gas
-     ! AMR test 424. cr_interpol_hydro is the same cell-centred slope-limited
-     ! prolongation cr_godfine1 uses for the stencil buffer cells.
      if(hydro .and. cr_advect)then
         do j=0,twondim
            do ivar=1,ncrvars
@@ -1163,12 +1156,6 @@ subroutine kill_grid(ind_cell,ilevel,nn,ibound,boundary_region)
      end if
 #endif
 #ifdef CRPHYS
-     ! SEPARATED CR variables. cral carries the CR in uold(:,nvar+3+1:nvar+3+ncrvars)
-     ! so the hydro loop above zeroes its embedded CR on oct destruction; for the
-     ! separated cruold/crunew this is the faithful analog. Without it a destroyed
-     ! oct returns to the free list still holding stale CR (e.g. the cr_bound_floor
-     ! injection value), which a later re-refinement can read back into interior
-     ! coarse cells at coarse-fine boundaries.
      if(cr_advect)then
         do ivar=1,ncrvars
            do i=1,nn
