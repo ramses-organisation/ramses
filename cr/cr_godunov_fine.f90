@@ -377,7 +377,7 @@ subroutine add_cr_source_terms(ilevel)
             ! Floor the CR energy and update total energy if necessary
             if ( crunew(ind_cell(i),icrE) .lt. cr_efloor ) crunew(ind_cell(i),icrE) = cr_efloor
             ! Thermal energy update:
-            if(.not. static_gas .and. .not. static) then
+            if(.not. static_gas .and. .not. static .and. cr_feedback) then
                unew(ind_cell(i),5) = unew(ind_cell(i),5) - (crunew(ind_cell(i),icrE) - old_ec)*f_decouple
                unew(ind_cell(i),5) = max(smallp*uold(ind_cell(i),1), unew(ind_cell(i),5))
             endif
@@ -398,33 +398,21 @@ subroutine add_cr_source_terms(ilevel)
 
             crunew(ind_cell(i),icrE+1) = frotx
             ! Momentum update
-            if(.not. static_gas .and. .not. static) then
-               if (cr_gradp_backreaction) then
-                  mom_change = -gradpcr_loc(i,1,iGrp)*dt
-               else
-                  mom_change = ( f1 - crunew(ind_cell(i),icrE+1) ) / cr_vmax(ilevel)**2
-               endif
+            if(.not. static_gas .and. .not. static .and. cr_feedback) then
+               mom_change = -gradpcr_loc(i,1,iGrp)*dt
                unew(ind_cell(i),2) = unew(ind_cell(i),2) + mom_change*f_decouple
             endif
 #if NDIM>1
             crunew(ind_cell(i),icrE+2) = froty
-            if(.not. static_gas .and. .not. static) then
-               if (cr_gradp_backreaction) then
-                  mom_change = -gradpcr_loc(i,2,iGrp)*dt
-               else
-                  mom_change = ( f2 - crunew(ind_cell(i),icrE+2) ) / cr_vmax(ilevel)**2
-               endif
+            if(.not. static_gas .and. .not. static .and. cr_feedback) then
+               mom_change = -gradpcr_loc(i,2,iGrp)*dt
                unew(ind_cell(i),3) = unew(ind_cell(i),3) + mom_change*f_decouple
             endif
 #endif
 #if NDIM>2
             crunew(ind_cell(i),icrE+3) = frotz
-            if(.not. static_gas .and. .not. static) then
-               if (cr_gradp_backreaction) then
-                  mom_change = -gradpcr_loc(i,3,iGrp)*dt
-               else
-                  mom_change = ( f3 - crunew(ind_cell(i),icrE+3) ) / cr_vmax(ilevel)**2
-               endif
+            if(.not. static_gas .and. .not. static .and. cr_feedback) then
+               mom_change = -gradpcr_loc(i,3,iGrp)*dt
                unew(ind_cell(i),4) = unew(ind_cell(i),4) + mom_change*f_decouple
             endif
 #endif

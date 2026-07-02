@@ -27,7 +27,7 @@ module cr_parameters
   logical::cr_flux_correction=.false. ! Rescale superluminal fluxes
   ! Physics
   real(dp),dimension(1:ncr_groups)::gamma_cr=4d0/3d0 ! CR adiabatic index
-  logical::cr_gradp_backreaction=.true.               ! gradP_cr form of gas back-reaction
+  logical::cr_feedback=.true.               ! master CR->gas back-reaction switch (gradPcr momentum + energy)
   real(dp)::cr_smallr_decouple=1d4          ! Decouple CRs where rho<smallr*this
   real(dp)::cr_efloor=1d-30                   ! CR energy floor
   ! Timestep / reduced light speed
