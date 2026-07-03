@@ -1,10 +1,5 @@
 module nimhd_parameters
   use amr_parameters
-  
-  ! TC: Why not just use the value directly?
-  integer:: nxx=1
-  integer:: nyy=2
-  integer:: nzz=3
 
   logical :: nambipolar = .false. ! flag to activate ambipolar diffusion
   logical :: nmagdiffu  = .false. ! flag to activate magnetic  diffusion

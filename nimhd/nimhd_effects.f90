@@ -337,9 +337,9 @@ subroutine computejb2(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
       do j=ju1,ju2
          do i=iu1,iu2
             do l=1,ngrid
-               bcenter(l,i,j,k,nxx)=q(l,i,j,k,6)
-               bcenter(l,i,j,k,nyy)=q(l,i,j,k,7)
-               bcenter(l,i,j,k,nzz)=q(l,i,j,k,8)
+               bcenter(l,i,j,k,1)=q(l,i,j,k,6)
+               bcenter(l,i,j,k,2)=q(l,i,j,k,7)
+               bcenter(l,i,j,k,3)=q(l,i,j,k,8)
             end do
          end do
       end do
@@ -575,9 +575,9 @@ subroutine computdifmag(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
                ! TC: shouldn't dy and dz be used here in principle? (in practice they are the same)  
 
                ! WARNING dB/dt=-curl(eta*J)
-               emfohmdiss(l,i,j,k,nxx)=-etaod2x*jemfx(l,i,j,k,1)
-               emfohmdiss(l,i,j,k,nyy)=-etaod2y*jemfy(l,i,j,k,2)
-               emfohmdiss(l,i,j,k,nzz)=-etaod2z*jemfz(l,i,j,k,3)
+               emfohmdiss(l,i,j,k,1)=-etaod2x*jemfx(l,i,j,k,1)
+               emfohmdiss(l,i,j,k,2)=-etaod2y*jemfy(l,i,j,k,2)
+               emfohmdiss(l,i,j,k,3)=-etaod2z*jemfz(l,i,j,k,3)
                if(nimhdheating_in_flux) then 
                   do h = 1,3
                      rhof=0.5d0*(u(l,i,j,k,1)+u(l,i-index_i(h),j-index_j(h),k-index_k(h),1))
