@@ -583,12 +583,7 @@ subroutine region_condinit(x,q,dx,nn)
               enddo
 #endif
 #if NVAR>NHYDRO+NENER
-#ifdef NIMHD
-! remove when current in separate variable
-              do ivar=nhydro+1+nener,nvar-3
-#else
               do ivar=nhydro+1+nener,nvar
-#endif
                  q(i,ivar)=var_region(k,ivar-nhydro-nener)
               end do
 #endif
@@ -628,11 +623,7 @@ subroutine region_condinit(x,q,dx,nn)
            enddo
 #endif
 #if NVAR>NHYDRO+NENER
-#ifdef NIMHD
-           do ivar=nhydro+1+nener,nvar-3
-#else
            do ivar=nhydro+1+nener,nvar
-#endif
               q(i,ivar)=var_region(k,ivar-nhydro-nener)
            end do
 #endif

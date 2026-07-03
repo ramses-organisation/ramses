@@ -55,9 +55,7 @@ ifeq ($(SOLVER),mhd)
    NHYDRO = 8
 endif
 RAMSES_ISM=0
-# current is treated as a passive scalar?
 ifeq ($(NIMHD),1)
-   NPSCAL := $(NPSCAL)+4
    SOLVER=mhd
 endif
 NVAR := $(NHYDRO)+$(NENER)+$(NPSCAL)+$(NMETALS)
