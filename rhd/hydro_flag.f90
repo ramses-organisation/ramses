@@ -104,7 +104,11 @@ subroutine hydro_flag(ilevel)
         end do
 
         if(poisson.and.jeans_refine(ilevel)>0.0)then
-           call jeans_length_refine(ind_cell,ok,ngrid,ilevel)
+           if (iso_jeans) then
+              call modified_jeans_length_refine(ind_cell,ok,ngrid,ilevel)
+           else
+              call jeans_length_refine(ind_cell,ok,ngrid,ilevel)
+           endif
         endif
 
         ! Apply geometry-based refinement criteria

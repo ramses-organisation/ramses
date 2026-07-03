@@ -130,7 +130,11 @@ subroutine hydro_flag(ilevel)
         end do
 
         if(poisson.and.jeans_refine(ilevel)>0.0)then
-           call jeans_length_refine(ind_cell,ok,ngrid,ilevel)
+           if (iso_jeans) then
+              call modified_jeans_length_refine(ind_cell,ok,ngrid,ilevel)
+           else
+              call jeans_length_refine(ind_cell,ok,ngrid,ilevel)
+           endif
         endif
 
         ! Apply geometry-based refinement criteria
@@ -229,3 +233,75 @@ subroutine jeans_length_refine(ind_cell,ok,ncell,ilevel)
   end do
 
 end subroutine jeans_length_refine
+!#####################################################################
+!#####################################################################
+!#####################################################################
+!#####################################################################
+subroutine modified_jeans_length_refine(ind_cell,ok,ncell,ilevel)
+  use amr_commons
+  use pm_commons
+  use hydro_commons
+  use constants, only: pi
+  implicit none
+  integer,intent(in)::ncell,ilevel
+  integer,dimension(1:nvector),intent(in)::ind_cell
+  logical,dimension(1:nvector),intent(inout)::ok
+  !-------------------------------------------------------------------
+  ! This routine flags cells for refinement if the Jeans length is 
+  ! resolved by less than the user-specified number of cells.
+  ! Input:
+  !   ind_cell: cell indices of the current vector sweep
+  ! Output:
+  !   ok: updated refinement flag for these cells
+  !-------------------------------------------------------------------
+  integer::nx_loc,i
+  real(dp)::dx,scale,dx_loc,lamb_jeans,n_jeans,factG,cs2
+  real(dp),dimension(1:nvector),save::rho,ekin,erad,emag,etherm
+
+  factG=1
+  if(cosmo)factG=3d0/8d0/pi*omega_m*aexp
+  n_jeans = jeans_refine(ilevel)
+
+  ! Mesh spacing in this level
+  dx=0.5D0**ilevel
+  nx_loc=(icoarse_max-icoarse_min+1)
+  scale=boxlen/dble(nx_loc)
+  dx_loc=dx*scale
+
+  ! Gather density
+  do i=1,ncell
+     rho(i) = max(uold(ind_cell(i),1),smallr)
+  enddo
+
+  ! Compute thermal energy
+  call cmp_energy_components(ind_cell,ncell,rho,ekin,erad,emag)
+  do i=1,ncell
+     etherm(i) = uold(ind_cell(i),neul) - ekin(i) - erad(i) - emag(i)
+  enddo
+
+  do i=1,ncell
+     ! compute adiabatic sound speed (squared)
+     cs2 =  etherm / rho(i) * (gamma - 1.0d0) * gamma
+     ! prevent numerical crash due to negative temperature
+     cs2 = max(cs2(i),smallc**2)
+
+     if(rho(i)*scale_d .lt. rho_star) then
+        ! Compute adiabatic sound speed as if T=Tp_jeans
+        iso_cs2 = gamma * kB * Tp_jeans / (mu_gas*mH * scale_v**2)
+        cs2 = min(cs2 , iso_cs2)
+        if(dens*scale_d .gt. rho_iso)then
+           ! Increase the sound speed back once 2nd collapse has started,
+           ! blending log-linearly in density between rho_iso and rho_star.
+           iso_cs=10.0_dp**(log10(cs2) - (log10(cs2)-log10(iso_cs))* &
+                & ((log10(rho_star) - log10(dens*scale_d))/(log10(rho_star) - log10(rho_iso))))
+           cs2=iso_cs**2
+        end if
+     endif
+
+     ! compute the Jeans length (remember G=1)
+     lamb_jeans = sqrt( cs2 * pi / (rho(i) * factG) )
+     ! the Jeans length must be smaller than n_jeans times the size of the cell
+     ok(i) = ok(i) .or. ( n_jeans*dx_loc >= lamb_jeans )
+  end do
+
+end subroutine modified_jeans_length_refine
