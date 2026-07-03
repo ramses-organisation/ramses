@@ -22,9 +22,9 @@ subroutine read_nimhd_params(nml_ok)
   else
     use_nonideal_mhd = .false.
   endif
-  
+
   if(.not.use_nonideal_mhd) return
-  
+
   if(myid==1) then
     write(*,*)'!!!!!!!!!!!!!!!  Non Ideal MHD   !!!!!!!!!!!!!!!!'
     write(*,*)'Non ideal MHD parameters'
@@ -39,7 +39,7 @@ subroutine read_nimhd_params(nml_ok)
     else
       write(*,*)'Ambipolar diffusion switched OFF'
     endif
-  
+
     if(nmagdiffu)then
       write(*,*)'Magnetic diffusion switched ON'
     else

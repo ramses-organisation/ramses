@@ -14,8 +14,8 @@ subroutine compute_bemf(u,q,ngrid,bemfx,bemfy,bemfz)
    ! compute magnetic field at location of EMF
    !-------------------------------------------
    ! inputs
-   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar+3)::u 
-   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q 
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar+3)::u
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q
    integer::ngrid
    ! output
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::bemfx,bemfy,bemfz
@@ -31,7 +31,7 @@ subroutine compute_bemf(u,q,ngrid,bemfx,bemfy,bemfz)
    !!!!!!!!!!!!!!!!!!
 
    do k=min(1,ku1+1),ku2
-      do j=min(1,ju1+1),ju2       
+      do j=min(1,ju1+1),ju2
          do i=iu1,iu2
             do l=1,ngrid
                bemfx(l,i,j,k,1)=0.25d0*( q(l,i,j,k,6)+q(l,i,j-1,k,6)+q(l,i,j,k-1,6)+q(l,i,j-1,k-1,6) )
@@ -41,7 +41,7 @@ subroutine compute_bemf(u,q,ngrid,bemfx,bemfy,bemfz)
    end do
 
    do k=min(1,ku1+1),ku2
-      do j=ju1,ju2       
+      do j=ju1,ju2
          do i=iu1,iu2
             do l=1,ngrid
                bemfx(l,i,j,k,2)=0.5d0*( u(l,i,j,k,7)+u(l,i,j,k-1,7) )
@@ -51,7 +51,7 @@ subroutine compute_bemf(u,q,ngrid,bemfx,bemfy,bemfz)
    end do
 
    do k=ku1,ku2
-      do j=min(1,ju1+1),ju2       
+      do j=min(1,ju1+1),ju2
          do i=iu1,iu2
             do l=1,ngrid
                bemfx(l,i,j,k,3)=0.5d0*(u(l,i,j,k,8)+u(l,i,j-1,k,8))
@@ -65,7 +65,7 @@ subroutine compute_bemf(u,q,ngrid,bemfx,bemfy,bemfz)
    !!!!!!!!!!!!!!!!!!
 
    do k=min(1,ku1+1),ku2
-      do j=ju1,ju2       
+      do j=ju1,ju2
          do i=iu1,iu2
             do l=1,ngrid
                bemfy(l,i,j,k,1)=0.5d0*(u(l,i,j,k,6)+u(l,i,j,k-1,6))
@@ -75,7 +75,7 @@ subroutine compute_bemf(u,q,ngrid,bemfx,bemfy,bemfz)
    end do
 
    do k=min(1,ku1+1),ku2
-      do j=ju1,ju2       
+      do j=ju1,ju2
          do i=min(1,iu1+1),iu2
             do l=1,ngrid
                bemfy(l,i,j,k,2)=0.25d0*(q(l,i,j,k,7)+q(l,i-1,j,k,7)+q(l,i,j,k-1,7)+q(l,i-1,j,k-1,7))
@@ -85,7 +85,7 @@ subroutine compute_bemf(u,q,ngrid,bemfx,bemfy,bemfz)
    end do
 
    do k=ku1,ku2
-      do j=ju1,ju2       
+      do j=ju1,ju2
          do i=min(1,iu1+1),iu2
             do l=1,ngrid
                bemfy(l,i,j,k,3)=0.5d0*(u(l,i-1,j,k,8)+u(l,i,j,k,8))
@@ -99,7 +99,7 @@ subroutine compute_bemf(u,q,ngrid,bemfx,bemfy,bemfz)
    !!!!!!!!!!!!!!!!!!
 
    do k=ku1,ku2
-      do j=min(1,ju1+1),ju2       
+      do j=min(1,ju1+1),ju2
          do i=iu1,iu2
             do l=1,ngrid
                bemfz(l,i,j,k,1)=0.5d0*(u(l,i,j,k,6)+u(l,i,j-1,k,6))
@@ -109,7 +109,7 @@ subroutine compute_bemf(u,q,ngrid,bemfx,bemfy,bemfz)
    end do
 
    do k=ku1,ku2
-      do j=ju1,ju2       
+      do j=ju1,ju2
          do i=min(1,iu1+1),iu2
             do l=1,ngrid
                bemfz(l,i,j,k,2)=0.5d0*(u(l,i,j,k,7)+u(l,i-1,j,k,7))
@@ -119,7 +119,7 @@ subroutine compute_bemf(u,q,ngrid,bemfx,bemfy,bemfz)
    end do
 
    do k=ku1,ku2
-      do j=min(1,ju1+1),ju2       
+      do j=min(1,ju1+1),ju2
          do i=min(1,iu1+1),iu2
             do l=1,ngrid
                bemfz(l,i,j,k,3)=0.25d0*(q(l,i,j,k,8)+q(l,i-1,j,k,8)+q(l,i,j-1,k,8)+q(l,i-1,j-1,k,8))
@@ -138,13 +138,13 @@ subroutine compute_bmagij(u,q,ngrid,bmagij)
    use hydro_commons
    IMPLICIT NONE
    !-----------------------------------------------------------------
-   ! bmagij is the value of the magnetic field Bi where Bj 
+   ! bmagij is the value of the magnetic field Bi where Bj
    ! is naturally defined; Ex bmagij(l,i,j,k,1,2) is Bx at i,j-1/2,k
    ! and we can write it Bx,y
    !-----------------------------------------------------------------
    ! inputs
-   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar+3)::u 
-   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q 
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar+3)::u
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q
    integer::ngrid
    ! output
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3,1:3)::bmagij
@@ -246,14 +246,14 @@ subroutine compute_bmagijbis(u,ngrid,bmagijbis)
    ! Bn at i-1/2,j-1/2,k-1/2
    !-----------------------------------------------------------------
    ! inputs
-   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar+3)::u 
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar+3)::u
    integer::ngrid
    ! output
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::bmagijbis
    ! declare local variables
    INTEGER ::i, j, k, l
 
-   bmagijbis=0d0   
+   bmagijbis=0d0
 
    ! case Bx for Lorentz force EMF
    do k=min(1,ku1+1),ku2
@@ -271,18 +271,18 @@ subroutine compute_bmagijbis(u,ngrid,bmagijbis)
       do j=ju1,ju2
          do i=min(1,iu1+1),iu2
             do l=1,ngrid
-               bmagijbis(l,i,j,k,2)=0.25d0*(u(l,i,j,k,7)+u(l,i-1,j,k,7)+u(l,i,j,k-1,7)+u(l,i-1,j,k-1,7)) 
+               bmagijbis(l,i,j,k,2)=0.25d0*(u(l,i,j,k,7)+u(l,i-1,j,k,7)+u(l,i,j,k-1,7)+u(l,i-1,j,k-1,7))
             end do
          end do
       end do
    end do
-   
+
    ! case Bz for Lorentz force EMF
    do k=ku1,ku2
       do j=min(1,ju1+1),ju2
          do i=min(1,iu1+1),iu2
             do l=1,ngrid
-               bmagijbis(l,i,j,k,3)=0.25d0*(u(l,i,j,k,8)+u(l,i-1,j,k,8)+u(l,i,j-1,k,8)+u(l,i-1,j-1,k,8)) 
+               bmagijbis(l,i,j,k,3)=0.25d0*(u(l,i,j,k,8)+u(l,i-1,j,k,8)+u(l,i,j-1,k,8)+u(l,i-1,j-1,k,8))
             end do
          end do
       end do
@@ -301,8 +301,8 @@ subroutine computejb2(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
    IMPLICIT NONE
 
    ! inputs
-   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar+3)::u 
-   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q 
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar+3)::u
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q
    INTEGER ::ngrid
    REAL(dp)::dx,dy,dz,dt
 
@@ -324,7 +324,7 @@ subroutine computejb2(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
    fluxmd=0d0
    fluxad=0d0
    bmagij=0d0
-   
+
    bemfx=0d0
    bemfy=0d0
    bemfz=0d0
@@ -360,7 +360,7 @@ subroutine computejb2(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
       do j=min(1,ju1+1),max(1,ju2-1)
          do i=min(1,iu1+1),max(1,iu2-1)
             do l=1,ngrid
-               jemfx(l,i,j,k,1)=(u(l,i,j,k,8)-u(l,i,j-1,k,8))/dy-(u(l,i,j,k,7)-u(l,i,j,k-1,7))/dz 
+               jemfx(l,i,j,k,1)=(u(l,i,j,k,8)-u(l,i,j-1,k,8))/dy-(u(l,i,j,k,7)-u(l,i,j,k-1,7))/dz
                jemfx(l,i,j,k,2)=(bmagij(l,i,j,k,1,2)-bmagij(l,i,j,k-1,1,2))/dz- (bmagijbis(l,i+1,j,k,3)-bmagijbis(l,i,j,k,3))/dx
                jemfx(l,i,j,k,3)=(bmagijbis(l,i+1,j,k,2) -bmagijbis(l,i,j,k,2))/dx- (bmagij(l,i,j,k,1,3)-bmagij(l,i,j-1,k,1,3))/dy
 
@@ -386,7 +386,7 @@ subroutine computejb2(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
    ! face at i-1/2,j,k
 
    do k=min(1,ku1+1),max(1,ku2-1)
-      do j=min(1,ju1+1),max(1,ju2-1)           
+      do j=min(1,ju1+1),max(1,ju2-1)
          do i=min(1,iu1+1),iu2
             do l=1,ngrid
                jface(l,i,j,k,1,1)=computdybis(bemfz,3,l,i,j,k,dy)-computdzbis(bemfy,2,l,i,j,k,dz)
@@ -396,7 +396,7 @@ subroutine computejb2(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
    end do
 
    do k=min(1,ku1+1),max(1,ku2-1)
-      do j=ju1,ju2       
+      do j=ju1,ju2
          do i=min(1,iu1+1),iu2
             do l=1,ngrid
                jface(l,i,j,k,2,1)=computdzbis(bemfy,1,l,i,j,k,dz)-computdxbis(bcenter,3,l,i-1,j,k,dx)
@@ -404,9 +404,9 @@ subroutine computejb2(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
          end do
       end do
    end do
-  
+
    do k=ku1,ku2
-      do j=min(1,ju1+1),max(1,ju2-1)       
+      do j=min(1,ju1+1),max(1,ju2-1)
          do i=min(1,iu1+1),iu2
             do l=1,ngrid
                jface(l,i,j,k,3,1)=computdxbis(bcenter,2,l,i-1,j,k,dx)-computdybis(bemfz,1,l,i,j,k,dy)
@@ -414,11 +414,11 @@ subroutine computejb2(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
          end do
       end do
    end do
-  
+
    ! face at i,j-1/2,k
 
-   do k=min(1,ku1+1),max(1,ku2-1) 
-      do j=min(1,ju1+1),ju2       
+   do k=min(1,ku1+1),max(1,ku2-1)
+      do j=min(1,ju1+1),ju2
          do i=iu1,iu2
             do l=1,ngrid
                jface(l,i,j,k,1,2)=computdybis(bcenter,3,l,i,j-1,k,dy)-computdzbis(bemfx,2,l,i,j,k,dz)
@@ -427,19 +427,19 @@ subroutine computejb2(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
       end do
    end do
 
-   do k=min(1,ku1+1),max(1,ku2-1) 
-      do j=min(1,ju1+1),ju2       
-         do i=min(1,iu1+1),max(1,iu2-1) 
+   do k=min(1,ku1+1),max(1,ku2-1)
+      do j=min(1,ju1+1),ju2
+         do i=min(1,iu1+1),max(1,iu2-1)
             do l=1,ngrid
                jface(l,i,j,k,2,2)=computdzbis(bemfx,1,l,i,j,k,dz)-computdxbis(bemfz,3,l,i,j,k,dx)
             end do
          end do
       end do
    end do
-  
+
    do k=ku1,ku2
-      do j=min(1,ju1+1),ju2       
-         do i=min(1,iu1+1),max(1,iu2-1) 
+      do j=min(1,ju1+1),ju2
+         do i=min(1,iu1+1),max(1,iu2-1)
             do l=1,ngrid
                jface(l,i,j,k,3,2)=computdxbis(bemfz,2,l,i,j,k,dx)-computdybis(bcenter,1,l,i,j-1,k,dy)
             end do
@@ -448,32 +448,32 @@ subroutine computejb2(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
    end do
 
    ! face at i,j,k-1/2
-  
+
    do k=min(1,ku1+1),ku2
-      do j=min(1,ju1+1),max(1,ju2-1)        
+      do j=min(1,ju1+1),max(1,ju2-1)
          do i=iu1,iu2
             do l=1,ngrid
-               jface(l,i,j,k,1,3)=computdybis(bemfx,3,l,i,j,k,dy)-computdzbis(bcenter,2,l,i,j,k-1,dz)             
+               jface(l,i,j,k,1,3)=computdybis(bemfx,3,l,i,j,k,dy)-computdzbis(bcenter,2,l,i,j,k-1,dz)
             end do
          end do
       end do
    end do
 
    do k=min(1,ku1+1),ku2
-      do j=ju1,ju2       
+      do j=ju1,ju2
          do i=min(1,iu1+1),max(1,iu2-1)
             do l=1,ngrid
-               jface(l,i,j,k,2,3)=computdzbis(bcenter,1,l,i,j,k-1,dz)-computdxbis(bemfy,3,l,i,j,k,dx)             
+               jface(l,i,j,k,2,3)=computdzbis(bcenter,1,l,i,j,k-1,dz)-computdxbis(bemfy,3,l,i,j,k,dx)
             end do
          end do
       end do
    end do
-  
+
    do k=min(1,ku1+1),ku2
-      do j=min(1,ju1+1),max(1,ju2-1)      
+      do j=min(1,ju1+1),max(1,ju2-1)
          do i=min(1,iu1+1),max(1,iu2-1)
             do l=1,ngrid
-               jface(l,i,j,k,3,3)=computdxbis(bemfy,2,l,i,j,k,dx)-computdybis(bemfx,1,l,i,j,k,dx)            
+               jface(l,i,j,k,3,3)=computdxbis(bemfy,2,l,i,j,k,dx)-computdybis(bemfx,1,l,i,j,k,dx)
             end do
          end do
       end do
@@ -522,7 +522,7 @@ subroutine computdifmag(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
    implicit none
 
    ! inputs
-   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar+3)::u 
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar+3)::u
    integer ::ngrid
    real(dp)::dx,dy,dz,dt
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::bemfx,bemfy,bemfz
@@ -531,7 +531,7 @@ subroutine computdifmag(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::fluxmd
 
    ! outputs
-   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3):: emfohmdiss,fluxohm 
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3):: emfohmdiss,fluxohm
 
    ! local variables
    integer ::i,j,k,l,h
@@ -577,7 +577,7 @@ subroutine computdifmag(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
                emfohmdiss(l,i,j,k,1)=-etaod2x*jemfx(l,i,j,k,1)
                emfohmdiss(l,i,j,k,2)=-etaod2y*jemfy(l,i,j,k,2)
                emfohmdiss(l,i,j,k,3)=-etaod2z*jemfz(l,i,j,k,3)
-               if(nimhdheating_in_flux) then 
+               if(nimhdheating_in_flux) then
                   do h = 1,3
                      rhof=0.5d0*(u(l,i,j,k,1)+u(l,i-index_i(h),j-index_j(h),k-index_k(h),1))
                      epsf=0.5d0*(u(l,i,j,k,nvar)+u(l,i-index_i(h),j-index_j(h),k-index_k(h),nvar))
@@ -585,7 +585,7 @@ subroutine computdifmag(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
 
                      ! Compute gas temperature in cgs
                      call temperature_eos(rhof, epsf, tcellf)
-                        
+
                      etaod2=etaohmdiss(rhof,bsqf,tcellf,0d0,0d0,.false.)
                      fluxohm(l,i,j,k,h)=etaod2*fluxmd(l,i,j,k,h)
                   enddo
@@ -594,7 +594,7 @@ subroutine computdifmag(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
          end do
       end do
    end do
-  
+
 end subroutine computdifmag
 !###########################################################
 !###########################################################
@@ -610,7 +610,7 @@ subroutine computambip(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,b
    implicit none
 
    ! inputs
-   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar+3)::u 
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar+3)::u
    integer ::ngrid
    real(dp)::dx,dy,dz,dt
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::bemfx,bemfy,bemfz
@@ -660,7 +660,7 @@ subroutine computambip(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,b
    do k=min(1,ku1+1),max(1,ku2-1)
       do j=min(1,ju1+1),max(1,ju2-1)
          do i=min(1,iu1+1),max(1,iu2-1)
-           
+
             do l = 1, ngrid
 
                rhox=0.25d0*(u(l,i,j,k,1)+u(l,i,j-1,k,1)+u(l,i,j,k-1,1)+u(l,i,j-1,k-1,1))
@@ -676,7 +676,7 @@ subroutine computambip(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,b
                ! Compute gas temperature in cgs
 
                call temperature_eos(u(l,i,j,k,1), u(l,i,j,k,nvar), tcell)
-               
+
                bsquarex=bemfx(l,i,j,k,1)**2+bemfx(l,i,j,k,2)**2+bemfx(l,i,j,k,3)**2
                bsquarey=bemfy(l,i,j,k,1)**2+bemfy(l,i,j,k,2)**2+bemfy(l,i,j,k,3)**2
                bsquarez=bemfz(l,i,j,k,1)**2+bemfz(l,i,j,k,2)**2+bemfz(l,i,j,k,3)**2
@@ -699,7 +699,7 @@ subroutine computambip(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,b
 
                rhox=0.25d0*(u(l,i,j,k,1)+u(l,i,j-1,k,1)+u(l,i,j,k-1,1)+u(l,i,j-1,k-1,1))
                betaad2=betaad(rhocell,rhox,dt,bcell,bcell,dx,tcell,.true.)
-               emfambdiff(l,i,j,k,1)=emfambdiff(l,i,j,k,1)*betaad2 
+               emfambdiff(l,i,j,k,1)=emfambdiff(l,i,j,k,1)*betaad2
 
                ! EMF y
 
@@ -713,8 +713,8 @@ subroutine computambip(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,b
 
                rhoy=0.25d0*(u(l,i,j,k,1)+u(l,i-1,j,k,1)+u(l,i,j,k-1,1)+u(l,i-1,j,k-1,1))
                betaad2=betaad(rhocell,rhoy,dt,bcell,bcell,dx,tcell,.true.)
-               emfambdiff(l,i,j,k,2)=emfambdiff(l,i,j,k,2)*betaad2            
-                    
+               emfambdiff(l,i,j,k,2)=emfambdiff(l,i,j,k,2)*betaad2
+
                ! EMF z
 
                v1x=florentzz(l,i,j,k,1)
@@ -742,7 +742,7 @@ subroutine computambip(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,b
                   rhofz=0.5d0*(u(l,i,j,k,1)+u(l,i,j,k-1,1))
                   betaad2=betaad(rhocell,rhofz,dt,bcell,bcell,dx,tcell,.true.) !TC: dz?
                   fluxambdiff(l,i,j,k,3)=-betaad2*fluxad(l,i,j,k,3)
-               endif 
+               endif
             end do
          end do
       end do
@@ -761,7 +761,7 @@ double precision function computdxbis(vec,n2,l,i,j,k,dx)
 
    use amr_parameters,only:dp,nvector
    use hydro_parameters,only:iu1,iu2,ju1,ju2,ku1,ku2
-   implicit none 
+   implicit none
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::vec
    real(dp)::dx
    integer::n2,l,i,j,k
@@ -774,7 +774,7 @@ double precision  function computdybis(vec,n2,l,i,j,k,dx)
 
    use amr_parameters,only:dp,nvector
    use hydro_parameters,only:iu1,iu2,ju1,ju2,ku1,ku2
-   implicit none 
+   implicit none
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::vec
    real(dp)::dx
    integer::n2,l,i,j,k
@@ -802,7 +802,7 @@ subroutine crossprodbis(vec1,vec2,v1crossv2,l,i,j,k)
    use hydro_parameters,only:iu1,iu2,ju1,ju2,ku1,ku2
    implicit none
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3,1:3)::vec1,vec2,v1crossv2
-   integer ::l,i,j,k 
+   integer ::l,i,j,k
 
    real(dp)::v1x,v1y,v1z,v2x,v2y,v2z,crossprodx,crossprody,crossprodz
 
@@ -812,11 +812,11 @@ subroutine crossprodbis(vec1,vec2,v1crossv2,l,i,j,k)
       v1x=vec1(l,i,j,k,1,n)
       v1y=vec1(l,i,j,k,2,n)
       v1z=vec1(l,i,j,k,3,n)
-      
+
       v2x=vec2(l,i,j,k,1,n)
       v2y=vec2(l,i,j,k,2,n)
       v2z=vec2(l,i,j,k,3,n)
-      
+
       v1crossv2(l,i,j,k,1,n)=crossprodx(v1x,v1y,v1z,v2x,v2y,v2z)
       v1crossv2(l,i,j,k,2,n)=crossprody(v1x,v1y,v1z,v2x,v2y,v2z)
       v1crossv2(l,i,j,k,3,n)=crossprodz(v1x,v1y,v1z,v2x,v2y,v2z)
@@ -830,7 +830,7 @@ subroutine crossprod(vec1,vec2,v1crossv2,l,i,j,k)
    use hydro_parameters,only:iu1,iu2,ju1,ju2,ku1,ku2
    implicit none
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::vec1,vec2,v1crossv2
-   integer ::l,i,j,k 
+   integer ::l,i,j,k
 
    real(dp)::v1x,v1y,v1z,v2x,v2y,v2z,crossprodx,crossprody,crossprodz
 
@@ -925,7 +925,7 @@ double precision function betaad(rhocelln,rhon,dt,bsquare,bsquareold,dx,temper,l
       ! gammaadbis and densionbis already in user units
 
       if(xx.ne.0d0) then
-         betaad=1d0/xx 
+         betaad=1d0/xx
       else
          betaad=1d39
          if(rhotemp < 1.0d+14)then
@@ -934,12 +934,12 @@ double precision function betaad(rhocelln,rhon,dt,bsquare,bsquareold,dx,temper,l
       endif
 
       !xx=gammaadbis(rhotemp,bsquare,bsquareold,temper)*densionbis(rhon)*rhon   ! a l'interface : cote ou coin selon les cas. A utiliser si l'on est pas dans un cas seuille
-      xx=gammaadbis(rhotemp,bsquare,bsquareold,temper)*densionbis(rhotemp)*rhotemp  
+      xx=gammaadbis(rhotemp,bsquare,bsquareold,temper)*densionbis(rhotemp)*rhotemp
 
       ! a l'interface : cote ou coin selon les cas. A utiliser si l'on est pas dans un cas seuille
 
       if(xx.ne.0d0) then
-         betaadtemp=1d0/xx 
+         betaadtemp=1d0/xx
       else
          betaadtemp=1d39
          if(rhotemp < 1.0d+14)then
@@ -1001,7 +1001,7 @@ double precision function gammaadbis(rhon,BBcell,BBcellold,temper)
    rhoH = min(rhoH, n_H_max)
 
    ! TC: extrapolate from table[density,temperature,magnetic field]
-   call interpolate_table(rhoH,temper,BBcellold,sigO,sigH,sigP) 
+   call interpolate_table(rhoH,temper,BBcellold,sigO,sigH,sigP)
    !inp=rhoH/xmolaire/H2_fraction     ! inp is neutrals.cc, to fit densionbis
    inp=rhoH/2d0/H2_fraction     ! inp is neutrals.cc, to fit densionbis
    eta_AD_chimie=(sigO/(sigO**2+sigH**2)-1d0/sigP)   ! resistivity in s
@@ -1020,7 +1020,7 @@ double precision function densionbis(rhon)
 
    use amr_parameters, only : dp
 
-   implicit none 
+   implicit none
    real(dp)::rhon
    real(dp)::xn, rhoncgs
 
@@ -1031,10 +1031,10 @@ double precision function densionbis(rhon)
    real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
    call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
 
-   ! density of neutral in g/cm3  
+   ! density of neutral in g/cm3
    rhoncgs=rhon*scale_d
 
-   ! function which computes the density in g/cm3 of ions 
+   ! function which computes the density in g/cm3 of ions
    ! see Duffin & Pudritz 2008, astro-ph 08/10/08 eq (14)
 
    densionbis=coefionis*sqrt(rhoncgs*default_ionisrate/1.0d-17)
@@ -1057,7 +1057,7 @@ double precision function etaohmdiss(rhon,BBcell,temper,dt,dx,limit)
    ! in ohmic dissipation dB/dt=-curl(eta*curl(B))+...
    ! See Machida, Inutsuka, Matsumoto, ApJ, 670,1198-1213, 2007
    !-----------------------------------------------------------
-   implicit none 
+   implicit none
    real(dp) :: rhon,BBcell,temper  ! input cell variables
    real(dp) :: dx,dt               ! input cell size and simulation time step
    logical  :: limit               ! take into account limitation of timestep or not
@@ -1082,7 +1082,7 @@ double precision function etaohmdiss(rhon,BBcell,temper,dt,dx,limit)
       rhoH = MAX(rhoH,rho_threshold)
       rhoH = MIN(rhoH,n_H_max)
       ! extrapolate from table[density,temperature,magnetic field]
-      call interpolate_table(rhoH,temper,BBcell,sigO,sigH,sigP) 
+      call interpolate_table(rhoH,temper,BBcell,sigO,sigH,sigP)
       eta_ohm_chimie = (1d0 / sigP) * c_cgs * c_cgs / (4.0_dp*pi)
       ! Ad-hoc modification to ensure that the ohmic resistivity falls to zero when the density exceeds 1.0e15
       ! when alkali metals are ionized.

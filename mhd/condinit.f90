@@ -395,7 +395,7 @@ subroutine nimhd_diffusion_condinit(x,q,dx,nn)
 
   ! Call built-in initial condition generator
   call region_condinit(x,q,dx,nn)
-  
+
   do i = 1,nn
      xx = x(i,1) - 0.5_dp*(1.0_dp + dx)
      yy = x(i,2) - 0.5_dp*(1.0_dp + dx)

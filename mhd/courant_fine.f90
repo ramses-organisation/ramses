@@ -219,8 +219,8 @@ subroutine courant_fine(ilevel)
 
   dtambdiff(ilevel)=MIN(dtambdiff(ilevel), dtambdiff_all)
   dtmagdiff(ilevel)=MIN(dtmagdiff(ilevel), dtmagdiff_all)
-  dtwad(ilevel)=MIN(dtwad(ilevel), dtwad_all) 
-  
+  dtwad(ilevel)=MIN(dtwad(ilevel), dtwad_all)
+
   ! timestep reduction due to ambipolar diffusion
   if(nambipolar) then
      ! WARNING this should not be done for tests
@@ -246,7 +246,7 @@ subroutine courant_fine(ilevel)
      dtnew(ilevel)=MIN(dtnew(ilevel),tmag2)
    end if
 #endif
-  
+
 111 format('   Entering courant_fine for level ',I2)
 
 end subroutine courant_fine
@@ -378,12 +378,12 @@ subroutine cmpdt_nimhd(uu,dx,ncell,dtambdiff,dtohmdiss)
    real(dp)::xx,betaad,etaohmdiss
    real(dp),dimension(1:nvector),save::B2,rho,tcell
    integer::k,idim
-  
+
    do k = 1,ncell
       rho(k)=max(uu(k,1),smallr)
       call temperature_eos(rho(k), uu(k,nvar), tcell(k))
    end do
- 
+
    do k = 1,ncell
       B2(k)=0
    end do
@@ -392,7 +392,7 @@ subroutine cmpdt_nimhd(uu,dx,ncell,dtambdiff,dtohmdiss)
          B2(k)=B2(k) + (0.5d0*(uu(k,5+idim)+uu(k,nvar+idim)))**2
       end do
    end do
-  
+
    ! Ohmic dissipation
    dtohmdiss=1d35
    if (nmagdiffu) then
@@ -403,7 +403,7 @@ subroutine cmpdt_nimhd(uu,dx,ncell,dtambdiff,dtohmdiss)
          endif
       end do
    endif
-   
+
    ! ambipolar diffusion
    dtambdiff=1d36 !TC: can we put HUGE or something here?
    if (nambipolar) then
@@ -414,7 +414,7 @@ subroutine cmpdt_nimhd(uu,dx,ncell,dtambdiff,dtohmdiss)
          endif
       end do
    endif
- 
+
 end subroutine cmpdt_nimhd
 #endif
 !#########################################################

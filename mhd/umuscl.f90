@@ -82,8 +82,8 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),save::jemfx,jemfy,jemfz
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),save::fluxmd,fluxad
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),save::emfambdiff,fluxambdiff
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),save::emfohmdiss,fluxohm 
-#endif  
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),save::emfohmdiss,fluxohm
+#endif
 
   ! Local scalar variables
   integer::i,j,k,l,ivar
@@ -162,7 +162,7 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
   do j=jf1,jf2
   do i=ilo,ihi
      ! Energy flux from ohmic term dB/dt=rot(-eta*J)
-     if(use_nonideal_mhd) then  
+     if(use_nonideal_mhd) then
         ivar=5
         do l=1,ngrid
            flux(l,i,j,k,ivar,2)=flux(l,i,j,k,ivar,2)+(fluxambdiff(l,i,j,k,2)+fluxohm(l,i,j,k,2))*dt/dy
@@ -186,7 +186,7 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
   do j=jlo,jhi
   do i=ilo,ihi
      ! Energy flux from ohmic term dB/dt=rot(-eta*J)
-     if(use_nonideal_mhd) then  
+     if(use_nonideal_mhd) then
         ivar=5
         do l=1,ngrid
            flux(l,i,j,k,ivar,3)=flux(l,i,j,k,ivar,3)+(fluxambdiff(l,i,j,k,3)+fluxohm(l,i,j,k,3))*dt/dz
@@ -210,7 +210,7 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
         end do
      end do
   end do
-  
+
   do k=kf1,kf2
      do j=jlo,jhi
         do i=if1,if2

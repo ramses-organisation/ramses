@@ -25,7 +25,7 @@ module nimhd_parameters
 
   real(dp), parameter:: H2_fraction = 0.844d0 !remove ! H2 fraction in number of particules (equals 0.73 in mass)
 ! WARNING !! Think to change xmolaire if proportion are changed
-  
+
   ! timestep regulation
   real(dp):: coefad = 0.1d0    ! CFL condition for ambipolar diffusion
   real(dp):: coefohm = 0.05d0  ! CFL condition for ohmic dissipation

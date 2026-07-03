@@ -50,7 +50,7 @@ module amr_commons
   real(dp),dimension(1:MAXLEVEL)::dtambdiff,dtambdiffold ! ambipolar diffusion timestep
   real(dp),dimension(1:MAXLEVEL)::dtmagdiff,dtmagdiffold ! magnetic diffusion timestep
   real(dp),dimension(1:MAXLEVEL)::dtwad,dtwadold         ! ideal mhd timestep (without effects of gravity, etc)
-  
+
   ! Pointers for each level linked list
   integer,allocatable,dimension(:,:)::headl
   integer,allocatable,dimension(:,:)::taill

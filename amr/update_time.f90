@@ -216,7 +216,7 @@ subroutine update_time(ilevel)
 889 format(' dt ambipolar=',1pe10.3,' dt ohmic=',1pe10.3,&
          & ' dt ideal mhd=',1pe10.3)
 #endif
-  
+
 end subroutine update_time
 
 !------------------------------------------------------------------------

@@ -46,7 +46,7 @@ subroutine temperature_eos(rho_temp,Enint_temp,Teos)
   use cooling_module, only:barotropic_eos
   implicit none
   !--------------------------------------------------------------
-  ! This routine computes the temperature from the density and 
+  ! This routine computes the temperature from the density and
   ! internal volumic energy. Inputs/output are in code units.
   !--------------------------------------------------------------
   real(dp), intent(in) :: Enint_temp,rho_temp
@@ -64,7 +64,7 @@ subroutine temperature_eos(rho_temp,Enint_temp,Teos)
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
 
   rho   = rho_temp*scale_d
-  Enint = Enint_temp*scale_d*scale_v**2 
+  Enint = Enint_temp*scale_d*scale_v**2
   if (barotropic_eos) then
       call barotropic_eos_temperature(rho_temp, Teos)
       Teos = Teos*mu_gas

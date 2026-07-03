@@ -5,17 +5,17 @@ module resistivity_table
 
    ! number of steps in the table for
    integer :: bchimie       ! B field (currently only used for reading table)
-   integer :: nchimie       ! density 
+   integer :: nchimie       ! density
    integer :: tchimie       ! temperature
 
    ! step sizes in table variables for
    real(dp) :: dbchimie     ! B field
-   real(dp) :: dnchimie     ! density 
+   real(dp) :: dnchimie     ! density
    real(dp) :: dtchimie     ! temperature
 
    ! minimum values for extrapolation variables in table for
    real(dp) :: bminchimie   ! B field
-   real(dp) :: nminchimie   ! density  
+   real(dp) :: nminchimie   ! density
    real(dp) :: tminchimie   ! temperature
 
    real(dp),allocatable,dimension(:,:,:,:)::resistivite_chimie ! resistivites chimie
@@ -30,7 +30,7 @@ subroutine read_resistivities
    ! Read non-ideal MHD resistivities from file and construct table
    !----------------------------------------------------------------
    integer::i,j,k
-   integer   :: Nvarchimie        ! number of chemical species = ions + 3*grains (neutral,+,-) 
+   integer   :: Nvarchimie        ! number of chemical species = ions + 3*grains (neutral,+,-)
    real(dp)::bmaxchimie,dummy
    real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
    call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
@@ -87,7 +87,7 @@ subroutine construct_resistivity_table(nvarchimie)
    integer   :: nion=7            ! number of ions
    integer   :: nbins_grains      ! number of grain sizes
    real(dp)  :: nbins_real
-   integer   :: Nvarchimie        ! number of chemical species = ions + 3*grains (neutral,+,-) 
+   integer   :: Nvarchimie        ! number of chemical species = ions + 3*grains (neutral,+,-)
    ! species charge and mass
    real(dp), allocatable, dimension(:) :: q
    real(dp), allocatable, dimension(:) :: m
@@ -172,7 +172,7 @@ subroutine construct_resistivity_table(nvarchimie)
    tau_sn      = 0.0_dp
    omega       = 0.0_dp
    sigma       = 0.0_dp
-      
+
    do  iB=1,bchimie
    do  iT=1,tchimie
    do  iH=1,nchimie
@@ -227,7 +227,7 @@ subroutine construct_resistivity_table(nvarchimie)
    end do
    end do
    end do
-   
+
    deallocate(r_g,m_g,q,m)
    deallocate(omega,sigma,tau_sn)
 
@@ -256,7 +256,7 @@ subroutine interpolate_table(rho_cell,temp_cell,BB_cell,sigO,sigH,sigP)
    real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
    call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
 
-   ! determine indices in table (as reals) 
+   ! determine indices in table (as reals)
    i_n=(1d0+(log10(rho_cell)-log10(nminchimie))/dnchimie)
    i_t=(1d0+(log10(temp_cell)-log10(tminchimie))/dtchimie)
    BBcgs=sqrt(BB_cell*(4d0*pi*scale_d*(scale_v)**2)) ! change to Gauss
@@ -282,7 +282,7 @@ subroutine interpolate_table(rho_cell,temp_cell,BB_cell,sigO,sigH,sigP)
              &((i_n-j_dp))*(1d0-(i_t-k_dp))*(    (i_b-l_dp)) * (resistivite_chimie(1:3,j+1,k,  l+1))+&
          &(1d0-(i_n-j_dp))*(    (i_t-k_dp))*(    (i_b-l_dp)) * (resistivite_chimie(1:3,j,  k+1,l+1))+&
              &((i_n-j_dp))*(    (i_t-k_dp))*(    (i_b-l_dp)) * (resistivite_chimie(1:3,j+1,k+1,l+1))
- 
+
    sigP= 10d0**x(1)
    sigO= 10d0**x(2)
 
