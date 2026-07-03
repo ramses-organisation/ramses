@@ -130,8 +130,8 @@ subroutine hydro_flag(ilevel)
         end do
 
         if(poisson.and.jeans_refine(ilevel)>0.0)then
-           if (iso_jeans) then
-              call modified_jeans_length_refine(ind_cell,ok,ngrid,ilevel)
+           if (collapse_jeans_refine) then
+              call collapse_jeans_length_refine(ind_cell,ok,ngrid,ilevel)
            else
               call jeans_length_refine(ind_cell,ok,ngrid,ilevel)
            endif
@@ -237,7 +237,7 @@ end subroutine jeans_length_refine
 !#####################################################################
 !#####################################################################
 !#####################################################################
-subroutine modified_jeans_length_refine(ind_cell,ok,ncell,ilevel)
+subroutine collapse_jeans_length_refine(ind_cell,ok,ncell,ilevel)
   use amr_commons
   use hydro_commons
   use constants, only: pi, kB, mH
@@ -248,9 +248,9 @@ subroutine modified_jeans_length_refine(ind_cell,ok,ncell,ilevel)
   !-------------------------------------------------------------------
   ! Jeans-length refinement with a prescribed thermal behaviour: the
   ! sound speed used in the Jeans length follows the floor temperature
-  ! Tp_jeans at low density and the actual (adiabatic) gas sound speed
-  ! at high density, blending log-linearly in density between rho_iso
-  ! and rho_star. See jeans_length_refine for the plain version.
+  ! collapse_jeans_Tfloor at low density and the actual (adiabatic) gas sound speed
+  ! at high density, blending log-linearly in density between collapse_jeans_rho_low
+  ! and collapse_jeans_rho_high. See jeans_length_refine for the plain version.
   ! Input:
   !   ind_cell: cell indices of the current vector sweep
   ! Output:
@@ -274,11 +274,11 @@ subroutine modified_jeans_length_refine(ind_cell,ok,ncell,ilevel)
 
   ! Convert the density thresholds
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
-  d_iso     = rho_iso /scale_d
-  d_star    = rho_star/scale_d
+  d_iso     = collapse_jeans_rho_low /scale_d
+  d_star    = collapse_jeans_rho_high/scale_d
 
-  ! Compute floor sound speed to code units  (adiabatic cs^2 at Tp_jeans)
-  cs2_floor = gamma*kB*Tp_jeans/(mu_gas*mH) / scale_v**2
+  ! Compute floor sound speed to code units  (adiabatic cs^2 at collapse_jeans_Tfloor)
+  cs2_floor = gamma*kB*collapse_jeans_Tfloor/(mu_gas*mH) / scale_v**2
 
   ! Gather density
   do i=1,ncell
@@ -300,14 +300,14 @@ subroutine modified_jeans_length_refine(ind_cell,ok,ncell,ilevel)
      ! use coldest conditions for setting effective sound speed for the Jeans criterion
      ! This makes refinement more aggressive during the 1st and 2nd protostellar collapse
      if(rho(i) <= d_iso)then
-        ! Before 2nd collapse: take coldest temperature (as if it was isothermal at Tp_jeans)
+        ! Before 2nd collapse: take coldest temperature (as if it was isothermal at collapse_jeans_Tfloor)
         cs2 = min(cs2_gas, cs2_floor)
      else if(rho(i) >= d_star)then
         ! When protostar has formed: take actual gas temperature
         cs2 = cs2_gas
      else
         ! During the second collapse: transition regime
-        ! blending log-linearly in density between rho_iso and rho_star.
+        ! blending log-linearly in density between collapse_jeans_rho_low and collapse_jeans_rho_high.
         delta_logrho = (log10(rho(i)) - log10(d_iso)) / (log10(d_star) - log10(d_iso))
         ! Interpolate between the two above regimes
         interpol = (1-delta_logrho)*log10(min(cs2_gas, cs2_floor)) + delta_logrho*cs2_gas
@@ -320,4 +320,4 @@ subroutine modified_jeans_length_refine(ind_cell,ok,ncell,ilevel)
      ok(i) = ok(i) .or. ( n_jeans*dx_loc >= lamb_jeans )
   end do
 
-end subroutine modified_jeans_length_refine
+end subroutine collapse_jeans_length_refine

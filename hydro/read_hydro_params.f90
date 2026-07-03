@@ -53,7 +53,8 @@ subroutine read_hydro_params(nml_ok)
   ! Refinement parameters
   namelist/refine_params/x_refine,y_refine,z_refine,r_refine &
        & ,a_refine,b_refine,exp_refine,jeans_refine,mass_cut_refine &
-       & ,iso_jeans,Tp_jeans,rho_iso,rho_star &
+       & ,collapse_jeans_refine,collapse_jeans_Tfloor &
+       & ,collapse_jeans_rho_low,collapse_jeans_rho_high &
        & ,m_refine,mass_sph,err_grad_d,err_grad_p,err_grad_u &
        & ,floor_d,floor_u,floor_p,ivar_refine,var_cut_refine &
 #ifdef SOLVERmhd
