@@ -318,13 +318,8 @@ subroutine collapse_condinit(x,q,dx,nn)
      q(i,nvar+2) = 0.
 
      !Bz component
-     if(rc .le. r0)then
-      q(i,8     ) = B0
-      q(i,nvar+3) = B0
-     else
-      q(i,8     ) = B0/100.d0**(2./3.)
-      q(i,nvar+3) = B0/100.d0**(2./3.)
-     end if
+     q(i,8     ) = B0
+     q(i,nvar+3) = B0
 
      q(i,iu) = 0.
      q(i,iv) = 0.
@@ -376,9 +371,6 @@ subroutine collapse_condinit(x,q,dx,nn)
 
        q(i,ip) = p0/100.
      ENDIF
-
-     q(i,  ip) = q(i,1)* C_s**2!/(gamma-1.0d0)
- 
   ENDDO
 
 end subroutine collapse_condinit
