@@ -572,7 +572,6 @@ subroutine computdifmag(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
                etaod2x=etaohmdiss(rhox,bsquarex,tcellx,dt,dx,.true.)
                etaod2y=etaohmdiss(rhoy,bsquarey,tcelly,dt,dx,.true.)
                etaod2z=etaohmdiss(rhoz,bsquarez,tcellz,dt,dx,.true.)
-               ! TC: shouldn't dy and dz be used here in principle? (in practice they are the same)  
 
                ! WARNING dB/dt=-curl(eta*J)
                emfohmdiss(l,i,j,k,1)=-etaod2x*jemfx(l,i,j,k,1)
