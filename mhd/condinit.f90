@@ -21,8 +21,8 @@ subroutine  condinit(x,u,dx,nn)
   ! U(i,nvar+1:nvar+3): Bright
   ! Q is the primitive variable vector. Conventions are here:
   ! Q(i,1): d, Q(i,2:4):u,v,w, Q(i,5): P, Q(i,6:8): Bleft,
-  ! Q(i,nvar+1:nvar+3): Bright, Q(i,9:8+nener): Er (if FLD)
-  ! If nvar > 8+nener, remaining variables (9+nener:nvar) are treated as passive
+  ! Q(i,nvar+1:nvar+3): Bright
+  ! If nvar > 8, remaining variables (9:nvar) are treated as passive
   ! scalars in the hydro solver.
   ! U(:,:) and Q(:,:) are in user units.
   !================================================================
@@ -42,9 +42,6 @@ subroutine  condinit(x,u,dx,nn)
 
   case('orzag_tang')
      call orzag_tang_condinit(x, q, dx, nn)
-
-  case('coeur')
-     call coeur_condinit(x, q, dx, nn)
 
   case('ponomarenko')
       call ponomarenko_condinit(x, q, dx, nn)
@@ -86,7 +83,6 @@ subroutine  condinit(x,u,dx,nn)
   u(1:nn,neul)=u(1:nn,neul)+0.125d0*(q(1:nn,8)+q(1:nn,nvar+3))**2
   u(1:nn,6:8)=q(1:nn,6:8)
   u(1:nn,nvar+1:nvar+3)=q(1:nn,nvar+1:nvar+3)
-#if USE_FLD==0
 #if NENER>0
   ! radiative pressure -> radiative energy
   ! radiative energy -> total fluid energy
@@ -100,41 +96,6 @@ subroutine  condinit(x,u,dx,nn)
   do ivar=nhydro+1+nener,nvar
      u(1:nn,ivar)=q(1:nn,1)*q(1:nn,ivar)
   end do
-#endif
-#else
-#if NENER>0
-  ! non-thermal pressure -> non-thermal energy
-  ! non-thermal energy   -> total fluid energy
-  do irad=1,nener-ngrp
-     u(1:nn,8+irad)=q(1:nn,8+irad)/(gamma_rad(irad)-1.0d0)
-     u(1:nn,5)=u(1:nn,5)+u(1:nn,8+irad)
-  enddo
- ! Radiative transfer
-#if NGRP>0
-  ! radiative energy   -> total fluid energy
-  do ivar=1,ngrp
-     u(1:nn,firstindex_er+ivar)= q(1:nn,firstindex_er+ivar)
-     u(1:nn,5)=u(1:nn,5)+ u(1:nn,firstindex_er+ivar)
-  enddo
-#if USE_M_1==1
-  ! radiative flux
-  do ivar=1,ndim*ngrp
-     do i=1,ncache
-        u(1:nn,fisrtindex_fr+ivar)=q(1:nn,firstindex+ivar)
-     end do
-!      write(ilun)xdp
-  end do
-#endif
-#endif
-#endif
-#if NPSCAL>0
-  ! passive scalars
-  do ivar=1,npscal
-     u(1:nn,firstindex_pscal+ivar)=q(1:nn,1)*q(1:nn,firstindex_pscal+ivar)
-  end do
-  ! Internal energy
-  u(1:nn,nvar)=q(1:nn,5)/(gamma-1.0d0)
-#endif
 #endif
 
 end subroutine condinit
@@ -195,340 +156,6 @@ end subroutine orzag_tang_condinit
 !================================================================
 !================================================================
 !================================================================
-subroutine coeur_condinit(x,q,dx,nn)
-  use amr_parameters
-  use hydro_parameters
-  use collapse_parameters
-  use constants,ONLY:kB,mH,pi,M_sun
-  implicit none
-  integer ::nn                            ! Number of cells
-  real(dp)::dx                            ! Cell size
-  real(dp),dimension(1:nvector,1:nvar+3)::q ! Primitive variables
-  real(dp),dimension(1:nvector,1:ndim)::x ! Cell center position.
-  !================================================================
-  ! This routine generates collapsing core initial conditions for RAMSES.
-  !================================================================
-
-  integer :: i,id,iu,iv,iw,ip
-  real(dp):: x0,y0,z0,rc,rs,xx,yy,zz,r0,d0,B0,p0,omega0,C_s,Temp
-  real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
-
- ! Cloud parameters
-  mass_c = 1.0d0 ! in solar masses
-  delta_rho=0.1
-  alpha_dense_core=0.1
-  beta_dense_core=0.01
-  crit_dense_core=0.1
-
-  ! Conversion factor from user units to cgs units
-  call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
-
-  id=1; iu=2; iv=3; iw=4; ip=5
-  x0=0.5d0*boxlen
-  y0=0.5d0*boxlen
-  z0=0.5d0*boxlen
-  Temp = 10.0d0
-  r0=(alpha_dense_core*2.*6.67d-8*(mass_c*M_sun)*mu_gas*mH/(5.*kB*Temp))/scale_l
-  ! cloud density equal to unity
-  d0 = 3.0d0*(mass_c*M_sun/scale_l**3/scale_d)/(4.0d0*pi*r0**3.)
-  ! cloud rotation
-  omega0 = sqrt(beta_dense_core*4.*pi*d0)
-
-  ! sound speed
-  C_s = sqrt( Temp / scale_T2 )
-  ! cloud pressure
-  p0 = C_s**2*d0
-  ! vertical magnetic field
-
-  B0 = sqrt(4.*pi/5.)/0.53*(crit_dense_core*d0*r0)  / 2.26d0
-  DO i=1,nn
-     xx=x(i,1)-x0
-     yy=x(i,2)-y0
-     zz=x(i,3)-z0
-     rc=sqrt(xx**2+yy**2)
-     rs=sqrt(xx**2+yy**2+zz**2)
-
-     !Bx component
-     q(i,6     ) = 0.
-     q(i,nvar+1) = 0.
-
-     !By component
-     q(i,7     ) = 0.
-     q(i,nvar+2) = 0.
-
-     !Bz component
-     q(i,8     ) = B0
-     q(i,nvar+3) = B0
-
-     IF(rs .le. r0) THEN
-       q(i,id) = d0*(1.0+delta_rho*cos(2.*atan(yy/xx)))!(2.0*(xx/rc)**2-1.0))
-       q(i,iu) = omega0 * yy
-       q(i,iv) = -omega0 * xx
-       q(i,iw) = 0.0
-       q(i,ip) = p0
-     ELSE
-       q(i,id) = d0/100.
-       xx = r0 * xx / rc
-       yy = r0 * yy / rc
-       q(i,iu) = 0.0! omega0 * yy
-       q(i,iv) = 0.0!-omega0 * xx
-       q(i,iw) = 0.0
-       q(i,ip) = p0/100.
-     ENDIF
-  ENDDO
-
-end subroutine coeur_condinit
-!================================================================
-!================================================================
-!================================================================
-!================================================================
-! subroutine collapse_condinit(x,q,dx,nn)
-!   use amr_commons, only:myid
-!   use amr_parameters
-!   use hydro_commons
-!   use poisson_parameters
-!   use constants, only:mH,kB,M_sun,pc2cm
-!   implicit none
-!   integer ::nn                              ! Number of cells
-!   real(dp)::dx                              ! Cell size
-!   real(dp),dimension(1:nvector,1:nvar+3)::q ! Primitive variables
-!   real(dp),dimension(1:nvector,1:ndim)::x ! Cell center position.
-!   !================================================================
-!   ! This routine generates initial conditions of a collapsing core
-!   !================================================================
-!   integer :: i,j,k,id,iu,iv,iw,ip
-!   real(dp):: x0,y0,z0,rc,rs,xx,yy,zz,pi,r0,d0,B0,p0,omega0,mass_c_cu,scale_m
-!   integer :: ivar, np
-!   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
-!   real(dp),dimension(1:3,1:3):: rot_M,rot_invM,rot_tilde
-!   real(dp):: theta_mag_radians
-
-!   logical,save:: first=.true.
-!   real(dp),dimension(1:3,1:100,1:100,1:100),save::q_idl
-!   real(dp),save::vx_tot,vy_tot,vz_tot,vx2_tot,vy2_tot,vz2_tot
-!   integer,save:: n_size
-!   integer:: ind_i, ind_j, ind_k
-!   real(dp),save:: ind,seed1,seed2,seed3,xi,yi,zi,vx,vy,vz
-!   real(dp),save:: C_s,v_rms
-!   integer, save :: count_vrms
-! #if USE_FLD==1
-!   real(dp)::radiation_source
-! #endif
-
-!   id=1; iu=2; iv=3; iw=4; ip=5
-!   x0=0.5*boxlen
-!   y0=0.5*boxlen
-!   z0=0.5*boxlen
-!   pi=acos(-1.0d0)
-
-!   ! Conversion factor from user units to cgs units
-!   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
-!   scale_m=scale_d*scale_l**3
-
-!   ! cloud mass (warning mass_c should not be changed, because condinit called not just once)
-!   ! mass_c    is in solar mass
-!   ! mass_c_cu is in code units
-!   mass_c_cu = mass_c * (M_sun / scale_m )
-
-!   ! cloud radius
-!   r0=(alpha_dense_core*2.*6.67d-8*mass_c_cu*scale_m*mu_gas*mH/(5.*kB*T_eos))/scale_l
-
-!   ! cloud density
-!   d0 = 3.0d0*mass_c_cu/(4.0d0*pi*r0**3.)
-
-!   ! cloud rotation ! remember that G=1 in code units
-!   omega0 = sqrt(beta_dense_core*4.*pi*d0)
-
-!   ! cloud pressure ! remember that G=1 in code units
-!   C_s = sqrt(kB*T_eos/(mu_gas*mH))/scale_v
-
-!   p0 = d0*c_s**2
-!   ! vertical magnetic field ! remember that G=1 in code units (and that B as a factor 1/sqrt(4pi) between SI and Gaussian units)
-!   B0 = sqrt(4.*pi/5.)/0.53*crit_dense_core*d0*r0
-
-!   ! angle between the rotation axis and the magnetic field
-!   theta_mag_radians= theta_mag/180.0d0*pi
-
-  
-!   rot_M(1,1:3) = (/cos(theta_mag_radians),0.0d0,-sin(theta_mag_radians)/)
-!   rot_M(2,1:3) = (/0.0d0,1.0d0,0.0d0/)
-!   rot_M(3,1:3) = (/sin(theta_mag_radians),0.0d0,cos(theta_mag_radians)/)
-
-!   rot_invM(1,1:3) = (/cos(theta_mag_radians),0.0d0,sin(theta_mag_radians)/)
-!   rot_invM(2,1:3) = (/0.0d0,1.0d0,0.0d0/)
-!   rot_invM(3,1:3) = (/-sin(theta_mag_radians),0.0d0,cos(theta_mag_radians)/)
-
-!   rot_tilde(1,1:3) = (/0.0d0,1.0d0,0.0d0/)
-!   rot_tilde(2,1:3) = (/-1.0d0,0.0d0,0.0d0/)
-!   rot_tilde(3,1:3) = (/0.0d0,0.0d0,0.0d0/)
-
-!   if(first) then
-!     ! sound speed
-!     !C_s could be defined equivalently as sqrt( T_eos / (mu_gas*scale_T2) )
-    
-!     vx_tot=0.d0
-!     vy_tot=0.d0
-!     vz_tot=0.d0
-!     vx2_tot=0.d0
-!     vy2_tot=0.d0
-!     vz2_tot=0.d0
-!     v_rms=0.d0
-!     count_vrms=0
-!     if(Mach .ne. 0)then
-!       if (myid==1) write(*,*) 'Read the file which contains the initial turbulent velocity field'
-!       open(20,file='init_turb.data',form='formatted')
-!       read(20,*) n_size, ind, seed1,seed2,seed3
-!       if(n_size .ne. 100) then
-!           write(*,*) 'Unexpected field size'
-!           stop
-!       endif
-!       do k=1,n_size
-!         do j=1,n_size
-!           do i=1,n_size
-!             read(20,*)xi,yi,zi,vx,vy,vz
-!             q_idl(1,i,j,k) = vx
-!             q_idl(2,i,j,k) = vy
-!             q_idl(3,i,j,k) = vz
-!             xi = boxlen*((i-0.5)/n_size)-x0
-!             yi = boxlen*((j-0.5)/n_size)-y0
-!             zi = boxlen*((k-0.5)/n_size)-z0
-!             rs=sqrt(xi**2+yi**2+zi**2)
-
-!             IF(rs .le. r0) THEN
-!               !print*, vx_tot,vy_tot,vz_tot,vx2_tot,vy2_tot,vz2_tot
-!               vx_tot = vx_tot + vx
-!               vy_tot = vy_tot + vy
-!               vz_tot = vz_tot + vz
-
-!               vx2_tot = vx2_tot + vx**2
-!               vy2_tot = vy2_tot + vy**2
-!               vz2_tot = vz2_tot + vz**2
-
-!               count_vrms=count_vrms+1
-!             end if
-!           end do
-!         end do
-!       end do
-!       close(20)
-!       v_rms=sqrt((vx2_tot+vy2_tot+vz2_tot)/dble(count_vrms)-((vx_tot+vy_tot+vz_tot)/dble(count_vrms))**2)
-!       if (myid == 1) print *, 'v_rms for given seed =',v_rms
-!       ! correction factor to have the expected Mach number stored in v_rms
-!       v_rms = Mach*C_s/v_rms
-!       if (myid == 1) print *, 'correction factor for turbulent field =',v_rms
-!    end if
-
-!    if(myid==1)then
-!       print*,'alpha_dense_core=',alpha_dense_core
-!       print*,'beta_dense_core=',beta_dense_core
-!       print*,'Mass=',mass_c,' Msun'
-!       print*, 'Mass_cu =', mass_c_cu
-!       print*,'d0 (in g/cc)=',d0*scale_d
-!       print*,'Turbulent Mach,cs (km/s)=',Mach,C_s*scale_v/1e5
-!       print*,'r0,boxlen (in code units)=',r0,boxlen
-!       print*,'r0,boxlen (in pc)=',r0*scale_l/pc2cm,boxlen*scale_l/pc2cm
-!     endif
-!     first = .false.
-!   end if
-
-
-
-!   DO i=1,nn
-!      xx=x(i,1)-x0
-!      yy=x(i,2)-y0
-!      zz=x(i,3)-z0
-!      rc=sqrt(xx**2+yy**2)
-!      rs=sqrt(xx**2+yy**2+zz**2)
-
-!      q(i,iu) = 0.0d0
-!      q(i,iv) = 0.0d0
-!      q(i,iw) = 0.0d0
-!      if(Mach .ne. 0)then
-!       !initialise the turbulent velocity field
-!       !make a zero order interpolation (should be improved)
-!       ind_i = int((x(i,1)/boxlen)*n_size)+1
-!       ind_j = int((x(i,2)/boxlen)*n_size)+1
-!       ind_k = int((x(i,3)/boxlen)*n_size)+1
-!       ! safe check
-!       if( ind_i .lt. 1 .or. ind_i .gt. n_size) write(*,*) 'ind_i ',ind_i,(x(i,1)/boxlen)*n_size+1,n_size
-!       if( ind_j .lt. 1 .or. ind_j .gt. n_size) write(*,*) 'ind_j ',ind_j
-!       if( ind_k .lt. 1 .or. ind_k .gt. n_size) write(*,*) 'ind_k ',ind_k
-!     end if
-
-!      IF(rs .le. r0) THEN
-!         ! if(theta_mag.eq.0.0d0) then
-!         !   q(i,id) = d0*(1.0+delta_rho*cos(2.*atan(yy/xx)))!(2.0*(xx/rc)**2-1.0))
-!         !   q(i,iu) = omega0 * yy
-!         !   q(i,iv) = -omega0 * xx
-!         !   q(i,iw) = 0.0
-!         ! else
-!           q(i,id) = d0*(1.0+delta_rho*cos(2.*atan(yy/(cos(theta_mag_radians)*xx-sin(theta_mag_radians)*zz))))
-
-!           if(Mach .ne. 0)then
-!             !print*,omega0*yy,omega0*xx,v_rms,v_rms*(q_idl(1,ind_i,ind_j,ind_k)-vx_tot/dble(count_vrms))
-!             q(i,iu) =  v_rms*(q_idl(1,ind_i,ind_j,ind_k)-vx_tot/dble(count_vrms))
-!             q(i,iv) =  v_rms*(q_idl(2,ind_i,ind_j,ind_k)-vy_tot/dble(count_vrms))
-!             q(i,iw) =  v_rms*(q_idl(3,ind_i,ind_j,ind_k)-vz_tot/dble(count_vrms))
-!           end if
-!           q(i,iu:iw) = q(i,iu:iw) + matmul(rot_invM,omega0*matmul(rot_tilde,matmul(rot_M,(/xx,yy,zz/))))
-!         ! endif
-!         q(i,ip) = p0
-!         !Bx component
-!         q(i,6     ) = 0.0d0
-!         q(i,nvar+1) = 0.0d0
-
-!         !By component
-!         q(i,7     ) = 0.0d0
-!         q(i,nvar+2) = 0.0d0
-
-!         !Bz component
-!         q(i,8     ) = B0
-!         q(i,nvar+3) = q(i,8     )
-!      ELSE
-!        q(i,id) = d0/100.
-!        xx = r0 * xx / rc
-!        yy = r0 * yy / rc
-
-!        if(Mach .ne. 0)then
-!         q(i,iu) = v_rms*(q_idl(1,ind_i,ind_j,ind_k)-vx_tot/dble(count_vrms))! omega0 * yy
-!         q(i,iv) = v_rms*(q_idl(2,ind_i,ind_j,ind_k)-vy_tot/dble(count_vrms))!-omega0 * xx
-!         q(i,iw) = v_rms*(q_idl(3,ind_i,ind_j,ind_k)-vz_tot/dble(count_vrms))
-!        end if
-
-!       !  q(i,iu) = 0.0! omega0 * yy
-!       !  q(i,iv) = 0.0!-omega0 * xx
-!       !  q(i,iw) = 0.0
-
-!         q(i,ip) = p0/100.d0
-!         !Bx component
-!         q(i,6     ) = 0.0d0
-!         q(i,nvar+1) = 0.0d0
-
-!         !By component
-!         q(i,7     ) = 0.0d0
-!         q(i,nvar+2) = 0.0d0
-
-!         !Bz component
-!         q(i,8     ) = B0/100**(2./3.)
-!         q(i,nvar+3) = q(i,8     )
-!      ENDIF
-
-! #if USE_FLD==1
-! #if NGRP>0
-!     do ivar=1,ngrp
-!         q(i,firstindex_er+ivar) = radiation_source(T_eos,ivar)/(scale_d*scale_v**2)
-!     enddo
-! #endif     
-! #endif
-
-!   ENDDO 
-
-! end subroutine collapse_condinit
-
-
-!================================================================
-!================================================================
-!================================================================
-!================================================================
 subroutine collapse_condinit(x,q,dx,nn)
   use amr_commons, only:myid
   use amr_parameters
@@ -548,7 +175,7 @@ subroutine collapse_condinit(x,q,dx,nn)
   integer :: ivar, np
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   real(dp),dimension(1:3,1:3):: rot_M,rot_invM,rot_tilde
-  real(dp):: ee,theta_mag_radians
+  real(dp):: theta_mag_radians
 
   logical,save:: first=.true.
   real(dp),dimension(1:3,1:100,1:100,1:100),save::q_idl
@@ -558,9 +185,6 @@ subroutine collapse_condinit(x,q,dx,nn)
   real(dp),save:: ind,seed1,seed2,seed3,xi,yi,zi,vx,vy,vz
   real(dp),save:: C_s,v_rms
   integer, save :: count_vrms
-#if USE_FLD==1
-  real(dp)::radiation_source
-#endif
 
   id=1; iu=2; iv=3; iw=4; ip=5
   x0=0.5*boxlen
@@ -753,24 +377,10 @@ subroutine collapse_condinit(x,q,dx,nn)
        q(i,ip) = p0/100.
      ENDIF
 
-    if(eos) then
-      !call enerint_eos(q(i,1),T_eos,ee)
-      !q(i,  ip) = ee
-      !q(i,nvar) = ee
-    else
-      q(i,  ip) = q(i,1)* C_s**2!/(gamma-1.0d0)
-      q(i,nvar) = q(i,ip)
-    endif
+     q(i,  ip) = q(i,1)* C_s**2!/(gamma-1.0d0)
+     q(i,nvar) = q(i,ip)
  
-#if USE_FLD==1
-#if NGRP>0
-    do ivar=1,ngrp
-        q(i,firstindex_er+ivar) = radiation_source(T_eos,ivar)/(scale_d*scale_v**2)
-    enddo
-#endif     
-#endif
-
-  ENDDO 
+  ENDDO
 
 end subroutine collapse_condinit
 
