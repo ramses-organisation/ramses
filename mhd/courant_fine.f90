@@ -29,8 +29,7 @@ subroutine courant_fine(ilevel)
   real(dp),dimension(1:nvector,1:nvar_all),save::uu
   real(dp),dimension(1:nvector,1:ndim),save::gg
 #ifdef NIMHD
-  ! maybe to see if ambipolar dt at a certain level restricts the global dt?
-  ! can probably remove
+  ! to see if ambipolar dt at a certain level restricts the global dt
   real(dp)::dtwad_loc,dtwad_all
   real(dp)::dtambdiff_loc,dtambdiff_lev,dtambdiff_all
   real(dp)::dtmagdiff_loc,dtmagdiff_lev,dtmagdiff_all
@@ -46,8 +45,7 @@ subroutine courant_fine(ilevel)
   eint_all=0.0d0; eint_loc=0.0d0
   dt_all=dtnew(ilevel); dt_loc=dt_all
 #ifdef NIMHD
-  ! maybe to see if ambipolar dt at a certain level restricts the global dt?
-  ! can probably remove
+  ! to see if ambipolar dt at a certain level restricts the global dt
   dtambdiff_all=dtambdiff(ilevel); dtambdiff_loc=dtambdiff_all
   dtmagdiff_all=dtmagdiff(ilevel); dtmagdiff_loc=dtmagdiff_all
   dtwad_all=dtwad(ilevel); dtwad_loc=dtwad_all
