@@ -3,7 +3,6 @@ subroutine read_hydro_params(nml_ok)
   use hydro_commons
   use cooling_module, only:X,Y
   use mpi_mod
-  use cloud_module
   implicit none
   logical::nml_ok
   !--------------------------------------------------

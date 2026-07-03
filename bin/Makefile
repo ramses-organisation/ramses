@@ -228,7 +228,6 @@ endif
 ifeq ($(USE_TURB),1)
    MODOBJ += turb_parameters.o turb_commons.o
 endif
-   MODOBJ += cloud_module.o
 
 AMROBJ = read_params.o init_amr.o init_time.o init_refine.o tracer_utils.o adaptive_loop.o \
          amr_step.o update_time.o timer.o output_amr.o flag_utils.o \
