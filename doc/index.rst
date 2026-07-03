@@ -5,7 +5,7 @@
 Ramses Documentation
 ######################
 
-The `ramses` code is intended to be a versatile platform to develop
+The `Ramses` code is intended to be a versatile platform to develop
 applications using  Adaptive Mesh  Refinement (AMR)  for computational
 astrophysics.  The current implementation allows solving the classical
 and relativistic Euler equations in presence of self-gravity, magnetic
@@ -18,13 +18,17 @@ release,  allowing  the user  to  perform  a  simple analysis  of  the
 generated output files. A pdf version of this documentation can be found
 `here <Ramses.pdf>`_.
 
+**New users of Ramses are invited to follow the ramses's** `tutorials <https://ramses-tutorials.readthedocs.io/en/latest/>`_,
+**that cover the basics to setup a simulation and help with getting started
+with some common applications.**
+
 
 Table of Contents
 *****************
 
 .. toctree::
   :caption: User Documentation
-  :maxdepth: 2
+  :maxdepth: 1
 
   wiki/Start.md
   wiki/Runtime_Parameters.md
@@ -34,12 +38,19 @@ Table of Contents
 
 .. toctree::
   :caption: Developer Documentation
-  :maxdepth: 2
+  :maxdepth: 1
 
+  dev_docs/lecture/lectures.md
+  dev_docs/git.rst
   dev_docs/developer_guide.md
-  dev_docs/implementation.md
   dev_docs/docs.md
+
+.. toctree::
+  :caption: Acknowledgements
+  :maxdepth: 1
+
   dev_docs/contributors.md
+
 
 .. |github tag| image:: https://img.shields.io/badge/GitHub-black.svg?style=flat&logo=github
     :target: https://github.com/ramses-organisation/ramses

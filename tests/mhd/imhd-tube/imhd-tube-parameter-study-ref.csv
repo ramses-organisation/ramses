@@ -1,0 +1,6 @@
+test_name_combi,error
+riemann_llf,8.9292774312338216e-02
+riemann_hll,7.9412475635988841e-02
+riemann_roe,7.4677875689468667e-02
+riemann_hlld,7.5423013832204913e-02
+riemann_upwind,8.9292774312338216e-02

@@ -1069,6 +1069,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
 
               if (threshold_accretion.and.d_sink>0.0)then
                  m_acc=c_acc*weight*(d-d_sink)
+                 m_acc_smbh = 0.
               end if
 
               if (agn_acc_method=='mass') then
@@ -2708,7 +2709,7 @@ subroutine read_sink_params()
      call clean_stop
   end if
 
-  if (nlevelmax_sink .eq. 0) then
+  if (nlevelmax_sink <= 0 .or. nlevelmax_sink > nlevelmax) then
      nlevelmax_sink = nlevelmax
   end if
 
@@ -3145,16 +3146,16 @@ subroutine synchronize_sink_info
   !----------------------------------------------------------------------------
   integer::info
 
-  call MPI_BCAST(msink,      nsinkmax, MPI_DOUBLE_PRECISION, 1, MPI_COMM_WORLD, info)
-  call MPI_BCAST(msmbh,      nsinkmax, MPI_DOUBLE_PRECISION, 1, MPI_COMM_WORLD, info)
-  call MPI_BCAST(dmfsink,    nsinkmax, MPI_DOUBLE_PRECISION, 1, MPI_COMM_WORLD, info)
-  call MPI_BCAST(xsink,    3*nsinkmax, MPI_DOUBLE_PRECISION, 1, MPI_COMM_WORLD, info)
-  call MPI_BCAST(vsink,    3*nsinkmax, MPI_DOUBLE_PRECISION, 1, MPI_COMM_WORLD, info)
-  call MPI_BCAST(lsink,    3*nsinkmax, MPI_DOUBLE_PRECISION, 1, MPI_COMM_WORLD, info)
-  call MPI_BCAST(delta_mass, nsinkmax, MPI_DOUBLE_PRECISION, 1, MPI_COMM_WORLD, info)
-  call MPI_BCAST(idsink,     nsinkmax, MPI_INTEGER,          1, MPI_COMM_WORLD, info)
-  call MPI_BCAST(tsink,      nsinkmax, MPI_DOUBLE_PRECISION, 1, MPI_COMM_WORLD, info)
-  call MPI_BCAST(new_born,   nsinkmax, MPI_LOGICAL,          1, MPI_COMM_WORLD, info)
+  call MPI_BCAST(msink,      nsinkmax, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, info)
+  call MPI_BCAST(msmbh,      nsinkmax, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, info)
+  call MPI_BCAST(dmfsink,    nsinkmax, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, info)
+  call MPI_BCAST(xsink,    3*nsinkmax, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, info)
+  call MPI_BCAST(vsink,    3*nsinkmax, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, info)
+  call MPI_BCAST(lsink,    3*nsinkmax, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, info)
+  call MPI_BCAST(delta_mass, nsinkmax, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, info)
+  call MPI_BCAST(idsink,     nsinkmax, MPI_INTEGER,          0, MPI_COMM_WORLD, info)
+  call MPI_BCAST(tsink,      nsinkmax, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, info)
+  call MPI_BCAST(new_born,   nsinkmax, MPI_LOGICAL,          0, MPI_COMM_WORLD, info)
 
 end subroutine synchronize_sink_info
 #endif

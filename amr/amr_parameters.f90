@@ -110,6 +110,9 @@ module amr_parameters
   integer::foutput=1000000       ! Frequency of outputs
   logical::gadget_output=.false. ! Output in gadget format
   logical::output_now=.false.    ! write output next step
+  logical::exact_output_time=.false. ! enforce outputs at exact requested times
+  real(dp),parameter::eps_a=1d-10 ! Small tolerance to account for floating-point errors when comparing aexp to aout
+  real(dp),parameter::eps_t=1d-10 ! Small tolerance to account for floating-point errors when comparing t to tout
   real(dp)::walltime_hrs=-1      ! Wallclock time for submitted job
   real(dp)::minutes_dump=1       ! Dump an output minutes before walltime ends
   logical::finish_run=.false.! trigger cleanup after walltime end dump
@@ -120,6 +123,8 @@ module amr_parameters
   real(dp)::tout_next=HUGE(1.0D0)     ! next output time using delta_tout
   real(dp)::aout_next=HUGE(1.0D0)     ! next output expansion factor using delta_aout
   logical::output_to_log=.true.  ! write output to log for 1D runs
+  logical::write_conservative=.false. ! output conservative variables instead of primitive ones
+  logical::read_conservative=.false.  ! restart from an output which contains conservative variables
 
   ! Lightcone parameters
   real(dp)::thetay_cone=12.5d0
@@ -172,6 +177,8 @@ module amr_parameters
   real(dp)::sf_trelax=0              ! Relaxation time for star formation (cosmo=.false. only)
   real(dp)::sf_tdiss=0               ! Dissipation timescale for subgrid turbulence in units of turbulent crossing time
   integer::sf_model=3                ! Virial star formation model
+  logical::randomize_sf=.true.       ! Use the poissdev stellar mass random drawing
+  real(dp)::PoissMeanMult=1.0        ! Poisson Mean Multiplier, applied only when randomize_sf=.false., in test context
   integer::nlevel_collapse=3         ! Number of levels to follow initial dark matter collapse (cosmo=.true. only)
   real(dp)::mass_star_max=120        ! Maximum mass of a star in solar mass
   real(dp)::mass_sne_min=10          ! Minimum mass of a single supernova in solar mass
@@ -221,11 +228,12 @@ module amr_parameters
                                         !'isothermal': constant temperature T0
                                         !'polytrope': T = T0*(rho/rho0)**(gamma-1) or P ~ rho**gamma for ideal gas
                                         !'double_polytrope': isothermal with T0 below rho0 and polytropic with gamma above
+                                        !'2nd_collapse': Functional form for 2nd Larson core formation
                                         !'custom': for patching your own eos
                                         !'legacy': same as polytrop but using the old n_star, g_star and T2_star
-  real(dp)::polytrope_rho=1.0d50        ! sets rho0 in EOS = density normalisation or knee-density, in g/cm3
-  real(dp)::polytrope_rho_cu=1.0d50     ! rho0 in code units
-  real(dp)::polytrope_index=1.0d0       ! sets gamma in EOS = polytropic index
+  real(dp),dimension(5)::polytrope_rho=1.0d50     ! array of normalisation or knee-density densities for EOS, in g/cm3
+  real(dp),dimension(5)::polytrope_n              ! polytrope_rho in H/cc for calculation
+  real(dp),dimension(5)::polytrope_index=1.0d0    ! sets gamma in EOS = polytropic index
   real(dp)::T_eos=10                    ! sets T0 in EOS: isothermal temperature or temperature normalisation, in K
   real(dp)::mu_gas=1d0                  ! molecular weight
   real(dp)::T2_eos=10                   ! = T/mu, used in the computations
