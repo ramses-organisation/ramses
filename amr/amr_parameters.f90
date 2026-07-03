@@ -238,7 +238,6 @@ module amr_parameters
   real(dp)::T_eos=10                    ! sets T0 in EOS: isothermal temperature or temperature normalisation, in K
   real(dp)::mu_gas=1d0                  ! molecular weight
   real(dp)::T2_eos=10                   ! = T/mu, used in the computations
-  logical::eos=.false.                  ! non ideal gas EOS module activated
 
   ! Movie
   integer,parameter::NMOV=5

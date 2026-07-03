@@ -380,11 +380,10 @@ subroutine cmpdt_nimhd(uu,dx,ncell,dtambdiff,dtohmdiss)
    real(dp)::xx,betaad,etaohmdiss
    real(dp),dimension(1:nvector),save::B2,rho,tcell
    integer::k,idim
-   integer :: ht
   
    do k = 1,ncell
       rho(k)=max(uu(k,1),smallr)
-      call temperature_eos(rho(k), uu(k,nvar), tcell(k),ht)
+      call temperature_eos(rho(k), uu(k,nvar), tcell(k))
    end do
  
    do k = 1,ncell

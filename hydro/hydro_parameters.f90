@@ -46,10 +46,6 @@ module hydro_parameters
   integer,parameter::nvar_all=nvar
 #endif
 
-  ! EOS parameters
-  integer  :: nRho,nEnergy,nTemp
-  real(dp) :: rhomin,rhomax,Emax,emin,yHe,Tmax,Tmin
-
   ! Size of hydro kernel
   integer,parameter::iu1=-1
   integer,parameter::iu2=+4

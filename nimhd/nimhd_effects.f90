@@ -540,7 +540,6 @@ subroutine computdifmag(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
    real(dp)::rhof,bsqf,epsf,tcellf
    real(dp)::etaod2,etaohmdiss
    integer , dimension(1:3) :: index_i,index_j,index_k
-   integer :: ht
    emfohmdiss = 0d0
    fluxohm = 0d0
 
@@ -566,9 +565,9 @@ subroutine computdifmag(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
                bsquarey=bemfy(l,i,j,k,1)**2+bemfy(l,i,j,k,2)**2+bemfy(l,i,j,k,3)**2
                bsquarez=bemfz(l,i,j,k,1)**2+bemfz(l,i,j,k,2)**2+bemfz(l,i,j,k,3)**2
 
-               call temperature_eos(rhox, epsx, tcellx, ht)
-               call temperature_eos(rhoy, epsy, tcelly, ht)
-               call temperature_eos(rhoz, epsz, tcellz, ht)
+               call temperature_eos(rhox, epsx, tcellx)
+               call temperature_eos(rhoy, epsy, tcelly)
+               call temperature_eos(rhoz, epsz, tcellz)
 
                etaod2x=etaohmdiss(rhox,bsquarex,tcellx,dt,dx,.true.)
                etaod2y=etaohmdiss(rhoy,bsquarey,tcelly,dt,dx,.true.)
@@ -586,7 +585,7 @@ subroutine computdifmag(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
                      bsqf=bmagij(l,i,j,k,1,h)**2+bmagij(l,i,j,k,2,h)**2+bmagij(l,i,j,k,3,h)**2
 
                      ! Compute gas temperature in cgs
-                     call temperature_eos(rhof, epsf, tcellf, ht)
+                     call temperature_eos(rhof, epsf, tcellf)
                         
                      etaod2=etaohmdiss(rhof,bsqf,tcellf,0d0,0d0,.false.)
                      fluxohm(l,i,j,k,h)=etaod2*fluxmd(l,i,j,k,h)
@@ -623,7 +622,6 @@ subroutine computambip(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,b
    ! outputs
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::emfambdiff
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::fluxambdiff
-   integer :: ht
    ! declare local variables
    INTEGER ::i, j, k, l
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::florentzx,florentzy,florentzz
@@ -678,7 +676,7 @@ subroutine computambip(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,b
 
                ! Compute gas temperature in cgs
 
-               call temperature_eos(u(l,i,j,k,1), u(l,i,j,k,nvar), tcell,ht)
+               call temperature_eos(u(l,i,j,k,1), u(l,i,j,k,nvar), tcell)
                
                bsquarex=bemfx(l,i,j,k,1)**2+bemfx(l,i,j,k,2)**2+bemfx(l,i,j,k,3)**2
                bsquarey=bemfy(l,i,j,k,1)**2+bemfy(l,i,j,k,2)**2+bemfy(l,i,j,k,3)**2
