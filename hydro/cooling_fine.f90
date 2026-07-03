@@ -690,9 +690,9 @@ subroutine cmp_energy_components(ind_cell,ncell,rho,ekin,erad,emag)
   real(dp),dimension(1:nvector),intent(out)::ekin,erad,emag
   !-------------------------------------------------------------------
   ! Gather the non-thermal energy components:
-  !   ekin: kinetic 
-  !   erad: non-thermal,radiative 
-  !   emag: magnetic 
+  !   ekin: kinetic
+  !   erad: non-thermal,radiative
+  !   emag: magnetic
   ! With these, the thermal energy can be calculated as
   !   etherm = uold(:,neul) - ekin - erad - emag
   !-------------------------------------------------------------------

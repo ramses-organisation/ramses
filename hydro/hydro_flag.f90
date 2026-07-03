@@ -188,7 +188,7 @@ subroutine jeans_length_refine(ind_cell,ok,ncell,ilevel)
   integer,dimension(1:nvector),intent(in)::ind_cell
   logical,dimension(1:nvector),intent(inout)::ok
   !-------------------------------------------------------------------
-  ! This routine flags cells for refinement if the Jeans length is 
+  ! This routine flags cells for refinement if the Jeans length is
   ! resolved by less than the user-specified number of cells.
   ! Input:
   !   ind_cell: cell indices of the current vector sweep
