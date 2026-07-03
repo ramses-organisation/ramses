@@ -1052,7 +1052,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
                  ! on sink creation, new sinks
                  m_acc     =mass_sink_seed*M_sun/scale_m*weight/volume
                  m_acc_smbh=mass_smbh_seed*M_sun/scale_m*weight/volume
-                 if (agn_acc_method=='mass') then
+                 if (agn.and.agn_acc_method=='mass') then
                     m_acc      = m_acc * (d/density)
                     m_acc_smbh = m_acc_smbh * (d/density)
                  endif
@@ -1072,7 +1072,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
                  m_acc_smbh = 0.
               end if
 
-              if (agn_acc_method=='mass') then
+              if (agn.and.agn_acc_method=='mass') then
                  m_acc      = m_acc * (d/density)
                  m_acc_smbh = m_acc_smbh * (d/density)
               endif
