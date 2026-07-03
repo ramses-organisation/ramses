@@ -301,6 +301,10 @@ module amr_parameters
   real(dp)::mass_cut_refine=-1                   ! Mass threshold for particle-based refinement
   integer::ivar_refine=-1                        ! Variable index for refinement
   logical::sink_refine=.false.                   ! Fully refine on sink particles
+  logical::iso_jeans=.false.                     ! Prescribed-thermodynamics Jeans-length refinement criterion
+  real(dp)::Tp_jeans=10.0d0                      ! Floor temperature (K) for the iso_jeans criterion
+  real(dp)::rho_iso=1.0d-8                       ! Density (g/cc) below which iso_jeans caps at the floor sound speed
+  real(dp)::rho_star=1.0d-5                      ! Density (g/cc) above which iso_jeans uses the actual gas sound speed
 
   ! Initial condition selection parameter
   character(LEN=60)::condinit_kind ='region'
