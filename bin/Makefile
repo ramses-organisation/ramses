@@ -54,7 +54,6 @@ NHYDRO = 2+$(NDIM)
 ifeq ($(SOLVER),mhd)
    NHYDRO = 8
 endif
-RAMSES_ISM=0
 ifeq ($(NIMHD),1)
    SOLVER=mhd
 endif
@@ -73,7 +72,7 @@ GITREPO = $(shell git config --get remote.$(GITREMOTE).url)
 BUILDDATE = $(shell date +"%D-%T")
 BUILDCOMMAND =${MAKE} ${MAKEFLAGS}
 DEFINES = -DNVECTOR=$(NVECTOR) -DNDIM=$(NDIM) -DNPRE=$(NPRE) -DNENER=$(NENER) \
-          -DNVAR=$(NVAR) -DNHYDRO=$(NHYDRO) -DSOLVER$(SOLVER) -DRAMSES_ISM$(RAMSES_ISM)
+          -DNVAR=$(NVAR) -DNHYDRO=$(NHYDRO) -DSOLVER$(SOLVER)
 ifeq ($(ATON),1)
    DEFINES += -DATON
 endif
@@ -120,15 +119,15 @@ ifeq ($(COMPILER),GNU)
       F90 = gfortran
    endif
    FC = gfortran -ffree-line-length-none -fimplicit-none
-   FFLAGS_BASE += -ffree-line-length-none -fimplicit-none -fallow-argument-mismatch
+   FFLAGS_BASE += -ffree-line-length-none -fimplicit-none
    # add preprocessor macro definitions to compilation flags
    FFLAGS_BASE += -cpp $(DEFINES)
    ifeq ($(MPI),0)
       FFLAGS_BASE += -DWITHOUTMPI
    endif
    # link-time optimization accross files
-   #LDFLAGS += -flto -fwhole-program
-   #FFLAGS_OPT += -flto -fwhole-program
+   LDFLAGS += -flto -fwhole-program
+   FFLAGS_OPT += -flto -fwhole-program
    # Flags for coverage calculation (resets optimization flags)
    ifeq ($(GCOV),1)
       FFLAGS_BASE += -fprofile-arcs -ftest-coverage
