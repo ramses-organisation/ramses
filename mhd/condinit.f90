@@ -753,6 +753,8 @@ subroutine collapse_condinit(x,q,dx,nn)
        q(i,ip) = p0/100.
      ENDIF
 
+ 
+#if USE_FLD==1
     if(eos) then
       !call enerint_eos(q(i,1),T_eos,ee)
       !q(i,  ip) = ee
@@ -761,8 +763,7 @@ subroutine collapse_condinit(x,q,dx,nn)
       q(i,  ip) = q(i,1)* C_s**2!/(gamma-1.0d0)
       q(i,nvar) = q(i,ip)
     endif
- 
-#if USE_FLD==1
+
 #if NGRP>0
     do ivar=1,ngrp
         q(i,firstindex_er+ivar) = radiation_source(T_eos,ivar)/(scale_d*scale_v**2)
