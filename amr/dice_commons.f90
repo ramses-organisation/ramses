@@ -43,7 +43,6 @@ module dice_commons
   real(dp),allocatable,dimension(:)::maskp
   logical::dice_init       = .false.
   logical::amr_struct      = .false.
-#ifdef SOLVERmhd
   ! magnetic
   integer,parameter::MAXGAL= 32
   real(dp),dimension(1:MAXGAL)::ic_mag_center_x = 0.0
@@ -55,6 +54,5 @@ module dice_commons
   real(dp),dimension(1:MAXGAL)::ic_mag_scale_R  = 1.0
   real(dp),dimension(1:MAXGAL)::ic_mag_scale_H  = 1.0
   real(dp),dimension(1:MAXGAL)::ic_mag_scale_B  = 0.0
-#endif
 
 end module dice_commons
