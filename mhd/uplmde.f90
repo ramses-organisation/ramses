@@ -136,7 +136,7 @@ subroutine diffine1(ind_grid,ncache,dtdiff,ilevel)
   integer::ivar1,ivar2,ivar3,ivar4,ivar5,ivar6
   real(dp)::dx,dflux,weight,dflux_x,dflux_y,dflux_z,scale,dx_loc
 
-!$omp threadprivate(nbors_father_cells,ibuffer_father,B1,ind1,B2,ok,Bx,By,Bz,emfx,emfy,emfz,igrid_nbor,ind_cell,ind_buffer,exist_nbor)
+!$omp threadprivate(nbors_father_cells,ibuffer_father,B1,ind1,B2,ok,Bx,By,Bz,emfx,emfy,emfz,igrid_nbor,ind_cell,ind_buffer,igrid,exist_nbor)
 
   ! Mesh size at level ilevel in coarse cell units
   dx=0.5D0**ilevel

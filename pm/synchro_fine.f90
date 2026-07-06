@@ -512,6 +512,7 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
            if ( is_cloud(typep(ind_part(j))) ) then
               isink=-idp(ind_part(j))
               if(.not. direct_force_sink(isink))then
+!$omp atomic update
                  fsink_new(isink,idim)=fsink_new(isink,idim)+ff(j,idim)
               endif
            endif

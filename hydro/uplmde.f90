@@ -50,7 +50,7 @@ subroutine tracex(q,qm,qp,dx,dt,ngrid)
   real(dp),dimension(1:nvector,1:nvar,1:ndim)::dq
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qm
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar,1:ndim)::qp
-  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),save::c
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2)::c
 
   ! Local variables
   integer ::ilo,ihi,jlo,jhi,klo,khi
