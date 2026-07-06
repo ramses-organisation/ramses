@@ -596,6 +596,10 @@ subroutine make_grid_fine(ind_grid,ind_cell,ind,ilevel,nn,ibound,boundary_region
 #ifdef RT
   use rt_hydro_commons
 #endif
+#ifdef CRPHYS
+  use cr_hydro_commons, ONLY:cruold
+  use cr_parameters, ONLY:ncrvar,cr_advect
+#endif
 #ifdef ATON
   use radiation_commons, ONLY:Erad
 #endif
@@ -631,6 +635,10 @@ subroutine make_grid_fine(ind_grid,ind_cell,ind,ilevel,nn,ibound,boundary_region
 #ifdef RT
   real(dp),dimension(1:nvector,0:twondim  ,1:nrtvar),save::urt1
   real(dp),dimension(1:nvector,1:twotondim,1:nrtvar),save::urt2
+#endif
+#ifdef CRPHYS
+  real(dp),dimension(1:nvector,0:twondim  ,1:ncrvar),save::ucr1
+  real(dp),dimension(1:nvector,1:twotondim,1:ncrvar),save::ucr2
 #endif
   real(dp),dimension(1:nvector,1:ndim),save::xx
   integer ,dimension(1:nvector),save::cc
@@ -884,6 +892,29 @@ subroutine make_grid_fine(ind_grid,ind_cell,ind,ilevel,nn,ibound,boundary_region
         enddo
      end if
 #endif
+#ifdef CRPHYS
+     !============================
+     ! Interpolate CR variables
+     !============================
+     if(hydro .and. cr_advect)then
+        do j=0,twondim
+           do ivar=1,ncrvar
+              do i=1,nn
+                 ucr1(i,j,ivar)=cruold(ind_fathers(i,j),ivar)
+              end do
+           end do
+        end do
+        call cr_interpol_hydro(ucr1,ucr2,nn)
+        do j=1,twotondim
+           iskip=ncoarse+(j-1)*ngridmax
+           do ivar=1,ncrvar
+              do i=1,nn
+                 cruold(iskip+ind_grid_son(i),ivar)=ucr2(i,j,ivar)
+              end do
+           end do
+        enddo
+     end if
+#endif
      !=============================
      ! Interpolate stellar momentum
      !=============================
@@ -942,6 +973,10 @@ subroutine kill_grid(ind_cell,ilevel,nn,ibound,boundary_region)
 #ifdef RT
   use rt_hydro_commons
   use rt_parameters
+#endif
+#ifdef CRPHYS
+  use cr_parameters, ONLY:cr_advect,ncrvar
+  use cr_hydro_commons, ONLY:cruold,crunew
 #endif
 #ifdef ATON
   use radiation_commons, ONLY:Erad
@@ -1116,6 +1151,16 @@ subroutine kill_grid(ind_cell,ilevel,nn,ibound,boundary_region)
            do i=1,nn
               rtuold(ind_cell_son(i),ivar)=0.0D0
               rtunew(ind_cell_son(i),ivar)=0.0D0
+           end do
+        end do
+     end if
+#endif
+#ifdef CRPHYS
+     if(cr_advect)then
+        do ivar=1,ncrvar
+           do i=1,nn
+              cruold(ind_cell_son(i),ivar)=0.0D0
+              crunew(ind_cell_son(i),ivar)=0.0D0
            end do
         end do
      end if

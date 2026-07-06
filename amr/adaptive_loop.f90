@@ -7,6 +7,13 @@ subroutine adaptive_loop
 #ifdef RT
   use rt_hydro_commons
 #endif
+#ifdef CRPHYS
+  use cr_parameters, only: cr_advect,ncrvar
+  use cr_hydro_commons, only: cruold
+#endif
+#ifdef CRPHYS
+  use cr_parameters, only: ecrs_tot
+#endif
 #if USE_TURB==1
   use turb_commons
 #endif
@@ -34,6 +41,9 @@ subroutine adaptive_loop
   if(hydro)call init_hydro           ! Initialize hydro variables
 #ifdef RT
   if(rt.or.neq_chem) call rt_init_hydro ! Initialize radiation variables
+#endif
+#ifdef CRPHYS
+  call cr_init_hydro                 ! Allocate cosmic-ray variables
 #endif
   if(poisson)call init_poisson       ! Initialize poisson variables
 #ifdef ATON
@@ -91,6 +101,9 @@ subroutine adaptive_loop
 #ifdef SOLVERmhd
      emag_tot=0.0D0  ! Reset total magnetic energy
 #endif
+#ifdef CRPHYS
+     ecrs_tot=0.0D0  ! Reset total cosmic rays energy
+#endif
 
      ! Make new refinements
      if(levelmin.lt.nlevelmax.and.(.not.static.or.(nstep_coarse_old.eq.nstep_coarse.and.restart_remap)))then
@@ -113,6 +126,14 @@ subroutine adaptive_loop
                  call make_virtual_fine_dp(rtuold(1,ivar),ilevel)
               end do
               if(simple_boundary)call rt_make_boundary_hydro(ilevel)
+           endif
+#endif
+#ifdef CRPHYS
+           if(cr_advect)then
+              do ivar=1,ncrvar
+                 call make_virtual_fine_dp(cruold(1,ivar),ilevel)
+              end do
+              if(simple_boundary)call cr_make_boundary_hydro(ilevel)
            endif
 #endif
            if(poisson)then
@@ -156,6 +177,15 @@ subroutine adaptive_loop
                  call make_virtual_fine_dp(rtuold(1,ivar),ilevel)
               end do
               if(simple_boundary)call rt_make_boundary_hydro(ilevel)
+           end if
+#endif
+#ifdef CRPHYS
+           if(cr_advect)then
+              call cr_upload_fine(ilevel)
+              do ivar=1,ncrvar
+                 call make_virtual_fine_dp(cruold(1,ivar),ilevel)
+              end do
+              if(simple_boundary)call cr_make_boundary_hydro(ilevel)
            end if
 #endif
            ! Gravity book-keeping

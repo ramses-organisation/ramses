@@ -145,6 +145,17 @@ subroutine dump_all
   endif
 #endif
 
+#ifdef CRPHYS
+  if(myid==1.and.print_when_io) write(*,*)'Start backup cr'
+  filename=TRIM(filedir)//'cr_'//TRIM(nchar)//'.out'
+  filename_desc = trim(filedir) // 'cr_file_descriptor.txt'
+  call cr_backup_hydro(filename, filename_desc)
+#ifndef WITHOUTMPI
+  if(synchro_when_io) call MPI_BARRIER(MPI_COMM_WORLD,info)
+#endif
+  if(myid==1.and.print_when_io) write(*,*)'End backup cr'
+#endif
+
   if(pic)then
      if(myid==1.and.print_when_io) write(*,*)'Start backup part'
      filename=trim(filedir)//'part_'//trim(nchar)//'.out'

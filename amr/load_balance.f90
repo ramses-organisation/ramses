@@ -12,6 +12,10 @@ subroutine load_balance
 #ifdef RT
   use rt_hydro_commons, ONLY: nrtvar, rtuold
 #endif
+#ifdef CRPHYS
+  use cr_parameters, ONLY: cr_advect, ncrvar
+  use cr_hydro_commons, ONLY: cruold
+#endif
 #endif
   use bisection
   use mpi_mod
@@ -95,6 +99,16 @@ subroutine load_balance
         end do
         if(simple_boundary)then
            call rt_make_boundary_hydro(ilevel)
+        end if
+     endif
+#endif
+#ifdef CRPHYS
+     if(cr_advect)then
+        do ivar=1,ncrvar
+           call make_virtual_fine_dp(cruold(1,ivar),ilevel)
+        end do
+        if(simple_boundary)then
+           call cr_make_boundary_hydro(ilevel)
         end if
      endif
 #endif
@@ -1065,6 +1079,10 @@ subroutine defrag
 #ifdef RT
   use rt_hydro_commons
 #endif
+#ifdef CRPHYS
+  use cr_parameters, ONLY: cr_advect,ncrvar
+  use cr_hydro_commons, ONLY: cruold
+#endif
   implicit none
 
   integer::ncache,ngrid2,igridmax,i,igrid,ibound,ilevel
@@ -1549,6 +1567,44 @@ subroutine defrag
   end do
   do igrid=1,igridmax
      rtuold(iskip2+igrid,ivar)=real(hilbert_key(igrid),kind=8)
+  end do
+  end do
+  end do
+
+  end if
+#endif
+
+#ifdef CRPHYS
+  if(cr_advect)then
+
+  do ivar=1,ncrvar
+  do ind=1,twotondim
+  iskip2=ncoarse+(ind-1)*ngridmax
+  ngrid2=0
+  do igrid=1,igridmax
+     hilbert_key(igrid)=0.0D0
+  end do
+  do ilevel=1,nlevelmax
+     do ibound=1,nboundary+ncpu
+        if(ibound<=ncpu)then
+           ncache=numbl(ibound,ilevel)
+           istart=headl(ibound,ilevel)
+        else
+           ncache=numbb(ibound-ncpu,ilevel)
+           istart=headb(ibound-ncpu,ilevel)
+        end if
+        if(ncache>0)then
+           igrid=istart
+           do i=1,ncache
+              hilbert_key(ngrid2+i)=real(cruold(iskip2+igrid,ivar),kind=qdp)
+              igrid=next(igrid)
+           end do
+           ngrid2=ngrid2+ncache
+        end if
+     end do
+  end do
+  do igrid=1,igridmax
+     cruold(iskip2+igrid,ivar)=real(hilbert_key(igrid),kind=8)
   end do
   end do
   end do

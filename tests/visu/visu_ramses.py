@@ -25,7 +25,7 @@ def read_descriptor(fname):
 # =======================================================================
 # Load RAMSES data a la OSIRIS
 # =======================================================================
-def load_snapshot(nout, read_hydro=True, read_grav=False, read_rt=False):
+def load_snapshot(nout, read_hydro=True, read_grav=False, read_rt=False, read_cr=False):
 
     infile = generate_fname(nout)
 
@@ -73,6 +73,13 @@ def load_snapshot(nout, read_hydro=True, read_grav=False, read_rt=False):
         list_vars_rt, _ = read_descriptor(rtfile)
         info["nrtvar"] = len(list_vars_rt)
         list_vars.extend(list_vars_rt[:])
+
+    # Add cosmic-ray variables (separate cr_NNNNN.out dump, mirrors RT)
+    if read_cr:
+        crfile = infile+"/cr_file_descriptor.txt"
+        list_vars_cr, _ = read_descriptor(crfile)
+        info["ncrvar"] = len(list_vars_cr)
+        list_vars.extend(list_vars_cr[:])
 
     # Make sure we always read the coordinates
     list_vars.extend(("level","x","y","z","dx"))
@@ -154,6 +161,12 @@ def load_snapshot(nout, read_hydro=True, read_grav=False, read_rt=False):
             rt_fname = generate_fname(nout,ftype="rt",cpuid=k+1)
             with open(rt_fname, mode='rb') as rt_file: # b is important -> binary
                 rtContent = rt_file.read()
+
+        # Read binary CR file
+        if read_cr:
+            cr_fname = generate_fname(nout,ftype="cr",cpuid=k+1)
+            with open(cr_fname, mode='rb') as cr_file: # b is important -> binary
+                crContent = cr_file.read()
 
         # Need to extract info from the file header on the first loop
         if k == 0:
@@ -271,6 +284,13 @@ def load_snapshot(nout, read_hydro=True, read_grav=False, read_rt=False):
         nlines4 = 6
         nstrin4 = 0
 
+        # Offset for CR (same header as RT: ncpu, ncrvars, ndim,
+        # nlevelmax, nboundary [5 ints] + gamma [1 double])
+        ninteg5 = 5
+        nfloat5 = 1
+        nlines5 = 6
+        nstrin5 = 0
+
         # Loop over levels
         for ilevel in range(info["levelmax"]):
 
@@ -309,6 +329,12 @@ def load_snapshot(nout, read_hydro=True, read_grav=False, read_rt=False):
             nlines_rt = nlines4
             nstrin_rt = nstrin4
 
+            # Cumulative offsets in CR file
+            ninteg_cr = ninteg5
+            nfloat_cr = nfloat5
+            nlines_cr = nlines5
+            nstrin_cr = nstrin5
+
             # Loop over domains
             for j in range(nboundary+info["ncpu"]):
 
@@ -321,6 +347,8 @@ def load_snapshot(nout, read_hydro=True, read_grav=False, read_rt=False):
                 ninteg_grav += 2
                 nlines_rt += 2
                 ninteg_rt += 2
+                nlines_cr += 2
+                ninteg_cr += 2
 
                 if ncache > 0:
 
@@ -357,6 +385,12 @@ def load_snapshot(nout, read_hydro=True, read_grav=False, read_rt=False):
                                 for ivar in range(info["nrtvar"]):
                                     offset = 4*ninteg_rt + 8*(nlines_rt+nfloat_rt+(ind*info["nrtvar"]+ivar)*(ncache+1)) + nstrin_rt + 4
                                     var[:ncache,ind,info["nvar"]+info["ngravvar"]+ivar] = struct.unpack("%id"%(ncache), rtContent[offset:offset+8*ncache])
+                            # crvar: cosmic-ray variables (after rt columns)
+                            if read_cr:
+                                cr_base = info["nvar"]+info["ngravvar"]+info.get("nrtvar",0)
+                                for ivar in range(info["ncrvar"]):
+                                    offset = 4*ninteg_cr + 8*(nlines_cr+nfloat_cr+(ind*info["ncrvar"]+ivar)*(ncache+1)) + nstrin_cr + 4
+                                    var[:ncache,ind,cr_base+ivar] = struct.unpack("%id"%(ncache), crContent[offset:offset+8*ncache])
                             # refinement lvl
                             var[:ncache,ind,-5] = float(ilevel+1)
                             for n in range(info["ndim"]):
@@ -387,6 +421,10 @@ def load_snapshot(nout, read_hydro=True, read_grav=False, read_rt=False):
                         nfloat_rt += ncache*twotondim*info["nrtvar"]
                         nlines_rt += twotondim*info["nrtvar"]
 
+                    if read_cr:
+                        nfloat_cr += ncache*twotondim*info["ncrvar"]
+                        nlines_cr += twotondim*info["ncrvar"]
+
                     nfloat_grav += ncache*twotondim*(info["ndim"]+1)
                     nlines_grav += twotondim*(info["ndim"]+1)
 
@@ -410,6 +448,11 @@ def load_snapshot(nout, read_hydro=True, read_grav=False, read_rt=False):
             nfloat4 = nfloat_rt
             nlines4 = nlines_rt
             nstrin4 = nstrin_rt
+
+            ninteg5 = ninteg_cr
+            nfloat5 = nfloat_cr
+            nlines5 = nlines_cr
+            nstrin5 = nstrin_cr
 
         # Read binary particle file
         if info["particle_count"]["total"] > 0:
