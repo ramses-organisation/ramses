@@ -89,9 +89,11 @@ subroutine init_part
   allocate(ptcl_phi(npartmax))
 #endif
   ! Define up array (and maskp) for DICE ICs
-  allocate(up(npartmax))
-  if(ic_mask_ptype.gt.-1)then
-     allocate(maskp(npartmax))
+  if (filetype.eq.'dice') then
+     allocate(up(npartmax))
+     if(ic_mask_ptype.gt.-1)then
+        allocate(maskp(npartmax))
+     endif
   endif
   xp=0; vp=0; mp=0; levelp=0; idp=0
   typep(1:npartmax)%family=FAM_UNDEF; typep(1:npartmax)%tag=0

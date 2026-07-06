@@ -343,6 +343,7 @@ subroutine multipole_from_current_level(ilevel)
   ! the CIC scheme from particles that are not entirely in
   ! level ilevel (boundary particles).
   ! Arrays flag1 and flag2 are used as temporary work space.
+  ! Used for DICE initial conditions.
   !------------------------------------------------------------------
   integer::igrid,jgrid,ipart,jpart,idim,icpu,ind,iskip,ibound
   integer::j,ig,ip,npart1,npart2,next_part

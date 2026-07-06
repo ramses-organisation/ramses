@@ -467,8 +467,9 @@ subroutine init_flow_fine(ilevel)
   !-------------------------------------------------------
   ! DICE initial conditions
   !-------------------------------------------------------
-  elseif(filetype.eq.'dice') then ! TODO: dice stuff
+  elseif(filetype.eq.'dice') then
 
+#ifdef SOLVERmhd
      do i=1,MAXGAL
         if (ic_mag_scale_B(i) .EQ. 0.0) cycle
         ! renormalise axes
@@ -477,6 +478,7 @@ subroutine init_flow_fine(ilevel)
         ic_mag_axis_y(i) = ic_mag_axis_y(i) / axlen
         ic_mag_axis_z(i) = ic_mag_axis_z(i) / axlen
      enddo
+#endif
 
      ! Initialise uold with values from the DICE_PARAMS namelist
      call reset_uold(ilevel)
@@ -703,6 +705,7 @@ subroutine reset_uold(ilevel)
   !--------------------------------------------------------------------------
   ! This routine sets array uold to zero before calling
   ! the hydro scheme. uold is set to zero in virtual boundaries as well.
+  ! Used for DICE initial conditions.
   !--------------------------------------------------------------------------
   integer::i,ivar,ind,icpu,iskip
 
