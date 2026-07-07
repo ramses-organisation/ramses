@@ -54,13 +54,6 @@ subroutine temperature_eos(rho_temp,Enint_temp,Teos)
   real(dp)::rho,Enint
   real(dp)::scale_nH,scale_T2,scale_t,scale_v,scale_d,scale_l
 
-  integer::i_t,i_r,i
-  real(dp)::logr,tt,uu,y1,y2,y3,y4
-  real(dp):: le,lr
-  real(dp):: dd1,dd2,de1,de2
-  integer :: ir,ie
-  real(dp):: xx,drho,dener
-
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
 
   rho   = rho_temp*scale_d
