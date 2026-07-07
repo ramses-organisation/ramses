@@ -987,7 +987,7 @@ double precision function betaad(rhocelln,rhon,dt,bsquare,dx,temper,limit)
    implicit none
    real(dp) ::rhocelln,rhon,betaadtemp,dt,bsquare,dx,temper
    real(dp)::gammaadbis,densionbis,rhotemp,rhotemp_cell
-   real(dp)::xx,dtt,bbcgs
+   real(dp)::xx,dtt,bbcgs,gammaadbis2
    logical::limit
 
    ! function which computes the coefficient beta which
@@ -1009,7 +1009,8 @@ double precision function betaad(rhocelln,rhon,dt,bsquare,dx,temper,limit)
    rhotemp = MAX(rhon,rho_threshold)
    rhotemp_cell = MAX(rhocelln,rho_threshold)
 
-   xx=gammaadbis(rhotemp_cell,bsquare,temper)*densionbis(rhotemp_cell)*rhotemp_cell  ! dans la cellule
+   gammaadbis2=gammaadbis(rhotemp_cell,bsquare,temper)
+   xx=gammaadbis2*densionbis(rhotemp_cell)*rhotemp_cell  ! dans la cellule
    ! gammaadbis and densionbis already in user units
 
    if(xx.ne.0d0) then
@@ -1017,12 +1018,13 @@ double precision function betaad(rhocelln,rhon,dt,bsquare,dx,temper,limit)
    else
       betaad=1d39
       if(rhotemp < 1.0d+14)then
-         write(*,*)'WARNING gammaadbis(rhocelln,bsquare,temper)*densionbis(rhocelln)*rhocelln in the cell equals 0',gammaadbis(rhotemp_cell,bsquare,temper),densionbis(rhocelln),rhocelln,bsquare,temper
+         write(*,*)'WARNING gammaadbis(rhocelln,bsquare,temper)*densionbis(rhocelln)*rhocelln in the cell equals 0',gammaadbis2,densionbis(rhocelln),rhocelln,bsquare,temper
       endif
    endif
 
+   gammaadbis2=gammaadbis(rhotemp,bsquare,temper)
    !xx=gammaadbis(rhotemp,bsquare,temper)*densionbis(rhon)*rhon   ! a l'interface : cote ou coin selon les cas. A utiliser si l'on est pas dans un cas seuille
-   xx=gammaadbis(rhotemp,bsquare,temper)*densionbis(rhotemp)*rhotemp
+   xx=gammaadbis2*densionbis(rhotemp)*rhotemp
 
    ! a l'interface : cote ou coin selon les cas. A utiliser si l'on est pas dans un cas seuille
 
@@ -1031,7 +1033,7 @@ double precision function betaad(rhocelln,rhon,dt,bsquare,dx,temper,limit)
    else
       betaadtemp=1d39
       if(rhotemp < 1.0d+14)then
-         write(*,*)'WARNING gammaadbis(rhon,bsquare,temper)*densionbis(rhon)*rhon at the interface equals 0',gammaadbis(rhotemp,bsquare,temper),densionbis(rhon),rhon
+         write(*,*)'WARNING gammaadbis(rhon,bsquare,temper)*densionbis(rhon)*rhon at the interface equals 0',gammaadbis2,densionbis(rhon),rhon
       endif
    endif
 
