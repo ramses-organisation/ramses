@@ -6,7 +6,7 @@ module nimhd_parameters
   logical :: nimhdheating_in_flux = .true. ! flag to activate the non-ideal mhd energy fluxes
   logical :: nimhdheating_source_term = .false. ! flag to activate the non-ideal mhd heating as a source term
 
-  logical :: use_nonideal_mhd     ! true if any of the non-ideal MHD effects is used
+  logical :: use_nonideal_mhd = .false.     ! true if any of the non-ideal MHD effects is used
 
   ! Resistivity parameters
   integer :: resistivity_method=0     ! How to determine the resistivity
