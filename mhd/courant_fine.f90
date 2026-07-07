@@ -370,6 +370,15 @@ subroutine cmpdt_nimhd(uu,dx,ncell,dtambdiff,dtohmdiss)
    use nimhd_parameters
 
    implicit none
+   !--------------------------------------------------------------
+   ! Compute the explicit diffusion stability time steps for the
+   ! non-ideal MHD effects over a vector of cells. For each cell the
+   ! ambipolar (dtambdiff) and Ohmic (dtohmdiss) diffusion times are
+   ! dt = coef*dx^2 / (B^2*beta) and coef*dx^2 / eta respectively, and
+   ! the smallest value over the cells is returned. Used by
+   ! courant_fine to limit the global time step. Must be called before
+   ! cmpdt, which overwrites the working array uu.
+   !--------------------------------------------------------------
    integer::ncell
    real(dp)::dx
    real(dp)::dtambdiff,dtohmdiss    ! ambipolar and Ohmic diffusion times

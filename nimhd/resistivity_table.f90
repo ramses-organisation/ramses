@@ -1,3 +1,13 @@
+! Tabulated non-ideal MHD resistivities.
+!
+! When resistivity_method=2, the ambipolar and Ohmic resistivities depend
+! on the local density, temperature and magnetic field. This module reads
+! a chemistry file (resistivity_file) giving the abundances of ions and
+! grains on a (density, temperature) grid, builds a 3D conductivity table
+! over (density, temperature, magnetic field), and interpolates it at run
+! time. The conductivities (Pedersen sigP, Ohm sigO, Hall sigH) are then
+! converted into the resistivity coefficients used by gammaadbis (ambipolar)
+! and etaohmdiss (Ohmic) in nimhd_effects.f90.
 module resistivity_table
    use amr_parameters, ONLY:dp
    use nimhd_parameters
@@ -82,6 +92,17 @@ subroutine construct_resistivity_table(nvarchimie)
    use amr_commons, only : myid
    use constants, only:pi,c_cgs, kB
    implicit none
+   !----------------------------------------------------------------
+   ! Fill the 3D conductivity table resistivite_chimie over the
+   ! (density, temperature, magnetic field) grid. For every table
+   ! point it computes, following Kunz & Mouschovias (2009), the
+   ! collision times, gyro-frequencies and per-species conductivities
+   ! of the ions and of the (neutral/+/-) grains read from the
+   ! chemistry file, then sums them into the Pedersen (sigP), Ohm
+   ! (sigO) and Hall (sigH) conductivities. sigP/sigO/sigH are stored
+   ! as log10, and the sign of sigH is stored separately in slot 0.
+   ! Called once by read_resistivities.
+   !----------------------------------------------------------------
 
    ! ---- chemistry ---------
    integer   :: nion=7            ! number of ions
@@ -242,6 +263,15 @@ subroutine interpolate_table(rho_cell,temp_cell,BB_cell,sigO,sigH,sigP)
    use amr_parameters,    only : dp
    use constants,         only : pi
    implicit none
+   !----------------------------------------------------------------
+   ! Tri-linear interpolation (in log10 space) of the conductivity
+   ! table at the cell density, temperature and magnetic field.
+   ! Returns the Pedersen (sigP), Ohm (sigO) and Hall (sigH)
+   ! conductivities. Table indices are clamped to the table bounds,
+   ! so out-of-range inputs return the nearest edge value rather than
+   ! extrapolating. The Hall sign is taken from the lower-corner
+   ! sample and set to zero across a sign inversion.
+   !----------------------------------------------------------------
    ! input: density, temperature, magnetic field strength**2 and ionisation rate in the cell
    real(dp), intent(in)::rho_cell,temp_cell,BB_cell
    ! output: interpolated resistivity

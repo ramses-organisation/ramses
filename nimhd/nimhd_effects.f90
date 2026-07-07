@@ -1,5 +1,23 @@
 ! by Jacques Masson, Benoit Commercon and Neil Vaytet
 ! refactored by Tine Colman
+!
+! This file contains the core routines for the non-ideal MHD (NIMHD)
+! effects: ambipolar diffusion and Ohmic dissipation. They are called
+! from the MHD Godunov update (mhd/umuscl.f90) and add the non-ideal
+! contributions to the electromotive fields (EMFs) that evolve the
+! magnetic field, together with the associated non-ideal energy fluxes.
+!
+! Overview of the routines in this file:
+!   - compute_bemf / compute_bmagij / compute_bmagijbis : interpolate the
+!     magnetic field to the various staggered locations needed below.
+!   - computejb2   : build the current density J at the EMF/face locations
+!                    and the ideal-MHD flux building blocks (fluxmd, fluxad)
+!                    shared by both effects.
+!   - computdifmag : Ohmic dissipation EMF (emfohmdiss) and energy flux.
+!   - computambip  : ambipolar diffusion EMF (emfambdiff) and energy flux.
+!   - helpers      : finite-difference derivatives (computd{x,y,z}bis),
+!                    cross products (crossprod*), and the resistivity
+!                    coefficients (betaad, gammaadbis, densionbis, etaohmdiss).
 
 !###########################################################
 !###########################################################
@@ -299,7 +317,17 @@ subroutine computejb2(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
    use hydro_commons
    use nimhd_parameters
    IMPLICIT NONE
-
+   !-----------------------------------------------------------------
+   ! Build the geometric quantities shared by both non-ideal effects.
+   ! Interpolates the magnetic field to the EMF edges (bemfx/y/z), the
+   ! face locations (bmagij) and computes the current density J at the
+   ! EMF edges (jemfx/y/z) and on the cell faces (jface). From J and B
+   ! it forms the ideal-MHD energy-flux building blocks:
+   !   fluxmd = J x B          (used by Ohmic dissipation)
+   !   fluxad = (J x B) x B x B (used by ambipolar diffusion, if active)
+   ! These are later scaled by the resistivities in computdifmag and
+   ! computambip. Must be called before those two routines.
+   !-----------------------------------------------------------------
    ! inputs
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar+3)::u
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q
@@ -520,7 +548,14 @@ subroutine computdifmag(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
    use hydro_commons
    use nimhd_parameters
    implicit none
-
+   !-----------------------------------------------------------------
+   ! Ohmic dissipation. Computes the Ohmic contribution to the EMF,
+   !   emfohmdiss = -eta * J   (from dB/dt = -curl(eta*J)),
+   ! evaluated at the EMF edges using the resistivity eta returned by
+   ! etaohmdiss. If nimhdheating_in_flux is set, it also builds the
+   ! associated Ohmic energy flux (fluxohm = eta * fluxmd) on the faces.
+   ! Expects bemf*, jemf*, bmagij and fluxmd from computejb2.
+   !-----------------------------------------------------------------
    ! inputs
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar+3)::u
    integer ::ngrid
@@ -608,7 +643,15 @@ subroutine computambip(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,b
    use nimhd_parameters
    use const
    implicit none
-
+   !-----------------------------------------------------------------
+   ! Ambipolar diffusion. Computes the ambipolar contribution to the
+   ! EMF from the Lorentz force F = J x B:
+   !   emfambdiff = beta * (F x B)   (from dB/dt = curl(beta*(JxB)xB)),
+   ! evaluated at the EMF edges, where the coefficient beta is returned
+   ! by betaad. If nimhdheating_in_flux is set, it also builds the
+   ! ambipolar energy flux (fluxambdiff = -beta * fluxad) on the faces.
+   ! Expects bemf*, jemf*, bmagij and fluxad from computejb2.
+   !-----------------------------------------------------------------
    ! inputs
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar+3)::u
    integer ::ngrid
@@ -754,9 +797,15 @@ end subroutine computambip
 !###########################################################
 !###########################################################
 
-! VECTOR FUNCTION
+! VECTOR HELPER FUNCTIONS
+! computd{x,y,z}bis : first-order forward finite difference of component
+!   n2 of the vector field vec along the x, y or z direction, at cell dx.
+! crossprod / crossprodbis : cross product of two vector (rank-1) or
+!   tensor (rank-2, done column by column) fields at cell (l,i,j,k).
+! crossprod{x,y,z} : the three scalar components of a single cross product.
 
 !###########################################################
+! forward x-derivative of component n2 of vec, divided by dx
 double precision function computdxbis(vec,n2,l,i,j,k,dx)
 
    use amr_parameters,only:dp,nvector
@@ -770,6 +819,7 @@ double precision function computdxbis(vec,n2,l,i,j,k,dx)
 
 end function computdxbis
 
+! forward y-derivative of component n2 of vec, divided by dx
 double precision  function computdybis(vec,n2,l,i,j,k,dx)
 
    use amr_parameters,only:dp,nvector
@@ -783,6 +833,7 @@ double precision  function computdybis(vec,n2,l,i,j,k,dx)
 
 end function computdybis
 
+! forward z-derivative of component n2 of vec, divided by dx
 double precision  function computdzbis(vec,n2,l,i,j,k,dx)
 
    use amr_parameters,only:dp,nvector
@@ -796,6 +847,8 @@ double precision  function computdzbis(vec,n2,l,i,j,k,dx)
 
 end function computdzbis
 !###########################################################
+! column-wise cross product of two rank-2 (3x3) fields:
+! v1crossv2(:,n) = vec1(:,n) x vec2(:,n) for each column n=1,3
 subroutine crossprodbis(vec1,vec2,v1crossv2,l,i,j,k)
 
    use amr_parameters,only:dp,nvector
@@ -824,6 +877,7 @@ subroutine crossprodbis(vec1,vec2,v1crossv2,l,i,j,k)
 
 end subroutine crossprodbis
 
+! cross product of two vector fields at cell (l,i,j,k): v1crossv2 = vec1 x vec2
 subroutine crossprod(vec1,vec2,v1crossv2,l,i,j,k)
 
    use amr_parameters,only:dp,nvector
