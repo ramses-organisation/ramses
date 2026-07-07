@@ -14,6 +14,10 @@ The block named `&REFINE_PARAMS` contains the parameters related to grid refinem
 | `b_refine`          | `real array` | 1.0   | Geometry-based strategy: ratio Z/X of the refined region at each level.
 | `exp_refine`        | `real array` | 2.0   | Geometry-based strategy: exponent of the norm.
 | `jeans_refine`      | `real array` | -1.0   | Jeans refinement strategy: each level is refined if the cell size exceeds the local Jeans length divided by jeans_refine(ilevel).
+| `collapse_jeans_refine` | `bool` | `.false.` | Use modified Jeans refine with prescribed thermodynamics of protostellar collapse
+| `collapse_jeans_Tfloor` | `real` | 10.0d0  | Floor temperature (K) for the collapse_jeans_refine criterion
+| `collapse_jeans_rho_low` | `real` | 1.0d-8  |Density (g/cc) below which collapse_jeans_refine uses Tfloor, typically at 2nd core formation
+| `collapse_jeans_rho_high` | `real` | 1.0d-5   | Density (g/cc) above which collapse_jeans_refine uses the actual gas T, typically at protostar formation
 | `mass_cut_refine`   | `real` | -1.0   | Mass threshold for particle-based refinement
 | `m_refine`          | `real array` | -1.0   | Quasi-Lagrangian strategy: each level is refined if the baryons mass in a cell exceeds `m_refine(ilevel)*mass_sph`, or if the number of dark matter particles exceeds `m_refine(ilevel)`, whatever the mass is.
 | `mass_sph`          | `real` | 0.0   | Quasi-Lagrangian strategy: `mass_sph` is used to set a typical mass scale. For cosmo runs, its value is set automatically.
