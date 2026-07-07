@@ -779,7 +779,7 @@ subroutine computambip(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,b
                v2z=bemfx(l,i,j,k,3)
                emfambdiff(l,i,j,k,1)=crossprodx(v1x,v1y,v1z,v2x,v2y,v2z)
 
-               betaadx(l)=betaad(rhocell,rhox,dt,bcell,bcell,dx,tcell,.true.)
+               betaadx(l)=betaad(rhocell,rhox,dt,bcell,dx,tcell,.true.)
                emfambdiff(l,i,j,k,1)=emfambdiff(l,i,j,k,1)*betaadx(l)
 
                ! EMF y
@@ -792,7 +792,7 @@ subroutine computambip(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,b
                v2z=bemfy(l,i,j,k,3)
                emfambdiff(l,i,j,k,2)=crossprody(v1x,v1y,v1z,v2x,v2y,v2z)
 
-               betaady(l)=betaad(rhocell,rhoy,dt,bcell,bcell,dx,tcell,.true.)
+               betaady(l)=betaad(rhocell,rhoy,dt,bcell,dx,tcell,.true.)
                emfambdiff(l,i,j,k,2)=emfambdiff(l,i,j,k,2)*betaady(l)
 
                ! EMF z
@@ -805,18 +805,18 @@ subroutine computambip(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,b
                v2z=bemfz(l,i,j,k,3)
                emfambdiff(l,i,j,k,3)=crossprodz(v1x,v1y,v1z,v2x,v2y,v2z)
 
-               betaadz(l)=betaad(rhocell,rhoz,dt,bcell,bcell,dx,tcell,.true.)
+               betaadz(l)=betaad(rhocell,rhoz,dt,bcell,dx,tcell,.true.)
                emfambdiff(l,i,j,k,3)=emfambdiff(l,i,j,k,3)*betaadz(l)
                if(nimhdheating_in_flux) then
                   ! energy flux on faces
 
-                  betaadfx(l)=betaad(rhocell,rhofx,dt,bcell,bcell,dx,tcell,.true.)
+                  betaadfx(l)=betaad(rhocell,rhofx,dt,bcell,dx,tcell,.true.)
                   fluxambdiff(l,i,j,k,1)=-betaadfx(l)*fluxad(l,i,j,k,1)
 
-                  betaadfy(l)=betaad(rhocell,rhofy,dt,bcell,bcell,dx,tcell,.true.)
+                  betaadfy(l)=betaad(rhocell,rhofy,dt,bcell,dx,tcell,.true.)
                   fluxambdiff(l,i,j,k,2)=-betaadfy(l)*fluxad(l,i,j,k,2)
 
-                  betaadfz(l)=betaad(rhocell,rhofz,dt,bcell,bcell,dx,tcell,.true.)
+                  betaadfz(l)=betaad(rhocell,rhofz,dt,bcell,dx,tcell,.true.)
                   fluxambdiff(l,i,j,k,3)=-betaadfz(l)*fluxad(l,i,j,k,3)
                endif
             end do
@@ -976,7 +976,7 @@ end function crossprodz
 !###########################################################
 !###########################################################
 !###########################################################
-double precision function betaad(rhocelln,rhon,dt,bsquare,bsquareold,dx,temper,limit)
+double precision function betaad(rhocelln,rhon,dt,bsquare,dx,temper,limit)
 
    use hydro_parameters
    use amr_commons
@@ -985,7 +985,7 @@ double precision function betaad(rhocelln,rhon,dt,bsquare,bsquareold,dx,temper,l
    use constants
 
    implicit none
-   real(dp) ::rhocelln,rhon,betaadtemp,dt,bsquare,bsquareold,dx,temper
+   real(dp) ::rhocelln,rhon,betaadtemp,dt,bsquare,dx,temper
    real(dp)::gammaadbis,densionbis,rhotemp,rhotemp_cell
    real(dp)::xx,dtt,bbcgs
    logical::limit
@@ -1009,7 +1009,7 @@ double precision function betaad(rhocelln,rhon,dt,bsquare,bsquareold,dx,temper,l
    rhotemp = MAX(rhon,rho_threshold)
    rhotemp_cell = MAX(rhocelln,rho_threshold)
 
-   xx=gammaadbis(rhotemp_cell,bsquare,bsquareold,temper)*densionbis(rhotemp_cell)*rhotemp_cell  ! dans la cellule
+   xx=gammaadbis(rhotemp_cell,bsquare,temper)*densionbis(rhotemp_cell)*rhotemp_cell  ! dans la cellule
    ! gammaadbis and densionbis already in user units
 
    if(xx.ne.0d0) then
@@ -1017,12 +1017,12 @@ double precision function betaad(rhocelln,rhon,dt,bsquare,bsquareold,dx,temper,l
    else
       betaad=1d39
       if(rhotemp < 1.0d+14)then
-         write(*,*)'WARNING gammaadbis(rhocelln,bsquare,bsquareold,temper)*densionbis(rhocelln)*rhocelln in the cell equals 0',gammaadbis(rhotemp_cell,bsquare,bsquareold,temper),densionbis(rhocelln),rhocelln,bsquare,bsquareold,temper
+         write(*,*)'WARNING gammaadbis(rhocelln,bsquare,temper)*densionbis(rhocelln)*rhocelln in the cell equals 0',gammaadbis(rhotemp_cell,bsquare,temper),densionbis(rhocelln),rhocelln,bsquare,temper
       endif
    endif
 
-   !xx=gammaadbis(rhotemp,bsquare,bsquareold,temper)*densionbis(rhon)*rhon   ! a l'interface : cote ou coin selon les cas. A utiliser si l'on est pas dans un cas seuille
-   xx=gammaadbis(rhotemp,bsquare,bsquareold,temper)*densionbis(rhotemp)*rhotemp
+   !xx=gammaadbis(rhotemp,bsquare,temper)*densionbis(rhon)*rhon   ! a l'interface : cote ou coin selon les cas. A utiliser si l'on est pas dans un cas seuille
+   xx=gammaadbis(rhotemp,bsquare,temper)*densionbis(rhotemp)*rhotemp
 
    ! a l'interface : cote ou coin selon les cas. A utiliser si l'on est pas dans un cas seuille
 
@@ -1031,7 +1031,7 @@ double precision function betaad(rhocelln,rhon,dt,bsquare,bsquareold,dx,temper,l
    else
       betaadtemp=1d39
       if(rhotemp < 1.0d+14)then
-         write(*,*)'WARNING gammaadbis(rhon,bsquare,bsquareold,temper)*densionbis(rhon)*rhon at the interface equals 0',gammaadbis(rhotemp,bsquare,bsquareold,temper),densionbis(rhon),rhon
+         write(*,*)'WARNING gammaadbis(rhon,bsquare,temper)*densionbis(rhon)*rhon at the interface equals 0',gammaadbis(rhotemp,bsquare,temper),densionbis(rhon),rhon
       endif
    endif
 
@@ -1060,7 +1060,7 @@ end function betaad
 !###########################################################
 !###########################################################
 !###########################################################
-double precision function gammaadbis(rhon,BBcell,BBcellold,temper)
+double precision function gammaadbis(rhon,BBcell,temper)
 
    use hydro_parameters
    use amr_parameters,only:mu_gas
@@ -1069,7 +1069,7 @@ double precision function gammaadbis(rhon,BBcell,BBcellold,temper)
    use constants
    implicit none
 
-   real(dp)::rhon,rhoH,BBcell,temper,BBcellold
+   real(dp)::rhon,rhoH,BBcell,temper
    real(dp)::eta_AD_chimie
    real(dp) :: n_H_max=2.5d+17     ! cm**-3
 
@@ -1088,7 +1088,7 @@ double precision function gammaadbis(rhon,BBcell,BBcellold,temper)
    rhoH = min(rhoH, n_H_max)
 
    ! TC: extrapolate from table[density,temperature,magnetic field]
-   call interpolate_table(rhoH,temper,BBcellold,sigO,sigH,sigP)
+   call interpolate_table(rhoH,temper,BBcell,sigO,sigH,sigP)
    !inp=rhoH/xmolaire/H2_fraction     ! inp is neutrals.cc, to fit densionbis
    inp=rhoH/2d0/H2_fraction     ! inp is neutrals.cc, to fit densionbis
    eta_AD_chimie=(sigO/(sigO**2+sigH**2)-1d0/sigP)   ! resistivity in s

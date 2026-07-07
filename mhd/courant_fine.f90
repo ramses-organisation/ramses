@@ -438,7 +438,7 @@ subroutine cmpdt_nimhd(uu,dx,ncell,dtambdiff,dtohmdiss)
          end do
       else ! table
          do k = 1,ncell
-            xx(k)=B2(k)*betaad(rho(k),rho(k),0.0d0,B2(k),B2(k),0,tcell(k),.false.)
+            xx(k)=B2(k)*betaad(rho(k),rho(k),0.0d0,B2(k),0,tcell(k),.false.)
          end do
       endif
       do k = 1,ncell
