@@ -571,9 +571,10 @@ subroutine computdifmag(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
    ! local variables
    integer ::i,j,k,l,h
    real(dp)::rhox,rhoy,rhoz,epsx,epsy,epsz,bsquarex,bsquarey,bsquarez
-   real(dp)::tcellx,tcelly,tcellz,etaod2x,etaod2y,etaod2z
+   real(dp)::tcellx,tcelly,tcellz
+   real(dp),dimension(1:nvector),save::etaod2x,etaod2y,etaod2z,etaod2
    real(dp)::rhof,bsqf,epsf,tcellf
-   real(dp)::etaod2,etaohmdiss
+   real(dp)::etaohmdiss
    integer , dimension(1:3) :: index_i,index_j,index_k
    emfohmdiss = 0d0
    fluxohm = 0d0
@@ -586,46 +587,83 @@ subroutine computdifmag(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
       do j=min(1,ju1+1),max(1,ju2-1)
          do i=min(1,iu1+1),max(1,iu2-1)
 
+            ! get coefficient eta
+            if(resistivity_method==0) then ! fixed value
+               do l=1,ngrid
+                  etaod2x(l)=etaMD
+                  etaod2y(l)=etaMD
+                  etaod2z(l)=etaMD
+               end do
+
+            else if(resistivity_method==1) then ! analytical formula
+               ! TODO
+               do l=1,ngrid
+                  etaod2x(l)=etaMD
+                  etaod2y(l)=etaMD
+                  etaod2z(l)=etaMD
+               end do
+
+            else ! table
+               do l=1,ngrid
+                  rhox=0.25d0*(u(l,i,j,k,   1)+u(l,i  ,j-1,k,   1)+u(l,i,j  ,k-1,   1)+u(l,i  ,j-1,k-1,   1))
+                  rhoy=0.25d0*(u(l,i,j,k,   1)+u(l,i-1,j  ,k,   1)+u(l,i,j  ,k-1,   1)+u(l,i-1,j  ,k-1,   1))
+                  rhoz=0.25d0*(u(l,i,j,k,   1)+u(l,i-1,j  ,k,   1)+u(l,i,j-1,k  ,   1)+u(l,i-1,j-1,k  ,   1))
+
+                  ! TODO: nvar currently doesn't contain Eint!!!
+                  epsx=0.25d0*(u(l,i,j,k,nvar)+u(l,i  ,j-1,k,nvar)+u(l,i,j  ,k-1,nvar)+u(l,i  ,j-1,k-1,nvar))
+                  epsy=0.25d0*(u(l,i,j,k,nvar)+u(l,i-1,j  ,k,nvar)+u(l,i,j  ,k-1,nvar)+u(l,i-1,j  ,k-1,nvar))
+                  epsz=0.25d0*(u(l,i,j,k,nvar)+u(l,i-1,j  ,k,nvar)+u(l,i,j-1,k  ,nvar)+u(l,i-1,j-1,k  ,nvar))
+
+                  bsquarex=bemfx(l,i,j,k,1)**2+bemfx(l,i,j,k,2)**2+bemfx(l,i,j,k,3)**2
+                  bsquarey=bemfy(l,i,j,k,1)**2+bemfy(l,i,j,k,2)**2+bemfy(l,i,j,k,3)**2
+                  bsquarez=bemfz(l,i,j,k,1)**2+bemfz(l,i,j,k,2)**2+bemfz(l,i,j,k,3)**2
+
+                  call temperature_eos(rhox, epsx, tcellx)
+                  call temperature_eos(rhoy, epsy, tcelly)
+                  call temperature_eos(rhoz, epsz, tcellz)
+
+                  etaod2x(l)=etaohmdiss(rhox,bsquarex,tcellx,dt,dx,.true.)
+                  etaod2y(l)=etaohmdiss(rhoy,bsquarey,tcelly,dt,dx,.true.)
+                  etaod2z(l)=etaohmdiss(rhoz,bsquarez,tcellz,dt,dx,.true.)
+               end do
+            endif
+
             do l=1,ngrid
-
-               rhox=0.25d0*(u(l,i,j,k,   1)+u(l,i  ,j-1,k,   1)+u(l,i,j  ,k-1,   1)+u(l,i  ,j-1,k-1,   1))
-               rhoy=0.25d0*(u(l,i,j,k,   1)+u(l,i-1,j  ,k,   1)+u(l,i,j  ,k-1,   1)+u(l,i-1,j  ,k-1,   1))
-               rhoz=0.25d0*(u(l,i,j,k,   1)+u(l,i-1,j  ,k,   1)+u(l,i,j-1,k  ,   1)+u(l,i-1,j-1,k  ,   1))
-
-               epsx=0.25d0*(u(l,i,j,k,nvar)+u(l,i  ,j-1,k,nvar)+u(l,i,j  ,k-1,nvar)+u(l,i  ,j-1,k-1,nvar))
-               epsy=0.25d0*(u(l,i,j,k,nvar)+u(l,i-1,j  ,k,nvar)+u(l,i,j  ,k-1,nvar)+u(l,i-1,j  ,k-1,nvar))
-               epsz=0.25d0*(u(l,i,j,k,nvar)+u(l,i-1,j  ,k,nvar)+u(l,i,j-1,k  ,nvar)+u(l,i-1,j-1,k  ,nvar))
-
-               bsquarex=bemfx(l,i,j,k,1)**2+bemfx(l,i,j,k,2)**2+bemfx(l,i,j,k,3)**2
-               bsquarey=bemfy(l,i,j,k,1)**2+bemfy(l,i,j,k,2)**2+bemfy(l,i,j,k,3)**2
-               bsquarez=bemfz(l,i,j,k,1)**2+bemfz(l,i,j,k,2)**2+bemfz(l,i,j,k,3)**2
-
-               call temperature_eos(rhox, epsx, tcellx)
-               call temperature_eos(rhoy, epsy, tcelly)
-               call temperature_eos(rhoz, epsz, tcellz)
-
-               etaod2x=etaohmdiss(rhox,bsquarex,tcellx,dt,dx,.true.)
-               etaod2y=etaohmdiss(rhoy,bsquarey,tcelly,dt,dx,.true.)
-               etaod2z=etaohmdiss(rhoz,bsquarez,tcellz,dt,dx,.true.)
-
                ! WARNING dB/dt=-curl(eta*J)
-               emfohmdiss(l,i,j,k,1)=-etaod2x*jemfx(l,i,j,k,1)
-               emfohmdiss(l,i,j,k,2)=-etaod2y*jemfy(l,i,j,k,2)
-               emfohmdiss(l,i,j,k,3)=-etaod2z*jemfz(l,i,j,k,3)
-               if(nimhdheating_in_flux) then
-                  do h = 1,3
-                     rhof=0.5d0*(u(l,i,j,k,1)+u(l,i-index_i(h),j-index_j(h),k-index_k(h),1))
-                     epsf=0.5d0*(u(l,i,j,k,nvar)+u(l,i-index_i(h),j-index_j(h),k-index_k(h),nvar))
-                     bsqf=bmagij(l,i,j,k,1,h)**2+bmagij(l,i,j,k,2,h)**2+bmagij(l,i,j,k,3,h)**2
-
-                     ! Compute gas temperature in cgs
-                     call temperature_eos(rhof, epsf, tcellf)
-
-                     etaod2=etaohmdiss(rhof,bsqf,tcellf,0d0,0d0,.false.)
-                     fluxohm(l,i,j,k,h)=etaod2*fluxmd(l,i,j,k,h)
-                  enddo
-               endif
+               emfohmdiss(l,i,j,k,1)=-etaod2x(l)*jemfx(l,i,j,k,1)
+               emfohmdiss(l,i,j,k,2)=-etaod2y(l)*jemfy(l,i,j,k,2)
+               emfohmdiss(l,i,j,k,3)=-etaod2z(l)*jemfz(l,i,j,k,3)
             end do
+
+            if(nimhdheating_in_flux) then
+               do h = 1,3
+                  ! get coefficient eta, averaged on cell 
+                  if(resistivity_method==0) then ! fixed value
+                     do l=1,ngrid
+                        etaod2(l)=etaMD
+                     end do
+                  else if(resistivity_method==1) then ! analytical formula
+                     ! TODO
+                     do l=1,ngrid
+                        etaod2(l)=etaMD
+                     end do
+                  else ! table
+                     do l=1,ngrid
+                        rhof=0.5d0*(u(l,i,j,k,1)+u(l,i-index_i(h),j-index_j(h),k-index_k(h),1))
+                        epsf=0.5d0*(u(l,i,j,k,nvar)+u(l,i-index_i(h),j-index_j(h),k-index_k(h),nvar))
+                        bsqf=bmagij(l,i,j,k,1,h)**2+bmagij(l,i,j,k,2,h)**2+bmagij(l,i,j,k,3,h)**2
+                        ! Compute gas temperature in cgs
+                        call temperature_eos(rhof, epsf, tcellf)
+                        etaod2(l)=etaohmdiss(rhof,bsqf,tcellf,0d0,0d0,.false.)
+                     end do
+                  endif
+
+                  do l=1,ngrid
+                     fluxohm(l,i,j,k,h)=etaod2(l)*fluxmd(l,i,j,k,h)
+                  enddo
+               enddo
+            endif
+
          end do
       end do
    end do
@@ -1123,40 +1161,41 @@ double precision function etaohmdiss(rhon,BBcell,temper,dt,dx,limit)
 
    call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
 
-   if(resistivity_method==0) then ! fixed value
+   ! This function only evaluates the tabulated (resistivity_method==2)
+   ! Ohmic resistivity; the fixed and analytic cases are handled by the
+   ! callers, which set eta=etaMD directly. The guard below keeps the
+   ! function safe if it is ever called in another mode (the resistivity
+   ! table is then not allocated).
+   if(resistivity_method<2) then
       etaohmdiss=etaMD
+      return
+   endif
 
-   elseif(resistivity_method==1) then ! analytical formula
-      ! TODO
-      etaohmdiss=etaMD
+   ! convert to CGS
+   rhoH=rhon*2.0d0*H2_fraction*scale_d/(mu_gas*mH) ! convert in H/cc
+   rhoH = MAX(rhoH,rho_threshold)
+   rhoH = MIN(rhoH,n_H_max)
+   ! extrapolate from table[density,temperature,magnetic field]
+   call interpolate_table(rhoH,temper,BBcell,sigO,sigH,sigP)
+   eta_ohm_chimie = (1d0 / sigP) * c_cgs * c_cgs / (4.0_dp*pi)
+   ! Ad-hoc modification to ensure that the ohmic resistivity falls to zero when the density exceeds 1.0e15
+   ! when alkali metals are ionized.
+   eta_ohm_chimie = max(eta_ohm_chimie * (1.0d0-tanh(rhoH/1.0d15)), 1d-36)
+   ! convert to code units
+   etaohmdiss=eta_ohm_chimie*scale_t/(scale_l)**2
 
-   else ! table
-      ! convert to CGS
-      rhoH=rhon*2.0d0*H2_fraction*scale_d/(mu_gas*mH) ! convert in H/cc
-      rhoH = MAX(rhoH,rho_threshold)
-      rhoH = MIN(rhoH,n_H_max)
-      ! extrapolate from table[density,temperature,magnetic field]
-      call interpolate_table(rhoH,temper,BBcell,sigO,sigH,sigP)
-      eta_ohm_chimie = (1d0 / sigP) * c_cgs * c_cgs / (4.0_dp*pi)
-      ! Ad-hoc modification to ensure that the ohmic resistivity falls to zero when the density exceeds 1.0e15
-      ! when alkali metals are ionized.
-      eta_ohm_chimie = max(eta_ohm_chimie * (1.0d0-tanh(rhoH/1.0d15)), 1d-36)
-      ! convert to code units
-      etaohmdiss=eta_ohm_chimie*scale_t/(scale_l)**2
-
-      ! if the timestep was limited in courant fine, we need to adjust the resistivity to make things consistent.
-      if(limit.and.nminitimestep) then
-         if(dt.ne.0d0) then
-            if(etaohmdiss.ne.0d0) then
-               ! recalculate the ohmic timestep for the cell
-               dtt=coefohm*dx*dx/etaohmdiss
-            else
-               dtt=1d39
-            endif
-            if (dtt.le.dt) then
-               ! if it is smaller than the global timestep, we need to adjust the resistivity
-               etaohmdiss=coefohm*dx*dx/dt
-            endif
+   ! if the timestep was limited in courant fine, we need to adjust the resistivity to make things consistent.
+   if(limit.and.nminitimestep) then
+      if(dt.ne.0d0) then
+         if(etaohmdiss.ne.0d0) then
+            ! recalculate the ohmic timestep for the cell
+            dtt=coefohm*dx*dx/etaohmdiss
+         else
+            dtt=1d39
+         endif
+         if (dtt.le.dt) then
+            ! if it is smaller than the global timestep, we need to adjust the resistivity
+            etaohmdiss=coefohm*dx*dx/dt
          endif
       endif
    endif

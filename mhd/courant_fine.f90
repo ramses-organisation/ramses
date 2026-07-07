@@ -384,8 +384,8 @@ subroutine cmpdt_nimhd(uu,dx,ncell,dtambdiff,dtohmdiss)
    real(dp)::dtambdiff,dtohmdiss    ! ambipolar and Ohmic diffusion times
    real(dp),dimension(1:nvector,1:nvar+3)::uu
 
-   real(dp)::xx,betaad,etaohmdiss
-   real(dp),dimension(1:nvector),save::B2,rho,tcell
+   real(dp)::betaad,etaohmdiss
+   real(dp),dimension(1:nvector),save::B2,rho,tcell,xx
    integer::k,idim
 
    do k = 1,ncell
@@ -405,10 +405,22 @@ subroutine cmpdt_nimhd(uu,dx,ncell,dtambdiff,dtohmdiss)
    ! Ohmic dissipation
    dtohmdiss=1d35
    if (nmagdiffu) then
+      if(resistivity_method==0) then ! fixed value
+         do k = 1,ncell
+            xx(k)=etaMD
+         end do
+      else if(resistivity_method==1) then ! analytical formula
+         do k = 1,ncell
+            xx(k)=etaMD !TODO
+         end do
+      else
+         do k = 1,ncell
+            xx(k)=etaohmdiss(rho(k),B2(k),tcell(k),0d0,0d0,.false.)
+         end do
+      endif
       do k = 1,ncell
-         xx=etaohmdiss(rho(k),B2(k),tcell(k),0d0,0d0,.false.)
-         if(xx.gt.0d0) then
-            dtohmdiss=min(dtohmdiss, coefohm*dx*dx/xx)
+         if(xx(k).gt.0d0) then
+            dtohmdiss=min(dtohmdiss, coefohm*dx*dx/xx(k))
          endif
       end do
    endif
@@ -417,9 +429,9 @@ subroutine cmpdt_nimhd(uu,dx,ncell,dtambdiff,dtohmdiss)
    dtambdiff=1d36 !TC: can we put HUGE or something here?
    if (nambipolar) then
       do k = 1,ncell
-         xx=B2(k)*betaad(rho(k),rho(k),0.0d0,B2(k),B2(k),0,tcell(k),.false.)
-         if (xx.gt.0d0) then
-            dtambdiff=min(dtambdiff, coefad*dx*dx/xx)
+         xx(k)=B2(k)*betaad(rho(k),rho(k),0.0d0,B2(k),B2(k),0,tcell(k),.false.)
+         if (xx(k).gt.0d0) then
+            dtambdiff=min(dtambdiff, coefad*dx*dx/xx(k))
          endif
       end do
    endif
