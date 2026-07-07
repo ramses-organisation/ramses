@@ -710,7 +710,8 @@ subroutine computambip(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,b
    real(dp)::rhox,rhoy,rhoz,rhofx,rhofy,rhofz
    real(dp)::bsquarex,bsquarey,bsquarez,bsquare
    real(dp)::bsquarexx,bsquareyy,bsquarezz
-   real(dp)::betaad2,betaad
+   real(dp)::betaad
+   real(dp),dimension(nvector),save::betaadx,betaady,betaadz,betaadfx,betaadfy,betaadfz
    real(dp)::rhocell,bcell,tcell
    real(dp)::crossprodx,crossprody,crossprodz
 
@@ -778,9 +779,8 @@ subroutine computambip(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,b
                v2z=bemfx(l,i,j,k,3)
                emfambdiff(l,i,j,k,1)=crossprodx(v1x,v1y,v1z,v2x,v2y,v2z)
 
-               rhox=0.25d0*(u(l,i,j,k,1)+u(l,i,j-1,k,1)+u(l,i,j,k-1,1)+u(l,i,j-1,k-1,1))
-               betaad2=betaad(rhocell,rhox,dt,bcell,bcell,dx,tcell,.true.)
-               emfambdiff(l,i,j,k,1)=emfambdiff(l,i,j,k,1)*betaad2
+               betaadx(l)=betaad(rhocell,rhox,dt,bcell,bcell,dx,tcell,.true.)
+               emfambdiff(l,i,j,k,1)=emfambdiff(l,i,j,k,1)*betaadx(l)
 
                ! EMF y
 
@@ -792,9 +792,8 @@ subroutine computambip(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,b
                v2z=bemfy(l,i,j,k,3)
                emfambdiff(l,i,j,k,2)=crossprody(v1x,v1y,v1z,v2x,v2y,v2z)
 
-               rhoy=0.25d0*(u(l,i,j,k,1)+u(l,i-1,j,k,1)+u(l,i,j,k-1,1)+u(l,i-1,j,k-1,1))
-               betaad2=betaad(rhocell,rhoy,dt,bcell,bcell,dx,tcell,.true.)
-               emfambdiff(l,i,j,k,2)=emfambdiff(l,i,j,k,2)*betaad2
+               betaady(l)=betaad(rhocell,rhoy,dt,bcell,bcell,dx,tcell,.true.)
+               emfambdiff(l,i,j,k,2)=emfambdiff(l,i,j,k,2)*betaady(l)
 
                ! EMF z
 
@@ -806,23 +805,19 @@ subroutine computambip(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,b
                v2z=bemfz(l,i,j,k,3)
                emfambdiff(l,i,j,k,3)=crossprodz(v1x,v1y,v1z,v2x,v2y,v2z)
 
-               rhoz=0.25d0*(u(l,i,j,k,1)+u(l,i-1,j,k,1)+u(l,i,j-1,k,1)+u(l,i-1,j-1,k,1))
-               betaad2=betaad(rhocell,rhoz,dt,bcell,bcell,dx,tcell,.true.)
-               emfambdiff(l,i,j,k,3)=emfambdiff(l,i,j,k,3)*betaad2
+               betaadz(l)=betaad(rhocell,rhoz,dt,bcell,bcell,dx,tcell,.true.)
+               emfambdiff(l,i,j,k,3)=emfambdiff(l,i,j,k,3)*betaadz(l)
                if(nimhdheating_in_flux) then
                   ! energy flux on faces
 
-                  rhofx=0.5d0*(u(l,i,j,k,1)+u(l,i-1,j,k,1))
-                  betaad2=betaad(rhocell,rhofx,dt,bcell,bcell,dx,tcell,.true.)
-                  fluxambdiff(l,i,j,k,1)=-betaad2*fluxad(l,i,j,k,1)
+                  betaadfx(l)=betaad(rhocell,rhofx,dt,bcell,bcell,dx,tcell,.true.)
+                  fluxambdiff(l,i,j,k,1)=-betaadfx(l)*fluxad(l,i,j,k,1)
 
-                  rhofy=0.5d0*(u(l,i,j,k,1)+u(l,i,j-1,k,1))
-                  betaad2=betaad(rhocell,rhofy,dt,bcell,bcell,dx,tcell,.true.) !TC:dy?
-                  fluxambdiff(l,i,j,k,2)=-betaad2*fluxad(l,i,j,k,2)
+                  betaadfy(l)=betaad(rhocell,rhofy,dt,bcell,bcell,dx,tcell,.true.)
+                  fluxambdiff(l,i,j,k,2)=-betaadfy(l)*fluxad(l,i,j,k,2)
 
-                  rhofz=0.5d0*(u(l,i,j,k,1)+u(l,i,j,k-1,1))
-                  betaad2=betaad(rhocell,rhofz,dt,bcell,bcell,dx,tcell,.true.) !TC: dz?
-                  fluxambdiff(l,i,j,k,3)=-betaad2*fluxad(l,i,j,k,3)
+                  betaadfz(l)=betaad(rhocell,rhofz,dt,bcell,bcell,dx,tcell,.true.)
+                  fluxambdiff(l,i,j,k,3)=-betaadfz(l)*fluxad(l,i,j,k,3)
                endif
             end do
          end do
@@ -1000,62 +995,62 @@ double precision function betaad(rhocelln,rhon,dt,bsquare,bsquareold,dx,temper,l
    ! see Duffin & Pudritz 2008, astro-ph 08/10/08 eq (5)
    ! WARNING no mu_0 needed here because F_Lorentz used
 
-   if(resistivity_method==0)then
-      ! fixed resistivity
+   ! This function only evaluates the tabulated (resistivity_method==2)
+   ! ambipolar coefficient; the fixed and analytic cases are handled by
+   ! the callers, which use beta = 1/(gammaAD*rhon) directly. The guard
+   ! below keeps the function safe if it is ever called in another mode
+   ! (the resistivity table is then not allocated).
+   if(resistivity_method<2) then
       betaad=1d0/(gammaAD*rhon)
-   elseif(resistivity_method==1)then
-      ! *** put your analytic resistivity here ***
-      !analytical model resitivity(rho,T), Shu?
-      gammaAD = 1
-      betaad=1d0/(gammaAD*rhon)
+      return
+   endif
+
+   ! table
+   rhotemp = MAX(rhon,rho_threshold)
+   rhotemp_cell = MAX(rhocelln,rho_threshold)
+
+   xx=gammaadbis(rhotemp_cell,bsquare,bsquareold,temper)*densionbis(rhotemp_cell)*rhotemp_cell  ! dans la cellule
+   ! gammaadbis and densionbis already in user units
+
+   if(xx.ne.0d0) then
+      betaad=1d0/xx
    else
-      ! table
-      rhotemp = MAX(rhon,rho_threshold)
-      rhotemp_cell = MAX(rhocelln,rho_threshold)
-
-      xx=gammaadbis(rhotemp_cell,bsquare,bsquareold,temper)*densionbis(rhotemp_cell)*rhotemp_cell  ! dans la cellule
-      ! gammaadbis and densionbis already in user units
-
-      if(xx.ne.0d0) then
-         betaad=1d0/xx
-      else
-         betaad=1d39
-         if(rhotemp < 1.0d+14)then
-            write(*,*)'WARNING gammaadbis(rhocelln,bsquare,bsquareold,temper)*densionbis(rhocelln)*rhocelln in the cell equals 0',gammaadbis(rhotemp_cell,bsquare,bsquareold,temper),densionbis(rhocelln),rhocelln,bsquare,bsquareold,temper
-         endif
+      betaad=1d39
+      if(rhotemp < 1.0d+14)then
+         write(*,*)'WARNING gammaadbis(rhocelln,bsquare,bsquareold,temper)*densionbis(rhocelln)*rhocelln in the cell equals 0',gammaadbis(rhotemp_cell,bsquare,bsquareold,temper),densionbis(rhocelln),rhocelln,bsquare,bsquareold,temper
       endif
+   endif
 
-      !xx=gammaadbis(rhotemp,bsquare,bsquareold,temper)*densionbis(rhon)*rhon   ! a l'interface : cote ou coin selon les cas. A utiliser si l'on est pas dans un cas seuille
-      xx=gammaadbis(rhotemp,bsquare,bsquareold,temper)*densionbis(rhotemp)*rhotemp
+   !xx=gammaadbis(rhotemp,bsquare,bsquareold,temper)*densionbis(rhon)*rhon   ! a l'interface : cote ou coin selon les cas. A utiliser si l'on est pas dans un cas seuille
+   xx=gammaadbis(rhotemp,bsquare,bsquareold,temper)*densionbis(rhotemp)*rhotemp
 
-      ! a l'interface : cote ou coin selon les cas. A utiliser si l'on est pas dans un cas seuille
+   ! a l'interface : cote ou coin selon les cas. A utiliser si l'on est pas dans un cas seuille
 
-      if(xx.ne.0d0) then
-         betaadtemp=1d0/xx
-      else
-         betaadtemp=1d39
-         if(rhotemp < 1.0d+14)then
-            write(*,*)'WARNING gammaadbis(rhon,bsquare,bsquareold,temper)*densionbis(rhon)*rhon at the interface equals 0',gammaadbis(rhotemp,bsquare,bsquareold,temper),densionbis(rhon),rhon
-         endif
+   if(xx.ne.0d0) then
+      betaadtemp=1d0/xx
+   else
+      betaadtemp=1d39
+      if(rhotemp < 1.0d+14)then
+         write(*,*)'WARNING gammaadbis(rhon,bsquare,bsquareold,temper)*densionbis(rhon)*rhon at the interface equals 0',gammaadbis(rhotemp,bsquare,bsquareold,temper),densionbis(rhon),rhon
       endif
+   endif
 
-      ! if the timestep has been limited, the resistivity needs to be adjusted
-      if(limit.and.nminitimestep) then
-         if(dt.ne.0d0) then
-            ! recalculate the ambipolar diffusion timestep for the current cell
-            xx=bsquare*betaad
-            if(xx.ne.0d0) then
-               dtt=coefad*dx*dx/xx
-            else
-               dtt=1d39
-            endif
-            ! check whether it is smaller than the global timestep that has been determined
-            if (dtt.le.dt) then
-               ! if so, adjust the resistivity to match the timestep
-               betaad=coefad*dx*dx/(dt*bsquare)
-            else
-               betaad=betaadtemp
-            endif
+   ! if the timestep has been limited, the resistivity needs to be adjusted
+   if(limit.and.nminitimestep) then
+      if(dt.ne.0d0) then
+         ! recalculate the ambipolar diffusion timestep for the current cell
+         xx=bsquare*betaad
+         if(xx.ne.0d0) then
+            dtt=coefad*dx*dx/xx
+         else
+            dtt=1d39
+         endif
+         ! check whether it is smaller than the global timestep that has been determined
+         if (dtt.le.dt) then
+            ! if so, adjust the resistivity to match the timestep
+            betaad=coefad*dx*dx/(dt*bsquare)
+         else
+            betaad=betaadtemp
          endif
       endif
    endif

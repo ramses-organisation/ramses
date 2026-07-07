@@ -428,8 +428,20 @@ subroutine cmpdt_nimhd(uu,dx,ncell,dtambdiff,dtohmdiss)
    ! ambipolar diffusion
    dtambdiff=1d36 !TC: can we put HUGE or something here?
    if (nambipolar) then
+      if(resistivity_method==0) then ! fixed value
+         do k = 1,ncell
+            xx(k)=B2(k)/(gammaAD*rho(k))
+         end do
+      else if(resistivity_method==1) then ! analytical formula
+         do k = 1,ncell
+            xx(k)=B2(k)/(gammaAD*rho(k)) !TODO
+         end do
+      else ! table
+         do k = 1,ncell
+            xx(k)=B2(k)*betaad(rho(k),rho(k),0.0d0,B2(k),B2(k),0,tcell(k),.false.)
+         end do
+      endif
       do k = 1,ncell
-         xx(k)=B2(k)*betaad(rho(k),rho(k),0.0d0,B2(k),B2(k),0,tcell(k),.false.)
          if (xx(k).gt.0d0) then
             dtambdiff=min(dtambdiff, coefad*dx*dx/xx(k))
          endif
