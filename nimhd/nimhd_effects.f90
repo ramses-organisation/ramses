@@ -25,20 +25,16 @@
 !###########################################################
 !###########################################################
 subroutine compute_bemf(u,q,ngrid,bemfx,bemfy,bemfz)
-
    USE amr_parameters
    use hydro_commons
-   IMPLICIT NONE
+   implicit none
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar+3),intent(in)::u
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar),intent(in)::q
+   integer,intent(in)::ngrid
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),intent(out)::bemfx,bemfy,bemfz
    !-------------------------------------------
    ! compute magnetic field at location of EMF
    !-------------------------------------------
-   ! inputs
-   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar+3)::u
-   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q
-   integer::ngrid
-   ! output
-   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::bemfx,bemfy,bemfz
-   ! local variables
    integer ::i, j, k, l
 
    bemfx=0d0
@@ -155,23 +151,21 @@ end subroutine compute_bemf
 subroutine compute_bmagij(u,q,ngrid,bmagij)
    USE amr_parameters
    use hydro_commons
-   IMPLICIT NONE
+   implicit none
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar+3),intent(in)::u
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar),intent(in)::q
+   integer,intent(in)::ngrid
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3,1:3),intent(out)::bmagij
    !-----------------------------------------------------------------
    ! bmagij is the value of the magnetic field Bi where Bj
    ! is naturally defined; Ex bmagij(l,i,j,k,1,2) is Bx at i,j-1/2,k
    ! and we can write it Bx,y
    !-----------------------------------------------------------------
-   ! inputs
-   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar+3)::u
-   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q
-   integer::ngrid
-   ! output
-   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3,1:3)::bmagij
-   ! declare local variables
-   INTEGER ::i, j, k, l, m
+   integer ::i, j, k, l, m
 
-  bmagij=0d0
+   bmagij=0d0
 
+   ! Diagonal: Bx x, By y, Bz z
    do k=ku1,ku2
       do j=ju1,ju2
          do i=iu1,iu2
@@ -259,18 +253,15 @@ end subroutine compute_bmagij
 subroutine compute_bmagijbis(u,ngrid,bmagijbis)
    use amr_parameters
    use hydro_commons
-   IMPLICIT NONE
+   implicit none
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar+3),intent(in)::u
+   integer,intent(in)::ngrid
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),intent(out)::bmagijbis
    !-----------------------------------------------------------------
    ! bmagijbis(l,i,j,k,n) is the value of the magnetic field component
    ! Bn at i-1/2,j-1/2,k-1/2
    !-----------------------------------------------------------------
-   ! inputs
-   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar+3)::u
-   integer::ngrid
-   ! output
-   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::bmagijbis
-   ! declare local variables
-   INTEGER ::i, j, k, l
+   integer ::i, j, k, l
 
    bmagijbis=0d0
 
@@ -313,11 +304,20 @@ end subroutine compute_bmagijbis
 !###########################################################
 !###########################################################
 subroutine computejb2(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,bmagij,fluxmd,fluxad)
-
-   USE amr_parameters
+   use amr_parameters
    use hydro_commons
    use nimhd_parameters
-   IMPLICIT NONE
+   implicit none
+   ! inputs
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar+3),intent(in)::u
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar),intent(in)::q
+   integer,intent(in)::ngrid
+   real(dp),intent(in)::dx,dy,dz,dt
+   ! outputs
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),intent(out)::bemfx,bemfy,bemfz
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),intent(out)::jemfx,jemfy,jemfz
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3,1:3),intent(out)::bmagij
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),intent(out)::fluxmd,fluxad
    !-----------------------------------------------------------------
    ! Build the geometric quantities shared by both non-ideal effects.
    ! Interpolates the magnetic field to the EMF edges (bemfx/y/z), the
@@ -329,20 +329,7 @@ subroutine computejb2(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
    ! These are later scaled by the resistivities in computdifmag and
    ! computambip. Must be called before those two routines.
    !-----------------------------------------------------------------
-   ! inputs
-   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar+3)::u
-   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::q
-   INTEGER ::ngrid
-   REAL(dp)::dx,dy,dz,dt
-
-   ! outputs
-   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::bemfx,bemfy,bemfz
-   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::jemfx,jemfy,jemfz
-   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3,1:3)::bmagij
-   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::fluxmd,fluxad
-
-   ! declare local variables
-   INTEGER ::i, j, k, l, m
+   integer ::i, j, k, l, m
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::bmagijbis
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3,1:3)::jface
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::bcenter
@@ -549,6 +536,16 @@ subroutine computdifmag(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
    use hydro_commons
    use nimhd_parameters
    implicit none
+   ! inputs
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar+3),intent(in)::u
+   integer,intent(in)::ngrid
+   real(dp),intent(in)::dx,dy,dz,dt
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),intent(in)::bemfx,bemfy,bemfz
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),intent(in)::jemfx,jemfy,jemfz
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3,1:3),intent(in)::bmagij
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),intent(in)::fluxmd
+   ! outputs
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),intent(out):: emfohmdiss,fluxohm
    !-----------------------------------------------------------------
    ! Ohmic dissipation. Computes the Ohmic contribution to the EMF,
    !   emfohmdiss = -eta * J   (from dB/dt = -curl(eta*J)),
@@ -557,20 +554,8 @@ subroutine computdifmag(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
    ! energy flux (fluxohm = eta * fluxmd) on the faces.
    ! Expects jemf* and fluxmd from computejb2.
    !-----------------------------------------------------------------
-   ! inputs
-   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar+3)::u
-   integer ::ngrid
-   real(dp)::dx,dy,dz,dt
-   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::bemfx,bemfy,bemfz
-   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::jemfx,jemfy,jemfz
-   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3,1:3)::bmagij
-   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::fluxmd
-
-   ! outputs
-   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3):: emfohmdiss,fluxohm
-
-   ! local variables
    integer ::i,j,k,l,h
+
    emfohmdiss = 0d0
    fluxohm = 0d0
 
@@ -610,6 +595,17 @@ subroutine computambip(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,b
    use nimhd_parameters
    use const
    implicit none
+   ! inputs
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar+3),intent(in)::u
+   integer,intent(in)::ngrid
+   real(dp),intent(in)::dx,dy,dz,dt
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),intent(in)::bemfx,bemfy,bemfz
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),intent(in)::jemfx,jemfy,jemfz
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),intent(in)::fluxad
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3,1:3),intent(in)::bmagij
+   ! outputs
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),intent(out)::emfambdiff
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),intent(out)::fluxambdiff
    !-----------------------------------------------------------------
    ! Ambipolar diffusion. Computes the ambipolar contribution to the
    ! EMF from the Lorentz force F = J x B:
@@ -619,22 +615,8 @@ subroutine computambip(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,b
    ! builds the ambipolar energy flux (fluxambdiff = -beta * fluxad) on
    ! the faces. Expects bemf*, jemf* and fluxad from computejb2.
    !-----------------------------------------------------------------
-   ! inputs
-   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar+3)::u
-   integer ::ngrid
-   real(dp)::dx,dy,dz,dt
-   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::bemfx,bemfy,bemfz
-   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::jemfx,jemfy,jemfz
-   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::fluxad
-   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3,1:3)::bmagij
-
-   ! outputs
-   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::emfambdiff
-   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::fluxambdiff
-   ! declare local variables
-   INTEGER ::i, j, k, l
+   integer ::i, j, k, l
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::florentzx,florentzy,florentzz
-
    real(dp)::v1x,v1y,v1z,v2x,v2y,v2z
    real(dp)::rhox,rhoy,rhoz,rhofx,rhofy,rhofz
 
