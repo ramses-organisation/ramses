@@ -106,7 +106,7 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
      call compute_bemf(uin,qin,ngrid,bemfx,bemfy,bemfz)
      call compute_bmagij(uin,qin,ngrid,bmagij)
      call compute_jemf(uin,ngrid,dx,dy,dz,bmagij,jemfx,jemfy,jemfz)
-     call computejb2(uin,qin,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,bmagij,fluxmd,fluxad)
+     call computejb2(qin,ngrid,dx,dy,dz,bemfx,bemfy,bemfz,bmagij,fluxmd,fluxad)
   endif
 
   ! AMBIPOLAR DIFFUSION
