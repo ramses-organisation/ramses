@@ -157,9 +157,9 @@ subroutine compute_bmagij(u,q,ngrid,bmagij)
    integer,intent(in)::ngrid
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3,1:3),intent(out)::bmagij
    !-----------------------------------------------------------------
-   ! bmagij is the value of the magnetic field Bi where Bj
-   ! is naturally defined; Ex bmagij(l,i,j,k,1,2) is Bx at i,j-1/2,k
-   ! and we can write it Bx,y
+   ! Compute the value of the magnetic field Bi where Bj is naturally defined;
+   ! For example, bmagij(l,i,j,k,1,2) is Bx at i,j-1/2,k
+   ! and we can name it Bx,y
    !-----------------------------------------------------------------
    integer ::i, j, k, l, m
 
@@ -257,8 +257,9 @@ subroutine compute_bmagijbis(u,ngrid,bmagijbis)
    integer,intent(in)::ngrid
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),intent(out)::bmagijbis
    !-----------------------------------------------------------------
-   ! bmagijbis(l,i,j,k,n) is the value of the magnetic field component
-   ! Bn at i-1/2,j-1/2,k-1/2
+   ! Compure the value of the magnetic field component at i-1/2,j-1/2,k-1/2
+   ! Used by compute_jemf
+   ! Only fills the values that are actually used by compute_jemf
    !-----------------------------------------------------------------
    integer ::i, j, k, l
 
@@ -315,18 +316,15 @@ subroutine compute_jemf(u,ngrid,dx,dy,dz,bmagij,jemfx,jemfy,jemfz)
    ! outputs
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),intent(out)::jemfx,jemfy,jemfz
    !-----------------------------------------------------------------
-   ! Build the geometric quantities shared by both non-ideal effects.
-   ! the
-   ! face locations (bmagij) and computes the current density J at the
-   ! EMF edges (jemfx/y/z) and on the cell faces (jface). From J and B
-   ! it forms the ideal-MHD energy-flux building blocks:
-   !   fluxmd = J x B          (used by Ohmic dissipation)
-   !   fluxad = (J x B) x B x B (used by ambipolar diffusion, if active)
-   ! These are later scaled by the resistivities in computdifmag and
-   ! computambip. Must be called before those two routines.
+   ! Computes the current density J at the EMF edges 
    !-----------------------------------------------------------------
    integer ::i, j, k, l, m, n
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::bmagijbis
+   real(dp):: oneoverdx
+
+   ! We optimize by calculating the division only once,
+   ! and using the fact that dx=dy=dz in RAMSES
+   oneoverdx = 1d0/dx
 
    jemfx=0d0
    jemfy=0d0
@@ -343,17 +341,17 @@ subroutine compute_jemf(u,ngrid,dx,dy,dz,bmagij,jemfx,jemfy,jemfz)
       do j=min(1,ju1+1),max(1,ju2-1)
          do i=min(1,iu1+1),max(1,iu2-1)
             do l=1,ngrid
-               jemfx(l,i,j,k,1)=(u(l,i,j,k,8)-u(l,i,j-1,k,8))/dy-(u(l,i,j,k,7)-u(l,i,j,k-1,7))/dz
-               jemfx(l,i,j,k,2)=(bmagij(l,i,j,k,1,2)-bmagij(l,i,j,k-1,1,2))/dz- (bmagijbis(l,i+1,j,k,3)-bmagijbis(l,i,j,k,3))/dx
-               jemfx(l,i,j,k,3)=(bmagijbis(l,i+1,j,k,2) -bmagijbis(l,i,j,k,2))/dx- (bmagij(l,i,j,k,1,3)-bmagij(l,i,j-1,k,1,3))/dy
+               jemfx(l,i,j,k,1) = ((u(l,i,j,k,8)-u(l,i,j-1,k,8))                 - (u(l,i,j,k,7)-u(l,i,j,k-1,7))                ) * oneoverdx
+               jemfx(l,i,j,k,2) = ((bmagij(l,i,j,k,1,2)-bmagij(l,i,j,k-1,1,2))   - (bmagijbis(l,i+1,j,k,3)-bmagijbis(l,i,j,k,3))) * oneoverdx
+               jemfx(l,i,j,k,3) = ((bmagijbis(l,i+1,j,k,2)-bmagijbis(l,i,j,k,2)) - (bmagij(l,i,j,k,1,3)-bmagij(l,i,j-1,k,1,3))  ) * oneoverdx
 
-               jemfy(l,i,j,k,1)=(bmagijbis(l,i,j+1,k,3)-bmagijbis(l,i,j,k,3))/dy-(bmagij(l,i,j,k,2,1) - bmagij(l,i,j,k-1,2,1) )/dz
-               jemfy(l,i,j,k,2)=(u(l,i,j,k,6)-u(l,i,j,k-1,6))/dz-(u(l,i,j,k,8)-u(l,i-1,j,k,8))/dx
-               jemfy(l,i,j,k,3)=(bmagij(l,i,j,k,2,3)-bmagij(l,i-1,j,k,2,3))/dx-(bmagijbis(l,i,j+1,k,1)-bmagijbis(l,i,j,k,1))/dy
+               jemfy(l,i,j,k,1) = ((bmagijbis(l,i,j+1,k,3)-bmagijbis(l,i,j,k,3)) - (bmagij(l,i,j,k,2,1) - bmagij(l,i,j,k-1,2,1) )) * oneoverdx
+               jemfy(l,i,j,k,2) = ((u(l,i,j,k,6)-u(l,i,j,k-1,6))                 - (u(l,i,j,k,8)-u(l,i-1,j,k,8))                 ) * oneoverdx
+               jemfy(l,i,j,k,3) = ((bmagij(l,i,j,k,2,3)-bmagij(l,i-1,j,k,2,3))   - (bmagijbis(l,i,j+1,k,1)-bmagijbis(l,i,j,k,1)) ) * oneoverdx
 
-               jemfz(l,i,j,k,1)=(bmagij(l,i,j,k,3,1) -bmagij(l,i,j-1,k,3,1))/dy-(bmagijbis(l,i,j,k+1,2)-bmagijbis(l,i,j,k,2))/dz
-               jemfz(l,i,j,k,2)=( bmagijbis(l,i,j,k+1,1)-bmagijbis(l,i,j,k,1))/dz-(bmagij(l,i,j,k,3,2)-bmagij(l,i-1,j,k,3,2))/dx
-               jemfz(l,i,j,k,3)=(u(l,i,j,k,7)-u(l,i-1,j,k,7))/dx-(u(l,i,j,k,6)-u(l,i,j-1,k,6))/dy
+               jemfz(l,i,j,k,1) = ((bmagij(l,i,j,k,3,1) -bmagij(l,i,j-1,k,3,1))  - (bmagijbis(l,i,j,k+1,2)-bmagijbis(l,i,j,k,2)) ) * oneoverdx
+               jemfz(l,i,j,k,2) = ((bmagijbis(l,i,j,k+1,1)-bmagijbis(l,i,j,k,1)) - (bmagij(l,i,j,k,3,2)-bmagij(l,i-1,j,k,3,2))   ) * oneoverdx
+               jemfz(l,i,j,k,3) = ((u(l,i,j,k,7)-u(l,i-1,j,k,7))                 - (u(l,i,j,k,6)-u(l,i,j-1,k,6))                 ) * oneoverdx
             end do
          end do
       end do
@@ -389,10 +387,8 @@ subroutine computejb2(q,ngrid,dx,dy,dz,bemfx,bemfy,bemfz,bmagij,fluxmd,fluxad)
    !-----------------------------------------------------------------
    integer ::i, j, k, l, m, n
    real(dp)::v1x,v1y,v1z,v2x,v2y,v2z
-   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::bmagijbis
    real(dp),dimension(1:nvector,1:3,1:3)::jface
    real(dp),dimension(1:nvector,1:3,1:3)::fluxbis
-   real(dp)::bsquare
    real(dp)::computdxbis,computdybis,computdzbis  !forward derivatives
 
    fluxmd=0d0
@@ -406,7 +402,7 @@ subroutine computejb2(q,ngrid,dx,dy,dz,bemfx,bemfy,bemfz,bmagij,fluxmd,fluxad)
       do j=min(1,ju1+1),max(1,ju2-1)
          do i=min(1,iu1+1),max(1,iu2-1)
 
-            ! computation of current on faces
+            ! Computation the current density J on the cell faces
             ! (q contains the magnetic field at center of cells)
             do l = 1, ngrid
                ! face at i-1/2,j,k
