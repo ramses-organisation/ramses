@@ -101,29 +101,32 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
   call uslope_mag(bf,dbf,dx,dt,ngrid)
 
 #ifdef NIMHD
+  ! compute necessary quantities
   if(use_nonideal_mhd) then
-     ! compute necessary quantities
-     call compute_bemf(uin,qin,ngrid,bemfx,bemfy,bemfz)
      call compute_bmagij(uin,qin,ngrid,bmagij)
      call compute_jemf(uin,ngrid,dx,dy,dz,bmagij,jemfx,jemfy,jemfz)
-     call computejb2(qin,ngrid,dx,dy,dz,bemfx,bemfy,bemfz,bmagij,fluxmd,fluxad)
   endif
+
+  if(nimhdheating_in_flux.or.nambipolar) then
+     call compute_bemf(uin,qin,ngrid,bemfx,bemfy,bemfz)
+  end if
 
   ! AMBIPOLAR DIFFUSION
   if(nambipolar) then
      call computambip(uin,ngrid,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,emfambdiff)
-     if(nimhdheating_in_flux) then
-        call compute_heating_ambip(uin,ngrid,fluxad,fluxambdiff)
-     endif
   endif
 
   ! OHMIC DISSIPATION
   if(nmagdiffu) then
      call computdifmag(ngrid,jemfx,jemfy,jemfz,emfohmdiss)
-     if(nimhdheating_in_flux) then
-        call compute_heating_difmag(ngrid,fluxmd,fluxohm)
-     endif
-   endif
+  endif
+
+  if(nimhdheating_in_flux) then
+     call compute_nimhd_flux_heating(qin,ngrid,dx,dy,dz,bemfx,bemfy,bemfz,bmagij,fluxmd,fluxad)
+     if(nambipolar) call compute_heating_ambip(uin,ngrid,fluxad,fluxambdiff)
+     if(nmagdiffu)  call compute_heating_difmag(ngrid,fluxmd,fluxohm)
+  endif
+
 #endif
 
   ! Compute 3D traced-states in all three directions

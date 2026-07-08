@@ -357,7 +357,7 @@ end subroutine compute_jemf
 !###########################################################
 !###########################################################
 !###########################################################
-subroutine computejb2(q,ngrid,dx,dy,dz,bemfx,bemfy,bemfz,bmagij,fluxmd,fluxad)
+subroutine compute_nimhd_flux_heating(q,ngrid,dx,dy,dz,bemfx,bemfy,bemfz,bmagij,fluxmd,fluxad)
    use amr_parameters
    use hydro_commons
    use nimhd_parameters
@@ -498,7 +498,7 @@ subroutine computejb2(q,ngrid,dx,dy,dz,bemfx,bemfy,bemfz,bmagij,fluxmd,fluxad)
       end do
    end do
 
-end subroutine computejb2
+end subroutine compute_nimhd_flux_heating
 !###########################################################
 !###########################################################
 !###########################################################
