@@ -331,7 +331,7 @@ subroutine computejb2(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
    integer ::i, j, k, l, m, n
    real(dp)::v1x,v1y,v1z,v2x,v2y,v2z
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::bmagijbis
-   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3,1:3)::jface
+   real(dp),dimension(1:nvector,1:3,1:3)::jface
    real(dp),dimension(1:nvector,1:3,1:3)::fluxbis
    real(dp)::bsquare
    real(dp)::computdxbis,computdybis,computdzbis  !forward derivatives
@@ -375,133 +375,58 @@ subroutine computejb2(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
    ! computation of the component of j at center of cell
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-
-   ! computation of current on faces
-
-   ! face at i-1/2,j,k
-   ! q contains the magnetic field at center of cells
-
    do k=min(1,ku1+1),max(1,ku2-1)
       do j=min(1,ju1+1),max(1,ju2-1)
-         do i=min(1,iu1+1),iu2
-            do l=1,ngrid
+         do i=min(1,iu1+1),max(1,iu2-1)
+
+            ! computation of current on faces
+            ! (q contains the magnetic field at center of cells)
+            do l = 1, ngrid
+               ! face at i-1/2,j,k
                computdybis = (bemfz(l,i,j+1,k  ,3) - bemfz(l,i,j,k,3)) / dy
                computdzbis = (bemfy(l,i,j  ,k+1,2) - bemfy(l,i,j,k,2)) / dz
-               jface(l,i,j,k,1,1) = computdybis - computdzbis
-            end do
-         end do
-      end do
-   end do
+               jface(l,1,1) = computdybis - computdzbis
 
-   do k=min(1,ku1+1),max(1,ku2-1)
-      do j=ju1,ju2
-         do i=min(1,iu1+1),iu2
-            do l=1,ngrid
                computdzbis = (bemfy(l,i,j,k+1,1) - bemfy(l,i  ,j,k,1)) / dz
                computdxbis = (    q(l,i,j,k  ,8) -     q(l,i-1,j,k,8)) / dx
-               jface(l,i,j,k,2,1) = computdzbis - computdxbis
-            end do
-         end do
-      end do
-   end do
+               jface(l,2,1) = computdzbis - computdxbis
 
-   do k=ku1,ku2
-      do j=min(1,ju1+1),max(1,ju2-1)
-         do i=min(1,iu1+1),iu2
-            do l=1,ngrid
                computdxbis = (    q(l,i,j  ,k,7) -     q(l,i-1,j,k,7)) / dx
                computdybis = (bemfz(l,i,j+1,k,1) - bemfz(l,i  ,j,k,1)) / dy
-               jface(l,i,j,k,3,1) = computdxbis - computdybis
-            end do
-         end do
-      end do
-   end do
+               jface(l,3,1) = computdxbis - computdybis
 
-   ! face at i,j-1/2,k
-
-   do k=min(1,ku1+1),max(1,ku2-1)
-      do j=min(1,ju1+1),ju2
-         do i=iu1,iu2
-            do l=1,ngrid
+               ! face at i,j-1/2,k
                computdybis = (    q(l,i,j,k  ,8) -     q(l,i,j-1,k,8)) / dy
                computdzbis = (bemfx(l,i,j,k+1,2) - bemfx(l,i,j  ,k,2)) / dz
-               jface(l,i,j,k,1,2) = computdybis - computdzbis
-            end do
-         end do
-      end do
-   end do
+               jface(l,1,2) = computdybis - computdzbis
 
-   do k=min(1,ku1+1),max(1,ku2-1)
-      do j=min(1,ju1+1),ju2
-         do i=min(1,iu1+1),max(1,iu2-1)
-            do l=1,ngrid
                computdzbis = (bemfx(l,i  ,j,k+1,1) - bemfx(l,i,j,k,1)) / dz
                computdxbis = (bemfz(l,i+1,j,k  ,3) - bemfz(l,i,j,k,3)) / dx
-               jface(l,i,j,k,2,2) = computdzbis - computdxbis
-            end do
-         end do
-      end do
-   end do
+               jface(l,2,2) = computdzbis - computdxbis
 
-   do k=ku1,ku2
-      do j=min(1,ju1+1),ju2
-         do i=min(1,iu1+1),max(1,iu2-1)
-            do l=1,ngrid
                computdxbis = (bemfz(l,i+1,j,k,2) - bemfz(l,i,j  ,k,2)) / dx
                computdybis = (    q(l,i  ,j,k,6) -     q(l,i,j-1,k,6)) / dy
-               jface(l,i,j,k,3,2) = computdxbis - computdybis
-            end do
-         end do
-      end do
-   end do
+               jface(l,3,2) = computdxbis - computdybis
 
-   ! face at i,j,k-1/2
-
-   do k=min(1,ku1+1),ku2
-      do j=min(1,ju1+1),max(1,ju2-1)
-         do i=iu1,iu2
-            do l=1,ngrid
+               ! face at i,j,k-1/2
                computdybis = (bemfx(l,i,j+1,k,3) - bemfx(l,i,j,k  ,3)) / dy
                computdzbis = (    q(l,i,j  ,k,7) -     q(l,i,j,k-1,7)) / dz
-               jface(l,i,j,k,1,3) = computdybis - computdzbis
-            end do
-         end do
-      end do
-   end do
+               jface(l,1,3) = computdybis - computdzbis
 
-   do k=min(1,ku1+1),ku2
-      do j=ju1,ju2
-         do i=min(1,iu1+1),max(1,iu2-1)
-            do l=1,ngrid
                computdzbis = (    q(l,i  ,j,k,6) -     q(l,i,j,k-1,6)) / dz
                computdxbis = (bemfy(l,i+1,j,k,3) - bemfy(l,i,j,k  ,3)) / dx
-               jface(l,i,j,k,2,3) = computdzbis - computdxbis
-            end do
-         end do
-      end do
-   end do
+               jface(l,2,3) = computdzbis - computdxbis
 
-   do k=min(1,ku1+1),ku2
-      do j=min(1,ju1+1),max(1,ju2-1)
-         do i=min(1,iu1+1),max(1,iu2-1)
-            do l=1,ngrid
                computdxbis = (bemfy(l,i+1,j  ,k,2) - bemfy(l,i,j,k,2)) / dx
                computdybis = (bemfx(l,i  ,j+1,k,1) - bemfx(l,i,j,k,1)) / dx
-               jface(l,i,j,k,3,3) = computdxbis - computdybis
-            end do
-         end do
-      end do
-   end do
+               jface(l,3,3) = computdxbis - computdybis
+            end do 
 
-
-   do k=min(1,ku1+1),max(1,ku2-1)
-      do j=min(1,ju1+1),max(1,ju2-1)
-         do i=min(1,iu1+1),max(1,iu2-1)
             do l = 1, ngrid
                do n=1,3
-                  v1x=jface(l,i,j,k,1,n)
-                  v1y=jface(l,i,j,k,2,n)
-                  v1z=jface(l,i,j,k,3,n)
+                  v1x=jface(l,1,n)
+                  v1y=jface(l,2,n)
+                  v1z=jface(l,3,n)
 
                   v2x=bmagij(l,i,j,k,1,n)
                   v2y=bmagij(l,i,j,k,2,n)
