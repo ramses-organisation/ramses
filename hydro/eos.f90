@@ -35,38 +35,3 @@ subroutine barotropic_eos_temperature(nH, temperature)
    END SELECT
 
 end subroutine barotropic_eos_temperature
-!################################################################
-!################################################################
-!################################################################
-!################################################################
-subroutine temperature_eos(rho_temp,Enint_temp,Teos)
-  use amr_parameters      ,only:dp,mu_gas
-  use hydro_commons       !,only:gamma
-  use constants           ,only:kB,mH
-  use cooling_module, only:barotropic_eos
-  implicit none
-  !--------------------------------------------------------------
-  ! This routine computes the temperature from the density and
-  ! internal volumic energy. Inputs/output are in code units.
-  !--------------------------------------------------------------
-  real(dp), intent(in) :: Enint_temp,rho_temp
-  real(dp), intent(out):: Teos
-  real(dp)::rho,Enint
-  real(dp)::scale_nH,scale_T2,scale_t,scale_v,scale_d,scale_l
-
-  call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
-
-  rho   = rho_temp*scale_d
-  Enint = Enint_temp*scale_d*scale_v**2
-  if (barotropic_eos) then
-      call barotropic_eos_temperature(rho_temp, Teos)
-      Teos = Teos*mu_gas
-  else
-      Teos = Enint/(rho*kB/(mu_gas*mH*(gamma-1.0d0)))
-  endif
-
-end subroutine temperature_eos
-!################################################################
-!################################################################
-!################################################################
-!################################################################

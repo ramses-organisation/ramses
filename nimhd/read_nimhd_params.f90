@@ -1,15 +1,14 @@
 subroutine read_nimhd_params(nml_ok)
   use amr_commons
   use nimhd_parameters
-  use resistivity_table
   implicit none
   logical, intent(inout) ::nml_ok
   !--------------------------------------------------
   ! Namelist definitions
   !--------------------------------------------------
   namelist/nonidealmhd_params/nambipolar,gammaAD &
-        & ,nmagdiffu,etaMD,resistivity_method,resistivity_file &
-        & ,coefad,coefohm, nminitimestep, coefalfven,coefdtohm, rho_threshold,nimhdheating_in_flux,nimhdheating_source_term
+        & ,nmagdiffu,etaMD &
+        & ,coefad,coefohm, nminitimestep, coefalfven,coefdtohm,nimhdheating_in_flux,nimhdheating_source_term
 
   ! Checks on non-ideal MHD parameters
   rewind(1)
@@ -46,11 +45,6 @@ subroutine read_nimhd_params(nml_ok)
       write(*,*)'Magnetic diffusion switched OFF'
     endif
 
-  endif
-
-  ! read tabulated resistivities
-  if(resistivity_method.eq.2)then
-    call read_resistivities
   endif
 
   109 continue

@@ -384,13 +384,11 @@ subroutine cmpdt_nimhd(uu,dx,ncell,dtambdiff,dtohmdiss)
    real(dp)::dtambdiff,dtohmdiss    ! ambipolar and Ohmic diffusion times
    real(dp),dimension(1:nvector,1:nvar+3)::uu
 
-   real(dp)::betaad,etaohmdiss
-   real(dp),dimension(1:nvector),save::B2,rho,tcell,xx
+   real(dp),dimension(1:nvector),save::B2,rho,xx
    integer::k,idim
 
    do k = 1,ncell
       rho(k)=max(uu(k,1),smallr)
-      call temperature_eos(rho(k), uu(k,nvar), tcell(k))
    end do
 
    do k = 1,ncell
@@ -402,45 +400,18 @@ subroutine cmpdt_nimhd(uu,dx,ncell,dtambdiff,dtohmdiss)
       end do
    end do
 
-   ! Ohmic dissipation
+   ! Ohmic dissipation (fixed resistivity eta = etaMD)
    dtohmdiss=1d35
-   if (nmagdiffu) then
-      if(resistivity_method==0) then ! fixed value
-         do k = 1,ncell
-            xx(k)=etaMD
-         end do
-      else if(resistivity_method==1) then ! analytical formula
-         do k = 1,ncell
-            xx(k)=etaMD !TODO
-         end do
-      else
-         do k = 1,ncell
-            xx(k)=etaohmdiss(rho(k),B2(k),tcell(k),0d0,0d0,.false.)
-         end do
-      endif
-      do k = 1,ncell
-         if(xx(k).gt.0d0) then
-            dtohmdiss=min(dtohmdiss, coefohm*dx*dx/xx(k))
-         endif
-      end do
+   if (nmagdiffu .and. etaMD>0d0) then
+      dtohmdiss=coefohm*dx*dx/etaMD
    endif
 
-   ! ambipolar diffusion
-   dtambdiff=1d36 !TC: can we put HUGE or something here?
+   ! ambipolar diffusion (fixed coefficient beta = 1/(gammaAD*rho))
+   dtambdiff=1d36
    if (nambipolar) then
-      if(resistivity_method==0) then ! fixed value
-         do k = 1,ncell
-            xx(k)=B2(k)/(gammaAD*rho(k))
-         end do
-      else if(resistivity_method==1) then ! analytical formula
-         do k = 1,ncell
-            xx(k)=B2(k)/(gammaAD*rho(k)) !TODO
-         end do
-      else ! table
-         do k = 1,ncell
-            xx(k)=B2(k)*betaad(rho(k),rho(k),0.0d0,B2(k),0,tcell(k),.false.)
-         end do
-      endif
+      do k = 1,ncell
+         xx(k)=B2(k)/(gammaAD*rho(k))
+      end do
       do k = 1,ncell
          if (xx(k).gt.0d0) then
             dtambdiff=min(dtambdiff, coefad*dx*dx/xx(k))
