@@ -170,10 +170,9 @@ subroutine compute_bmagij(u,q,ngrid,bmagij)
       do j=ju1,ju2
          do i=iu1,iu2
             do l=1,ngrid
-               do m=1,3
-                  !! m+5 mandatory cf Bx=uin(l,i,j,k,6)
-                  bmagij(l,i,j,k,m,m)=u(l,i,j,k,m+5)
-               end do
+               bmagij(l,i,j,k,1,1)=u(l,i,j,k,6)
+               bmagij(l,i,j,k,2,2)=u(l,i,j,k,7)
+               bmagij(l,i,j,k,3,3)=u(l,i,j,k,8)
             end do
          end do
       end do
@@ -571,10 +570,10 @@ subroutine computdifmag(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
             end do
 
             if(nimhdheating_in_flux) then
-               do h = 1,3
-                  do l=1,ngrid
-                     fluxohm(l,i,j,k,h)=etaMD*fluxmd(l,i,j,k,h)
-                  enddo
+               do l=1,ngrid
+                  fluxohm(l,i,j,k,1)=etaMD*fluxmd(l,i,j,k,1)
+                  fluxohm(l,i,j,k,2)=etaMD*fluxmd(l,i,j,k,2)
+                  fluxohm(l,i,j,k,3)=etaMD*fluxmd(l,i,j,k,3)
                enddo
             endif
 
@@ -636,17 +635,10 @@ subroutine computambip(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,b
                call crossprod(jemfy,bemfy,florentzy,l,i,j,k)
                call crossprod(jemfz,bemfz,florentzz,l,i,j,k)
             end do
-         end do
-      end do
-   end do
 
+            !dtlim=dt!*coefalfven
+            !dt est deja dtnew, qui a été choisi comme le dt normal (avec la condition de courant) ou le dt normal seuillé si le dtAD est trop faible(bricolo)
 
-   !dtlim=dt!*coefalfven
-   !dt est deja dtnew, qui a été choisi comme le dt normal (avec la condition de courant) ou le dt normal seuillé si le dtAD est trop faible(bricolo)
-
-   do k=min(1,ku1+1),max(1,ku2-1)
-      do j=min(1,ju1+1),max(1,ju2-1)
-         do i=min(1,iu1+1),max(1,iu2-1)
 
             do l = 1, ngrid
 
