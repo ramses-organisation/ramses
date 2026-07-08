@@ -332,7 +332,7 @@ subroutine computejb2(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
    real(dp)::v1x,v1y,v1z,v2x,v2y,v2z
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::bmagijbis
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3,1:3)::jface
-   real(dp),dimension(1:nvector,1:3,1:3)::fluxbis,fluxter
+   real(dp),dimension(1:nvector,1:3,1:3)::fluxbis
    real(dp)::bsquare
    real(dp)::computdxbis,computdybis,computdzbis  !forward derivatives
 
@@ -520,38 +520,34 @@ subroutine computejb2(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
             end do
 
             if(nambipolar) then
+               ! Compute fluxad from crossproduct ((J x B) x B) x B
                do l = 1, ngrid
-                  do n=1,3
-                     v1x=fluxbis(l,1,n)
-                     v1y=fluxbis(l,2,n)
-                     v1z=fluxbis(l,3,n)
 
-                     v2x=bmagij(l,i,j,k,1,n)
-                     v2y=bmagij(l,i,j,k,2,n)
-                     v2z=bmagij(l,i,j,k,3,n)
-
-                     fluxter(l,1,n)=v1y*v2z-v1z*v2y
-                     fluxter(l,2,n)=v1z*v2x-v1x*v2z
-                     fluxter(l,3,n)=v1x*v2y-v2x*v1y
-                  end do
-
-                  ! Compute fluxad from crossproduct ((J x B) x B) x B
-                  v1y=fluxter(l,2,1)
-                  v1z=fluxter(l,3,1)
+                  ! x-component
+                  v1x=fluxbis(l,1,1)
+                  v2x=bmagij(l,i,j,k,1,1)
                   v2y=bmagij(l,i,j,k,2,1)
                   v2z=bmagij(l,i,j,k,3,1)
+                  v1y=fluxbis(l,3,1)*v2x-v1x*v2z
+                  v1z=v1x*v2y-v2x*fluxbis(l,2,1)
                   fluxad(l,i,j,k,1)=v1y*v2z-v1z*v2y
 
-                  v1x=fluxter(l,1,2)
-                  v1z=fluxter(l,3,2)
+                  ! y-component
+                  v1y=fluxbis(l,2,2)
                   v2x=bmagij(l,i,j,k,1,2)
+                  v2y=bmagij(l,i,j,k,2,2)
                   v2z=bmagij(l,i,j,k,3,2)
+                  v1x=v1y*v2z-fluxbis(l,3,2)*v2y
+                  v1z=fluxbis(l,1,2)*v2y-v2x*v1y
                   fluxad(l,i,j,k,2)=v1z*v2x-v1x*v2z
 
-                  v1x=fluxter(l,1,3)
-                  v1y=fluxter(l,2,3)
+                  ! z-component
+                  v1z=fluxbis(l,3,3)
                   v2x=bmagij(l,i,j,k,1,3)
                   v2y=bmagij(l,i,j,k,2,3)
+                  v2z=bmagij(l,i,j,k,3,3)
+                  v1x=fluxbis(l,2,3)*v2z-v1z*v2y
+                  v1y=v1z*v2x-fluxbis(l,1,3)*v2z
                   fluxad(l,i,j,k,3)=v1x*v2y-v2x*v1y
 
                end do
