@@ -618,7 +618,7 @@ end subroutine computdifmag
 !###########################################################
 !###########################################################
 !###########################################################
-subroutine computambip(u,ngrid,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,fluxad,emfambdiff,fluxambdiff)
+subroutine computambip(u,ngrid,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,emfambdiff)
    use amr_commons
    use amr_parameters
    use hydro_commons
@@ -630,25 +630,21 @@ subroutine computambip(u,ngrid,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,fluxad,emfamb
    integer,intent(in)::ngrid
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),intent(in)::bemfx,bemfy,bemfz
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),intent(in)::jemfx,jemfy,jemfz
-   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),intent(in)::fluxad
    ! outputs
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),intent(out)::emfambdiff
-   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),intent(out)::fluxambdiff
    !-----------------------------------------------------------------
    ! Ambipolar diffusion. Computes the ambipolar contribution to the
    ! EMF from the Lorentz force F = J x B:
    !   emfambdiff = beta * (F x B)   (from dB/dt = curl(beta*(JxB)xB)),
    ! evaluated at the EMF edges, with the fixed coefficient
-   ! beta = 1/(gammaAD*rho). If nimhdheating_in_flux is set, it also
-   ! builds the ambipolar energy flux (fluxambdiff = -beta * fluxad) on
-   ! the faces. Expects bemf*, jemf* and fluxad from computejb2.
+   ! beta = 1/(gammaAD*rho).
+   ! Expects bemf*, jemf* from computejb2.
    !-----------------------------------------------------------------
    integer ::i, j, k, l
    real(dp)::jx,jy,jz,bx,by,bz,fx,fy,fz,beta_x,beta_y,beta_z
-   real(dp)::rhox,rhoy,rhoz,rhofx,rhofy,rhofz
+   real(dp)::rhox,rhoy,rhoz
 
    emfambdiff=0d0
-   fluxambdiff=0d0
 
    ! Compute (J x B) x B
    do k=min(1,ku1+1),max(1,ku2-1)
@@ -699,24 +695,65 @@ subroutine computambip(u,ngrid,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,fluxad,emfamb
 
             end do
 
-            if(nimhdheating_in_flux) then
-               do l = 1, ngrid
-                  ! energy flux on faces
-                  rhofx=0.5d0*(u(l,i,j,k,1)+u(l,i-1,j,k,1))
-                  rhofy=0.5d0*(u(l,i,j,k,1)+u(l,i,j-1,k,1))
-                  rhofz=0.5d0*(u(l,i,j,k,1)+u(l,i,j,k-1,1))
-
-                  fluxambdiff(l,i,j,k,1)=-fluxad(l,i,j,k,1)/(gammaAD*rhofx)
-                  fluxambdiff(l,i,j,k,2)=-fluxad(l,i,j,k,2)/(gammaAD*rhofy)
-                  fluxambdiff(l,i,j,k,3)=-fluxad(l,i,j,k,3)/(gammaAD*rhofz)
-               end do
-            endif
-
          end do
       end do
    end do
 
 end subroutine computambip
+!###########################################################
+!###########################################################
+!###########################################################
+!###########################################################
+subroutine compute_heating_ambip(u,ngrid,fluxad,fluxambdiff)
+   use amr_commons
+   use amr_parameters
+   use hydro_commons
+   use nimhd_parameters
+   use const
+   implicit none
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar+3),intent(in)::u
+   integer,intent(in)::ngrid
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),intent(in)::fluxad
+   ! outputs
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),intent(out)::fluxambdiff
+   !-----------------------------------------------------------------
+   ! Calculate the ambipolar energy flux
+   !   fluxambdiff = -beta * fluxad on
+   ! the faces.
+   ! Assume fixed coefficient
+   !   beta = 1/(gammaAD*rho)
+   !-----------------------------------------------------------------
+   integer ::i, j, k, l
+   real(dp)::beta_x,beta_y,beta_z
+   real(dp)::rhofx,rhofy,rhofz
+
+   fluxambdiff=0d0
+
+   ! Compute (J x B) x B
+   do k=min(1,ku1+1),max(1,ku2-1)
+      do j=min(1,ju1+1),max(1,ju2-1)
+         do i=min(1,iu1+1),max(1,iu2-1)
+
+            do l = 1, ngrid
+               ! energy flux on faces
+               rhofx=0.5d0*(u(l,i,j,k,1)+u(l,i-1,j,k,1))
+               rhofy=0.5d0*(u(l,i,j,k,1)+u(l,i,j-1,k,1))
+               rhofz=0.5d0*(u(l,i,j,k,1)+u(l,i,j,k-1,1))
+
+               beta_x=1d0/(gammaAD*rhofx)
+               beta_y=1d0/(gammaAD*rhofy)
+               beta_z=1d0/(gammaAD*rhofz)
+
+               fluxambdiff(l,i,j,k,1)=-fluxad(l,i,j,k,1) * beta_x
+               fluxambdiff(l,i,j,k,2)=-fluxad(l,i,j,k,2) * beta_y
+               fluxambdiff(l,i,j,k,3)=-fluxad(l,i,j,k,3) * beta_z
+            end do
+
+         end do
+      end do
+   end do
+
+end subroutine compute_heating_ambip
 !###########################################################
 !###########################################################
 !###########################################################
