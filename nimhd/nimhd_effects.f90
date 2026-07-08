@@ -267,7 +267,7 @@ subroutine compute_bmagijbis(u,ngrid,bmagijbis)
    ! case Bx for Lorentz force EMF
    do k=min(1,ku1+1),ku2
       do j=min(1,ju1+1),ju2
-         do i=iu1,iu2
+         do i=min(1,iu1+1),max(1,iu2-1)
             do l=1,ngrid
                bmagijbis(l,i,j,k,1)=0.25d0*(u(l,i,j,k,6)+u(l,i,j-1,k,6)+u(l,i,j,k-1,6)+u(l,i,j-1,k-1,6))
             end do
@@ -277,7 +277,7 @@ subroutine compute_bmagijbis(u,ngrid,bmagijbis)
 
    ! case By for Lorentz force EMF
    do k=min(1,ku1+1),ku2
-      do j=ju1,ju2
+      do j=min(1,ju1+1),max(1,ju2-1)
          do i=min(1,iu1+1),iu2
             do l=1,ngrid
                bmagijbis(l,i,j,k,2)=0.25d0*(u(l,i,j,k,7)+u(l,i-1,j,k,7)+u(l,i,j,k-1,7)+u(l,i-1,j,k-1,7))
@@ -287,7 +287,7 @@ subroutine compute_bmagijbis(u,ngrid,bmagijbis)
    end do
 
    ! case Bz for Lorentz force EMF
-   do k=ku1,ku2
+   do k=min(1,ku1+1),max(1,ku2-1)
       do j=min(1,ju1+1),ju2
          do i=min(1,iu1+1),iu2
             do l=1,ngrid
