@@ -647,30 +647,16 @@ subroutine computambip(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,b
    ! the faces. Expects bemf*, jemf* and fluxad from computejb2.
    !-----------------------------------------------------------------
    integer ::i, j, k, l
-   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::florentzx,florentzy,florentzz
-   real(dp)::v1x,v1y,v1z,v2x,v2y,v2z
+   real(dp)::jx,jy,jz,bx,by,bz,fx,fy,fz
    real(dp)::rhox,rhoy,rhoz,rhofx,rhofy,rhofz
 
    emfambdiff=0d0
    fluxambdiff=0d0
 
-   florentzx=0d0
-   florentzy=0d0
-   florentzz=0d0
-
-   ! compute Loretz force
+   ! compute Lorentz force
    do k=min(1,ku1+1),max(1,ku2-1)
       do j=min(1,ju1+1),max(1,ju2-1)
          do i=min(1,iu1+1),max(1,iu2-1)
-            do l = 1, ngrid
-               call crossprod(jemfx,bemfx,florentzx,l,i,j,k)
-               call crossprod(jemfy,bemfy,florentzy,l,i,j,k)
-               call crossprod(jemfz,bemfz,florentzz,l,i,j,k)
-            end do
-
-            !dtlim=dt!*coefalfven
-            !dt est deja dtnew, qui a été choisi comme le dt normal (avec la condition de courant) ou le dt normal seuillé si le dtAD est trop faible(bricolo)
-
 
             do l = 1, ngrid
 
@@ -679,28 +665,38 @@ subroutine computambip(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,b
                rhoz=0.25d0*(u(l,i,j,k,1)+u(l,i-1,j,k,1)+u(l,i,j-1,k,1)+u(l,i-1,j-1,k,1))
 
                ! EMF x
-
-               v1y=florentzx(l,i,j,k,2)
-               v1z=florentzx(l,i,j,k,3)
-               v2y=bemfx(l,i,j,k,2)
-               v2z=bemfx(l,i,j,k,3)
-               emfambdiff(l,i,j,k,1)=(v1y*v2z-v1z*v2y)/(gammaAD*rhox)
+               jx=jemfx(l,i,j,k,1)
+               jy=jemfx(l,i,j,k,2)
+               jz=jemfx(l,i,j,k,3)
+               bx=bemfx(l,i,j,k,1)
+               by=bemfx(l,i,j,k,2)
+               bz=bemfx(l,i,j,k,3)
+               fy=jz*bx-jx*bz !florentzx(l,2)
+               fz=jx*by-bx*jy !florentzx(l,3)
+               emfambdiff(l,i,j,k,1)=(fy*bz-fz*by)/(gammaAD*rhox)
 
                ! EMF y
-
-               v1x=florentzy(l,i,j,k,1)
-               v1z=florentzy(l,i,j,k,3)
-               v2x=bemfy(l,i,j,k,1)
-               v2z=bemfy(l,i,j,k,3)
-               emfambdiff(l,i,j,k,2)=(v1z*v2x-v1x*v2z)/(gammaAD*rhoy)
+               jx=jemfy(l,i,j,k,1)
+               jy=jemfy(l,i,j,k,2)
+               jz=jemfy(l,i,j,k,3)
+               bx=bemfy(l,i,j,k,1)
+               by=bemfy(l,i,j,k,2)
+               bz=bemfy(l,i,j,k,3)
+               fx=jy*bz-jz*by !florentzy(l,1)
+               fz=jx*by-bx*jy !florentzy(l,3)
+               emfambdiff(l,i,j,k,2)=(fz*bx-fx*bz)/(gammaAD*rhoy)
 
                ! EMF z
 
-               v1x=florentzz(l,i,j,k,1)
-               v1y=florentzz(l,i,j,k,2)
-               v2x=bemfz(l,i,j,k,1)
-               v2y=bemfz(l,i,j,k,2)
-               emfambdiff(l,i,j,k,3)=(v1x*v2y-v2x*v1y)/(gammaAD*rhoz)
+               jx=jemfz(l,i,j,k,1)
+               jy=jemfz(l,i,j,k,2)
+               jz=jemfz(l,i,j,k,3)
+               bx=bemfz(l,i,j,k,1)
+               by=bemfz(l,i,j,k,2)
+               bz=bemfz(l,i,j,k,3)
+               fx=jy*bz-jz*by !florentzz(l,1)
+               fy=jz*bx-jx*bz !florentzz(l,2)
+               emfambdiff(l,i,j,k,3)=(fx*by-bx*fy)/(gammaAD*rhoz)
 
                if(nimhdheating_in_flux) then
                   ! energy flux on faces
@@ -723,40 +719,3 @@ end subroutine computambip
 !###########################################################
 !###########################################################
 
-! VECTOR HELPER FUNCTIONS
-! computd{x,y,z}bis : first-order forward finite difference of component
-!   n2 of the vector field vec along the x, y or z direction, at cell dx.
-! crossprod / crossprodbis : cross product of two vector (rank-1) or
-!   tensor (rank-2, done column by column) fields at cell (l,i,j,k).
-! crossprod{x,y,z} : the three scalar components of a single cross product.
-
-!###########################################################
-!###########################################################
-
-! cross product of two vector fields at cell (l,i,j,k): v1crossv2 = vec1 x vec2
-subroutine crossprod(vec1,vec2,v1crossv2,l,i,j,k)
-
-   use amr_parameters,only:dp,nvector
-   use hydro_parameters,only:iu1,iu2,ju1,ju2,ku1,ku2
-   implicit none
-   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::vec1,vec2,v1crossv2
-   integer ::l,i,j,k
-
-   real(dp)::v1x,v1y,v1z,v2x,v2y,v2z
-
-   v1x=vec1(l,i,j,k,1)
-   v1y=vec1(l,i,j,k,2)
-   v1z=vec1(l,i,j,k,3)
-
-   v2x=vec2(l,i,j,k,1)
-   v2y=vec2(l,i,j,k,2)
-   v2z=vec2(l,i,j,k,3)
-
-   v1crossv2(l,i,j,k,1)=v1y*v2z-v1z*v2y
-   v1crossv2(l,i,j,k,2)=v1z*v2x-v1x*v2z
-   v1crossv2(l,i,j,k,3)=v1x*v2y-v2x*v1y
-
-end subroutine crossprod
-!###########################################################
-!###########################################################
-!###########################################################
