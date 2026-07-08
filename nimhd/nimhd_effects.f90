@@ -328,10 +328,11 @@ subroutine computejb2(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
    ! These are later scaled by the resistivities in computdifmag and
    ! computambip. Must be called before those two routines.
    !-----------------------------------------------------------------
-   integer ::i, j, k, l, m
+   integer ::i, j, k, l, m, n
+   real(dp)::v1x,v1y,v1z,v2x,v2y,v2z
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::bmagijbis
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3,1:3)::jface
-   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3,1:3)::fluxbis,fluxter,fluxquat
+   real(dp),dimension(1:nvector,1:3,1:3)::fluxbis,fluxter
    real(dp)::bsquare
    real(dp)::computdxbis,computdybis,computdzbis  !forward derivatives
 
@@ -499,30 +500,65 @@ subroutine computejb2(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
       do j=min(1,ju1+1),max(1,ju2-1)
          do i=min(1,iu1+1),max(1,iu2-1)
             do l = 1, ngrid
-               call crossprodbis(jface,bmagij,fluxbis,l,i,j,k)
-               fluxmd(l,i,j,k,1)=fluxbis(l,i,j,k,1,1)
-               fluxmd(l,i,j,k,2)=fluxbis(l,i,j,k,2,2)
-               fluxmd(l,i,j,k,3)=fluxbis(l,i,j,k,3,3)
+               do n=1,3
+                  v1x=jface(l,i,j,k,1,n)
+                  v1y=jface(l,i,j,k,2,n)
+                  v1z=jface(l,i,j,k,3,n)
+
+                  v2x=bmagij(l,i,j,k,1,n)
+                  v2y=bmagij(l,i,j,k,2,n)
+                  v2z=bmagij(l,i,j,k,3,n)
+
+                  fluxbis(l,1,n)=v1y*v2z-v1z*v2y
+                  fluxbis(l,2,n)=v1z*v2x-v1x*v2z
+                  fluxbis(l,3,n)=v1x*v2y-v2x*v1y
+               end do
+
+               fluxmd(l,i,j,k,1)=fluxbis(l,1,1)
+               fluxmd(l,i,j,k,2)=fluxbis(l,2,2)
+               fluxmd(l,i,j,k,3)=fluxbis(l,3,3)
             end do
+
+            if(nambipolar) then
+               do l = 1, ngrid
+                  do n=1,3
+                     v1x=fluxbis(l,1,n)
+                     v1y=fluxbis(l,2,n)
+                     v1z=fluxbis(l,3,n)
+
+                     v2x=bmagij(l,i,j,k,1,n)
+                     v2y=bmagij(l,i,j,k,2,n)
+                     v2z=bmagij(l,i,j,k,3,n)
+
+                     fluxter(l,1,n)=v1y*v2z-v1z*v2y
+                     fluxter(l,2,n)=v1z*v2x-v1x*v2z
+                     fluxter(l,3,n)=v1x*v2y-v2x*v1y
+                  end do
+
+                  ! Compute fluxad from crossproduct ((J x B) x B) x B
+                  v1y=fluxter(l,2,1)
+                  v1z=fluxter(l,3,1)
+                  v2y=bmagij(l,i,j,k,2,1)
+                  v2z=bmagij(l,i,j,k,3,1)
+                  fluxad(l,i,j,k,1)=v1y*v2z-v1z*v2y
+
+                  v1x=fluxter(l,1,2)
+                  v1z=fluxter(l,3,2)
+                  v2x=bmagij(l,i,j,k,1,2)
+                  v2z=bmagij(l,i,j,k,3,2)
+                  fluxad(l,i,j,k,2)=v1z*v2x-v1x*v2z
+
+                  v1x=fluxter(l,1,3)
+                  v1y=fluxter(l,2,3)
+                  v2x=bmagij(l,i,j,k,1,3)
+                  v2y=bmagij(l,i,j,k,2,3)
+                  fluxad(l,i,j,k,3)=v1x*v2y-v2x*v1y
+
+               end do
+            endif
          end do
       end do
    end do
-
-   if(nambipolar) then
-      do k=min(1,ku1+1),max(1,ku2-1)
-         do j=min(1,ju1+1),max(1,ju2-1)
-            do i=min(1,iu1+1),max(1,iu2-1)
-               do l = 1, ngrid
-                  call crossprodbis(fluxbis,bmagij,fluxter,l,i,j,k)
-                  call crossprodbis(fluxter,bmagij,fluxquat,l,i,j,k)
-                  fluxad(l,i,j,k,1)=fluxquat(l,i,j,k,1,1)
-                  fluxad(l,i,j,k,2)=fluxquat(l,i,j,k,2,2)
-                  fluxad(l,i,j,k,3)=fluxquat(l,i,j,k,3,3)
-               end do
-            end do
-         end do
-      end do
-   endif
 
 end subroutine computejb2
 !###########################################################
@@ -700,33 +736,6 @@ end subroutine computambip
 
 !###########################################################
 !###########################################################
-! column-wise cross product of two rank-2 (3x3) fields:
-! v1crossv2(:,n) = vec1(:,n) x vec2(:,n) for each column n=1,3
-subroutine crossprodbis(vec1,vec2,v1crossv2,l,i,j,k)
-
-   use amr_parameters,only:dp,nvector
-   use hydro_parameters,only:iu1,iu2,ju1,ju2,ku1,ku2
-   implicit none
-   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3,1:3)::vec1,vec2,v1crossv2
-   integer ::l,i,j,k
-   real(dp)::v1x,v1y,v1z,v2x,v2y,v2z
-   integer::n
-
-   do n=1,3
-      v1x=vec1(l,i,j,k,1,n)
-      v1y=vec1(l,i,j,k,2,n)
-      v1z=vec1(l,i,j,k,3,n)
-
-      v2x=vec2(l,i,j,k,1,n)
-      v2y=vec2(l,i,j,k,2,n)
-      v2z=vec2(l,i,j,k,3,n)
-
-      v1crossv2(l,i,j,k,1,n)=v1y*v2z-v1z*v2y
-      v1crossv2(l,i,j,k,2,n)=v1z*v2x-v1x*v2z
-      v1crossv2(l,i,j,k,3,n)=v1x*v2y-v2x*v1y
-   end do
-
-end subroutine crossprodbis
 
 ! cross product of two vector fields at cell (l,i,j,k): v1crossv2 = vec1 x vec2
 subroutine crossprod(vec1,vec2,v1crossv2,l,i,j,k)
