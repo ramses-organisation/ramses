@@ -33,7 +33,7 @@ subroutine compute_bemf(u,q,ngrid,bemfx,bemfy,bemfz)
    integer,intent(in)::ngrid
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),intent(out)::bemfx,bemfy,bemfz
    !-------------------------------------------
-   ! compute magnetic field at location of EMF
+   ! Interpolates the magnetic field at location of EMF (edges)
    !-------------------------------------------
    integer ::i, j, k, l
 
@@ -312,14 +312,14 @@ subroutine computejb2(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar),intent(in)::q
    integer,intent(in)::ngrid
    real(dp),intent(in)::dx,dy,dz,dt
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),intent(in)::bemfx,bemfy,bemfz
    ! outputs
-   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),intent(out)::bemfx,bemfy,bemfz
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),intent(out)::jemfx,jemfy,jemfz
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3,1:3),intent(out)::bmagij
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),intent(out)::fluxmd,fluxad
    !-----------------------------------------------------------------
    ! Build the geometric quantities shared by both non-ideal effects.
-   ! Interpolates the magnetic field to the EMF edges (bemfx/y/z), the
+   ! the
    ! face locations (bmagij) and computes the current density J at the
    ! EMF edges (jemfx/y/z) and on the cell faces (jface). From J and B
    ! it forms the ideal-MHD energy-flux building blocks:
@@ -341,8 +341,6 @@ subroutine computejb2(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
    jemfx=0d0
    jemfy=0d0
    jemfz=0d0
-
-   call compute_bemf(u,q,ngrid,bemfx,bemfy,bemfz)
 
    call compute_bmagij(u,q,ngrid,bmagij)
 

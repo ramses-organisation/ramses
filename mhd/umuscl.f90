@@ -103,6 +103,7 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
 #ifdef NIMHD
   if(use_nonideal_mhd) then
      ! compute necessary quantities
+     call compute_bemf(uin,qin,ngrid,bemfx,bemfy,bemfz)
      call computejb2(uin,qin,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,bmagij,fluxmd,fluxad)
   endif
 
