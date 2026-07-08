@@ -313,9 +313,9 @@ subroutine computejb2(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
    integer,intent(in)::ngrid
    real(dp),intent(in)::dx,dy,dz,dt
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),intent(in)::bemfx,bemfy,bemfz
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3,1:3),intent(in)::bmagij
    ! outputs
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),intent(out)::jemfx,jemfy,jemfz
-   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3,1:3),intent(out)::bmagij
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),intent(out)::fluxmd,fluxad
    !-----------------------------------------------------------------
    ! Build the geometric quantities shared by both non-ideal effects.
@@ -341,8 +341,6 @@ subroutine computejb2(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
    jemfx=0d0
    jemfy=0d0
    jemfz=0d0
-
-   call compute_bmagij(u,q,ngrid,bmagij)
 
    call compute_bmagijbis(u,ngrid,bmagijbis)
 
