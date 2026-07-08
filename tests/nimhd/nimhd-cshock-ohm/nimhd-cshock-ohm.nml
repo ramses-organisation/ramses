@@ -85,7 +85,6 @@ C_bound(1)=0.0
 &NONIDEALMHD_PARAMS
 nmagdiffu=.true.
 etaMD=0.1d0
-nminitimestep=.false.   ! pour la diffusion ambipolaire seulement
 /
 
 &COOLING_PARAMS

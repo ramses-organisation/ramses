@@ -51,7 +51,7 @@ subroutine newdt_fine(ilevel)
 #ifdef NIMHD
   dtambdiffold(ilevel)=dtambdiff(ilevel)
   dtmagdiffold(ilevel)=dtmagdiff(ilevel)
-  dtwadold(ilevel)=dtwad(ilevel)
+  dtidealold(ilevel)=dtideal(ilevel)
 #endif
 
   ! Maximum time step
@@ -59,7 +59,7 @@ subroutine newdt_fine(ilevel)
 #ifdef NIMHD
   dtambdiff(ilevel)=dtnew(ilevel)
   dtmagdiff(ilevel)=dtnew(ilevel)
-  dtwad(ilevel)=dtnew(ilevel)
+  dtideal(ilevel)=dtnew(ilevel)
 #endif
   if(poisson.and.(self_gravity.or.gravity_rho_ana_type>0))then
      fourpi=4.0d0*pi

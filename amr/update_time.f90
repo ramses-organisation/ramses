@@ -119,7 +119,7 @@ subroutine update_time(ilevel)
            endif
 #ifdef NIMHD
            if(use_nonideal_mhd)then
-              write(*,889)dtambdiff(ilevel),dtmagdiff(ilevel),dtwad(ilevel)
+              write(*,889)dtambdiff(ilevel),dtmagdiff(ilevel),dtideal(ilevel)
            endif
 #endif
            itest=1

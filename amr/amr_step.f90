@@ -350,10 +350,10 @@ recursive subroutine amr_step(ilevel,icount)
            ! analogous, update NIMHD timesteps
            dtambdiffold(ilevel+1) = dtambdiff(ilevel) / dble(nsubcycle(ilevel))
            dtmagdiffold(ilevel+1) = dtmagdiff(ilevel) / dble(nsubcycle(ilevel))
-           dtwadold    (ilevel+1) = dtwad    (ilevel) / dble(nsubcycle(ilevel))
+           dtidealold(ilevel+1) = dtideal(ilevel) / dble(nsubcycle(ilevel))
            dtambdiff(ilevel+1) = dtambdiff(ilevel) / dble(nsubcycle(ilevel))
            dtmagdiff(ilevel+1) = dtmagdiff(ilevel) / dble(nsubcycle(ilevel))
-           dtwad    (ilevel+1) = dtwad    (ilevel) / dble(nsubcycle(ilevel))
+           dtideal  (ilevel+1) = dtideal  (ilevel) / dble(nsubcycle(ilevel))
         end if
 #endif
         call update_time(ilevel)
@@ -576,12 +576,12 @@ recursive subroutine amr_step(ilevel,icount)
         if(nsubcycle(ilevel-1)==1) then
            dtambdiff(ilevel-1) = dtambdiff(ilevel)
            dtmagdiff(ilevel-1) = dtmagdiff(ilevel)
-           dtwad    (ilevel-1) = dtwad    (ilevel)
+           dtideal  (ilevel-1) = dtideal  (ilevel)
         endif
         if (icount==2) then
            dtambdiff(ilevel-1) = dtambdiffold(ilevel) + dtambdiff(ilevel)
            dtmagdiff(ilevel-1) = dtmagdiffold(ilevel) + dtmagdiff(ilevel)
-           dtwad    (ilevel-1) = dtwadold    (ilevel) + dtwad    (ilevel)
+           dtideal  (ilevel-1) = dtidealold  (ilevel) + dtideal  (ilevel)
         endif
      end if
 #endif
