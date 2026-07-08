@@ -10,15 +10,14 @@
 ! Overview of the routines in this file:
 !   - compute_bemf / compute_bmagij / compute_bmagijbis : interpolate the
 !     magnetic field to the various staggered locations needed below.
-!   - computejb2   : build the current density J at the EMF/face locations
-!                    and the ideal-MHD flux building blocks (fluxmd, fluxad)
+!   - compute_jemf : compute the current density at the EMF/face locations
+!   - computejb2   : build the ideal-MHD flux building blocks (fluxmd, fluxad)
 !                    shared by both effects.
-!   - computdifmag : Ohmic dissipation EMF (emfohmdiss) and energy flux,
+!   - computdifmag : Ohmic dissipation EMF (emfohmdiss),
 !                    using the fixed resistivity eta = etaMD.
-!   - computambip  : ambipolar diffusion EMF (emfambdiff) and energy flux,
+!   - computambip  : ambipolar diffusion EMF (emfambdiff),
 !                    using the fixed coefficient beta = 1/(gammaAD*rho).
-!   - helpers      : finite-difference derivatives (computd{x,y,z}bis)
-!                    and cross products (crossprod*).
+!   - compute_heating_difmag / compute_heating_ambip : NIMHD energy fluxes
 
 !###########################################################
 !###########################################################
@@ -33,7 +32,7 @@ subroutine compute_bemf(u,q,ngrid,bemfx,bemfy,bemfz)
    integer,intent(in)::ngrid
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),intent(out)::bemfx,bemfy,bemfz
    !-------------------------------------------
-   ! Interpolates the magnetic field at location of EMF (edges)
+   ! Interpolates the magnetic field at location of EMF
    !-------------------------------------------
    integer ::i, j, k, l
 
@@ -317,6 +316,7 @@ subroutine compute_jemf(u,ngrid,dx,dy,dz,bmagij,jemfx,jemfy,jemfz)
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),intent(out)::jemfx,jemfy,jemfz
    !-----------------------------------------------------------------
    ! Computes the current density J at the EMF edges 
+   ! jemfx(l,i,j,k,n) is the component Jn at i,j-1/2,k-1/2
    !-----------------------------------------------------------------
    integer ::i, j, k, l, m, n
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::bmagijbis
@@ -331,11 +331,6 @@ subroutine compute_jemf(u,ngrid,dx,dy,dz,bmagij,jemfx,jemfy,jemfz)
    jemfz=0d0
 
    call compute_bmagijbis(u,ngrid,bmagijbis)
-
-   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-   ! computation of the component of j where EMFs are located
-   ! jemfx(l,i,j,k,n) is the component Jn at i,j-1/2,k-1/2
-   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
    do k=min(1,ku1+1),max(1,ku2-1)
       do j=min(1,ju1+1),max(1,ju2-1)
@@ -373,17 +368,16 @@ subroutine computejb2(q,ngrid,dx,dy,dz,bemfx,bemfy,bemfz,bmagij,fluxmd,fluxad)
    real(dp),intent(in)::dx,dy,dz
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),intent(in)::bemfx,bemfy,bemfz
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3,1:3),intent(in)::bmagij
-   ! outputs
+   ! output
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),intent(out)::fluxmd,fluxad
    !-----------------------------------------------------------------
-   ! Build the geometric quantities shared by both non-ideal effects.
-   ! the face locations (bmagij) and computes the current density J at the
-   ! EMF edges (jemfx/y/z) and on the cell faces (jface). From J and B
-   ! it forms the ideal-MHD energy-flux building blocks:
+   ! Calculate the ideal-MHD energy-flux building blocks:
    !   fluxmd = J x B          (used by Ohmic dissipation)
    !   fluxad = (J x B) x B x B (used by ambipolar diffusion, if active)
-   ! These are later scaled by the resistivities in computdifmag and
-   ! computambip. Must be called before those two routines.
+   ! Where J is the current at the cell faces (calculated here), 
+   ! and B is the magnetic field given by compute_bmagij.
+   ! These are later scaled by the resistivities in
+   ! compute_heating_difmag and compute_heating_ambip.
    !-----------------------------------------------------------------
    integer ::i, j, k, l, m, n
    real(dp)::v1x,v1y,v1z,v2x,v2y,v2z
@@ -398,10 +392,6 @@ subroutine computejb2(q,ngrid,dx,dy,dz,bemfx,bemfy,bemfz,bmagij,fluxmd,fluxad)
 
    fluxmd=0d0
    fluxad=0d0
-
-   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-   ! computation of the component of j at center of cell
-   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
    do k=min(1,ku1+1),max(1,ku2-1)
       do j=min(1,ju1+1),max(1,ju2-1)
@@ -450,6 +440,7 @@ subroutine computejb2(q,ngrid,dx,dy,dz,bemfx,bemfy,bemfz,bmagij,fluxmd,fluxad)
                jface(l,3,3) = (computdxbis - computdybis) * oneoverdx
             end do 
 
+            ! Compute fluxmd from crossproduct (J x B)
             do l = 1, ngrid
                do n=1,3
                   v1x=jface(l,1,n)
@@ -513,21 +504,18 @@ end subroutine computejb2
 !###########################################################
 !###########################################################
 subroutine computdifmag(ngrid,jemfx,jemfy,jemfz,emfohmdiss)
-
    use amr_parameters
    use hydro_commons
    use nimhd_parameters
    implicit none
-   ! inputs
    integer,intent(in)::ngrid
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),intent(in)::jemfx,jemfy,jemfz
-   ! outputs
-   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),intent(out):: emfohmdiss
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),intent(out)::emfohmdiss
    !-----------------------------------------------------------------
-   ! Ohmic dissipation. Computes the Ohmic contribution to the EMF,
+   ! Computes the Ohmic contribution to the EMF,
    !   emfohmdiss = -eta * J   (from dB/dt = -curl(eta*J)),
-   ! evaluated at the EMF edges using the fixed resistivity eta = etaMD.
-   ! Expects jemf* from computejb2.
+   ! evaluated at the EMF edges.
+   ! Assumes a fixed resistivity eta = etaMD.
    !-----------------------------------------------------------------
    integer ::i,j,k,l,h
 
@@ -558,10 +546,8 @@ subroutine compute_heating_difmag(ngrid,fluxmd,fluxohm)
    use hydro_commons
    use nimhd_parameters
    implicit none
-   ! inputs
    integer,intent(in)::ngrid
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),intent(in)::fluxmd
-   ! outputs
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),intent(out)::fluxohm
    !-----------------------------------------------------------------
    ! Compute the Ohmic energy flux (fluxohm = eta * fluxmd) on the faces.
@@ -594,22 +580,21 @@ subroutine computambip(u,ngrid,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,emfambdiff)
    use amr_parameters
    use hydro_commons
    use nimhd_parameters
-   use const
    implicit none
    ! inputs
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar+3),intent(in)::u
    integer,intent(in)::ngrid
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),intent(in)::bemfx,bemfy,bemfz
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),intent(in)::jemfx,jemfy,jemfz
-   ! outputs
+   ! output
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),intent(out)::emfambdiff
    !-----------------------------------------------------------------
-   ! Ambipolar diffusion. Computes the ambipolar contribution to the
-   ! EMF from the Lorentz force F = J x B:
+   ! Computes the ambipolar contribution to the EMF from the Lorentz force
+   !   F = J x B
    !   emfambdiff = beta * (F x B)   (from dB/dt = curl(beta*(JxB)xB)),
-   ! evaluated at the EMF edges, with the fixed coefficient
-   ! beta = 1/(gammaAD*rho).
-   ! Expects bemf*, jemf* from computejb2.
+   ! evaluated at the EMF edges.
+   ! Assume a fixed coefficient
+   !   beta = 1/(gammaAD*rho).
    !-----------------------------------------------------------------
    integer ::i, j, k, l
    real(dp)::jx,jy,jz,bx,by,bz,fx,fy,fz,beta_x,beta_y,beta_z
@@ -680,17 +665,14 @@ subroutine compute_heating_ambip(u,ngrid,fluxad,fluxambdiff)
    use amr_parameters
    use hydro_commons
    use nimhd_parameters
-   use const
    implicit none
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar+3),intent(in)::u
    integer,intent(in)::ngrid
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),intent(in)::fluxad
-   ! outputs
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),intent(out)::fluxambdiff
    !-----------------------------------------------------------------
-   ! Calculate the ambipolar energy flux
-   !   fluxambdiff = -beta * fluxad on
-   ! the faces.
+   ! Calculate the ambipolar energy flux on the faces
+   !   fluxambdiff = -beta * fluxad
    ! Assume fixed coefficient
    !   beta = 1/(gammaAD*rho)
    !-----------------------------------------------------------------
