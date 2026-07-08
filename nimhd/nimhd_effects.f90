@@ -561,34 +561,26 @@ end subroutine computejb2
 !###########################################################
 !###########################################################
 !###########################################################
-subroutine computdifmag(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,bmagij,fluxmd,emfohmdiss,fluxohm)
+subroutine computdifmag(ngrid,jemfx,jemfy,jemfz,emfohmdiss)
 
    use amr_parameters
    use hydro_commons
    use nimhd_parameters
    implicit none
    ! inputs
-   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar+3),intent(in)::u
    integer,intent(in)::ngrid
-   real(dp),intent(in)::dx,dy,dz,dt
-   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),intent(in)::bemfx,bemfy,bemfz
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),intent(in)::jemfx,jemfy,jemfz
-   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3,1:3),intent(in)::bmagij
-   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),intent(in)::fluxmd
    ! outputs
-   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),intent(out):: emfohmdiss,fluxohm
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),intent(out):: emfohmdiss
    !-----------------------------------------------------------------
    ! Ohmic dissipation. Computes the Ohmic contribution to the EMF,
    !   emfohmdiss = -eta * J   (from dB/dt = -curl(eta*J)),
    ! evaluated at the EMF edges using the fixed resistivity eta = etaMD.
-   ! If nimhdheating_in_flux is set, it also builds the associated Ohmic
-   ! energy flux (fluxohm = eta * fluxmd) on the faces.
-   ! Expects jemf* and fluxmd from computejb2.
+   ! Expects jemf* from computejb2.
    !-----------------------------------------------------------------
    integer ::i,j,k,l,h
 
    emfohmdiss = 0d0
-   fluxohm = 0d0
 
    do k=min(1,ku1+1),max(1,ku2-1)
       do j=min(1,ju1+1),max(1,ju2-1)
@@ -601,19 +593,47 @@ subroutine computdifmag(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
                emfohmdiss(l,i,j,k,3)=-etaMD*jemfz(l,i,j,k,3)
             end do
 
-            if(nimhdheating_in_flux) then
-               do l=1,ngrid
-                  fluxohm(l,i,j,k,1)=etaMD*fluxmd(l,i,j,k,1)
-                  fluxohm(l,i,j,k,2)=etaMD*fluxmd(l,i,j,k,2)
-                  fluxohm(l,i,j,k,3)=etaMD*fluxmd(l,i,j,k,3)
-               enddo
-            endif
-
          end do
       end do
    end do
 
 end subroutine computdifmag
+!###########################################################
+!###########################################################
+!###########################################################
+!###########################################################
+subroutine compute_heating_difmag(ngrid,fluxmd,fluxohm)
+   use amr_parameters
+   use hydro_commons
+   use nimhd_parameters
+   implicit none
+   ! inputs
+   integer,intent(in)::ngrid
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),intent(in)::fluxmd
+   ! outputs
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),intent(out)::fluxohm
+   !-----------------------------------------------------------------
+   ! Compute the Ohmic energy flux (fluxohm = eta * fluxmd) on the faces.
+   ! Expects fluxmd from computejb2.
+   ! Resistivity is assumed to be constant: eta = etaMD
+   !-----------------------------------------------------------------
+   integer ::i,j,k,l,h
+
+   fluxohm = 0d0
+
+   do k=min(1,ku1+1),max(1,ku2-1)
+      do j=min(1,ju1+1),max(1,ju2-1)
+         do i=min(1,iu1+1),max(1,iu2-1)
+            do l=1,ngrid
+               fluxohm(l,i,j,k,1)=etaMD*fluxmd(l,i,j,k,1)
+               fluxohm(l,i,j,k,2)=etaMD*fluxmd(l,i,j,k,2)
+               fluxohm(l,i,j,k,3)=etaMD*fluxmd(l,i,j,k,3)
+            enddo
+         end do
+      end do
+   end do
+
+end subroutine compute_heating_difmag
 !###########################################################
 !###########################################################
 !###########################################################
