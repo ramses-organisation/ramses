@@ -257,7 +257,7 @@ subroutine compute_bmagijbis(u,ngrid,bmagijbis)
    integer,intent(in)::ngrid
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),intent(out)::bmagijbis
    !-----------------------------------------------------------------
-   ! Compure the value of the magnetic field component at i-1/2,j-1/2,k-1/2
+   ! Compute the value of the magnetic field component at i-1/2,j-1/2,k-1/2
    ! Used by compute_jemf
    ! Only fills the values that are actually used by compute_jemf
    !-----------------------------------------------------------------
@@ -390,6 +390,11 @@ subroutine computejb2(q,ngrid,dx,dy,dz,bemfx,bemfy,bemfz,bmagij,fluxmd,fluxad)
    real(dp),dimension(1:nvector,1:3,1:3)::jface
    real(dp),dimension(1:nvector,1:3,1:3)::fluxbis
    real(dp)::computdxbis,computdybis,computdzbis  !forward derivatives
+   real(dp)::oneoverdx
+
+   ! We optimize by calculating the division only once,
+   ! and using the fact that dx=dy=dz in RAMSES
+   oneoverdx = 1d0/dx
 
    fluxmd=0d0
    fluxad=0d0
@@ -406,43 +411,43 @@ subroutine computejb2(q,ngrid,dx,dy,dz,bemfx,bemfy,bemfz,bmagij,fluxmd,fluxad)
             ! (q contains the magnetic field at center of cells)
             do l = 1, ngrid
                ! face at i-1/2,j,k
-               computdybis = (bemfz(l,i,j+1,k  ,3) - bemfz(l,i,j,k,3)) / dy
-               computdzbis = (bemfy(l,i,j  ,k+1,2) - bemfy(l,i,j,k,2)) / dz
-               jface(l,1,1) = computdybis - computdzbis
+               computdybis = (bemfz(l,i,j+1,k  ,3) - bemfz(l,i,j,k,3)) !/ dy
+               computdzbis = (bemfy(l,i,j  ,k+1,2) - bemfy(l,i,j,k,2)) !/ dz
+               jface(l,1,1) = (computdybis - computdzbis) * oneoverdx
 
-               computdzbis = (bemfy(l,i,j,k+1,1) - bemfy(l,i  ,j,k,1)) / dz
-               computdxbis = (    q(l,i,j,k  ,8) -     q(l,i-1,j,k,8)) / dx
-               jface(l,2,1) = computdzbis - computdxbis
+               computdzbis = (bemfy(l,i,j,k+1,1) - bemfy(l,i  ,j,k,1)) !/ dz
+               computdxbis = (    q(l,i,j,k  ,8) -     q(l,i-1,j,k,8)) !/ dx
+               jface(l,2,1) = (computdzbis - computdxbis) * oneoverdx
 
-               computdxbis = (    q(l,i,j  ,k,7) -     q(l,i-1,j,k,7)) / dx
-               computdybis = (bemfz(l,i,j+1,k,1) - bemfz(l,i  ,j,k,1)) / dy
-               jface(l,3,1) = computdxbis - computdybis
+               computdxbis = (    q(l,i,j  ,k,7) -     q(l,i-1,j,k,7)) !/ dx
+               computdybis = (bemfz(l,i,j+1,k,1) - bemfz(l,i  ,j,k,1)) !/ dy
+               jface(l,3,1) = (computdxbis - computdybis) * oneoverdx
 
                ! face at i,j-1/2,k
-               computdybis = (    q(l,i,j,k  ,8) -     q(l,i,j-1,k,8)) / dy
-               computdzbis = (bemfx(l,i,j,k+1,2) - bemfx(l,i,j  ,k,2)) / dz
-               jface(l,1,2) = computdybis - computdzbis
+               computdybis = (    q(l,i,j,k  ,8) -     q(l,i,j-1,k,8)) !/ dy
+               computdzbis = (bemfx(l,i,j,k+1,2) - bemfx(l,i,j  ,k,2)) !/ dz
+               jface(l,1,2) = (computdybis - computdzbis) * oneoverdx
 
-               computdzbis = (bemfx(l,i  ,j,k+1,1) - bemfx(l,i,j,k,1)) / dz
-               computdxbis = (bemfz(l,i+1,j,k  ,3) - bemfz(l,i,j,k,3)) / dx
-               jface(l,2,2) = computdzbis - computdxbis
+               computdzbis = (bemfx(l,i  ,j,k+1,1) - bemfx(l,i,j,k,1)) !/ dz
+               computdxbis = (bemfz(l,i+1,j,k  ,3) - bemfz(l,i,j,k,3)) !/ dx
+               jface(l,2,2) = (computdzbis - computdxbis) * oneoverdx
 
-               computdxbis = (bemfz(l,i+1,j,k,2) - bemfz(l,i,j  ,k,2)) / dx
-               computdybis = (    q(l,i  ,j,k,6) -     q(l,i,j-1,k,6)) / dy
-               jface(l,3,2) = computdxbis - computdybis
+               computdxbis = (bemfz(l,i+1,j,k,2) - bemfz(l,i,j  ,k,2)) !/ dx
+               computdybis = (    q(l,i  ,j,k,6) -     q(l,i,j-1,k,6)) !/ dy
+               jface(l,3,2) = (computdxbis - computdybis) * oneoverdx
 
                ! face at i,j,k-1/2
-               computdybis = (bemfx(l,i,j+1,k,3) - bemfx(l,i,j,k  ,3)) / dy
-               computdzbis = (    q(l,i,j  ,k,7) -     q(l,i,j,k-1,7)) / dz
-               jface(l,1,3) = computdybis - computdzbis
+               computdybis = (bemfx(l,i,j+1,k,3) - bemfx(l,i,j,k  ,3)) !/ dy
+               computdzbis = (    q(l,i,j  ,k,7) -     q(l,i,j,k-1,7)) !/ dz
+               jface(l,1,3) = (computdybis - computdzbis) * oneoverdx
 
-               computdzbis = (    q(l,i  ,j,k,6) -     q(l,i,j,k-1,6)) / dz
-               computdxbis = (bemfy(l,i+1,j,k,3) - bemfy(l,i,j,k  ,3)) / dx
-               jface(l,2,3) = computdzbis - computdxbis
+               computdzbis = (    q(l,i  ,j,k,6) -     q(l,i,j,k-1,6)) !/ dz
+               computdxbis = (bemfy(l,i+1,j,k,3) - bemfy(l,i,j,k  ,3)) !/ dx
+               jface(l,2,3) = (computdzbis - computdxbis) * oneoverdx
 
-               computdxbis = (bemfy(l,i+1,j  ,k,2) - bemfy(l,i,j,k,2)) / dx
-               computdybis = (bemfx(l,i  ,j+1,k,1) - bemfx(l,i,j,k,1)) / dx
-               jface(l,3,3) = computdxbis - computdybis
+               computdxbis = (bemfy(l,i+1,j  ,k,2) - bemfy(l,i,j,k,2)) !/ dx
+               computdybis = (bemfx(l,i  ,j+1,k,1) - bemfx(l,i,j,k,1)) !/ dx
+               jface(l,3,3) = (computdxbis - computdybis) * oneoverdx
             end do 
 
             do l = 1, ngrid
