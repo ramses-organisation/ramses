@@ -334,7 +334,7 @@ subroutine computejb2(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::bcenter
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3,1:3)::fluxbis,fluxter,fluxquat
    real(dp)::bsquare
-   real(dp)::computdxbis,computdybis,computdzbis
+   real(dp)::computdxbis,computdybis,computdzbis  !forward derivatives
 
    fluxmd=0d0
    fluxad=0d0
@@ -399,7 +399,9 @@ subroutine computejb2(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
       do j=min(1,ju1+1),max(1,ju2-1)
          do i=min(1,iu1+1),iu2
             do l=1,ngrid
-               jface(l,i,j,k,1,1)=computdybis(bemfz,3,l,i,j,k,dy)-computdzbis(bemfy,2,l,i,j,k,dz)
+               computdybis = (bemfz(l,i,j+1,k  ,3) - bemfz(l,i,j,k,3)) / dy
+               computdzbis = (bemfy(l,i,j  ,k+1,2) - bemfy(l,i,j,k,2)) / dz
+               jface(l,i,j,k,1,1) = computdybis - computdzbis
             end do
          end do
       end do
@@ -409,7 +411,9 @@ subroutine computejb2(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
       do j=ju1,ju2
          do i=min(1,iu1+1),iu2
             do l=1,ngrid
-               jface(l,i,j,k,2,1)=computdzbis(bemfy,1,l,i,j,k,dz)-computdxbis(bcenter,3,l,i-1,j,k,dx)
+               computdzbis = (  bemfy(l,i,j,k+1,1) -   bemfy(l,i  ,j,k,1)) / dz
+               computdxbis = (bcenter(l,i,j,k  ,3) - bcenter(l,i-1,j,k,3)) / dx
+               jface(l,i,j,k,2,1) = computdzbis - computdxbis
             end do
          end do
       end do
@@ -419,7 +423,9 @@ subroutine computejb2(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
       do j=min(1,ju1+1),max(1,ju2-1)
          do i=min(1,iu1+1),iu2
             do l=1,ngrid
-               jface(l,i,j,k,3,1)=computdxbis(bcenter,2,l,i-1,j,k,dx)-computdybis(bemfz,1,l,i,j,k,dy)
+               computdxbis = (bcenter(l,i,j  ,k,2) - bcenter(l,i-1,j,k,2)) / dx
+               computdybis = (  bemfz(l,i,j+1,k,1) -   bemfz(l,i  ,j,k,1)) / dy
+               jface(l,i,j,k,3,1) = computdxbis - computdybis
             end do
          end do
       end do
@@ -431,7 +437,9 @@ subroutine computejb2(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
       do j=min(1,ju1+1),ju2
          do i=iu1,iu2
             do l=1,ngrid
-               jface(l,i,j,k,1,2)=computdybis(bcenter,3,l,i,j-1,k,dy)-computdzbis(bemfx,2,l,i,j,k,dz)
+               computdybis = (bcenter(l,i,j,k  ,3) - bcenter(l,i,j-1,k,3)) / dy
+               computdzbis = (  bemfx(l,i,j,k+1,2) -   bemfx(l,i,j  ,k,2)) / dz
+               jface(l,i,j,k,1,2) = computdybis - computdzbis
             end do
          end do
       end do
@@ -441,7 +449,9 @@ subroutine computejb2(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
       do j=min(1,ju1+1),ju2
          do i=min(1,iu1+1),max(1,iu2-1)
             do l=1,ngrid
-               jface(l,i,j,k,2,2)=computdzbis(bemfx,1,l,i,j,k,dz)-computdxbis(bemfz,3,l,i,j,k,dx)
+               computdzbis = (bemfx(l,i  ,j,k+1,1) - bemfx(l,i,j,k,1)) / dz
+               computdxbis = (bemfz(l,i+1,j,k  ,3) - bemfz(l,i,j,k,3)) / dx
+               jface(l,i,j,k,2,2) = computdzbis - computdxbis
             end do
          end do
       end do
@@ -451,7 +461,9 @@ subroutine computejb2(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
       do j=min(1,ju1+1),ju2
          do i=min(1,iu1+1),max(1,iu2-1)
             do l=1,ngrid
-               jface(l,i,j,k,3,2)=computdxbis(bemfz,2,l,i,j,k,dx)-computdybis(bcenter,1,l,i,j-1,k,dy)
+               computdxbis = (  bemfz(l,i+1,j,k,2) -   bemfz(l,i,j  ,k,2)) / dx
+               computdybis = (bcenter(l,i  ,j,k,1) - bcenter(l,i,j-1,k,1)) / dy
+               jface(l,i,j,k,3,2) = computdxbis - computdybis
             end do
          end do
       end do
@@ -463,7 +475,9 @@ subroutine computejb2(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
       do j=min(1,ju1+1),max(1,ju2-1)
          do i=iu1,iu2
             do l=1,ngrid
-               jface(l,i,j,k,1,3)=computdybis(bemfx,3,l,i,j,k,dy)-computdzbis(bcenter,2,l,i,j,k-1,dz)
+               computdybis = (  bemfx(l,i,j+1,k,3) -   bemfx(l,i,j,k  ,3)) / dy
+               computdzbis = (bcenter(l,i,j  ,k,2) - bcenter(l,i,j,k-1,2)) / dz
+               jface(l,i,j,k,1,3) = computdybis - computdzbis
             end do
          end do
       end do
@@ -473,7 +487,9 @@ subroutine computejb2(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
       do j=ju1,ju2
          do i=min(1,iu1+1),max(1,iu2-1)
             do l=1,ngrid
-               jface(l,i,j,k,2,3)=computdzbis(bcenter,1,l,i,j,k-1,dz)-computdxbis(bemfy,3,l,i,j,k,dx)
+               computdzbis = (bcenter(l,i  ,j,k,1) - bcenter(l,i,j,k-1,1)) / dz
+               computdxbis = (  bemfy(l,i+1,j,k,3) -   bemfy(l,i,j,k  ,3)) / dx
+               jface(l,i,j,k,2,3) = computdzbis - computdxbis
             end do
          end do
       end do
@@ -483,7 +499,9 @@ subroutine computejb2(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
       do j=min(1,ju1+1),max(1,ju2-1)
          do i=min(1,iu1+1),max(1,iu2-1)
             do l=1,ngrid
-               jface(l,i,j,k,3,3)=computdxbis(bemfy,2,l,i,j,k,dx)-computdybis(bemfx,1,l,i,j,k,dx)
+               computdxbis = (bemfy(l,i+1,j  ,k,2) - bemfy(l,i,j,k,2)) / dx
+               computdybis = (bemfx(l,i  ,j+1,k,1) - bemfx(l,i,j,k,1)) / dx
+               jface(l,i,j,k,3,3) = computdxbis - computdybis
             end do
          end do
       end do
@@ -694,47 +712,6 @@ end subroutine computambip
 ! crossprod{x,y,z} : the three scalar components of a single cross product.
 
 !###########################################################
-! forward x-derivative of component n2 of vec, divided by dx
-double precision function computdxbis(vec,n2,l,i,j,k,dx)
-
-   use amr_parameters,only:dp,nvector
-   use hydro_parameters,only:iu1,iu2,ju1,ju2,ku1,ku2
-   implicit none
-   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::vec
-   real(dp)::dx
-   integer::n2,l,i,j,k
-
-   computdxbis = (vec(l,i+1,j,k,n2) - vec(l,i,j,k,n2)) / dx
-
-end function computdxbis
-
-! forward y-derivative of component n2 of vec, divided by dx
-double precision  function computdybis(vec,n2,l,i,j,k,dx)
-
-   use amr_parameters,only:dp,nvector
-   use hydro_parameters,only:iu1,iu2,ju1,ju2,ku1,ku2
-   implicit none
-   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::vec
-   real(dp)::dx
-   integer::n2,l,i,j,k
-
-   computdybis=(vec(l,i,j+1,k,n2) - vec(l,i,j,k,n2)) / dx
-
-end function computdybis
-
-! forward z-derivative of component n2 of vec, divided by dx
-double precision  function computdzbis(vec,n2,l,i,j,k,dx)
-
-   use amr_parameters,only:dp,nvector
-   use hydro_parameters,only:iu1,iu2,ju1,ju2,ku1,ku2
-   implicit none
-   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::vec
-   real(dp)::dx
-   integer::n2,l,i,j,k
-
-   computdzbis = (vec(l,i,j,k+1,n2) - vec(l,i,j,k,n2)) / dx
-
-end function computdzbis
 !###########################################################
 ! column-wise cross product of two rank-2 (3x3) fields:
 ! v1crossv2(:,n) = vec1(:,n) x vec2(:,n) for each column n=1,3
