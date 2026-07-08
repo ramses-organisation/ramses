@@ -302,21 +302,18 @@ end subroutine compute_bmagijbis
 !###########################################################
 !###########################################################
 !###########################################################
-subroutine computejb2(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,bmagij,fluxmd,fluxad)
+subroutine compute_jemf(u,ngrid,dx,dy,dz,bmagij,jemfx,jemfy,jemfz)
    use amr_parameters
    use hydro_commons
    use nimhd_parameters
    implicit none
    ! inputs
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar+3),intent(in)::u
-   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar),intent(in)::q
    integer,intent(in)::ngrid
-   real(dp),intent(in)::dx,dy,dz,dt
-   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),intent(in)::bemfx,bemfy,bemfz
+   real(dp),intent(in)::dx,dy,dz
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3,1:3),intent(in)::bmagij
    ! outputs
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),intent(out)::jemfx,jemfy,jemfz
-   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),intent(out)::fluxmd,fluxad
    !-----------------------------------------------------------------
    ! Build the geometric quantities shared by both non-ideal effects.
    ! the
@@ -329,15 +326,8 @@ subroutine computejb2(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
    ! computambip. Must be called before those two routines.
    !-----------------------------------------------------------------
    integer ::i, j, k, l, m, n
-   real(dp)::v1x,v1y,v1z,v2x,v2y,v2z
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::bmagijbis
-   real(dp),dimension(1:nvector,1:3,1:3)::jface
-   real(dp),dimension(1:nvector,1:3,1:3)::fluxbis
-   real(dp)::bsquare
-   real(dp)::computdxbis,computdybis,computdzbis  !forward derivatives
 
-   fluxmd=0d0
-   fluxad=0d0
    jemfx=0d0
    jemfy=0d0
    jemfz=0d0
@@ -368,6 +358,45 @@ subroutine computejb2(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
          end do
       end do
    end do
+
+end subroutine compute_jemf
+!###########################################################
+!###########################################################
+!###########################################################
+!###########################################################
+subroutine computejb2(q,ngrid,dx,dy,dz,bemfx,bemfy,bemfz,bmagij,fluxmd,fluxad)
+   use amr_parameters
+   use hydro_commons
+   use nimhd_parameters
+   implicit none
+   ! inputs
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar),intent(in)::q
+   integer,intent(in)::ngrid
+   real(dp),intent(in)::dx,dy,dz
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),intent(in)::bemfx,bemfy,bemfz
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3,1:3),intent(in)::bmagij
+   ! outputs
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),intent(out)::fluxmd,fluxad
+   !-----------------------------------------------------------------
+   ! Build the geometric quantities shared by both non-ideal effects.
+   ! the face locations (bmagij) and computes the current density J at the
+   ! EMF edges (jemfx/y/z) and on the cell faces (jface). From J and B
+   ! it forms the ideal-MHD energy-flux building blocks:
+   !   fluxmd = J x B          (used by Ohmic dissipation)
+   !   fluxad = (J x B) x B x B (used by ambipolar diffusion, if active)
+   ! These are later scaled by the resistivities in computdifmag and
+   ! computambip. Must be called before those two routines.
+   !-----------------------------------------------------------------
+   integer ::i, j, k, l, m, n
+   real(dp)::v1x,v1y,v1z,v2x,v2y,v2z
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::bmagijbis
+   real(dp),dimension(1:nvector,1:3,1:3)::jface
+   real(dp),dimension(1:nvector,1:3,1:3)::fluxbis
+   real(dp)::bsquare
+   real(dp)::computdxbis,computdybis,computdzbis  !forward derivatives
+
+   fluxmd=0d0
+   fluxad=0d0
 
    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
    ! computation of the component of j at center of cell
