@@ -338,11 +338,6 @@ subroutine computejb2(u,q,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,
 
    fluxmd=0d0
    fluxad=0d0
-   bmagij=0d0
-
-   bemfx=0d0
-   bemfy=0d0
-   bemfz=0d0
    jemfx=0d0
    jemfy=0d0
    jemfz=0d0
