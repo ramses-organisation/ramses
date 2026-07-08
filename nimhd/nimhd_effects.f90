@@ -637,7 +637,6 @@ subroutine computambip(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,b
 
    real(dp)::v1x,v1y,v1z,v2x,v2y,v2z
    real(dp)::rhox,rhoy,rhoz,rhofx,rhofy,rhofz
-   real(dp)::crossprodx,crossprody,crossprodz
 
    emfambdiff=0d0
    fluxambdiff=0d0
@@ -675,33 +674,27 @@ subroutine computambip(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,b
 
                ! EMF x
 
-               v1x=florentzx(l,i,j,k,1)
                v1y=florentzx(l,i,j,k,2)
                v1z=florentzx(l,i,j,k,3)
-               v2x=bemfx(l,i,j,k,1)
                v2y=bemfx(l,i,j,k,2)
                v2z=bemfx(l,i,j,k,3)
-               emfambdiff(l,i,j,k,1)=crossprodx(v1x,v1y,v1z,v2x,v2y,v2z)/(gammaAD*rhox)
+               emfambdiff(l,i,j,k,1)=(v1y*v2z-v1z*v2y)/(gammaAD*rhox)
 
                ! EMF y
 
                v1x=florentzy(l,i,j,k,1)
-               v1y=florentzy(l,i,j,k,2)
                v1z=florentzy(l,i,j,k,3)
                v2x=bemfy(l,i,j,k,1)
-               v2y=bemfy(l,i,j,k,2)
                v2z=bemfy(l,i,j,k,3)
-               emfambdiff(l,i,j,k,2)=crossprody(v1x,v1y,v1z,v2x,v2y,v2z)/(gammaAD*rhoy)
+               emfambdiff(l,i,j,k,2)=(v1z*v2x-v1x*v2z)/(gammaAD*rhoy)
 
                ! EMF z
 
                v1x=florentzz(l,i,j,k,1)
                v1y=florentzz(l,i,j,k,2)
-               v1z=florentzz(l,i,j,k,3)
                v2x=bemfz(l,i,j,k,1)
                v2y=bemfz(l,i,j,k,2)
-               v2z=bemfz(l,i,j,k,3)
-               emfambdiff(l,i,j,k,3)=crossprodz(v1x,v1y,v1z,v2x,v2y,v2z)/(gammaAD*rhoz)
+               emfambdiff(l,i,j,k,3)=(v1x*v2y-v2x*v1y)/(gammaAD*rhoz)
 
                if(nimhdheating_in_flux) then
                   ! energy flux on faces
@@ -783,9 +776,7 @@ subroutine crossprodbis(vec1,vec2,v1crossv2,l,i,j,k)
    implicit none
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3,1:3)::vec1,vec2,v1crossv2
    integer ::l,i,j,k
-
-   real(dp)::v1x,v1y,v1z,v2x,v2y,v2z,crossprodx,crossprody,crossprodz
-
+   real(dp)::v1x,v1y,v1z,v2x,v2y,v2z
    integer::n
 
    do n=1,3
@@ -797,9 +788,9 @@ subroutine crossprodbis(vec1,vec2,v1crossv2,l,i,j,k)
       v2y=vec2(l,i,j,k,2,n)
       v2z=vec2(l,i,j,k,3,n)
 
-      v1crossv2(l,i,j,k,1,n)=crossprodx(v1x,v1y,v1z,v2x,v2y,v2z)
-      v1crossv2(l,i,j,k,2,n)=crossprody(v1x,v1y,v1z,v2x,v2y,v2z)
-      v1crossv2(l,i,j,k,3,n)=crossprodz(v1x,v1y,v1z,v2x,v2y,v2z)
+      v1crossv2(l,i,j,k,1,n)=v1y*v2z-v1z*v2y
+      v1crossv2(l,i,j,k,2,n)=v1z*v2x-v1x*v2z
+      v1crossv2(l,i,j,k,3,n)=v1x*v2y-v2x*v1y
    end do
 
 end subroutine crossprodbis
@@ -813,7 +804,7 @@ subroutine crossprod(vec1,vec2,v1crossv2,l,i,j,k)
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3)::vec1,vec2,v1crossv2
    integer ::l,i,j,k
 
-   real(dp)::v1x,v1y,v1z,v2x,v2y,v2z,crossprodx,crossprody,crossprodz
+   real(dp)::v1x,v1y,v1z,v2x,v2y,v2z
 
    v1x=vec1(l,i,j,k,1)
    v1y=vec1(l,i,j,k,2)
@@ -823,44 +814,11 @@ subroutine crossprod(vec1,vec2,v1crossv2,l,i,j,k)
    v2y=vec2(l,i,j,k,2)
    v2z=vec2(l,i,j,k,3)
 
-   v1crossv2(l,i,j,k,1)=crossprodx(v1x,v1y,v1z,v2x,v2y,v2z)
-   v1crossv2(l,i,j,k,2)=crossprody(v1x,v1y,v1z,v2x,v2y,v2z)
-   v1crossv2(l,i,j,k,3)=crossprodz(v1x,v1y,v1z,v2x,v2y,v2z)
+   v1crossv2(l,i,j,k,1)=v1y*v2z-v1z*v2y
+   v1crossv2(l,i,j,k,2)=v1z*v2x-v1x*v2z
+   v1crossv2(l,i,j,k,3)=v1x*v2y-v2x*v1y
 
 end subroutine crossprod
-!###########################################################
-double precision function  crossprodx(v1x,v1y,v1z,v2x,v2y,v2z)
-
-   ! x component of a cross product
-   use amr_parameters,only:dp
-   implicit none
-   real(dp)::v1x,v1y,v1z,v2x,v2y,v2z
-
-   crossprodx=v1y*v2z-v1z*v2y
-
-end function crossprodx
-
-double precision function crossprody(v1x,v1y,v1z,v2x,v2y,v2z)
-
-   ! y component of a cross product
-   use amr_parameters,only:dp
-   implicit none
-   real(dp)::v1x,v1y,v1z,v2x,v2y,v2z
-
-   crossprody=v1z*v2x-v1x*v2z
-
-end function crossprody
-
-double precision function crossprodz(v1x,v1y,v1z,v2x,v2y,v2z)
-
-   ! z component of a cross product
-   use amr_parameters,only:dp
-   implicit none
-   real(dp)::v1x,v1y,v1z,v2x,v2y,v2z
-
-   crossprodz=v1x*v2y-v2x*v1y
-
-end function crossprodz
 !###########################################################
 !###########################################################
 !###########################################################
