@@ -108,7 +108,7 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
 
   ! AMBIPOLAR DIFFUSION
   if(nambipolar) then
-     call computambip(uin,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,bmagij,fluxad,emfambdiff,fluxambdiff)
+     call computambip(uin,ngrid,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,fluxad,emfambdiff,fluxambdiff)
   endif
 
   ! OHMIC DISSIPATION

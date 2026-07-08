@@ -618,8 +618,7 @@ end subroutine computdifmag
 !###########################################################
 !###########################################################
 !###########################################################
-subroutine computambip(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,bmagij,fluxad,emfambdiff,fluxambdiff)
-
+subroutine computambip(u,ngrid,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,fluxad,emfambdiff,fluxambdiff)
    use amr_commons
    use amr_parameters
    use hydro_commons
@@ -629,11 +628,9 @@ subroutine computambip(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,b
    ! inputs
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar+3),intent(in)::u
    integer,intent(in)::ngrid
-   real(dp),intent(in)::dx,dy,dz,dt
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),intent(in)::bemfx,bemfy,bemfz
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),intent(in)::jemfx,jemfy,jemfz
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),intent(in)::fluxad
-   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3,1:3),intent(in)::bmagij
    ! outputs
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),intent(out)::emfambdiff
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),intent(out)::fluxambdiff
@@ -647,13 +644,13 @@ subroutine computambip(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,b
    ! the faces. Expects bemf*, jemf* and fluxad from computejb2.
    !-----------------------------------------------------------------
    integer ::i, j, k, l
-   real(dp)::jx,jy,jz,bx,by,bz,fx,fy,fz
+   real(dp)::jx,jy,jz,bx,by,bz,fx,fy,fz,beta_x,beta_y,beta_z
    real(dp)::rhox,rhoy,rhoz,rhofx,rhofy,rhofz
 
    emfambdiff=0d0
    fluxambdiff=0d0
 
-   ! compute Lorentz force
+   ! Compute (J x B) x B
    do k=min(1,ku1+1),max(1,ku2-1)
       do j=min(1,ju1+1),max(1,ju2-1)
          do i=min(1,iu1+1),max(1,iu2-1)
@@ -673,7 +670,8 @@ subroutine computambip(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,b
                bz=bemfx(l,i,j,k,3)
                fy=jz*bx-jx*bz !florentzx(l,2)
                fz=jx*by-bx*jy !florentzx(l,3)
-               emfambdiff(l,i,j,k,1)=(fy*bz-fz*by)/(gammaAD*rhox)
+               beta_x=1d0/(gammaAD*rhox)
+               emfambdiff(l,i,j,k,1) = (fy*bz-fz*by) * beta_x
 
                ! EMF y
                jx=jemfy(l,i,j,k,1)
@@ -684,10 +682,10 @@ subroutine computambip(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,b
                bz=bemfy(l,i,j,k,3)
                fx=jy*bz-jz*by !florentzy(l,1)
                fz=jx*by-bx*jy !florentzy(l,3)
-               emfambdiff(l,i,j,k,2)=(fz*bx-fx*bz)/(gammaAD*rhoy)
+               beta_y=1d0/(gammaAD*rhoy)
+               emfambdiff(l,i,j,k,2)=(fz*bx-fx*bz) * beta_y
 
                ! EMF z
-
                jx=jemfz(l,i,j,k,1)
                jy=jemfz(l,i,j,k,2)
                jz=jemfz(l,i,j,k,3)
@@ -696,9 +694,13 @@ subroutine computambip(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,b
                bz=bemfz(l,i,j,k,3)
                fx=jy*bz-jz*by !florentzz(l,1)
                fy=jz*bx-jx*bz !florentzz(l,2)
-               emfambdiff(l,i,j,k,3)=(fx*by-bx*fy)/(gammaAD*rhoz)
+               beta_z=1d0/(gammaAD*rhoz)
+               emfambdiff(l,i,j,k,3)=(fx*by-bx*fy) * beta_z
 
-               if(nimhdheating_in_flux) then
+            end do
+
+            if(nimhdheating_in_flux) then
+               do l = 1, ngrid
                   ! energy flux on faces
                   rhofx=0.5d0*(u(l,i,j,k,1)+u(l,i-1,j,k,1))
                   rhofy=0.5d0*(u(l,i,j,k,1)+u(l,i,j-1,k,1))
@@ -707,8 +709,9 @@ subroutine computambip(u,ngrid,dx,dy,dz,dt,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,b
                   fluxambdiff(l,i,j,k,1)=-fluxad(l,i,j,k,1)/(gammaAD*rhofx)
                   fluxambdiff(l,i,j,k,2)=-fluxad(l,i,j,k,2)/(gammaAD*rhofy)
                   fluxambdiff(l,i,j,k,3)=-fluxad(l,i,j,k,3)/(gammaAD*rhofz)
-               endif
-            end do
+               end do
+            endif
+
          end do
       end do
    end do
