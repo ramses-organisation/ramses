@@ -201,4 +201,4 @@ ax[5].set_ylim([ymin,ymax])
 fig.savefig('nimhd-coeur-ad.pdf',bbox_inches='tight')
 
 # Check results against reference solution
-visu_ramses.check_solution(data["data"],'nimhd-coeur-ad', overwrite=True)
+visu_ramses.check_solution(data["data"],'nimhd-coeur-ad', overwrite=False)
