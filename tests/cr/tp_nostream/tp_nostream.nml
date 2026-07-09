@@ -9,7 +9,7 @@ static_gas=.false.
 nrestart=0
 /
 
-&AMR_PARAMS 
+&AMR_PARAMS
 levelmin=9
 levelmax=9
 ngridmax=10000
@@ -91,7 +91,7 @@ pressure_fix=.true.
 beta_fix=0.5
 /
 
-&REFINE_PARAMS 
+&REFINE_PARAMS
 err_grad_d=0.01
 err_grad_u=0.05
 err_grad_p=0.05
