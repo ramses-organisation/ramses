@@ -35,7 +35,7 @@ subroutine cmp_cr_flux_tensors(uin_gas, uin_cr, iGrp, nGrid, ftens, vmax, bfield
 ! ngrid     => Number of 'valid' grids in uin.
 ! ftens     <=  Group flux tensors for all the cells.
 !------------------------------------------------------------------------
-  real(dp),dimension(nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar+3)::uin_gas
+  real(dp),dimension(nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar_all)::uin_gas
   real(dp),dimension(nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:ncrvar)::uin_cr
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nDim+1,1:ndim)::ftens
   integer::iGrp, nGrid!---------------------------------------------------
@@ -121,7 +121,7 @@ SUBROUTINE cmp_cr_wavespeeds(uin_gas, uin_cr, iGrp, ngrid, lmax, ilevel, dt)
   !  ju1,ju2     |cell centered,
   !  ku1,ku2     |including buffer cells.
   !------------------------------------------------------------------------
-    real(dp),dimension(nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar+3), &
+    real(dp),dimension(nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar_all), &
                                                             intent(in)::uin_gas
     real(dp),dimension(nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:ncrvar), &
                                                             intent(in)::uin_cr
@@ -320,7 +320,7 @@ SUBROUTINE cmp_cr_faces(uin_gas,uin_cr,iFlx,dx,dt,iGrp,ngrid,ilevel)
   use amr_commons
   use const
   implicit none
-  real(dp),dimension(nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar+3)::uin_gas
+  real(dp),dimension(nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar_all)::uin_gas
   real(dp),dimension(nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:ncrvar)::uin_cr
   real(dp),dimension(nvector,if1:if2,jf1:jf2,kf1:kf2,1:ncrvar,1:ndim)::iFlx
   real(dp)::dx, dt
@@ -341,7 +341,7 @@ SUBROUTINE cmp_cr_faces(uin_gas,uin_cr,iFlx,dx,dt,iGrp,ngrid,ilevel)
   real(dp),dimension(nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:ndim)::bfield
   integer::idim
 !------------------------------------------------------------------------
-  iP0 = 1+(iGrp-1)*(ndim+1)            ! Index of CR group energy density
+  iP0 = Ecr_idx(iGrp)
   iP1 = iP0+nDim
   ! Magnetic field, needed for M1; in the default P1 path (cr_isotropic_pressure)
   ! cmp_cr_flux_tensors never reads bfield, so skip building the full stencil.
