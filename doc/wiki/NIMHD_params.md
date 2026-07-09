@@ -9,7 +9,7 @@ The non-ideal terms are added explicitly to the induction equation and to the to
 
 For a detailed description of the scheme, see:
 
-* [[1] Masson et al. 2012, Ambipolar diffusion in low-mass star formation](http://arxiv.org/abs/1208.1150)
+* [Masson et al. 2012, Incorporating Ambipolar and Ohmic Diffusion in the AMR MHD Code RAMSES](https://ui.adsabs.harvard.edu/abs/2012ApJS..201...24M/abstract)
 
 ## Effect activation
 
@@ -35,6 +35,10 @@ The energy released by the non-ideal terms can be deposited either through the t
 |:------------------------------------ |:------------ |:----------- |
 | `nimhdheating_in_flux=.true.` | `logical` | Add the non-ideal (ambipolar + Ohmic) heating to the total-energy flux. This is the default, conservative treatment. |
 | `nimhdheating_source_term=.false.` | `logical` | Add the non-ideal heating as an explicit source term instead of via the flux. Mutually exclusive with `nimhdheating_in_flux`. |
+
+:::{warning}
+`nimhdheating_source_term=.true.` is currently not implemented!
+:::
 
 ## Time-step control
 
