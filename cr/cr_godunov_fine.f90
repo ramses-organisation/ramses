@@ -653,13 +653,13 @@ SUBROUTINE cr_godfine1(ind_grid, ncache, ilevel)
    integer   ,dimension(1:nvector,0:twondim    ),save::ibuffer_father
    integer   ,dimension(1:nvector,0:twondim    ),save::ind1
    ! Split buffers for the coarser-level neighbour interpolation:
-   real(dp),dimension(1:nvector,0:twondim  ,1:nvar+3),save::u1_gas
-   real(dp),dimension(1:nvector,1:twotondim,1:nvar+3),save::u2_gas
+   real(dp),dimension(1:nvector,0:twondim  ,1:nvar_all),save::u1_gas
+   real(dp),dimension(1:nvector,1:twotondim,1:nvar_all),save::u2_gas
    real(dp),dimension(1:nvector,0:twondim  ,1:ncrvar),save::u1_cr
    real(dp),dimension(1:nvector,1:twotondim,1:ncrvar),save::u2_cr
 
    ! Split 6x6x6 stencils:
-   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar+3),save::uin_gas
+   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar_all),save::uin_gas
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:ncrvar),save::uin_cr
    real(dp),dimension(1:nvector,if1:if2,jf1:jf2,kf1:kf2,1:ncrvar,1:ndim),save::flux
    logical,dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2),save::ok
@@ -725,7 +725,7 @@ SUBROUTINE cr_godfine1(ind_grid, ncache, ilevel)
          do j=0,twondim
             ! Gas (rho/vel/B) from uold, interpolated with the MHD-aware
             ! interpol_hydro (preserves div B).
-            do ivar=1,nvar+3
+            do ivar=1,nvar_all
                do i=1,nbuffer
                   u1_gas(i,j,ivar)=uold(ibuffer_father(i,j),ivar)
                end do
@@ -773,7 +773,7 @@ SUBROUTINE cr_godfine1(ind_grid, ncache, ilevel)
          if(ndim>2)k3=1+2*(k1-1)+k2
 
          ! Gather gas variables (rho/vel/B) from uold into uin_gas
-         do ivar=1,nvar+3
+         do ivar=1,nvar_all
             do i=1,nexist
                uin_gas(ind_exist(i),i3,j3,k3,ivar)=uold(ind_cell(i),ivar)
             end do
