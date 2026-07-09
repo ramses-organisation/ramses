@@ -108,6 +108,12 @@ module hydro_parameters
   real(dp),dimension(1:NVAR-NHYDRO-NENER)::err_grad_var=-1
 #endif
   real(dp),dimension(1:MAXLEVEL)::jeans_refine=-1
+  logical::collapse_jeans_refine=.false.         ! Use modified Jeans refine with prescribed thermodynamics of protostellar collapse
+  real(dp)::collapse_jeans_Tfloor=10.0d0         ! Floor temperature (K) for the collapse_jeans_refine criterion
+  real(dp)::collapse_jeans_rho_low=1.0d-8        ! Density (g/cc) below which collapse_jeans_refine uses Tfloor,
+                                                 ! typically at 2nd core formation
+  real(dp)::collapse_jeans_rho_high=1.0d-5       ! Density (g/cc) above which collapse_jeans_refine uses the actual gas T,
+                                                 ! typically at protostar formation
 
   ! Initial conditions hydro variables
   real(dp),dimension(1:MAXREGION)::d_region=0

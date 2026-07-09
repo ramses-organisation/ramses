@@ -130,7 +130,11 @@ subroutine hydro_flag(ilevel)
         end do
 
         if(poisson.and.jeans_refine(ilevel)>0.0)then
-           call jeans_length_refine(ind_cell,ok,ngrid,ilevel)
+           if (collapse_jeans_refine) then
+              call collapse_jeans_length_refine(ind_cell,ok,ngrid,ilevel)
+           else
+              call jeans_length_refine(ind_cell,ok,ngrid,ilevel)
+           endif
         endif
 
         ! Apply geometry-based refinement criteria
@@ -178,65 +182,142 @@ subroutine jeans_length_refine(ind_cell,ok,ncell,ilevel)
   use amr_commons
   use pm_commons
   use hydro_commons
-  use poisson_commons
   use constants, only: pi
   implicit none
-  integer::ncell,ilevel
-  integer,dimension(1:nvector)::ind_cell
-  logical,dimension(1:nvector)::ok
-  !-------------------------------------------------
-  ! This routine sets flag1 to 1 if cell statisfy
-  ! user-defined physical criterion for refinement.
-  ! P. Hennebelle 03/11/2005
-  !-------------------------------------------------
-  integer::i,indi
-  real(dp)::lamb_jeans,tail_pix,n_jeans
-  real(dp)::dens,tempe,etherm,factG
-#if NENER>0
-  integer::irad
-#endif
-#ifdef SOLVERmhd
-  real(dp)::emag
-#endif
+  integer,intent(in)::ncell,ilevel
+  integer,dimension(1:nvector),intent(in)::ind_cell
+  logical,dimension(1:nvector),intent(inout)::ok
+  !-------------------------------------------------------------------
+  ! This routine flags cells for refinement if the Jeans length is
+  ! resolved by less than the user-specified number of cells.
+  ! Input:
+  !   ind_cell: cell indices of the current vector sweep
+  ! Output:
+  !   ok: updated refinement flag for these cells
+  !-------------------------------------------------------------------
+  integer::nx_loc,i
+  real(dp)::dx,scale,dx_loc,lamb_jeans,n_jeans
+  real(dp)::cs2,factG
+  real(dp),dimension(1:nvector),save::rho,ekin,erad,emag,etherm
+
   factG=1
   if(cosmo)factG=3d0/8d0/pi*omega_m*aexp
   n_jeans = jeans_refine(ilevel)
-  ! compute the size of the pixel
-  tail_pix = boxlen / (2d0)**ilevel
+
+  ! Mesh spacing in this level
+  dx=0.5D0**ilevel
+  nx_loc=(icoarse_max-icoarse_min+1)
+  scale=boxlen/dble(nx_loc)
+  dx_loc=dx*scale
+
+  ! Gather density
   do i=1,ncell
-     indi = ind_cell(i)
-     ! the thermal energy
-     dens = max(uold(indi,1),smallr)
-     etherm = uold(indi,neul)
-     etherm = etherm - 0.5d0*uold(indi,2)**2/dens
-#if NDIM > 1 || SOLVERmhd
-     etherm = etherm - 0.5d0*uold(indi,3)**2/dens
-#endif
-#if NDIM > 2 || SOLVERmhd
-     etherm = etherm - 0.5d0*uold(indi,4)**2/dens
-#endif
-#ifdef SOLVERmhd
-     ! the magnetic energy
-     emag =        (uold(indi,6)+uold(indi,nvar+1))**2
-     emag = emag + (uold(indi,7)+uold(indi,nvar+2))**2
-     emag = emag + (uold(indi,8)+uold(indi,nvar+3))**2
-     emag = emag / 8d0
-     etherm = (etherm - emag)
-#endif
-#if NENER>0
-     do irad=1,nener
-        etherm=etherm-uold(indi,nhydro+irad)
-     end do
-#endif
-     ! the temperature
-     tempe =  etherm / dens * (gamma - 1.0d0)
+     rho(i) = max(uold(ind_cell(i),1),smallr)
+  enddo
+
+  ! Compute thermal energy
+  call cmp_energy_components(ind_cell,ncell,rho,ekin,erad,emag)
+  do i=1,ncell
+     etherm(i) = uold(ind_cell(i),neul) - ekin(i) - erad(i) - emag(i)
+  enddo
+
+  do i=1,ncell
+     ! compute isothermal sound speed (squared)
+     cs2 =  etherm(i) / rho(i) * (gamma - 1.0d0)
      ! prevent numerical crash due to negative temperature
-     tempe = max(tempe,smallc**2)
+     cs2 = max(cs2,smallc**2)
      ! compute the Jeans length (remember G=1)
-     lamb_jeans = sqrt( tempe * pi / dens / factG )
-     ! the Jeans length must be smaller
-     ! than n_jeans times the size of the pixel
-     ok(i) = ok(i) .or. ( n_jeans*tail_pix >= lamb_jeans )
+     lamb_jeans = sqrt( cs2 * pi / (rho(i) * factG) )
+     ! the Jeans length must be smaller than n_jeans times the size of the cell
+     ok(i) = ok(i) .or. ( n_jeans*dx_loc >= lamb_jeans )
   end do
 
 end subroutine jeans_length_refine
+!#####################################################################
+!#####################################################################
+!#####################################################################
+!#####################################################################
+subroutine collapse_jeans_length_refine(ind_cell,ok,ncell,ilevel)
+  use amr_commons
+  use hydro_commons
+  use constants, only: pi, kB, mH
+  implicit none
+  integer,intent(in)::ncell,ilevel
+  integer,dimension(1:nvector),intent(in)::ind_cell
+  logical,dimension(1:nvector),intent(inout)::ok
+  !-------------------------------------------------------------------
+  ! Jeans-length refinement with a prescribed thermal behaviour: the
+  ! sound speed used in the Jeans length follows the floor temperature
+  ! collapse_jeans_Tfloor at low density and the actual (adiabatic) gas sound speed
+  ! at high density, blending log-linearly in density between collapse_jeans_rho_low
+  ! and collapse_jeans_rho_high. See jeans_length_refine for the plain version.
+  ! Input:
+  !   ind_cell: cell indices of the current vector sweep
+  ! Output:
+  !   ok: updated refinement flag for these cells
+  !-------------------------------------------------------------------
+  integer::nx_loc,i
+  real(dp)::dx,scale,dx_loc,lamb_jeans,n_jeans,factG
+  real(dp)::cs2,cs2_gas,cs2_floor,delta_logrho,interpol,d_iso,d_star
+  real(dp)::scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2
+  real(dp),dimension(1:nvector),save::rho,ekin,erad,emag,etherm
+
+  factG=1
+  if(cosmo)factG=3d0/8d0/pi*omega_m*aexp
+  n_jeans = jeans_refine(ilevel)
+
+  ! Mesh spacing in this level
+  dx=0.5D0**ilevel
+  nx_loc=(icoarse_max-icoarse_min+1)
+  scale=boxlen/dble(nx_loc)
+  dx_loc=dx*scale
+
+  ! Convert the density thresholds
+  call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
+  d_iso     = collapse_jeans_rho_low /scale_d
+  d_star    = collapse_jeans_rho_high/scale_d
+
+  ! Compute floor sound speed to code units  (adiabatic cs^2 at collapse_jeans_Tfloor)
+  cs2_floor = gamma*kB*collapse_jeans_Tfloor/(mu_gas*mH) / scale_v**2
+
+  ! Gather density
+  do i=1,ncell
+     rho(i) = max(uold(ind_cell(i),1),smallr)
+  enddo
+
+  ! Compute thermal energy
+  call cmp_energy_components(ind_cell,ncell,rho,ekin,erad,emag)
+  do i=1,ncell
+     etherm(i) = uold(ind_cell(i),neul) - ekin(i) - erad(i) - emag(i)
+  enddo
+
+  do i=1,ncell
+     ! actual (adiabatic) sound speed squared
+     cs2_gas = gamma*(gamma-1.0d0) * etherm(i)/rho(i)
+     ! prevent numerical crash due to negative temperature
+     cs2_gas = max(cs2_gas,smallc**2)
+
+     ! use coldest conditions for setting effective sound speed for the Jeans criterion
+     ! This makes refinement more aggressive during the 1st and 2nd protostellar collapse
+     if(rho(i) <= d_iso)then
+        ! Before 2nd collapse: take coldest temperature (as if it was isothermal at collapse_jeans_Tfloor)
+        cs2 = min(cs2_gas, cs2_floor)
+     else if(rho(i) >= d_star)then
+        ! When protostar has formed: take actual gas temperature
+        cs2 = cs2_gas
+     else
+        ! During the second collapse: transition regime
+        ! blending log-linearly in density between collapse_jeans_rho_low and collapse_jeans_rho_high.
+        delta_logrho = (log10(rho(i)) - log10(d_iso)) / (log10(d_star) - log10(d_iso))
+        ! Interpolate between the two above regimes
+        interpol = (1-delta_logrho)*log10(min(cs2_gas, cs2_floor)) + delta_logrho*cs2_gas
+        cs2 = 10.0d0**(interpol)
+     endif
+
+     ! compute the Jeans length (remember G=1)
+     lamb_jeans = sqrt( cs2 * pi / (rho(i) * factG) )
+     ! the Jeans length must be smaller than n_jeans times the size of the cell
+     ok(i) = ok(i) .or. ( n_jeans*dx_loc >= lamb_jeans )
+  end do
+
+end subroutine collapse_jeans_length_refine
