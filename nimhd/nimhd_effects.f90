@@ -315,7 +315,7 @@ subroutine compute_jemf(u,ngrid,dx,dy,dz,bmagij,jemfx,jemfy,jemfz)
    ! outputs
    real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),intent(out)::jemfx,jemfy,jemfz
    !-----------------------------------------------------------------
-   ! Computes the current density J at the EMF edges 
+   ! Computes the current density J at the EMF edges
    ! jemfx(l,i,j,k,n) is the component Jn at i,j-1/2,k-1/2
    !-----------------------------------------------------------------
    integer ::i, j, k, l, m, n
@@ -374,7 +374,7 @@ subroutine compute_nimhd_flux_heating(q,ngrid,dx,dy,dz,bemfx,bemfy,bemfz,bmagij,
    ! Calculate the ideal-MHD energy-flux building blocks:
    !   fluxmd = J x B          (used by Ohmic dissipation)
    !   fluxad = (J x B) x B x B (used by ambipolar diffusion, if active)
-   ! Where J is the current at the cell faces (calculated here), 
+   ! Where J is the current at the cell faces (calculated here),
    ! and B is the magnetic field given by compute_bmagij.
    ! These are later scaled by the resistivities in
    ! compute_heating_difmag and compute_heating_ambip.
@@ -438,7 +438,7 @@ subroutine compute_nimhd_flux_heating(q,ngrid,dx,dy,dz,bemfx,bemfy,bemfz,bmagij,
                computdxbis = (bemfy(l,i+1,j  ,k,2) - bemfy(l,i,j,k,2)) !/ dx
                computdybis = (bemfx(l,i  ,j+1,k,1) - bemfx(l,i,j,k,1)) !/ dx
                jface(l,3,3) = (computdxbis - computdybis) * oneoverdx
-            end do 
+            end do
 
             ! Compute fluxmd from crossproduct (J x B)
             do l = 1, ngrid
@@ -711,4 +711,3 @@ end subroutine compute_heating_ambip
 !###########################################################
 !###########################################################
 !###########################################################
-
