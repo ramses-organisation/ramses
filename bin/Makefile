@@ -53,10 +53,6 @@ LIGHT_MPI_COMM = 0
 USE_FLD=0
 NGRP=0
 NENER:=$(NENER)+$(NGRP)
-ifeq ($(USE_FLD),1)
-   # for internal energy
-   NPSCAL := $(NPSCAL)+$(NIONS)+1
-endif
 
 # Compute NVAR
 NHYDRO = 2+$(NDIM)
@@ -65,9 +61,14 @@ ifeq ($(SOLVER),mhd)
 endif
 # current is treated as a passive scalar?
 ifeq ($(NIMHD),1)
-   NPSCAL := $(NPSCAL)+4
+#   NPSCAL := $(NPSCAL)+4
    SOLVER=mhd
 endif
+ifeq ($(USE_FLD),1)
+   # for internal energy
+   NPSCAL := $(NPSCAL)+$(NIONS)+1
+endif
+
 NVAR := $(NHYDRO)+$(NENER)+$(NPSCAL)+$(NMETALS)
 ifeq ($(RT),1)
    ifeq ($(USE_FLD),0) #else the NPSCAL already includes the NIONS
