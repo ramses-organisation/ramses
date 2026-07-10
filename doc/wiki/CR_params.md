@@ -7,6 +7,7 @@ For detailed descriptions of the scheme, see:
 
 * [[1] A New Numerical Scheme for Cosmic-Ray Transport (Jiang & Oh 2018)](http://arxiv.org/abs/1712.07117)
 * [2] Fitz Axen et al. (2024), for the collisional cooling
+* [[3] Two-moment cosmic ray transport in RAMSES (Rosdahl et al. 2025)](https://arxiv.org/abs/2509.19447)
 
 | Variable name, syntax, default value | Fortran type  | Description       |
 |:---------------------------- |:------------- |:------------------------- |
@@ -20,9 +21,9 @@ For detailed descriptions of the scheme, see:
 | `cr_smallr_decouple=1e4`     |  `real`       | CRs are smoothly decoupled from the gas at low densities: source terms are multiplied by `exp(-smallr*cr_smallr_decouple/rho)`. |
 | `cr_efloor=1e-30`            |  `real`       | Floor applied to the CR energy density (code units). |
 | **====================** | **====================** | **Timestep and reduced light speed** |
-| `cr_c_fraction=1.`           |  `real`       | Reduced light-speed fraction: the CR free-streaming speed is `V_m = cr_c_fraction * c`. Reduce it to keep manageable timestep lengths; must be in (0,1]. |
+| `cr_c_fraction=1.`           |  `real`       | Reduced light-speed fraction: the CR free-streaming speed is `V_m = cr_c_fraction * c`. Reduce it to keep manageable timestep lengths; must be in (0,1] (see [3]). |
 | `cr_nsubcycle=1`             |  `integer`    | Maximum number of CR steps during one hydro timestep. The hydro timestep is limited to `cr_nsubcycle` CR Courant steps `dt_cr = courant_factor*dx/(3*V_m)`. |
-| `cr_varvmax=.false.`         |  `logical`    | Adaptive reduced light speed: raise `V_m` per level so it stays at least `cr_varvmax_fudge` times the gas signal speed `dx/(3*dt)` (always capped at c). |
+| `cr_varvmax=.false.`         |  `logical`    | Adaptive reduced light speed: raise `V_m` per level so it stays at least `cr_varvmax_fudge` times the gas signal speed `dx/(3*dt)` (always capped at c; see [3]). |
 | `cr_varvmax_fudge=10.`       |  `real`       | Safety factor for the adaptive reduced light speed. |
 | `cr_varvmax_vdvs=.false.`    |  `logical`    | With `cr_varvmax`, also keep `V_m` above the streaming speed `gamma_cr*v_A` and the diffusion speed `Dcr/dx`. |
 | **====================** | **====================** | **Scattering, diffusion and streaming** |

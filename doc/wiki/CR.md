@@ -5,6 +5,7 @@
 Cosmic-ray (CR) transport is implemented in RAMSES as a standalone `cr/` module, following the two-moment (M1-like) method described in:
 
 * [A New Numerical Scheme for Cosmic-Ray Transport (Jiang & Oh 2018)](http://arxiv.org/abs/1712.07117)
+* [Two-moment cosmic ray transport in RAMSES (Rosdahl et al. 2025)](https://arxiv.org/abs/2509.19447)
 
 with optional CR collisional (Coulomb + hadronic) energy losses following Fitz Axen et al. (2024) (see also Armillotta et al. 2021).
 
