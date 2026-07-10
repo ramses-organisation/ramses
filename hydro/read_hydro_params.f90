@@ -3,6 +3,7 @@ subroutine read_hydro_params(nml_ok)
   use hydro_commons
   use cooling_module, only:X,Y
   use mpi_mod
+  use constants, only:mH
   implicit none
   logical::nml_ok
   !--------------------------------------------------
@@ -262,6 +263,11 @@ subroutine read_hydro_params(nml_ok)
     ! set T2 for computations
     T2_eos = T_eos/mu_gas
   endif
+
+   ! convert user-inputted EOS parameters from g/cm3 to H/cc
+   do i=1,5
+      polytrope_n(i) = polytrope_rho(i) * X/mH
+   end do
 
   !--------------------------------------------------
   ! Check whether illegally trying non-eq chemistry
