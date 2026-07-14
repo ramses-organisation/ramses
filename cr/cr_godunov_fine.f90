@@ -104,13 +104,10 @@ subroutine add_cr_source_terms(ilevel)
   use cr_flux_module, only: rotatevec, invrotatevec
   implicit none
   integer::ilevel
-  !---------------------------------------------------------
-  ! This routine adds the cosmic ray source term .
-  !---------------------------------------------------------
   integer::i,ind,iskip,nx_loc
   integer::ncache,igrid,ngrid,idim,id1,ig1,ih1,id2,ig2,ih2
   integer,dimension(1:3,1:2,1:8)::iii,jjj
-  real(dp)::scale,dx,dx_loc,B_field(3),dt
+  real(dp)::scale,dx,dx_loc,dt
 
   integer ,dimension(1:nvector),save::ind_grid,ind_cell
   integer ,dimension(1:nvector,0:twondim),save::igridn
@@ -131,7 +128,8 @@ subroutine add_cr_source_terms(ilevel)
   real(dp)::rhs1, rhs2, rhs3, rhs4, fred, sqrt3
   real(dp)::v1, v2, v3, vtot1, vtot2, vtot3
   real(dp)::mom_change
-  real(dp)::etherm, ekin, emag, err, f_decouple, smallp
+  real(dp)::etherm, ekin, emag, f_decouple, smallp
+  logical::gas_coupled
 
   dt=dtnew(ilevel)
 
@@ -139,6 +137,7 @@ subroutine add_cr_source_terms(ilevel)
   if(verbose)write(*,111)ilevel
 
   smallp = smallc**2/gamma
+  gas_coupled = .not.static_gas .and. .not.static .and. cr_feedback
 
   nx_loc=icoarse_max-icoarse_min+1
   scale=boxlen/dble(nx_loc)
@@ -224,219 +223,216 @@ subroutine add_cr_source_terms(ilevel)
         ! End loop over dimensions
 
         do i=1,ngrid
-        do iGrp=1,ncr_groups
-           do idim=1,ndim
-              gradEcr_loc(i,idim,iGrp) = (pcrd(i,idim,iGrp)-pcrg(i,idim,iGrp)) &
-                   &                    / (dx_g(i,idim)     +dx_d(i,idim))
-              gradpcr_loc(i,idim,iGrp) = gradEcr_loc(i,idim,iGrp)*(gamma_cr(iGrp)-1.)
-           enddo
-           vs_loc(i,:)=0.
-           va_loc(i)=0.
-           do idim=1,3
-              B_field_loc(i,idim) = 0.5 * (uold(ind_cell(i), 5+idim) + uold(ind_cell(i), nvar+idim) )
-              vs_loc(i,idim) = B_field_loc(i,idim)/sqrt(uold(ind_cell(i),1))
-              va_loc(i) = va_loc(i) + vs_loc(i,idim)**2
-           enddo
-           va_loc(i) = sqrt(va_loc(i))
+           do iGrp=1,ncr_groups
+              icrE = Ecr_idx(iGrp)  ! starting index of cr variables
 
-           if(cr_v_alfven.gt.0.) then
-              vs_loc(i,:) = 0.
-              vs_loc(i,1) = cr_v_alfven
-              va_loc(i) = cr_v_alfven
+              do idim=1,ndim
+                 gradEcr_loc(i,idim,iGrp) = (pcrd(i,idim,iGrp)-pcrg(i,idim,iGrp)) &
+                      &                    / (dx_g(i,idim)     +dx_d(i,idim))
+                 gradpcr_loc(i,idim,iGrp) = gradEcr_loc(i,idim,iGrp)*(gamma_cr(iGrp)-1.)
+              enddo
+              vs_loc(i,:)=0.
+              va_loc(i)=0.
+              do idim=1,3
+                 B_field_loc(i,idim) = 0.5 * (uold(ind_cell(i), 5+idim) + uold(ind_cell(i), nvar+idim) )
+                 vs_loc(i,idim) = B_field_loc(i,idim)/sqrt(uold(ind_cell(i),1))
+                 va_loc(i) = va_loc(i) + vs_loc(i,idim)**2
+              enddo
+              va_loc(i) = sqrt(va_loc(i))
+
+              if(cr_v_alfven.gt.0.) then
+                 vs_loc(i,:) = 0.
+                 vs_loc(i,1) = cr_v_alfven
+                 va_loc(i) = cr_v_alfven
+              endif
+
+              bdotgradE_loc(i)=0.
+              ! bdotgrade is needed for eq 3 in Jiang & Oh
+              do idim=1,ndim
+                 bdotgradE_loc(i) = bdotgradE_loc(i) + B_field_loc(i,idim)*gradEcr_loc(i,idim,iGrp)
+              enddo
+              ! Local streaming velocity, needed for eq 18 in Jiang & Oh
+              vs_loc(i,:) = -vs_loc(i,:)  * bdotgradE_loc(i)/max(1d-50,abs(bdotgradE_loc(i))) !! eq 3 in PO17
+
+              ! Source term, eq 18 in Jiang & Oh 2017
+              norm=0.
+              do j=1,3
+                 norm = norm + B_field_loc(i,j)**2
+              end do
+              norm = max(sqrt(norm), 1d-30)
+
+              bxby = sqrt(B_field_loc(i,1)**2+B_field_loc(i,2)**2)
+              if(norm.gt.1e-10) then
+                 sint = bxby/norm
+                 cost = B_field_loc(i,3)/norm
+              else
+                 sint = 1d0
+                 cost = 0d0
+              endif
+              if(bxby.gt.1e-10) then
+                 sinp = B_field_loc(i,2)/bxby
+                 cosp = B_field_loc(i,1)/bxby
+              else
+                 sinp = 0d0
+                 cosp = 1d0
+              endif
+
+              rhs1 = max(crunew(ind_cell(i),icrE),cr_efloor)
+
+              ! Flux update ... first rotate flux vector onto B-field,
+              ! i.e. describing the flux in the B coordinate system
+              f2=0. ; f3=0.
+              f1 = crunew(ind_cell(i),icrE+1)
+#if NDIM>1
+              f2 = crunew(ind_cell(i),icrE+2)
+#endif
+#if NDIM>2
+              f3 = crunew(ind_cell(i),icrE+3)
+#endif
+
+              ! Make sure that |F|<=cE/sqrt3 (sqrt3=1 or sqrt(3) for M1 or P1 resp.)
+              fred = sqrt(f1**2+f2**2+f3**2)/(cr_vmax(ilevel)*rhs1)*sqrt3
+              if(fred .gt. 1d0) then
+                 f1 = f1/fred ; f2 = f2/fred ; f3 = f3/fred
+              endif
+
+              frotx=f1; froty=f2; frotz=f3
+              call rotatevec(sint, cost, sinp, cosp, frotx, froty, frotz)
+              v1=0. ; v2=0. ; v3=0.
+              v1 = uold(ind_cell(i),2)/uold(ind_cell(i),1)
+#if NDIM>1
+              v2 = uold(ind_cell(i),3)/uold(ind_cell(i),1)
+#endif
+#if NDIM>2
+              v3 = uold(ind_cell(i),4)/uold(ind_cell(i),1)
+#endif
+              vtot1 = v1 ; vtot2 = v2 ; vtot3 = v3
+              if(cr_streaming_heating) then
+                 vtot1 = vtot1+vs_loc(i,1)
+                 vtot2 = vtot2+vs_loc(i,2)
+                 vtot3 = vtot3+vs_loc(i,3)
+              endif
+
+              ! Rotate velocity
+              call rotatevec(sint, cost, sinp, cosp, v1, v2, v3)
+              ! Rotate streaming velocity
+              call rotatevec(sint, cost, sinp, cosp, vtot1, vtot2, vtot3)
+
+              rhs2 = frotx
+              rhs3 = froty
+              rhs4 = frotz
+              if(abs(rhs2).lt.1e-10*cr_efloor) rhs2=0d0
+              if(abs(rhs3).lt.1e-10*cr_efloor) rhs3=0d0
+              if(abs(rhs4).lt.1e-10*cr_efloor) rhs4=0d0
+
+              ! Factor for decoupling CRs from gas at low densities
+              f_decouple = MAX(exp(-smallr*cr_smallr_decouple/uold(ind_cell(i),1)),1d-10)
+
+              ! Scattering coefficients sigma=1/D along/across B; along B the
+              ! streaming term adds an effective diffusivity (JO17 eq 18/19)
+              if(cr_streaming_diffusion) then
+                 sigma_stream = max(1./DCRmax_code &
+                    & ,abs(bdotgradE_loc(i))/3d0 / norm / va_loc(i) / gamma_cr(iGrp) / max(crunew(ind_cell(i),icrE),cr_efloor))
+                 sigma_x = 1./(Dcr_code(iGrp) + 1./sigma_stream)
+              else
+                 sigma_x = 1./Dcr_code(iGrp)
+              endif
+              sigma_y = 1./(Dcr_code(iGrp)*Dcr_perp_factor(iGrp))
+              sigma_z = 1./(Dcr_code(iGrp)*Dcr_perp_factor(iGrp))
+
+              coef_11 = 1.0 - dt * sigma_x * vtot1 * v1 * gamma_cr(iGrp) *3d0*(gamma_cr(iGrp)-1d0)   &
+                            - dt * sigma_y * vtot2 * v2 * gamma_cr(iGrp) *3d0*(gamma_cr(iGrp)-1d0)   &
+                            - dt * sigma_z * vtot3 * v3 * gamma_cr(iGrp) *3d0*(gamma_cr(iGrp)-1d0)
+              coef_12 = dt * sigma_x * vtot1 *3d0*(gamma_cr(iGrp)-1d0)
+              coef_13 = dt * sigma_y * vtot2 *3d0*(gamma_cr(iGrp)-1d0)
+              coef_14 = dt * sigma_z * vtot3 *3d0*(gamma_cr(iGrp)-1d0)
+
+              coef_21 = -dt * v1 * sigma_x * gamma_cr(iGrp) * cr_vmax(ilevel)**2
+              coef_22 = 1.0 + dt * sigma_x * cr_vmax(ilevel)**2
+
+              coef_31 = -dt * v2 * sigma_y * gamma_cr(iGrp) * cr_vmax(ilevel)**2
+              coef_33 = 1.0 + dt * sigma_y * cr_vmax(ilevel)**2
+
+              coef_41 = -dt * v3 * sigma_z * gamma_cr(iGrp) * cr_vmax(ilevel)**2
+              coef_44 = 1.0 + dt * sigma_z * cr_vmax(ilevel)**2
+
+              ! 4x4 implicit solve, reduced with a Schur complement on E_cr:
+              ! newfr1 = (rhs2 - coef21 * newEc)/coef22
+              ! newfr2 = (rhs3 - coef31 * newEc)/coef33
+              ! newfr3 = (rhs4 - coef41 * newEc)/coef44
+              ! (coef11 - coef21*coef12/coef22 - coef13*coef31/coef33 - coef41*coef14/coef44)*newec
+              !    = rhs1 - coef12*rhs2/coef22 - coef13*rhs3/coef33 - coef14*rhs4/coef44
+
+              e_coef = coef_11 - coef_12 * coef_21/coef_22 - coef_13 * coef_31/coef_33 &
+                              - coef_14 * coef_41/coef_44
+              new_ec = rhs1 - coef_12 * rhs2/coef_22 - coef_13 * rhs3/coef_33 &
+                           - coef_14 * rhs4/coef_44
+              new_ec = new_ec / e_coef
+
+              old_ec = crunew(ind_cell(i),icrE)
+              crunew(ind_cell(i),icrE) = crunew(ind_cell(i),icrE) + (new_ec-old_ec) * f_decouple
+
+              ! Floor the CR energy and update total energy if necessary
+              if ( crunew(ind_cell(i),icrE) .lt. cr_efloor ) crunew(ind_cell(i),icrE) = cr_efloor
+              ! Thermal energy update:
+              if(gas_coupled) then
+                 unew(ind_cell(i),5) = unew(ind_cell(i),5) - (crunew(ind_cell(i),icrE) - old_ec)*f_decouple
+                 unew(ind_cell(i),5) = max(smallp*uold(ind_cell(i),1), unew(ind_cell(i),5))
+              endif
+              frotx = (rhs2 - coef_21 * new_ec)/coef_22
+              froty = (rhs3 - coef_31 * new_ec)/coef_33
+              frotz = (rhs4 - coef_41 * new_ec)/coef_44
+
+              ! Make sure that |F|<=cE/sqrt3 (sqrt3=1 or sqrt(3) for M1 or P1 resp.)
+              fred = sqrt(frotx**2+froty**2+frotz**2)/(cr_vmax(ilevel)*new_ec)*sqrt3
+              if(fred .gt. 1d0) then
+                 frotx = frotx/fred ; froty = froty/fred ; frotz = frotz/fred
+              endif
+
+              ! We are missing the perpendicular energy source term which is done here in Athena!!!
+              ! Rotate the flux back to the simulation coordinate system
+              call invrotatevec(sint, cost, sinp, cosp, frotx, froty, frotz)
+
+              crunew(ind_cell(i),icrE+1) = frotx
+              ! Momentum update
+              if(gas_coupled) then
+                 mom_change = -gradpcr_loc(i,1,iGrp)*dt
+                 unew(ind_cell(i),2) = unew(ind_cell(i),2) + mom_change*f_decouple
+              endif
+#if NDIM>1
+              crunew(ind_cell(i),icrE+2) = froty
+              if(gas_coupled) then
+                 mom_change = -gradpcr_loc(i,2,iGrp)*dt
+                 unew(ind_cell(i),3) = unew(ind_cell(i),3) + mom_change*f_decouple
+              endif
+#endif
+#if NDIM>2
+              crunew(ind_cell(i),icrE+3) = frotz
+              if(gas_coupled) then
+                 mom_change = -gradpcr_loc(i,3,iGrp)*dt
+                 unew(ind_cell(i),4) = unew(ind_cell(i),4) + mom_change*f_decouple
+              endif
+#endif
+
+           end do ! End loop over CR groups
+
+           ! Floor the gas thermal energy of the updated state
+           ekin=0d0
+           do idim=1,ndim
+              ekin = ekin + 0.5d0*unew(ind_cell(i),idim+1)**2/unew(ind_cell(i),1)
+           end do
+           emag=0d0
+           do idim=1,ndim
+              emag = emag + 0.125d0*(unew(ind_cell(i),idim+5)+unew(ind_cell(i),idim+nvar))**2
+           end do
+
+           etherm = unew(ind_cell(i),5) - ekin - emag
+           if(etherm .lt. smallp*uold(ind_cell(i),1)) then
+              unew(ind_cell(i),5) = ekin + emag + smallp*uold(ind_cell(i),1)
+              if(myid.eq.1) print*,'add_cr_source_terms: gas thermal energy floored'
            endif
 
-           bdotgradE_loc(i)=0.
-           ! bdotgrade is needed for eq 3 in Jiang & Oh
-           do idim=1,ndim
-              bdotgradE_loc(i) = bdotgradE_loc(i) + B_field_loc(i,idim)*gradEcr_loc(i,idim,iGrp)
-           enddo
-           ! Local streaming velocity, needed for eq 18 in Jiang & Oh
-           vs_loc(i,:) = -vs_loc(i,:)  * bdotgradE_loc(i)/max(1d-50,abs(bdotgradE_loc(i))) !! eq 3 in PO17
-
-           ! Source term, eq 18 in Jiang & Oh 2017
-
-            icrE = Ecr_idx(iGrp)  ! starting index of cr variables
-            norm=0.
-            do j=1,3
-               ! Reuse the face-averaged B already stored in B_field_loc(i,:)
-               ! at the top of this i/iGrp iteration (identical expression).
-               B_field(j) = B_field_loc(i,j)
-               norm = norm + B_field(j)**2
-            end do
-            norm = max(sqrt(norm), 1d-30)
-
-            bxby = sqrt(B_field(1)**2+B_field(2)**2)
-            if(norm.gt.1e-10) then
-               sint = bxby/norm
-               cost = B_field(3)/norm
-            else
-               sint = 1d0
-               cost = 0d0
-            endif
-            if(bxby.gt.1e-10) then
-               sinp = B_field(2)/bxby
-               cosp = B_field(1)/bxby
-            else
-               sinp = 0d0
-               cosp = 1d0
-            endif
-            !B_field = B_field/norm
-
-            rhs1 = max(crunew(ind_cell(i),icrE),cr_efloor)
-
-            ! Flux update ... first rotate flux vector onto B-field,
-            ! i.e. describing the flux in the B coordinate system
-            f2=0. ; f3=0.
-            f1 = crunew(ind_cell(i),icrE+1)
-#if NDIM>1
-            f2 = crunew(ind_cell(i),icrE+2)
-#endif
-#if NDIM>2
-            f3 = crunew(ind_cell(i),icrE+3)
-#endif
-
-            ! Make sure that |F|<=cE/sqrt3 (sqrt3=1 or sqrt(3) for M1 or P1 resp.)
-            fred = sqrt(f1**2+f2**2+f3**2)/(cr_vmax(ilevel)*rhs1)*sqrt3
-            if(fred .gt. 1d0) then
-               f1 = f1/fred ; f2 = f2/fred ; f3 = f3/fred
-            endif
-
-            frotx=f1; froty=f2; frotz=f3
-            call rotatevec(sint, cost, sinp, cosp, frotx, froty, frotz)
-            v1=0. ; v2=0. ; v3=0.
-            v1 = uold(ind_cell(i),2)/uold(ind_cell(i),1)
-#if NDIM>1
-            v2 = uold(ind_cell(i),3)/uold(ind_cell(i),1)
-#endif
-#if NDIM>2
-            v3 = uold(ind_cell(i),4)/uold(ind_cell(i),1)
-#endif
-            vtot1 = v1 ; vtot2 = v2 ; vtot3 = v3
-            if(cr_streaming_heating) then
-               vtot1 = vtot1+vs_loc(i,1)
-               vtot2 = vtot2+vs_loc(i,2)
-               vtot3 = vtot3+vs_loc(i,3)
-            endif
-
-            ! Rotate velocity
-            call rotatevec(sint, cost, sinp, cosp, v1, v2, v3)
-            ! Rotate streaming velocity
-            call rotatevec(sint, cost, sinp, cosp, vtot1, vtot2, vtot3)
-
-            rhs2 = frotx
-            rhs3 = froty
-            rhs4 = frotz
-            if(abs(rhs2).lt.1e-10*cr_efloor) rhs2=0d0
-            if(abs(rhs3).lt.1e-10*cr_efloor) rhs3=0d0
-            if(abs(rhs4).lt.1e-10*cr_efloor) rhs4=0d0
-
-            ! Factor for decoupling CRs from gas at low densities
-            f_decouple = MAX(exp(-smallr*cr_smallr_decouple/uold(ind_cell(i),1)),1d-10)
-
-            sigma_stream = max(1./DCRmax_code &
-               & ,abs(bdotgradE_loc(i))/3d0 / norm / va_loc(i) / gamma_cr(iGrp) / max(crunew(ind_cell(i),icrE),cr_efloor))
-            if(cr_streaming_diffusion) then
-               sigma_x = 1./(Dcr_code(iGrp) + 1./sigma_stream)
-            else
-               sigma_x = 1./Dcr_code(iGrp)
-            endif
-            sigma_y = 1./(Dcr_code(iGrp)*Dcr_perp_factor(iGrp))
-            sigma_z = 1./(Dcr_code(iGrp)*Dcr_perp_factor(iGrp))
-
-            coef_11 = 1.0 - dt * sigma_x * vtot1 * v1 * gamma_cr(iGrp) *3d0*(gamma_cr(iGrp)-1d0)   &
-                          - dt * sigma_y * vtot2 * v2 * gamma_cr(iGrp) *3d0*(gamma_cr(iGrp)-1d0)   &
-                          - dt * sigma_z * vtot3 * v3 * gamma_cr(iGrp) *3d0*(gamma_cr(iGrp)-1d0)
-            coef_12 = dt * sigma_x * vtot1 *3d0*(gamma_cr(iGrp)-1d0)
-            coef_13 = dt * sigma_y * vtot2 *3d0*(gamma_cr(iGrp)-1d0)
-            coef_14 = dt * sigma_z * vtot3 *3d0*(gamma_cr(iGrp)-1d0)
-
-            coef_21 = -dt * v1 * sigma_x * gamma_cr(iGrp) * cr_vmax(ilevel)**2
-            coef_22 = 1.0 + dt * sigma_x * cr_vmax(ilevel)**2
-
-            coef_31 = -dt * v2 * sigma_y * gamma_cr(iGrp) * cr_vmax(ilevel)**2
-            coef_33 = 1.0 + dt * sigma_y * cr_vmax(ilevel)**2
-
-            coef_41 = -dt * v3 * sigma_z * gamma_cr(iGrp) * cr_vmax(ilevel)**2
-            coef_44 = 1.0 + dt * sigma_z * cr_vmax(ilevel)**2
-
-            ! newfr1 = (rhs2 - coef21 * newEc)/coef22
-            ! newfr2= (rhs3 - coef31 * newEc)/coef33
-            ! newfr3 = (rhs4 - coef41 * newEc)/coef44
-            ! coef11 - coef21 * coef12 /coef22 - coef13 * coef31 /coef33 - coef41 * coef14 /coef44)* newec
-            !    =rhs1 - coef12 *rhs2/coef22 - coef13 * rhs3/coef33 - coef14 * rhs4/coef44
-
-            e_coef = coef_11 - coef_12 * coef_21/coef_22 - coef_13 * coef_31/coef_33 &
-                            - coef_14 * coef_41/coef_44
-            new_ec = rhs1 - coef_12 * rhs2/coef_22 - coef_13 * rhs3/coef_33 &
-                         - coef_14 * rhs4/coef_44
-            new_ec = new_ec / e_coef
-
-            old_ec = crunew(ind_cell(i),icrE)
-            crunew(ind_cell(i),icrE) = crunew(ind_cell(i),icrE) + (new_ec-old_ec) * f_decouple
-
-            ! Floor the CR energy and update total energy if necessary
-            if ( crunew(ind_cell(i),icrE) .lt. cr_efloor ) crunew(ind_cell(i),icrE) = cr_efloor
-            ! Thermal energy update:
-            if(.not. static_gas .and. .not. static .and. cr_feedback) then
-               unew(ind_cell(i),5) = unew(ind_cell(i),5) - (crunew(ind_cell(i),icrE) - old_ec)*f_decouple
-               unew(ind_cell(i),5) = max(smallp*uold(ind_cell(i),1), unew(ind_cell(i),5))
-            endif
-            frotx = (rhs2 - coef_21 * new_ec)/coef_22
-            froty = (rhs3 - coef_31 * new_ec)/coef_33
-            frotz = (rhs4 - coef_41 * new_ec)/coef_44
-
-            ! Make sure that |F|<=cE/sqrt3 (sqrt3=1 or sqrt(3) for M1 or P1 resp.)
-            fred = sqrt(frotx**2+froty**2+frotz**2)/(cr_vmax(ilevel)*new_ec)*sqrt3
-            if(fred .gt. 1d0) then
-               !print*,'maybe a problem with fred'
-               frotx = frotx/fred ; froty = froty/fred ; frotz = frotz/fred
-            endif
-
-            ! We are missing the perpendicular energy source term which is done here in Athena!!!
-            ! Rotate the flux back to the simulation coordinate system
-            call invrotatevec(sint, cost, sinp, cosp, frotx, froty, frotz)
-
-            crunew(ind_cell(i),icrE+1) = frotx
-            ! Momentum update
-            if(.not. static_gas .and. .not. static .and. cr_feedback) then
-               mom_change = -gradpcr_loc(i,1,iGrp)*dt
-               unew(ind_cell(i),2) = unew(ind_cell(i),2) + mom_change*f_decouple
-            endif
-#if NDIM>1
-            crunew(ind_cell(i),icrE+2) = froty
-            if(.not. static_gas .and. .not. static .and. cr_feedback) then
-               mom_change = -gradpcr_loc(i,2,iGrp)*dt
-               unew(ind_cell(i),3) = unew(ind_cell(i),3) + mom_change*f_decouple
-            endif
-#endif
-#if NDIM>2
-            crunew(ind_cell(i),icrE+3) = frotz
-            if(.not. static_gas .and. .not. static .and. cr_feedback) then
-               mom_change = -gradpcr_loc(i,3,iGrp)*dt
-               unew(ind_cell(i),4) = unew(ind_cell(i),4) + mom_change*f_decouple
-            endif
-#endif
-
-        end do ! ncr_groups
-
-            ekin=0d0
-            do idim=1,ndim
-               ekin = ekin + 0.5d0*unew(ind_cell(i),idim+1)**2/unew(ind_cell(i),1)
-            end do
-            err=0d0
-            emag=0d0
-            do idim=1,ndim
-               emag = emag + 0.125d0*(unew(ind_cell(i),idim+5)+unew(ind_cell(i),idim+nvar))**2
-            end do
-
-            etherm = unew(ind_cell(i),5) - ekin - emag - err
-            if(etherm .lt. smallp*uold(ind_cell(i),1)) then
-               unew(ind_cell(i),5) = ekin + emag + err + smallp*uold(ind_cell(i),1)
-               if(myid.eq.1) print*,'Noooooo negative energy!!'
-               !call clean_stop
-            endif
-
-        end do ! ncache
+        end do ! End loop over cells in the vector sweep
 
      enddo
      ! End loop over cells
@@ -489,6 +485,7 @@ SUBROUTINE cr_set_unew(ilevel)
    use amr_commons
    use cr_hydro_commons
    use cr_parameters
+   use cr_flux_module, only: cr_limit_flux
    implicit none
    integer::ilevel
    !--------------------------------------------------------------------------
@@ -496,28 +493,21 @@ SUBROUTINE cr_set_unew(ilevel)
    ! calling the CR advection scheme. crunew is set to zero in virtual
    ! boundaries.
    !--------------------------------------------------------------------------
-   integer::i,ivar,ind,icpu,iskip
-   real(dp)::fred,sqrt3
+   integer::i,ivar,ind,icpu,iskip,icell,iGrp,icrE
 
    if(numbtot(1,ilevel)==0)return
    if(verbose)write(*,111)ilevel
 
-   if(cr_isotropic_pressure)then
-      sqrt3=sqrt(3d0)
-   else
-      sqrt3=1.0d0
-   endif
-
    if(cr_flux_correction)then
       do ind=1,twotondim
          iskip=ncoarse+(ind-1)*ngridmax
-         do i=1,active(ilevel)%ngrid
-            fred=sqrt(sum(cruold(active(ilevel)%igrid(i)+iskip,Ecr_idx(1)+1:Ecr_idx(1)+ndim)**2)) &
-                 /(cr_vmax(ilevel)*cruold(active(ilevel)%igrid(i)+iskip,Ecr_idx(1)))*sqrt3
-            if(fred>1.0)then
-               cruold(active(ilevel)%igrid(i)+iskip,Ecr_idx(1)+1:Ecr_idx(1)+ndim) = &
-                    cruold(active(ilevel)%igrid(i)+iskip,Ecr_idx(1)+1:Ecr_idx(1)+ndim)/fred
-            endif
+         do iGrp=1,ncr_groups
+            icrE=Ecr_idx(iGrp)
+            do i=1,active(ilevel)%ngrid
+               icell=active(ilevel)%igrid(i)+iskip
+               call cr_limit_flux(cruold(icell,icrE), &
+                  cruold(icell,icrE+1:icrE+ndim),cr_vmax(ilevel))
+            end do
          end do
       end do
    endif
@@ -560,6 +550,7 @@ SUBROUTINE cr_set_uold(ilevel)
    use amr_commons
    use cr_hydro_commons
    use cr_parameters
+   use cr_flux_module, only: cr_limit_flux
    implicit none
    integer::ilevel
    !--------------------------------------------------------------------------
@@ -569,32 +560,25 @@ SUBROUTINE cr_set_uold(ilevel)
    ! Transport-robustness floor: the per-group CR energy is floored at
    ! cr_efloor after the update. This makes the explicit transport robust on
    ! its own -- without it the explicit transport of a degenerate state can
-   ! drive E_cr slightly negative and trip the Ecr<0 guard in
-   ! cmp_cr_flux_tensors. This is pure transport robustness -- no
-   ! scattering/streaming/cooling source physics.
+   ! drive E_cr slightly negative and the negative state would persist in
+   ! cruold. This is pure transport robustness -- no scattering/streaming/
+   ! cooling source physics.
    !--------------------------------------------------------------------------
-   integer::i,ivar,ind,iskip,iGrp,icrE
-   real(dp)::fred,sqrt3
+   integer::i,ivar,ind,iskip,iGrp,icrE,icell
 
    if(numbtot(1,ilevel)==0)return
    if(verbose)write(*,111)ilevel
 
-   if(cr_isotropic_pressure)then
-      sqrt3=sqrt(3d0)
-   else
-      sqrt3=1.0d0
-   endif
-
    if(cr_flux_correction)then
       do ind=1,twotondim
          iskip=ncoarse+(ind-1)*ngridmax
-         do i=1,active(ilevel)%ngrid
-            fred=sqrt(sum(crunew(active(ilevel)%igrid(i)+iskip,Ecr_idx(1)+1:Ecr_idx(1)+ndim)**2)) &
-                 /(cr_vmax(ilevel)*crunew(active(ilevel)%igrid(i)+iskip,Ecr_idx(1)))*sqrt3
-            if(fred>1.0)then
-               crunew(active(ilevel)%igrid(i)+iskip,Ecr_idx(1)+1:Ecr_idx(1)+ndim) = &
-                    crunew(active(ilevel)%igrid(i)+iskip,Ecr_idx(1)+1:Ecr_idx(1)+ndim)/fred
-            endif
+         do iGrp=1,ncr_groups
+            icrE=Ecr_idx(iGrp)
+            do i=1,active(ilevel)%ngrid
+               icell=active(ilevel)%igrid(i)+iskip
+               call cr_limit_flux(crunew(icell,icrE), &
+                  crunew(icell,icrE+1:icrE+ndim),cr_vmax(ilevel))
+            end do
          end do
       end do
    endif
@@ -668,9 +652,8 @@ SUBROUTINE cr_godfine1(ind_grid, ncache, ilevel)
 
    integer::i,j,idim,ind_son,ind_father,iskip,nbuffer
    integer::i0,j0,k0,i1,j1,k1,i2,j2,k2,i3,j3,k3,nx_loc,nb_noneigh,nexist
-   integer::ivar,iGrp
+   integer::ivar,iGrp,icrE
    real(dp)::dx,scale,oneontwotondim
-   real(dp)::fred,sqrt3
 !------------------------------------------------------------------------
    oneontwotondim = 1d0/dble(twotondim) ! 1/8 in 3D
    ! Mesh spacing
@@ -678,11 +661,6 @@ SUBROUTINE cr_godfine1(ind_grid, ncache, ilevel)
    scale=boxlen/dble(nx_loc)           ! length per coarse oct (=boxlen)
    dx=0.5D0**ilevel*scale              ! length per oct/grid at ilevel
    dt=dtnew(ilevel)
-   if(cr_isotropic_pressure)then
-      sqrt3=sqrt(3d0)
-   else
-      sqrt3=1.0d0
-   endif
 
    !------------------------------------------
    ! Gather 3^ndim neighboring father cells
@@ -745,12 +723,11 @@ SUBROUTINE cr_godfine1(ind_grid, ncache, ilevel)
          if(cr_flux_correction)then
             do j=1,twotondim
                do i=1,nbuffer
-                  ! F<e*c/sqrt(3) for P1 closure
-                  fred=sqrt(sum(u2_cr(i,j,Ecr_idx(1)+1:Ecr_idx(1)+ndim)**2)) &
-                       /(cr_vmax(ilevel)*u2_cr(i,j,Ecr_idx(1)))*sqrt3
-                  if(fred.gt.1.0)then
-                     u2_cr(i,j,Ecr_idx(1)+1:Ecr_idx(1)+ndim)=u2_cr(i,j,Ecr_idx(1)+1:Ecr_idx(1)+ndim)/fred
-                  endif
+                  do iGrp=1,ncr_groups
+                     icrE = Ecr_idx(iGrp)  ! starting index of cr variables
+                     call cr_limit_flux(u2_cr(i,j,icrE), &
+                        u2_cr(i,j,icrE+1:icrE+ndim),cr_vmax(ilevel))
+                  end do
                end do
             end do
          endif
