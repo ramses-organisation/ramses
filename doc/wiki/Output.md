@@ -19,6 +19,7 @@ This namelist block, called `&OUTPUT_PARAMS`, is used to set up the frequency an
 | `write_conservative=.false.` | `logical` | Output conservative hydro variables as stored in `uold` instead of primitive ones |
 | `read_conservative=.false.` | `logical` | When conservative variables have been outputted, this flag should be set to `.true.` to match the correct variables on restart. |
 | `exact_output_time=.false.` | `logical` | Enforce outputs at the exact requested times (`tout` or `aout`) by adjusting the timestep. |
+| `output_to_log=.true.` | `logical` | Write output to the log for 1D runs. |
 
 > **Warning (R. Teyssier)**
 > When using the `exact_output_time` option, having an abrupt change of time step can potentially affect the quality of the solution.
