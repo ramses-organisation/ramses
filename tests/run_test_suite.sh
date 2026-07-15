@@ -25,8 +25,13 @@
 #       ./run_test_suite.sh -q
 #   - Run test suite with coverage:
 #       ./run_test_suite.sh -s
-#   - Run tests with restart:
-#       ./run_test_suite.sh -r
+#   - Restart behaviour:
+#       By default, only tests that opt in via their config.txt
+#       (a line "RESTART: true") are run through the restart mechanism.
+#       ./run_test_suite.sh            # restart the opted-in tests only
+#       ./run_test_suite.sh -r         # force restart on ALL tests
+#       ./run_test_suite.sh -r all     # same as -r
+#       ./run_test_suite.sh -r none    # disable restart for ALL tests
 #
 #######################################################################
 
@@ -44,7 +49,8 @@ DELDATA=true;
 COVERAGE=false;
 CLEAN_ALL=false;
 SELECTTEST=false;
-RESTART=false;
+# Restart mode: "default" (only tests opted-in via config.txt), "all" or "none".
+RESTART_MODE="default";
 while getopts "cdsp:qt:vr" OPTION; do
    case $OPTION in
       c)
@@ -69,7 +75,16 @@ while getopts "cdsp:qt:vr" OPTION; do
          VERBOSE=true;
       ;;
       r)
-         RESTART=true;
+         # -r takes an optional argument ("all" or "none"). getopts treats -r as
+         # a plain flag, so peek at the next token and consume it only if it is
+         # one of the recognised keywords; otherwise -r means "all".
+         eval nextarg=\${$OPTIND};
+         if [ "$nextarg" = "none" ] || [ "$nextarg" = "all" ] ; then
+            RESTART_MODE=$nextarg;
+            OPTIND=$((OPTIND + 1));
+         else
+            RESTART_MODE="all";
+         fi
       ;;
    esac
 done
@@ -287,6 +302,25 @@ for ((i=0;i<$ntests;i++)); do
       fi
    done
 
+   # Decide whether this test is run through the restart mechanism.
+   #   -r all  -> every test ; -r none -> no test ;
+   #   default -> only tests whose config.txt contains "RESTART: true".
+   DO_RESTART=false;
+   case $RESTART_MODE in
+      all)
+         DO_RESTART=true;
+      ;;
+      none)
+         DO_RESTART=false;
+      ;;
+      *)
+         testrestart=$(grep -i '^[[:space:]]*RESTART[[:space:]]*:' ${TEST_DIRECTORY}/${testname[n]}/config.txt | cut -d ':' -f2 | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]');
+         if [ "$testrestart" = "true" ] ; then
+            DO_RESTART=true;
+         fi
+      ;;
+   esac
+
    # Initial cleanup
    $RETURN_TO_BIN;
    if ${make_clean[n]}; then
@@ -340,7 +374,7 @@ for ((i=0;i<$ntests;i++)); do
          run_before_test;
    fi
 
-   if $RESTART ; then
+   if $DO_RESTART ; then
       echo  "Restart: step 1 ..." | tee -a $LOGFILE;
       python3 ../../run_with_restart.py -s 1 -t ${rawname[i]}  | tee -a $LOGFILE;
       run_test;
