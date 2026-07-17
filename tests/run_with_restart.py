@@ -123,21 +123,23 @@ def analyze_schedule(output_params):
         end=end,
         end_type=end_type,
         candidates=sorted(candidates),
-        has_noutput=("noutput" in output_params))
+        has_noutput=("noutput" in output_params),
+        foutput=foutput)
 
 
 def decide_split(schedule):
     """Pick where run 1 should stop and if that creates an extra output."""
     candidates = schedule["candidates"]
+    offset = 0
     if candidates:
         # that the scheduled output in the middle of the list of candidates
         # -> continuous numbering.
         split = candidates[(len(candidates) - 1) // 2]
-        offset = 0
     else:
-        # No intermediate reference output: stop at the mid-point.
+        # No intermediate reference output: stop at the mid-point
+        # if outputting at each coarse step, then the new end time is a pre-existing output
         split = schedule["end"] / 2.0
-        offset = 1
+        if (schedule["foutput"]!=1): offset = 1
     return split, offset
 
 
