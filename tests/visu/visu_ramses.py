@@ -82,7 +82,7 @@ def load_snapshot(nout, read_hydro=True, read_grav=False, read_rt=False):
     # We have to open the files in binary format, and count all the bytes in the ===
     # file structure to extract just the data we need. =============================
     # See output_amr.f90 and output_hydro.f90 in the RAMSES source. ================
-    print("Processing %i files in " % (info["ncpu"]) + infile + '... ', end="")
+    print("Processing %i files in " % (info["ncpu"]) + infile + '...', end="")
 
     # We will store the cells in a dictionary which we build as we go along.
     # The final concatenation into a single array will be done once at the end.
@@ -450,7 +450,7 @@ def load_snapshot(nout, read_hydro=True, read_grav=False, read_rt=False):
     del data_pieces,xcent,xg,son,var,xyz,ref
 
 
-    print("Total number of cells loaded: %i" % ncells_tot, end=" ")
+    print("Total number of cells loaded: %i" % ncells_tot, end="")
     if npart_read > 0:
         print(", total particles loaded: %i" % npart_read, end="")
     print('')
