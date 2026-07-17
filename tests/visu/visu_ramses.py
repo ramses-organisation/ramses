@@ -450,9 +450,10 @@ def load_snapshot(nout, read_hydro=True, read_grav=False, read_rt=False):
     del data_pieces,xcent,xg,son,var,xyz,ref
 
 
-    print("Total number of cells loaded: %i" % ncells_tot)
+    print("Total number of cells loaded: %i" % ncells_tot, end=" ")
     if npart_read > 0:
-        print("Total particles loaded: %i" % npart_read)
+        print(", total particles loaded: %i" % npart_read, end="")
+    print('')
 
     # This is the master data dictionary.
     data = {"data": {}, "info": info, "sinks": {"nsinks": 0}, "stellars": {"nstellars": 0}}
