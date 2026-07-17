@@ -60,7 +60,7 @@ def _as_list(value):
     return [value]
 
 
-def analyze_schedule(op):
+def analyze_schedule(output_params):
     """
     Reconstruct, from the &OUTPUT_PARAMS block, the information needed to split
     the run. Mirrors the termination logic of read_output_params/update_time.
@@ -68,32 +68,32 @@ def analyze_schedule(op):
     Returns a dict with:
       var    : 'time' or 'expansion' -- the controlling variable
       end    : value of that variable at which the run terminates
-      mech   : how the end is imposed ('tend'/'aend'/'tout_list'/'aout_list')
+      end_type   : how the end is imposed ('tend'/'aend'/'tout_list'/'aout_list')
       candidates : sorted intermediate reference outputs strictly in (0, end)
       foutput_active : True if an output is written every coarse step-ish
       has_noutput    : whether noutput is written explicitly in the namelist
       write_conservative : whether outputs store conservative variables
     """
-    tout = _as_list(op.get("tout"))
-    aout = _as_list(op.get("aout"))
-    tend = op.get("tend", 0) or 0
-    aend = op.get("aend", 0) or 0
-    delta_tout = op.get("delta_tout")
-    delta_aout = op.get("delta_aout")
-    foutput = op.get("foutput")
+    tout = _as_list(output_params.get("tout"))
+    aout = _as_list(output_params.get("aout"))
+    tend = output_params.get("tend", 0) or 0
+    aend = output_params.get("aend", 0) or 0
+    delta_tout = output_params.get("delta_tout")
+    delta_aout = output_params.get("delta_aout")
+    foutput = output_params.get("foutput")
     foutput_active = foutput is not None and 0 < foutput < FOUTPUT_OFF
 
     # Controlling variable and end value. aend/tend are appended by RAMSES as the
     # final aout/tout and thus set the termination, taking precedence over the
     # explicit lists.
     if aend > 0:
-        var, end, mech = "expansion", aend, "aend"
+        var, end, end_type = "expansion", aend, "aend"
     elif tend > 0:
-        var, end, mech = "time", tend, "tend"
+        var, end, end_type = "time", tend, "tend"
     elif tout:
-        var, end, mech = "time", max(tout), "tout_list"
+        var, end, end_type = "time", max(tout), "tout_list"
     elif aout:
-        var, end, mech = "expansion", max(aout), "aout_list"
+        var, end, end_type = "expansion", max(aout), "aout_list"
     else:
         raise ValueError(
             "Could not determine the simulation end from &OUTPUT_PARAMS "
@@ -119,53 +119,51 @@ def analyze_schedule(op):
     return dict(
         var=var,
         end=end,
-        mech=mech,
+        end_type=end_type,
         candidates=sorted(candidates),
         foutput_active=foutput_active,
-        has_noutput=("noutput" in op),
-        write_conservative=bool(op.get("write_conservative", False)),
+        has_noutput=("noutput" in output_params),
+        write_conservative=bool(output_params.get("write_conservative", False)),
     )
 
 
-def decide_split(sched):
+def decide_split(schedule):
     """Pick where run 1 should stop and how many extra outputs that creates."""
-    candidates = sched["candidates"]
+    candidates = schedule["candidates"]
     if candidates:
         # Stop on the middle scheduled output -> continuous numbering.
         split = candidates[(len(candidates) - 1) // 2]
         offset = 0
     else:
         # No intermediate reference output: stop at the mid-point.
-        split = sched["end"] / 2.0
+        split = schedule["end"] / 2.0
         # With foutput active every step is an output, so the mid-point dump is
         # a regular output and numbering stays continuous.
-        offset = 0 if sched["foutput_active"] else 1
+        offset = 0 if schedule["foutput_active"] else 1
     return split, offset
 
 
-def impose_end(op, sched, split):
+def impose_end(output_params, schedule, split):
     """Modify the &OUTPUT_PARAMS block in place so the run terminates at `split`."""
-    mech = sched["mech"]
-    single = len(sched["candidates"]) == 0
+    end_type = schedule["end_type"]
+    single = len(schedule["candidates"]) == 0
 
-    if mech == "tend":
-        op["tend"] = split
-    elif mech == "aend":
-        op["aend"] = split
-    elif mech in ("tout_list", "aout_list"):
-        key = "tout" if mech == "tout_list" else "aout"
+    if end_type in ("tend", "aend"):
+        output_params[end_type] = split
+    elif end_type in ("tout_list", "aout_list"):
+        key = "tout" if end_type == "tout_list" else "aout"
         if single:
-            op[key] = split
-            if sched["has_noutput"]:
-                op["noutput"] = 1
+            output_params[key] = split
+            if schedule["has_noutput"]:
+                output_params["noutput"] = 1
         else:
-            new = sorted(x for x in _as_list(op.get(key)) if x <= split)
+            new = sorted(x for x in _as_list(output_params.get(key)) if x <= split)
             if split not in new:
                 new.append(split)
                 new.sort()
-            op[key] = new
-            if sched["has_noutput"]:
-                op["noutput"] = len(new)
+            output_params[key] = new
+            if schedule["has_noutput"]:
+                output_params["noutput"] = len(new)
 
 
 def _list_output_numbers():
@@ -189,14 +187,10 @@ def step_1(test_name):
     shutil.copyfile(nml_path, nml_path + "_backup")
 
     nml = f90nml.read(nml_path)
-    sched = analyze_schedule(nml["output_params"])
-    split, offset = decide_split(sched)
-    impose_end(nml["output_params"], sched, split)
+    schedule = analyze_schedule(nml["output_params"])
+    split, offset = decide_split(schedule)
+    impose_end(nml["output_params"], schedule, split)
 
-    #print(
-    #    f"[restart] step 1: {sched['mech']} end={sched['end']} ({sched['var']}); "
-    #    f"run 1 stops at {split} (offset={offset})"
-    #)
     f90nml.write(nml, nml_path, force=True)
 
 
@@ -206,7 +200,7 @@ def step_2(test_name):
 
     # Start from the original schedule so the second run reproduces it exactly.
     nml = f90nml.read(nml_path + "_backup")
-    op = nml["output_params"]
+    output_params = nml["output_params"]
 
     outputs = _list_output_numbers()
     if not outputs:
@@ -218,8 +212,8 @@ def step_2(test_name):
     nml["run_params"]["nrestart"] = last_output
 
     # Conservative outputs must be read back as conservative on restart.
-    if bool(op.get("write_conservative", False)):
-        op["read_conservative"] = True
+    if bool(output_params.get("write_conservative", False)):
+        output_params["read_conservative"] = True
 
     f90nml.write(nml, nml_path, force=True)
 
