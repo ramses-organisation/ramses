@@ -129,7 +129,6 @@ def analyze_schedule(output_params):
 def decide_split(schedule):
     """Pick where run 1 should stop and if that creates an extra output."""
     candidates = schedule["candidates"]
-    print('debug',candidates)
     if candidates:
         # that the scheduled output in the middle of the list of candidates
         # -> continuous numbering.
@@ -157,7 +156,6 @@ def impose_end(output_params, schedule, split):
         # cut the output list at the new end time
         i_end = updated_params.index(split)
         updated_params = updated_params[0:i_end+1]
-        print(updated_params)
         output_params[end_type] = updated_params
         # update noutput if set
         if schedule["has_noutput"]:
