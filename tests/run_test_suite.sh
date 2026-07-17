@@ -404,9 +404,9 @@ for ((i=0;i<$ntests;i++)); do
    echo "Plotting and analysing results" | tee -a $LOGFILE;
    status=$(python3 plot-${rawname[i]}.py 2>&1);
    if $VERBOSE ; then
-      echo $status;
+      echo "$status";
    fi
-   echo $status >> $LOGFILE;
+   echo "$status" >> $LOGFILE;
 
    # Print message on test status
    ispassed=$(echo $status | grep PASSED);
