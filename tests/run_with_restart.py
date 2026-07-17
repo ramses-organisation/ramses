@@ -5,7 +5,6 @@ except ImportError:
     exit(1)
 
 import os
-import re
 import argparse
 import shutil
 import glob
@@ -17,11 +16,11 @@ The idea of a restart test is to reproduce, in two chunks joined by a restart,
 exactly the same final output(s) that a single uninterrupted run would produce.
 The test suite invokes this script in three steps around two runs of the code:
 
-    python run_with_restart.py -s 1 -t <test_name>   # shorten the run
+    python run_with_restart.py -s 1 -t <test_name>   # prepare namelist for shortened run
     <run the code>                                   # run 1 -> stops mid-way
-    python run_with_restart.py -s 2 -t <test_name>   # restore + set nrestart
-    <run the code>                                   # run 2 -> completes
-    python run_with_restart.py -s 3 -t <test_name>   # restore + renumber
+    python run_with_restart.py -s 2 -t <test_name>   # prepare namelist for restart
+    <run the code>                                   # run 2 -> reached original end time
+    python run_with_restart.py -s 3 -t <test_name>   # restore namelist + renumber outputs
 
 Where:
   -s <step> is the step to run (1, 2 or 3)
@@ -33,9 +32,10 @@ The output schedule can be driven by any combination of:
   tout / aout            explicit output times / expansion factors (scalar or list)
   tend / aend            end time / end expansion factor (appended as final tout/aout)
   delta_tout/delta_aout  periodic outputs in time / expansion factor
-  foutput                outputs every foutput coarse steps
   noutput                number of predefined outputs (recomputed by RAMSES)
   write_conservative     conservative outputs -> read_conservative is set on restart
+
+NOT supported: foutput (unless 1)
 
 These mirror read_output_params() in amr/read_params.f90 and the output logic in
 amr/amr_step.f90 / amr/update_time.f90.
@@ -46,9 +46,6 @@ Whenever possible, we choose the restart point from the options in the default
 namelist. When there is no such candidate, an additional output is created and
 output numbers are renumbered to match the original in the cleanup phase.
 """
-
-# foutput default in amr/amr_parameters.f90 (effectively "off").
-FOUTPUT_OFF = 1000000
 
 
 def _as_list(value):
@@ -68,11 +65,9 @@ def analyze_schedule(output_params):
     Returns a dict with:
       var    : 'time' or 'expansion' -- the controlling variable
       end    : value of that variable at which the run terminates
-      end_type   : how the end is imposed ('tend'/'aend'/'tout_list'/'aout_list')
+      end_type   : how the end is imposed ('tend'/'aend'/'tout'/'aout')
       candidates : sorted intermediate reference outputs strictly in (0, end)
-      foutput_active : True if an output is written every coarse step-ish
       has_noutput    : whether noutput is written explicitly in the namelist
-      write_conservative : whether outputs store conservative variables
     """
     tout = _as_list(output_params.get("tout"))
     aout = _as_list(output_params.get("aout"))
@@ -81,19 +76,20 @@ def analyze_schedule(output_params):
     delta_tout = output_params.get("delta_tout")
     delta_aout = output_params.get("delta_aout")
     foutput = output_params.get("foutput")
-    foutput_active = foutput is not None and 0 < foutput < FOUTPUT_OFF
+    if (foutput not in [None,1]):
+        print("ERROR: foutput!=1 not supported for restarts")
+        return
 
-    # Controlling variable and end value. aend/tend are appended by RAMSES as the
-    # final aout/tout and thus set the termination, taking precedence over the
-    # explicit lists.
+    # Store information about which namelist param is controling the end of the run
+    # Remark that aend/tend take precedence over tout/aout
     if aend > 0:
         var, end, end_type = "expansion", aend, "aend"
     elif tend > 0:
         var, end, end_type = "time", tend, "tend"
     elif tout:
-        var, end, end_type = "time", max(tout), "tout_list"
+        var, end, end_type = "time", max(tout), "tout"
     elif aout:
-        var, end, end_type = "expansion", max(aout), "aout_list"
+        var, end, end_type = "expansion", max(aout), "aout"
     else:
         raise ValueError(
             "Could not determine the simulation end from &OUTPUT_PARAMS "
@@ -101,69 +97,71 @@ def analyze_schedule(output_params):
         )
     # TODO: support for nstepmax
 
-    # Intermediate reference outputs strictly inside the run.
+    # Determine possible restart points from expected outputs
     candidates = set()
-    if var == "time":
-        explicit, delta = tout, delta_tout
+
+    # list explicit intermediate output points
+    if end_type in ['tout','aout']:
+        output_points = _as_list(output_params.get(end_type))
+        output_points = sorted(output_points)
+        output_points = [i for i in output_points if i>0] #remove 0 if present
+        for t in output_points[:-1]:
+            candidates.add(t)
+
+    # predicted output times when using delta
+    if (var == "time"):
+        delta = delta_tout
     else:
-        explicit, delta = aout, delta_aout
-    for x in explicit:
-        if 0 < x < end:
-            candidates.add(x)
-    if delta is not None and 0 < delta < FOUTPUT_OFF:
+        delta = delta_aout
+    if delta is not None:
         k = 1
-        while k * delta < end and k < FOUTPUT_OFF:
+        while k * delta < end:
             candidates.add(k * delta)
             k += 1
 
     return dict(
-        var=var,
         end=end,
         end_type=end_type,
         candidates=sorted(candidates),
-        foutput_active=foutput_active,
-        has_noutput=("noutput" in output_params),
-        write_conservative=bool(output_params.get("write_conservative", False)),
-    )
+        has_noutput=("noutput" in output_params))
 
 
 def decide_split(schedule):
-    """Pick where run 1 should stop and how many extra outputs that creates."""
+    """Pick where run 1 should stop and if that creates an extra output."""
     candidates = schedule["candidates"]
+    print('debug',candidates)
     if candidates:
-        # Stop on the middle scheduled output -> continuous numbering.
+        # that the scheduled output in the middle of the list of candidates
+        # -> continuous numbering.
         split = candidates[(len(candidates) - 1) // 2]
         offset = 0
     else:
         # No intermediate reference output: stop at the mid-point.
         split = schedule["end"] / 2.0
-        # With foutput active every step is an output, so the mid-point dump is
-        # a regular output and numbering stays continuous.
-        offset = 0 if schedule["foutput_active"] else 1
+        offset = 1
     return split, offset
 
 
 def impose_end(output_params, schedule, split):
     """Modify the &OUTPUT_PARAMS block in place so the run terminates at `split`."""
     end_type = schedule["end_type"]
-    single = len(schedule["candidates"]) == 0
 
     if end_type in ("tend", "aend"):
         output_params[end_type] = split
-    elif end_type in ("tout_list", "aout_list"):
-        key = "tout" if end_type == "tout_list" else "aout"
-        if single:
-            output_params[key] = split
-            if schedule["has_noutput"]:
-                output_params["noutput"] = 1
-        else:
-            new = sorted(x for x in _as_list(output_params.get(key)) if x <= split)
-            if split not in new:
-                new.append(split)
-                new.sort()
-            output_params[key] = new
-            if schedule["has_noutput"]:
-                output_params["noutput"] = len(new)
+    elif end_type in ("tout", "aout"):
+        # insert new end time in list if not present (this can be the case when using delta)
+        updated_params = _as_list(output_params[end_type])
+        if split not in updated_params:
+            updated_params.append(split)
+        updated_params = sorted(updated_params)
+        # cut the output list at the new end time
+        i_end = updated_params.index(split)
+        updated_params = updated_params[0:i_end+1]
+        print(updated_params)
+        output_params[end_type] = updated_params
+        # update noutput if set
+        if schedule["has_noutput"]:
+            output_params["noutput"] = len(updated_params)
 
 
 def _list_output_numbers():
@@ -195,7 +193,7 @@ def step_1(test_name):
 
 
 def step_2(test_name):
-    """Restore the full schedule and restart from the last output written."""
+    """Restore the full output schedule and restart from the last output written."""
     nml_path = f"{test_name}.nml"
 
     # Start from the original schedule so the second run reproduces it exactly.
@@ -207,7 +205,6 @@ def step_2(test_name):
         print("ERROR: no output_XXXXX directory found to restart from")
         return
     last_output = outputs[-1]
-    #print(f"[restart] step 2: restarting from output_{last_output:05d}")
 
     nml["run_params"]["nrestart"] = last_output
 
@@ -232,32 +229,29 @@ def step_3(test_name):
         os.rename(backup, nml_path)
 
     if offset == 0:
-        # nothing to do
+        # nothing to do, an intermediate snapshot was outputted by the original namelist
         return
 
-    # offset == 1: run 1 produced output_00001 (start) and output_00002 (extra
-    # mid-point snapshot). Remove the extra and shift everything above down by 1.
-    extra = 2
-    outputs = _list_output_numbers()
-    if not outputs:
-        return
-    last = outputs[-1]
-    if not os.path.isdir(f"output_{extra:05d}") or last <= extra:
-        return
+    # offset == 1: the original run only produced the start and end snapshot,
+    # and the restart produced an extra mid-way output. We remove output 2
+    # and rename output_00003 -> output_00002
+    if os.path.exists("output_00003"):
+        try:
+            # Remove output 2
+            shutil.rmtree(f"output_00002")
+            # Move output 3 into output 2
+            os.rename(f"output_00003", f"output_00002")
 
-    shutil.rmtree(f"output_{extra:05d}")
-    for k in range(extra + 1, last + 1):
-        src = f"output_{k:05d}"
-        dst = f"output_{k - 1:05d}"
-        os.rename(src, dst)
-        for fname in os.listdir(dst):
-            # Replace the (first) output-number token; leave the .outNNNNN cpu
-            # index untouched.
-            new = re.sub(f"{k:05d}", f"{k - 1:05d}", fname, count=1)
-            if new != fname:
-                os.rename(os.path.join(dst, fname), os.path.join(dst, new))
-    #print(f"[restart] step 3: removed extra snapshot, renumbered {extra + 1}..{last} down by 1")
-
+            for file in os.listdir("output_00002"):
+                # remove extension
+                name, ext = os.path.splitext(file)
+                # rename file
+                if name.endswith("00003"):
+                    new_name = name[:-5] + "00002" + ext
+                    os.rename(os.path.join("output_00002", file), os.path.join("output_00002", new_name))
+        except FileNotFoundError:
+            print(f"Warning: output_00003 or output_00002 does not exist")
+            return -1
 
 if __name__ == "__main__":
     # Parse command line arguments
