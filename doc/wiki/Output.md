@@ -6,7 +6,7 @@ This namelist block, called `&OUTPUT_PARAMS`, is used to set up the frequency an
 
 | Variable name, syntax, default value | Fortran type | Description |
 |:---------------------------- |:------------- |:------------------------- |
-| `noutput=1`  | `integer` | Number of specified output times.  At least one output time should be given, corresponding to the end of the simulation. |
+| `noutput=0`  | `integer` | Deprecated. Used to set the number of specified output times, but this is now counted automatically. When set, it is ignored and reset internally. |
 | `foutput=1000000` | `integer` | Frequency of additional outputs in units of coarse time steps. `foutput=1` means one output at each time step. Specified outputs (see above) will not be superseded by this parameter. |
 | `tout=0.0,0.0,0.0,` | `real array` | Value of specified output times. |
 | `aout=1.1,1.1,1.1,` | `real array` | Value of specified output expansion factor (for cosmology runs only). `aout=1.0` means "present epoch" or "zero redshift". |
