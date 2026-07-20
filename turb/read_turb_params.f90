@@ -25,11 +25,12 @@ subroutine read_turb_params(nml_ok)
      nml_ok = .FALSE.
   end if
 
-  ! BUG: upon restart, turb_type 2 gives the wrong rms.
-  if (turb_type == 2) then
-     write (*,*) "Turbulence type 2 is bugged. Please select 1 instead."
-     nml_ok = .FALSE.
-  end if
+  ! turb_type 2 used to give the wrong rms upon restart: init_turb interpolated
+  ! between the two stored fields, and on a restart t falls part way through the
+  ! interval, so the static field came out as a blend of two independent fields,
+  ! whose rms is below turb_rms. init_turb now takes a single field for type 2
+  ! and never interpolates it. Covered by the turb/driving-fixed test, whose
+  ! bottom panel checks that the rms stays constant across a restart.
 
   if (comp_frac < 0.0_dp .OR. comp_frac > 1.0_dp) then
      write (*,*) "Invalid compressive fraction selected! (0.0 to 1.0)"

@@ -1,4 +1,10 @@
 # REMARK: it is normal the reference value for density is negative. This is the sum of the log of the cell densities.
+#
+# Fixed forced turbulence (turb_type=2). The forcing field is generated once and
+# then held for the whole run, so the turbulent rms must be *constant*: it is
+# never advanced and never interpolated. A blend of two independent fields has
+# an rms below turb_rms, so a sagging or restart-dependent rms in the bottom
+# panel is the signature of the field being interpolated when it should not be.
 
 import matplotlib as mpl
 mpl.use('Agg')
@@ -11,7 +17,7 @@ from scipy.interpolate import griddata
 
 # Number of dimensions this test is built with (see config.txt)
 NDIM = 3
-TESTNAME = 'turb/driving'
+TESTNAME = 'turb/driving-fixed'
 
 # Two rows of projections, plus a full-width panel for the rms history
 fig = plt.figure(figsize=(12, 9))
@@ -84,19 +90,26 @@ for i in [0,1]:
 for c in cb:
     c.ax.yaxis.set_label_coords(-1.1, 0.5)
 
-# Turbulent rms and kinetic energy history. These are only diagnostics: they are
-# not compared against the reference solution, and a failure to read the log must
-# not break the test.
+# Turbulent rms history. This is only a diagnostic: it is not compared against
+# the reference solution, and a failure to read the log must not break the test.
 try:
     hist = turb_log.read_turb_history(os.path.join('..', '..', 'test_suite.log'), TESTNAME)
-    target = turb_log.read_target_rms('driving.nml')
+    target = turb_log.read_target_rms('driving-fixed.nml')
 except Exception as e:
     hist, target = turb_log.read_turb_history('', TESTNAME), None
-    print("Could not read turbulence history: %s" % e)
+    print("Could not read turbulent rms history: %s" % e)
 
-turb_log.plot_history(ax_rms, hist, target_rms=target, ndim=NDIM)
+# The field is static, so how flat the rms is *is* the test: report the spread
+# alongside it. The kinetic energy still grows, since a constant force keeps
+# doing work on the gas.
+rms = hist['rms']
+label = 'Current turbulent rms'
+if len(rms) > 0:
+    label += ' (spread %.2e)' % (rms.max() - rms.min())
 
-fig.savefig('driving.pdf',bbox_inches='tight')
+turb_log.plot_history(ax_rms, hist, target_rms=target, ndim=NDIM, rms_label=label)
+
+fig.savefig('driving-fixed.pdf',bbox_inches='tight')
 
 # Check results against reference solution
-visu_ramses.check_solution(data["data"],'driving', threshold=1e-30)
+visu_ramses.check_solution(data["data"],'driving-fixed', threshold=1e-30, overwrite=False)

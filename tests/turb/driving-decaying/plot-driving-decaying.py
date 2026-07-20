@@ -1,4 +1,14 @@
 # REMARK: it is normal the reference value for density is negative. This is the sum of the log of the cell densities.
+#
+# Decaying turbulence (turb_type=3). Despite living in the driving module this
+# is not a driven run at all: init_flow_fine applies the initial field once as a
+# velocity kick, turb_check_time then zeroes it, and every forcing path in
+# amr_step/courant_fine/newdt_fine is switched off by 'turb_type /= 3'.
+#
+# So the bottom panel shows the decay of the kinetic energy, which is the part
+# that actually evolves. The turbulent rms is expected to be identically zero at
+# every step; a non-zero value would mean forcing is leaking into a run that is
+# supposed to be freely decaying, so it is reported rather than plotted.
 
 import matplotlib as mpl
 mpl.use('Agg')
@@ -9,15 +19,13 @@ import visu_ramses
 import turb_log
 from scipy.interpolate import griddata
 
-# Number of dimensions this test is built with (see config.txt)
-NDIM = 3
-TESTNAME = 'turb/driving'
+TESTNAME = 'turb/driving-decaying'
 
-# Two rows of projections, plus a full-width panel for the rms history
+# Two rows of projections, plus a full-width panel for the energy history
 fig = plt.figure(figsize=(12, 9))
 gs = fig.add_gridspec(nrows=3, ncols=3, hspace=0.3)
 ax = np.array([[fig.add_subplot(gs[i, j]) for j in range(3)] for i in range(2)])
-ax_rms = fig.add_subplot(gs[2, :])
+ax_ekin = fig.add_subplot(gs[2, :])
 
 # Load RAMSES output
 data = visu_ramses.load_snapshot(2)
@@ -84,19 +92,32 @@ for i in [0,1]:
 for c in cb:
     c.ax.yaxis.set_label_coords(-1.1, 0.5)
 
-# Turbulent rms and kinetic energy history. These are only diagnostics: they are
-# not compared against the reference solution, and a failure to read the log must
-# not break the test.
+# Energy history. This is only a diagnostic: it is not compared against the
+# reference solution, and a failure to read the log must not break the test.
 try:
     hist = turb_log.read_turb_history(os.path.join('..', '..', 'test_suite.log'), TESTNAME)
-    target = turb_log.read_target_rms('driving.nml')
 except Exception as e:
-    hist, target = turb_log.read_turb_history('', TESTNAME), None
-    print("Could not read turbulence history: %s" % e)
+    hist = turb_log.read_turb_history('', TESTNAME)
+    print("Could not read energy history: %s" % e)
 
-turb_log.plot_history(ax_rms, hist, target_rms=target, ndim=NDIM)
+# The rms is identically zero here, so plotting it would only add a flat line at
+# zero; it is checked and reported as text instead.
+turb_log.plot_history(ax_ekin, hist, show_rms=False,
+                      missing='No energy history found in ../../test_suite.log')
 
-fig.savefig('driving.pdf',bbox_inches='tight')
+rms = hist['rms']
+if len(rms) > 0:
+    # No forcing should ever be applied in a decaying run
+    if np.all(rms == 0.0):
+        note = 'turbulent forcing rms = 0 at all %d steps (no driving)' % len(rms)
+        colour = 'C2'
+    else:
+        note = 'WARNING: turbulent forcing rms is not zero (max %.3e)' % np.abs(rms).max()
+        colour = 'C3'
+    ax_ekin.text(0.99, 0.95, note, ha='right', va='top', fontsize='small',
+                 color=colour, transform=ax_ekin.transAxes)
+
+fig.savefig('driving-decaying.pdf',bbox_inches='tight')
 
 # Check results against reference solution
-visu_ramses.check_solution(data["data"],'driving', threshold=1e-30)
+visu_ramses.check_solution(data["data"],'driving-decaying', threshold=1e-30, overwrite=False)
