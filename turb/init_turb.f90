@@ -16,8 +16,7 @@ subroutine init_turb
    real(kind=dp)        :: proj_norm       ! Normalization from projection
    real(kind=dp)        :: OU_norm         ! Normalization for OU process
 
-   real(kind=dp) :: turb_last_tfrac        ! Time fraction since last
-   real(kind=dp) :: turb_next_tfrac        ! Time fraction until next
+   real(kind=dp) :: turb_tfrac             ! Time fraction since last
 
    integer, parameter :: instant_turb_mult=5
                                          ! Number of autocorrelation times
@@ -54,10 +53,8 @@ subroutine init_turb
    if (myid/=1) then
       call mpi_share_turb_fields(.TRUE.)
       ! Set up afield_now
-      turb_last_tfrac = real((t - turb_last_time) / turb_dt, dp)
-      turb_next_tfrac = 1.0_dp - turb_last_tfrac
-
-      afield_now = turb_last_tfrac*afield_last + turb_next_tfrac*afield_next
+      turb_tfrac = real((t - turb_last_time) / turb_dt, dp)
+      afield_now = (1.0_dp - turb_tfrac)*afield_last + turb_tfrac*afield_next
       return
    end if
 #endif
@@ -192,9 +189,7 @@ subroutine init_turb
    end if
 
    ! Set up afield_now
-   turb_last_tfrac = real((t - turb_last_time) / turb_dt, dp)
-   turb_next_tfrac = 1.0_dp - turb_last_tfrac
-
-   afield_now = turb_last_tfrac*afield_last + turb_next_tfrac*afield_next
+   turb_tfrac = real((t - turb_last_time) / turb_dt, dp)
+   afield_now = (1.0_dp - turb_tfrac)*afield_last + turb_tfrac*afield_next
 
 end subroutine init_turb
