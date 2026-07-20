@@ -3,8 +3,6 @@ subroutine turb_check_time
    use turb_commons
    implicit none
 
-   real(kind=dp) :: turb_tfrac
-
    select case (turb_type)
    case (3)
       ! decaying turbulence - the initial field set up by init_turb has already
@@ -36,11 +34,8 @@ subroutine turb_check_time
          end if
       end do
 
-      ! Time fraction since last turbulence field evaluation
-      turb_tfrac = real((t - turb_last_time) / turb_dt, dp)
-
       ! interpolate for current time between last and next turb field
-      afield_now = (1.0_dp - turb_tfrac)*afield_last + turb_tfrac*afield_next
+      call turb_interpolate_now
    end select
 
 end subroutine turb_check_time

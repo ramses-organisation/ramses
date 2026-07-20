@@ -668,6 +668,22 @@ subroutine current_turb_rms(rms_val)
 
 end subroutine current_turb_rms
 
+subroutine turb_interpolate_now
+   use turb_commons
+   implicit none
+   real(kind=dp) :: turb_tfrac              ! Time fraction since last field
+
+   ! Linear interpolation of the forcing field for the current time between the
+   ! two bracketing fields afield_last (at turb_last_time) and afield_next (at
+   ! turb_next_time). turb_tfrac is expected to lie in [0,1]. This is the single
+   ! definition of the interpolation used by both init_turb and turb_check_time
+   ! for evolving turbulence (turb_type=1); keep it that way, as the two used to
+   ! hold divergent copies of this expression.
+   turb_tfrac = real((t - turb_last_time) / turb_dt, dp)
+   afield_now = (1.0_dp - turb_tfrac)*afield_last + turb_tfrac*afield_next
+
+end subroutine turb_interpolate_now
+
 ! PRNG of Marsaglia
 subroutine spin_up(s)
    use turb_parameters

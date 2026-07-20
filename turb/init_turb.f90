@@ -16,7 +16,6 @@ subroutine init_turb
    real(kind=dp)        :: proj_norm       ! Normalization from projection
    real(kind=dp)        :: OU_norm         ! Normalization for OU process
 
-   real(kind=dp) :: turb_tfrac             ! Time fraction since last
    real(kind=dp) :: turb_rms_now           ! Realised rms of the static field
 
    integer, parameter :: instant_turb_mult=5
@@ -196,11 +195,10 @@ subroutine init_turb
    ! Set up afield_now
    select case (turb_type)
    case (1)
-      ! Evolving forcing: interpolate between the two bracketing fields.
-      ! turb_tfrac lies in [0,1]: it is 0 on a fresh start (with or without
-      ! instant_turb) and lands part way through the interval on a restart.
-      turb_tfrac = real((t - turb_last_time) / turb_dt, dp)
-      afield_now = (1.0_dp - turb_tfrac)*afield_last + turb_tfrac*afield_next
+      ! Evolving forcing: interpolate between the two bracketing fields. The time
+      ! fraction is 0 on a fresh start (with or without instant_turb) and lands
+      ! part way through the interval on a restart.
+      call turb_interpolate_now
    case (2)
       ! Fixed forcing: a single static field, held for the whole run by
       ! turb_check_time. It must NOT be interpolated - blending two independent
