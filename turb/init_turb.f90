@@ -187,13 +187,27 @@ subroutine init_turb
    call mpi_share_turb_fields(.TRUE.)
 #endif
 
-   if (turb_type == 3) then
-       turb_next_time = turb_last_time
-       turb_last_time = turb_last_time - turb_dt
-   end if
-
    ! Set up afield_now
-   turb_tfrac = real((t - turb_last_time) / turb_dt, dp)
-   afield_now = (1.0_dp - turb_tfrac)*afield_last + turb_tfrac*afield_next
+   select case (turb_type)
+   case (1)
+      ! Evolving forcing: interpolate between the two bracketing fields. On a
+      ! fresh start turb_last_time == t, so this reduces to afield_last; after a
+      ! restart t falls part way through the interval and the weights matter.
+      turb_tfrac = real((t - turb_last_time) / turb_dt, dp)
+      afield_now = (1.0_dp - turb_tfrac)*afield_last + turb_tfrac*afield_next
+   case (2)
+      ! Fixed forcing: a single static field, held for the whole run by
+      ! turb_check_time. It must NOT be interpolated - blending two independent
+      ! fields gives an rms below turb_rms, which is what broke type 2 on
+      ! restart. afield_last pairs with turb_last, which is what gets written to
+      ! and reloaded from the restart files, so this is stable across a restart.
+      afield_now = afield_last
+   case (3)
+      ! Decaying: no forcing is ever applied. This field is consumed once, by
+      ! init_flow_fine, as the initial velocity field, then zeroed by
+      ! turb_check_time. Any single field will do, but it must be a single
+      ! field and it must be the same one on every task.
+      afield_now = afield_last
+   end select
 
 end subroutine init_turb
