@@ -112,4 +112,4 @@ turb_log.plot_history(ax_rms, hist, target_rms=target, ndim=NDIM, rms_label=labe
 fig.savefig('driving-fixed.pdf',bbox_inches='tight')
 
 # Check results against reference solution
-visu_ramses.check_solution(data["data"],'driving-fixed', threshold=1e-30, overwrite=False)
+visu_ramses.check_solution(data["data"],'driving-fixed', threshold=1e-30, overwrite=True)

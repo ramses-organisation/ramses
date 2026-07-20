@@ -83,6 +83,15 @@ $\sqrt{N_{dim}}\,f_{\mathrm{rms}}$ from one update to the next. This is intended
 $f_{\mathrm{rms}}$ sets the *time-averaged* amplitude, and the scatter averages
 out over a run.
 
+An evolving field grown from rest starts at only $\sqrt{1-e^{-2dt/T}}\approx14\%$
+of its saturated amplitude and needs about one autocorrelation time $T$ to build
+up. The `instant_turb` option (on by default) evolves the field for several $T$
+before the run starts, so that it begins already saturated. Leaving it on is
+strongly recommended for `turb_type=1`, especially for runs shorter than or
+comparable to $T$, which would otherwise spend most of their length in the
+spin-up transient. It has no useful effect for the other two types (see below)
+and is switched off automatically for them.
+
 ### `turb_type=2` — fixed driving ###
 
 One field is generated at startup and then held, unchanged, for the whole run.
@@ -124,7 +133,29 @@ Note this differs from the more usual way of setting up decaying turbulence, in
 which a driven run is evolved to a steady state and the driving is then switched
 off. Here the initial field is a single draw of the process rather than a
 saturated turbulent state, so it has not developed the density structure or the
-velocity correlations of fully developed turbulence.
+velocity correlations of fully developed turbulence. For that reason
+`turb_type=3` is best thought of as a quick way to seed a velocity field, not as
+a substitute for genuinely decaying turbulence; for the latter, use the recipe
+below.
+
+### Decaying turbulence from a developed field ###
+
+To study freely decaying turbulence it is usually better to develop the
+turbulence self-consistently first and only then let it decay, rather than to
+start from the single draw of `turb_type=3`:
+
+1. Run with `turb_type=1` (keep `instant_turb` on) until the turbulence is fully
+   developed — as a rule of thumb a few autocorrelation times $T$, long enough
+   for the density structure and velocity correlations to build up. Write an
+   output at the point you want the decay to begin.
+2. Restart from that output with turbulence switched off, i.e. `turb=.false.`
+   in the namelist.
+
+On restart with `turb=.false.` no forcing is applied and the initial velocity
+kick is not re-applied (`init_flow_fine` only applies it on a fresh start,
+`nrestart==0`), so the developed field simply decays under its own dissipation
+from the state in the restart file. This gives a physically meaningful decaying
+run, which the `turb_type=3` initial-velocity field does not.
 
 ## Overview of parameters ##
 
@@ -133,7 +164,7 @@ velocity correlations of fully developed turbulence.
 | `turb`                | `boolean`    | `.false.`     |          | Turn on or off driving
 | `turb_seed`           | `integer`    | `-1`          |          | Random number generator seed. -1 = random
 | `turb_type`           | `integer`    | `1`           |          | How the driving changes over time. 1=driven evolving, 2=driven fixed, 3=decaying. See the "Turbulence types" section above
-| `instant_turb`        | `boolean`    | `.true.`      |          | Generate initial turbulence before start
+| `instant_turb`        | `boolean`    | `.true.`      |          | Evolve the field to saturation before the run starts. Recommended for `turb_type=1`; ignored (forced off) for types 2 and 3. See the "Turbulence types" section above
 | `comp_frac`           | `float`      | `0.3333`      |  $\chi$  | The weight of compressive over solenoidal modes
 | `turb_T`              | `float`      | `1`           |  $T$     | Turbulent velocity auto-correlation time in code units.
 | `turb_Ndt`            | `integer`    | `100`         |  $T/dt$  | Number of timesteps per auto-correlation time |

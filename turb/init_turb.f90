@@ -172,8 +172,13 @@ subroutine init_turb
             write (6,'(A,$)') " done."
             write (6,*)
             call flush(6)
-            turb_last_time = turb_next_time
-            turb_next_time = turb_last_time + turb_dt
+            ! The spin-up loop above holds the clock at its fixed point
+            ! (turb_last_time, turb_next_time) = (t, t + turb_dt) while it
+            ! regenerates the fields, so it already leaves the correct bracket
+            ! for the current time. Do NOT advance the clock again here: doing
+            ! so used to leave turb_last_time one turb_dt ahead of t, so the
+            ! initial afield_now came out as the extrapolation
+            ! 2*afield_last - afield_next rather than a field on the segment.
          end if
       end if
 
@@ -191,9 +196,9 @@ subroutine init_turb
    ! Set up afield_now
    select case (turb_type)
    case (1)
-      ! Evolving forcing: interpolate between the two bracketing fields. On a
-      ! fresh start turb_last_time == t, so this reduces to afield_last; after a
-      ! restart t falls part way through the interval and the weights matter.
+      ! Evolving forcing: interpolate between the two bracketing fields.
+      ! turb_tfrac lies in [0,1]: it is 0 on a fresh start (with or without
+      ! instant_turb) and lands part way through the interval on a restart.
       turb_tfrac = real((t - turb_last_time) / turb_dt, dp)
       afield_now = (1.0_dp - turb_tfrac)*afield_last + turb_tfrac*afield_next
    case (2)
