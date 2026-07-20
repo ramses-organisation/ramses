@@ -65,13 +65,74 @@ fraction $\chi$.
 
 
 
+## Turbulence types ##
+
+The `turb_type` parameter selects one of three fairly different behaviours. The
+same turbulent field is generated in all three cases; what changes is how it is
+used afterwards.
+
+### `turb_type=1` — evolving driving ###
+
+The default. The field evolves through the Ornstein-Uhlenbeck process described
+above, being advanced every $dt = T/N_{dt}$ and linearly interpolated in between,
+and is applied as an acceleration at every timestep. The timestep is capped at
+$T/N_{dt}$ so that no step skips over a field update.
+
+The rms of the field fluctuates by a few percent about
+$\sqrt{N_{dim}}\,f_{\mathrm{rms}}$ from one update to the next. This is intended:
+$f_{\mathrm{rms}}$ sets the *time-averaged* amplitude, and the scatter averages
+out over a run.
+
+### `turb_type=2` — fixed driving ###
+
+One field is generated at startup and then held, unchanged, for the whole run.
+It is applied as an acceleration at every timestep, exactly as for type 1.
+
+Because the field is frozen, the scatter that averages out for type 1 would
+instead become a systematic bias for the whole simulation, so the field is
+renormalised at startup so that its rms is exactly
+$\sqrt{N_{dim}}\,f_{\mathrm{rms}}$.
+
+This field is deliberately *not* interpolated. Interpolating it would blend two
+independent realisations, and a weighted blend has a lower rms than either one,
+which is what used to make type 2 lose amplitude after a restart.
+
+### `turb_type=3` — decaying turbulence ###
+
+Despite living in the driving module, this is **not** a driven run. The
+turbulent field is applied exactly once, by `init_flow_fine`, as the initial
+velocity field, and is then zeroed for the rest of the run. Every forcing and
+timestep-limiting path is switched off for this type, so the timestep is set by
+the ordinary CFL condition rather than being capped at $T/N_{dt}$.
+
+This has an important consequence for `turb_rms`. For types 1 and 2 the field
+is an **acceleration**, and the velocity a run reaches is a saturation value set
+by driving against dissipation, typically far below $f_{\mathrm{rms}}$. For type
+3 the field is applied with an effective timestep of exactly one code time unit,
+which turns it into a **velocity**: the box starts at
+$|v|_{\mathrm{rms}} = \sqrt{N_{dim}}\,f_{\mathrm{rms}}$ immediately. As for type
+2, the field is renormalised at startup, so this initial velocity dispersion,
+and hence the initial Mach number, is exact rather than left to the draw.
+
+So `turb_rms` carries over badly between the two. Reusing a driven value for a
+decaying run typically gives an initial Mach number one to two orders of
+magnitude too high, and a correspondingly tiny CFL timestep. For a decaying run,
+choose `turb_rms` from the initial velocity dispersion you want, divided by
+$\sqrt{N_{dim}}$.
+
+Note this differs from the more usual way of setting up decaying turbulence, in
+which a driven run is evolved to a steady state and the driving is then switched
+off. Here the initial field is a single draw of the process rather than a
+saturated turbulent state, so it has not developed the density structure or the
+velocity correlations of fully developed turbulence.
+
 ## Overview of parameters ##
 
 | Variable name         | Fortran type | Default value | Notation | Description |
 |:----------------------|:------------ |:------------- |:---------| :------------------------ |
 | `turb`                | `boolean`    | `.false.`     |          | Turn on or off driving
 | `turb_seed`           | `integer`    | `-1`          |          | Random number generator seed. -1 = random
-| `turb_type`           | `integer`    | `1`           |          | How the driving changes over time. 1=driven evolving, 3=decaying
+| `turb_type`           | `integer`    | `1`           |          | How the driving changes over time. 1=driven evolving, 2=driven fixed, 3=decaying. See the "Turbulence types" section above
 | `instant_turb`        | `boolean`    | `.true.`      |          | Generate initial turbulence before start
 | `comp_frac`           | `float`      | `0.3333`      |  $\chi$  | The weight of compressive over solenoidal modes
 | `turb_T`              | `float`      | `1`           |  $T$     | Turbulent velocity auto-correlation time in code units.

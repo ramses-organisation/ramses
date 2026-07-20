@@ -14,6 +14,18 @@ subroutine synchro_hydro_fine(ilevel,dteff,which_force)
   integer::which_force !gravity=1, turbulence=2
   !-------------------------------------------------------------------
   ! Update velocity  from gravitational acceleration
+  !
+  ! The velocity is updated as v = v + force*dteff, where the force is
+  ! either the gravitational acceleration (which_force=1) or the turbulent
+  ! forcing fturb (which_force=2).
+  !
+  ! Beware that dteff is not always a timestep. Driven turbulence
+  ! (turb_type=1 and 2) passes the real timestep from amr_step, but decaying
+  ! turbulence (turb_type=3) is called once from init_flow_fine with
+  ! dteff=1.0, which turns this routine into a way of *setting* the initial
+  ! velocity field rather than accelerating the gas: it reinterprets the
+  ! acceleration array as a velocity by integrating it over exactly one code
+  ! time unit. See the comment at that call site in init_flow_fine.
   !-------------------------------------------------------------------
   integer::ncache,ngrid,i,igrid,iskip,ind
   integer,dimension(1:nvector),save::ind_grid,ind_cell

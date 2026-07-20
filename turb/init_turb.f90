@@ -17,6 +17,7 @@ subroutine init_turb
    real(kind=dp)        :: OU_norm         ! Normalization for OU process
 
    real(kind=dp) :: turb_tfrac             ! Time fraction since last
+   real(kind=dp) :: turb_rms_now           ! Realised rms of the static field
 
    integer, parameter :: instant_turb_mult=5
                                          ! Number of autocorrelation times
@@ -202,12 +203,39 @@ subroutine init_turb
       ! restart. afield_last pairs with turb_last, which is what gets written to
       ! and reloaded from the restart files, so this is stable across a restart.
       afield_now = afield_last
+
+      ! Renormalise onto the requested amplitude. afield_last is a single draw
+      ! of the Ornstein-Uhlenbeck process, whose rms fluctuates by a few percent
+      ! about sqrt(ndim)*turb_rms. For turb_type=1 that scatter is intended and
+      ! averages out over the run, but here the field is frozen, so whatever
+      ! deviation this particular draw happens to have would bias the driving
+      ! for the whole simulation.
+      ! current_turb_rms works on afield_now, and afield_last is rebuilt
+      ! identically from turb_last after a restart, so the same factor is
+      ! recovered and the field stays stable across a restart. It is also
+      ! computed identically on every task, so no communication is needed.
+      call current_turb_rms(turb_rms_now)
+      if (turb_rms_now > 0.0_dp) then
+         afield_now = afield_now * &
+              & (sqrt(real(ndim,dp))*turb_rms / turb_rms_now)
+      end if
    case (3)
       ! Decaying: no forcing is ever applied. This field is consumed once, by
       ! init_flow_fine, as the initial velocity field, then zeroed by
       ! turb_check_time. Any single field will do, but it must be a single
       ! field and it must be the same one on every task.
       afield_now = afield_last
+
+      ! Renormalise for the same reason as turb_type=2: this single draw of the
+      ! process would otherwise be a few percent off the requested amplitude.
+      ! Here that amplitude is a velocity rather than a forcing, so this fixes
+      ! the initial velocity dispersion, and hence the initial Mach number, at
+      ! exactly sqrt(ndim)*turb_rms instead of leaving it to the draw.
+      call current_turb_rms(turb_rms_now)
+      if (turb_rms_now > 0.0_dp) then
+         afield_now = afield_now * &
+              & (sqrt(real(ndim,dp))*turb_rms / turb_rms_now)
+      end if
    end select
 
 end subroutine init_turb

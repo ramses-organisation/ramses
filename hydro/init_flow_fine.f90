@@ -479,7 +479,24 @@ subroutine init_flow_fine(ilevel)
      ! End loop over grids
 
 #if USE_TURB==1
-     ! Add initial turbulent velocity
+     ! Add initial turbulent velocity.
+     !
+     ! Decaying turbulence (turb_type=3) is never driven: the turbulent field is
+     ! applied once, here, as the initial velocity field, and turb_check_time
+     ! zeroes it from the first timestep onwards.
+     !
+     ! Note the dteff=1.0 passed to synchro_hydro_fine. That is deliberate, and
+     ! it is not a timestep. synchro_hydro_fine adds fturb*dteff to the velocity,
+     ! so passing exactly one code time unit reuses the driving machinery to
+     ! *set* a velocity rather than to accelerate the gas: the field, which for
+     ! turb_type=1 and 2 is an acceleration, is reinterpreted here as a velocity.
+     !
+     ! The practical consequence is that turb_rms means something different for
+     ! turb_type=3: it is the rms of the initial velocity per dimension, not of
+     ! a forcing, so |v|_rms = sqrt(ndim)*turb_rms right away. A value tuned for
+     ! a driven run is therefore far too large here, because a driven run only
+     ! reaches a saturation velocity set by driving against dissipation. See
+     ! doc/wiki/TurbulenceDriving.md and the turb/driving-decaying test.
      if (turb .AND. turb_type == 3) then
         call calc_turb_forcing(ilevel)
         call synchro_hydro_fine(ilevel,1.0_dp,2)
