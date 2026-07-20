@@ -119,10 +119,20 @@ subroutine gaussian_cmplx(G)
    !use constants, only:pi
    use turb_commons
    implicit none
-   ! Generates 3 complex random variates, where each variate has a
-   ! complex value drawn from a Gaussian distribution EITHER
-   ! by assigning a Gaussian magnitude and uniformly distributed argument OR
-   ! by assigning Gaussian real and imaginary components
+   ! Generates ndim complex random variates for one Fourier mode of the forcing.
+   !
+   ! CAVEAT ON THE DISTRIBUTION: as implemented (Method 1 below) each variate is
+   ! a normal magnitude times a uniform-phase unit phasor. That is NOT a proper
+   ! complex Gaussian: a complex Gaussian (real and imaginary parts each an
+   ! independent N(0,1), which is what the commented-out Method 2 produces) has
+   ! a Rayleigh magnitude, whereas this gives a half-normal magnitude |N(0,1)|
+   ! and so half the per-mode power (E[|G|^2]=1 instead of 2). In practice this
+   ! barely matters: the real-space forcing is a sum over many modes and so is
+   ! Gaussian by the central limit theorem regardless, and the amplitude is set
+   ! by the empirical turb_norm rather than by this per-mode variance. Switching
+   ! to a true complex Gaussian would require re-fitting proj_rms_norm (which was
+   ! calibrated against this generator) and regenerating the turb references, so
+   ! the generator is left as-is and only documented here.
    complex(kind=cdp), intent(out) :: G(1:ndim) ! Random gaussian values
    integer              :: d           ! Dimension counter
    real(kind=dp)        :: Rnd(1:3)    ! Random numbers
@@ -134,7 +144,7 @@ subroutine gaussian_cmplx(G)
    ! and centred on 0 (hopefully)
    ! You get two independent variates each time
 
-   ! Method 1: Gaussian magnitude and uniformly-random argument
+   ! Method 1: normal magnitude and uniformly-random argument (see caveat above)
    do d=1,ndim
       do
          call kiss64_double(2, kiss64_state, Rnd(1:2))
@@ -150,6 +160,12 @@ subroutine gaussian_cmplx(G)
    end do
 
    call kiss64_double(ndim, kiss64_state, Rnd(1:ndim))
+   ! Random phase. The trailing "- 1.0" is a constant 1-radian offset and looks
+   ! like a leftover (it was probably meant to be "- PI" to centre the phase on
+   ! [-PI, PI)). It has no statistical effect: the phase is uniform over a full
+   ! 2*pi period either way, so cos/sin sample the circle identically. It is
+   ! kept only so the generated fields, and hence the test reference solutions,
+   ! do not change; drop it (and regenerate the turb references) if ever touched.
    arg = (Rnd(1:ndim) * 2.0 * PI) - 1.0
 
    G = cmplx(mag * cos(arg), mag * sin(arg), kind=cdp)
@@ -730,12 +746,16 @@ subroutine kiss64_double(N, s, out_array)
       call kiss64_core(s, int_array(i))
    end do
 
+   ! The mantissa mask and exponent set make each int64 the bit pattern of a
+   ! double-precision real in [1,2); subtracting 1 gives a uniform variate in
+   ! [0,1). The int64 pattern is always a *double*, so the reinterpretation must
+   ! use a double-precision mold even when out_array is single precision.
    int_array = iand(int_array, z'FFFFFFFFFFFFF')
    int_array = ieor(int_array, z'3FF0000000000000')
 #ifdef DOUBLE_PRECISION
    out_array = transfer(int_array, out_array) - 1.0_dp
 #else
-   dbl_array = transfer(int_array, out_array)
+   dbl_array = transfer(int_array, dbl_array) - 1.0d0
    out_array = real(dbl_array, dp)
 #endif
 
