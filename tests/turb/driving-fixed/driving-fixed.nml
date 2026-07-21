@@ -54,7 +54,7 @@ T_eos=4.2194
 
 &TURB_PARAMS
 turb=.true.
-turb_type=2          ! 2=forced fixed 
+turb_type=2          ! 2=forced fixed
 turb_seed=1          ! -1 = random
 comp_frac=0.5        ! compressive fraction
 instant_turb=.false. ! Not useful for type 2
