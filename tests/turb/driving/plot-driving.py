@@ -84,7 +84,7 @@ for i in [0,1]:
 for c in cb:
     c.ax.yaxis.set_label_coords(-1.1, 0.5)
 
-# Turbulent rms and kinetic energy history. These are only diagnostics: they are
+# Plot turbulent rms and kinetic energy evolution. These are only diagnostics: they are
 # not compared against the reference solution, and a failure to read the log must
 # not break the test.
 try:

@@ -1,5 +1,3 @@
-# REMARK: it is normal the reference value for density is negative. This is the sum of the log of the cell densities.
-#
 # Decaying turbulence (turb_type=3). Despite living in the driving module this
 # is not a driven run at all: init_flow_fine applies the initial field once as a
 # velocity kick, turb_check_time then zeroes it, and every forcing path in
@@ -120,4 +118,4 @@ if len(rms) > 0:
 fig.savefig('driving-decaying.pdf',bbox_inches='tight')
 
 # Check results against reference solution
-visu_ramses.check_solution(data["data"],'driving-decaying', threshold=1e-30, overwrite=False)
+visu_ramses.check_solution(data["data"],'driving-decaying', threshold=1e-30)

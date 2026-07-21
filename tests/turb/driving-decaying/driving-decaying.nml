@@ -59,10 +59,10 @@ T_eos=4.2194
 
 &TURB_PARAMS
 turb=.true.
-turb_type=3         ! 1=forced evolving, 2=forced fixed, 3=decaying
-turb_seed=1         ! -1 = random
-comp_frac=0.5       ! compressive fraction
-!instant_turb=.true. ! Generate initial turbulence before start
+turb_type=3          ! 3=decaying
+turb_seed=1          ! -1 = random
+comp_frac=0.5        ! compressive fraction
+instant_turb=.false. ! not useful for type 3
 forcing_power_spectrum='power_law' !power_law, parabolic, konstandin, test
 turb_T=0.29241000937376255
 turb_Ndt=100       ! Number of timesteps per autocorr. time

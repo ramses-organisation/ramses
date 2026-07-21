@@ -1,5 +1,3 @@
-# REMARK: it is normal the reference value for density is negative. This is the sum of the log of the cell densities.
-#
 # Fixed forced turbulence (turb_type=2). The forcing field is generated once and
 # then held for the whole run, so the turbulent rms must be *constant*: it is
 # never advanced and never interpolated. A blend of two independent fields has
@@ -112,4 +110,4 @@ turb_log.plot_history(ax_rms, hist, target_rms=target, ndim=NDIM, rms_label=labe
 fig.savefig('driving-fixed.pdf',bbox_inches='tight')
 
 # Check results against reference solution
-visu_ramses.check_solution(data["data"],'driving-fixed', threshold=1e-30, overwrite=True)
+visu_ramses.check_solution(data["data"],'driving-fixed', threshold=1e-30)

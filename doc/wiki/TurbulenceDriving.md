@@ -65,6 +65,22 @@ fraction $\chi$.
 
 
 
+## Overview of parameters ##
+
+| Variable name         | Fortran type | Default value | Notation | Description |
+|:----------------------|:------------ |:------------- |:---------| :------------------------ |
+| `turb`                | `boolean`    | `.false.`     |          | Turn on or off driving
+| `turb_seed`           | `integer`    | `-1`          |          | Random number generator seed. -1 = random
+| `turb_type`           | `integer`    | `1`           |          | How the driving changes over time. 1=driven evolving, 2=driven fixed, 3=decaying. See the "Turbulence types" section below
+| `instant_turb`        | `boolean`    | `.true.`      |          | Evolve the field to saturation before the run starts. Recommended for `turb_type=1`. See the "Turbulence types" section below
+| `comp_frac`           | `float`      | `0.3333`      |  $\chi$  | The weight of compressive over solenoidal modes
+| `turb_T`              | `float`      | `1`           |  $T$     | Turbulent velocity auto-correlation time in code units.
+| `turb_Ndt`            | `integer`    | `100`         |  $T/dt$  | Number of timesteps per auto-correlation time |
+| `turb_rms`            | `float`      | `1`           |  $f_\mathrm{rms}$ |Root-mean-square  turbulent  forcing  in  code  units. |
+| `turb_min_rho`        | `float`      | `1d-50`       |          | Minimum density for turbulence. Not forcing is added onto cellswith a density less than this value.
+| `forcing_power_spectrum`  | `string`     | `parabolic` | $F_0$   | Power spectrum type of the forcing, which describes the relative strength of individual modes. Options are: power_law, parabolic, konstandin
+
+
 ## Turbulence types ##
 
 The `turb_type` parameter selects one of three fairly different behaviours. The
@@ -89,8 +105,7 @@ up. The `instant_turb` option (on by default) evolves the field for several $T$
 before the run starts, so that it begins already saturated. Leaving it on is
 strongly recommended for `turb_type=1`, especially for runs shorter than or
 comparable to $T$, which would otherwise spend most of their length in the
-spin-up transient. It has no useful effect for the other two types (see below)
-and is switched off automatically for them.
+spin-up transient. It has no useful effect for the other two types.
 
 ### `turb_type=2` — fixed driving ###
 
@@ -101,10 +116,6 @@ Because the field is frozen, the scatter that averages out for type 1 would
 instead become a systematic bias for the whole simulation, so the field is
 renormalised at startup so that its rms is exactly
 $\sqrt{N_{dim}}\,f_{\mathrm{rms}}$.
-
-This field is deliberately *not* interpolated. Interpolating it would blend two
-independent realisations, and a weighted blend has a lower rms than either one,
-which is what used to make type 2 lose amplitude after a restart.
 
 ### `turb_type=3` — decaying turbulence ###
 
@@ -157,19 +168,5 @@ kick is not re-applied (`init_flow_fine` only applies it on a fresh start,
 from the state in the restart file. This gives a physically meaningful decaying
 run, which the `turb_type=3` initial-velocity field does not.
 
-## Overview of parameters ##
-
-| Variable name         | Fortran type | Default value | Notation | Description |
-|:----------------------|:------------ |:------------- |:---------| :------------------------ |
-| `turb`                | `boolean`    | `.false.`     |          | Turn on or off driving
-| `turb_seed`           | `integer`    | `-1`          |          | Random number generator seed. -1 = random
-| `turb_type`           | `integer`    | `1`           |          | How the driving changes over time. 1=driven evolving, 2=driven fixed, 3=decaying. See the "Turbulence types" section above
-| `instant_turb`        | `boolean`    | `.true.`      |          | Evolve the field to saturation before the run starts. Recommended for `turb_type=1`; ignored (forced off) for types 2 and 3. See the "Turbulence types" section above
-| `comp_frac`           | `float`      | `0.3333`      |  $\chi$  | The weight of compressive over solenoidal modes
-| `turb_T`              | `float`      | `1`           |  $T$     | Turbulent velocity auto-correlation time in code units.
-| `turb_Ndt`            | `integer`    | `100`         |  $T/dt$  | Number of timesteps per auto-correlation time |
-| `turb_rms`            | `float`      | `1`           |  $f_\mathrm{rms}$ |Root-mean-square  turbulent  forcing  in  code  units. |
-| `turb_min_rho`        | `float`      | `1d-50`       |          | Minimum density for turbulence. Not forcing is added onto cellswith a density less than this value.
-| `forcing_power_spectrum`  | `string`     | `parabolic` | $F_0$   | Power spectrum type of the forcing, which describes the relative strength of individual modes. Options are: power_law, parabolic, konstandin
 
 [^ref]: adapted from Brucy et al. 2024.

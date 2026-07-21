@@ -171,23 +171,15 @@ subroutine init_turb
             write (6,'(A,$)') " done."
             write (6,*)
             call flush(6)
-            ! The spin-up loop above holds the clock at its fixed point
-            ! (turb_last_time, turb_next_time) = (t, t + turb_dt) while it
-            ! regenerates the fields, so it already leaves the correct bracket
-            ! for the current time. Do NOT advance the clock again here: doing
-            ! so used to leave turb_last_time one turb_dt ahead of t, so the
-            ! initial afield_now came out as the extrapolation
-            ! 2*afield_last - afield_next rather than a field on the segment.
          end if
       end if
-
    end if
 
    ! Tasks to always be done (including MPI non-root tasks)
    ! ---------------------------------------------------------------------------
 
 #ifndef WITHOUTMPI
-   ! Rendezvous: for the root task this call sends the fields built above, for
+   ! Rendezvous: for the root task this sends the fields built above, for
    ! every other task it receives them into the arrays allocated at the top.
    call mpi_share_turb_fields(.TRUE.)
 #endif
@@ -202,42 +194,29 @@ subroutine init_turb
    case (2)
       ! Fixed forcing: a single static field, held for the whole run by
       ! turb_check_time. It must NOT be interpolated - blending two independent
-      ! fields gives an rms below turb_rms, which is what broke type 2 on
-      ! restart. afield_last pairs with turb_last, which is what gets written to
-      ! and reloaded from the restart files, so this is stable across a restart.
+      ! fields gives an rms below turb_rms.
       afield_now = afield_last
 
       ! Renormalise onto the requested amplitude. afield_last is a single draw
       ! of the Ornstein-Uhlenbeck process, whose rms fluctuates by a few percent
-      ! about sqrt(ndim)*turb_rms. For turb_type=1 that scatter is intended and
-      ! averages out over the run, but here the field is frozen, so whatever
-      ! deviation this particular draw happens to have would bias the driving
-      ! for the whole simulation.
-      ! current_turb_rms works on afield_now, and afield_last is rebuilt
-      ! identically from turb_last after a restart, so the same factor is
-      ! recovered and the field stays stable across a restart. It is also
-      ! computed identically on every task, so no communication is needed.
+      ! about sqrt(ndim)*turb_rms.
       call current_turb_rms(turb_rms_now)
       if (turb_rms_now > 0.0_dp) then
-         afield_now = afield_now * &
-              & (sqrt(real(ndim,dp))*turb_rms / turb_rms_now)
+         afield_now = afield_now * (sqrt(real(ndim,dp))*turb_rms / turb_rms_now)
       end if
    case (3)
       ! Decaying: no forcing is ever applied. This field is consumed once, by
       ! init_flow_fine, as the initial velocity field, then zeroed by
-      ! turb_check_time. Any single field will do, but it must be a single
-      ! field and it must be the same one on every task.
+      ! turb_check_time.
       afield_now = afield_last
 
-      ! Renormalise for the same reason as turb_type=2: this single draw of the
-      ! process would otherwise be a few percent off the requested amplitude.
+      ! Renormalise for the same reason as turb_type=2.
       ! Here that amplitude is a velocity rather than a forcing, so this fixes
       ! the initial velocity dispersion, and hence the initial Mach number, at
       ! exactly sqrt(ndim)*turb_rms instead of leaving it to the draw.
       call current_turb_rms(turb_rms_now)
       if (turb_rms_now > 0.0_dp) then
-         afield_now = afield_now * &
-              & (sqrt(real(ndim,dp))*turb_rms / turb_rms_now)
+         afield_now = afield_now * (sqrt(real(ndim,dp))*turb_rms / turb_rms_now)
       end if
    end select
 
