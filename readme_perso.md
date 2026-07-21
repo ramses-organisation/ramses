@@ -1,0 +1,2 @@
+Clone from my fork (https://github.com/EmileD123/ramses) of the dev branch ramses (https://github.com/ramses-organisation/ramses).
+See regularly if ther any updates by ramses : if yes, sinc on my repo on guthub ("Sync fork" button) and pull them (need to resolve merge conflicts at each time).

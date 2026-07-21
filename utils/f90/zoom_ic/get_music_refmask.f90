@@ -24,6 +24,7 @@ program get_music_refmask
   real(KIND=8),dimension(:)  ,allocatable::temp
   real(KIND=8),dimension(:)  ,allocatable::bt
   real(KIND=8),dimension(:)  ,allocatable::tempx,tempy,tempz,tempvx,tempvy,tempvz,tempm,tempbt
+  integer(kind=1),allocatable :: dumfam(:), dumtag(:)
   integer(i8b),allocatable,dimension(:)::tempid
   integer,allocatable,dimension(:)::temp2,indtempid
   integer(i8b),allocatable,dimension(:)::id
@@ -239,6 +240,8 @@ program get_music_refmask
      allocate(temp(1:npart2))
      allocate(tempid(1:npart2))
      allocate(temp2(1:npart2))
+     allocate(dumfam(1:npart2))
+     allocate(dumtag(1:npart2))
      ! Read positions
      read(1)temp
      x(nstart:nstart+npart2-1)=temp
@@ -261,6 +264,10 @@ program get_music_refmask
      id(nstart:nstart+npart2-1)=tempid
      !Read level
      read(1)temp2
+     !Read family (added to allow compatiblity)
+     read(1)dumfam
+     !Read tag (added to allow compatiblity)
+     read(1)dumtag
      if(nstar>0) then
         ! Read BT
         read(1)temp
@@ -271,6 +278,8 @@ program get_music_refmask
      deallocate(temp)
      deallocate(tempid)
      deallocate(temp2)
+     deallocate(dumfam)
+     deallocate(dumtag)
   enddo
 
 50 format(2I16)
@@ -394,6 +403,8 @@ program get_music_refmask
      allocate(tempid(1:npart2))
      allocate(indtempid(1:npart2))
      allocate(temp2(1:npart2))
+     allocate(dumfam(1:npart2))
+     allocate(dumtag(1:npart2))
      allocate(tempbt(1:npart2))
      ! Read positions
      read(1)tempx
@@ -409,6 +420,10 @@ program get_music_refmask
      read(1)tempid
      ! Read level
      read(1)temp2
+     !Read family (added to allow compatiblity)
+     read(1)dumfam
+     !Read tag (added to allow compatiblity)
+     read(1)dumtag
      if(nstar.gt.0) then
         ! Read BT
         read(1)tempbt
@@ -461,6 +476,8 @@ program get_music_refmask
      deallocate(tempid)
      deallocate(indtempid)
      deallocate(temp2)
+     deallocate(dumfam)
+     deallocate(dumtag)
      deallocate(tempbt)
 
   end do
