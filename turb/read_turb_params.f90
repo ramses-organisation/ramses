@@ -8,7 +8,8 @@ subroutine read_turb_params(nml_ok)
   ! Namelist definitions
   !--------------------------------------------------
   namelist/turb_params/turb, turb_seed, turb_type, instant_turb, comp_frac,&
-       & forcing_power_spectrum, turb_T, turb_Ndt, turb_rms, turb_min_rho
+       & forcing_power_spectrum, turb_T, turb_Ndt, turb_rms, turb_min_rho,&
+       & turb_exact_rms
 
   !--------------------------------------------------
   ! Read namelist; check variables that have been loaded
@@ -25,6 +26,10 @@ subroutine read_turb_params(nml_ok)
      nml_ok = .FALSE.
   end if
 
+  if (turb_type > 1 .AND. .NOT.turb_exact_rms) then
+     write (*,*) "Turb_type 2 or 3: Setting turb_exact_rms=.true."
+     turb_exact_rms = .TRUE.
+  end if
 
   if (comp_frac < 0.0_dp .OR. comp_frac > 1.0_dp) then
      write (*,*) "Invalid compressive fraction selected! (0.0 to 1.0)"

@@ -681,6 +681,20 @@ subroutine turb_interpolate_now
 
 end subroutine turb_interpolate_now
 
+subroutine turb_normalise_rms
+   use turb_commons
+   implicit none
+   real(kind=dp) :: rms_now                 ! Realised rms of afield_now
+
+   ! Scale afield_now so that its rms is exactly sqrt(ndim)*turb_rms, removing
+   ! the scatter of the Ornstein-Uhlenbeck draw.
+   call current_turb_rms(rms_now)
+   if (rms_now > 0.0_dp) then
+      afield_now = afield_now * (sqrt(real(ndim,dp))*turb_rms / rms_now)
+   end if
+
+end subroutine turb_normalise_rms
+
 ! PRNG of Marsaglia
 subroutine spin_up(s)
    use turb_parameters

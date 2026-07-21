@@ -46,6 +46,7 @@ module turb_parameters
   real(dp) :: turb_T=1.0_dp       ! Turbulent velocity autocorrelation time
   integer  :: turb_Ndt=100        ! Number of timesteps per autocorr. time
   real(dp) :: turb_rms=1.0_dp     ! rms turbulent forcing acceleration
+  logical  :: turb_exact_rms=.FALSE. ! Set the forcing rms to exactly match turb_rms?
 
   real(dp) :: turb_min_rho=1d-50  ! Minimum density for turbulence
 

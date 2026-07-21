@@ -36,6 +36,10 @@ subroutine turb_check_time
 
       ! interpolate for current time between last and next turb field
       call turb_interpolate_now
+
+      ! Optionally hold the injected rms exactly on turb_rms while the
+      ! pattern keeps evolving
+      if (turb_exact_rms) call turb_normalise_rms
    end select
 
 end subroutine turb_check_time

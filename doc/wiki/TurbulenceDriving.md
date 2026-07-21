@@ -77,6 +77,7 @@ fraction $\chi$.
 | `turb_T`              | `float`      | `1`           |  $T$     | Turbulent velocity auto-correlation time in code units.
 | `turb_Ndt`            | `integer`    | `100`         |  $T/dt$  | Number of timesteps per auto-correlation time |
 | `turb_rms`            | `float`      | `1`           |  $f_\mathrm{rms}$ |Root-mean-square  turbulent  forcing  in  code  units. |
+| `turb_exact_rms`      | `boolean`    | `.false.`     |          | Always use a forcing rms of exactly $\sqrt{N_{dim}}f_\mathrm{rms}$ instead of letting it follow the random draw. Only applicable for `turb_type=1`. See the "Turbulence types" section below
 | `turb_min_rho`        | `float`      | `1d-50`       |          | Minimum density for turbulence. Not forcing is added onto cellswith a density less than this value.
 | `forcing_power_spectrum`  | `string`     | `parabolic` | $F_0$   | Power spectrum type of the forcing, which describes the relative strength of individual modes. Options are: power_law, parabolic, konstandin
 
@@ -95,9 +96,9 @@ and is applied as an acceleration at every timestep. The timestep is capped at
 $T/N_{dt}$ so that no step skips over a field update.
 
 The rms of the field fluctuates by a few percent about
-$\sqrt{N_{dim}}\,f_{\mathrm{rms}}$ from one update to the next. This is intended:
-$f_{\mathrm{rms}}$ sets the *time-averaged* amplitude, and the scatter averages
-out over a run.
+$\sqrt{N_{dim}}\,f_{\mathrm{rms}}$ from one update to the next. This is intended: $f_{\mathrm{rms}}$ sets the *time-averaged* amplitude, and the
+scatter averages out over a run. This behavior can be altered by setting `turb_exact_rms=.true.`. This will force the rms to always be exactly $\sqrt{N_{dim}}\,f_{\mathrm{rms}}$ at every step, so the driving
+pattern keeps decorrelating while the injected amplitude stays constant.
 
 An evolving acceleration field grown from rest starts at only $\sqrt{1-e^{-2dt/T}}\approx14\%$
 of its saturated amplitude and needs about one autocorrelation time $T$ to build
@@ -113,9 +114,17 @@ One acceleration field is generated at startup and then held, unchanged, for the
 It is applied as an acceleration at every timestep, exactly as for type 1.
 
 Because the field is frozen, the scatter that averages out for type 1 would
-instead become a systematic bias for the whole simulation, so the field is
-renormalised at startup so that its rms is exactly
-$\sqrt{N_{dim}}\,f_{\mathrm{rms}}$.
+instead become a systematic amplitude bias for the whole simulation. To avoid this,
+`turb_exact_rms=.true.` is always set to true for this type, so the field is
+renormalised at startup so that its rms is exactly $\sqrt{N_{dim}}\,f_{\mathrm{rms}}$.
+
+Taken together, `turb_type` and `turb_exact_rms` are two independent axes — how
+the driving *pattern* behaves, and whether its *amplitude* is pinned:
+
+| | `turb_exact_rms=.false.` | `turb_exact_rms=.true.` |
+|:---|:---|:---|
+| `turb_type=1` | Pattern and amplitude both fluctuate (the raw Ornstein-Uhlenbeck process) | Pattern decorrelates at constant injected amplitude |
+| `turb_type=2` | Frozen pattern, amplitude left to the draw (illegal) | Frozen pattern at exactly the requested amplitude |
 
 ### `turb_type=3` — decaying turbulence ###
 

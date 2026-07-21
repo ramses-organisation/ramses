@@ -191,33 +191,25 @@ subroutine init_turb
       ! fraction is 0 on a fresh start (with or without instant_turb) and lands
       ! part way through the interval on a restart.
       call turb_interpolate_now
+
    case (2)
       ! Fixed forcing: a single static field, held for the whole run by
       ! turb_check_time. It must NOT be interpolated - blending two independent
       ! fields gives an rms below turb_rms.
       afield_now = afield_last
 
-      ! Renormalise onto the requested amplitude. afield_last is a single draw
-      ! of the Ornstein-Uhlenbeck process, whose rms fluctuates by a few percent
-      ! about sqrt(ndim)*turb_rms.
-      call current_turb_rms(turb_rms_now)
-      if (turb_rms_now > 0.0_dp) then
-         afield_now = afield_now * (sqrt(real(ndim,dp))*turb_rms / turb_rms_now)
-      end if
    case (3)
       ! Decaying: no forcing is ever applied. This field is consumed once, by
       ! init_flow_fine, as the initial velocity field, then zeroed by
       ! turb_check_time.
       afield_now = afield_last
 
-      ! Renormalise for the same reason as turb_type=2.
-      ! Here that amplitude is a velocity rather than a forcing, so this fixes
-      ! the initial velocity dispersion, and hence the initial Mach number, at
-      ! exactly sqrt(ndim)*turb_rms instead of leaving it to the draw.
-      call current_turb_rms(turb_rms_now)
-      if (turb_rms_now > 0.0_dp) then
-         afield_now = afield_now * (sqrt(real(ndim,dp))*turb_rms / turb_rms_now)
-      end if
    end select
+
+   ! Renormalise onto the requested amplitude. afield_last is a single draw
+   ! of the Ornstein-Uhlenbeck process, whose rms fluctuates by a few percent
+   ! about sqrt(ndim)*turb_rms.
+   ! Always on for type 2 and type 3!
+   if (turb_exact_rms) call turb_normalise_rms
 
 end subroutine init_turb
