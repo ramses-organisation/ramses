@@ -15,7 +15,6 @@ module turb_commons
   real(dp)    :: turb_next_time   ! Time of next turbulent field
   real(dp)    :: turb_dt          ! Turbulent velocity evolution timestep
   real(dp)    :: turb_decay_frac  ! Decay fraction per dt
-  real(dp)    :: turb_space(1:3)  ! Grid spacing
   real(dp)    :: turb_norm        ! Normalizing constant from combination
                                        ! of Ornstein-Uhlenbeck process, initial
                                        ! power spectrum and projection

@@ -9,7 +9,7 @@ subroutine read_turb_params(nml_ok)
   !--------------------------------------------------
   namelist/turb_params/turb, turb_seed, turb_type, instant_turb, comp_frac,&
        & forcing_power_spectrum, turb_T, turb_Ndt, turb_rms, turb_min_rho,&
-       & turb_exact_rms
+       & turb_exact_rms, initial_turb, initial_turb_vrms
 
   !--------------------------------------------------
   ! Read namelist; check variables that have been loaded
@@ -19,15 +19,33 @@ subroutine read_turb_params(nml_ok)
   rewind(1)
   read(1,NML=turb_params,END=87)
 
-  if (.NOT. turb) return
+  if (.NOT. (turb.OR.initial_turb)) return
 
-  if (turb_type < 1 .OR. turb_type > 3) then
-     write (*,*) "Invalid turbulence type selected! (1 to 3)"
+  ! turb_type=3 was never a driving mode: it applied the field once as an
+  ! initial velocity. Translate it onto the dedicated parameters.
+  if (turb .AND. turb_type == 3) then
+     if (myid==1) then
+        write (*,*) "WARNING: turb_type=3 is deprecated."
+        write (*,*) "Use turb=.false., initial_turb=.true. and"
+        write (*,*) "initial_turb_vrms=sqrt(ndim)*turb_rms instead."
+     end if
+     turb = .FALSE.
+     initial_turb = .TRUE.
+     initial_turb_vrms = sqrt(real(ndim,dp)) * turb_rms
+  end if
+
+  if (initial_turb .AND. initial_turb_vrms <= 0.0_dp) then
+     write (*,*) "Initial turbulent velocity dispersion must be > 0.0!"
      nml_ok = .FALSE.
   end if
 
-  if (turb_type > 1 .AND. .NOT.turb_exact_rms) then
-     write (*,*) "Turb_type 2 or 3: Setting turb_exact_rms=.true."
+  if (turb .AND. (turb_type < 1 .OR. turb_type > 2)) then
+     write (*,*) "Invalid turbulence type selected! (1 or 2)"
+     nml_ok = .FALSE.
+  end if
+
+  if (turb .AND. turb_type==2 .AND. .NOT.turb_exact_rms) then
+     write (*,*) "Turb_type 2: Setting turb_exact_rms=.true."
      turb_exact_rms = .TRUE.
   end if
 
@@ -46,6 +64,7 @@ subroutine read_turb_params(nml_ok)
      nml_ok = .FALSE.
   end if
 
+  ! turb_rms scales the generated field even when using initial_turb
   if (turb_rms <= 0.0_dp) then
      write (*,*) "Turbulent forcing rms acceleration must be > 0.0!"
      nml_ok = .FALSE.

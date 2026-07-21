@@ -4,12 +4,6 @@ subroutine turb_check_time
    implicit none
 
    select case (turb_type)
-   case (3)
-      ! decaying turbulence - the initial field set up by init_turb has already
-      ! been applied as an initial velocity, so no forcing from here on
-      afield_now = 0.0_dp
-      fturb = 0.0_dp
-      turb_next_time = huge(turb_next_time) / 10.0d0
    case (2)
       ! fixed forced turbulence - afield_now is the static field chosen by
       ! init_turb and is deliberately left untouched for the whole run

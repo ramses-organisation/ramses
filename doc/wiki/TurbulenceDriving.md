@@ -71,7 +71,7 @@ fraction $\chi$.
 |:----------------------|:------------ |:------------- |:---------| :------------------------ |
 | `turb`                | `boolean`    | `.false.`     |          | Turn on or off driving
 | `turb_seed`           | `integer`    | `-1`          |          | Random number generator seed. -1 = random
-| `turb_type`           | `integer`    | `1`           |          | How the driving changes over time. 1=driven evolving, 2=driven fixed, 3=decaying. See the "Turbulence types" section below
+| `turb_type`           | `integer`    | `1`           |          | How the driving changes over time. 1=driven evolving, 2=driven fixed. 3 is deprecated, see `initial_turb`. See the "Turbulence types" section below
 | `instant_turb`        | `boolean`    | `.true.`      |          | Evolve the field to saturation before the run starts. Recommended for `turb_type=1`. See the "Turbulence types" section below
 | `comp_frac`           | `float`      | `0.3333`      |  $\chi$  | The weight of compressive over solenoidal modes
 | `turb_T`              | `float`      | `1`           |  $T$     | Turbulent velocity auto-correlation time in code units.
@@ -80,7 +80,8 @@ fraction $\chi$.
 | `turb_exact_rms`      | `boolean`    | `.false.`     |          | Always use a forcing rms of exactly $\sqrt{N_{dim}}f_\mathrm{rms}$ instead of letting it follow the random draw. Only applicable for `turb_type=1`. See the "Turbulence types" section below
 | `turb_min_rho`        | `float`      | `1d-50`       |          | Minimum density for turbulence. Not forcing is added onto cellswith a density less than this value.
 | `forcing_power_spectrum`  | `string`     | `parabolic` | $F_0$   | Power spectrum type of the forcing, which describes the relative strength of individual modes. Options are: power_law, parabolic, konstandin
-
+| `initial_turb`        | `boolean`    | `.false.`     |          | Add a turbulent velocity field to the initial conditions. Independent of `turb`. See the "Turbulent initial velocity field" section below
+| `initial_turb_vrms`   | `float`      | `0`           |          | Velocity dispersion $\vert v\vert_\mathrm{rms}$ of that initial field, in code units. A velocity, not an acceleration: it is not interchangeable with `turb_rms`
 
 ## Turbulence types ##
 
@@ -126,56 +127,57 @@ the driving *pattern* behaves, and whether its *amplitude* is pinned:
 | `turb_type=1` | Pattern and amplitude both fluctuate (the raw Ornstein-Uhlenbeck process) | Pattern decorrelates at constant injected amplitude |
 | `turb_type=2` | Frozen pattern, amplitude left to the draw (illegal) | Frozen pattern at exactly the requested amplitude |
 
-### `turb_type=3` — decaying turbulence ###
 
-Despite living in the driving module, this is **not** a driven run. The
-turbulent field is applied exactly once, by `init_flow_fine`, as the initial
-velocity field, and is then zeroed for the rest of the run. Every forcing and
-timestep-limiting path is switched off for this type, so the timestep is set by
-the ordinary CFL condition rather than being capped at $T/N_{dt}$.
+## Turbulent initial velocity field ##
 
-This has an important consequence for `turb_rms`. For types 1 and 2 the field
-is an **acceleration**, and the velocity a run reaches is a saturation value set
-by driving against dissipation, typically far below $f_{\mathrm{rms}}$. For type
-3 the field is applied with an effective timestep of exactly one code time unit,
-which turns it into a **velocity**: the box starts at
-$|v|_{\mathrm{rms}} = \sqrt{N_{dim}}\,f_{\mathrm{rms}}$ immediately. As for type
-2, the field is renormalised at startup, so this initial velocity dispersion,
-and hence the initial Mach number, is exact rather than left to the draw.
+Setting `initial_turb=.true.` starts the simulation from a turbulent
+velocity field with dispersion $|v|_{\mathrm{rms}} =$ `initial_turb_vrms`. The field
+is generated with the same machinery as the driving (so `comp_frac`,
+`forcing_power_spectrum` and `turb_T` apply), but it is applied exactly once, by
+`init_flow_fine`, and is not re-applied on a restart.
 
-So `turb_rms` carries over badly between the two. Reusing a driven value for a
-decaying run typically gives an initial Mach number one to two orders of
-magnitude too high, and a correspondingly tiny CFL timestep. For a decaying run,
-choose `turb_rms` from the initial velocity dispersion you want, divided by
-$\sqrt{N_{dim}}$.
+This is **independent of the driving**, which gives three useful combinations:
 
-Note this differs from the more usual way of setting up decaying turbulence, in
-which a driven run is evolved to a steady state and the driving is then switched
-off. Here the initial field is a single draw of the process rather than a
-saturated turbulent state, so it has not developed the density structure or the
-velocity correlations of fully developed turbulence. For that reason
-`turb_type=3` is best thought of as a quick way to seed a velocity field, not as
-a substitute for genuinely decaying turbulence; for the latter, use the recipe
-below.
+| `turb` | `initial_turb` | Result |
+|:---|:---|:---|
+| `.true.`  | `.false.` | Driving only: the gas starts at rest and is stirred. |
+| `.false.` | `.true.`  | Decaying: the gas starts turbulent and is never driven. |
+| `.true.`  | `.true.`  | Driven, starting from an already turbulent field rather than from rest. |
 
-### Decaying turbulence from a developed field ###
+Note that `initial_turb_vrms` is a **velocity** and `turb_rms` is an
+**acceleration**; they are not interchangeable. A driven run only reaches a
+saturation velocity set by driving against dissipation, typically far below
+$f_{\mathrm{rms}}$, so reusing a driven `turb_rms` value as `initial_turb_vrms`
+would start the box at a wildly supersonic Mach number and a correspondingly tiny
+CFL timestep. Choose `initial_turb_vrms` from the velocity dispersion, or Mach
+number, you actually want.
 
-To study freely decaying turbulence it is usually better to develop the
-turbulence self-consistently first and only then let it decay, rather than to
-start from the single draw of `turb_type=3`:
+:::{admonition} Deprecated: `turb_type=3`
+:class: warning
+`turb_type=3` did the same thing through the driving parameters and is
+deprecated. It is still accepted and translated automatically to
+`turb=.false.`, `initial_turb=.true.` and
+`initial_turb_vrms=`$\sqrt{N_{dim}}\,$`turb_rms`, with a warning.
+:::
 
-1. Run with `turb_type=1` (keep `instant_turb` on) until the turbulence is fully
-   developed — as a rule of thumb a few autocorrelation times $T$, long enough
-   for the density structure and velocity correlations to build up. Write an
-   output at the point you want the decay to begin.
-2. Restart from that output with turbulence switched off, i.e. `turb=.false.`
-   in the namelist.
 
-On restart with `turb=.false.` no forcing is applied and the initial velocity
-kick is not re-applied (`init_flow_fine` only applies it on a fresh start,
-`nrestart==0`), so the developed field simply decays under its own dissipation
-from the state in the restart file. This gives a physically meaningful decaying
-run, which the `turb_type=3` initial-velocity field does not.
+## Decaying turbulence from a developed field ###
+
+The initial field above is a single draw of the Ornstein-Uhlenbeck process, not a
+saturated turbulent state, so it has neither the density structure nor the
+velocity correlations of fully developed turbulence. To study freely decaying
+turbulence it is usually better to develop the turbulence self-consistently
+first:
+
+1. Run with `turb=.true.` and `turb_type=1` (keep `instant_turb` on) until the
+   turbulence is fully developed — as a rule of thumb a few autocorrelation times
+   $T$, long enough for the density structure and velocity correlations to build
+   up. Write an output at the point you want the decay to begin.
+2. Restart from that output with `turb=.false.`.
+
+No forcing is then applied, and the initial velocity field is not re-applied on a
+restart, so the developed field simply decays under its own dissipation from the
+state in the restart file.
 
 
 [^ref]: adapted from Brucy et al. 2024.

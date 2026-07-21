@@ -30,8 +30,11 @@ subroutine init_turb
 
    all_stat = 0
 
-   ! Allocate turbulent force storage
-   allocate(fturb(1:ncoarse+twotondim*ngridmax,1:ndim), stat=all_stat(1))
+   ! Allocate turbulent force storage. Only the driving needs it: the initial
+   ! velocity field is applied straight from afield_now.
+   if (turb) then
+      allocate(fturb(1:ncoarse+twotondim*ngridmax,1:ndim), stat=all_stat(1))
+   end if
 
    ! Allocate grids
    allocate(afield_last(1:NDIM,0:TGRID_X,0:TGRID_Y,0:TGRID_Z),&
@@ -42,9 +45,6 @@ subroutine init_turb
             &stat=all_stat(4))
 
    if (any(all_stat /= 0)) stop 'Out of memory in init_turb!'
-
-   ! Set grid spacing
-   turb_space = (/1.d0, 1.d0, 1.d0/) / turb_gs_real
 
    ! Set turbulence update time from autocorrelation time and number of substeps
    turb_dt = turb_T / real(turb_Ndt,dp)
@@ -185,31 +185,164 @@ subroutine init_turb
 #endif
 
    ! Set up afield_now
-   select case (turb_type)
-   case (1)
-      ! Evolving forcing: interpolate between the two bracketing fields. The time
-      ! fraction is 0 on a fresh start (with or without instant_turb) and lands
-      ! part way through the interval on a restart.
-      call turb_interpolate_now
+   if (turb) then
+      select case (turb_type)
+      case (1)
+         ! Evolving forcing: interpolate between the two bracketing fields. The time
+         ! fraction is 0 on a fresh start (with or without instant_turb) and lands
+         ! part way through the interval on a restart.
+         call turb_interpolate_now
 
-   case (2)
-      ! Fixed forcing: a single static field, held for the whole run by
-      ! turb_check_time. It must NOT be interpolated - blending two independent
-      ! fields gives an rms below turb_rms.
+      case (2)
+         ! Fixed forcing: a single static field, held for the whole run by
+         ! turb_check_time. It must NOT be interpolated - blending two independent
+         ! fields gives an rms below turb_rms.
+         afield_now = afield_last
+
+      end select
+
+      ! Renormalise onto the requested amplitude. afield_last is a single draw
+      ! of the Ornstein-Uhlenbeck process, whose rms fluctuates by a few percent
+      ! about sqrt(ndim)*turb_rms.
+      ! Always on for type 2 !
+      if (turb_exact_rms) call turb_normalise_rms
+   else
+      ! Driving is off, but a field is still needed for the initial velocity.
+      ! turb_type is not meaningful here (it may still be the deprecated 3).
       afield_now = afield_last
-
-   case (3)
-      ! Decaying: no forcing is ever applied. This field is consumed once, by
-      ! init_flow_fine, as the initial velocity field, then zeroed by
-      ! turb_check_time.
-      afield_now = afield_last
-
-   end select
-
-   ! Renormalise onto the requested amplitude. afield_last is a single draw
-   ! of the Ornstein-Uhlenbeck process, whose rms fluctuates by a few percent
-   ! about sqrt(ndim)*turb_rms.
-   ! Always on for type 2 and type 3!
-   if (turb_exact_rms) call turb_normalise_rms
+   end if
 
 end subroutine init_turb
+!#####################################################################
+!#####################################################################
+!#####################################################################
+subroutine add_turb_init_velocity(ilevel)
+  use amr_commons
+  use hydro_commons
+  use turb_commons
+  implicit none
+  integer::ilevel
+  !-------------------------------------------------------------------
+  ! Add the turbulent initial velocity field to the gas and update the
+  ! total energy accordingly. Called once, from init_flow_fine, on a
+  ! fresh start. This is not a force: the field is scaled by
+  ! turb_init_vscale so that the resulting velocity dispersion is
+  ! initial_turb_vrms, and added directly to the momentum.
+  !-------------------------------------------------------------------
+  integer::ncache,ngrid,i,igrid,iskip,ind,idim
+  integer::ix,iy,iz,nx_loc
+#ifdef SOLVERmhd
+  integer::nndim=3
+#else
+  integer::nndim=ndim
+#endif
+  integer,dimension(1:nvector),save::ind_grid,ind_cell
+  real(kind=dp) :: x_cell(1:ndim,1:nvector)     ! Cell positions
+  real(kind=dp) :: rho(1:nvector)               ! Cell densities
+  real(kind=dp) :: vturb(1:ndim,1:nvector)      ! Turbulent velocity field
+  real(dp),dimension(1:3,1:twotondim)::xc
+  real(dp),dimension(1:3)::skip_loc
+  real(dp)::dx,dx_loc,scale,d,turb_init_vscale,rms_now
+
+  if(numbtot(1,ilevel)==0)return
+  if(verbose)write(*,111)ilevel
+
+  ! Scale the field onto the requested velocity dispersion. Measuring the rms
+  ! here keeps this correct whether or not afield_now has been renormalised.
+  call current_turb_rms(rms_now)
+  if (rms_now > 0.0_dp) then
+     turb_init_vscale = initial_turb_vrms / rms_now
+  else
+     turb_init_vscale = 0.0_dp
+  end if
+
+  ! Mesh size at level ilevel in coarse cell units
+  dx=0.5D0**ilevel
+
+  ! Rescaling factors
+  nx_loc=(icoarse_max-icoarse_min+1)
+  skip_loc=(/0.0d0,0.0d0,0.0d0/)
+  if(ndim>0)skip_loc(1)=dble(icoarse_min)
+  if(ndim>1)skip_loc(2)=dble(jcoarse_min)
+  if(ndim>2)skip_loc(3)=dble(kcoarse_min)
+  scale=turb_gs_real/dble(nx_loc)
+  dx_loc=dx*scale
+
+  ! Set position of cell centers relative to grid center
+  do ind=1,twotondim
+     iz=(ind-1)/4
+     iy=(ind-1-4*iz)/2
+     ix=(ind-1-2*iy-4*iz)
+     if(ndim>0)xc(1,ind)=(dble(ix)-0.5D0)*dx
+     if(ndim>1)xc(2,ind)=(dble(iy)-0.5D0)*dx
+     if(ndim>2)xc(3,ind)=(dble(iz)-0.5D0)*dx
+  end do
+
+  ! Loop over active grids by vector sweeps
+  ncache=active(ilevel)%ngrid
+  do igrid=1,ncache,nvector
+     ngrid=MIN(nvector,ncache-igrid+1)
+     do i=1,ngrid
+        ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
+     end do
+
+     ! Loop over cells
+     do ind=1,twotondim
+
+        ! Gather cell indices
+        iskip=ncoarse+(ind-1)*ngridmax
+        do i=1,ngrid
+           ind_cell(i)=iskip+ind_grid(i)
+        end do
+        ! Gather cell centre positions
+        do i=1,ngrid
+           do idim=1,ndim
+              x_cell(idim,i)=xg(ind_grid(i),idim)+xc(idim,ind)
+           end do
+        end do
+        ! Rescale position from code units to 0->turb_gs_real units
+        do i=1,ngrid
+           do idim=1,ndim
+              x_cell(idim,i)=(x_cell(idim,i)-skip_loc(idim))*scale
+           end do
+        end do
+
+        ! Gather cell densities
+        do i=1,ngrid
+           rho(i) = uold(ind_cell(i), 1)
+        end do
+
+        ! Interpolate the turbulent field onto the cells
+        call turb_force_calc(ngrid, x_cell, rho, vturb)
+
+        do i=1,ngrid
+           d = max(uold(ind_cell(i),1),smallr)
+
+           ! Remove the kinetic energy, leaving internal (+ magnetic) energy
+           do idim=1,nndim
+              uold(ind_cell(i),neul) = uold(ind_cell(i),neul) &
+                   & - 0.5d0*uold(ind_cell(i),idim+1)**2/d
+           end do
+
+           ! Add the turbulent velocity to the momentum
+           do idim=1,ndim
+              uold(ind_cell(i),idim+1) = uold(ind_cell(i),idim+1) &
+                   & + d*vturb(idim,i)*turb_init_vscale
+           end do
+
+           ! Restore the total energy with the new kinetic energy
+           do idim=1,nndim
+              uold(ind_cell(i),neul) = uold(ind_cell(i),neul) &
+                   & + 0.5d0*uold(ind_cell(i),idim+1)**2/d
+           end do
+        end do
+
+     end do
+     ! End loop over cells
+
+  end do
+  ! End loop over grids
+
+111 format('   Entering add_turb_init_velocity for level',i2)
+
+end subroutine add_turb_init_velocity

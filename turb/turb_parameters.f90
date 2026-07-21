@@ -32,11 +32,11 @@ module turb_parameters
 #endif
   real(dp), parameter :: turb_gs_real=real(TURB_GS,dp) ! real(TURB_GS, dp)
 
-  logical  :: turb=.FALSE.        ! Use turbulence?
-  integer  :: turb_type=1         ! Turbulence type
-                                  ! 1 = forced, evolving turbulence
-                                  ! 2 = forced, fixed turbulence
-                                  ! 3 = decaying turbulence
+  logical  :: turb=.FALSE.        ! Use turbulence driving?
+  integer  :: turb_type=1         ! Driving type
+                                  ! 1 = evolving forcing field
+                                  ! 2 = fixed forcing field set at the beginning
+                                  ! 3 = deprecated, use initial_turb
   integer  :: turb_seed=-1        ! Turbulent seed (-1=random)
   logical  :: instant_turb=.TRUE. ! Generate initial turbulence before start?
   character (LEN=100) :: forcing_power_spectrum='parabolic'
@@ -49,5 +49,9 @@ module turb_parameters
   logical  :: turb_exact_rms=.FALSE. ! Set the forcing rms to exactly match turb_rms?
 
   real(dp) :: turb_min_rho=1d-50  ! Minimum density for turbulence
+
+  ! Turbulent initial velocity field, independent of the driving above
+  logical  :: initial_turb=.FALSE.       ! Add turbulent velocity to the initial conditions?
+  real(dp) :: initial_turb_vrms=0.0_dp   ! Velocity dispersion |v|_rms of that field
 
 end module turb_parameters
