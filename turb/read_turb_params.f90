@@ -45,6 +45,10 @@ subroutine read_turb_params(nml_ok)
            turb = .FALSE.
            initial_turb = .TRUE.
            initial_turb_vrms = sqrt(real(ndim,dp)) * turb_rms
+           ! turb_type=3 drew from the driving spectrum, so a legacy namelist
+           ! expresses its intent through those parameters
+           initial_turb_spectrum = forcing_power_spectrum
+           initial_turb_comp_frac = comp_frac
         end if
      case default
         write (*,*) "Invalid turbulence type selected! (1 to 3)"
@@ -52,12 +56,7 @@ subroutine read_turb_params(nml_ok)
      end select
   end if
 
-  ! The initial field defaults to the same spectrum and compressive fraction as
-  ! the driving
-  if (initial_turb_spectrum == '') initial_turb_spectrum = forcing_power_spectrum
-  if (initial_turb_comp_frac < 0.0_dp) initial_turb_comp_frac = comp_frac
-
-  if (initial_turb_comp_frac > 1.0_dp) then
+  if (initial_turb_comp_frac < 0.0_dp .OR. initial_turb_comp_frac > 1.0_dp) then
      write (*,*) "Invalid initial compressive fraction selected! (0.0 to 1.0)"
      nml_ok = .FALSE.
   end if

@@ -54,11 +54,15 @@ module turb_parameters
   ! Turbulent initial velocity field, independent of the driving above
   logical  :: initial_turb=.FALSE.       ! Add turbulent velocity to the initial conditions?
   real(dp) :: initial_turb_vrms=0.0_dp   ! Velocity dispersion |v|_rms of that field
-  real(dp) :: initial_turb_comp_frac=-1.0_dp
+  real(dp) :: initial_turb_comp_frac=0.3333_dp
                                   ! Compressive fraction of the initial velocity
-                                  ! field; negative means use comp_frac
-  character (LEN=100) :: initial_turb_spectrum=''
-                                  ! Power spectrum for the initial velocity
-                                  ! field; empty means use forcing_power_spectrum
+                                  ! field. 1/3 spreads the power evenly over the
+                                  ! one longitudinal and two transverse degrees
+                                  ! of freedom
+  character (LEN=100) :: initial_turb_spectrum='power_law'
+                                  ! Power spectrum of the initial velocity field.
+                                  ! Broadband by default: initial conditions want
+                                  ! power on every scale, whereas the driving
+                                  ! usually acts on a few large-scale modes
 
 end module turb_parameters
