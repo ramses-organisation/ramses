@@ -61,16 +61,17 @@ subroutine find_unitk(i,j,k,limit,unitk)
 
 end subroutine find_unitk
 
-subroutine calc_power_spectrum(k, power_spectrum)
+subroutine calc_power_spectrum(spectrum, k, power_spectrum)
    use turb_commons
    implicit none
+   character(len=*), intent(in) :: spectrum     ! Which spectrum to evaluate
    integer, intent(in)        :: k(1:3)         ! Wavevector
    real(kind=dp), intent(out) :: power_spectrum ! Power value
    real(kind=dp)              :: k_mag          ! Wavevector magnitude
 
    ! Remark that the components of k are between -TURB_GS and TURB_GS
    ! with k=1 corresponding to the box size
-   select case(forcing_power_spectrum)
+   select case(spectrum)
       case('power_law')
          ! alpha^-2 power spectrum
          if (all(k==0)) then
@@ -114,6 +115,40 @@ subroutine calc_power_spectrum(k, power_spectrum)
       end select
 
 end subroutine calc_power_spectrum
+
+subroutine build_power_spectrum(spectrum, power)
+   use turb_commons
+   implicit none
+   ! Evaluate a named power spectrum over the whole turbulent grid
+   character(len=*), intent(in) :: spectrum
+   real(kind=dp), intent(out)   :: power(0:TGRID_X,0:TGRID_Y,0:TGRID_Z)
+   integer                      :: i, j, k     ! Loop variables
+   integer                      :: k_vec(1:3)  ! Wavevector
+
+   do k=0,TGRID_Z
+      if (k > TURB_GS / 2) then
+         k_vec(3) = k - TURB_GS
+      else
+         k_vec(3) = k
+      end if
+      do j=0,TGRID_Y
+         if (j > TURB_GS / 2) then
+            k_vec(2) = j - TURB_GS
+         else
+            k_vec(2) = j
+         end if
+         do i=0,TGRID_X
+            if (i > TURB_GS / 2) then
+               k_vec(1) = i - TURB_GS
+            else
+               k_vec(1) = i
+            end if
+            call calc_power_spectrum(spectrum, k_vec, power(i,j,k))
+         end do
+      end do
+   end do
+
+end subroutine build_power_spectrum
 
 subroutine gaussian_cmplx(G)
    !use constants, only:pi
@@ -170,7 +205,7 @@ subroutine gaussian_cmplx(G)
 
 end subroutine gaussian_cmplx
 
-subroutine add_turbulence(turb_field, dt)
+subroutine add_turbulence(turb_field, power, comp, sol, dt)
    use turb_commons
    implicit none
    ! Take a complex Fourier field of turbulence, and add a random component
@@ -182,6 +217,10 @@ subroutine add_turbulence(turb_field, dt)
    complex(kind=cdp), intent(inout) :: turb_field(1:NDIM, 0:TGRID_X,&
                                                  &0:TGRID_Y, 0:TGRID_Z)
                                            ! Complex field to add to
+   real(kind=dp), intent(in) :: power(0:TGRID_X,0:TGRID_Y,0:TGRID_Z)
+                                           ! Power spectrum to draw from
+   real(kind=dp), intent(in)       :: comp ! Compressive fraction
+   real(kind=dp), intent(in)       :: sol  ! Solenoidal fraction
    real(kind=dp), intent(in)       :: dt   ! Width of Gaussian which drives
                                            ! Wiener process
 
@@ -211,7 +250,7 @@ subroutine add_turbulence(turb_field, dt)
             hermitian_pair = .FALSE.
 #endif
             ! Check there is any power in this mode, else cycle
-            if (power_spec(i,j,k) == 0.0_dp) cycle
+            if (power(i,j,k) == 0.0_dp) cycle
 
 #if defined(HERMITIAN_FIELD)
             ! Test if we are own conjugate or need to use another conjugate
@@ -250,7 +289,7 @@ subroutine add_turbulence(turb_field, dt)
             ! Random power/phase (complex Gaussian) multiplied by power
             ! spectrum and multiplied by width dt
             call gaussian_cmplx(complex_vec)
-            complex_vec = complex_vec * sqrt(dt) * power_spec(i,j,k)
+            complex_vec = complex_vec * sqrt(dt) * power(i,j,k)
 
 #if defined(HERMITIAN_FIELD)
             if (own_conjg) then
@@ -266,7 +305,7 @@ subroutine add_turbulence(turb_field, dt)
             unitk_cmplx = cmplx(unitk, kind=cdp)
             comp_cmplx = unitk_cmplx *  dot_product(unitk_cmplx,complex_vec)
             sol_cmplx = complex_vec - comp_cmplx
-            complex_vec = comp_cmplx*comp_frac + sol_cmplx*sol_frac
+            complex_vec = comp_cmplx*comp + sol_cmplx*sol
             ! note that there are two degrees of freedom for
             ! solenoidal/transverse modes, and only one for
             ! longitudinal/compressive modes,

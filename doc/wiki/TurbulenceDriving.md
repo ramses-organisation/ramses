@@ -82,6 +82,8 @@ fraction $\chi$.
 | `forcing_power_spectrum`  | `string`     | `parabolic` | $F_0$   | Power spectrum type of the forcing, which describes the relative strength of individual modes. Options are: power_law, parabolic, konstandin
 | `initial_turb`        | `boolean`    | `.false.`     |          | Add a turbulent velocity field to the initial conditions. Independent of `turb`. See the "Turbulent initial velocity field" section below
 | `initial_turb_vrms`   | `float`      | `0`           |          | Velocity dispersion $\vert v\vert_\mathrm{rms}$ of that initial field, in code units. A velocity, not an acceleration: it is not interchangeable with `turb_rms`
+| `initial_turb_spectrum` | `string`   | same as `forcing_power_spectrum` |  | Power spectrum of the initial velocity field. Lets the initial field differ from the driving, e.g. broadband turbulence stirred by selected modes
+| `initial_turb_comp_frac` | `float`   | same as `comp_frac` |          | Compressive fraction of the initial velocity field
 
 ## Turbulence types ##
 
@@ -132,10 +134,26 @@ the driving *pattern* behaves, and whether its *amplitude* is pinned:
 
 Setting `initial_turb=.true.` starts the simulation from a turbulent
 velocity field with dispersion $|v|_{\mathrm{rms}} =$ `initial_turb_vrms`. The field
-is generated with the same machinery as the driving (so `comp_frac`,
-`forcing_power_spectrum` and `turb_T` apply), but it is applied exactly once, by
-`init_flow_fine`, and is not re-applied on a restart. `turb_rms` is not used:
-with the driving off, the amplitude is set entirely by `initial_turb_vrms`.
+is generated with the same machinery as the driving (so `comp_frac` and `turb_T`
+apply), but it is applied exactly once, by `init_flow_fine`, and is not
+re-applied on a restart. `turb_rms` is not used: with the driving off, the
+amplitude is set entirely by `initial_turb_vrms`.
+
+The initial field is drawn **independently** of the driving, so the two are
+uncorrelated, and it has its own power spectrum and compressive fraction. By
+default these follow `forcing_power_spectrum` and `comp_frac`, but
+`initial_turb_spectrum` and `initial_turb_comp_frac` let them differ. Starting
+from broadband, mixed turbulence and then pushing it with a purely compressive
+single mode, for instance, is `initial_turb_spectrum='power_law'` with
+`initial_turb_comp_frac=0.5`, and `forcing_power_spectrum='test'` with
+`comp_frac=1.0`.
+
+The other driving parameters have no initial-field equivalent, and do not need
+one. `turb_T` and `turb_Ndt` only enter the draw through a single $\sqrt{dt}$
+factor common to every mode, so they set the amplitude, which
+`initial_turb_vrms` then overrides. `turb_type`, `instant_turb` and
+`turb_exact_rms` all describe how the field evolves or is held over time, which
+does not apply to a field used once.
 
 This is **independent of the driving**, which gives three useful combinations:
 

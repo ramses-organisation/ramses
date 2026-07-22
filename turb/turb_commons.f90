@@ -10,6 +10,7 @@ module turb_commons
   real(dp), allocatable     :: afield_now(:,:,:,:)  ! Forcing field now
   real(dp), allocatable     :: afield_init(:,:,:,:) ! Field for the initial velocity
   real(dp), allocatable     :: power_spec(:,:,:)    ! Power spectrum of turbulence
+  real(dp), allocatable     :: power_spec_init(:,:,:) ! Spectrum for the initial field
 
   real(dp)    :: sol_frac         ! Solenoidal fraction
   real(dp)    :: turb_last_time   ! Time of old turbulent field

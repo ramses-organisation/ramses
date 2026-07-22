@@ -51,6 +51,12 @@ module turb_parameters
   real(dp) :: turb_min_rho=1d-50  ! Minimum density for turbulence
 
   ! Turbulent initial velocity field, independent of the driving above
+  real(dp) :: initial_turb_comp_frac=-1.0_dp
+                                  ! Compressive fraction of the initial velocity
+                                  ! field; negative means use comp_frac
+  character (LEN=100) :: initial_turb_spectrum=''
+                                  ! Power spectrum for the initial velocity
+                                  ! field; empty means use forcing_power_spectrum
   logical  :: initial_turb=.FALSE.       ! Add turbulent velocity to the initial conditions?
   real(dp) :: initial_turb_vrms=0.0_dp   ! Velocity dispersion |v|_rms of that field
 

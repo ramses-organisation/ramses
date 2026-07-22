@@ -5,8 +5,7 @@ subroutine init_turb
   ! Local variables
   !--------------------------------------------------
 
-   integer       :: i, j, k                ! Loop variables
-   integer       :: k_vec(1:3)             ! Wavevector
+   integer       :: i                      ! Loop variable
    integer       :: all_stat(1:4)          ! Allocation statuses
 
    integer              :: n_seed=4        ! Length of random seed, 4 for KISS64
@@ -97,29 +96,17 @@ subroutine init_turb
       ! Set turbulent field time
       turb_next_time = t ! will be updated later
 
-      ! Set initial power distribution (should be parameterised in some fashion)
-      do k=0,TGRID_Z
-         if (k > TURB_GS / 2) then
-            k_vec(3) = k - TURB_GS
-         else
-            k_vec(3) = k
-         end if
-         do j=0,TGRID_Y
-            if (j > TURB_GS / 2) then
-               k_vec(2) = j - TURB_GS
-            else
-               k_vec(2) = j
-            end if
-            do i=0,TGRID_X
-               if (i > TURB_GS / 2) then
-                  k_vec(1) = i - TURB_GS
-               else
-                  k_vec(1) = i
-               end if
-               call calc_power_spectrum(k_vec, power_spec(i,j,k))
-            end do
-         end do
-      end do
+      ! Set the power distribution of the driving
+      call build_power_spectrum(forcing_power_spectrum, power_spec)
+
+      ! The initial velocity field may use a different spectrum, e.g. broadband
+      ! turbulence while the driving acts on selected modes
+      if (initial_turb) then
+         allocate(power_spec_init(0:TGRID_X,0:TGRID_Y,0:TGRID_Z),&
+                  &stat=all_stat(1))
+         if (all_stat(1) /= 0) stop 'Out of memory in init_turb!'
+         call build_power_spectrum(initial_turb_spectrum, power_spec_init)
+      end if
 
       ! Calculate turbulent normalization
       ! Power normalization comes from FFT of initial power spectrum
@@ -152,7 +139,7 @@ subroutine init_turb
       else
          ! Not a restart - set up initial field and perform FFT
          turb_next = cmplx(0, 0, kind=cdp)
-         call add_turbulence(turb_next, turb_dt)
+         call add_turbulence(turb_next, power_spec, comp_frac, sol_frac, turb_dt)
 
          ! Fourier transform
 #if NDIM==1
@@ -199,7 +186,8 @@ subroutine init_turb
                   &stat=all_stat(1))
          if (all_stat(1) /= 0) stop 'Out of memory in init_turb!'
          turb_ic = cmplx(0, 0, kind=cdp)
-         call add_turbulence(turb_ic, turb_dt)
+         call add_turbulence(turb_ic, power_spec_init, initial_turb_comp_frac,&
+                              & 1.0_dp - initial_turb_comp_frac, turb_dt)
 #if NDIM==1
          call FFT_1D(turb_ic(1,:,0,0), afield_init(1,:,0,0))
 #elif NDIM==2

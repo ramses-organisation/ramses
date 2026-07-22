@@ -9,7 +9,8 @@ subroutine read_turb_params(nml_ok)
   !--------------------------------------------------
   namelist/turb_params/turb, turb_seed, turb_type, instant_turb, comp_frac,&
        & forcing_power_spectrum, turb_T, turb_Ndt, turb_rms, turb_min_rho,&
-       & turb_exact_rms, initial_turb, initial_turb_vrms
+       & turb_exact_rms, initial_turb, initial_turb_vrms,&
+       & initial_turb_spectrum, initial_turb_comp_frac
 
   !--------------------------------------------------
   ! Read namelist; check variables that have been loaded
@@ -32,6 +33,16 @@ subroutine read_turb_params(nml_ok)
      turb = .FALSE.
      initial_turb = .TRUE.
      initial_turb_vrms = sqrt(real(ndim,dp)) * turb_rms
+  end if
+
+  ! The initial field defaults to the same spectrum and compressive fraction as
+  ! the driving
+  if (initial_turb_spectrum == '') initial_turb_spectrum = forcing_power_spectrum
+  if (initial_turb_comp_frac < 0.0_dp) initial_turb_comp_frac = comp_frac
+
+  if (initial_turb_comp_frac > 1.0_dp) then
+     write (*,*) "Invalid initial compressive fraction selected! (0.0 to 1.0)"
+     nml_ok = .FALSE.
   end if
 
   if (initial_turb .AND. initial_turb_vrms <= 0.0_dp) then
