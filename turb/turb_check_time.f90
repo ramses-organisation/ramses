@@ -3,13 +3,9 @@ subroutine turb_check_time
    use turb_commons
    implicit none
 
-   select case (turb_type)
-   case (2)
-      ! fixed forced turbulence - afield_now is the static field chosen by
-      ! init_turb and is deliberately left untouched for the whole run
-      continue
-   case (1)
-      ! evolving forced turbulence
+   ! A non-evolving field is the static one chosen by init_turb and is
+   ! deliberately left untouched for the whole run
+   if (evolving) then
       do
          if (t >= turb_next_time) then
 #ifndef WITHOUTMPI
@@ -34,6 +30,6 @@ subroutine turb_check_time
       ! Optionally hold the injected rms exactly on turb_rms while the
       ! pattern keeps evolving
       if (turb_exact_rms) call turb_normalise_rms
-   end select
+   end if
 
 end subroutine turb_check_time

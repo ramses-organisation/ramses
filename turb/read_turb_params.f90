@@ -8,7 +8,8 @@ subroutine read_turb_params(nml_ok)
   ! Namelist definitions
   !--------------------------------------------------
   namelist/turb_params/turb, turb_seed, turb_type, instant_turb, comp_frac,&
-       & forcing_power_spectrum, turb_T, turb_Ndt, turb_rms, turb_min_rho,&
+       & evolving, forcing_power_spectrum, turb_T, turb_Ndt, turb_rms,&
+       & turb_min_rho,&
        & turb_exact_rms, initial_turb, initial_turb_vrms,&
        & initial_turb_spectrum, initial_turb_comp_frac
 
@@ -22,17 +23,34 @@ subroutine read_turb_params(nml_ok)
 
   if (.NOT. (turb.OR.initial_turb)) return
 
-  ! turb_type=3 was never a driving mode: it applied the field once as an
-  ! initial velocity. Translate it onto the dedicated parameters.
-  if (turb .AND. turb_type == 3) then
-     if (myid==1) then
-        write (*,*) "WARNING: turb_type=3 is deprecated."
-        write (*,*) "Use turb=.false., initial_turb=.true. and"
-        write (*,*) "initial_turb_vrms=sqrt(ndim)*turb_rms instead."
-     end if
-     turb = .FALSE.
-     initial_turb = .TRUE.
-     initial_turb_vrms = sqrt(real(ndim,dp)) * turb_rms
+  ! turb_type is deprecated: 1 and 2 are now the boolean evolving, and 3 was
+  ! never a driving mode at all - it applied the field once as an initial
+  ! velocity, which is what initial_turb does.
+  if (turb_type /= -1) then
+     select case (turb_type)
+     case (1)
+        if (myid==1) write (*,*) &
+             & "WARNING: turb_type=1 is deprecated, use evolving=.true."
+        evolving = .TRUE.
+     case (2)
+        if (myid==1) write (*,*) &
+             & "WARNING: turb_type=2 is deprecated, use evolving=.false."
+        evolving = .FALSE.
+     case (3)
+        if (myid==1) then
+           write (*,*) "WARNING: turb_type=3 is deprecated."
+           write (*,*) "Use turb=.false., initial_turb=.true. and"
+           write (*,*) "initial_turb_vrms=sqrt(ndim)*turb_rms instead."
+        end if
+        if (turb) then
+           turb = .FALSE.
+           initial_turb = .TRUE.
+           initial_turb_vrms = sqrt(real(ndim,dp)) * turb_rms
+        end if
+     case default
+        write (*,*) "Invalid turbulence type selected! (1 to 3)"
+        nml_ok = .FALSE.
+     end select
   end if
 
   ! The initial field defaults to the same spectrum and compressive fraction as
@@ -50,13 +68,11 @@ subroutine read_turb_params(nml_ok)
      nml_ok = .FALSE.
   end if
 
-  if (turb .AND. (turb_type < 1 .OR. turb_type > 2)) then
-     write (*,*) "Invalid turbulence type selected! (1 or 2)"
-     nml_ok = .FALSE.
-  end if
-
-  if (turb .AND. turb_type==2 .AND. .NOT.turb_exact_rms) then
-     write (*,*) "Turb_type 2: Setting turb_exact_rms=.true."
+  ! A frozen field would otherwise carry the scatter of its single draw as a
+  ! systematic amplitude bias for the whole run
+  if (turb .AND. .NOT.evolving .AND. .NOT.turb_exact_rms) then
+     if (myid==1) write (*,*) &
+          & "Non-evolving driving: setting turb_exact_rms=.true."
      turb_exact_rms = .TRUE.
   end if
 

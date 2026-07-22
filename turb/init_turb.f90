@@ -214,20 +214,17 @@ subroutine init_turb
 
    ! Set up afield_now
    if (turb) then
-      select case (turb_type)
-      case (1)
-         ! Evolving forcing: interpolate between the two bracketing fields. The time
-         ! fraction is 0 on a fresh start (with or without instant_turb) and lands
-         ! part way through the interval on a restart.
+      if (evolving) then
+         ! Interpolate between the two bracketing fields. The time fraction is 0
+         ! on a fresh start (with or without instant_turb) and lands part way
+         ! through the interval on a restart.
          call turb_interpolate_now
-
-      case (2)
-         ! Fixed forcing: a single static field, held for the whole run by
-         ! turb_check_time. It must NOT be interpolated - blending two independent
-         ! fields gives an rms below turb_rms.
+      else
+         ! A single static field, held for the whole run by turb_check_time. It
+         ! must NOT be interpolated - blending two independent fields gives an
+         ! rms below turb_rms.
          afield_now = afield_last
-
-      end select
+      end if
 
       ! Renormalise onto the requested amplitude. afield_last is a single draw
       ! of the Ornstein-Uhlenbeck process, whose rms fluctuates by a few percent
