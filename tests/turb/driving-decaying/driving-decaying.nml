@@ -37,11 +37,11 @@ p_region=0.030361026190591216
 
 &OUTPUT_PARAMS
 noutput=1
-! Longer than the driven test on purpose. turb_type=3 does not cap dt at turb_dt
-! (newdt_fine only does so for turb_type/=3), so the CFL timestep is ~0.04
-! rather than 0.0029 and t=0.25 would be reached in a handful of steps, showing
-! almost no decay. The eddy turnover time is boxlen/|v|_rms ~ 4/0.87 ~ 4.6, so
-! t=2 shows a clear decay in about 45 steps, i.e. cheaper than the driven test.
+! Longer than the driven test on purpose. With the driving off there is no cap
+! on dt at turb_dt, so the CFL timestep is ~0.04 rather than 0.0029 and t=0.25
+! would be reached in a handful of steps, showing almost no decay. The eddy
+! turnover time is boxlen/|v|_rms ~ 4/0.87 ~ 4.6, so t=2 shows a clear decay in
+! about 45 steps, i.e. cheaper than the driven test.
 tout=2.0
 /
 
@@ -58,19 +58,17 @@ T_eos=4.2194
 /
 
 &TURB_PARAMS
-turb=.true.
-turb_type=3          ! 3=decaying
+turb=.false.         ! no driving: the turbulence decays freely
+initial_turb=.true.  ! start from a turbulent velocity field
+! Initial velocity dispersion |v|_rms. This is a velocity, unlike the forcing
+! turb_rms: the sound speed here is sqrt(p_region/d_region) = 0.324, so this is
+! Mach ~2.7, comparable to the driven test.
+initial_turb_vrms=0.8660254037844386
 turb_seed=1          ! -1 = random
 comp_frac=0.5        ! compressive fraction
-instant_turb=.false. ! not useful for type 3
+instant_turb=.false. ! use a single draw rather than a saturated field
 forcing_power_spectrum='power_law' !power_law, parabolic, konstandin, test
 turb_T=0.29241000937376255
 turb_Ndt=100       ! Number of timesteps per autocorr. time
-! For turb_type=3 the field is not a forcing but the initial velocity field:
-! init_flow_fine applies it once as v += afield_now, so |v|_rms = sqrt(3)*turb_rms.
-! Reusing the driven value 5.094 would start the box at Mach 27 (the sound speed
-! is sqrt(p_region/d_region) = 0.324), shrinking the CFL timestep by a factor of
-! ~25. 0.5 gives |v|_rms = 0.87, i.e. Mach ~2.7, comparable to the driven test.
-turb_rms=0.5                    ! rms of the initial turbulent velocity field
 turb_min_rho=2.5470372511355715d-6 ! Minimum density for turbulence
 /

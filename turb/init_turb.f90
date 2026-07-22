@@ -49,6 +49,15 @@ subroutine init_turb
    ! Set turbulence update time from autocorrelation time and number of substeps
    turb_dt = turb_T / real(turb_Ndt,dp)
 
+   ! Amplitude of the generated field. Without driving the field is only used for
+   ! the initial velocity, whose amplitude is set by initial_turb_vrms, so
+   ! turb_rms plays no role.
+   if (turb) then
+      turb_amp = turb_rms
+   else
+      turb_amp = 1.0_dp
+   end if
+
    ! Tasks that do not need to be done by MPI non-root tasks
    ! ---------------------------------------------------------------------------
    ! Only the root task holds the turbulent spectra (turb_last, turb_next), the
@@ -132,8 +141,8 @@ subroutine init_turb
          call FFT_3D(turb_last, afield_last)
          call FFT_3D(turb_next, afield_next)
 #endif
-         afield_last = afield_last * turb_norm * turb_rms
-         afield_next = afield_next * turb_norm * turb_rms
+         afield_last = afield_last * turb_norm * turb_amp
+         afield_next = afield_next * turb_norm * turb_amp
       else
          ! Not a restart - set up initial field and perform FFT
          turb_next = cmplx(0, 0, kind=cdp)
@@ -147,7 +156,7 @@ subroutine init_turb
 #else
          call FFT_3D(turb_next, afield_next)
 #endif
-         afield_next = afield_next * turb_norm * turb_rms
+         afield_next = afield_next * turb_norm * turb_amp
 
          ! Call turb_next_field to create second field
          call turb_next_field

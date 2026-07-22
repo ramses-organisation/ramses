@@ -1,12 +1,8 @@
-# Decaying turbulence (turb_type=3). Despite living in the driving module this
-# is not a driven run at all: init_flow_fine applies the initial field once as a
-# velocity kick, turb_check_time then zeroes it, and every forcing path in
-# amr_step/courant_fine/newdt_fine is switched off by 'turb_type /= 3'.
-#
-# So the bottom panel shows the decay of the kinetic energy, which is the part
-# that actually evolves. The turbulent rms is expected to be identically zero at
-# every step; a non-zero value would mean forcing is leaking into a run that is
-# supposed to be freely decaying, so it is reported rather than plotted.
+# Decaying turbulence: the run starts from a turbulent velocity field
+# (initial_turb) with the driving switched off (turb=.false.), so the bottom
+# panel shows the decay of the kinetic energy, which is the only thing that
+# evolves. No turbulent rms is reported by the code, because no driving field is
+# ever evaluated.
 
 import matplotlib as mpl
 mpl.use('Agg')
@@ -98,22 +94,17 @@ except Exception as e:
     hist = turb_log.read_turb_history('', TESTNAME)
     print("Could not read energy history: %s" % e)
 
-# The rms is identically zero here, so plotting it would only add a flat line at
-# zero; it is checked and reported as text instead.
 turb_log.plot_history(ax_ekin, hist, show_rms=False,
                       missing='No energy history found in ../../test_suite.log')
 
+# The driving is off, so the code should never report a turbulent rms. Any such
+# line in the log would mean forcing is leaking into a freely decaying run.
 rms = hist['rms']
 if len(rms) > 0:
-    # No forcing should ever be applied in a decaying run
-    if np.all(rms == 0.0):
-        note = 'turbulent forcing rms = 0 at all %d steps (no driving)' % len(rms)
-        colour = 'C2'
-    else:
-        note = 'WARNING: turbulent forcing rms is not zero (max %.3e)' % np.abs(rms).max()
-        colour = 'C3'
-    ax_ekin.text(0.99, 0.95, note, ha='right', va='top', fontsize='small',
-                 color=colour, transform=ax_ekin.transAxes)
+    ax_ekin.text(0.99, 0.95,
+                 'WARNING: driving is off but a turbulent rms was reported',
+                 ha='right', va='top', fontsize='small', color='C3',
+                 transform=ax_ekin.transAxes)
 
 fig.savefig('driving-decaying.pdf',bbox_inches='tight')
 

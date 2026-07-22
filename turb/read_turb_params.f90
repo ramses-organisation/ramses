@@ -64,8 +64,7 @@ subroutine read_turb_params(nml_ok)
      nml_ok = .FALSE.
   end if
 
-  ! turb_rms scales the generated field even when using initial_turb
-  if (turb_rms <= 0.0_dp) then
+  if (turb .AND. turb_rms <= 0.0_dp) then
      write (*,*) "Turbulent forcing rms acceleration must be > 0.0!"
      nml_ok = .FALSE.
   end if

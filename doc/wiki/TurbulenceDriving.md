@@ -76,7 +76,7 @@ fraction $\chi$.
 | `comp_frac`           | `float`      | `0.3333`      |  $\chi$  | The weight of compressive over solenoidal modes
 | `turb_T`              | `float`      | `1`           |  $T$     | Turbulent velocity auto-correlation time in code units.
 | `turb_Ndt`            | `integer`    | `100`         |  $T/dt$  | Number of timesteps per auto-correlation time |
-| `turb_rms`            | `float`      | `1`           |  $f_\mathrm{rms}$ |Root-mean-square  turbulent  forcing  in  code  units. |
+| `turb_rms`            | `float`      | `1`           |  $f_\mathrm{rms}$ |Root-mean-square  turbulent  forcing  in  code  units. Only used when `turb=.true.`; a run that only uses `initial_turb` takes its amplitude from `initial_turb_vrms` instead. |
 | `turb_exact_rms`      | `boolean`    | `.false.`     |          | Always use a forcing rms of exactly $\sqrt{N_{dim}}f_\mathrm{rms}$ instead of letting it follow the random draw. Only applicable for `turb_type=1`. See the "Turbulence types" section below
 | `turb_min_rho`        | `float`      | `1d-50`       |          | Minimum density for turbulence. Not forcing is added onto cellswith a density less than this value.
 | `forcing_power_spectrum`  | `string`     | `parabolic` | $F_0$   | Power spectrum type of the forcing, which describes the relative strength of individual modes. Options are: power_law, parabolic, konstandin
@@ -134,7 +134,8 @@ Setting `initial_turb=.true.` starts the simulation from a turbulent
 velocity field with dispersion $|v|_{\mathrm{rms}} =$ `initial_turb_vrms`. The field
 is generated with the same machinery as the driving (so `comp_frac`,
 `forcing_power_spectrum` and `turb_T` apply), but it is applied exactly once, by
-`init_flow_fine`, and is not re-applied on a restart.
+`init_flow_fine`, and is not re-applied on a restart. `turb_rms` is not used:
+with the driving off, the amplitude is set entirely by `initial_turb_vrms`.
 
 This is **independent of the driving**, which gives three useful combinations:
 
