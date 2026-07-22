@@ -28,7 +28,7 @@ subroutine turb_check_time
       call turb_interpolate_now
 
       ! Optionally hold the injected rms exactly on turb_rms while the
-      ! pattern keeps evolving
+      ! pattern keeps evolving (needs to be done after interpolation)
       if (turb_exact_rms) call turb_normalise_rms
    end if
 

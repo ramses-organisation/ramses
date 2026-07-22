@@ -9,8 +9,7 @@ subroutine read_turb_params(nml_ok)
   !--------------------------------------------------
   namelist/turb_params/turb, turb_seed, turb_type, instant_turb, comp_frac,&
        & turb_evolving, forcing_power_spectrum, turb_T, turb_Ndt, turb_rms,&
-       & turb_min_rho,&
-       & turb_exact_rms, initial_turb, initial_turb_vrms,&
+       & turb_min_rho, turb_exact_rms, initial_turb, initial_turb_vrms,&
        & initial_turb_spectrum, initial_turb_comp_frac
 
   !--------------------------------------------------

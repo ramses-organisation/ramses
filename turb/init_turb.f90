@@ -183,8 +183,8 @@ subroutine init_turb_driving
 #ifndef WITHOUTMPI
    ! Rendezvous: for the root task this sends the fields built above, for
    ! every other task it receives them into the arrays allocated at the top.
-   ! turb and initial_turb come from the namelist, so every task takes the same
-   ! branch and the collectives stay matched.
+   ! init_turb calls this routine on the strength of turb alone, a namelist
+   ! parameter, so every task gets here and the collectives stay matched.
    call mpi_share_turb_fields(.TRUE.)
 #endif
 
@@ -268,10 +268,10 @@ subroutine init_turb_initial
    end if
 
 #ifndef WITHOUTMPI
-   ! Rendezvous: for the root task this sends the fields built above, for
-   ! every other task it receives them into the arrays allocated by the two
-   ! routines. The conditions are namelist parameters, so every task takes the
-   ! same branch and the collectives stay matched.
+   ! Rendezvous: for the root task this sends the field drawn above, for every
+   ! other task it receives it into afield_init. init_turb calls this routine on
+   ! initial_turb .AND. nrestart == 0, both of which every task agrees on, so
+   ! the collective stays matched.
    call mpi_share_turb_init_field
 #endif
 
