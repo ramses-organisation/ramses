@@ -1,4 +1,4 @@
-# Frozen driving (turb_evolving=.false.). The forcing field is generated once and
+# Static driving (turb_evolving=.false.). The forcing field is generated once and
 # then held for the whole run, so the turbulent rms must be *constant*: it is
 # never advanced and never interpolated. A blend of two independent fields has
 # an rms below turb_rms, so a sagging or restart-dependent rms in the bottom
@@ -15,7 +15,7 @@ from scipy.interpolate import griddata
 
 # Number of dimensions this test is built with (see config.txt)
 NDIM = 3
-TESTNAME = 'turb/driving-fixed'
+TESTNAME = 'turb/driving-static'
 
 # Two rows of projections, plus a full-width panel for the rms history
 fig = plt.figure(figsize=(12, 9))
@@ -92,7 +92,7 @@ for c in cb:
 # the reference solution, and a failure to read the log must not break the test.
 try:
     hist = turb_log.read_turb_history(os.path.join('..', '..', 'test_suite.log'), TESTNAME)
-    target = turb_log.read_target_rms('driving-fixed.nml')
+    target = turb_log.read_target_rms('driving-static.nml')
 except Exception as e:
     hist, target = turb_log.read_turb_history('', TESTNAME), None
     print("Could not read turbulent rms history: %s" % e)
@@ -107,7 +107,7 @@ if len(rms) > 0:
 
 turb_log.plot_history(ax_rms, hist, target_rms=target, ndim=NDIM, rms_label=label)
 
-fig.savefig('driving-fixed.pdf',bbox_inches='tight')
+fig.savefig('driving-static.pdf',bbox_inches='tight')
 
 # Check results against reference solution
-visu_ramses.check_solution(data["data"],'driving-fixed', threshold=1e-30)
+visu_ramses.check_solution(data["data"],'driving-static', threshold=1e-30)

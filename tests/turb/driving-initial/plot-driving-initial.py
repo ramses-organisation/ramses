@@ -3,13 +3,13 @@
 # Driving on top of a turbulent initial velocity field: the only test with both
 # initial_turb and turb switched on, covering the interaction between the two.
 # The box starts as broadband turbulence (initial_turb_spectrum='power_law') and
-# is pushed by a steady fixed forcing on the single mode k=(1,0,0).
+# is pushed by a static forcing on the single mode k=(1,0,0).
 #
 # Rows:
 #   1. initial velocity (output 1, the initial conditions)
 #   2. final velocity
 #   3. final density
-#   4. driving rms, pinned exactly on target (a frozen field forces
+#   4. driving rms, pinned exactly on target (a static field forces
 #      turb_exact_rms) and undisturbed by the initial field, plus the
 #      kinetic energy
 #

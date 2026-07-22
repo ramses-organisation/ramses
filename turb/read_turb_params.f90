@@ -68,7 +68,7 @@ subroutine read_turb_params(nml_ok)
      nml_ok = .FALSE.
   end if
 
-  ! A frozen field would otherwise carry the scatter of its single draw as a
+  ! A static field would otherwise carry the scatter of its single draw as a
   ! systematic amplitude bias for the whole run
   if (turb .AND. .NOT.turb_evolving .AND. .NOT.turb_exact_rms) then
      if (myid==1) write (*,*) &

@@ -4,7 +4,7 @@ both on, so it covers the interaction between the two: the initial field is an
 independent draw, and the driving must be unaffected by it.
 
 The box starts as broadband turbulence (power_law) and is then pushed by a
-steady, fixed forcing acting on the single mode k=(1,0,0) ('test'). This covers
+static forcing acting on the single mode k=(1,0,0) ('test'). This covers
 the two spectra being different, and the 'test' spectrum branch.
 
 &RUN_PARAMS
@@ -61,7 +61,7 @@ T_eos=4.2194
 
 &TURB_PARAMS
 turb=.true.
-turb_evolving=.false. ! one frozen field: a steady push on one mode
+turb_evolving=.false. ! one static field: a steady push on one mode
 turb_seed=843       ! -1 = random
 comp_frac=1.0       ! fully compressive: the push is along k, i.e. along x
 instant_turb=.false.

@@ -71,7 +71,7 @@ fraction $\chi$.
 |:----------------------|:------------ |:------------- |:---------| :------------------------ |
 | `turb`                | `boolean`    | `.false.`     |          | Turn on or off driving
 | `turb_seed`           | `integer`    | `-1`          |          | Random number generator seed. -1 = random
-| `turb_evolving`          | `boolean`    | `.true.`      |          | Whether the driving field evolves over time. `.true.` follows the Ornstein-Uhlenbeck process, `.false.` freezes one field for the whole run. See the "Driving modes" section below
+| `turb_evolving`          | `boolean`    | `.true.`      |          | Whether the driving field evolves over time. `.true.` follows the Ornstein-Uhlenbeck process, `.false.` holds one static field for the whole run. See the "Driving modes" section below
 | `instant_turb`        | `boolean`    | `.true.`      |          | Evolve the field to saturation before the run starts. Recommended when `turb_evolving=.true.`. See the "Driving modes" section below
 | `comp_frac`           | `float`      | `0.3333`      |  $\chi$  | The weight of compressive over solenoidal modes
 | `turb_T`              | `float`      | `1`           |  $T$     | Turbulent velocity auto-correlation time in code units.
@@ -112,12 +112,12 @@ before the run starts, so that it begins already saturated. Leaving it on is
 strongly recommended here, especially for runs shorter than or comparable to $T$,
 which would otherwise spend most of their length in the spin-up transient.
 
-### `turb_evolving=.false.` — frozen driving ###
+### `turb_evolving=.false.` — static driving ###
 
 One acceleration field is generated at startup and then held, unchanged, for the whole run.
 It is applied as an acceleration at every timestep, exactly as above.
 
-Because the field is frozen, the scatter that would average out for an evolving
+Because the field is static, the scatter that would average out for an evolving
 field instead becomes a systematic amplitude bias for the whole simulation. To
 avoid that, `turb_exact_rms` is forced on in this mode, so the field is
 renormalised at startup to an rms of exactly
@@ -129,7 +129,7 @@ the driving *pattern* behaves, and whether its *amplitude* is pinned:
 | | `turb_exact_rms=.false.` | `turb_exact_rms=.true.` |
 |:---|:---|:---|
 | `turb_evolving=.true.` | Pattern and amplitude both fluctuate (the raw Ornstein-Uhlenbeck process) | Pattern decorrelates at constant injected amplitude |
-| `turb_evolving=.false.` | Not available, forced to the column on the right | Frozen pattern at exactly the requested amplitude |
+| `turb_evolving=.false.` | Not available, forced to the column on the right | Static pattern at exactly the requested amplitude |
 
 :::{admonition} Deprecated: `turb_type`
 :class: warning

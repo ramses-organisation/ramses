@@ -70,7 +70,7 @@ T_eos=4.2194
 
 &TURB_PARAMS
 turb=.true.
-turb_evolving=.true. ! .false. = one frozen field for the whole run
+turb_evolving=.true. ! .false. = one static field for the whole run
 turb_seed=1         ! -1 = random
 comp_frac=1       ! compressive fraction
 forcing_power_spectrum='power_law' !power_law, parabolic, konstandin, test
