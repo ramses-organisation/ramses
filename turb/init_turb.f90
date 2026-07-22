@@ -183,13 +183,11 @@ subroutine init_turb_driving
 #ifndef WITHOUTMPI
    ! Rendezvous: for the root task this sends the fields built above, for
    ! every other task it receives them into the arrays allocated at the top.
-   ! init_turb calls this routine on the strength of turb alone, a namelist
-   ! parameter, so every task gets here and the collectives stay matched.
    call mpi_share_turb_fields(.TRUE.)
 #endif
 
-   ! Set up afield_now, the field the driving actually applies. This has to
-   ! happen after the rendezvous, since it runs on every task.
+   ! Set up afield_now, i.e. the field the driving actually applies.
+   ! To be done after the rendezvous.
    if (turb_evolving) then
       ! Interpolate between the two bracketing fields. The time fraction is 0
       ! on a fresh start (with or without instant_turb) and lands part way
@@ -269,9 +267,7 @@ subroutine init_turb_initial
 
 #ifndef WITHOUTMPI
    ! Rendezvous: for the root task this sends the field drawn above, for every
-   ! other task it receives it into afield_init. init_turb calls this routine on
-   ! initial_turb .AND. nrestart == 0, both of which every task agrees on, so
-   ! the collective stays matched.
+   ! other task it receives it into afield_init.
    call mpi_share_turb_init_field
 #endif
 
