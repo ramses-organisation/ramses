@@ -56,7 +56,7 @@ z_ave=1.0
 
 &TURB_PARAMS
 turb=.true.
-turb_type=1
+turb_evolving=.true.
 turb_seed=1
 comp_frac=0.5
 instant_turb=.true.

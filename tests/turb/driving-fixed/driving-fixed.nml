@@ -54,10 +54,10 @@ T_eos=4.2194
 
 &TURB_PARAMS
 turb=.true.
-turb_type=2          ! 2=forced fixed
+turb_evolving=.false. ! one frozen field for the whole run
 turb_seed=1          ! -1 = random
 comp_frac=0.5        ! compressive fraction
-instant_turb=.false. ! Not useful for type 2
+instant_turb=.false. ! Not useful for a frozen field
 forcing_power_spectrum='power_law' !power_law, parabolic, konstandin, test
 turb_T=0.29241000937376255
 turb_Ndt=100       ! Number of timesteps per autocorr. time
