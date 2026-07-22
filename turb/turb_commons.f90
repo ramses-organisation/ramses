@@ -8,6 +8,7 @@ module turb_commons
   real(dp), allocatable     :: afield_last(:,:,:,:) ! Forcing field at time = t
   real(dp), allocatable     :: afield_next(:,:,:,:) ! Forcing field at time = t + dt
   real(dp), allocatable     :: afield_now(:,:,:,:)  ! Forcing field now
+  real(dp), allocatable     :: afield_init(:,:,:,:) ! Field for the initial velocity
   real(dp), allocatable     :: power_spec(:,:,:)    ! Power spectrum of turbulence
 
   real(dp)    :: sol_frac         ! Solenoidal fraction
@@ -18,9 +19,6 @@ module turb_commons
   real(dp)    :: turb_norm        ! Normalizing constant from combination
                                        ! of Ornstein-Uhlenbeck process, initial
                                        ! power spectrum and projection
-  real(dp)    :: turb_amp         ! Amplitude the generated field is scaled to:
-                                       ! turb_rms when driving, 1 when only the
-                                       ! initial velocity field is used
 
   character(len=256) :: turb_file_last    ! filename for 'last' field
   character(len=256) :: turb_file_next    ! filename for 'last' field

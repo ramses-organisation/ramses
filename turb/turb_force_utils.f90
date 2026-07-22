@@ -506,9 +506,11 @@ subroutine power_rms_norm(power_in, P)
 
 end subroutine power_rms_norm
 
-subroutine turb_force_calc(ncache, x_cell, rho, aturb)
+subroutine turb_force_calc(afield, ncache, x_cell, rho, aturb)
    use turb_commons
    implicit none
+   real(kind=dp), intent(in)  :: afield(1:NDIM, 0:TGRID_X,&
+                                       &0:TGRID_Y, 0:TGRID_Z) ! Field to sample
    integer, intent(in)        :: ncache
    real(kind=dp), intent(in)  :: x_cell(1:ndim,1:nvector) ! Positions
    real(kind=dp), intent(in)  :: rho(1:nvector)           ! Densities
@@ -567,8 +569,8 @@ subroutine turb_force_calc(ncache, x_cell, rho, aturb)
    ! Find cube values
 #if NDIM==1
    do i=1,nok
-      cube_vals(:,i,1) = afield_now(:, bmin(1,i), 0, 0)
-      cube_vals(:,i,2) = afield_now(:, bmax(1,i), 0, 0)
+      cube_vals(:,i,1) = afield(:, bmin(1,i), 0, 0)
+      cube_vals(:,i,2) = afield(:, bmax(1,i), 0, 0)
    end do
 
    do i=1,nok
@@ -577,10 +579,10 @@ subroutine turb_force_calc(ncache, x_cell, rho, aturb)
    end do
 #elif NDIM==2
    do i=1,nok
-      cube_vals(:,i,1) = afield_now(:, bmin(1,i), bmin(2,i), 0)
-      cube_vals(:,i,2) = afield_now(:, bmax(1,i), bmin(2,i), 0)
-      cube_vals(:,i,3) = afield_now(:, bmin(1,i), bmax(2,i), 0)
-      cube_vals(:,i,4) = afield_now(:, bmax(1,i), bmax(2,i), 0)
+      cube_vals(:,i,1) = afield(:, bmin(1,i), bmin(2,i), 0)
+      cube_vals(:,i,2) = afield(:, bmax(1,i), bmin(2,i), 0)
+      cube_vals(:,i,3) = afield(:, bmin(1,i), bmax(2,i), 0)
+      cube_vals(:,i,4) = afield(:, bmax(1,i), bmax(2,i), 0)
    end do
 
    do i=1,nok
@@ -591,14 +593,14 @@ subroutine turb_force_calc(ncache, x_cell, rho, aturb)
    end do
 #else
    do i=1,nok
-      cube_vals(:,i,1) = afield_now(:, bmin(1,i), bmin(2,i), bmin(3,i))
-      cube_vals(:,i,2) = afield_now(:, bmax(1,i), bmin(2,i), bmin(3,i))
-      cube_vals(:,i,3) = afield_now(:, bmin(1,i), bmax(2,i), bmin(3,i))
-      cube_vals(:,i,4) = afield_now(:, bmax(1,i), bmax(2,i), bmin(3,i))
-      cube_vals(:,i,5) = afield_now(:, bmin(1,i), bmin(2,i), bmax(3,i))
-      cube_vals(:,i,6) = afield_now(:, bmax(1,i), bmin(2,i), bmax(3,i))
-      cube_vals(:,i,7) = afield_now(:, bmin(1,i), bmax(2,i), bmax(3,i))
-      cube_vals(:,i,8) = afield_now(:, bmax(1,i), bmax(2,i), bmax(3,i))
+      cube_vals(:,i,1) = afield(:, bmin(1,i), bmin(2,i), bmin(3,i))
+      cube_vals(:,i,2) = afield(:, bmax(1,i), bmin(2,i), bmin(3,i))
+      cube_vals(:,i,3) = afield(:, bmin(1,i), bmax(2,i), bmin(3,i))
+      cube_vals(:,i,4) = afield(:, bmax(1,i), bmax(2,i), bmin(3,i))
+      cube_vals(:,i,5) = afield(:, bmin(1,i), bmin(2,i), bmax(3,i))
+      cube_vals(:,i,6) = afield(:, bmax(1,i), bmin(2,i), bmax(3,i))
+      cube_vals(:,i,7) = afield(:, bmin(1,i), bmax(2,i), bmax(3,i))
+      cube_vals(:,i,8) = afield(:, bmax(1,i), bmax(2,i), bmax(3,i))
    end do
 
    ! Find interpolation values
@@ -647,9 +649,11 @@ subroutine turb_force_calc(ncache, x_cell, rho, aturb)
 
 end subroutine turb_force_calc
 
-subroutine current_turb_rms(rms_val)
+subroutine current_turb_rms(afield, rms_val)
    use turb_commons
    implicit none
+   real (kind=dp), intent(in)  :: afield(1:NDIM, 0:TGRID_X,&
+                                        &0:TGRID_Y, 0:TGRID_Z)
    real (kind=dp), intent(out) :: rms_val
    integer                     :: i, j, k
    real (kind=dp)              :: asqd
@@ -658,7 +662,7 @@ subroutine current_turb_rms(rms_val)
    do k=0,TGRID_Z
       do j=0,TGRID_Y
          do i=0,TGRID_X
-            asqd = sum(afield_now(1:ndim, i, j, k)**2)
+            asqd = sum(afield(1:ndim, i, j, k)**2)
             rms_val = rms_val + asqd
          end do
       end do
@@ -688,7 +692,7 @@ subroutine turb_normalise_rms
 
    ! Scale afield_now so that its rms is exactly sqrt(ndim)*turb_rms, removing
    ! the scatter of the Ornstein-Uhlenbeck draw.
-   call current_turb_rms(rms_now)
+   call current_turb_rms(afield_now, rms_now)
    if (rms_now > 0.0_dp) then
       afield_now = afield_now * (sqrt(real(ndim,dp))*turb_rms / rms_now)
    end if

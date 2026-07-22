@@ -18,6 +18,10 @@ subroutine init_turb
 
    real(kind=dp) :: turb_rms_now           ! Realised rms of the static field
 
+   complex(kind=cdp), allocatable :: turb_ic(:,:,:,:)
+                                         ! Scratch spectrum for the independent
+                                         ! initial-velocity draw
+
    integer, parameter :: instant_turb_mult=5
                                          ! Number of autocorrelation times
                                          ! to evolve with instant turbulence
@@ -31,7 +35,7 @@ subroutine init_turb
    all_stat = 0
 
    ! Allocate turbulent force storage. Only the driving needs it: the initial
-   ! velocity field is applied straight from afield_now.
+   ! velocity field is applied straight from afield_init.
    if (turb) then
       allocate(fturb(1:ncoarse+twotondim*ngridmax,1:ndim), stat=all_stat(1))
    end if
@@ -46,17 +50,16 @@ subroutine init_turb
 
    if (any(all_stat /= 0)) stop 'Out of memory in init_turb!'
 
+   ! The initial velocity field is an independent draw, kept separate from the
+   ! driving so the two are uncorrelated
+   if (initial_turb) then
+      allocate(afield_init(1:NDIM,0:TGRID_X,0:TGRID_Y,0:TGRID_Z),&
+               &stat=all_stat(1))
+      if (all_stat(1) /= 0) stop 'Out of memory in init_turb!'
+   end if
+
    ! Set turbulence update time from autocorrelation time and number of substeps
    turb_dt = turb_T / real(turb_Ndt,dp)
-
-   ! Amplitude of the generated field. Without driving the field is only used for
-   ! the initial velocity, whose amplitude is set by initial_turb_vrms, so
-   ! turb_rms plays no role.
-   if (turb) then
-      turb_amp = turb_rms
-   else
-      turb_amp = 1.0_dp
-   end if
 
    ! Tasks that do not need to be done by MPI non-root tasks
    ! ---------------------------------------------------------------------------
@@ -128,7 +131,10 @@ subroutine init_turb
       ! Combination of all factored (reciprocal for easy multiplication)
       turb_norm = 1.0_dp / (power_norm * proj_norm * OU_norm)
 
-      if (nrestart > 0) then
+      if (.NOT. turb) then
+         ! Only the initial velocity field is needed, drawn below
+         continue
+      else if (nrestart > 0) then
          ! Restart - load turbulent fields from files and perform FFTs
          call read_turb_fields
 #if NDIM==1
@@ -141,8 +147,8 @@ subroutine init_turb
          call FFT_3D(turb_last, afield_last)
          call FFT_3D(turb_next, afield_next)
 #endif
-         afield_last = afield_last * turb_norm * turb_amp
-         afield_next = afield_next * turb_norm * turb_amp
+         afield_last = afield_last * turb_norm * turb_rms
+         afield_next = afield_next * turb_norm * turb_rms
       else
          ! Not a restart - set up initial field and perform FFT
          turb_next = cmplx(0, 0, kind=cdp)
@@ -156,7 +162,7 @@ subroutine init_turb
 #else
          call FFT_3D(turb_next, afield_next)
 #endif
-         afield_next = afield_next * turb_norm * turb_amp
+         afield_next = afield_next * turb_norm * turb_rms
 
          ! Call turb_next_field to create second field
          call turb_next_field
@@ -182,6 +188,28 @@ subroutine init_turb
             call flush(6)
          end if
       end if
+
+      ! Independent draw for the initial velocity field. Drawn after the driving
+      ! field so that a driven run is unaffected by this option, and into its own
+      ! scratch spectrum so the Ornstein-Uhlenbeck state of the driving in
+      ! turb_next is left untouched. The amplitude is set later from
+      ! initial_turb_vrms, so turb_rms does not enter here.
+      if (initial_turb) then
+         allocate(turb_ic(1:NDIM,0:TGRID_X,0:TGRID_Y,0:TGRID_Z),&
+                  &stat=all_stat(1))
+         if (all_stat(1) /= 0) stop 'Out of memory in init_turb!'
+         turb_ic = cmplx(0, 0, kind=cdp)
+         call add_turbulence(turb_ic, turb_dt)
+#if NDIM==1
+         call FFT_1D(turb_ic(1,:,0,0), afield_init(1,:,0,0))
+#elif NDIM==2
+         call FFT_2D(turb_ic(:,:,:,0), afield_init(:,:,:,0))
+#else
+         call FFT_3D(turb_ic, afield_init)
+#endif
+         afield_init = afield_init * turb_norm
+         deallocate(turb_ic)
+      end if
    end if
 
    ! Tasks to always be done (including MPI non-root tasks)
@@ -190,7 +218,10 @@ subroutine init_turb
 #ifndef WITHOUTMPI
    ! Rendezvous: for the root task this sends the fields built above, for
    ! every other task it receives them into the arrays allocated at the top.
-   call mpi_share_turb_fields(.TRUE.)
+   ! turb and initial_turb come from the namelist, so every task takes the same
+   ! branch and the collectives stay matched.
+   if (turb) call mpi_share_turb_fields(.TRUE.)
+   if (initial_turb) call mpi_share_turb_init_field
 #endif
 
    ! Set up afield_now
@@ -215,10 +246,6 @@ subroutine init_turb
       ! about sqrt(ndim)*turb_rms.
       ! Always on for type 2 !
       if (turb_exact_rms) call turb_normalise_rms
-   else
-      ! Driving is off, but a field is still needed for the initial velocity.
-      ! turb_type is not meaningful here (it may still be the deprecated 3).
-      afield_now = afield_last
    end if
 
 end subroutine init_turb
@@ -257,8 +284,8 @@ subroutine add_turb_init_velocity(ilevel)
   if(verbose)write(*,111)ilevel
 
   ! Scale the field onto the requested velocity dispersion. Measuring the rms
-  ! here keeps this correct whether or not afield_now has been renormalised.
-  call current_turb_rms(rms_now)
+  ! here keeps this correct whatever amplitude the field was generated at.
+  call current_turb_rms(afield_init, rms_now)
   if (rms_now > 0.0_dp) then
      turb_init_vscale = initial_turb_vrms / rms_now
   else
@@ -322,7 +349,7 @@ subroutine add_turb_init_velocity(ilevel)
         end do
 
         ! Interpolate the turbulent field onto the cells
-        call turb_force_calc(ngrid, x_cell, rho, vturb)
+        call turb_force_calc(afield_init, ngrid, x_cell, rho, vturb)
 
         do i=1,ngrid
            d = max(uold(ind_cell(i),1),smallr)

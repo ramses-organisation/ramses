@@ -26,6 +26,6 @@ subroutine turb_next_field
 #else
    call FFT_3D(turb_next, afield_next)
 #endif
-   afield_next = afield_next * turb_norm * turb_amp
+   afield_next = afield_next * turb_norm * turb_rms
 
 end subroutine turb_next_field
