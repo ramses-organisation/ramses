@@ -17,10 +17,10 @@
 # they can be compared directly. Slices rather than projections, because summing
 # a signed quantity along a line of sight largely cancels it out.
 #
-# Note that k=(1,0,0) means the forcing *varies* along x, not that it points
-# along x: with comp_frac=0.5 the Helmholtz projection drives a compressive
-# component along x and a solenoidal one in y-z, so all three components pick up
-# the mode and all three vary with x.
+# The driving is fully compressive (comp_frac=1), so the Helmholtz projection
+# leaves only the component along k: vx picks up the mode while vy and vz are
+# untouched and simply decay from their initial values. With comp_frac<1 the
+# solenoidal part would drive vy and vz as well, still varying along x.
 #
 # The density row keeps the usual projections along x, y and z. The mode is
 # invisible in the projection along x, since it is coherent in that direction.

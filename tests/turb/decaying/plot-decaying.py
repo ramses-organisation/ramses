@@ -13,7 +13,7 @@ import visu_ramses
 import turb_log
 from scipy.interpolate import griddata
 
-TESTNAME = 'turb/driving-decaying'
+TESTNAME = 'turb/decaying'
 
 # Two rows of projections, plus a full-width panel for the energy history
 fig = plt.figure(figsize=(12, 9))
@@ -106,7 +106,7 @@ if len(rms) > 0:
                  ha='right', va='top', fontsize='small', color='C3',
                  transform=ax_ekin.transAxes)
 
-fig.savefig('driving-decaying.pdf',bbox_inches='tight')
+fig.savefig('decaying.pdf',bbox_inches='tight')
 
 # Check results against reference solution
-visu_ramses.check_solution(data["data"],'driving-decaying', threshold=1e-30)
+visu_ramses.check_solution(data["data"],'decaying', threshold=1e-30)
