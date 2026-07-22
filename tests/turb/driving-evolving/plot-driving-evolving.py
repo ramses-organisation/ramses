@@ -11,7 +11,7 @@ from scipy.interpolate import griddata
 
 # Number of dimensions this test is built with (see config.txt)
 NDIM = 3
-TESTNAME = 'turb/driving'
+TESTNAME = 'turb/driving-evolving'
 
 # Two rows of projections, plus a full-width panel for the rms history
 fig = plt.figure(figsize=(12, 9))
@@ -89,14 +89,14 @@ for c in cb:
 # not break the test.
 try:
     hist = turb_log.read_turb_history(os.path.join('..', '..', 'test_suite.log'), TESTNAME)
-    target = turb_log.read_target_rms('driving.nml')
+    target = turb_log.read_target_rms('driving-evolving.nml')
 except Exception as e:
     hist, target = turb_log.read_turb_history('', TESTNAME), None
     print("Could not read turbulence history: %s" % e)
 
 turb_log.plot_history(ax_rms, hist, target_rms=target, ndim=NDIM)
 
-fig.savefig('driving.pdf',bbox_inches='tight')
+fig.savefig('driving-evolving.pdf',bbox_inches='tight')
 
 # Check results against reference solution
-visu_ramses.check_solution(data["data"],'driving', threshold=1e-30)
+visu_ramses.check_solution(data["data"],'driving-evolving', threshold=1e-30)

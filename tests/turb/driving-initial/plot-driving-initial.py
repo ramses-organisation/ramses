@@ -9,8 +9,9 @@
 #   1. initial velocity (output 1, the initial conditions)
 #   2. final velocity
 #   3. final density
-#   4. driving rms, pinned exactly on target (turb_type=2 forces turb_exact_rms)
-#      and undisturbed by the initial field, plus the kinetic energy
+#   4. driving rms, pinned exactly on target (a frozen field forces
+#      turb_exact_rms) and undisturbed by the initial field, plus the
+#      kinetic energy
 #
 # The velocity rows show the three signed components on a slice through the
 # middle of the box, with a diverging colour scale shared between the two rows so

@@ -1,4 +1,4 @@
-# Fixed forced turbulence (turb_type=2). The forcing field is generated once and
+# Frozen driving (turb_evolving=.false.). The forcing field is generated once and
 # then held for the whole run, so the turbulent rms must be *constant*: it is
 # never advanced and never interpolated. A blend of two independent fields has
 # an rms below turb_rms, so a sagging or restart-dependent rms in the bottom
