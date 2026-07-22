@@ -1,25 +1,64 @@
 subroutine init_turb
   use turb_commons
   implicit none
-  !--------------------------------------------------
-  ! Local variables
-  !--------------------------------------------------
+  !-------------------------------------------------------------------
+  ! Set up the turbulence module. Two independent features live in it:
+  !
+  !   turb          driving, a forcing field applied at every timestep
+  !   initial_turb  a turbulent velocity field applied once, at t=0
+  !
+  ! They share only the grid dimensions and the random number generator;
+  ! everything else belongs to one or the other and is set up by
+  ! init_turb_driving / init_turb_initial.
+  !-------------------------------------------------------------------
+
+   integer       :: i                      ! Loop variable
+   integer       :: n_seed=4               ! Length of random seed, 4 for KISS64
+   integer       :: clock                  ! Integer clock time
+
+   ! Only the root task holds the spectra and the PRNG state; the other tasks
+   ! receive the resulting fields at the rendezvous below. Note myid==1 also in
+   ! serial builds, so these branches need no preprocessor guard.
+   if (myid == 1 .AND. nrestart == 0) then
+      ! Set up random seed (modified from gfortran docs). On a restart the state
+      ! is restored from file by read_turb_fields instead.
+      if (turb_seed == -1) then
+          call system_clock(count=clock)
+          kiss64_state = clock + 37 * (/(i-1,i=1,n_seed)/)
+      else
+          kiss64_state = turb_seed
+      end if
+      call spin_up(kiss64_state)
+   end if
+
+   ! The driving is set up first, so that its random sequence - and hence a
+   ! driven run - is unaffected by whether initial_turb is switched on.
+   if (turb) call init_turb_driving
+
+   ! The initial field is only ever used on a fresh start, by init_flow_fine.
+   ! On a restart it must not be drawn at all: that would consume random numbers
+   ! after read_turb_fields has restored the PRNG state, and the driving would
+   ! then diverge from the run being continued.
+   if (initial_turb .AND. nrestart == 0) call init_turb_initial
+
+end subroutine init_turb
+!#####################################################################
+!#####################################################################
+!#####################################################################
+subroutine init_turb_driving
+  use turb_commons
+  implicit none
+  !-------------------------------------------------------------------
+  ! Set up the turbulent driving: the storage for the force, the two
+  ! bracketing forcing fields, their power spectrum and normalisation.
+  !-------------------------------------------------------------------
 
    integer       :: i                      ! Loop variable
    integer       :: all_stat(1:4)          ! Allocation statuses
 
-   integer              :: n_seed=4        ! Length of random seed, 4 for KISS64
-   integer              :: clock           ! Integer clock time
-
    real(kind=dp)        :: power_norm      ! Normalization from power spectrum
    real(kind=dp)        :: proj_norm       ! Normalization from projection
    real(kind=dp)        :: OU_norm         ! Normalization for OU process
-
-   real(kind=dp) :: turb_rms_now           ! Realised rms of the static field
-
-   complex(kind=cdp), allocatable :: turb_ic(:,:,:,:)
-                                         ! Scratch spectrum for the independent
-                                         ! initial-velocity draw
 
    integer, parameter :: instant_turb_mult=5
                                          ! Number of autocorrelation times
@@ -33,29 +72,13 @@ subroutine init_turb
 
    all_stat = 0
 
-   ! Allocate turbulent force storage. Only the driving needs it: the initial
-   ! velocity field is applied straight from afield_init.
-   if (turb) then
-      allocate(fturb(1:ncoarse+twotondim*ngridmax,1:ndim), stat=all_stat(1))
-   end if
+   ! Allocate turbulent force storage and the fields it is built from
+   allocate(fturb(1:ncoarse+twotondim*ngridmax,1:ndim), stat=all_stat(1))
+   allocate(afield_last(1:NDIM,0:TGRID_X,0:TGRID_Y,0:TGRID_Z), stat=all_stat(2))
+   allocate(afield_next(1:NDIM,0:TGRID_X,0:TGRID_Y,0:TGRID_Z), stat=all_stat(3))
+   allocate(afield_now(1:NDIM,0:TGRID_X,0:TGRID_Y,0:TGRID_Z), stat=all_stat(4))
 
-   ! Allocate grids
-   allocate(afield_last(1:NDIM,0:TGRID_X,0:TGRID_Y,0:TGRID_Z),&
-            &stat=all_stat(2))
-   allocate(afield_next(1:NDIM,0:TGRID_X,0:TGRID_Y,0:TGRID_Z),&
-            &stat=all_stat(3))
-   allocate(afield_now(1:NDIM,0:TGRID_X,0:TGRID_Y,0:TGRID_Z),&
-            &stat=all_stat(4))
-
-   if (any(all_stat /= 0)) stop 'Out of memory in init_turb!'
-
-   ! The initial velocity field is an independent draw, kept separate from the
-   ! driving so the two are uncorrelated
-   if (initial_turb) then
-      allocate(afield_init(1:NDIM,0:TGRID_X,0:TGRID_Y,0:TGRID_Z),&
-               &stat=all_stat(1))
-      if (all_stat(1) /= 0) stop 'Out of memory in init_turb!'
-   end if
+   if (any(all_stat /= 0)) stop 'Out of memory in init_turb_driving!'
 
    ! Set turbulence update time from autocorrelation time and number of substeps
    turb_dt = turb_T / real(turb_Ndt,dp)
@@ -69,23 +92,12 @@ subroutine init_turb
 
    if (myid == 1) then
 
-      if (nrestart == 0) then
-         ! Set up random seed (modified from gfortran docs)
-         if (turb_seed == -1) then
-             call system_clock(count=clock)
-             kiss64_state = clock + 37 * (/(i-1,i=1,n_seed)/)
-         else
-             kiss64_state = turb_seed
-         end if
-         call spin_up(kiss64_state)
-      end if
-
-      ! Allocate grids
+      ! Allocate the spectra, held by the root task only
       allocate(turb_last(1:NDIM,0:TGRID_X,0:TGRID_Y,0:TGRID_Z), stat=all_stat(1))
       allocate(turb_next(1:NDIM,0:TGRID_X,0:TGRID_Y,0:TGRID_Z), stat=all_stat(2))
       allocate(power_spec(0:TGRID_X,0:TGRID_Y,0:TGRID_Z), stat=all_stat(3))
 
-      if (any(all_stat /= 0)) stop 'Out of memory in init_turb!'
+      if (any(all_stat(1:3) /= 0)) stop 'Out of memory in init_turb_driving!'
 
       ! Set decay fraction per timestep dt
       turb_decay_frac = turb_dt / turb_T ! == 1 / turbNdt
@@ -99,15 +111,6 @@ subroutine init_turb
       ! Set the power distribution of the driving
       call build_power_spectrum(forcing_power_spectrum, power_spec)
 
-      ! The initial velocity field may use a different spectrum, e.g. broadband
-      ! turbulence while the driving acts on selected modes
-      if (initial_turb) then
-         allocate(power_spec_init(0:TGRID_X,0:TGRID_Y,0:TGRID_Z),&
-                  &stat=all_stat(1))
-         if (all_stat(1) /= 0) stop 'Out of memory in init_turb!'
-         call build_power_spectrum(initial_turb_spectrum, power_spec_init)
-      end if
-
       ! Calculate turbulent normalization
       ! Power normalization comes from FFT of initial power spectrum
       call power_rms_norm(power_spec, power_norm)
@@ -118,10 +121,7 @@ subroutine init_turb
       ! Combination of all factored (reciprocal for easy multiplication)
       turb_norm = 1.0_dp / (power_norm * proj_norm * OU_norm)
 
-      if (.NOT. turb) then
-         ! Only the initial velocity field is needed, drawn below
-         continue
-      else if (nrestart > 0) then
+      if (nrestart > 0) then
          ! Restart - load turbulent fields from files and perform FFTs
          call read_turb_fields
 #if NDIM==1
@@ -175,29 +175,6 @@ subroutine init_turb
             call flush(6)
          end if
       end if
-
-      ! Independent draw for the initial velocity field. Drawn after the driving
-      ! field so that a driven run is unaffected by this option, and into its own
-      ! scratch spectrum so the Ornstein-Uhlenbeck state of the driving in
-      ! turb_next is left untouched. The amplitude is set later from
-      ! initial_turb_vrms, so turb_rms does not enter here.
-      if (initial_turb) then
-         allocate(turb_ic(1:NDIM,0:TGRID_X,0:TGRID_Y,0:TGRID_Z),&
-                  &stat=all_stat(1))
-         if (all_stat(1) /= 0) stop 'Out of memory in init_turb!'
-         turb_ic = cmplx(0, 0, kind=cdp)
-         call add_turbulence(turb_ic, power_spec_init, initial_turb_comp_frac,&
-                              & 1.0_dp - initial_turb_comp_frac, turb_dt)
-#if NDIM==1
-         call FFT_1D(turb_ic(1,:,0,0), afield_init(1,:,0,0))
-#elif NDIM==2
-         call FFT_2D(turb_ic(:,:,:,0), afield_init(:,:,:,0))
-#else
-         call FFT_3D(turb_ic, afield_init)
-#endif
-         afield_init = afield_init * turb_norm
-         deallocate(turb_ic)
-      end if
    end if
 
    ! Tasks to always be done (including MPI non-root tasks)
@@ -208,32 +185,97 @@ subroutine init_turb
    ! every other task it receives them into the arrays allocated at the top.
    ! turb and initial_turb come from the namelist, so every task takes the same
    ! branch and the collectives stay matched.
-   if (turb) call mpi_share_turb_fields(.TRUE.)
-   if (initial_turb) call mpi_share_turb_init_field
+   call mpi_share_turb_fields(.TRUE.)
 #endif
 
-   ! Set up afield_now
-   if (turb) then
-      if (turb_evolving) then
-         ! Interpolate between the two bracketing fields. The time fraction is 0
-         ! on a fresh start (with or without instant_turb) and lands part way
-         ! through the interval on a restart.
-         call turb_interpolate_now
-      else
-         ! A single static field, held for the whole run by turb_check_time. It
-         ! must NOT be interpolated - blending two independent fields gives an
-         ! rms below turb_rms.
-         afield_now = afield_last
-      end if
-
-      ! Renormalise onto the requested amplitude. afield_last is a single draw
-      ! of the Ornstein-Uhlenbeck process, whose rms fluctuates by a few percent
-      ! about sqrt(ndim)*turb_rms.
-      ! Always on for type 2 !
-      if (turb_exact_rms) call turb_normalise_rms
+   ! Set up afield_now, the field the driving actually applies. This has to
+   ! happen after the rendezvous, since it runs on every task.
+   if (turb_evolving) then
+      ! Interpolate between the two bracketing fields. The time fraction is 0
+      ! on a fresh start (with or without instant_turb) and lands part way
+      ! through the interval on a restart.
+      call turb_interpolate_now
+   else
+      ! A single static field, held for the whole run by turb_check_time. It
+      ! must NOT be interpolated - blending two independent fields gives an
+      ! rms below turb_rms.
+      afield_now = afield_last
    end if
 
-end subroutine init_turb
+   ! Renormalise onto the requested amplitude. afield_last is a single draw
+   ! of the Ornstein-Uhlenbeck process, whose rms fluctuates by a few percent
+   ! about sqrt(ndim)*turb_rms. Forced on for a static field.
+   if (turb_exact_rms) call turb_normalise_rms
+
+end subroutine init_turb_driving
+!#####################################################################
+!#####################################################################
+!#####################################################################
+subroutine init_turb_initial
+  use turb_commons
+  implicit none
+  !-------------------------------------------------------------------
+  ! Draw the turbulent field used for the initial velocity.
+  !
+  ! This is a single draw, not a process: there is no time evolution,
+  ! no autocorrelation time, and no analytic normalisation. The field
+  ! only has to have the right shape - add_turb_init_velocity measures
+  ! its rms and scales it onto initial_turb_vrms - so none of the
+  ! driving parameters enter here.
+  !-------------------------------------------------------------------
+
+   integer :: all_stat                    ! Allocation status
+
+   real(kind=dp), allocatable     :: power_spec_init(:,:,:)
+                                         ! Power distribution of the draw, which
+                                         ! may differ from the driving spectrum
+   complex(kind=cdp), allocatable :: turb_ic(:,:,:,:)
+                                         ! Scratch spectrum for the draw
+
+   ! Allocated on every task: the root task fills it, the others receive it
+   allocate(afield_init(1:NDIM,0:TGRID_X,0:TGRID_Y,0:TGRID_Z), stat=all_stat)
+   if (all_stat /= 0) stop 'Out of memory in init_turb_initial!'
+
+   if (myid == 1) then
+
+      allocate(power_spec_init(0:TGRID_X,0:TGRID_Y,0:TGRID_Z), stat=all_stat)
+      if (all_stat /= 0) stop 'Out of memory in init_turb_initial!'
+      call build_power_spectrum(initial_turb_spectrum, power_spec_init)
+
+      ! Draw into a scratch spectrum of its own, so that with driving switched on
+      ! the Ornstein-Uhlenbeck state in turb_next is left untouched and the two
+      ! fields stay uncorrelated.
+      allocate(turb_ic(1:NDIM,0:TGRID_X,0:TGRID_Y,0:TGRID_Z), stat=all_stat)
+      if (all_stat /= 0) stop 'Out of memory in init_turb_initial!'
+
+      ! add_turbulence takes the variance of the Wiener increment as its last
+      ! argument. Starting from an empty field, that increment is the whole field
+      ! and the variance is a pure scale factor, so a unit variance is the natural
+      ! choice: the amplitude is set by initial_turb_vrms, not here.
+      turb_ic = cmplx(0, 0, kind=cdp)
+      call add_turbulence(turb_ic, power_spec_init, initial_turb_comp_frac,&
+                           & 1.0_dp - initial_turb_comp_frac, 1.0_dp)
+#if NDIM==1
+      call FFT_1D(turb_ic(1,:,0,0), afield_init(1,:,0,0))
+#elif NDIM==2
+      call FFT_2D(turb_ic(:,:,:,0), afield_init(:,:,:,0))
+#else
+      call FFT_3D(turb_ic, afield_init)
+#endif
+
+      deallocate(turb_ic)
+      deallocate(power_spec_init)
+   end if
+
+#ifndef WITHOUTMPI
+   ! Rendezvous: for the root task this sends the fields built above, for
+   ! every other task it receives them into the arrays allocated by the two
+   ! routines. The conditions are namelist parameters, so every task takes the
+   ! same branch and the collectives stay matched.
+   call mpi_share_turb_init_field
+#endif
+
+end subroutine init_turb_initial
 !#####################################################################
 !#####################################################################
 !#####################################################################
