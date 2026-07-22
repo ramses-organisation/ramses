@@ -8,7 +8,7 @@ subroutine read_turb_params(nml_ok)
   ! Namelist definitions
   !--------------------------------------------------
   namelist/turb_params/turb, turb_seed, turb_type, instant_turb, comp_frac,&
-       & evolving, forcing_power_spectrum, turb_T, turb_Ndt, turb_rms,&
+       & turb_evolving, forcing_power_spectrum, turb_T, turb_Ndt, turb_rms,&
        & turb_min_rho,&
        & turb_exact_rms, initial_turb, initial_turb_vrms,&
        & initial_turb_spectrum, initial_turb_comp_frac
@@ -23,19 +23,19 @@ subroutine read_turb_params(nml_ok)
 
   if (.NOT. (turb.OR.initial_turb)) return
 
-  ! turb_type is deprecated: 1 and 2 are now the boolean evolving, and 3 was
-  ! never a driving mode at all - it applied the field once as an initial
+  ! turb_type is deprecated: 1 and 2 are now the boolean turb_evolving, and 3
+  ! was never a driving mode at all - it applied the field once as an initial
   ! velocity, which is what initial_turb does.
   if (turb_type /= -1) then
      select case (turb_type)
      case (1)
         if (myid==1) write (*,*) &
-             & "WARNING: turb_type=1 is deprecated, use evolving=.true."
-        evolving = .TRUE.
+             & "WARNING: turb_type=1 is deprecated, use turb_evolving=.true."
+        turb_evolving = .TRUE.
      case (2)
         if (myid==1) write (*,*) &
-             & "WARNING: turb_type=2 is deprecated, use evolving=.false."
-        evolving = .FALSE.
+             & "WARNING: turb_type=2 is deprecated, use turb_evolving=.false."
+        turb_evolving = .FALSE.
      case (3)
         if (myid==1) then
            write (*,*) "WARNING: turb_type=3 is deprecated."
@@ -70,7 +70,7 @@ subroutine read_turb_params(nml_ok)
 
   ! A frozen field would otherwise carry the scatter of its single draw as a
   ! systematic amplitude bias for the whole run
-  if (turb .AND. .NOT.evolving .AND. .NOT.turb_exact_rms) then
+  if (turb .AND. .NOT.turb_evolving .AND. .NOT.turb_exact_rms) then
      if (myid==1) write (*,*) &
           & "Non-evolving driving: setting turb_exact_rms=.true."
      turb_exact_rms = .TRUE.

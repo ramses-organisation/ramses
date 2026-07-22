@@ -5,7 +5,7 @@ subroutine turb_check_time
 
    ! A non-evolving field is the static one chosen by init_turb and is
    ! deliberately left untouched for the whole run
-   if (evolving) then
+   if (turb_evolving) then
       do
          if (t >= turb_next_time) then
 #ifndef WITHOUTMPI

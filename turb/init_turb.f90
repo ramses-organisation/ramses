@@ -214,7 +214,7 @@ subroutine init_turb
 
    ! Set up afield_now
    if (turb) then
-      if (evolving) then
+      if (turb_evolving) then
          ! Interpolate between the two bracketing fields. The time fraction is 0
          ! on a fresh start (with or without instant_turb) and lands part way
          ! through the interval on a restart.

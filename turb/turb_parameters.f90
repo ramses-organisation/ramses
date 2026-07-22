@@ -33,10 +33,10 @@ module turb_parameters
   real(dp), parameter :: turb_gs_real=real(TURB_GS,dp) ! real(TURB_GS, dp)
 
   logical  :: turb=.FALSE.        ! Use turbulence driving?
-  logical  :: evolving=.TRUE.     ! Does the driving field evolve over time?
+  logical  :: turb_evolving=.TRUE. ! Does the driving field evolve over time?
                                   ! .true.  = Ornstein-Uhlenbeck evolution
                                   ! .false. = one field, frozen for the whole run
-  integer  :: turb_type=-1        ! Deprecated, replaced by evolving and
+  integer  :: turb_type=-1        ! Deprecated, replaced by turb_evolving and
                                   ! initial_turb. -1 means "not specified"
   integer  :: turb_seed=-1        ! Turbulent seed (-1=random)
   logical  :: instant_turb=.TRUE. ! Generate initial turbulence before start?
