@@ -21,7 +21,7 @@ end program ramses
 subroutine initialize_mpi
   use amr_commons, only:myid,ncpu,nthr
   use mpi_mod
-#ifdef OPENMP
+#ifdef _OPENMP
   use omp_lib
 #endif
   implicit none
@@ -35,7 +35,7 @@ integer::mythr
   ncpu=1
   myid=1
 #else
-#ifdef OPENMP
+#ifdef _OPENMP
   call MPI_INIT_THREAD(MPI_THREAD_SERIALIZED,info,ierr)
   if(info<MPI_THREAD_SERIALIZED) then
       write(*,*) 'Error: MPI_THREAD_SERIALIZED is not supported in current MPI library'
@@ -49,7 +49,7 @@ integer::mythr
   myid=myid+1 ! Careful with this...
 #endif
 
-#ifdef OPENMP
+#ifdef _OPENMP
 !$omp parallel private(mythr)
   mythr=omp_get_thread_num()+1
   if(mythr==1) then

@@ -1900,6 +1900,7 @@ subroutine defrag
   numbf=ngridmax-ngrid2
   prev(headf)=0
   next(tailf)=0
+  ngrid_current=ngrid2
 !$omp end single nowait
 !$omp do
   do i=ngrid2+2,ngridmax
@@ -1914,8 +1915,6 @@ subroutine defrag
   do i=1,nlevelmax
      call build_comm(i)
   end do
-
-  ngrid_current=ngrid2
 
 end subroutine defrag
 !#########################################################################

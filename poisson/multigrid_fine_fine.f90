@@ -47,7 +47,7 @@ subroutine restrict_mask_fine_reverse(ifinelevel)
       iskip_f_amr=ncoarse+(ind_f_cell-1)*ngridmax
 
       ! Loop over fine grids of myid
-!$omp do
+!$omp do schedule(static)
       do igrid_f_mg=1,active(ifinelevel)%ngrid
          igrid_f_amr=active(ifinelevel)%igrid(igrid_f_mg)
          icell_f_amr=igrid_f_amr+iskip_f_amr
@@ -380,7 +380,7 @@ subroutine restrict_residual_fine_reverse(ifinelevel)
       iskip_f_amr=ncoarse+(ind_f_cell-1)*ngridmax
 
       ! Loop over fine grids of myid
-!$omp do
+!$omp do schedule(static)
       do igrid_f_mg=1,active(ifinelevel)%ngrid
          igrid_f_amr=active(ifinelevel)%igrid(igrid_f_mg)
          icell_f_amr=igrid_f_amr+iskip_f_amr

@@ -230,7 +230,7 @@ subroutine make_tree_fine(ilevel)
   scale=boxlen/dble(nx_loc)
 
   ! Store old linked lists for indexing in parallel
-#ifdef OPENMP
+#ifdef _OPENMP
 !$omp parallel private(igrid,npart1,ipart,next_part)
   do icpu=1,ncpu
 !$omp do schedule(dynamic,10)
@@ -272,7 +272,7 @@ subroutine make_tree_fine(ilevel)
         else
            igrid=reception(icpu,ilevel)%igrid(jgrid)
         end if
-#ifdef OPENMP
+#ifdef _OPENMP
         npart1=numbp_old(igrid)  ! Number of particles in the grid
 #else
         npart1=numbp(igrid)  ! Number of particles in the grid
@@ -280,7 +280,7 @@ subroutine make_tree_fine(ilevel)
         if(npart1>0)then
            ig=ig+1
            ind_grid(ig)=igrid
-#ifdef OPENMP
+#ifdef _OPENMP
            ipart=headp_old(igrid)
 #else
            ipart=headp(igrid)
@@ -288,7 +288,7 @@ subroutine make_tree_fine(ilevel)
            ! Loop over particles
            do jpart=1,npart1
               ! Save next particle  <--- Very important !!!
-#ifdef OPENMP
+#ifdef _OPENMP
               next_part=nextp_old(ipart)
 #else
               next_part=nextp(ipart)

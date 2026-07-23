@@ -47,7 +47,7 @@ subroutine restrict_mask_coarse_reverse(ifinelevel)
       iskip_f_mg =(ind_f_cell-1)*active_mg(myid,ifinelevel)%ngrid
 
       ! Loop over fine grids of myid
-!$omp do
+!$omp do schedule(static)
       do igrid_f_mg=1,active_mg(myid,ifinelevel)%ngrid
          icell_f_mg=iskip_f_mg+igrid_f_mg
 #ifdef LIGHT_MPI_COMM
@@ -464,7 +464,7 @@ subroutine restrict_residual_coarse_reverse(ifinelevel)
       iskip_f_mg =(ind_f_cell-1)*active_mg(myid,ifinelevel)%ngrid
 
       ! Loop over fine grids of myid
-!$omp do
+!$omp do schedule(static)
       do igrid_f_mg=1,active_mg(myid,ifinelevel)%ngrid
          icell_f_mg=iskip_f_mg+igrid_f_mg
          ! Is fine cell masked?
