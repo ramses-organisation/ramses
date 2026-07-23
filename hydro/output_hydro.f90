@@ -156,13 +156,13 @@ subroutine backup_hydro(filename, filename_desc)
               end if
               call generic_dump(field_name, info_var_count, xdp, unit_out, dump_info_flag, unit_info)
 #if NVAR > NHYDRO+NENER
-#ifdef NIMHD
+!#ifdef NIMHD
 !! output current
 !! we want to keep it in hydro files to limit the number of files.
 !! add option to also output it in the case of ideal mhd
 !! add option to output velocity of the ions
 ! skip 3 current + Eint stored at the back of uold
-              do ivar = nhydro+1+nener, nvar-4 ! Write passive scalars if any
+!              do ivar = nhydro+1+nener, nvar-4 ! Write passive scalars if any
 !                 do i = 1, ncache
 !                    xdp(i) = uold(ind_grid(i)+iskip, ivar)/max(uold(ind_grid(i)+iskip, 1), smallr)
 !                 end do
@@ -178,10 +178,10 @@ subroutine backup_hydro(filename, filename_desc)
 !                 call generic_dump(field_name, info_var_count, xdp, unit_out, dump_info_flag, unit_info)
 !              end do
 !#endif
-#else
+!#else
               ! Write passive scalars if any
               do ivar = nhydro+1+nener, nvar
-#endif
+!#endif
                  if(write_conservative) then
                     if (metal .and. imetal == ivar) then
                        field_name = 'metal_density'
@@ -471,7 +471,7 @@ subroutine calc_thermal_pressure_from_total_energy(ind_grid, iskip, pressure, nc
 #endif
 #ifdef SOLVERmhd
    real(dp) :: A, B, C
-#endif
+#endf
 
    do i = 1, ncache
       d = max(uold(ind_grid(i)+iskip, 1), smallr)
