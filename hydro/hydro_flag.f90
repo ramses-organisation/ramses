@@ -203,6 +203,8 @@ subroutine jeans_length_refine(ind_cell,ok,ncell,ilevel)
   real(dp)::cs2,factG
   real(dp),dimension(1:nvector),save::rho,ekin,erad,emag,etherm
 
+!$omp threadprivate(rho,ekin,erad,emag,etherm)
+
   factG=1
   if(cosmo)factG=3d0/8d0/pi*omega_m*aexp
   n_jeans = jeans_refine(ilevel)
