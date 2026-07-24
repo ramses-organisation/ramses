@@ -1,0 +1,76 @@
+This is the RAMSES parameter file for the decaying turbulence test.
+
+&RUN_PARAMS
+hydro=.true.
+/
+
+&AMR_PARAMS
+levelmin=6
+levelmax=6
+ngridmax=500000
+boxlen=4
+/
+
+&HYDRO_PARAMS
+gamma=1.666667
+courant_factor=0.8
+scheme='muscl'
+slope_type=1
+riemann='hllc'
+pressure_fix=.true.
+beta_fix=0.5
+/
+
+&INIT_PARAMS
+nregion=1
+region_type='square'
+x_center=2
+y_center=2
+z_center=2
+length_x=4
+length_y=4
+length_z=4
+exp_region=10
+d_region=0.28954719470909174
+p_region=0.030361026190591216
+/
+
+&OUTPUT_PARAMS
+noutput=1
+! Longer than the driven test on purpose. turb_type=3 does not cap dt at turb_dt
+! (newdt_fine only does so for turb_type/=3), so the CFL timestep is ~0.04
+! rather than 0.0029 and t=0.25 would be reached in a handful of steps, showing
+! almost no decay. The eddy turnover time is boxlen/|v|_rms ~ 4/0.87 ~ 4.6, so
+! t=2 shows a clear decay in about 45 steps, i.e. cheaper than the driven test.
+tout=2.0
+/
+
+&UNITS_PARAMS
+units_density=1.50492957435d-20
+units_time=3.1556926d13
+units_length=3.0857d18
+/
+
+&COOLING_PARAMS
+barotropic_eos=.true.
+barotropic_eos_form='isothermal'
+T_eos=4.2194
+/
+
+&TURB_PARAMS
+turb=.true.
+turb_type=3          ! 3=decaying
+turb_seed=1          ! -1 = random
+comp_frac=0.5        ! compressive fraction
+instant_turb=.false. ! not useful for type 3
+forcing_power_spectrum='power_law' !power_law, parabolic, konstandin, test
+turb_T=0.29241000937376255
+turb_Ndt=100       ! Number of timesteps per autocorr. time
+! For turb_type=3 the field is not a forcing but the initial velocity field:
+! init_flow_fine applies it once as v += afield_now, so |v|_rms = sqrt(3)*turb_rms.
+! Reusing the driven value 5.094 would start the box at Mach 27 (the sound speed
+! is sqrt(p_region/d_region) = 0.324), shrinking the CFL timestep by a factor of
+! ~25. 0.5 gives |v|_rms = 0.87, i.e. Mach ~2.7, comparable to the driven test.
+turb_rms=0.5                    ! rms of the initial turbulent velocity field
+turb_min_rho=2.5470372511355715d-6 ! Minimum density for turbulence
+/
