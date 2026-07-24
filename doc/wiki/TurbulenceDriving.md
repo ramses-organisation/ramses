@@ -99,7 +99,7 @@ $\sqrt{N_{dim}}\,f_{\mathrm{rms}}$ from one update to the next. This is intended
 $f_{\mathrm{rms}}$ sets the *time-averaged* amplitude, and the scatter averages
 out over a run.
 
-An evolving field grown from rest starts at only $\sqrt{1-e^{-2dt/T}}\approx14\%$
+An evolving acceleration field grown from rest starts at only $\sqrt{1-e^{-2dt/T}}\approx14\%$
 of its saturated amplitude and needs about one autocorrelation time $T$ to build
 up. The `instant_turb` option (on by default) evolves the field for several $T$
 before the run starts, so that it begins already saturated. Leaving it on is
