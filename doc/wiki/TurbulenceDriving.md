@@ -109,7 +109,7 @@ spin-up transient. It has no useful effect for the other two types.
 
 ### `turb_type=2` — fixed driving ###
 
-One field is generated at startup and then held, unchanged, for the whole run.
+One acceleration field is generated at startup and then held, unchanged, for the whole run.
 It is applied as an acceleration at every timestep, exactly as for type 1.
 
 Because the field is frozen, the scatter that averages out for type 1 would
