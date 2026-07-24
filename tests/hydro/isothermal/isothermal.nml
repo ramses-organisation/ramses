@@ -44,7 +44,6 @@ p_region=2.418894075235192,24188.94075235192
 /
 
 &OUTPUT_PARAMS
-noutput=1
 tout=0.00049
 output_to_log=.false.
 /

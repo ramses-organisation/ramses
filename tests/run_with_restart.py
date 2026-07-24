@@ -32,7 +32,6 @@ The output schedule can be driven by any combination of:
   tout / aout            explicit output times / expansion factors (scalar or list)
   tend / aend            end time / end expansion factor (appended as final tout/aout)
   delta_tout/delta_aout  periodic outputs in time / expansion factor
-  noutput                number of predefined outputs (recomputed by RAMSES)
   write_conservative     conservative outputs -> read_conservative is set on restart
 
 NOT supported: foutput (unless 1)
@@ -67,7 +66,6 @@ def analyze_schedule(output_params):
       end    : value of that variable at which the run terminates
       end_type   : how the end is imposed ('tend'/'aend'/'tout'/'aout')
       candidates : sorted intermediate reference outputs strictly in (0, end)
-      has_noutput    : whether noutput is written explicitly in the namelist
     """
     tout = _as_list(output_params.get("tout"))
     aout = _as_list(output_params.get("aout"))
@@ -123,7 +121,6 @@ def analyze_schedule(output_params):
         end=end,
         end_type=end_type,
         candidates=sorted(candidates),
-        has_noutput=("noutput" in output_params),
         foutput=foutput)
 
 
@@ -159,9 +156,6 @@ def impose_end(output_params, schedule, split):
         i_end = updated_params.index(split)
         updated_params = updated_params[0:i_end+1]
         output_params[end_type] = updated_params
-        # update noutput if set
-        if schedule["has_noutput"]:
-            output_params["noutput"] = len(updated_params)
 
 
 def _list_output_numbers():

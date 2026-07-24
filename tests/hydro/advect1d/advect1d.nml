@@ -28,7 +28,6 @@ p_region=1.0,1.0
 /
 
 &OUTPUT_PARAMS
-noutput=1
 tout=10
 output_to_log=.false.
 /

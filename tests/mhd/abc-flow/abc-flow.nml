@@ -39,7 +39,6 @@ C_region=1.0e-3
 
 &OUTPUT_PARAMS
 !delta_tout=0.1
-noutput=1
 tout=10.0
 /
 
