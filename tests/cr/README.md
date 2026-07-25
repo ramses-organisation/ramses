@@ -42,7 +42,7 @@ source terms need the magnetic field.
 | `tp-stream-va15` | 1D | Two-pressure shock tube with streaming + heating at `v_A=1.5` | TPP 2021 |
 
 AMR CR tests must set `cr_nsubcycle>1` (jiang-414-refine, jiang-414-vel-refine,
-jiang-423 and jiang-424 use 10).
+jiang-423 and jiang-424 use 10; jiang-421, a non-AMR 1D test, also uses 10).
 
 ## Regression checks
 
@@ -50,8 +50,8 @@ Each test's `plot-<name>.py` produces a comparison figure and then calls
 `visu_ramses.check_solution` against the committed `<name>-ref.dat`. The whole
 family uses `tolerance={"all": 1e-12}` on the per-field cell sums. That is
 looser than the framework default of `3e-13` because the sums are not
-bit-reproducible across MPI domain decompositions, and tighter than the `3e-6`
-used by the `rt/` family.
+bit-reproducible across MPI domain decompositions; the `rt/` family itself
+spans the framework default up to `3e-6`.
 
 ## References
 

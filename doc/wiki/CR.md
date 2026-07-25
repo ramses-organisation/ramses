@@ -20,7 +20,7 @@ cd bin
 make NDIM=3 SOLVER=mhd CRPHYS=1 NCR_GROUPS=1 MPI=1
 ```
 
-This adds `-DCRPHYS -DNCR_GROUPS=<n>` and compiles the `cr/` sources. The module requires `SOLVER=mhd` (the closure and the streaming/scattering source terms need the magnetic field). Because the CR state is stored in separate arrays, `NVAR` is unchanged.
+This adds `-DCRPHYS -DNCR_GROUPS=1` and compiles the `cr/` sources. The module requires `SOLVER=mhd` (the closure and the streaming/scattering source terms need the magnetic field). Because the CR state is stored in separate arrays, `NVAR` is unchanged.
 
 ## The transport scheme
 

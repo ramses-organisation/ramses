@@ -1,7 +1,7 @@
 
 # CR Params
 
-This set of parameters, contained in the namelist block `&CR_PARAMS`, controls cosmic-ray transport in RAMSES. Note that the number of CR groups (`NCR_GROUPS`) is a compilation parameter, to be set in the Makefile together with `CRPHYS=1` (see the [documentation page about CR simulations](./CR)). Parameters marked `real array` have one entry per CR group.
+This set of parameters, contained in the namelist block `&CR_PARAMS`, controls cosmic-ray transport in RAMSES. Note that the number of CR groups (`NCR_GROUPS`) is a compilation parameter, to be set in the Makefile together with `CRPHYS=1` (see the [documentation page about CR simulations](./CR)). Only `NCR_GROUPS=1` is currently supported; the Makefile rejects other values. Parameters marked `real array` have one entry per CR group.
 
 For detailed descriptions of the scheme, see:
 
