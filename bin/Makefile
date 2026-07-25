@@ -90,6 +90,12 @@ ifeq ($(CRPHYS),1)
    ifeq ($(NCR_GROUPS),0)
       $(error CRPHYS=1 requires NCR_GROUPS>=1)
    endif
+   ifneq ($(NCR_GROUPS),1)
+      $(error CRPHYS=1 currently supports NCR_GROUPS=1 only; multi-group CR transport is not implemented yet)
+   endif
+   ifneq ($(SOLVER),mhd)
+      $(error CRPHYS=1 requires SOLVER=mhd: the CR closure and source terms need the magnetic field)
+   endif
    DEFINES += -DCRPHYS -DNCR_GROUPS=$(NCR_GROUPS)
 endif
 ifeq ($(USE_TURB),1)

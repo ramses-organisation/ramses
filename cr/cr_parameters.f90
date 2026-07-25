@@ -8,9 +8,6 @@ module cr_parameters
 #ifndef NCR_GROUPS
 #error "cr/ sources require -DNCR_GROUPS=<ngroups>: set NCR_GROUPS in bin/Makefile"
 #endif
-#ifndef SOLVERmhd
-#error "the CR module requires SOLVER=mhd (closure and source terms need B)"
-#endif
 
   integer,parameter::ncr_groups=NCR_GROUPS         ! Number of CR groups
   integer,parameter::ncrvar=ncr_groups*(ndim+1)   ! Per group: E_cr + ndim fluxes
