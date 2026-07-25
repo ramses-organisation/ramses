@@ -161,11 +161,13 @@ subroutine courant_fine(ilevel)
 #endif
 
 #ifdef CRPHYS
-        do igrp=1,ncr_groups
-           do i=1,nleaf
-              ecrs_loc=ecrs_loc+cruold(ind_leaf(i),Ecr_idx(igrp))*vol
+        if(cr_advect)then
+           do igrp=1,ncr_groups
+              do i=1,nleaf
+                 ecrs_loc=ecrs_loc+cruold(ind_leaf(i),Ecr_idx(igrp))*vol
+              end do
            end do
-        end do
+        endif
 #endif
 
         ! Compute CFL time-step

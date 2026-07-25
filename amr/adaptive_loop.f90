@@ -43,7 +43,7 @@ subroutine adaptive_loop
   if(rt.or.neq_chem) call rt_init_hydro ! Initialize radiation variables
 #endif
 #ifdef CRPHYS
-  call cr_init_hydro                 ! Allocate cosmic-ray variables
+  if(cr_advect)call cr_init_hydro    ! Allocate cosmic-ray variables
 #endif
   if(poisson)call init_poisson       ! Initialize poisson variables
 #ifdef ATON
