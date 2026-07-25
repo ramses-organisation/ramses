@@ -267,7 +267,8 @@ RTOBJ = rt_init_hydro.o rt_init_xion.o rt_init.o rt_init_flow_fine.o \
 # Cosmic-ray objects
 CROBJ = cr_read_params.o cr_init_hydro.o cr_godunov_utils.o cr_courant_fine.o cr_godunov_fine.o \
         cr_hydro_boundary.o cr_boundana.o cr_condinit.o cr_init_flow_fine.o \
-        cr_interpol_hydro.o cr_hydro_flag.o cr_cooling_fine.o cr_output_hydro.o
+        cr_interpol_hydro.o cr_hydro_flag.o cr_cooling_fine.o cr_output_hydro.o \
+        cr_cmpdt.o
 # Turbulence objects
 TURBOBJ = turb_force_utils.o read_turb_params.o init_turb.o mpi_share_turb_fields.o \
           turb_next_field.o turb_check_time.o write_turb_fields.o read_turb_fields.o \

@@ -8,12 +8,13 @@ subroutine courant_fine(ilevel)
 #endif
 #ifdef CRPHYS
   use cr_parameters, only: cr_advect,cr_va_max,ncr_groups,Ecr_idx, &
-       & ecrs_tot,cr_egather
+       & ecrs_tot
   use cr_hydro_commons, only: cruold
 #endif
   implicit none
 #ifdef CRPHYS
   real(kind=8)::ecrs_loc,ecrs_all, cr_va_max_all
+  real(dp),dimension(1:nvector,1:ncr_groups),save::cr_egather
 #endif
 #ifndef WITHOUTMPI
   integer::info
@@ -172,7 +173,11 @@ subroutine courant_fine(ilevel)
 
         ! Compute CFL time-step
         if(nleaf>0)then
+#ifdef CRPHYS
+           call cmpdt(uu,gg,dx,dt_lev,nleaf,cr_egather)
+#else
            call cmpdt(uu,gg,dx,dt_lev,nleaf)
+#endif
            dt_loc=min(dt_loc,dt_lev)
         end if
 
@@ -235,14 +240,17 @@ end subroutine courant_fine
 !###########################################################
 !###########################################################
 !###########################################################
+#ifdef CRPHYS
+subroutine cmpdt(uu,gg,dx,dt,ncell,crgather)
+#else
 subroutine cmpdt(uu,gg,dx,dt,ncell)
+#endif
   use amr_parameters
   use hydro_parameters
   use const
 #ifdef CRPHYS
-  use cr_parameters, only: cr_advect,ncr_groups,gamma_cr,cr_smallr_decouple, &
-       & cr_varvmax,cr_varvmax_vdvs,cr_va_max,cr_streaming_diffusion, &
-       & cr_egather
+  use cr_parameters, only: cr_advect,ncr_groups, &
+       & cr_varvmax,cr_varvmax_vdvs,cr_streaming_diffusion
 #endif
   implicit none
   integer::ncell
@@ -251,9 +259,7 @@ subroutine cmpdt(uu,gg,dx,dt,ncell)
   real(dp),dimension(1:nvector,1:ndim)::gg
   real(dp),dimension(1:nvector),save::a2,B2,rho,ctot
 #ifdef CRPHYS
-  real(dp),dimension(1:nvector),save::cr_cs
-  integer::icr
-  real(dp)::BNva
+  real(dp),dimension(1:nvector,1:ncr_groups)::crgather
 #endif
 
   real(dp)::dtcell,smallp,cf,cc,bc,bn
@@ -306,22 +312,7 @@ subroutine cmpdt(uu,gg,dx,dt,ncell)
   end do
 #endif
 #ifdef CRPHYS
-  if(cr_advect)then
-     do k = 1, ncell
-        cr_cs(k)=zero
-     end do
-     do icr = 1,ncr_groups
-        do k = 1, ncell
-           cr_cs(k)=cr_cs(k) + cr_egather(k,icr) * gamma_cr(icr)*(gamma_cr(icr)-1.0d0)
-        end do
-     end do
-     do k = 1, ncell
-        cr_cs(k)=cr_cs(k)/uu(k,1)
-        ! Only consider CR sound speed where rho is not tiny
-        if(uu(k,1) .gt. smallr*cr_smallr_decouple) &
-             a2(k) = a2(k) + cr_cs(k)
-     end do
-  endif
+  if(cr_advect)call cr_cmpdt_a2(a2,rho,crgather,ncell)
 #endif
 
   ! Compute maximum wave speed (fast magnetosonic)
@@ -367,15 +358,8 @@ subroutine cmpdt(uu,gg,dx,dt,ncell)
   end do
 
 #ifdef CRPHYS
-  if(cr_advect .and. cr_varvmax .and. cr_varvmax_vdvs .and. cr_streaming_diffusion)then
-     do k = 1, ncell
-        BNva=0d0
-        do idim=1,3
-           BNva = BNva + (half*(uu(k,5+idim)+uu(k,nvar+idim)))**2
-        end do
-        cr_va_max=max(cr_va_max, sqrt(BNva/uu(k,1)))
-     end do
-  endif
+  if(cr_advect .and. cr_varvmax .and. cr_varvmax_vdvs .and. cr_streaming_diffusion) &
+       & call cr_cmpdt_vamax(uu,ncell)
 #endif
 
 end subroutine cmpdt
