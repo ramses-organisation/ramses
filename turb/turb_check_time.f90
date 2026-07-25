@@ -3,14 +3,18 @@ subroutine turb_check_time
    use turb_commons
    implicit none
 
-   real(kind=dp) :: turb_tfrac
-
-   if (turb_type == 3) then
-      ! decaying turbulence
+   select case (turb_type)
+   case (3)
+      ! decaying turbulence - the initial field set up by init_turb has already
+      ! been applied as an initial velocity, so no forcing from here on
       afield_now = 0.0_dp
       fturb = 0.0_dp
       turb_next_time = huge(turb_next_time) / 10.0d0
-   else if (turb_type == 1) then
+   case (2)
+      ! fixed forced turbulence - afield_now is the static field chosen by
+      ! init_turb and is deliberately left untouched for the whole run
+      continue
+   case (1)
       ! evolving forced turbulence
       do
          if (t >= turb_next_time) then
@@ -30,11 +34,8 @@ subroutine turb_check_time
          end if
       end do
 
-      ! Time fraction since last turbulence field evaluation
-      turb_tfrac = real((t - turb_last_time) / turb_dt, dp)
-
       ! interpolate for current time between last and next turb field
-      afield_now = (1.0_dp - turb_tfrac)*afield_last + turb_tfrac*afield_next
-   end if
+      call turb_interpolate_now
+   end select
 
 end subroutine turb_check_time

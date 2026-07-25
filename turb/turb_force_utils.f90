@@ -668,6 +668,19 @@ subroutine current_turb_rms(rms_val)
 
 end subroutine current_turb_rms
 
+subroutine turb_interpolate_now
+   use turb_commons
+   implicit none
+   real(kind=dp) :: turb_tfrac              ! Time fraction since last field
+
+   ! Linear interpolation of the forcing field for the current time between the
+   ! two bracketing fields afield_last (at turb_last_time) and afield_next (at
+   ! turb_next_time). turb_tfrac is expected to lie in [0,1].
+   turb_tfrac = real((t - turb_last_time) / turb_dt, dp)
+   afield_now = (1.0_dp - turb_tfrac)*afield_last + turb_tfrac*afield_next
+
+end subroutine turb_interpolate_now
+
 ! PRNG of Marsaglia
 subroutine spin_up(s)
    use turb_parameters
@@ -714,12 +727,16 @@ subroutine kiss64_double(N, s, out_array)
       call kiss64_core(s, int_array(i))
    end do
 
+   ! The mantissa mask and exponent set make each int64 the bit pattern of a
+   ! double-precision real in [1,2); subtracting 1 gives a uniform variate in
+   ! [0,1). The int64 pattern is always a *double*, so the reinterpretation must
+   ! use a double-precision mold even when out_array is single precision.
    int_array = iand(int_array, z'FFFFFFFFFFFFF')
    int_array = ieor(int_array, z'3FF0000000000000')
 #ifdef DOUBLE_PRECISION
    out_array = transfer(int_array, out_array) - 1.0_dp
 #else
-   dbl_array = transfer(int_array, out_array)
+   dbl_array = transfer(int_array, dbl_array) - 1.0d0
    out_array = real(dbl_array, dp)
 #endif
 
