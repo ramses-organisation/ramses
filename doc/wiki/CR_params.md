@@ -6,7 +6,7 @@ This set of parameters, contained in the namelist block `&CR_PARAMS`, controls c
 For detailed descriptions of the scheme, see:
 
 * [[1] A New Numerical Scheme for Cosmic-Ray Transport (Jiang & Oh 2018)](http://arxiv.org/abs/1712.07117)
-* [2] Fitz Axen et al. (2024), for the collisional cooling
+* [[2] Fitz Axen et al. (2024), for the collisional cooling](https://arxiv.org/abs/2407.17597)
 * [[3] Two-moment cosmic ray transport in RAMSES (Rosdahl et al. 2025)](https://arxiv.org/abs/2509.19447)
 
 | Variable name, syntax, default value | Fortran type  | Description       |

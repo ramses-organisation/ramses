@@ -7,9 +7,9 @@ Cosmic-ray (CR) transport is implemented in RAMSES as a standalone `cr/` module,
 * [A New Numerical Scheme for Cosmic-Ray Transport (Jiang & Oh 2018)](http://arxiv.org/abs/1712.07117)
 * [Two-moment cosmic ray transport in RAMSES (Rosdahl et al. 2025)](https://arxiv.org/abs/2509.19447)
 
-with optional CR collisional (Coulomb + hadronic) energy losses following Fitz Axen et al. (2024) (see also Armillotta et al. 2021).
+with optional CR collisional (Coulomb + hadronic) energy losses following [Fitz Axen et al. (2024)](https://arxiv.org/abs/2407.17597) (see also [Armillotta et al. (2021)](https://arxiv.org/abs/2108.09356)).
 
-For each CR group, the module evolves the CR energy density `E_cr` and its flux vector `F_cr` (1+ndim variables per group), coupled to the MHD gas. The CR state lives in its own arrays (`cruold`/`crunew`), fully separated from the hydro state vector `uold`/`unew` — the module mirrors the structure of the `rt/` radiative-transfer module, and the code builds and runs identically when it is disabled.
+For each CR group, the module evolves the CR energy density `E_cr` and its flux vector `F_cr` (1+ndim variables per group), coupled to the MHD gas. The CR state lives in its own arrays (`cruold`/`crunew`), fully separated from the hydro state vector `uold`/`unew` — the module mirrors the structure of the `rt/` radiative-transfer module, and the code builds and runs identically when it is disabled. The implementation is currently limited to a single CR group; multi-group transport is planned.
 
 ## Compiling for CR runs
 
@@ -20,7 +20,7 @@ cd bin
 make NDIM=3 SOLVER=mhd CRPHYS=1 NCR_GROUPS=1 MPI=1
 ```
 
-This adds `-DCRPHYS -DNCR_GROUPS=<n>` and compiles the `cr/` sources. The module requires `SOLVER=mhd` (the closure and the streaming/scattering source terms need the magnetic field). Because the CR state is stored in separate arrays, `NVAR` is unchanged. The CI build script `tests/build.cr.sh` shows the configuration used by the test suite.
+This adds `-DCRPHYS -DNCR_GROUPS=<n>` and compiles the `cr/` sources. The module requires `SOLVER=mhd` (the closure and the streaming/scattering source terms need the magnetic field). Because the CR state is stored in separate arrays, `NVAR` is unchanged.
 
 ## The transport scheme
 
