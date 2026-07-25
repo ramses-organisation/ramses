@@ -44,4 +44,4 @@ fig.suptitle("%s  t=%.3g  (snapshot %d)" % (title, t, si))
 fig.tight_layout()
 fig.savefig(title + ".pdf", bbox_inches="tight")
 
-visu_ramses.check_solution(data["data"], title, tolerance={"all": 1e-8}, overwrite=False)
+visu_ramses.check_solution(data["data"], title, tolerance={"all": 1e-12}, overwrite=False)
