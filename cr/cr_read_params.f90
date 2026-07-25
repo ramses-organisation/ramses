@@ -24,7 +24,7 @@ subroutine read_cr_params(nml_ok)
   if(myid==1)write(*,'(A50)')"Reading cr_params namelist ..."
   rewind(1)
   read(1,NML=cr_params,END=101)
-101 continue
+101 continue                                 ! No harm if no cr namelist
 
   ! Energy index of each CR group in cruold/crunew (mirror rt_init iGroups)
   do ig=1,ncr_groups

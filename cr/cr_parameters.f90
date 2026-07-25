@@ -13,7 +13,7 @@ module cr_parameters
   integer,parameter::ncrvar=ncr_groups*(ndim+1)   ! Per group: E_cr + ndim fluxes
   ! Energy index of each CR group in cruold/crunew (mirrors rt iGroups);
   ! group g energy at Ecr_idx(g), fluxes at Ecr_idx(g)+1:Ecr_idx(g)+ndim.
-  ! Filled in read_cr_params (cr_init.f90), like rt_init fills iGroups.
+  ! Filled in read_cr_params (cr_read_params.f90), like rt_init fills iGroups.
   integer,dimension(1:ncr_groups)::Ecr_idx=1
 
   ! --- &cr_params namelist ---------------------------------------------
