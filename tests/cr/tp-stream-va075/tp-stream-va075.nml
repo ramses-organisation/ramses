@@ -77,6 +77,7 @@ C_region=0.0,0.0
 &OUTPUT_PARAMS
 !foutput=10
 !foutput=1
+noutput=1
 tout=2.0
 /
 
