@@ -67,7 +67,6 @@ C_region=0.0,0.0
 
 &OUTPUT_PARAMS
 foutput=10
-noutput=1
 tout=0.1
 /
 

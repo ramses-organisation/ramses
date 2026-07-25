@@ -50,7 +50,6 @@ C_region=0.0
 /
 
 &OUTPUT_PARAMS
-noutput=3
 tout=100.,200.,300.
 /
 

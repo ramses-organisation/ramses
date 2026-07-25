@@ -55,7 +55,6 @@ C_region=0.0
 /
 
 &OUTPUT_PARAMS
-noutput=2
 tout=0.02,0.05
 /
 
