@@ -94,7 +94,7 @@ subroutine cr_condinit(x,u,dx,nn,ilevel)
      call cr_region_condinit(x,u,dx,nn,ilevel)
      call cr_flux_from_region_velocity(x,u,dx,nn)
 
-  case('tp_nostream','tp_stream_va075', 'tp_stream_va15', '423')                  ! Region-based: CR energy+flux from cr_region_u
+  case('tp-nostream','tp-stream-va075', 'tp-stream-va15', '423')                  ! Region-based: CR energy+flux from cr_region_u
      ! Entire CR state comes from cr_region_u (energy at Ecr_idx(1), fluxes after).
      ! TP_1D_shock: E_cr contact discontinuity (3|1) across x=5, zero flux.
      ! 423 (2D CR blast/Sedov): uniform E_cr=1d-10 floor, gas blast sweeps it.

@@ -42,10 +42,10 @@ subroutine cr_boundana(x,u,dx,ibound,ncell)
      end do
   endif
 
-  ! Two-pressure shock (tp_*): imposed CR boundary held at the namelist
+  ! Two-pressure shock (tp-*): imposed CR boundary held at the namelist
   ! cr_boundary_u(ibound,:) -- energy at index 1, CR flux at 2:ncrvar.
-  if(trim(jiang_test)=='tp_nostream' .or. trim(jiang_test)=='tp_stream_va075' &
-       & .or. trim(jiang_test)=='tp_stream_va15')then
+  if(trim(jiang_test)=='tp-nostream' .or. trim(jiang_test)=='tp-stream-va075' &
+       & .or. trim(jiang_test)=='tp-stream-va15')then
      do i=1,ncell
         u(i,1:ncrvar)=cr_boundary_u(ibound,1:ncrvar)
      end do

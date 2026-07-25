@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import visu_ramses
 
 # ---- CONFIG (per test) ----
-title="tp_stream_va15"; center=False;
+title="tp-stream-va15"; center=False;
 panels=[("density", r"$\rho$", False), ("velocity_x", r"$v$", False), ("pressure", r"$P_{\rm gas}$", False), ("P_CR", r"$P_{\rm CR}$", False), ("CRflx_01_x", r"$F_{\rm CR}$", False)]
 # ---------------------------
 
