@@ -140,9 +140,9 @@ ifeq ($(COMPILER),INTEL)
    ifeq ($(MPI),1)
       F90 = $(MPIF90)
    else
-      F90 = ifort
+      F90 = ifx
    endif
-   FC = ifort -fp-model source
+   FC = ifx -fp-model source
    FFLAGS_BASE += -fp-model source
    # add preprocessor macro definitions to compilation flags
    FFLAGS_BASE += -cpp $(DEFINES)

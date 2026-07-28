@@ -33,14 +33,17 @@ endif
 
 #
 ifeq ($(MACHINE),marenostrum)
-   MPIF90 = mpif90
+   MPIF90 = mpiifx
 endif
 
 #
 ifeq ($(MACHINE),meluxina)
-   MPIF90 = mpif90
    ifeq ($(COMPILER),GNU)
+      MPIF90 = mpif90
       FFLAGS_OPT += -march=native
+   endif
+   ifeq ($(COMPILER),INTEL)
+      MPIF90 = mpiifx
    endif
 endif
 
