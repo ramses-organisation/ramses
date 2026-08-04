@@ -18,7 +18,7 @@ subroutine backup_hydro(filename, filename_desc)
   character(LEN = 80) :: fileloc
   integer, parameter :: tag = 1121
   logical :: dump_info_flag
-  integer :: info_var_count
+  integer :: info_var_count, nvar_output
   character(len=100) :: field_name
 
   if (verbose) write(*,*)'Entering backup_hydro'
@@ -47,12 +47,18 @@ subroutine backup_hydro(filename, filename_desc)
      dump_info_flag = .false.
   end if
 
-  write(unit_out) ncpu
+  nvar_output = nvar_all
   if(strict_equilibrium>0)then
-     write(unit_out) nvar_all+2
-  else
-     write(unit_out) nvar_all
+     nvar_output=nvar_output+2
   endif
+#ifdef SOLVERmhd
+  if(output_current)then
+     nvar_output=nvar_output+3
+  end if
+#endif
+
+  write(unit_out) ncpu
+  write(unit_out) nvar_output
   write(unit_out) ndim
   write(unit_out) nlevelmax
   write(unit_out) nboundary
@@ -167,6 +173,18 @@ subroutine backup_hydro(filename, filename_desc)
                  field_name = 'equilibrium_pressure'
                  call generic_dump(field_name, info_var_count, xdp, unit_out, dump_info_flag, unit_info)
               endif
+#ifdef SOLVERmhd
+              ! Write electric current if requested, at the very end (we do not want to read it on restart)
+              if(output_current) then
+                 do ivar = 1, 3
+                    field_name = 'current_' // dim_keys(ivar)
+                    do i = 1, ncache
+                       xdp(i) = electric_current(ind_grid(i)+iskip, ivar)
+                    end do
+                    call generic_dump(field_name, info_var_count, xdp, unit_out, dump_info_flag, unit_info)
+                 end do
+              end if
+#endif
               ! We did one output, deactivate dumping of variables
               dump_info_flag = .false.
            end do
