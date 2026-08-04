@@ -9,6 +9,8 @@ This set of parameters, contained in the namelist block `&BOUNDARY_PARAMS`, is u
 | `nboundary=1`  | `integer` | Number of ghost regions used to specify the boundary conditions.|
 | `bound_type=0,0,0,` | `integer array` | Type of boundary conditions to apply in the corresponding ghost region. Possible values are: `bound_type=0` (periodic), `bound_type=1` (reflexive), `bound_type=2` (outflow, zero gradients), `bound_type=3` (inflow, user specified).|
 | `d_bound=0.0` `u_bound=0.0` `v_bound=0.0` `w_bound=0.0` `p_bound=0.0` | `real arrays` | Flow variables in each ghost region (density, velocities and pressure). They are used only for inflow boundary conditions.|
+| `A_bound=0.0` `B_bound=0.0` `C_bound=0.0` | `real arrays` | Magnetic field flow variables in each ghost region. They are used only for inflow boundary conditions.|
+| `prad_bound=0.0` `Erad_bound=0.0` | `real arrays` | Nener field flow variables in each ghost region (set either as pressure OR energy, see `io_nener_energies`). They are used only for inflow boundary conditions.|
 | `ibound_min=0` `jbound_min=0` `kbound_min=0` | `integer arrays` | Coordinates of the lower, left, bottom corner of each boundary region. Each coordinate lies between -1 and +1 in each direction. |
 | `ibound_max=0` `jbound_max=0` `kbound_max=0` | `integer arrays` | Likewise, for the upper, right and upper corner of each boundary region. |
 

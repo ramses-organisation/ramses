@@ -578,9 +578,15 @@ subroutine region_condinit(x,q,dx,nn)
               q(i,nvar+3)=C_region(k)
 #endif
 #if NENER>0
-              do ivar=1,nener
-                 q(i,nhydro+ivar)=prad_region(k,ivar)
-              enddo
+              if(io_nener_energies)then
+                 do ivar=1,nener
+                    q(i,nhydro+ivar)=Erad_region(k,ivar)*(gamma_rad(ivar)-1d0)
+                 end do
+              else
+                 do ivar=1,nener
+                    q(i,nhydro+ivar)=prad_region(k,ivar)
+                 end do
+              endif
 #endif
 #if NVAR>NHYDRO+NENER
               do ivar=nhydro+1+nener,nvar
@@ -618,9 +624,15 @@ subroutine region_condinit(x,q,dx,nn)
 #endif
            q(i,neul)=q(i,neul)+p_region(k)*r/vol
 #if NENER>0
-           do ivar=1,nener
-              q(i,nhydro+ivar)=q(i,nhydro+ivar)+prad_region(k,ivar)*r/vol
-           enddo
+           if(io_nener_energies)then
+              do ivar=1,nener
+                 q(i,nhydro+ivar)=Erad_region(k,ivar)*(gamma_rad(ivar)-1d0)*r/vol
+              end do
+           else
+              do ivar=1,nener
+                 q(i,nhydro+ivar)=q(i,nhydro+ivar)+prad_region(k,ivar)*r/vol
+              end do
+           endif
 #endif
 #if NVAR>NHYDRO+NENER
            do ivar=nhydro+1+nener,nvar

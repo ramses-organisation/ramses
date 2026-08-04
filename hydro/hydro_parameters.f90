@@ -72,10 +72,11 @@ module hydro_parameters
   real(dp),dimension(1:MAXBOUND)::B_bound=0
   real(dp),dimension(1:MAXBOUND)::C_bound=0
 #endif
-  ! TODO allow other variables in inflow:
 #if NENER>0
   real(dp),dimension(1:MAXBOUND,1:NENER)::prad_bound=0
+  real(dp),dimension(1:MAXBOUND,1:NENER)::Erad_bound=0
 #endif
+  ! TODO allow passive scalar variables in inflow:
 #if NVAR>NHYDRO+NENER
   real(dp),dimension(1:MAXBOUND,1:NVAR-NHYDRO-NENER)::var_bound=0
 #endif
@@ -100,10 +101,13 @@ module hydro_parameters
   real(dp)::err_grad_lor=-1.0  ! Lorentz factor gradient
 #endif
   real(dp)::mass_sph=0.0d0     ! mass_sph
-  ! TODO allow for discontinuity-based refine on non-standard hydro vars:
 #if NENER>0
-  real(dp),dimension(1:NENER)::err_grad_prad=-1
+  real(dp)::err_grad_prad=-1
+  real(dp)::err_grad_Erad=-1
+  real(dp)::floor_prad=1d-10
+  real(dp)::floor_Erad=1d-10
 #endif
+  ! TODO allow for discontinuity-based refine on passive scalars:
 #if NVAR>NHYDRO+NENER
   real(dp),dimension(1:NVAR-NHYDRO-NENER)::err_grad_var=-1
 #endif
@@ -128,6 +132,7 @@ module hydro_parameters
 #endif
 #if NENER>0
   real(dp),dimension(1:MAXREGION,1:NENER)::prad_region=0
+  real(dp),dimension(1:MAXREGION,1:NENER)::Erad_region=0
 #endif
 #if NVAR>NHYDRO+NENER
   real(dp),dimension(1:MAXREGION,1:NVAR-NHYDRO-NENER)::var_region=0

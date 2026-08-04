@@ -58,6 +58,10 @@ subroutine hydro_flag(ilevel)
        & err_grad_C==-1.0.and.&
        & err_grad_B2==-1.0.and.&
 #endif
+#if NENER>0
+       & err_grad_prad==-1.0.and.&
+       & err_grad_Erad==-1.0.and.&
+#endif
        & jeans_refine(ilevel)==-1.0 )return
 
 #ifdef RT

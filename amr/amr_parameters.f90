@@ -125,6 +125,7 @@ module amr_parameters
   logical::output_to_log=.true.  ! write output to log for 1D runs
   logical::write_conservative=.false. ! output conservative variables instead of primitive ones
   logical::read_conservative=.false.  ! restart from an output which contains conservative variables
+  logical::io_nener_energies=.false.  ! use nener energies instead of pressures for any I/O
 
   ! Lightcone parameters
   real(dp)::thetay_cone=12.5d0

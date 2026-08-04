@@ -18,6 +18,7 @@ This namelist block, called `&OUTPUT_PARAMS`, is used to set up the frequency an
 | `minutes_dump=1` | `real` | Dump an output this many minutes before walltime_hrs |
 | `write_conservative=.false.` | `logical` | Output conservative hydro variables as stored in `uold` instead of primitive ones |
 | `read_conservative=.false.` | `logical` | When conservative variables have been outputted, this flag should be set to `.true.` to match the correct variables on restart. |
+| `io_nener_energies=.false.` | `logical` | Handle any I/O for nener variables as energies instead of pressure. This overwrites the behaviour of `write_conservative` and `read_conservative`. Also applies when setting region initial conditions or inflow boundary conditions. |
 | `exact_output_time=.false.` | `logical` | Enforce outputs at the exact requested times (`tout` or `aout`) by adjusting the timestep. |
 
 > **Warning (R. Teyssier)**

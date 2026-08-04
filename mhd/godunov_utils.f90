@@ -12,6 +12,7 @@ subroutine hydro_refine(ug,um,ud,ok,nn,ilevel)
   integer nn,ilevel
 #if NENER>0
   integer::irad
+  real(dp)::Eg,Em,Ed
 #endif
   real(dp)::ug(1:nvector,1:nvar+3)
   real(dp)::um(1:nvector,1:nvar+3)
@@ -180,6 +181,38 @@ subroutine hydro_refine(ug,um,ud,ok,nn,ilevel)
         end do
      end do
   end if
+
+#if NENER>0
+  if(err_grad_prad >= 0.)then
+     do k=1,nn
+        pg=0.0D0 ; pm=0.0D0 ; pd=0.0D0 ;
+        do irad=1,nener
+           pg=pg+ug(k,nhydro+irad)*(gamma_rad(irad)-1d0)
+           pm=pm+um(k,nhydro+irad)*(gamma_rad(irad)-1d0)
+           pd=pd+ud(k,nhydro+irad)*(gamma_rad(irad)-1d0)
+        end do
+        error=2.0d0*MAX( &
+             & ABS((pd-pm)/(pd+pm+floor_prad)), &
+             & ABS((pm-pg)/(pm+pg+floor_prad)) )
+        ok(k) = ok(k) .or. error > err_grad_prad
+     end do
+  end if
+
+  if(err_grad_Erad >= 0.)then
+     do k=1,nn
+        Eg=0.0D0 ; Em=0.0D0 ; Ed=0.0D0 ;
+        do irad=1,nener
+           Eg=Eg+ug(k,nhydro+irad)
+           Em=Em+um(k,nhydro+irad)
+           Ed=Ed+ud(k,nhydro+irad)
+        end do
+        error=2.0d0*MAX( &
+             & ABS((Ed-Em)/(Ed+Em+floor_Erad)), &
+             & ABS((Em-Eg)/(Em+Eg+floor_Erad)) )
+        ok(k) = ok(k) .or. error > err_grad_Erad
+     end do
+  end if
+#endif
 
   if(ischeme.eq.1)then
      if(m_refine(ilevel) >= 0.)then
