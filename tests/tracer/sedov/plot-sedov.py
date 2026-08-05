@@ -126,9 +126,17 @@ dt = {
     if k in ("family", "levelp", "mass", "position_x", "position_y", "tag")
 }
 
+# Check both grid and tracer particles
+to_check = data["data"]
+for key in data["particle"].keys():
+    to_check["tracer_"+key] = data["particle"][key]
+
+# TC: commented this since these values are so big that it didn't even pick
+#     up that the simulation crashed at restart.
 # Use a relative tolerance within ± 2 Poisson noise
-rtol = {
-    key: 2/np.sqrt(data["particle"]["identity"].size)
-    for key in dt
-}
-visu_ramses.check_solution(dt, 'sedov', tolerance=rtol)
+#rtol = {
+#    key: 2/np.sqrt(data["particle"]["identity"].size)
+#    for key in dt
+#}
+
+visu_ramses.check_solution(to_check, 'sedov')#, tolerance=rtol)
