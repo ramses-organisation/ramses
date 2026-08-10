@@ -310,7 +310,7 @@ subroutine collapse_jeans_length_refine(ind_cell,ok,ncell,ilevel)
         ! blending log-linearly in density between collapse_jeans_rho_low and collapse_jeans_rho_high.
         delta_logrho = (log10(rho(i)) - log10(d_iso)) / (log10(d_star) - log10(d_iso))
         ! Interpolate between the two above regimes
-        interpol = (1-delta_logrho)*log10(min(cs2_gas, cs2_floor)) + delta_logrho*cs2_gas
+        interpol = (1-delta_logrho)*log10(min(cs2_gas, cs2_floor)) + delta_logrho*log10(cs2_gas)
         cs2 = 10.0d0**(interpol)
      endif
 
