@@ -33,7 +33,11 @@ endif
 
 #
 ifeq ($(MACHINE),marenostrum)
-   MPIF90 = mpiifx
+   ifeq ($(COMPILER),INTEL)
+      MPIF90 = mpif90
+   else ifeq ($(COMPILER),INTELX)
+      MPIF90 = mpiifx
+   endif
 endif
 
 #
@@ -41,10 +45,10 @@ ifeq ($(MACHINE),meluxina)
    ifeq ($(COMPILER),GNU)
       MPIF90 = mpif90
       FFLAGS_OPT += -march=native
-   endif
-   ifeq ($(COMPILER),INTEL)
+   else ifeq ($(COMPILER),INTELX)
       MPIF90 = mpiifx
    endif
+   # old intel ifort compiler not available on meluxina
 endif
 
 #
