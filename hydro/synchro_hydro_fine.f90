@@ -13,9 +13,9 @@ subroutine synchro_hydro_fine(ilevel,dteff,which_force)
   real(dp)::dteff
   integer::which_force !gravity=1, turbulence=2
   !-------------------------------------------------------------------
-  ! Update velocity as v = v + force*dteff, where the force is either the
-  ! gravitational acceleration (which_force=1) or the turbulent forcing
-  ! fturb (which_force=2)
+  ! Update velocity as v = v + acceleration*dteff, where the acceleration
+  ! is either the gravitational acceleration f (which_force=1) or the
+  ! turbulent forcing acceleration fturb (which_force=2)
   !-------------------------------------------------------------------
   integer::ncache,ngrid,i,igrid,iskip,ind
   integer,dimension(1:nvector),save::ind_grid,ind_cell
