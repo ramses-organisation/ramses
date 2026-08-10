@@ -7,7 +7,7 @@
 DEBUG = 0
 # Do we want to test coverage?
 GCOV = 0
-# Compiler flavor: GNU or INTEL
+# Compiler flavor: GNU or INTEL (classic ifort) or INTELX (new LLVM-based ifx)
 COMPILER = GNU
 # Target cluster, to set cluster specific optimisation flags (see Makefile.machines)
 MACHINE = generic
@@ -104,13 +104,14 @@ LDFLAGS =
 
 # GNU compiler (gfortran)
 ifeq ($(COMPILER),GNU)
+   SERIALF90 = gfortran
    # set compiler commands
    ifeq ($(MPI),1)
       F90 = $(MPIF90)
    else
-      F90 = gfortran
+      F90 = $(SERIALF90)
    endif
-   FC = gfortran -ffree-line-length-none -fimplicit-none
+   FC = $(SERIALF90) -ffree-line-length-none -fimplicit-none
    FFLAGS_BASE += -ffree-line-length-none -fimplicit-none
    # add preprocessor macro definitions to compilation flags
    FFLAGS_BASE += -cpp $(DEFINES)
@@ -135,14 +136,19 @@ ifeq ($(COMPILER),GNU)
 endif
 
 # Intel compiler
-ifeq ($(COMPILER),INTEL)
+ifeq ($(COMPILER),$(filter $(COMPILER),INTEL INTELX))
    # set compiler commands
+   ifeq ($(COMPILER),INTEL)
+      SERIALF90 = ifort
+   else
+      SERIALF90 = ifx
+   endif
    ifeq ($(MPI),1)
       F90 = $(MPIF90)
    else
-      F90 = ifort
+      F90 = $(SERIALF90)
    endif
-   FC = ifort -fp-model source
+   FC = $(SERIALF90) -fp-model source
    FFLAGS_BASE += -fp-model source
    # add preprocessor macro definitions to compilation flags
    FFLAGS_BASE += -cpp $(DEFINES)
