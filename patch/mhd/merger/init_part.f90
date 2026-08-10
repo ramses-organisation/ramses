@@ -1182,7 +1182,9 @@ contains
                 vv3=vv3*1D5/scale_v
                 mm1=mm1*1D9*1.9891D33/scale_m
 
-                xx(i,:) = matmul(rot_gal, (/ xx1, xx2, xx3 /))
+                ! Shift to box coordinates right away: cmp_cpumap below expects
+                ! positions in [0,boxlen], not galaxy-centred ones.
+                xx(i,:) = matmul(rot_gal, (/ xx1, xx2, xx3 /)) + gal_center1 + boxlen/2.0D0
                 vv(i,:) = matmul(rot_gal, (/ vv1, vv2, vv3 /)) + vgal1
                 mm(i  )=mm1
                 ii(i  )=indglob
@@ -1209,14 +1211,14 @@ contains
 #ifndef WITHOUTMPI
              if(cc(i)==myid)then
 #endif
-                if (maxval(abs(xx(i,1:3)+gal_center1)) .LT. (boxlen/2.0)) then
+                if (maxval(abs(xx(i,1:3)-boxlen/2.0D0)) .LT. (boxlen/2.0)) then
                    ipart=ipart+1
                    if(ipart>npartmax)then
                       write(*,*)'Maximum number of particles incorrect'
                       write(*,*)'npartmax should be greater than',ipart
                       call clean_stop
                    endif
-                   xp(ipart,1:3)= xx(i,1:3) + gal_center1 + boxlen/2.0D0
+                   xp(ipart,1:3)= xx(i,1:3)
                    vp(ipart,1:3)= vv(i,1:3)
                    mp(ipart)    = mm(i)
                    levelp(ipart)= levelmin
@@ -1298,7 +1300,8 @@ contains
                 vv3=vv3*1D5/scale_v
                 mm1=mm1*1D9*1.9891D33/scale_m
 
-                xx(i,:) = matmul(rot_gal, (/ xx1, xx2, xx3 /))
+                ! Box coordinates, as for galaxy #1
+                xx(i,:) = matmul(rot_gal, (/ xx1, xx2, xx3 /)) + gal_center2 + boxlen/2.0D0
                 vv(i,:) = matmul(rot_gal, (/ vv1, vv2, vv3 /)) + vgal2
                 mm(i  )=mm1
                 ii(i  )=indglob
@@ -1325,14 +1328,14 @@ contains
 #ifndef WITHOUTMPI
              if(cc(i)==myid)then
 #endif
-                if (maxval(abs(xx(i,1:3)+gal_center2)) .LT. (boxlen/2.0)) then
+                if (maxval(abs(xx(i,1:3)-boxlen/2.0D0)) .LT. (boxlen/2.0)) then
                    ipart=ipart+1
                    if(ipart>npartmax)then
                       write(*,*)'Maximum number of particles incorrect'
                       write(*,*)'npartmax should be greater than',ipart
                       call clean_stop
                    endif
-                   xp(ipart,1:3)= xx(i,1:3) + gal_center2 + boxlen/2.0D0
+                   xp(ipart,1:3)= xx(i,1:3)
                    vp(ipart,1:3)= vv(i,1:3)
                    mp(ipart)    = mm(i)
                    levelp(ipart)= levelmin
