@@ -3,19 +3,9 @@ subroutine turb_check_time
    use turb_commons
    implicit none
 
-   select case (turb_type)
-   case (3)
-      ! decaying turbulence - the initial field set up by init_turb has already
-      ! been applied as an initial velocity, so no forcing from here on
-      afield_now = 0.0_dp
-      fturb = 0.0_dp
-      turb_next_time = huge(turb_next_time) / 10.0d0
-   case (2)
-      ! fixed forced turbulence - afield_now is the static field chosen by
-      ! init_turb and is deliberately left untouched for the whole run
-      continue
-   case (1)
-      ! evolving forced turbulence
+   ! A non-evolving field is the static one chosen by init_turb and is
+   ! deliberately left untouched for the whole run
+   if (turb_evolving) then
       do
          if (t >= turb_next_time) then
 #ifndef WITHOUTMPI
@@ -36,6 +26,10 @@ subroutine turb_check_time
 
       ! interpolate for current time between last and next turb field
       call turb_interpolate_now
-   end select
+
+      ! Optionally hold the injected rms exactly on turb_rms while the
+      ! pattern keeps evolving (needs to be done after interpolation)
+      if (turb_exact_rms) call turb_normalise_rms
+   end if
 
 end subroutine turb_check_time

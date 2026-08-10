@@ -1,0 +1,80 @@
+This is the RAMSES parameter file for a test that combines a turbulent initial
+velocity field with driving. It is the only test where initial_turb and driven_turb are
+both on, so it covers the interaction between the two: the initial field is an
+independent draw, and the driving must be unaffected by it.
+
+The box starts as broadband turbulence (power_law) and is then pushed by a
+static forcing acting on the single mode k=(1,0,0) ('test'). This covers
+the two spectra being different, and the 'test' spectrum branch.
+
+&RUN_PARAMS
+hydro=.true.
+/
+
+&AMR_PARAMS
+levelmin=6
+levelmax=6
+ngridmax=500000
+boxlen=4
+/
+
+&HYDRO_PARAMS
+gamma=1.666667
+courant_factor=0.8
+scheme='muscl'
+slope_type=1
+riemann='hllc'
+pressure_fix=.true.
+beta_fix=0.5
+/
+
+&INIT_PARAMS
+nregion=1
+region_type='square'
+x_center=2
+y_center=2
+z_center=2
+length_x=4
+length_y=4
+length_z=4
+exp_region=10
+d_region=0.28954719470909174
+p_region=0.030361026190591216
+/
+
+&OUTPUT_PARAMS
+noutput=1
+tout=0.25
+/
+
+&UNITS_PARAMS
+units_density=1.50492957435d-20
+units_time=3.1556926d13
+units_length=3.0857d18
+/
+
+&COOLING_PARAMS
+barotropic_eos=.true.
+barotropic_eos_form='isothermal'
+T_eos=4.2194
+/
+
+&TURB_PARAMS
+driven_turb=.true.
+turb_evolving=.false. ! one static field: a steady push on one mode
+turb_seed=843       ! -1 = random
+comp_frac=1.0       ! fully compressive: the push is along k, i.e. along x
+instant_turb=.false.
+forcing_power_spectrum='test' !power_law, parabolic, konstandin, test
+turb_T=0.25
+turb_Ndt=100       ! Number of timesteps per autocorr. time
+turb_rms=3         ! rms turbulent forcing acceleration
+turb_min_rho=1d-6  ! Minimum density for turbulence
+!-------------------
+initial_turb=.true.
+initial_turb_spectrum='power_law' ! broadband, unlike the single-mode driving
+initial_turb_comp_frac=0.5        ! mixed, unlike the fully compressive driving
+! Initial velocity dispersion |v|_rms. The sound speed is
+! sqrt(p_region/d_region) = 0.324, so the box starts at Mach ~1.5.
+initial_turb_vrms=0.5
+/
