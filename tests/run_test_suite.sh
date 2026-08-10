@@ -13,6 +13,9 @@
 # Options:
 #   - Run the suite in parallel (on 4 cpus):
 #       ./run_test_suite.sh -p 4
+#       An individual test can override this and pin itself to a fixed number
+#       of MPI processes with a line "NPROC: <n>" in its config.txt. This is
+#       for tests whose reference solution depends on the decomposition.
 #   - Do not delete results data:
 #       ./run_test_suite.sh -d
 #   - Run in verbose mode:
@@ -321,6 +324,18 @@ for ((i=0;i<$ntests;i++)); do
       ;;
    esac
 
+   # Set the number of MPI processes to use for this test
+   TEST_NCPU=${NCPU};
+   if [ ${MPI} -eq 1 ] ; then
+      # Check of NPROC was specified in config
+      testnproc=$(grep -i '^[[:space:]]*NPROC[[:space:]]*:' ${TEST_DIRECTORY}/${testname[n]}/config.txt | cut -d ':' -f2 | tr -d '[:space:]');
+      if [ -n "$testnproc" ] ; then
+         TEST_NCPU=$testnproc;
+         echo "Test fixed to ${TEST_NCPU} MPI process(es)" | tee -a $LOGFILE;
+      fi
+      RUN_TEST_BASE="mpirun -np ${TEST_NCPU} ${BIN_DIRECTORY}/${EXECNAME}";
+   fi
+
    # Initial cleanup
    $RETURN_TO_BIN;
    if ${make_clean[n]}; then
@@ -479,7 +494,7 @@ echo "Commit hash: \href{${GIT_URL}/commits/${THIS_COMMIT}}{${THIS_COMMIT:0:6}}"
 echo "\end{center}" >> $latexfile;
 echo "\begin{table}[ht]" >> $latexfile;
 echo "\centering" >> $latexfile;
-echo "\caption*{Test run summary using ${NCPU} processor(s)}" >> $latexfile;
+echo "\caption*{Test run summary using ${NCPU} processor(s),\\\\except where a test fixes its own NPROC}" >> $latexfile;
 echo "\begin{tabular}{|r|l|l|l|l|}" >> $latexfile;
 echo "\hline" >> $latexfile;
 echo "~ & Test name & Run time & Total time & Status\\\\" >> $latexfile;

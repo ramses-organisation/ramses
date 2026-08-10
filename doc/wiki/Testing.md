@@ -82,6 +82,11 @@ In that directory, you will need:
 
 - A `config.txt` file: usually just contains the Makefile flags, e.g. `FLAGS: NDIM=3 PATCH= SOLVER=hydro`
 
+  Two optional keys can be added on their own lines:
+  - `RESTART: true` runs the test through the restart mechanism (see below).
+  - `NPROC: 2` pins the test to a fixed number of MPI processes, overriding the
+    `-p` given to `run_test_suite.sh`. Only needed for tests whose result depends on the number of MPI ranks, for example due to random generators (e.g. tracer tests). Avoid using this.
+
 - A namelist: `sedov-3d.nml` (the name needs to be the same as the test directory)
 
 :::{warning}
