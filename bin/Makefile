@@ -179,6 +179,8 @@ ifeq ($(GRACKLE),1)
    LIBS_OBJ     = -I$(HOME)/local/include -DCONFIG_BFLOAT_8 -DH5_USE_16_API -fPIC
 endif
 ifeq ($(USE_TURB),1)
+   # if FFTW_DIR is not already set, set it to the directory that matched the
+   # readme install instructions
    FFTW_DIR ?= $(HOME)/local
    LIBS_TURB = -L$(FFTW_DIR)/lib -lfftw3
    LIBS_OBJ_TURB = -I$(FFTW_DIR)/include -lfftw3
