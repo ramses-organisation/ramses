@@ -52,8 +52,8 @@ T_eos=4.2194
 /
 
 &TURB_PARAMS
-turb=.true.
-turb_type=1         ! 1=forced evolving, 2=forced fixed, 3=decaying
+driven_turb=.true.
+turb_evolving=.true. ! .false. = one static field for the whole run
 turb_seed=1         ! -1 = random
 comp_frac=0.5       ! compressive fraction
 !instant_turb=.true. ! Generate initial turbulence before start
