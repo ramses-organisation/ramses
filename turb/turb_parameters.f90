@@ -32,7 +32,8 @@ module turb_parameters
 #endif
   real(dp), parameter :: turb_gs_real=real(TURB_GS,dp) ! real(TURB_GS, dp)
 
-  logical  :: turb=.FALSE.        ! Use turbulence driving?
+  logical  :: driven_turb=.FALSE. ! Use turbulence driving?
+  logical  :: turb=.FALSE.        ! Deprecated namelist parameter, replaced be driven_turb
   logical  :: turb_evolving=.TRUE. ! Does the driving field evolve over time?
                                   ! .true.  = Ornstein-Uhlenbeck evolution
                                   ! .false. = one static field for the whole run

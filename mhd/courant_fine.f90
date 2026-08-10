@@ -92,7 +92,7 @@ subroutine courant_fine(ilevel)
 
 #if USE_TURB==1
         ! Gather turbulence driving acceleration
-        if (turb) then
+        if (driven_turb) then
            do idim=1,ndim
               do i=1,nleaf
                  gg(i,idim)=gg(i,idim)+fturb(ind_leaf(i),idim)

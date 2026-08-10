@@ -111,7 +111,7 @@ subroutine newdt_fine(ilevel)
 
 #if USE_TURB==1
   ! Maximum time step from turbulent forcing
-  if (turb) then
+  if (driven_turb) then
      dtnew(ilevel) = min(dtnew(ilevel), turb_dt)
   end if
 #endif

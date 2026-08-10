@@ -1,5 +1,5 @@
 This is the RAMSES parameter file for a test that combines a turbulent initial
-velocity field with driving. It is the only test where initial_turb and turb are
+velocity field with driving. It is the only test where initial_turb and driven_turb are
 both on, so it covers the interaction between the two: the initial field is an
 independent draw, and the driving must be unaffected by it.
 
@@ -60,7 +60,7 @@ T_eos=4.2194
 /
 
 &TURB_PARAMS
-turb=.true.
+driven_turb=.true.
 turb_evolving=.false. ! one static field: a steady push on one mode
 turb_seed=843       ! -1 = random
 comp_frac=1.0       ! fully compressive: the push is along k, i.e. along x

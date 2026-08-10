@@ -53,7 +53,7 @@ T_eos=4.2194
 /
 
 &TURB_PARAMS
-turb=.true.
+driven_turb=.true.
 turb_evolving=.true. ! .false. = one static field for the whole run
 turb_seed=1         ! -1 = random
 comp_frac=0.5       ! compressive fraction

@@ -58,7 +58,7 @@ T_eos=4.2194
 /
 
 &TURB_PARAMS
-turb=.false.         ! no driving: the turbulence decays freely
+driven_turb=.false.         ! no driving: the turbulence decays freely
 initial_turb=.true.  ! start from a turbulent velocity field
 turb_seed=1          ! -1 = random
 ! Initial velocity dispersion |v|_rms. This is a velocity, unlike the forcing
@@ -69,6 +69,6 @@ initial_turb_spectrum='power_law' !power_law, parabolic, konstandin, test
 initial_turb_comp_frac=0.5        ! compressive fraction
 turb_min_rho=2.5470372511355715d-6 ! Minimum density for turbulence
 ! The driving parameters (comp_frac, forcing_power_spectrum, turb_T, turb_Ndt,
-! turb_rms, instant_turb) play no part here: with turb=.false. there is nothing
+! turb_rms, instant_turb) play no part here: with driven_turb=.false. there is nothing
 ! to drive, and the initial field has parameters of its own.
 /

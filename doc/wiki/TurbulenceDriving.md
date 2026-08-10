@@ -69,18 +69,19 @@ fraction $\chi$.
 
 | Variable name         | Fortran type | Default value | Notation | Description |
 |:----------------------|:------------ |:------------- |:---------| :------------------------ |
-| `turb`                | `boolean`    | `.false.`     |          | Turn on or off driving
+| `driven_turb`        | `boolean`    | `.false.`     |          | Turn on or off driving
+| `turb`                | `boolean`    | `.false.`     |          | Deprecated, replaced by `driven_turb`
 | `turb_seed`           | `integer`    | `-1`          |          | Random number generator seed. -1 = random
 | `turb_evolving`          | `boolean`    | `.true.`      |          | Whether the driving field evolves over time. `.true.` follows the Ornstein-Uhlenbeck process, `.false.` holds one static field for the whole run. See the "Driving modes" section below
 | `instant_turb`        | `boolean`    | `.true.`      |          | Evolve the field to saturation before the run starts. Recommended when `turb_evolving=.true.`. See the "Driving modes" section below
 | `comp_frac`           | `float`      | `0.3333`      |  $\chi$  | The weight of compressive over solenoidal modes
 | `turb_T`              | `float`      | `1`           |  $T$     | Turbulent velocity auto-correlation time in code units.
 | `turb_Ndt`            | `integer`    | `100`         |  $T/dt$  | Number of timesteps per auto-correlation time |
-| `turb_rms`            | `float`      | `1`           |  $f_\mathrm{rms}$ |Root-mean-square  turbulent  forcing  in  code  units. Only used when `turb=.true.`; a run that only uses `initial_turb` takes its amplitude from `initial_turb_vrms` instead. |
+| `turb_rms`            | `float`      | `1`           |  $f_\mathrm{rms}$ |Root-mean-square  turbulent  forcing  in  code  units. Only used when `driven_turb=.true.`; a run that only uses `initial_turb` takes its amplitude from `initial_turb_vrms` instead. |
 | `turb_exact_rms`      | `boolean`    | `.false.`     |          | Always use a forcing rms of exactly $\sqrt{N_{dim}}f_\mathrm{rms}$ instead of letting it follow the random draw. Forced on when `turb_evolving=.false.`. See the "Driving modes" section below
 | `turb_min_rho`        | `float`      | `1d-50`       |          | Minimum density for turbulence. Not forcing is added onto cellswith a density less than this value.
 | `forcing_power_spectrum`  | `string`     | `parabolic` | $F_0$   | Power spectrum type of the forcing, which describes the relative strength of individual modes. Options are: power_law, parabolic, konstandin
-| `initial_turb`        | `boolean`    | `.false.`     |          | Add a turbulent velocity field to the initial conditions. Independent of `turb`. See the "Turbulent initial velocity field" section below
+| `initial_turb`        | `boolean`    | `.false.`     |          | Add a turbulent velocity field to the initial conditions. Independent of `driven_turb`. See the "Turbulent initial velocity field" section below
 | `initial_turb_vrms`   | `float`      | `0`           |          | Velocity dispersion $\vert v\vert_\mathrm{rms}$ of that initial field, in code units. A velocity, not an acceleration: it is not interchangeable with `turb_rms`
 | `initial_turb_spectrum` | `string`   | `power_law` |  | Power spectrum of the initial velocity field. Broadband by default, unlike the driving, which usually acts on a few large-scale modes
 | `initial_turb_comp_frac` | `float`   | `0.3333`      |          | Compressive fraction of the initial velocity field. The default spreads the power evenly over the one longitudinal and two transverse degrees of freedom
@@ -167,7 +168,7 @@ field used once.
 
 This is **independent of the driving**, which gives three useful combinations:
 
-| `turb` | `initial_turb` | Result |
+| `driven_turb` | `initial_turb` | Result |
 |:---|:---|:---|
 | `.true.`  | `.false.` | Driving only: the gas starts at rest and is stirred. |
 | `.false.` | `.true.`  | Decaying: the gas starts turbulent and is never driven. |
@@ -190,11 +191,11 @@ velocity correlations of fully developed turbulence. To study freely decaying
 turbulence it is usually better to develop the turbulence self-consistently
 first:
 
-1. Run with `turb=.true.` and `turb_evolving=.true.` (keep `instant_turb` on) until the
+1. Run with `driven_turb=.true.` and `turb_evolving=.true.` (keep `instant_turb` on) until the
    turbulence is fully developed — as a rule of thumb a few autocorrelation times
    $T$, long enough for the density structure and velocity correlations to build
    up. Write an output at the point you want the decay to begin.
-2. Restart from that output with `turb=.false.`.
+2. Restart from that output with `driven_turb=.false.`.
 
 No forcing is then applied, and the initial velocity field is not re-applied on a
 restart, so the developed field simply decays under its own dissipation from the

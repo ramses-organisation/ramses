@@ -7,7 +7,7 @@ subroutine read_turb_params(nml_ok)
   !--------------------------------------------------
   ! Namelist definitions
   !--------------------------------------------------
-  namelist/turb_params/turb, turb_seed, turb_type, instant_turb, comp_frac,&
+  namelist/turb_params/turb, driven_turb, turb_seed, turb_type, instant_turb, comp_frac,&
        & turb_evolving, forcing_power_spectrum, turb_T, turb_Ndt, turb_rms,&
        & turb_min_rho, turb_exact_rms, initial_turb, initial_turb_vrms,&
        & initial_turb_spectrum, initial_turb_comp_frac
@@ -20,7 +20,12 @@ subroutine read_turb_params(nml_ok)
   rewind(1)
   read(1,NML=turb_params,END=87)
 
-  if (.NOT. (turb.OR.initial_turb)) return
+  ! Namelist parameter turb has been replaced by driven_turb
+  if (turb) then
+    driven_turb = .true.
+  end if
+
+  if (.NOT. (driven_turb.OR.initial_turb)) return
 
   ! turb_type is deprecated: 1 and 2 are now the boolean turb_evolving, and 3
   ! was never a driving mode at all - it applied the field once as an initial
@@ -38,11 +43,11 @@ subroutine read_turb_params(nml_ok)
      case (3)
         if (myid==1) then
            write (*,*) "WARNING: turb_type=3 is deprecated."
-           write (*,*) "Use turb=.false., initial_turb=.true. and"
+           write (*,*) "Use driven_turb=.false., initial_turb=.true. and"
            write (*,*) "initial_turb_vrms=sqrt(ndim)*turb_rms instead."
         end if
-        if (turb) then
-           turb = .FALSE.
+        if (driven_turb) then
+           driven_turb = .FALSE.
            initial_turb = .TRUE.
            initial_turb_vrms = sqrt(real(ndim,dp)) * turb_rms
            ! turb_type=3 drew from the driving spectrum, so a legacy namelist
@@ -68,7 +73,7 @@ subroutine read_turb_params(nml_ok)
 
   ! A static field would otherwise carry the scatter of its single draw as a
   ! systematic amplitude bias for the whole run
-  if (turb .AND. .NOT.turb_evolving .AND. .NOT.turb_exact_rms) then
+  if (driven_turb .AND. .NOT.turb_evolving .AND. .NOT.turb_exact_rms) then
      if (myid==1) write (*,*) &
           & "Non-evolving driving: setting turb_exact_rms=.true."
      turb_exact_rms = .TRUE.
@@ -89,7 +94,7 @@ subroutine read_turb_params(nml_ok)
      nml_ok = .FALSE.
   end if
 
-  if (turb .AND. turb_rms <= 0.0_dp) then
+  if (driven_turb .AND. turb_rms <= 0.0_dp) then
      write (*,*) "Turbulent forcing rms acceleration must be > 0.0!"
      nml_ok = .FALSE.
   end if

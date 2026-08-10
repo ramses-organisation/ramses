@@ -4,8 +4,8 @@ subroutine init_turb
   !-------------------------------------------------------------------
   ! Set up the turbulence module. Two independent features live in it:
   !
-  !   turb          driving, a forcing field applied at every timestep
-  !   initial_turb  a turbulent velocity field applied once, at t=0
+  !   driven_turb  -> driving, a forcing field applied at every timestep
+  !   initial_turb -> a turbulent velocity field applied once, at t=0
   !
   ! They share only the grid dimensions and the random number generator;
   ! everything else belongs to one or the other and is set up by
@@ -33,7 +33,7 @@ subroutine init_turb
 
    ! The driving is set up first, so that its random sequence - and hence a
    ! driven run - is unaffected by whether initial_turb is switched on.
-   if (turb) call init_turb_driving
+   if (driven_turb) call init_turb_driving
 
    ! The initial field is only ever used on a fresh start, by init_flow_fine.
    ! On a restart it must not be drawn at all: that would consume random numbers

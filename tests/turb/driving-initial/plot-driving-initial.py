@@ -1,7 +1,7 @@
 # REMARK: it is normal the reference value for density is negative. This is the sum of the log of the cell densities.
 #
 # Driving on top of a turbulent initial velocity field: the only test with both
-# initial_turb and turb switched on, covering the interaction between the two.
+# initial_turb and driven_turb switched on, covering the interaction between the two.
 # The box starts as broadband turbulence (initial_turb_spectrum='power_law') and
 # is pushed by a static forcing on the single mode k=(1,0,0).
 #

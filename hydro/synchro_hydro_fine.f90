@@ -21,7 +21,7 @@ subroutine synchro_hydro_fine(ilevel,dteff,which_force)
   integer,dimension(1:nvector),save::ind_grid,ind_cell
 
 #if USE_TURB==1
-  if(.not. (poisson.or.turb))return
+  if(.not. (poisson.or.driven_turb))return
 #else
   if(.not. poisson)return
   if(numbtot(1,ilevel)==0)return
