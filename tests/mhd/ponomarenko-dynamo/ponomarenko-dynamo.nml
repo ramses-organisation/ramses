@@ -22,7 +22,6 @@ nregion=2
 /
 
 &OUTPUT_PARAMS
-noutput=1
 tout=10
 !delta_tout=2.
 /

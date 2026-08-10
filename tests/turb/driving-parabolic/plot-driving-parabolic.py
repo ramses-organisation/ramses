@@ -1,13 +1,27 @@
 # REMARK: it is normal the reference value for density is negative. This is the sum of the log of the cell densities.
+#
+# Turbulence driving with the 'parabolic' forcing power spectrum (the module
+# default, power concentrated in k in (1,3)). Same setup as turb/driving, which
+# uses 'power_law'; this covers the parabolic branch of calc_power_spectrum.
 
 import matplotlib as mpl
 mpl.use('Agg')
+import os
 import numpy as np
 import matplotlib.pyplot as plt
 import visu_ramses
+import turb_log
 from scipy.interpolate import griddata
 
-fig, ax = plt.subplots(nrows=3, ncols=3, figsize=(12, 8))
+# Number of dimensions this test is built with (see config.txt)
+NDIM = 3
+TESTNAME = 'turb/driving-parabolic'
+
+# Two rows of projections, plus a full-width panel for the rms history
+fig = plt.figure(figsize=(12, 9))
+gs = fig.add_gridspec(nrows=3, ncols=3, hspace=0.3)
+ax = np.array([[fig.add_subplot(gs[i, j]) for j in range(3)] for i in range(2)])
+ax_rms = fig.add_subplot(gs[2, :])
 
 # Load RAMSES output
 data = visu_ramses.load_snapshot(2)
@@ -19,7 +33,6 @@ rho    = data["data"]["density"]
 vx     = data["data"]["velocity_x"]
 vy     = data["data"]["velocity_y"]
 vz     = data["data"]["velocity_z"]
-p    = data["data"]["pressure"]
 
 xmin = np.amin(x-0.5*dx)
 xmax = np.amax(x+0.5*dx)
@@ -41,7 +54,6 @@ z1 = griddata(points,rho,(grid_x,grid_y, grid_z),method='nearest')
 z2 = griddata(points,vx ,(grid_x,grid_y, grid_z),method='nearest')
 z3 = griddata(points,vy ,(grid_x,grid_y, grid_z),method='nearest')
 z4 = griddata(points,vz ,(grid_x,grid_y, grid_z),method='nearest')
-z5 = griddata(points,p,(grid_x,grid_y, grid_z),method='nearest')
 
 rho_proj2 = np.sum(z1, axis=0) #proj along y-axis
 rho_proj1 = np.sum(z1, axis=1) #proj along x-axis
@@ -49,9 +61,6 @@ rho_proj3 = np.sum(z1, axis=2) #proj along z-axis
 vx_proj = np.sum(z2, axis=1)
 vy_proj = np.sum(z3, axis=0)
 vz_proj = np.sum(z4, axis=2)
-p_proj2 = np.sum(z5, axis=0) #proj along y-axis
-p_proj1 = np.sum(z5, axis=1) #proj along x-axis
-p_proj3 = np.sum(z5, axis=2) #proj along z-axis
 
 im1 = ax[0,0].imshow(rho_proj1, origin="lower", aspect='equal', extent=[xmin, xmax, ymin, ymax])
 im2 = ax[0,1].imshow(rho_proj2, origin="lower", aspect='equal', extent=[xmin, xmax, ymin, ymax])
@@ -59,9 +68,6 @@ im3 = ax[0,2].imshow(rho_proj3, origin="lower", aspect='equal', extent=[xmin, xm
 im4 = ax[1,0].imshow(vx_proj, origin="lower", aspect='equal', extent=[xmin, xmax, ymin, ymax], cmap='magma')
 im5 = ax[1,1].imshow(vy_proj, origin="lower", aspect='equal', extent=[xmin, xmax, ymin, ymax], cmap='magma')
 im6 = ax[1,2].imshow(vz_proj, origin="lower", aspect='equal', extent=[xmin, xmax, ymin, ymax], cmap='magma')
-im7 = ax[2,0].imshow(p_proj1, origin="lower", aspect='equal', extent=[xmin, xmax, ymin, ymax])
-im8 = ax[2,1].imshow(p_proj2, origin="lower", aspect='equal', extent=[xmin, xmax, ymin, ymax])
-im9 = ax[2,2].imshow(p_proj3, origin="lower", aspect='equal', extent=[xmin, xmax, ymin, ymax])
 
 cb = []
 cb.append(plt.colorbar(im1, ax=ax[0,0], label='Density'))
@@ -70,11 +76,8 @@ cb.append(plt.colorbar(im3, ax=ax[0,2], label='Density'))
 cb.append(plt.colorbar(im4, ax=ax[1,0], label='Velocity_x'))
 cb.append(plt.colorbar(im5, ax=ax[1,1], label='Velocity_y'))
 cb.append(plt.colorbar(im6, ax=ax[1,2], label='Velocity_z'))
-cb.append(plt.colorbar(im7, ax=ax[2,0], label='Pressure'))
-cb.append(plt.colorbar(im8, ax=ax[2,1], label='Pressure'))
-cb.append(plt.colorbar(im9, ax=ax[2,2], label='Pressure'))
 
-for i in [0,1,2]:
+for i in [0,1]:
     ax[i,0].set_xlabel('y')
     ax[i,0].set_ylabel('z')
     ax[i,1].set_xlabel('x')
@@ -85,7 +88,19 @@ for i in [0,1,2]:
 for c in cb:
     c.ax.yaxis.set_label_coords(-1.1, 0.5)
 
-fig.savefig('driving.pdf',bbox_inches='tight')
+# Turbulent rms and kinetic energy history. These are only diagnostics: they are
+# not compared against the reference solution, and a failure to read the log must
+# not break the test.
+try:
+    hist = turb_log.read_turb_history(os.path.join('..', '..', 'test_suite.log'), TESTNAME)
+    target = turb_log.read_target_rms('driving-parabolic.nml')
+except Exception as e:
+    hist, target = turb_log.read_turb_history('', TESTNAME), None
+    print("Could not read turbulence history: %s" % e)
+
+turb_log.plot_history(ax_rms, hist, target_rms=target, ndim=NDIM)
+
+fig.savefig('driving-parabolic.pdf',bbox_inches='tight')
 
 # Check results against reference solution
-visu_ramses.check_solution(data["data"],'driving', threshold=1e-30)
+visu_ramses.check_solution(data["data"],'driving-parabolic', threshold=1e-30, overwrite=False)

@@ -138,10 +138,13 @@ dt = {
     "gas_density": rho,
 }
 
+dt["time"] = data.meta["time"].magnitude
+
 # Use a relative tolerance within ± 2 Poisson noise
-rtol = {
-    key: 2/Ntracer
-    for key in dt
-}
+#rtol = {
+#    key: 2/Ntracer
+#    for key in dt
+#}
+
 import visu_ramses
-visu_ramses.check_solution(dt, 'sedov-classical-tracers', tolerance=rtol)
+visu_ramses.check_solution(dt, 'sedov-classical-tracers')#, tolerance=rtol)

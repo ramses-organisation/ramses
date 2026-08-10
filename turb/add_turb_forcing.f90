@@ -78,7 +78,7 @@ subroutine calc_turb_forcing(ilevel)
            rho(i) = uold(ind_cell(i), 1)
         end do
 
-        call turb_force_calc(ngrid, x_cell, rho, aturb)
+        call turb_force_calc(afield_now, ngrid, x_cell, rho, aturb)
 
         do i=1,ngrid
            do idim=1,ndim

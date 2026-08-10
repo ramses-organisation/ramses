@@ -61,16 +61,17 @@ subroutine find_unitk(i,j,k,limit,unitk)
 
 end subroutine find_unitk
 
-subroutine calc_power_spectrum(k, power_spectrum)
+subroutine calc_power_spectrum(spectrum, k, power_spectrum)
    use turb_commons
    implicit none
+   character(len=*), intent(in) :: spectrum     ! Which spectrum to evaluate
    integer, intent(in)        :: k(1:3)         ! Wavevector
    real(kind=dp), intent(out) :: power_spectrum ! Power value
    real(kind=dp)              :: k_mag          ! Wavevector magnitude
 
    ! Remark that the components of k are between -TURB_GS and TURB_GS
    ! with k=1 corresponding to the box size
-   select case(forcing_power_spectrum)
+   select case(spectrum)
       case('power_law')
          ! alpha^-2 power spectrum
          if (all(k==0)) then
@@ -114,6 +115,40 @@ subroutine calc_power_spectrum(k, power_spectrum)
       end select
 
 end subroutine calc_power_spectrum
+
+subroutine build_power_spectrum(spectrum, power)
+   use turb_commons
+   implicit none
+   ! Evaluate a named power spectrum over the whole turbulent grid
+   character(len=*), intent(in) :: spectrum
+   real(kind=dp), intent(out)   :: power(0:TGRID_X,0:TGRID_Y,0:TGRID_Z)
+   integer                      :: i, j, k     ! Loop variables
+   integer                      :: k_vec(1:3)  ! Wavevector
+
+   do k=0,TGRID_Z
+      if (k > TURB_GS / 2) then
+         k_vec(3) = k - TURB_GS
+      else
+         k_vec(3) = k
+      end if
+      do j=0,TGRID_Y
+         if (j > TURB_GS / 2) then
+            k_vec(2) = j - TURB_GS
+         else
+            k_vec(2) = j
+         end if
+         do i=0,TGRID_X
+            if (i > TURB_GS / 2) then
+               k_vec(1) = i - TURB_GS
+            else
+               k_vec(1) = i
+            end if
+            call calc_power_spectrum(spectrum, k_vec, power(i,j,k))
+         end do
+      end do
+   end do
+
+end subroutine build_power_spectrum
 
 subroutine gaussian_cmplx(G)
    !use constants, only:pi
@@ -170,7 +205,7 @@ subroutine gaussian_cmplx(G)
 
 end subroutine gaussian_cmplx
 
-subroutine add_turbulence(turb_field, dt)
+subroutine add_turbulence(turb_field, power, comp, sol, dt)
    use turb_commons
    implicit none
    ! Take a complex Fourier field of turbulence, and add a random component
@@ -182,6 +217,10 @@ subroutine add_turbulence(turb_field, dt)
    complex(kind=cdp), intent(inout) :: turb_field(1:NDIM, 0:TGRID_X,&
                                                  &0:TGRID_Y, 0:TGRID_Z)
                                            ! Complex field to add to
+   real(kind=dp), intent(in) :: power(0:TGRID_X,0:TGRID_Y,0:TGRID_Z)
+                                           ! Power spectrum to draw from
+   real(kind=dp), intent(in)       :: comp ! Compressive fraction
+   real(kind=dp), intent(in)       :: sol  ! Solenoidal fraction
    real(kind=dp), intent(in)       :: dt   ! Width of Gaussian which drives
                                            ! Wiener process
 
@@ -211,7 +250,7 @@ subroutine add_turbulence(turb_field, dt)
             hermitian_pair = .FALSE.
 #endif
             ! Check there is any power in this mode, else cycle
-            if (power_spec(i,j,k) == 0.0_dp) cycle
+            if (power(i,j,k) == 0.0_dp) cycle
 
 #if defined(HERMITIAN_FIELD)
             ! Test if we are own conjugate or need to use another conjugate
@@ -250,7 +289,7 @@ subroutine add_turbulence(turb_field, dt)
             ! Random power/phase (complex Gaussian) multiplied by power
             ! spectrum and multiplied by width dt
             call gaussian_cmplx(complex_vec)
-            complex_vec = complex_vec * sqrt(dt) * power_spec(i,j,k)
+            complex_vec = complex_vec * sqrt(dt) * power(i,j,k)
 
 #if defined(HERMITIAN_FIELD)
             if (own_conjg) then
@@ -266,7 +305,7 @@ subroutine add_turbulence(turb_field, dt)
             unitk_cmplx = cmplx(unitk, kind=cdp)
             comp_cmplx = unitk_cmplx *  dot_product(unitk_cmplx,complex_vec)
             sol_cmplx = complex_vec - comp_cmplx
-            complex_vec = comp_cmplx*comp_frac + sol_cmplx*sol_frac
+            complex_vec = comp_cmplx*comp + sol_cmplx*sol
             ! note that there are two degrees of freedom for
             ! solenoidal/transverse modes, and only one for
             ! longitudinal/compressive modes,
@@ -506,9 +545,11 @@ subroutine power_rms_norm(power_in, P)
 
 end subroutine power_rms_norm
 
-subroutine turb_force_calc(ncache, x_cell, rho, aturb)
+subroutine turb_force_calc(afield, ncache, x_cell, rho, aturb)
    use turb_commons
    implicit none
+   real(kind=dp), intent(in)  :: afield(1:NDIM, 0:TGRID_X,&
+                                       &0:TGRID_Y, 0:TGRID_Z) ! Field to sample
    integer, intent(in)        :: ncache
    real(kind=dp), intent(in)  :: x_cell(1:ndim,1:nvector) ! Positions
    real(kind=dp), intent(in)  :: rho(1:nvector)           ! Densities
@@ -567,8 +608,8 @@ subroutine turb_force_calc(ncache, x_cell, rho, aturb)
    ! Find cube values
 #if NDIM==1
    do i=1,nok
-      cube_vals(:,i,1) = afield_now(:, bmin(1,i), 0, 0)
-      cube_vals(:,i,2) = afield_now(:, bmax(1,i), 0, 0)
+      cube_vals(:,i,1) = afield(:, bmin(1,i), 0, 0)
+      cube_vals(:,i,2) = afield(:, bmax(1,i), 0, 0)
    end do
 
    do i=1,nok
@@ -577,10 +618,10 @@ subroutine turb_force_calc(ncache, x_cell, rho, aturb)
    end do
 #elif NDIM==2
    do i=1,nok
-      cube_vals(:,i,1) = afield_now(:, bmin(1,i), bmin(2,i), 0)
-      cube_vals(:,i,2) = afield_now(:, bmax(1,i), bmin(2,i), 0)
-      cube_vals(:,i,3) = afield_now(:, bmin(1,i), bmax(2,i), 0)
-      cube_vals(:,i,4) = afield_now(:, bmax(1,i), bmax(2,i), 0)
+      cube_vals(:,i,1) = afield(:, bmin(1,i), bmin(2,i), 0)
+      cube_vals(:,i,2) = afield(:, bmax(1,i), bmin(2,i), 0)
+      cube_vals(:,i,3) = afield(:, bmin(1,i), bmax(2,i), 0)
+      cube_vals(:,i,4) = afield(:, bmax(1,i), bmax(2,i), 0)
    end do
 
    do i=1,nok
@@ -591,14 +632,14 @@ subroutine turb_force_calc(ncache, x_cell, rho, aturb)
    end do
 #else
    do i=1,nok
-      cube_vals(:,i,1) = afield_now(:, bmin(1,i), bmin(2,i), bmin(3,i))
-      cube_vals(:,i,2) = afield_now(:, bmax(1,i), bmin(2,i), bmin(3,i))
-      cube_vals(:,i,3) = afield_now(:, bmin(1,i), bmax(2,i), bmin(3,i))
-      cube_vals(:,i,4) = afield_now(:, bmax(1,i), bmax(2,i), bmin(3,i))
-      cube_vals(:,i,5) = afield_now(:, bmin(1,i), bmin(2,i), bmax(3,i))
-      cube_vals(:,i,6) = afield_now(:, bmax(1,i), bmin(2,i), bmax(3,i))
-      cube_vals(:,i,7) = afield_now(:, bmin(1,i), bmax(2,i), bmax(3,i))
-      cube_vals(:,i,8) = afield_now(:, bmax(1,i), bmax(2,i), bmax(3,i))
+      cube_vals(:,i,1) = afield(:, bmin(1,i), bmin(2,i), bmin(3,i))
+      cube_vals(:,i,2) = afield(:, bmax(1,i), bmin(2,i), bmin(3,i))
+      cube_vals(:,i,3) = afield(:, bmin(1,i), bmax(2,i), bmin(3,i))
+      cube_vals(:,i,4) = afield(:, bmax(1,i), bmax(2,i), bmin(3,i))
+      cube_vals(:,i,5) = afield(:, bmin(1,i), bmin(2,i), bmax(3,i))
+      cube_vals(:,i,6) = afield(:, bmax(1,i), bmin(2,i), bmax(3,i))
+      cube_vals(:,i,7) = afield(:, bmin(1,i), bmax(2,i), bmax(3,i))
+      cube_vals(:,i,8) = afield(:, bmax(1,i), bmax(2,i), bmax(3,i))
    end do
 
    ! Find interpolation values
@@ -647,9 +688,11 @@ subroutine turb_force_calc(ncache, x_cell, rho, aturb)
 
 end subroutine turb_force_calc
 
-subroutine current_turb_rms(rms_val)
+subroutine current_turb_rms(afield, rms_val)
    use turb_commons
    implicit none
+   real (kind=dp), intent(in)  :: afield(1:NDIM, 0:TGRID_X,&
+                                        &0:TGRID_Y, 0:TGRID_Z)
    real (kind=dp), intent(out) :: rms_val
    integer                     :: i, j, k
    real (kind=dp)              :: asqd
@@ -658,7 +701,7 @@ subroutine current_turb_rms(rms_val)
    do k=0,TGRID_Z
       do j=0,TGRID_Y
          do i=0,TGRID_X
-            asqd = sum(afield_now(1:ndim, i, j, k)**2)
+            asqd = sum(afield(1:ndim, i, j, k)**2)
             rms_val = rms_val + asqd
          end do
       end do
@@ -667,6 +710,33 @@ subroutine current_turb_rms(rms_val)
    rms_val = sqrt(rms_val / (turb_gs_real**NDIM))
 
 end subroutine current_turb_rms
+
+subroutine turb_interpolate_now
+   use turb_commons
+   implicit none
+   real(kind=dp) :: turb_tfrac              ! Time fraction since last field
+
+   ! Linear interpolation of the forcing field for the current time between the
+   ! two bracketing fields afield_last (at turb_last_time) and afield_next (at
+   ! turb_next_time). turb_tfrac is expected to lie in [0,1].
+   turb_tfrac = real((t - turb_last_time) / turb_dt, dp)
+   afield_now = (1.0_dp - turb_tfrac)*afield_last + turb_tfrac*afield_next
+
+end subroutine turb_interpolate_now
+
+subroutine turb_normalise_rms
+   use turb_commons
+   implicit none
+   real(kind=dp) :: rms_now                 ! Realised rms of afield_now
+
+   ! Scale afield_now so that its rms is exactly sqrt(ndim)*turb_rms, removing
+   ! the scatter of the Ornstein-Uhlenbeck draw.
+   call current_turb_rms(afield_now, rms_now)
+   if (rms_now > 0.0_dp) then
+      afield_now = afield_now * (sqrt(real(ndim,dp))*turb_rms / rms_now)
+   end if
+
+end subroutine turb_normalise_rms
 
 ! PRNG of Marsaglia
 subroutine spin_up(s)
@@ -714,12 +784,16 @@ subroutine kiss64_double(N, s, out_array)
       call kiss64_core(s, int_array(i))
    end do
 
+   ! The mantissa mask and exponent set make each int64 the bit pattern of a
+   ! double-precision real in [1,2); subtracting 1 gives a uniform variate in
+   ! [0,1). The int64 pattern is always a *double*, so the reinterpretation must
+   ! use a double-precision mold even when out_array is single precision.
    int_array = iand(int_array, z'FFFFFFFFFFFFF')
    int_array = ieor(int_array, z'3FF0000000000000')
 #ifdef DOUBLE_PRECISION
    out_array = transfer(int_array, out_array) - 1.0_dp
 #else
-   dbl_array = transfer(int_array, out_array)
+   dbl_array = transfer(int_array, dbl_array) - 1.0d0
    out_array = real(dbl_array, dp)
 #endif
 
