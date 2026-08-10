@@ -22,6 +22,8 @@ subroutine read_turb_params(nml_ok)
 
   ! Namelist parameter turb has been replaced by driven_turb
   if (turb) then
+   if (myid==1) write (*,*) &
+      & "WARNING: namelist parameter turb is deprecated, use driven_turb=.true."
     driven_turb = .true.
   end if
 
