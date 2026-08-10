@@ -10,6 +10,7 @@ This namelist block, called `&OUTPUT_PARAMS`, is used to set up the frequency an
 | `foutput=1000000` | `integer` | Frequency of additional outputs in units of coarse time steps. `foutput=1` means one output at each time step. Specified outputs (see above) will not be superseded by this parameter. |
 | `tout=0.0,0.0,0.0,` | `real array` | Value of specified output times. |
 | `aout=1.1,1.1,1.1,` | `real array` | Value of specified output expansion factor (for cosmology runs only). `aout=1.0` means "present epoch" or "zero redshift". |
+| `exact_output_time=.false.` | `logical` | Enforce outputs at the exact requested times (`tout` or `aout`) by adjusting the timestep. |
 | `delta_tout=0` | `real` | Frequency of outputs in user time units. |
 | `delta_aout=0` | `real` | Frequency of outputs in expansion factor (for cosmology runs only). |
 | `tend=10` | `real` | End time of the simulation, in user time units. |
@@ -18,7 +19,8 @@ This namelist block, called `&OUTPUT_PARAMS`, is used to set up the frequency an
 | `minutes_dump=1` | `real` | Dump an output this many minutes before walltime_hrs |
 | `write_conservative=.false.` | `logical` | Output conservative hydro variables as stored in `uold` instead of primitive ones |
 | `read_conservative=.false.` | `logical` | When conservative variables have been outputted, this flag should be set to `.true.` to match the correct variables on restart. |
-| `exact_output_time=.false.` | `logical` | Enforce outputs at the exact requested times (`tout` or `aout`) by adjusting the timestep. |
+| `output_current=.false.` | `logical` | Output cell-centred electric current density (MHD only) |
+| `input_current=.false.` | `logical` | Restart file contains electric current |
 
 > **Warning (R. Teyssier)**
 > When using the `exact_output_time` option, having an abrupt change of time step can potentially affect the quality of the solution.
