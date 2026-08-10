@@ -23,6 +23,8 @@ SOLVER = hydro
 PATCH =
 # Use RT? 1=Yes, 0=No
 RT = 0
+# Use non-ideal MHD? 1=Yes, 0=No
+NIMHD = 0
 # Use turbulence? 1=Yes, 0=No (requires fftw3)
 USE_TURB = 0
 # Use MPI? 1=Yes, 0=No
@@ -52,6 +54,9 @@ NHYDRO = 2+$(NDIM)
 ifeq ($(SOLVER),mhd)
    NHYDRO = 8
 endif
+ifeq ($(NIMHD),1)
+   SOLVER=mhd
+endif
 NVAR := $(NHYDRO)+$(NENER)+$(NPSCAL)+$(NMETALS)
 ifeq ($(RT),1)
    NVAR := $(NVAR)+$(NIONS)
@@ -73,6 +78,9 @@ ifeq ($(ATON),1)
 endif
 ifeq ($(GRACKLE),1)
    DEFINES += -Dgrackle
+endif
+ifeq ($(NIMHD),1)
+   DEFINES += -DNIMHD
 endif
 ifeq ($(OLD_MPI_SUPPORT),1)
    DEFINES += -DMPI_OLD
@@ -189,6 +197,9 @@ VPATH = $(PATCH):../$(SOLVER):../aton:
 ifeq ($(RT),1)
    VPATH += ../rt:
 endif
+ifeq ($(NIMHD),1)
+   VPATH += ../nimhd:
+endif
 ifeq ($(USE_TURB),1)
    VPATH += ../turb:
 endif
@@ -207,6 +218,9 @@ MODOBJ += poisson_commons.o hydro_parameters.o hydro_commons.o \
 ifeq ($(RT),1)
    MODOBJ += rt_parameters.o rt_hydro_commons.o coolrates_module.o \
              rt_spectra.o rt_cooling_module.o rt_flux_module.o
+endif
+ifeq ($(NIMHD),1)
+   MODOBJ += nimhd_parameters.o
 endif
 ifeq ($(USE_TURB),1)
    MODOBJ += turb_parameters.o turb_commons.o
@@ -240,6 +254,8 @@ RTOBJ = rt_init_hydro.o rt_init_xion.o rt_init.o rt_init_flow_fine.o \
         rt_output_hydro.o rt_godunov_fine.o rt_interpol_hydro.o \
         rt_godunov_utils.o rt_condinit.o rt_hydro_flag.o rt_hydro_boundary.o \
         rt_boundana.o rt_units.o
+# NIMHD objects
+NIMHDOBJ = read_nimhd_params.o nimhd_effects.o
 # Turbulence objects
 TURBOBJ = turb_force_utils.o read_turb_params.o init_turb.o mpi_share_turb_fields.o \
           turb_next_field.o turb_check_time.o write_turb_fields.o read_turb_fields.o \
@@ -251,6 +267,9 @@ sinclude $(PATCH)/Makefile
 AMRLIB = $(AMROBJ) $(HYDROOBJ) $(PMOBJ) $(POISSONOBJ)
 ifeq ($(RT),1)
    AMRLIB += $(RTOBJ)
+endif
+ifeq ($(NIMHD),1)
+   AMRLIB += $(NIMHDOBJ)
 endif
 ifeq ($(USE_TURB),1)
    AMRLIB += $(TURBOBJ)

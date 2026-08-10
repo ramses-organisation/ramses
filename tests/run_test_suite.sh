@@ -36,7 +36,7 @@
 #######################################################################
 
 # List of directories to scan
-testlist="hydro,mhd,poisson,rt,sink,star,turb,tracer";
+testlist="hydro,mhd,nimhd,poisson,rt,sink,star,turb,tracer";
 
 #######################################################################
 # Determine the parameters for running the test suite
@@ -164,7 +164,7 @@ if $CLEAN_ALL ; then
          # rm_list=$(cat to_be_removed);
          # rm -f $rm_list;
          # rm to_be_removed;
-         $SHELL after_test.sh;
+         ${SHELL} after_test.sh;
       fi
    done
    $RETURN_TO_BIN;

@@ -567,7 +567,9 @@ def check_solution(data,test_name,tolerance=None,threshold=2.0e-14,norm_min=1.0e
 
     vars_to_correct = ["sink_lx","sink_ly","sink_lz",
                        "sink_vx","sink_vy","sink_vz",
-                       "sink_vx_gas","sink_vy_gas","sink_vz_gas"]
+                       "sink_vx_gas","sink_vy_gas","sink_vz_gas",
+                       "B_x_left", "B_y_left", "B_z_left",
+                       "B_x_right", "B_y_right", "B_z_right"]
     # Find vectors and normalize components
     norms = dict()
     permutations = {"_x":["_y","_z"],"_y":["_x","_z"],"_z":["_x","_y"]}

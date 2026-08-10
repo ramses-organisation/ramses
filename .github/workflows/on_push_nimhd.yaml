@@ -1,0 +1,13 @@
+name: Verify NIMHD
+
+on:
+  push:
+    branches:
+      - combo_fld_nimhd
+      - isolate_nimhd_from_fld
+
+jobs:
+
+  tests:
+    name: Test Ramses NIMHD
+    uses: ./.github/workflows/tests-nimhd.yaml

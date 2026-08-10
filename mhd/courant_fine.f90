@@ -6,6 +6,9 @@ subroutine courant_fine(ilevel)
 #if USE_TURB==1
   use turb_commons
 #endif
+#ifdef NIMHD
+  use nimhd_parameters
+#endif
   implicit none
 #ifndef WITHOUTMPI
   integer::info
@@ -25,6 +28,13 @@ subroutine courant_fine(ilevel)
   real(kind=8)::mass_all,ekin_all,eint_all,emag_all,dt_all
   real(dp),dimension(1:nvector,1:nvar_all),save::uu
   real(dp),dimension(1:nvector,1:ndim),save::gg
+#ifdef NIMHD
+  ! to see if ambipolar dt at a certain level restricts the global dt
+  real(dp)::dtideal_loc,dtideal_all
+  real(dp)::dtambdiff_loc,dtambdiff_lev,dtambdiff_all
+  real(dp)::dtmagdiff_loc,dtmagdiff_lev,dtmagdiff_all
+  real(dp)::tmag1,tmag2
+#endif
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
@@ -34,6 +44,12 @@ subroutine courant_fine(ilevel)
   emag_all=0.0d0; emag_loc=0.0d0
   eint_all=0.0d0; eint_loc=0.0d0
   dt_all=dtnew(ilevel); dt_loc=dt_all
+#ifdef NIMHD
+  ! to see if ambipolar dt at a certain level restricts the global dt
+  dtambdiff_all=dtambdiff(ilevel); dtambdiff_loc=dtambdiff_all
+  dtmagdiff_all=dtmagdiff(ilevel); dtmagdiff_loc=dtmagdiff_all
+  dtideal_all=dtideal(ilevel); dtideal_loc=dtideal_all
+#endif
 
   ! Mesh spacing at that level
   nx_loc=icoarse_max-icoarse_min+1
@@ -137,8 +153,18 @@ subroutine courant_fine(ilevel)
 
         ! Compute CFL time-step
         if(nleaf>0)then
+#ifdef NIMHD
+           ! Warning: cmpdt_nimhd needs to be done before cmpdt because there uu is altered
+           call cmpdt_nimhd(uu,dx,nleaf,dtambdiff_lev,dtmagdiff_lev)
+           dtambdiff_loc=min(dtambdiff_loc,dtambdiff_lev)
+           dtmagdiff_loc=min(dtmagdiff_loc,dtmagdiff_lev)
+#endif
            call cmpdt(uu,gg,dx,dt_lev,nleaf)
            dt_loc=min(dt_loc,dt_lev)
+#ifdef NIMHD
+           ! store the ideal MHD timestep (without effect of gravity, etc.)
+           dtideal_loc=min(dtideal_loc,dt_lev)
+#endif
         end if
 
      end do
@@ -175,6 +201,51 @@ subroutine courant_fine(ilevel)
   eint_tot=eint_tot+eint_all
   emag_tot=emag_tot+emag_all
   dtnew(ilevel)=MIN(dtnew(ilevel),dt_all)
+
+#ifdef NIMHD
+  ! Compute global NIMHD timesteps
+#ifndef WITHOUTMPI
+  call MPI_ALLREDUCE(dtambdiff_loc,dtambdiff_all,1,MPI_DOUBLE_PRECISION,MPI_MIN,&
+       &MPI_COMM_WORLD,info)
+  call MPI_ALLREDUCE(dtmagdiff_loc,dtmagdiff_all,1,MPI_DOUBLE_PRECISION,MPI_MIN,&
+       &MPI_COMM_WORLD,info)
+  call MPI_ALLREDUCE(dtideal_loc  ,dtideal_all  ,1,MPI_DOUBLE_PRECISION,MPI_MIN,&
+       &MPI_COMM_WORLD,info)
+#else
+  dtambdiff_all=dtambdiff_loc
+  dtmagdiff_all=dtmagdiff_loc
+  dtideal_all=dtideal_loc
+#endif
+
+  dtambdiff(ilevel)=MIN(dtambdiff(ilevel), dtambdiff_all)
+  dtmagdiff(ilevel)=MIN(dtmagdiff(ilevel), dtmagdiff_all)
+  dtideal(ilevel)=MIN(dtideal(ilevel), dtideal_all)
+
+  ! timestep reduction due to ambipolar diffusion
+  if(nambipolar) then
+     ! WARNING this should not be done for tests
+     if (nimhd_dt_cap) then
+        ! alfven time alone maybe not correct
+        ! comparison with global time step
+        tmag1=max(dtambdiff(ilevel),dtideal(ilevel)*frac_dt_cap_ad)
+     else
+        tmag1=dtambdiff(ilevel)
+     endif
+     dtnew(ilevel)=MIN(dtnew(ilevel),tmag1)
+   endif
+
+  ! timestep reduction due to Ohmic diffusion
+  if(nmagdiffu) then
+     if (nimhd_dt_cap) then
+        ! alfven time alone maybe not correct
+        ! comparison with global time step
+        tmag2=max(dtmagdiff(ilevel),dtideal(ilevel)*frac_dt_cap_ohm)
+     else
+        tmag2=dtmagdiff(ilevel)
+     endif
+     dtnew(ilevel)=MIN(dtnew(ilevel),tmag2)
+   end if
+#endif
 
 111 format('   Entering courant_fine for level ',I2)
 
@@ -287,6 +358,69 @@ subroutine cmpdt(uu,gg,dx,dt,ncell)
   end do
 
 end subroutine cmpdt
+!###########################################################
+!###########################################################
+!###########################################################
+!###########################################################
+! Non-ideal MHD timesteps
+#ifdef NIMHD
+subroutine cmpdt_nimhd(uu,dx,ncell,dtambdiff,dtohmdiss)
+   use amr_parameters
+   use hydro_parameters
+   use nimhd_parameters
+
+   implicit none
+   !--------------------------------------------------------------
+   ! Compute the explicit diffusion stability time steps for the
+   ! non-ideal MHD effects over a vector of cells. For each cell the
+   ! ambipolar (dtambdiff) and Ohmic (dtohmdiss) diffusion times are
+   ! dt = coef*dx^2 / (B^2*beta) and coef*dx^2 / eta respectively, and
+   ! the smallest value over the cells is returned. Used by
+   ! courant_fine to limit the global time step. Must be called before
+   ! cmpdt, which overwrites the working array uu.
+   !--------------------------------------------------------------
+   integer::ncell
+   real(dp)::dx
+   real(dp)::dtambdiff,dtohmdiss    ! ambipolar and Ohmic diffusion times
+   real(dp),dimension(1:nvector,1:nvar+3)::uu
+
+   real(dp),dimension(1:nvector),save::B2,rho,xx
+   integer::k,idim
+
+   do k = 1,ncell
+      rho(k)=max(uu(k,1),smallr)
+   end do
+
+   do k = 1,ncell
+      B2(k)=0
+   end do
+   do idim = 1,3
+      do k = 1, ncell
+         B2(k)=B2(k) + (0.5d0*(uu(k,5+idim)+uu(k,nvar+idim)))**2
+      end do
+   end do
+
+   ! Ohmic dissipation (fixed resistivity eta = etaMD)
+   dtohmdiss=1d35
+   if (nmagdiffu .and. etaMD>0d0) then
+      dtohmdiss=coefohm*dx*dx/etaMD
+   endif
+
+   ! ambipolar diffusion (fixed coefficient beta = 1/(gammaAD*rho))
+   dtambdiff=1d36
+   if (nambipolar) then
+      do k = 1,ncell
+         xx(k)=B2(k)/(gammaAD*rho(k))
+      end do
+      do k = 1,ncell
+         if (xx(k).gt.0d0) then
+            dtambdiff=min(dtambdiff, coefad*dx*dx/xx(k))
+         endif
+      end do
+   endif
+
+end subroutine cmpdt_nimhd
+#endif
 !#########################################################
 !#########################################################
 !#########################################################
@@ -372,6 +506,8 @@ subroutine velocity_fine(ilevel)
         select case (condinit_kind)
             case('ponomarenko')
                call velana_ponomarenko(xx,vv,dx_loc,t,ngrid)
+            case('nimhd_diffusion')
+               call velana_nimhd_diffusion(xx,vv,dx_loc,t,ngrid)
             case default
                call velana(xx,vv,dx_loc,t,ngrid)
          end select

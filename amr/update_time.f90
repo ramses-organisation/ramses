@@ -6,6 +6,9 @@ subroutine update_time(ilevel)
 #if USE_TURB==1
   use turb_commons
 #endif
+#ifdef NIMHD
+  use nimhd_parameters
+#endif
   use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
@@ -114,6 +117,11 @@ subroutine update_time(ilevel)
               write(*,888)nstep,t,dt,aexp,&
                    & real(100.0D0*dble(used_mem_tot)/dble(ngridmax+1))
            endif
+#ifdef NIMHD
+           if(use_nonideal_mhd)then
+              write(*,889)dtambdiff(ilevel),dtmagdiff(ilevel),dtideal(ilevel)
+           endif
+#endif
            itest=1
         end if
         output_done=.false.
@@ -204,6 +212,10 @@ subroutine update_time(ilevel)
 888 format(' Fine step=',i7,' t=',1pe12.5,' dt=',1pe10.3, &
          & ' a=',1pe10.3,' mem=',0pF4.1,'% ',0pF4.1,'%')
 999 format(' Level ',I2,' has ',I10,' grids (',3(I8,','),')')
+#ifdef NIMHD
+889 format(' dt ambipolar=',1pe10.3,' dt ohmic=',1pe10.3,&
+         & ' dt ideal mhd=',1pe10.3)
+#endif
 
 end subroutine update_time
 

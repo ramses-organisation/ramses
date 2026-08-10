@@ -49,6 +49,9 @@ subroutine  condinit(x,u,dx,nn)
   case('collapse')
      call collapse_condinit(x, q, dx, nn)
 
+  case('nimhd_diffusion')
+     call nimhd_diffusion_condinit(x, q, dx, nn)
+
   ! Add here, if you wish, some user-defined initial conditions
   ! ........
 
@@ -371,6 +374,39 @@ subroutine collapse_condinit(x,q,dx,nn)
   ENDDO
 
 end subroutine collapse_condinit
+
+!================================================================
+!================================================================
+!================================================================
+!================================================================
+subroutine nimhd_diffusion_condinit(x,q,dx,nn)
+  use amr_parameters
+  use hydro_parameters
+  implicit none
+  integer ::nn                            ! Number of cells
+  real(dp)::dx                            ! Cell size
+  real(dp),dimension(1:nvector,1:nvar_all)::q ! Primitive variables
+  real(dp),dimension(1:nvector,1:ndim)::x ! Cell center position.
+  !================================================================
+  ! This routine generates initial conditions for the NIMHD diffusion test
+  !================================================================
+  integer::i
+  real(dp) :: xx,yy,zz
+
+  ! Call built-in initial condition generator
+  call region_condinit(x,q,dx,nn)
+
+  do i = 1,nn
+     xx = x(i,1) - 0.5_dp*(1.0_dp + dx)
+     yy = x(i,2) - 0.5_dp*(1.0_dp + dx)
+     zz = x(i,3) - 0.5_dp*(1.0_dp + dx)
+     if((abs(xx) < 0.9_dp*dx) .and. (abs(zz) < 0.9_dp*dx))then
+       q(i,     7) = 1.0_dp
+       q(i,nvar+2) = 1.0_dp
+     endif
+  enddo
+
+end subroutine nimhd_diffusion_condinit
 !================================================================
 !================================================================
 !================================================================
@@ -719,3 +755,27 @@ subroutine velana_ponomarenko(x,v,dx,t,ncell)
 
 
 end subroutine velana_ponomarenko
+!================================================================
+!================================================================
+!================================================================
+!================================================================
+subroutine velana_nimhd_diffusion(x,v,dx,t,ncell)
+  use amr_parameters
+  use hydro_parameters
+  implicit none
+  integer ::ncell                         ! Size of input arrays
+  real(dp)::dx                            ! Cell size
+  real(dp)::t                             ! Current time
+  real(dp),dimension(1:nvector,1:3)::v    ! Velocity field
+  real(dp),dimension(1:nvector,1:ndim)::x ! Cell center position.
+  !================================================================
+  ! This routine computes the user defined velocity fields.
+  ! x(i,1:ndim) are cell center position in [0,boxlen] (user units).
+  ! v(i,1:3) is the imposed 3-velocity in user units.
+  !================================================================
+  integer::i
+
+  ! Add here, if you wish, some user-defined initial conditions
+  v=0.0d0
+
+end subroutine velana_nimhd_diffusion

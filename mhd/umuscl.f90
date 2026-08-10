@@ -27,11 +27,15 @@
 !  Note that here we have 3 components for v and B whatever ndim.
 !
 !  This routine was written by Sebastien Fromang and Patrick Hennebelle
+!  then modified by Jacques Masson, Benoit Commercon and Neil Vaytet for non-ideal MHD
 ! ----------------------------------------------------------------
 subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
   use amr_parameters
   use const
   use hydro_parameters
+#ifdef NIMHD
+  use nimhd_parameters
+#endif
   implicit none
 
   integer ::ngrid
@@ -71,6 +75,16 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
   ! Intermediate fluxes
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2)       ,save::emf
 
+#ifdef NIMHD
+  ! WARNING following quantities defined with three components even if ndim<3 !
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3,1:3),save::bmagij
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),save::bemfx,bemfy,bemfz
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),save::jemfx,jemfy,jemfz
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),save::fluxmd,fluxad
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),save::emfambdiff,fluxambdiff
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:3),save::emfohmdiss,fluxohm
+#endif
+
   ! Local scalar variables
   integer::i,j,k,l,ivar
   integer::ilo,ihi,jlo,jhi,klo,khi
@@ -85,6 +99,35 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
 
   ! Compute TVD slopes
   call uslope_mag(bf,dbf,dx,dt,ngrid)
+
+#ifdef NIMHD
+  ! compute necessary quantities
+  if(use_nonideal_mhd) then
+     call compute_bmagij(uin,qin,ngrid,bmagij)
+     call compute_jemf(uin,ngrid,dx,dy,dz,bmagij,jemfx,jemfy,jemfz)
+  endif
+
+  if(nimhdheating_in_flux.or.nambipolar) then
+     call compute_bemf(uin,qin,ngrid,bemfx,bemfy,bemfz)
+  end if
+
+  ! AMBIPOLAR DIFFUSION
+  if(nambipolar) then
+     call computambip(uin,ngrid,bemfx,bemfy,bemfz,jemfx,jemfy,jemfz,emfambdiff)
+  endif
+
+  ! OHMIC DISSIPATION
+  if(nmagdiffu) then
+     call computdifmag(ngrid,jemfx,jemfy,jemfz,emfohmdiss)
+  endif
+
+  if(nimhdheating_in_flux) then
+     call compute_nimhd_flux_heating(qin,ngrid,dx,dy,dz,bemfx,bemfy,bemfz,bmagij,fluxmd,fluxad)
+     if(nambipolar) call compute_heating_ambip(uin,ngrid,fluxad,fluxambdiff)
+     if(nmagdiffu)  call compute_heating_difmag(ngrid,fluxmd,fluxohm)
+  endif
+
+#endif
 
   ! Compute 3D traced-states in all three directions
 #if NDIM==1
@@ -102,6 +145,22 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
        &       qp,iu1  ,iu2  ,ju1  ,ju2  ,ku1  ,ku2  , &
        &          if1  ,if2  ,jlo  ,jhi  ,klo  ,khi  , &
        &       2,3,4,6,7,8,flux,tmp,1,dtdx,ngrid)
+#ifdef NIMHD
+  ! add nimhd
+  if(use_nonideal_mhd) then
+     do k=klo,khi
+     do j=jlo,jhi
+     do i=if1,if2
+        ! Energy flux from ohmic term dB/dt=rot(-eta*J)
+        ivar=5
+        do l=1,ngrid
+           flux(l,i,j,k,ivar,1)=flux(l,i,j,k,ivar,1)+(fluxambdiff(l,i,j,k,1)+fluxohm(l,i,j,k,1))*dt/dx
+        end do
+     end do
+     end do
+     end do
+  endif
+#endif
 
   ! Solve for 1D flux in Y direction
 #if NDIM>1
@@ -109,6 +168,22 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
        &       qp,iu1  ,iu2  ,ju1  ,ju2  ,ku1  ,ku2  , &
        &          ilo  ,ihi  ,jf1  ,jf2  ,klo  ,khi  , &
        &       3,2,4,7,6,8,flux,tmp,2,dtdx,ngrid)
+#ifdef NIMHD
+  ! add nimhd
+  do k=klo,khi
+  do j=jf1,jf2
+  do i=ilo,ihi
+     ! Energy flux from ohmic term dB/dt=rot(-eta*J)
+     if(use_nonideal_mhd) then
+        ivar=5
+        do l=1,ngrid
+           flux(l,i,j,k,ivar,2)=flux(l,i,j,k,ivar,2)+(fluxambdiff(l,i,j,k,2)+fluxohm(l,i,j,k,2))*dt/dy
+        end do
+     endif
+  end do
+  end do
+  end do
+#endif
 #endif
 
   ! Solve for 1D flux in Z direction
@@ -117,6 +192,57 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
        &       qp,iu1  ,iu2  ,ju1  ,ju2  ,ku1  ,ku2  , &
        &          ilo  ,ihi  ,jlo  ,jhi  ,kf1  ,kf2  , &
        &       4,2,3,8,6,7,flux,tmp,3,dtdx,ngrid)
+#ifdef NIMHD
+  ! add nimhd
+  do k=kf1,kf2
+  do j=jlo,jhi
+  do i=ilo,ihi
+     ! Energy flux from ohmic term dB/dt=rot(-eta*J)
+     if(use_nonideal_mhd) then
+        ivar=5
+        do l=1,ngrid
+           flux(l,i,j,k,ivar,3)=flux(l,i,j,k,ivar,3)+(fluxambdiff(l,i,j,k,3)+fluxohm(l,i,j,k,3))*dt/dz
+        end do
+     endif
+  end do
+  end do
+  end do
+#endif
+#endif
+
+#ifdef NIMHD
+! emf rather than fluxes
+#if NDIM==1
+  do k=kf1,kf2
+     do j=jf1,jf2
+        do i=ilo,ihi
+           do l=1,ngrid
+              emfx(l,i,j,k)=( emfambdiff(l,i,j,k,1)+emfohmdiss(l,i,j,k,1) )*dt/dx
+           end do
+        end do
+     end do
+  end do
+
+  do k=kf1,kf2
+     do j=jlo,jhi
+        do i=if1,if2
+           do l=1,ngrid
+              emfy(l,i,j,k)=( emfambdiff(l,i,j,k,2)+emfohmdiss(l,i,j,k,2) )*dt/dx
+           end do
+        end do
+     end do
+  end do
+
+  do k=klo,khi
+     do j=jf1,jf2
+        do i=if1,if2
+           do l=1,ngrid
+              emfz(l,i,j,k)=( emfambdiff(l,i,j,k,3)+emfohmdiss(l,i,j,k,3) )*dt/dx
+           end do
+        end do
+     end do
+  end do
+#endif
 #endif
 
 #if NDIM>1
@@ -132,6 +258,9 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
   do i=if1,if2
      do l=1,ngrid
         emfz(l,i,j,k)=emf(l,i,j,k)*dt/dx
+#ifdef NIMHD
+        emfz(l,i,j,k)=emfz(l,i,j,k) + ( emfambdiff(l,i,j,k,3)+emfohmdiss(l,i,j,k,3) )*dt/dx
+#endif
      end do
   end do
   end do
@@ -162,6 +291,9 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
   do i=if1,if2
      do l=1,ngrid
         emfy(l,i,j,k)=emf(l,i,j,k)*dt/dx
+#ifdef NIMHD
+        emfy(l,i,j,k)=emfy(l,i,j,k) + ( emfambdiff(l,i,j,k,2)+emfohmdiss(l,i,j,k,2) )*dt/dx
+#endif
      end do
   end do
   end do
@@ -178,6 +310,9 @@ subroutine mag_unsplit(uin,gravin,flux,emfx,emfy,emfz,tmp,dx,dy,dz,dt,ngrid)
   do i=ilo,ihi
      do l=1,ngrid
         emfx(l,i,j,k)=emf(l,i,j,k)*dt/dx
+#ifdef NIMHD
+        emfx(l,i,j,k)=emfx(l,i,j,k) + ( emfambdiff(l,i,j,k,1)+emfohmdiss(l,i,j,k,1) )*dt/dx
+#endif
      end do
   end do
   end do

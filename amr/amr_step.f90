@@ -15,6 +15,9 @@ recursive subroutine amr_step(ilevel,icount)
 #if USE_TURB==1
   use turb_commons
 #endif
+#ifdef NIMHD
+  use nimhd_parameters
+#endif
   use mpi_mod
   implicit none
 #ifndef WITHOUTMPI
@@ -342,6 +345,17 @@ recursive subroutine amr_step(ilevel,icount)
         ! Otherwise, update time and finer level time-step
         dtold(ilevel+1)=dtnew(ilevel)/dble(nsubcycle(ilevel))
         dtnew(ilevel+1)=dtnew(ilevel)/dble(nsubcycle(ilevel))
+#ifdef NIMHD
+        if(nmagdiffu.or.nambipolar)then
+           ! analogous, update NIMHD timesteps
+           dtambdiffold(ilevel+1) = dtambdiff(ilevel) / dble(nsubcycle(ilevel))
+           dtmagdiffold(ilevel+1) = dtmagdiff(ilevel) / dble(nsubcycle(ilevel))
+           dtidealold(ilevel+1) = dtideal(ilevel) / dble(nsubcycle(ilevel))
+           dtambdiff(ilevel+1) = dtambdiff(ilevel) / dble(nsubcycle(ilevel))
+           dtmagdiff(ilevel+1) = dtmagdiff(ilevel) / dble(nsubcycle(ilevel))
+           dtideal  (ilevel+1) = dtideal  (ilevel) / dble(nsubcycle(ilevel))
+        end if
+#endif
         call update_time(ilevel)
 #if NDIM==3
         if(sink)call update_sink(ilevel)
@@ -556,6 +570,21 @@ recursive subroutine amr_step(ilevel,icount)
   if(ilevel>levelmin)then
      if(nsubcycle(ilevel-1)==1)dtnew(ilevel-1)=dtnew(ilevel)
      if(icount==2)dtnew(ilevel-1)=dtold(ilevel)+dtnew(ilevel)
+#ifdef NIMHD
+     ! analogous, update NIMHD course timesteps
+     if(nmagdiffu.or.nambipolar)then
+        if(nsubcycle(ilevel-1)==1) then
+           dtambdiff(ilevel-1) = dtambdiff(ilevel)
+           dtmagdiff(ilevel-1) = dtmagdiff(ilevel)
+           dtideal  (ilevel-1) = dtideal  (ilevel)
+        endif
+        if (icount==2) then
+           dtambdiff(ilevel-1) = dtambdiffold(ilevel) + dtambdiff(ilevel)
+           dtmagdiff(ilevel-1) = dtmagdiffold(ilevel) + dtmagdiff(ilevel)
+           dtideal  (ilevel-1) = dtidealold  (ilevel) + dtideal  (ilevel)
+        endif
+     end if
+#endif
   end if
 
   ! Reset move flag flag

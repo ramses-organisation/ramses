@@ -1,5 +1,6 @@
 subroutine barotropic_eos_temperature(nH, temperature)
    use amr_parameters
+   implicit none
    !--------------------------------------------------------------
    ! This routine selects the chosen EOS and calculates the
    ! temperature T[in Kelvin]/mu from the density nH[in H/cc]
