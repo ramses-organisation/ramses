@@ -1,4 +1,4 @@
-This is the RAMSES parameter file for the decaying turbulence test.
+This is the RAMSES parameter file for the decaying turbulence test, using the built-in turbulence module.
 
 &RUN_PARAMS
 hydro=.true.
