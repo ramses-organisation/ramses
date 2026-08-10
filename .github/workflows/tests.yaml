@@ -36,6 +36,12 @@ jobs:
         - name: Setup headless display for pyvista
           uses: pyvista/setup-headless-display-action@v3
         - name: "Run tests ${{ matrix.test-family }}"
+          # GitHub-hosted Linux runners for public repositories have 4 vCPUs.
+          # OpenMPI counts slots from the physical cores reported by hwloc, which
+          # on these VMs can be fewer than the number of vCPUs, so allow
+          # oversubscription rather than have mpirun refuse to launch 4 ranks.
+          env:
+            OMPI_MCA_rmaps_base_oversubscribe: "true"
           run: |
             cd tests
             bash run_test_suite.sh -p 4 -v -t ${{ matrix.test-family }}
