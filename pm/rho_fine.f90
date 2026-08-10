@@ -9,6 +9,7 @@ subroutine rho_fine(ilevel,icount)
   use poisson_commons
   use cooling_module
   use mpi_mod
+  use dice_commons
   implicit none
 #ifndef WITHOUTMPI
   integer::info
@@ -43,6 +44,15 @@ subroutine rho_fine(ilevel,icount)
   !-------------------------------------------------------
   ! Initialize rho to analytical and baryon density field
   !-------------------------------------------------------
+#if NDIM==3
+  if(dice_init.and.amr_struct) then
+    if(hydro)call multipole_from_current_level(ilevel)
+    call cic_from_multipole(ilevel)
+    ! Update boundaries
+    call make_virtual_reverse_dp(rho(1),ilevel)
+    call make_virtual_fine_dp   (rho(1),ilevel)
+  else
+#endif
   if(ilevel==levelmin.or.icount>1)then
      do i=nlevelmax,ilevel,-1
         ! Compute mass multipole
@@ -54,7 +64,9 @@ subroutine rho_fine(ilevel,icount)
         call make_virtual_fine_dp   (rho(1),i)
      end do
   end if
-
+#if NDIM==3
+  endif
+#endif
   !--------------------------
   ! Initialize fields to zero
   !--------------------------
@@ -318,6 +330,7 @@ subroutine rho_from_current_level(ilevel)
   ! End loop over cpus
 
 end subroutine rho_from_current_level
+
 !##############################################################################
 !##############################################################################
 !##############################################################################
@@ -327,6 +340,7 @@ subroutine cic_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
   use pm_commons
   use pm_parameters, only:nlevelmax_sink
   use poisson_commons
+  use dice_commons
   use hydro_commons, ONLY: mass_sph
   implicit none
   integer::ng,np,ilevel
@@ -548,6 +562,12 @@ subroutine cic_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
         ok(j)=(igrid(j,ind)>0).and.is_not_tracer(fam(j))
         vol2(j)=mmm(j)*vol(j,ind)/vol_loc
      end do
+
+     if (dice_init) then
+        do j=1,np
+           ok(j)=ok(j).and.(idp(ind_part(j)).ne.1)
+        end do
+     end if
 
      if(cic_levelmax==0.or.ilevel<=cic_levelmax)then
         do j=1,np

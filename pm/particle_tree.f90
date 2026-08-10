@@ -726,6 +726,7 @@ subroutine virtual_tree_fine(ilevel)
   use pm_commons
   use amr_commons
   use mpi_mod
+  use dice_commons
   implicit none
   integer::ilevel
   !-----------------------------------------------------------------------
@@ -823,6 +824,8 @@ subroutine virtual_tree_fine(ilevel)
 #ifdef OUTPUT_PARTICLE_POTENTIAL
   particle_data_width=particle_data_width+1
 #endif
+  ! DICE init for gas temperature
+  if(dice_init) particle_data_width=particle_data_width+2
 
   ! Allocate communication buffer in emission
   do icpu=1,ncpu
@@ -1211,6 +1214,7 @@ end subroutine virtual_tree_fine
 subroutine fill_comm(ind_part,ind_com,ind_list,np,ilevel,icpu)
   use pm_commons
   use amr_commons
+  use dice_commons
   implicit none
   !-----------------------------------------------------------------------
   ! This subroutine is called by virtual_tree_fine. It fills the communication
@@ -1344,6 +1348,20 @@ subroutine fill_comm(ind_part,ind_com,ind_list,np,ilevel,icpu)
      end do
   end if
 
+  ! DICE init for gas temperature
+  if(dice_init) then
+     do i=1,np
+        reception(icpu,ilevel)%up(ind_com(i),current_property)=up(ind_part(i))
+     end do
+     current_property = current_property+1
+     if(cosmo) then
+       do i=1,np
+          reception(icpu,ilevel)%up(ind_com(i),current_property)=maskp(ind_part(i))
+       end do
+       current_property = current_property+1
+     endif
+  endif
+
   ! Remove particles from parent linked list
   call remove_list(ind_part,ind_list,ok,np)
   call add_free(ind_part,np)
@@ -1360,6 +1378,7 @@ subroutine empty_comm(ind_com,np,ilevel,icpu)
 #endif
   use pm_commons
   use amr_commons
+  use dice_commons
   implicit none
   !-----------------------------------------------------------------------
   ! This subroutine is called by virtual_tree_fine. It transfers particle
@@ -1537,6 +1556,20 @@ subroutine empty_comm(ind_com,np,ilevel,icpu)
 #endif
      end do
   end if
+
+  ! DICE init for gas temperature
+  if(dice_init) then
+     do i=1,np
+       up(ind_part(i))=emission(icpu,ilevel)%up(ind_com(i),current_property)
+     end do
+     current_property = current_property+1
+     if(cosmo) then
+       do i=1,np
+         maskp(ind_part(i))=emission(icpu,ilevel)%up(ind_com(i),current_property)
+       end do
+       current_property = current_property+1
+     endif
+  endif
 
 end subroutine empty_comm
 !################################################################

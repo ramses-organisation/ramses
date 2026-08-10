@@ -212,7 +212,7 @@ endif
 MODOBJ += poisson_commons.o hydro_parameters.o hydro_commons.o \
           cooling_module.o bisection.o sparse_mat.o clfind_commons.o \
           gadgetreadfile.o write_makefile.o write_patch.o write_gitinfo.o \
-          sink_sn_feedback.o
+          sink_sn_feedback.o dice_commons.o
 ifeq ($(RT),1)
    MODOBJ += rt_parameters.o rt_hydro_commons.o coolrates_module.o \
              rt_spectra.o rt_cooling_module.o rt_flux_module.o
@@ -243,7 +243,8 @@ POISSONOBJ = init_poisson.o phi_fine_cg.o interpol_phi.o force_fine.o \
 HYDROOBJ = init_hydro.o init_flow_fine.o write_screen.o output_hydro.o \
            courant_fine.o godunov_fine.o uplmde.o slope_types.o umuscl.o interpol_hydro.o \
            godunov_utils.o condinit.o hydro_flag.o hydro_boundary.o boundana.o \
-           read_hydro_params.o synchro_hydro_fine.o cooling_module_ism.o
+           read_hydro_params.o synchro_hydro_fine.o cooling_module_ism.o \
+	   init_dice.o
 # RT objects
 RTOBJ = rt_init_hydro.o rt_init_xion.o rt_init.o rt_init_flow_fine.o \
         rt_output_hydro.o rt_godunov_fine.o rt_interpol_hydro.o \
