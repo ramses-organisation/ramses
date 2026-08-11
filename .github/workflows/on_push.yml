@@ -13,3 +13,7 @@ jobs:
   build:
     name: Build Ramses
     uses: ./.github/workflows/build.yaml
+
+  tests:
+    name: Test Ramses
+    uses: ./.github/workflows/tests.yaml
