@@ -35,6 +35,24 @@ Once the tests have completed, a report is generated in a `.pdf` file named `tes
 ./run_test_suite.sh -p 4
 ```
 
+- Run the suite with OpenMP (on 2 threads per MPI rank):
+```
+./run_test_suite.sh -m 2
+```
+Without `-m`, only the tests that opt in via `OPENMP: true` in their
+`config.txt` are built with OpenMP, and they run on a single thread.
+
+- Force OpenMP on or off for every test, whatever their `config.txt` says:
+```
+./run_test_suite.sh -o all
+./run_test_suite.sh -o none
+```
+`-o all` still respects an explicit `OPENMP: false`, which is there for the
+tests known not to work with OpenMP yet. Combine with `-p` and `-m` to choose
+the decomposition, e.g. `-p 2 -m 2 -o all` runs everything on 2 MPI ranks with
+2 threads each. Note that the reference solutions were generated on 2 MPI
+ranks, so running on 2 ranks isolates the effect of the threads.
+
 - Do not delete results data:
 ```
 ./run_test_suite.sh -d
