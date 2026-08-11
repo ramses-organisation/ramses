@@ -350,13 +350,15 @@ subroutine add_gravity_source_terms(ilevel)
   !--------------------------------------------------------------------------
   integer::i,ind,iskip,ind_cell
   real(dp)::d,u,v,w,e_kin,e_prim,d_old,fact
-  real(dp)::req=0_dp
+  real(dp)::req
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
 
+  req=0
+
   ! Add gravity source term at time t with half time step
-!$omp parallel private(ind,iskip,i,ind_cell,d,u,v,w,e_kin,e_prim,d_old,fact)
+!$omp parallel private(ind,iskip,i,ind_cell,d,u,v,w,e_kin,e_prim,d_old,fact,req)
   do ind=1,twotondim
      iskip=ncoarse+(ind-1)*ngridmax
 !$omp do
