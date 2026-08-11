@@ -1,2 +1,4 @@
 FLAGS: NDIM=3 PATCH= SOLVER=hydro USE_TURB=1
 RESTART: true
+# The turbulence driving module uses FFTW and segfaults with OpenMP
+OPENMP: false

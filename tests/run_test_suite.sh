@@ -28,6 +28,8 @@
 #       ./run_test_suite.sh -o -m 2    # same tests, 2 threads
 #       ./run_test_suite.sh -o all     # force OpenMP on ALL tests
 #       ./run_test_suite.sh -o none    # disable OpenMP for ALL tests
+#       A test whose config.txt says "OPENMP: false" is left out even by
+#       -o all, for the tests known not to work with OpenMP yet.
 #   - Do not delete results data:
 #       ./run_test_suite.sh -d
 #   - Run in verbose mode:
@@ -381,6 +383,7 @@ for ((i=0;i<$ntests;i++)); do
    # Decide whether this test is compiled and run with OpenMP.
    #   -o all  -> every test ; -o none -> no test ;
    #   default -> only tests whose config.txt contains "OPENMP: true".
+   testopenmp=$(grep -i '^[[:space:]]*OPENMP[[:space:]]*:' ${TEST_DIRECTORY}/${testname[n]}/config.txt | cut -d ':' -f2 | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]');
    DO_OPENMP=false;
    case $OPENMP_MODE in
       all)
@@ -390,12 +393,16 @@ for ((i=0;i<$ntests;i++)); do
          DO_OPENMP=false;
       ;;
       *)
-         testopenmp=$(grep -i '^[[:space:]]*OPENMP[[:space:]]*:' ${TEST_DIRECTORY}/${testname[n]}/config.txt | cut -d ':' -f2 | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]');
          if [ "$testopenmp" = "true" ] ; then
             DO_OPENMP=true;
          fi
       ;;
    esac
+   # An explicit "OPENMP: false" opts a test out even under -o all, for the
+   # tests that are known not to work with OpenMP yet.
+   if [ "$testopenmp" = "false" ] ; then
+      DO_OPENMP=false;
+   fi
 
    # Set the number of threads to use for this test. A test that does not use
    # OpenMP still has to be built and run, just with a single thread, so that
@@ -561,6 +568,9 @@ cd ${TEST_DIRECTORY};
 latexfile="test_results.tex";
 echo "\documentclass[12pt]{article}" > $latexfile;
 echo "\usepackage{graphicx,color,caption}" >> $latexfile;
+# Captions are justified by default as soon as they span more than one line,
+# which left-aligns the run summary above the table.
+echo "\captionsetup{justification=centering}" >> $latexfile;
 echo "\usepackage[colorlinks=true,linkcolor=blue]{hyperref}" >> $latexfile;
 echo "\topmargin -1.3in" >> $latexfile;
 echo "\textheight 10.1in" >> $latexfile;
