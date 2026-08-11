@@ -171,7 +171,6 @@ subroutine read_hydro_params(nml_ok)
     ischeme = 0
   CASE ('induction')
     ischeme = 1
-
   CASE DEFAULT
     write(*,*)'unknown scheme'
     nml_ok=.false.
@@ -234,6 +233,17 @@ subroutine read_hydro_params(nml_ok)
   ! account for staggered mesh representation
   !--------------------------------------------------
   nexpand_bound=2
+#else
+  !------------------------------------------------
+  ! check the hydro scheme name
+  !------------------------------------------------
+  SELECT CASE (scheme)
+  CASE ('muscl')
+  CASE ('plmde')
+  CASE DEFAULT
+    if(myid==1)write(*,*)'Error: unknown scheme, the hydro solver accepts muscl or plmde'
+    nml_ok=.false.
+  END SELECT
 #endif
 
   !--------------------------------------------------
