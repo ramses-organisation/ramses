@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - dev
+      - openmp
+      - openmp_cicd
   workflow_dispatch:
 
 
