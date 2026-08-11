@@ -20,6 +20,14 @@
 #       ./run_test_suite.sh -m 4
 #   - Run the suite in parallel with MPI+OPENMP (on 4 cpus):
 #       ./run_test_suite.sh -p 2 -m 2
+#   - OpenMP behaviour:
+#       Giving -m runs every test with OpenMP. Without it, only the tests that
+#       opt in via their config.txt (a line "OPENMP: true") are built and run
+#       with OpenMP, the others are built without it.
+#       ./run_test_suite.sh            # the opted-in tests only, 1 thread
+#       ./run_test_suite.sh -o -m 2    # same tests, 2 threads
+#       ./run_test_suite.sh -o all     # force OpenMP on ALL tests
+#       ./run_test_suite.sh -o none    # disable OpenMP for ALL tests
 #   - Do not delete results data:
 #       ./run_test_suite.sh -d
 #   - Run in verbose mode:
@@ -60,7 +68,13 @@ CLEAN_ALL=false;
 SELECTTEST=false;
 # Restart mode: "default" (only tests opted-in via config.txt), "all" or "none".
 RESTART_MODE="default";
-while getopts "cdsp:qm:t:vr" OPTION; do
+# OpenMP mode: "default" (only tests opted-in via config.txt), "all" or "none".
+# Giving -m implies "all", so that -m N keeps its old meaning of running the
+# whole suite with N threads, but an explicit -o always wins, whatever the
+# order of the options.
+OPENMP_MODE="default";
+OPENMP_MODE_SET=false;
+while getopts "cdsp:qm:t:vro" OPTION; do
    case $OPTION in
       c)
          CLEAN_ALL=true;
@@ -99,8 +113,31 @@ while getopts "cdsp:qm:t:vr" OPTION; do
             RESTART_MODE="all";
          fi
       ;;
+      o)
+         # -o takes an optional argument ("all" or "none"), same trick as -r.
+         eval nextarg=\${$OPTIND};
+         if [ "$nextarg" = "none" ] || [ "$nextarg" = "all" ] ; then
+            OPENMP_MODE=$nextarg;
+            OPTIND=$((OPTIND + 1));
+         else
+            OPENMP_MODE="all";
+         fi
+         OPENMP_MODE_SET=true;
+      ;;
    esac
 done
+
+# -m on its own means "run everything with OpenMP", unless -o said otherwise.
+if ! ${OPENMP_MODE_SET} && [ ${OPENMP} -eq 1 ] ; then
+   OPENMP_MODE="all";
+fi
+# Conversely, tests opting in via config.txt need the OpenMP settings exported
+# even when -m was not given, in which case they run on a single thread.
+if [ "${OPENMP_MODE}" = "none" ] ; then
+   OPENMP=0;
+else
+   OPENMP=1;
+fi
 
 #######################################################################
 # Setup paths and commands
@@ -119,8 +156,9 @@ GIT_URL=$(git config --get remote.origin.url | sed 's/git@github.com:/https:\/\/
 GIT_URL=${GIT_URL:0:$((${#GIT_URL}-4))};
 THIS_COMMIT=$(git rev-parse HEAD);
 echo > $LOGFILE;
+# The thread placement settings are the same for every test, only the number of
+# threads varies, and that is set per test inside the loop below.
 if [ ${OPENMP} -eq 1 ]; then
-   export OMP_NUM_THREADS=${NTHREADS}
    export OMP_PLACES=cores
    export OMP_PROC_BIND=true
    export OMP_STACKSIZE=2048M
@@ -340,6 +378,37 @@ for ((i=0;i<$ntests;i++)); do
       ;;
    esac
 
+   # Decide whether this test is compiled and run with OpenMP.
+   #   -o all  -> every test ; -o none -> no test ;
+   #   default -> only tests whose config.txt contains "OPENMP: true".
+   DO_OPENMP=false;
+   case $OPENMP_MODE in
+      all)
+         DO_OPENMP=true;
+      ;;
+      none)
+         DO_OPENMP=false;
+      ;;
+      *)
+         testopenmp=$(grep -i '^[[:space:]]*OPENMP[[:space:]]*:' ${TEST_DIRECTORY}/${testname[n]}/config.txt | cut -d ':' -f2 | tr -d '[:space:]' | tr '[:upper:]' '[:lower:]');
+         if [ "$testopenmp" = "true" ] ; then
+            DO_OPENMP=true;
+         fi
+      ;;
+   esac
+
+   # Set the number of threads to use for this test. A test that does not use
+   # OpenMP still has to be built and run, just with a single thread, so that
+   # the reference solutions stay comparable.
+   TEST_OPENMP=0;
+   TEST_NTHREADS=1;
+   if ${DO_OPENMP} ; then
+      TEST_OPENMP=1;
+      TEST_NTHREADS=${NTHREADS};
+      echo "Test uses OpenMP with ${TEST_NTHREADS} thread(s)" | tee -a $LOGFILE;
+   fi
+   export OMP_NUM_THREADS=${TEST_NTHREADS};
+
    # Set the number of MPI processes to use for this test
    TEST_NPROC=${NPROC};
    if [ ${MPI} -eq 1 ] ; then
@@ -349,7 +418,7 @@ for ((i=0;i<$ntests;i++)); do
          TEST_NPROC=$testnproc;
          echo "Test fixed to ${TEST_NPROC} MPI process(es)" | tee -a $LOGFILE;
       fi
-      RUN_TEST_BASE="mpirun --map-by slot:pe=${NTHREADS} --np ${TEST_NPROC} ${BIN_DIRECTORY}/${EXECNAME}";
+      RUN_TEST_BASE="mpirun --map-by slot:pe=${TEST_NTHREADS} --np ${TEST_NPROC} ${BIN_DIRECTORY}/${EXECNAME}";
    fi
 
    # Initial cleanup
@@ -365,7 +434,7 @@ for ((i=0;i<$ntests;i++)); do
 
    # Compile source
    echo "Compiling source" | tee -a $LOGFILE;
-   MAKESTRING="make EXEC=${EXECNAME} MPI=${MPI} GCOV=${GCOV} ${FLAGS} OPENMP=${OPENMP}";
+   MAKESTRING="make EXEC=${EXECNAME} MPI=${MPI} GCOV=${GCOV} ${FLAGS} OPENMP=${TEST_OPENMP}";
    # if [ ${MPI} -eq 1 ]; then
    #    MAKESTRING="${MAKESTRING} -j ${NPROC}";
    # fi
@@ -510,7 +579,7 @@ echo "Commit hash: \href{${GIT_URL}/commits/${THIS_COMMIT}}{${THIS_COMMIT:0:6}}"
 echo "\end{center}" >> $latexfile;
 echo "\begin{table}[ht]" >> $latexfile;
 echo "\centering" >> $latexfile;
-echo "\caption*{Test run summary using ${NPROC} processes with ${NTHREADS} threads,\\\\except where a test fixes its own NPROC}" >> $latexfile;
+echo "\caption*{Test run summary using ${NPROC} processes with up to ${NTHREADS} threads,\\\\except where a test fixes its own NPROC or does not use OpenMP}" >> $latexfile;
 echo "\begin{tabular}{|r|l|l|l|l|}" >> $latexfile;
 echo "\hline" >> $latexfile;
 echo "~ & Test name & Run time & Total time & Status\\\\" >> $latexfile;

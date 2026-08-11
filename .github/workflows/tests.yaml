@@ -53,3 +53,50 @@ jobs:
             path: |
               tests/test_results.pdf
               tests/test_suite.log
+
+    run-openmp:
+        name: "Tests ${{ matrix.test-family }} (OpenMP, 1 thread)"
+        runs-on: ubuntu-latest
+        # The code is built with OpenMP but run on a single thread, so the
+        # results must match the reference solutions exactly. This checks that
+        # the OpenMP directives do not change the serial answer, without yet
+        # depending on the thread safety of the parallel regions.
+        continue-on-error: true
+        strategy:
+            fail-fast: false
+            matrix:
+                test-family: [hydro,mhd,poisson,rt,sink,star,turb,tracer]
+        steps:
+        - name: Checkout repository
+          uses: actions/checkout@v4
+        - name: Install OpenMPI and FFTW
+          run: sudo apt-get install -y openmpi-bin libopenmpi-dev libfftw3-bin libfftw3-dev
+        - name: Setup python
+          uses: actions/setup-python@v5
+          with:
+            python-version: '3.13'
+            cache: 'pip' # caching pip dependencies
+        - name: Install python dependencies
+          run: pip install -r .github/workflows/requirements.txt
+        - name: Setup tectonic
+          uses: wtfjoke/setup-tectonic@v3
+          with:
+            tectonic-version: 0.15.0
+        - name: Setup headless display for pyvista
+          uses: pyvista/setup-headless-display-action@v3
+        - name: "Run tests ${{ matrix.test-family }} with OpenMP"
+          env:
+            OMPI_MCA_rmaps_base_oversubscribe: "true"
+          run: |
+            cd tests
+            bash run_test_suite.sh -p 4 -o all -v -t ${{ matrix.test-family }}
+        - name: "Upload artifacts  ${{ matrix.test-family }} (OpenMP)"
+          uses: actions/upload-artifact@v4
+          if: always()
+          with:
+            # Deliberately not starting with "test": the workflow that comments
+            # the report on the PR collects every artifact whose name does.
+            name: "openmp-results-${{ matrix.test-family }}"
+            path: |
+              tests/test_results.pdf
+              tests/test_suite.log
