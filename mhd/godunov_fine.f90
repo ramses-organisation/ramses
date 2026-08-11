@@ -355,8 +355,6 @@ subroutine add_gravity_source_terms(ilevel)
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
 
-  req=0
-
   ! Add gravity source term at time t with half time step
 !$omp parallel private(ind,iskip,i,ind_cell,d,u,v,w,e_kin,e_prim,d_old,fact,req)
   do ind=1,twotondim
@@ -372,6 +370,7 @@ subroutine add_gravity_source_terms(ilevel)
         e_kin=0.5d0*d*(u**2+v**2+w**2)
         e_prim=unew(ind_cell,neul)-e_kin
         d_old=max(uold(ind_cell,1),smallr)
+        req=0
         if(strict_equilibrium>0)req=rho_eq(ind_cell)
         fact=(d_old-req)/d*0.5d0*dtnew(ilevel)
         if(ndim>0)then
