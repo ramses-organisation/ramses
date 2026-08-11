@@ -89,7 +89,8 @@ In that directory, you will need:
   - `OPENMP: true` builds and runs the test with OpenMP, using the number of
     threads given by `-m` (one thread if `-m` is not given). Tests without this
     key are built without OpenMP. Use `-o all` or `-o none` to override every
-    test at once.
+    test at once. `OPENMP: false` excludes a test even under `-o all`, for
+    tests that are known not to work with OpenMP yet.
 
 - A namelist: `sedov-3d.nml` (the name needs to be the same as the test directory)
 
