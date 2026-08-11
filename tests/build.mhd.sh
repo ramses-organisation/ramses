@@ -1,4 +1,4 @@
 #!/bin/bash
 
 cd bin
-make NDIM=$1 MPI=1 DEBUG=1 SOLVER=mhd
+make NDIM=$1 MPI=${MPI:-1} OPENMP=${OPENMP:-0} DEBUG=1 SOLVER=mhd
