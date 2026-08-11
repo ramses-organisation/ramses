@@ -1,2 +1,4 @@
 FLAGS: NDIM=3 SOLVER=mhd
 RESTART: true
+# temporarily fix to 2 until fix for this test has been merged (interpol_var #300)
+NPROC: 2
