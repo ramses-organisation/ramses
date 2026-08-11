@@ -1,6 +1,6 @@
 FLAGS: NDIM=2 PATCH= SOLVER=hydro
-#RESTART: true
+RESTART: true
 # This test failed for nproc not equal to 2, at which the solution was generated.
 # Tracer positions and velocities are completely different. Not sure why.
 # To be investigated.
-#NPROC: 2
+NPROC: 2
