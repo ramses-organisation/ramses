@@ -269,7 +269,9 @@ subroutine add_gravity_source_terms(ilevel)
   !--------------------------------------------------------------------------
   integer::i,ind,iskip,ind_cell
   real(dp)::d,u,v,w,e_kin,e_prim,d_old,fact
-  real(dp)::req=0_dp
+  ! req must not be initialised here: an initialiser implies SAVE, and a private
+  ! copy is undefined on entry to the parallel region, so it would be garbage.
+  real(dp)::req
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
@@ -289,6 +291,7 @@ subroutine add_gravity_source_terms(ilevel)
         e_kin=0.5d0*d*(u**2+v**2+w**2)
         e_prim=unew(ind_cell,neul)-e_kin
         d_old=max(uold(ind_cell,1),smallr)
+        req=0
         if(strict_equilibrium>0)req=rho_eq(ind_cell)
         fact=(d_old-req)/d*0.5d0*dtnew(ilevel)
         if(ndim>0)then
