@@ -1,1 +1,4 @@
 FLAGS: NDIM=2 PATCH= SOLVER=hydro
+# MC tracers: init_tracer splits the random generator into ncpu substreams, so
+# the trajectories, and hence the reference, depend on the number of ranks.
+NPROC: 2
