@@ -38,6 +38,6 @@ eta_mag=0.0025
 
 &REFINE_PARAMS
 err_grad_u=0.1
-interpol_var=0
+interpol_var=1
 interpol_type=2
 /

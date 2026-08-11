@@ -176,6 +176,17 @@ subroutine read_hydro_params(nml_ok)
     write(*,*)'unknown scheme'
     nml_ok=.false.
   END SELECT
+
+  ! Force interpol_var==1 for induction scheme.
+  ! This scheme re-imposes the total energy analytically by forcing P=1,
+  ! so total energy is not conserved anyway and interpol_var=0 is meaningless.
+  ! Worse, it makes the coarse-fine magnetic energy correction end up in the
+  ! thermal energy, which spoils the imposed pressure.
+  ! Only relevant when AMR is enabled (otherwise interpol_var in namelist not read).
+  if(ischeme==1.and.nlevelmax>levelmin.and.interpol_var.ne.1)then
+     if(myid==1)write(*,*)'Error: the induction scheme requires interpol_var=1'
+     nml_ok=.false.
+  endif
   !------------------------------------------------
   ! set iriemann
   !------------------------------------------------

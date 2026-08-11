@@ -143,7 +143,10 @@ subroutine upload_fine(ilevel)
                     igrid_son  (icell)=son(igridn(i,ig1)+ih1)
                  end if
               end do
-              if(interpol_var==1.or.ischeme==1)then
+              ! interpol_var==0: conserve *total* energy, magentic energy is converted to heat
+              ! interpol_var==1: recalculate magnetic energy after interpolation,
+              !                  conserve other energies (but not Etot!)
+              if(interpol_var==1)then
                  ! Remove magnetic energy
                  do i=1,nsplit
                     emag=0.125d0*(uold(ind_unsplit(i),neul+idim)+ &
@@ -152,7 +155,7 @@ subroutine upload_fine(ilevel)
                  end do
               endif
               call upl_left(ind_unsplit,igrid_son,idim,nsplit)
-              if(interpol_var==1.or.ischeme==1)then
+              if(interpol_var==1)then
                  ! Add magnetic energy
                  do i=1,nsplit
                     emag=0.125d0*(uold(ind_unsplit(i),neul+idim)+ &
@@ -189,7 +192,8 @@ subroutine upload_fine(ilevel)
                     igrid_son  (icell)=son(igridn(i,ig2)+ih2)
                  end if
               end do
-              if(interpol_var==1.or.ischeme==1)then
+              ! See the comment on the left neighbour above
+              if(interpol_var==1)then
                  ! Remove magnetic energy
                  do i=1,nsplit
                     emag=0.125d0*(uold(ind_unsplit(i),neul+idim)+ &
@@ -198,7 +202,7 @@ subroutine upload_fine(ilevel)
                  end do
               endif
               call upl_right(ind_unsplit,igrid_son,idim,nsplit)
-              if(interpol_var==1.or.ischeme==1)then
+              if(interpol_var==1)then
                  ! Add magnetic energy
                  do i=1,nsplit
                     emag=0.125d0*(uold(ind_unsplit(i),neul+idim)+ &
