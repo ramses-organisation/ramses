@@ -42,6 +42,7 @@ end subroutine add_list
 subroutine add_free(ind_part,np)
   use amr_commons
   use pm_commons
+  use dice_commons
   implicit none
   integer, intent(in)::np
   integer,dimension(1:nvector), intent(in)::ind_part
@@ -74,6 +75,11 @@ subroutine add_free(ind_part,np)
         end do
      end if
   end if
+  if(dice_init) then
+     do j=1,np
+        up(ind_part(j))=0.0
+     end do
+  endif
 
 !$omp critical(omp_particle_list)
   do j=1,np
@@ -103,6 +109,7 @@ end subroutine add_free
 subroutine add_free_cond(ind_part,ok,np)
   use amr_commons
   use pm_commons
+  use dice_commons
   implicit none
   integer::np
   integer,dimension(1:nvector)::ind_part
@@ -144,6 +151,13 @@ subroutine add_free_cond(ind_part,ok,np)
         end do
      end if
   end if
+  if(dice_init) then
+     do j=1,np
+        if(ok(j))then
+           up(ind_part(j))=0.0
+        endif
+     end do
+  endif
 
 !$omp critical(omp_particle_list)
   do j=1,np

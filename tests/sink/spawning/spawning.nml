@@ -52,7 +52,6 @@ p_region=0.030361026190591216
 /
 
 &OUTPUT_PARAMS
-noutput=1
 tout=0.4
 /
 
@@ -69,8 +68,8 @@ T_eos=4.2194
 /
 
 &TURB_PARAMS
-turb=.true.
-turb_type=1         ! 1=forced evolving, 2=forced fixed, 3=decaying
+driven_turb=.true.
+turb_evolving=.true. ! .false. = one static field for the whole run
 turb_seed=1         ! -1 = random
 comp_frac=1       ! compressive fraction
 forcing_power_spectrum='power_law' !power_law, parabolic, konstandin, test

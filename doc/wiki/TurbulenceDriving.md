@@ -69,15 +69,137 @@ fraction $\chi$.
 
 | Variable name         | Fortran type | Default value | Notation | Description |
 |:----------------------|:------------ |:------------- |:---------| :------------------------ |
-| `turb`                | `boolean`    | `.false.`     |          | Turn on or off driving
+| `driven_turb`        | `boolean`    | `.false.`     |          | Turn on or off driving
+| `turb`                | `boolean`    | `.false.`     |          | Deprecated, replaced by `driven_turb`
 | `turb_seed`           | `integer`    | `-1`          |          | Random number generator seed. -1 = random
-| `turb_type`           | `integer`    | `1`           |          | How the driving changes over time. 1=driven evolving, 3=decaying
-| `instant_turb`        | `boolean`    | `.true.`      |          | Generate initial turbulence before start
+| `turb_evolving`          | `boolean`    | `.true.`      |          | Whether the driving field evolves over time. `.true.` follows the Ornstein-Uhlenbeck process, `.false.` holds one static field for the whole run. See the "Driving modes" section below
+| `instant_turb`        | `boolean`    | `.true.`      |          | Evolve the field to saturation before the run starts. Recommended when `turb_evolving=.true.`. See the "Driving modes" section below
 | `comp_frac`           | `float`      | `0.3333`      |  $\chi$  | The weight of compressive over solenoidal modes
 | `turb_T`              | `float`      | `1`           |  $T$     | Turbulent velocity auto-correlation time in code units.
 | `turb_Ndt`            | `integer`    | `100`         |  $T/dt$  | Number of timesteps per auto-correlation time |
-| `turb_rms`            | `float`      | `1`           |  $f_\mathrm{rms}$ |Root-mean-square  turbulent  forcing  in  code  units. |
+| `turb_rms`            | `float`      | `1`           |  $f_\mathrm{rms}$ |Root-mean-square  turbulent  forcing  in  code  units. Only used when `driven_turb=.true.`; a run that only uses `initial_turb` takes its amplitude from `initial_turb_vrms` instead. |
+| `turb_exact_rms`      | `boolean`    | `.false.`     |          | Always use a forcing rms of exactly $\sqrt{N_{dim}}f_\mathrm{rms}$ instead of letting it follow the random draw. Forced on when `turb_evolving=.false.`. See the "Driving modes" section below
 | `turb_min_rho`        | `float`      | `1d-50`       |          | Minimum density for turbulence. Not forcing is added onto cellswith a density less than this value.
 | `forcing_power_spectrum`  | `string`     | `parabolic` | $F_0$   | Power spectrum type of the forcing, which describes the relative strength of individual modes. Options are: power_law, parabolic, konstandin
+| `initial_turb`        | `boolean`    | `.false.`     |          | Add a turbulent velocity field to the initial conditions. Independent of `driven_turb`. See the "Turbulent initial velocity field" section below
+| `initial_turb_vrms`   | `float`      | `0`           |          | Velocity dispersion $\vert v\vert_\mathrm{rms}$ of that initial field, in code units. A velocity, not an acceleration: it is not interchangeable with `turb_rms`
+| `initial_turb_spectrum` | `string`   | `power_law` |  | Power spectrum of the initial velocity field. Broadband by default, unlike the driving, which usually acts on a few large-scale modes
+| `initial_turb_comp_frac` | `float`   | `0.3333`      |          | Compressive fraction of the initial velocity field. The default spreads the power evenly over the one longitudinal and two transverse degrees of freedom
+
+## Driving modes ##
+
+The `turb_evolving` parameter selects how the driving field behaves over time. The
+same turbulent field is generated either way; what changes is what happens to it
+afterwards.
+
+### `turb_evolving=.true.` — evolving driving ###
+
+The default. The field evolves through the Ornstein-Uhlenbeck process described
+above, being advanced every $dt = T/N_{dt}$ and linearly interpolated in between,
+and is applied as an acceleration at every timestep. The timestep is capped at
+$T/N_{dt}$ so that no step skips over a field update.
+
+The rms of the field fluctuates by a few percent about
+$\sqrt{N_{dim}}\,f_{\mathrm{rms}}$ from one update to the next. This is
+intended: $f_{\mathrm{rms}}$ sets the *time-averaged* amplitude, and the scatter
+averages out over a run. Setting `turb_exact_rms=.true.` instead pins the rms to
+exactly $\sqrt{N_{dim}}\,f_{\mathrm{rms}}$ at every step, so the driving
+pattern keeps decorrelating while the injected amplitude stays constant.
+
+An evolving acceleration field grown from rest starts at only $\sqrt{1-e^{-2dt/T}}\approx14\%$
+of its saturated amplitude and needs about one autocorrelation time $T$ to build
+up. The `instant_turb` option (on by default) evolves the field for several $T$
+before the run starts, so that it begins already saturated. Leaving it on is
+strongly recommended here, especially for runs shorter than or comparable to $T$,
+which would otherwise spend most of their length in the spin-up transient.
+
+### `turb_evolving=.false.` — static driving ###
+
+One acceleration field is generated at startup and then held, unchanged, for the whole run.
+It is applied as an acceleration at every timestep, exactly as above.
+
+Because the field is static, the scatter that would average out for an evolving
+field instead becomes a systematic amplitude bias for the whole simulation. To
+avoid that, `turb_exact_rms` is forced on in this mode, so the field is
+renormalised at startup to an rms of exactly
+$\sqrt{N_{dim}}\,f_{\mathrm{rms}}$. `instant_turb` has no useful effect here.
+
+Taken together, `turb_evolving` and `turb_exact_rms` are two independent axes — how
+the driving *pattern* behaves, and whether its *amplitude* is pinned:
+
+| | `turb_exact_rms=.false.` | `turb_exact_rms=.true.` |
+|:---|:---|:---|
+| `turb_evolving=.true.` | Pattern and amplitude both fluctuate (the raw Ornstein-Uhlenbeck process) | Pattern decorrelates at constant injected amplitude |
+| `turb_evolving=.false.` | Not available, forced to the column on the right | Static pattern at exactly the requested amplitude |
+
+:::{admonition} Deprecated: `turb_type`
+:class: warning
+`turb_type` replaced both of the parameters above and is deprecated. It is still
+accepted and translated automatically, with a warning: 1 becomes
+`turb_evolving=.true.`, 2 becomes `turb_evolving=.false.`, and 3 becomes the turbulent
+initial velocity field described below. Since `turb_type=3` drew from the driving
+spectrum, the translation also copies `forcing_power_spectrum` and `comp_frac`
+onto `initial_turb_spectrum` and `initial_turb_comp_frac`, so a legacy namelist
+keeps its behaviour rather than picking up the new defaults.
+:::
+
+## Turbulent initial velocity field ##
+
+Setting `initial_turb=.true.` starts the simulation from a turbulent
+velocity field with dispersion $|v|_{\mathrm{rms}} =$ `initial_turb_vrms`. It is
+built by the same field generator as the driving, but it is a single draw rather
+than a process: it is applied exactly once, by `init_flow_fine`, and is not
+re-applied on a restart.
+
+None of the driving parameters enter it. The initial field is drawn
+**independently**, so the two are uncorrelated, and it has its own spectrum and
+compressive fraction, `initial_turb_spectrum` and `initial_turb_comp_frac`,
+with defaults of their own. Starting from broadband, mixed turbulence and then
+pushing it with a purely compressive single mode, for instance, is
+`initial_turb_spectrum='power_law'` with `initial_turb_comp_frac=0.5`, and
+`forcing_power_spectrum='test'` with `comp_frac=1.0`.
+
+The remaining driving parameters have no initial-field equivalent, and do not
+need one. `turb_rms` sets a forcing amplitude, whereas here the amplitude comes
+from `initial_turb_vrms` alone. `turb_T` and `turb_Ndt` describe the timescale
+of an evolving process, and `turb_evolving`, `instant_turb` and `turb_exact_rms`
+describe how the field changes or is held over time - none of which applies to a
+field used once.
+
+This is **independent of the driving**, which gives three useful combinations:
+
+| `driven_turb` | `initial_turb` | Result |
+|:---|:---|:---|
+| `.true.`  | `.false.` | Driving only: the gas starts at rest and is stirred. |
+| `.false.` | `.true.`  | Decaying: the gas starts turbulent and is never driven. |
+| `.true.`  | `.true.`  | Driven, starting from an already turbulent field rather than from rest. |
+
+Note that `initial_turb_vrms` is a **velocity** and `turb_rms` is an
+**acceleration**; they are not interchangeable. A driven run only reaches a
+saturation velocity set by driving against dissipation, typically far below
+$f_{\mathrm{rms}}$, so reusing a driven `turb_rms` value as `initial_turb_vrms`
+would start the box at a wildly supersonic Mach number and a correspondingly tiny
+CFL timestep. Choose `initial_turb_vrms` from the velocity dispersion, or Mach
+number, you actually want.
+
+
+## Decaying turbulence from a developed field ###
+
+The initial field above is a single draw of the Ornstein-Uhlenbeck process, not a
+saturated turbulent state, so it has neither the density structure nor the
+velocity correlations of fully developed turbulence. To study freely decaying
+turbulence it is usually better to develop the turbulence self-consistently
+first:
+
+1. Run with `driven_turb=.true.` and `turb_evolving=.true.` (keep `instant_turb` on) until the
+   turbulence is fully developed — as a rule of thumb a few autocorrelation times
+   $T$, long enough for the density structure and velocity correlations to build
+   up. Write an output at the point you want the decay to begin.
+2. Restart from that output with `driven_turb=.false.`.
+
+No forcing is then applied, and the initial velocity field is not re-applied on a
+restart, so the developed field simply decays under its own dissipation from the
+state in the restart file.
+
 
 [^ref]: adapted from Brucy et al. 2024.

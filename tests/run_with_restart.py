@@ -10,133 +10,226 @@ import shutil
 import glob
 
 """
-This script modifies the namelist file of a test to prepare for a restart test.
-It performs the following steps:
-1. Modify the namelist file to divide the output time by 2 and create a backup.
-2. Modify the namelist file to add a second output time and set nrestart to 2 (or stop at the middle if more that one output time).
-3. Clean up by recovering the original namelist file and, if needed, copy output_00003 to output_00002.
+Prepare a RAMSES test for a restart test and clean up afterwards.
 
-Usage:
-python run_with_restart.py -s <step> -t <test_name>
+The idea of a restart test is to reproduce, in two chunks joined by a restart,
+exactly the same final output(s) that a single uninterrupted run would produce.
+The test suite invokes this script in three steps around two runs of the code:
+
+    python run_with_restart.py -s 1 -t <test_name>   # prepare namelist for shortened run
+    <run the code>                                   # run 1 -> stops mid-way
+    python run_with_restart.py -s 2 -t <test_name>   # prepare namelist for restart
+    <run the code>                                   # run 2 -> reached original end time
+    python run_with_restart.py -s 3 -t <test_name>   # restore namelist + renumber outputs
 
 Where:
--s <step> is the step to run (1, 2, or 3)
--t <test_name> is the name of the test (without .nml extension)
+  -s <step> is the step to run (1, 2 or 3)
+  -t <test_name> is the test name
 
-The script uses the f90nml library to read and write Fortran namelist files.
+Supported &OUTPUT_PARAMS options
+--------------------------------
+The output schedule can be driven by any combination of:
+  tout / aout            explicit output times / expansion factors (scalar or list)
+  tend / aend            end time / end expansion factor (appended as final tout/aout)
+  delta_tout/delta_aout  periodic outputs in time / expansion factor
+  write_conservative     conservative outputs -> read_conservative is set on restart
+
+NOT supported: foutput (unless 1)
+
+These mirror read_output_params() in amr/read_params.f90 and the output logic in
+amr/amr_step.f90 / amr/update_time.f90.
+
+Strategy
+--------
+Whenever possible, we choose the restart point from the options in the default
+namelist. When there is no such candidate, an additional output is created and
+output numbers are renumbered to match the original in the cleanup phase.
 """
 
-def apply_output_factor(nml, factor, add_extra_output_time=False):
-    """
-    Apply a factor to the output time in the namelist.
-    This function modifies the namelist in place.
 
-    Parameters
-    ---------
-    nml: namelist
-        Namelist object to modify in place
-    factor: float
-        Factor to apply to the existing output
-    add_extra_output_time: bool
-        Add the modified output time after the existing one instead of
-        modifying it.
+def _as_list(value):
+    """Return a namelist entry as a flat list of finite values."""
+    if value is None:
+        return []
+    if isinstance(value, (list, tuple)):
+        return [x for x in value if x is not None]
+    return [value]
+
+
+def analyze_schedule(output_params):
     """
-    if "tout" in nml["output_params"]:
-        tout = nml["output_params"]["tout"]
-        if add_extra_output_time:
-            nml["output_params"]["tout"] = [tout, tout * factor]
-        else:
-            nml["output_params"]["tout"] = tout * factor
-    elif "aout" in nml["output_params"]:
-        aout = nml["output_params"]["aout"]
-        if add_extra_output_time:
-            nml["output_params"]["aout"] = [aout, aout * factor]
-        else:
-            nml["output_params"]["aout"] = aout * factor
+    Reconstruct, from the &OUTPUT_PARAMS block, the information needed to split
+    the run. Mirrors the termination logic of read_output_params/update_time.
+
+    Returns a dict with:
+      var    : 'time' or 'expansion' -- the controlling variable
+      end    : value of that variable at which the run terminates
+      end_type   : how the end is imposed ('tend'/'aend'/'tout'/'aout')
+      candidates : sorted intermediate reference outputs strictly in (0, end)
+    """
+    tout = _as_list(output_params.get("tout"))
+    aout = _as_list(output_params.get("aout"))
+    tend = output_params.get("tend", 0) or 0
+    aend = output_params.get("aend", 0) or 0
+    delta_tout = output_params.get("delta_tout")
+    delta_aout = output_params.get("delta_aout")
+    foutput = output_params.get("foutput")
+    if (foutput not in [None,1]):
+        print("ERROR: foutput!=1 not supported for restarts")
+        return
+
+    # Store information about which namelist param is controling the end of the run
+    # Remark that aend/tend take precedence over tout/aout
+    if aend > 0:
+        var, end, end_type = "expansion", aend, "aend"
+    elif tend > 0:
+        var, end, end_type = "time", tend, "tend"
+    elif tout:
+        var, end, end_type = "time", max(tout), "tout"
+    elif aout:
+        var, end, end_type = "expansion", max(aout), "aout"
     else:
-        print("ERROR: noutput found but tout or aout not found in output_params")
+        raise ValueError(
+            "Could not determine the simulation end from &OUTPUT_PARAMS "
+            "(need one of tout, aout, tend or aend)."
+        )
+    # TODO: support for nstepmax
 
-    return nml
+    # Determine possible restart points from expected outputs
+    candidates = set()
+
+    # list explicit intermediate output points
+    if end_type in ['tout','aout']:
+        output_points = _as_list(output_params.get(end_type))
+        output_points = sorted(output_points)
+        output_points = [i for i in output_points if i>0] #remove 0 if present
+        for t in output_points[:-1]:
+            candidates.add(t)
+
+    # predicted output times when using delta
+    if (var == "time"):
+        delta = delta_tout
+    else:
+        delta = delta_aout
+    if delta is not None:
+        k = 1
+        while k * delta < end:
+            candidates.add(k * delta)
+            k += 1
+
+    return dict(
+        end=end,
+        end_type=end_type,
+        candidates=sorted(candidates),
+        foutput=foutput)
+
+
+def decide_split(schedule):
+    """Pick where run 1 should stop and if that creates an extra output."""
+    candidates = schedule["candidates"]
+    offset = 0
+    if candidates:
+        # that the scheduled output in the middle of the list of candidates
+        # -> continuous numbering.
+        split = candidates[(len(candidates) - 1) // 2]
+    else:
+        # No intermediate reference output: stop at the mid-point
+        # if outputting at each coarse step, then the new end time is a pre-existing output
+        split = schedule["end"] / 2.0
+        if (schedule["foutput"]!=1): offset = 1
+    return split, offset
+
+
+def impose_end(output_params, schedule, split):
+    """Modify the &OUTPUT_PARAMS block in place so the run terminates at `split`."""
+    end_type = schedule["end_type"]
+
+    if end_type in ("tend", "aend"):
+        output_params[end_type] = split
+    elif end_type in ("tout", "aout"):
+        # insert new end time in list if not present (this can be the case when using delta)
+        updated_params = _as_list(output_params[end_type])
+        if split not in updated_params:
+            updated_params.append(split)
+        updated_params = sorted(updated_params)
+        # cut the output list at the new end time
+        i_end = updated_params.index(split)
+        updated_params = updated_params[0:i_end+1]
+        output_params[end_type] = updated_params
+
+
+def _list_output_numbers():
+    """Sorted list of existing output_XXXXX directory numbers."""
+    nums = []
+    for path in glob.glob("output_*"):
+        tail = path.split("_")[-1]
+        if os.path.isdir(path) and tail.isdigit():
+            nums.append(int(tail))
+    return sorted(nums)
 
 
 def step_1(test_name):
-    """
-    Step 1: Modify the namelist file to
-    divide the output time by 2 and create a backup.
-    """
-
+    """Shorten the run so it stops mid-way, backing up the original namelist."""
     nml_path = f"{test_name}.nml"
 
-    # backup the original namelist file
-    if os.path.exists(nml_path):
-        shutil.copyfile(nml_path, nml_path + "_backup")
-    else:
+    if not os.path.exists(nml_path):
         print(f"Warning: {nml_path} does not exist")
         return
 
+    shutil.copyfile(nml_path, nml_path + "_backup")
+
     nml = f90nml.read(nml_path)
+    schedule = analyze_schedule(nml["output_params"])
+    split, offset = decide_split(schedule)
+    impose_end(nml["output_params"], schedule, split)
 
-    if "noutput" in nml["output_params"]:
-        assert(nml["output_params"]["noutput"] == 1)
-        nml = apply_output_factor(nml, 0.5)
-    elif "tout" in nml["output_params"]:
-        nout = len(nml["output_params"]["tout"])
-        nml["output_params"]["tout"] = nml["output_params"]["tout"][0:int(nout/2)]
-    else:
-        assert("tend" in nml["output_params"])
-        assert("foutput" in nml["output_params"])
-        tend = nml["output_params"]["tend"]
-        nml["output_params"]["tend"] = tend / 2
+    f90nml.write(nml, nml_path, force=True)
 
-    #nml["output_params"]["write_conservative"] = True
-
-    f90nml.write(nml=nml, nml_path=nml_path, force=True)
 
 def step_2(test_name):
-    """
-    Step 2: Modify the namelist file to
-    add a second output time and set nrestart to 2.
-    """
-
+    """Restore the full output schedule and restart from the last output written."""
     nml_path = f"{test_name}.nml"
-    nml = f90nml.read(nml_path)
-    nml_orig = f90nml.read(nml_path + "_backup")
 
-    # Find the last output time
-    all_outputs = sorted(glob.glob("output_*"))
-    last_output = int(all_outputs[-1].split("_")[-1])
-    print(f"Restarting from output {last_output}")
+    # Start from the original schedule so the second run reproduces it exactly.
+    nml = f90nml.read(nml_path + "_backup")
+    output_params = nml["output_params"]
+
+    outputs = _list_output_numbers()
+    if not outputs:
+        print("ERROR: no output_XXXXX directory found to restart from")
+        return
+    last_output = outputs[-1]
+
     nml["run_params"]["nrestart"] = last_output
 
-    if "noutput" in nml["output_params"]:
-        nml["run_params"]["nrestart"] = 2
-        nml["output_params"]["noutput"] = 2
-        nml = apply_output_factor(nml, 2, add_extra_output_time=True)
-    elif "tout" in nml["output_params"]:
-        # recover original output list from namelist
-        nml["output_params"]["tout"] = nml_orig["output_params"]["tout"]
-    else:
-        tend = nml["output_params"]["tend"]
-        nml["output_params"]["tend"] = tend * 2
+    # Conservative outputs must be read back as conservative on restart.
+    if bool(output_params.get("write_conservative", False)):
+        output_params["read_conservative"] = True
 
-    #nml["output_params"]["read_conservative"] = True
-    ##if "write_conservative" in nml_orig["output_params"]:
-    #nml["output_params"]["write_conservative"] = False #nml_orig["output_params"]["write_conservative"]
+    f90nml.write(nml, nml_path, force=True)
 
-    f90nml.write(nml=nml, nml_path=nml_path, force=True)
 
 def step_3(test_name):
-    """
-    Step 3: Cleaning: recover the original namelist file
-    and, if needed, copy output_00003 to output_00002.
-    """
-
+    """Restore the original namelist and, if needed, renumber the outputs."""
     nml_path = f"{test_name}.nml"
-    os.rename(nml_path + "_backup", nml_path)
+    backup = nml_path + "_backup"
 
-    nml = f90nml.read(nml_path)
+    # Determine (from the untouched original) whether run 1 created an extra
+    # output that must be removed to match a normal run's numbering.
+    offset = 0
+    if os.path.exists(backup):
+        sched = analyze_schedule(f90nml.read(backup)["output_params"])
+        _, offset = decide_split(sched)
+        os.rename(backup, nml_path)
 
-    if "noutput" in nml["output_params"] and os.path.exists("output_00003"):
+    if offset == 0:
+        # nothing to do, an intermediate snapshot was outputted by the original namelist
+        return
+
+    # offset == 1: the original run only produced the start and end snapshot,
+    # and the restart produced an extra mid-way output. We remove output 2
+    # and rename output_00003 -> output_00002
+    if os.path.exists("output_00003"):
         try:
             # Remove output 2
             shutil.rmtree(f"output_00002")
@@ -156,17 +249,12 @@ def step_3(test_name):
 
 if __name__ == "__main__":
     # Parse command line arguments
-    parser = argparse.ArgumentParser(description='Prepare the test for restarts.')
-    parser.add_argument("-s", "--step", help="Step to run", type=int, default=0)
+    parser = argparse.ArgumentParser(description="Prepare a test for restarts.")
+    parser.add_argument("-s", "--step", help="Step to run (1, 2 or 3)", type=int, default=0)
     parser.add_argument("-t", "--test_name", help="Test name", type=str)
-
     args = parser.parse_args()
 
-    steps = {
-        1: step_1,
-        2: step_2,
-        3: step_3
-    }
+    steps = {1: step_1, 2: step_2, 3: step_3}
 
     # Run the specified step
     if args.step in steps:

@@ -13,7 +13,9 @@ subroutine synchro_hydro_fine(ilevel,dteff,which_force)
   real(dp)::dteff
   integer::which_force !gravity=1, turbulence=2
   !-------------------------------------------------------------------
-  ! Update velocity  from gravitational acceleration
+  ! Update velocity as v = v + acceleration*dteff, where the acceleration
+  ! is either the gravitational acceleration f (which_force=1) or the
+  ! turbulent forcing acceleration fturb (which_force=2)
   !-------------------------------------------------------------------
   integer::ncache,ngrid,i,igrid,iskip,ind
   integer,dimension(1:nvector),save::ind_grid,ind_cell
@@ -21,7 +23,7 @@ subroutine synchro_hydro_fine(ilevel,dteff,which_force)
 !$omp threadprivate(ind_grid,ind_cell)
 
 #if USE_TURB==1
-  if(.not. (poisson.or.turb))return
+  if(.not. (poisson.or.driven_turb))return
 #else
   if(.not. poisson)return
   if(numbtot(1,ilevel)==0)return
@@ -82,7 +84,7 @@ subroutine synchydrofine1(ind_cell,ncell,dteff,which_force)
 
 !$omp threadprivate(pp)
 
-  ! Compute internal + magnetic + radiative energy
+  ! Substract kinetic energy from total energy
   do i=1,ncell
      pp(i)=uold(ind_cell(i),neul)
   end do
@@ -95,7 +97,7 @@ subroutine synchydrofine1(ind_cell,ncell,dteff,which_force)
      uold(ind_cell(i),neul)=pp(i)
   end do
 
-  ! Update momentum
+  ! Add force through v += f dt and update momentum in uold
   do idim=1,ndim
 #if USE_TURB==1
      if (which_force==2) then
@@ -125,7 +127,7 @@ subroutine synchydrofine1(ind_cell,ncell,dteff,which_force)
      end do
   end do
 
-  ! Update total energy
+  ! Add updated kinetic energy back to total energy
   do i=1,ncell
      pp(i)=uold(ind_cell(i),neul)
   end do

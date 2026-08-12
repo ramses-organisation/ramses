@@ -1,1 +1,2 @@
 FLAGS: NDIM=3 PATCH= SOLVER=hydro
+RESTART: true

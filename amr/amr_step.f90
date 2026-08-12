@@ -304,7 +304,7 @@ recursive subroutine amr_step(ilevel,icount)
 #if USE_TURB==1
   ! Compute turbulent forcing
                                call timer('turb','start')
-  if (turb .and. turb_type/=3) then
+  if (driven_turb) then
      ! Calculate turbulent acceleration on each cell in this level
      call calc_turb_forcing(ilevel)
   end if
@@ -427,7 +427,7 @@ recursive subroutine amr_step(ilevel,icount)
 #if USE_TURB==1
      ! Compute turbulent forcing
                                call timer('turb','start')
-     if (turb .AND. turb_type/=3) then
+     if (driven_turb) then
         ! Euler step, adding turbulent acceleration
         call synchro_hydro_fine(ilevel,dtnew(ilevel),2)
      end if

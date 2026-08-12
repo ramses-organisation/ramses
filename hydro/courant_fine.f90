@@ -86,7 +86,7 @@ subroutine courant_fine(ilevel)
         end if
 
 #if USE_TURB==1
-        if (turb .AND. turb_type/=3) then
+        if (driven_turb) then
            do idim=1,ndim
               do i=1,nleaf
                  gg(i,idim)=gg(i,idim)+fturb(ind_leaf(i),idim)

@@ -720,13 +720,15 @@ subroutine cmp_energy_components(ind_cell,ncell,rho,ekin,erad,emag)
   emag=0d0
 
   ! Kinetic energy
-  do idim=1,ndim
-     do i=1,ncell
-        ekin(i)=ekin(i)+0.5d0*uold(ind_cell(i),idim+1)**2
-     end do
-  end do
   do i=1,ncell
-     ekin(i)=ekin(i)/rho(i)
+     ekin(i)=uold(ind_cell(i),2)**2
+#if NDIM > 1 || SOLVERmhd
+     ekin(i)=ekin(i)+uold(ind_cell(i),3)**2
+#endif
+#if NDIM > 2 || SOLVERmhd
+     ekin(i)=ekin(i)+uold(ind_cell(i),4)**2
+#endif
+     ekin(i)=0.5d0 * ekin(i)/rho(i)
   end do
 
   ! Non-thermal energy

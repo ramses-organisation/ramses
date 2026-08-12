@@ -3,15 +3,9 @@ subroutine turb_check_time
    use turb_commons
    implicit none
 
-   real(kind=dp) :: turb_tfrac
-
-   if (turb_type == 3) then
-      ! decaying turbulence
-      afield_now = 0.0_dp
-      fturb = 0.0_dp
-      turb_next_time = huge(turb_next_time) / 10.0d0
-   else if (turb_type == 1) then
-      ! evolving forced turbulence
+   ! A non-evolving field is the static one chosen by init_turb and is
+   ! deliberately left untouched for the whole run
+   if (turb_evolving) then
       do
          if (t >= turb_next_time) then
 #ifndef WITHOUTMPI
@@ -30,11 +24,12 @@ subroutine turb_check_time
          end if
       end do
 
-      ! Time fraction since last turbulence field evaluation
-      turb_tfrac = real((t - turb_last_time) / turb_dt, dp)
-
       ! interpolate for current time between last and next turb field
-      afield_now = (1.0_dp - turb_tfrac)*afield_last + turb_tfrac*afield_next
+      call turb_interpolate_now
+
+      ! Optionally hold the injected rms exactly on turb_rms while the
+      ! pattern keeps evolving (needs to be done after interpolation)
+      if (turb_exact_rms) call turb_normalise_rms
    end if
 
 end subroutine turb_check_time
