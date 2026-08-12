@@ -2,3 +2,13 @@ FLAGS: NDIM=2 PATCH= SOLVER=hydro
 # MC tracers: init_tracer splits the random generator into ncpu substreams, so
 # the trajectories, and hence the reference, depend on the number of ranks.
 NPROC: 2
+# MC tracers are not reproducible with more than one thread, so they can never
+# match a stored reference. move_tracer_fine is called outside the parallel
+# region, so the sequence of ranf(tracer_seed,...) draws is deterministic, but
+# the tracers are walked in particle-list order and that order is thread
+# dependent: the same random numbers go to different tracers. Measured on 2
+# ranks x 2 threads, two runs of the same binary put 99.8% of the tracers in a
+# different cell, while the gas output was bit-identical. Re-enable once each
+# tracer draws from a substream seeded by its own identity rather than from one
+# shared stream in traversal order.
+OPENMP: false

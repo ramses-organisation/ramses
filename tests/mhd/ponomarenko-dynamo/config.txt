@@ -2,3 +2,7 @@ FLAGS: NDIM=3 SOLVER=mhd
 RESTART: true
 # temporarily fix to 2 until fix for this test has been merged (interpol_var #300)
 NPROC: 2
+# Same reason: without the interpol_var fix the reference pressure is not 0, so
+# the test is sensitive to roundoff and fails under OpenMP. Re-enable together
+# with removing the NPROC pin once #300 is merged.
+OPENMP: false
