@@ -521,13 +521,19 @@ subroutine power_rms_norm(power_in, P)
    real(kind=dp), intent(in)  :: power_in(0:TGRID_X,&
                                          &0:TGRID_Y,0:TGRID_Z)
    real(kind=dp), intent(out) :: P  ! Normalization constant
-   complex(kind=cdp)           :: complex_field(1:NDIM, 0:TGRID_X,&
-                                               &0:TGRID_Y, 0:TGRID_Z)
+   ! These are allocated rather than declared with a fixed size: at TURB_GS=64
+   ! they hold 18 MB together, and gfortran -fopenmp implies -frecursive, which
+   ! puts local arrays on the stack. That overflows the default stack and
+   ! segfaults, even on a single thread, since the master thread uses the
+   ! process stack and is not covered by OMP_STACKSIZE.
+   complex(kind=cdp), allocatable :: complex_field(:,:,:,:)
                                                  ! Complex field to transform
-   real(kind=dp)              :: real_field(1:NDIM, 0:TGRID_X,&
-                                           &0:TGRID_Y, 0:TGRID_Z)
+   real(kind=dp), allocatable     :: real_field(:,:,:,:)
                                                  ! Result of transforms
    integer                    :: d               ! Dimension counter
+
+   allocate(complex_field(1:NDIM, 0:TGRID_X, 0:TGRID_Y, 0:TGRID_Z))
+   allocate(real_field(1:NDIM, 0:TGRID_X, 0:TGRID_Y, 0:TGRID_Z))
 
    do d=1,NDIM
       complex_field(d,:,:,:) = cmplx(power_in, kind=cdp)
@@ -542,6 +548,9 @@ subroutine power_rms_norm(power_in, P)
 #endif
 
    P = sqrt(sum(real_field**2)/size(real_field))
+
+   deallocate(complex_field)
+   deallocate(real_field)
 
 end subroutine power_rms_norm
 

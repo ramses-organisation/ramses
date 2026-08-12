@@ -35,6 +35,24 @@ Once the tests have completed, a report is generated in a `.pdf` file named `tes
 ./run_test_suite.sh -p 4
 ```
 
+- Run the suite with OpenMP (on 2 threads per MPI rank):
+```
+./run_test_suite.sh -m 2
+```
+Without `-m`, only the tests that opt in via `OPENMP: true` in their
+`config.txt` are built with OpenMP, and they run on a single thread.
+
+- Force OpenMP on or off for every test, whatever their `config.txt` says:
+```
+./run_test_suite.sh -o all
+./run_test_suite.sh -o none
+```
+`-o all` still respects an explicit `OPENMP: false`, which is there for the
+tests known not to work with OpenMP yet. Combine with `-p` and `-m` to choose
+the decomposition, e.g. `-p 2 -m 2 -o all` runs everything on 2 MPI ranks with
+2 threads each. Note that the reference solutions were generated on 2 MPI
+ranks, so running on 2 ranks isolates the effect of the threads.
+
 - Do not delete results data:
 ```
 ./run_test_suite.sh -d
@@ -81,6 +99,16 @@ The first step is to create a new directory `sedov-3d` in one of the `hydro`, `m
 In that directory, you will need:
 
 - A `config.txt` file: usually just contains the Makefile flags, e.g. `FLAGS: NDIM=3 PATCH= SOLVER=hydro`
+
+  Some optional keys can be added on their own lines:
+  - `RESTART: true` runs the test through the restart mechanism (see below).
+  - `NPROC: 2` pins the test to a fixed number of MPI processes, overriding the
+    `-p` given to `run_test_suite.sh`. Only needed for tests whose result depends on the number of MPI ranks, for example due to random generators (e.g. tracer tests). Avoid using this.
+  - `OPENMP: true` builds and runs the test with OpenMP, using the number of
+    threads given by `-m` (one thread if `-m` is not given). Tests without this
+    key are built without OpenMP. Use `-o all` or `-o none` to override every
+    test at once. `OPENMP: false` excludes a test even under `-o all`, for
+    tests that are known not to work with OpenMP yet.
 
 - A namelist: `sedov-3d.nml` (the name needs to be the same as the test directory)
 
