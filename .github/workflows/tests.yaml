@@ -15,6 +15,9 @@ jobs:
         name: "Tests ${{ matrix.test-family }}"
         runs-on: ubuntu-latest
         strategy:
+            # Run every family even after one fails, so a single bad family does
+            # not hide problems in the others.
+            fail-fast: false
             matrix:
                 test-family: [hydro,mhd,poisson,rt,sink,star,turb,tracer]
         steps:
@@ -69,13 +72,19 @@ jobs:
         #    reference solutions were generated with, so that any difference
         #    comes from threading alone and not from the domain decomposition.
         # 2 ranks x 2 threads and 4 ranks x 1 thread both fit the 4 vCPUs.
-        continue-on-error: true
+        #
+        # Only the 2-thread configuration runs by default, to save runner time:
+        # it is a superset of what 1 thread can catch. Uncomment the 1-thread
+        # line when a 2-thread job fails, to tell a data race (fails only on 2
+        # threads) from a privatisation bug (fails on 1 thread too).
         strategy:
+            # Run every family even after one fails, so a single bad family does
+            # not hide problems in the others.
             fail-fast: false
             matrix:
                 test-family: [hydro,mhd,poisson,rt,sink,star,turb,tracer]
                 config:
-                  - {nproc: 4, nthreads: 1, label: "1 thread"}
+                  # - {nproc: 4, nthreads: 1, label: "1 thread"}
                   - {nproc: 2, nthreads: 2, label: "2 threads"}
         steps:
         - name: Checkout repository
