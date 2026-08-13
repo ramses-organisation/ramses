@@ -193,6 +193,9 @@ subroutine make_tree_fine(ilevel)
   ! not exist, the particle is left to its original parent grid.
   ! Particles must not move to a distance greater than direct neighbors
   ! boundaries. Otherwise an error message is issued and the code stops.
+  !
+  ! The name "make tree" refers to rebuilding the grid/particle tree at this
+  ! level, not to creating particles. Nothing is created or destroyed here.
   !-----------------------------------------------------------------------
   ! Input parameters
   ! ilevel        => (input) current level
@@ -432,6 +435,12 @@ subroutine kill_tree_fine(ilevel)
   ! list. If the child grid does not exist, the particle is left to its
   ! original parent grid.
   ! This routine resets all linked lists at level ilevel+1 before sorting.
+  ! 
+  ! The name "kill tree" probably refers to this routine first reseting
+  ! (kills) every particle linked list at ilevel+1, before refilling them
+  ! from ilevel. No particle is destroyed.
+  ! The counterpart of this routine is merge_tree_fine, which attaches
+  ! particles back from level+1 to level at the end of amr_step.
   !------------------------------------------------------------------------
   ! Input parameters
   ! ilevel        => (input) current level
