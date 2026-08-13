@@ -291,30 +291,335 @@ If there is at least one particle in the grid (i.e., if ``npart1>0``), we can lo
 
 This is done in many places in the code, and looking for the ``Very important !!!`` comment is likely to return many of these places. You can guess how people usually go about writing this loop.
 
-2.3 Adding and deleting new particles
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+2.3 The different particle tree operations
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Multiple routines in RAMSES need to create or destroy particles. Once again, the most typical example is the star formation routine: when new stars are formed, we need to "spawn" new particles and update the linked lists accordingly. Conversely, it can happen that particles are destroyed (for example, the "cloud particles" surrounding black holes when two black holes merge).
+Before looking at the individual operations, it helps to state the invariant that
+the whole scheme rests on:
 
-This is handled by routines found in ``pm/add_list.f90`` and ``pm/remove_list.f90``. Let's quickly review how they work together.
+.. important::
 
-When spawning new particles, we need to insert them somewhere in the particle linked list. This is done relatively easily thanks to the linked list structure: we just need to add the particle index after the current last particle in the ``nextp`` array. This is essentially what the ``add_list`` subroutine does in ``pm/add_list.f90``:
+   Every slot of the particle arrays, from ``1`` to ``npartmax``, belongs (in principle) to
+   **exactly one** linked list at any time: either the list of a grid, or the
+   list of *unused* slots, called the **free list**.
+
+The free list uses the same ``nextp``/``prevp`` arrays as the grid lists, with its
+own head, tail and counter, defined in ``pm/pm_commons.f90``:
 
 .. code:: fortran
 
-   nextp(tailp(ind_grid(j))) = ind_part(j)
+     integer::headp_free,tailp_free,numbp_free=0,numbp_free_tot=0
 
-Here, ``tailp(ind_grid(j))`` indicates the tail of the particle linked list in the grid ``ind_grid(j)``, and we define the ``nextp`` particle as the one with index ``ind_part(j)``.
+It is the memory allocator for particles: "creating" a particle never allocates
+anything, it simply takes a slot off the free list, and "destroying" one gives
+its slot back. The number of particles actually in use is therefore just the
+complement of the free list, which is why you will find this line every time the
+free list changes:
 
-To make sure that there is enough space in the particle arrays, we need to use the ``remove_free`` subroutine of ``pm/remove_list.f90``, which essentially reserves a block of the particle arrays for the new particles.
+.. code:: fortran
 
-As a result, the correct way to update the linked lists when adding new particles is **always** to *first* call ``remove_free``, then add the particles with ``add_list``. This is for example done in the star formation routine in ``pm/star_formation.f90``:
+   npart=npartmax-numbp_free
+
+Four primitives, defined in ``pm/add_list.f90`` and ``pm/remove_list.f90``, are all
+that is needed to manipulate the lists. They all work on batches of up to
+``nvector`` particles, and most take a mask ``ok`` so that only a subset of the
+batch is acted on:
+
++-------------------+------------------------------------------------------------------+
+| Primitive         | Effect                                                           |
++===================+==================================================================+
+| ``remove_list``   | Unlink particles from the list of the grid they are in           |
++-------------------+------------------------------------------------------------------+
+| ``add_list``      | Append particles at the **tail** of the list of a grid           |
++-------------------+------------------------------------------------------------------+
+| ``remove_free``   | Take slots off the **head** of the free list and return their    |
+|                   | indices to the caller                                            |
++-------------------+------------------------------------------------------------------+
+| ``add_free``      | Reset all particle data and append the slots at the tail of the  |
+|                   | free list (``add_free_cond`` does the same behind a mask)        |
++-------------------+------------------------------------------------------------------+
+
+Note the asymmetry between the two "remove" routines: ``remove_list`` is told
+*which* particles to unlink, whereas ``remove_free`` *chooses* the slots and hands
+them back through an ``intent(out)`` argument. That difference matters later.
+
+Because of the invariant above, the golden rule is:
+
+.. warning::
+
+   A particle must never be on two lists, nor on none. Every operation is
+   therefore a **pair**: one routine that takes the particle off a list,
+   followed by one that puts it on another. Always remove before adding.
+
+
+Almost everything the code does to particles is built from those primitives. There are
+several situations to handle, and it is worth seeing them side by side:
+
++---------------------------------------+---------------------------------------+-------------------------------------+
+| Operation                             | Where it is handled                   | Primitives used                     |
++=======================================+=======================================+=====================================+
+| Particle drifts to a sister grid at   | ``make_tree_fine`` → ``check_tree``   | ``remove_list`` + ``add_list``      |
+| the same level                        |                                       |                                     |
++---------------------------------------+---------------------------------------+-------------------------------------+
+| Grid is refined: particle moves from  | ``kill_tree_fine`` → ``kill_tree``    | ``remove_list`` + ``add_list``      |
+| ``ilevel`` down to ``ilevel+1``       |                                       |                                     |
++---------------------------------------+---------------------------------------+-------------------------------------+
+| All particles of ``ilevel+1`` are     | ``merge_tree_fine``                   | *none* — merges whole lists         |
+| gathered back into ``ilevel``         |                                       | directly (see below)                |
++---------------------------------------+---------------------------------------+-------------------------------------+
+| Particle leaves this MPI process      | ``virtual_tree_fine`` → ``fill_comm`` | ``remove_list`` + ``add_free``      |
++---------------------------------------+---------------------------------------+-------------------------------------+
+| Particle arrives from another process | ``virtual_tree_fine`` → ``empty_comm``| ``remove_free`` + ``add_list``      |
++---------------------------------------+---------------------------------------+-------------------------------------+
+| Particle is created                   | ``star_formation``, ``sink_particle`` | ``remove_free`` + ``add_list``      |
++---------------------------------------+---------------------------------------+-------------------------------------+
+| Particle is destroyed                 | ``feedback``, ``sink_particle``       | ``remove_list`` + ``add_free_cond`` |
++---------------------------------------+---------------------------------------+-------------------------------------+
+
+.. note::
+
+   The names of some of these routines can seem a bit cryptic:
+
+   - ``make_tree_fine`` **makes** the fine-level tree, i.e. rebuilds which grid
+     each particle belongs to after they have moved.
+   - ``kill_tree_fine`` **kills** the existing ``ilevel+1`` lists — it resets
+     them all before refilling them from ``ilevel``.
+   - ``merge_tree_fine`` **merges** the ``ilevel+1`` lists back into the
+     ``ilevel`` ones, which as we saw is literally a list splice.
+
+``check_tree`` and ``kill_tree`` both use the same pair
+of calls (``remove_list`` + ``add_list``), only the source and destination differ.
+
+.. admonition:: **Exercise**
+
+   Why does ``merge_tree_fine`` not use the primitives?
+
+   .. admonition:: **Solution**
+      :class: dropdown
+
+      Because it gathers *every* particle of a child grid into its father, it can
+      simply hook the two linked lists together in one operation, instead of moving particles one by one:
+
+      .. code:: fortran
+
+         ! Connect son linked list at the tail of father linked list
+         nextp(tailp(ind_grid(i)))=headp(ind_grid_son(i))
+         prevp(headp(ind_grid_son(i)))=tailp(ind_grid(i))
+         numbp(ind_grid(i))=numbp(ind_grid(i))+numbp(ind_grid_son(i))
+         tailp(ind_grid(i))=tailp(ind_grid_son(i))
+
+      This is the whole point of using a linked list rather than an array: splicing two
+      lists is O(1), so the cost of ``merge_tree_fine`` scales with the number of
+      *grids*, not the number of *particles*.
+
+The different use cases of these routines are explained in more detail below.
+
+
+2.4 Where all this happens in ``amr_step``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The routines above are called in a specific order in ``amr_step``, listed below.
+
++---------------------------+---------------------------------------------------------------+
+| Routine                   | What it does to the particles                                 |
++===========================+===============================================================+
+| ``refine_fine``           | Creates and destroys grids. Ordinary particles need **no**    |
+|                           | handling here — see the note below. MC tracers are the        |
+|                           | exception.                                                    |
++---------------------------+---------------------------------------------------------------+
+| ``make_tree_fine``        | Re-attaches particles that drifted out of their grid during   |
+|                           | the previous step, to the correct grid **at this level**.     |
++---------------------------+---------------------------------------------------------------+
+| ``rho_fine``              | CIC deposition: particles contribute their mass to ``rho``.   |
+|                           | Reads the lists, does not modify them.                        |
++---------------------------+---------------------------------------------------------------+
+| ``kill_tree_fine``        | Hands particles that sit in refined regions down to           |
+|                           | ``ilevel+1``, so the finer level owns them for its sub-steps. |
++---------------------------+---------------------------------------------------------------+
+| ``virtual_tree_fine``     | Sends particles that have left this MPI domain to their new   |
+|                           | process, and receives incoming ones.                          |
++---------------------------+---------------------------------------------------------------+
+| ``synchro_fine``          | Gravitational kick: updates particle positions and velocities |
+|                           | from the force field (part 1).                                |
++---------------------------+---------------------------------------------------------------+
+| *recursive* ``amr_step``  | The finer level runs its own (sub-)steps, with the particles  |
+| ``(ilevel+1)``            | that ``kill_tree_fine`` just gave it.                         |
++---------------------------+---------------------------------------------------------------+
+| ``move_fine``             | Updates particle positions and velocities (part 2).           |
++---------------------------+---------------------------------------------------------------+
+| ``star_formation``        | Creates new particles (and ``feedback`` may destroy some).    |
++---------------------------+---------------------------------------------------------------+
+| ``merge_tree_fine``       | Takes every particle back from ``ilevel+1`` into ``ilevel``,  |
+|                           | so this level owns them all again when it next runs.          |
++---------------------------+---------------------------------------------------------------+
+
+The pairing worth remembering is ``kill_tree_fine`` … ``merge_tree_fine``: they
+bracket the recursion. The coarse level lends its particles to the fine level
+before recursing, and takes them all back afterwards.
+
+Remark that this means that particles need no special attention when refining/derefining grids.
+The only place in ``amr/refine_utils.f90`` that touches the
+particle lists is in ``kill_grid``:
+
+.. code:: fortran
+
+   if(pic)then
+      do i=1,nn
+         headp(ind_grid_son(i))=0
+         tailp(ind_grid_son(i))=0
+         numbp(ind_grid_son(i))=0
+      end do
+   end if
+
+which merely resets the list of the grid being freed, so that the slot is clean
+when it is reused. No particle is moved, because by the time ``refine_fine`` runs
+there are no particles attached to the grids being destroyed: ``merge_tree_fine``
+lifted them all up to ``ilevel`` at the end of the previous step.
+
+.. note::
+
+   MC tracers are the exception. They are attached to *cells* rather than merely
+   parked in a grid list, so when a cell is refined its tracers have to be
+   distributed among the new children, with a probability proportional to the
+   child masses. This is done by ``post_make_grid_fine_hook`` and its
+   counterparts in ``pm/tracer_utils.f90``, called from ``refine_fine``.
+
+.. important::
+
+   The child grids are **not** disconnected in ``merge_tree_fine``. ``headp``,
+   ``tailp`` and ``numbp`` of the child are never reset, so after the splice
+   they still describe exactly the run of particles that came from that child.
+   This stays true however many times that run is spliced further up the
+   hierarchy, because splicing only rewrites the links at the join and leaves
+   the interior of the chain untouched. The child head and count therefore
+   remain a valid record of "the particles that were in this grid" long after
+   the particles themselves have been merged several levels above.
+
+   This mechanism is relied on my the MC tracer particles. When a grid is derefined,
+   ``pre_kill_grid_hook`` in ``pm/tracer_utils.f90`` walks ``headp``/``numbp``
+   of the doomed grid to find its gas tracers, recentre them on the parent cell
+   and update ``partp``.
+   By the time ``refine_fine`` runs, the particles live in a grid several
+   levels up, so this dangling record is the only thing that still identifies
+   which tracers belonged to the doomed grid.
+   Note that this is fragile and probably not intended to be used this way.
+
+   The lists are cleared by the "Reset all linked lists at level ilevel+1" loop
+   at the top of ``kill_tree_fine``, once the derefinement pass is over.
+
+
+2.5 Moving particles between grids
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+We can distinguish several cases when a particle moves to a neighbouring region.
+
+The simplest case is when the neighbouring region is at **the same refinement level**.
+This is handled by ``make_tree_fine``, which works out which of
+the :math:`3^{\texttt{ndim}}` neighbouring grids the
+particle now sits in, and moves it there.
+
+It gets more complex when the target region is **at a different refinement level**.
+``make_tree_fine`` never moves a particle across levels.
+It looks up the neighbouring *father*
+cells at ``ilevel-1``, and then takes their children:
+
+.. code:: fortran
+
+     igrid_son(j)=son(nbors_father_cells(ind_grid_part(j),ind_son(j)))
+
+so the destination is by construction a grid at ``ilevel``. As a result,
+``make_tree_fine`` needs to be combined with another routine to obtain the
+desired result. The two cases are:
+
+- the neighbouring region is **more refined**: the father cell is refined, ``son``
+  returns a valid grid at ``ilevel``, and the particle moves there normally using
+  ``make_tree_fine``. It is
+  then pushed further down to ``ilevel+1`` by ``kill_tree_fine``, which runs later
+  in ``amr_step``.
+- the neighbouring region is **less refined**: the father cell has no child, so
+  ``son`` returns ``0``, ``ok(j)`` is set to ``.false.`` and the particle is left
+  attached to its original grid — even though it is now geometrically outside it.
+  The particle is not stranded by this. At the end of ``amr_step(ilevel-1)``,
+  ``merge_tree_fine`` pulls *every* particle of level ``ilevel`` up to
+  ``ilevel-1``, and the next ``make_tree_fine(ilevel-1)`` then relocates it among
+  the neighboring grids at a lower level, where the destination does exist.
+
+.. figure:: ./img/particle_moving_levels.png
+   :alt: "Particles moving between levels"
+
+   The two cases, with the coarse level drawn above the fine level. **Left:** the
+   particle drifts into a region that is refined. ``make_tree_fine`` moves it
+   within the coarse level to the grid that now covers it, and ``kill_tree_fine``
+   then hands it down to the fine level. **Right:** the particle drifts towards a
+   region that is *not* refined. ``make_tree_fine`` cannot move it at the fine
+   level, because the neighbouring grid it would need does not exist (red cross),
+   so the particle stays where it is until ``merge_tree_fine`` lifts it back up
+   to the coarse level — where ``make_tree_fine`` can finally place it in the
+   correct grid.
+
+There is a hard limit on how far a particle may drift in a single step. If
+it has left the :math:`3^{\texttt{ndim}}` neighbourhood of its parent grid,
+``check_tree`` cannot express where it went, and the code stops:
+
+.. code:: fortran
+
+   if(error)then
+      write(*,*)'Problem in check_tree at level ',ilevel
+      write(*,*)'A particle has moved outside allowed boundaries'
+      ...
+      stop
+   end if
+
+This is the meaning of the sentence in the header of ``make_tree_fine``,
+*"Particles must not move to a distance greater than direct neighbors
+boundaries"*, and it is what the particle timestep condition (in
+``pm/newdt_fine.f90``) exists to guarantee.
+
+
+2.6 Moving particles between MPI processes
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This one is worth reading carefully, because it is really a *destruction* on one
+process and a *creation* on another. On the
+sending side ``fill_comm`` copies the particle data into a communication buffer,
+unlinks the particle from its grid and returns the slot to the free list — from
+that process's point of view the particle has ceased to exist. On the receiving
+side ``empty_comm`` claims a fresh slot from the free list, unpacks the buffer
+into it and links it into the destination grid. The particle index is therefore
+**not** preserved across the transfer, which is why particles carry a separate
+identity (``idp``) that does survive.
+
+2.7 Creating and destroying particles
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+**Creating.** Star formation is the archetype: ``remove_free`` first, to obtain
+slots, then fill in the particle data, then ``add_list`` to attach them to a grid:
 
 .. code:: fortran
 
            ! Update linked list for stars
            call remove_free(ind_part,nnew)
            call add_list(ind_part,ind_grid_new,ok_new,nnew)
+
+**Destroying.** The mirror image, for example when a supernova removes its
+progenitor or when a black hole accretes a cloud particle:
+
+.. code:: fortran
+
+     call remove_list(ind_part,ind_grid,ok_free,nSN_loc)
+     call add_free_cond(ind_part,ok_free,nSN_loc)
+
+Note that ``add_free`` is also responsible for *zeroing* the particle data
+(``xp``, ``vp``, ``mp``, the type, …). This matters: a slot handed out later by
+``remove_free`` is expected to be clean.
+
+.. admonition:: **Exercise**
+
+   Both ``virtual_tree_fine`` and ``star_formation`` end up calling
+   ``remove_free`` followed by ``add_list``. What is the difference between the
+   two cases, and why does one of them need ``idp`` while the other assigns a
+   fresh one?
+
 
 3. Cloud-in-Cell scheme
 -----------------------
