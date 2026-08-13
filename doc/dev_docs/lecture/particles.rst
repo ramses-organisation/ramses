@@ -621,66 +621,7 @@ Note that ``add_free`` is also responsible for *zeroing* the particle data
    fresh one?
 
 
-2.8 Particle operations and OpenMP
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-The loops of section 2.2 are natural candidates for OpenMP: each grid can be
-handled by a different thread. Linked lists make this delicate, though, and there
-are two distinct problems to keep apart.
-
-**Problem 1: traversing a list while it is being modified.** If one thread is
-walking a grid's list while another splices a particle into it, the walk can
-follow a stale pointer. This is why ``make_tree_fine`` starts with a separate
-parallel pass that takes a *snapshot* of the lists into ``numbp_old``,
-``headp_old`` and ``nextp_old``, and then traverses the snapshot rather than the
-live list:
-
-.. code:: fortran
-
-   #ifdef _OPENMP
-              next_part=nextp_old(ipart)
-   #else
-              next_part=nextp(ipart)
-   #endif
-
-**Problem 2: the order in which modifications are applied.** The primitives are
-protected by a named critical section, ``critical(omp_particle_list)``, so two
-threads can never corrupt a list. But mutual exclusion only decides *that* the
-threads take turns, not *in which order* they do so: whichever thread reaches the
-lock first appends first. The lists therefore come out in a different order from
-one run to the next, even though every run is a valid state.
-
-That is harmless for the physics, but not harmless in general: anything that walks
-the list and consumes a *sequence* becomes irreproducible. The clearest example is
-the MC tracer scheme, where tracers are advected in list order using draws from a
-single random number stream — a different list order gives a different tracer a
-given random number, so the result changes from run to run.
-
-.. note::
-
-   Reproducibility here is not the same as bit-for-bit determinism of the
-   floating-point results, which OpenMP does not provide anyway: any
-   ``reduction`` or ``atomic`` on a real number accumulates in an unspecified
-   order. The issue described here is separate, and much larger in amplitude
-   because it changes *discrete* decisions rather than last bits.
-
-The fix is to stop applying the list updates inside the parallel region. Each
-thread instead *records* its pending operations, tagged with the position the
-particle had in the traversal, and a single serial pass replays them in that order
-once the parallel region is over. This reproduces the order a serial run would
-have produced, and removes the need for the named critical section altogether.
-The machinery lives in ``pm/particle_defer.f90`` and is used by ``make_tree_fine``
-and ``kill_tree_fine``.
-
-.. warning::
-
-   ``virtual_tree_fine`` still uses the critical section. It cannot use the same
-   mechanism directly, because ``remove_free`` hands a slot back to its caller,
-   which needs the index immediately in order to unpack the incoming particle
-   data into it. Making that reproducible requires deterministic *slot
-   allocation*, for example by reserving a block of slots per process up front.
-
-3. Cloud-in-Cell scheme
+1. Cloud-in-Cell scheme
 -----------------------
 
 Particles interact with the rest of the simulation in essentially two ways: either through direct exchange of mass, energy, momentum, radiation (…) with the grid, or through their gravitational influence. The former will be discussed in the section on :doc:`subgrid modelling <subgrid>`, and we will now focus on the way particles interact with gravity.
