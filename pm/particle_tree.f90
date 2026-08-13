@@ -435,7 +435,7 @@ subroutine kill_tree_fine(ilevel)
   ! list. If the child grid does not exist, the particle is left to its
   ! original parent grid.
   ! This routine resets all linked lists at level ilevel+1 before sorting.
-  ! 
+  !
   ! The name "kill tree" probably refers to this routine first reseting
   ! (kills) every particle linked list at ilevel+1, before refilling them
   ! from ilevel. No particle is destroyed.
@@ -640,9 +640,9 @@ subroutine merge_tree_fine(ilevel)
   implicit none
   integer::ilevel
   !----------------------------------------------------------------------
-  ! This routine appends ("merges") the particle linked list of every 
+  ! This routine appends ("merges") the particle linked list of every
   ! child grid at level ilevel+1 to the linked list of its parent grid at
-  ! level ilevel. The two linked lists are simply spliced together instead 
+  ! level ilevel. The two linked lists are simply spliced together instead
   ! of moving particles one by one with add_list/remove_list, so the cost
   ! scales with the number of grids.
   ! Counterpart of kill_tree_fine; the two bracket the recursion in amr_step.

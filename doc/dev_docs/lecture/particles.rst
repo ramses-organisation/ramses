@@ -397,7 +397,7 @@ of calls (``remove_list`` + ``add_list``), only the source and destination diffe
    .. admonition:: **Solution**
       :class: dropdown
 
-      Because it gathers *every* particle of a child grid into its father, it can 
+      Because it gathers *every* particle of a child grid into its father, it can
       simply hook the two linked lists together in one operation, instead of moving particles one by one:
 
       .. code:: fortran
@@ -515,7 +515,7 @@ We can distinguish several cases when a particle moves to a neighbouring region.
 
 The simplest case is when the neighbouring region is at **the same refinement level**.
 This is handled by ``make_tree_fine``, which works out which of
-the :math:`3^{\texttt{ndim}}` neighbouring grids the 
+the :math:`3^{\texttt{ndim}}` neighbouring grids the
 particle now sits in, and moves it there.
 
 It gets more complex when the target region is **at a different refinement level**.
