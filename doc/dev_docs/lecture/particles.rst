@@ -680,7 +680,7 @@ and ``kill_tree_fine``.
    data into it. Making that reproducible requires deterministic *slot
    allocation*, for example by reserving a block of slots per process up front.
 
-1. Cloud-in-Cell scheme
+3. Cloud-in-Cell scheme
 -----------------------
 
 Particles interact with the rest of the simulation in essentially two ways: either through direct exchange of mass, energy, momentum, radiation (…) with the grid, or through their gravitational influence. The former will be discussed in the section on :doc:`subgrid modelling <subgrid>`, and we will now focus on the way particles interact with gravity.
