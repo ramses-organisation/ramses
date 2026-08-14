@@ -62,10 +62,10 @@ module pm_commons
   integer ,allocatable,dimension(:)    ::headp    ! Head particle in grid
   integer ,allocatable,dimension(:)    ::tailp    ! Tail particle in grid
   integer ,allocatable,dimension(:)    ::numbp    ! Number of particles in grid
-  ! Temporary arrays for to storing linked lists in check_tree for OpenMP
-  integer ,allocatable,dimension(:)    ::headp_old
-  integer ,allocatable,dimension(:)    ::nextp_old
-  integer ,allocatable,dimension(:)    ::numbp_old
+  ! Pending particle moves, recorded by check_tree and kill_tree and applied by
+  ! apply_tree_moves. See the header of apply_tree_moves in particle_tree.f90.
+  integer ,allocatable,dimension(:)    ::newgridp  ! Destination grid of a particle, 0 if it stays
+  integer ,allocatable,dimension(:)    ::nmovep    ! Number of particles leaving a grid
   ! Global particle linked lists
   integer::headp_free,tailp_free,numbp_free=0,numbp_free_tot=0
   ! Local and current seed for random number generator

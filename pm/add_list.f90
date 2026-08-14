@@ -32,7 +32,7 @@ subroutine add_list_one(ipart,igrid)
   ! Append one particle to the tail of a grid linked list.
   ! Contains no synchronisation of its own: callers must either hold the
   ! particle-list critical section (add_list) or be running serially
-  ! (the deferred replay in particle_defer).
+  ! (apply_tree_moves).
   !
   if (numbp(igrid) > 0) then
      ! Add particle at the tail of its linked list
@@ -114,9 +114,8 @@ subroutine add_free_one(ipart)
   !
   ! Append one particle to the tail of the free memory linked list.
   ! Splice only: the caller is responsible for resetting the particle data.
-  ! Contains no synchronisation of its own: callers must either hold the
-  ! particle-list critical section (add_free) or be running serially
-  ! (the deferred replay in particle_defer).
+  ! Contains no synchronisation of its own: callers must hold the
+  ! particle-list critical section (add_free).
   !
   if(numbp_free>0)then
      ! Add particle at the tail of its linked list

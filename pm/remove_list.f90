@@ -32,7 +32,7 @@ subroutine remove_list_one(ipart,igrid)
   ! Unlink one particle from its grid linked list.
   ! Contains no synchronisation of its own: callers must either hold the
   ! particle-list critical section (remove_list) or be running serially
-  ! (the deferred replay in particle_defer).
+  ! (apply_tree_moves).
   !
   if(prevp(ipart) .ne. 0) then
      if( nextp(ipart) .ne. 0 )then
