@@ -787,13 +787,13 @@ subroutine merge_tree_fine(ilevel)
   logical,dimension(1:nvector),save::ok
 
 !$omp threadprivate(ind_grid,ind_cell,ind_grid_son,ok)
-! No OpenMP needed here, since it is cheap and needs a critical section.
 
   if(numbtot(1,ilevel)==0)return
   if(ilevel==nlevelmax)return
   if(verbose)write(*,111)ilevel
 
   ! Loop over cpus
+!$omp parallel private(icpu,ncache,igrid,ngrid,i,ind,iskip)
   do icpu=1,ncpu
      if(icpu==myid)then
         ncache=active(ilevel)%ngrid
@@ -801,6 +801,7 @@ subroutine merge_tree_fine(ilevel)
         ncache=reception(icpu,ilevel)%ngrid
      end if
      ! Loop over grids by vector sweeps
+!$omp do
      do igrid=1,ncache,nvector
         ngrid=MIN(nvector,ncache-igrid+1)
         if(icpu==myid)then
@@ -831,6 +832,8 @@ subroutine merge_tree_fine(ilevel)
            do i=1,ngrid
            if(ok(i))then
            if(numbp(ind_grid_son(i))>0)then
+              ! OMP: no critical needed here since each thread only updates 
+              !      the linked lists of its own father cells
               if(numbp(ind_grid(i))>0)then
                  ! Connect son linked list at the tail of father linked list
                  nextp(tailp(ind_grid(i)))=headp(ind_grid_son(i))
@@ -852,8 +855,10 @@ subroutine merge_tree_fine(ilevel)
         end do
         ! End loop over children
      end do
+!$omp end do nowait
      ! End loop over grids
   end do
+!$omp end parallel
   ! End loop over cpus
 111 format('   Entering merge_tree_fine for level ',I2)
 
