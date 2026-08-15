@@ -250,7 +250,11 @@ subroutine make_tree_fine(ilevel)
         if(icpu==myid)then
            igrid=active(ilevel)%igrid(jgrid)
         else
+#ifdef LIGHT_MPI_COMM
+           igrid=reception(icpu,ilevel)%pcomm%igrid(jgrid)
+#else
            igrid=reception(icpu,ilevel)%igrid(jgrid)
+#endif
         end if
         npart1=numbp(igrid)  ! Number of particles in the grid
         if(npart1>0)then
@@ -529,7 +533,11 @@ subroutine kill_tree_fine(ilevel)
         if(icpu==myid)then
            igrid=active(ilevel)%igrid(jgrid)
         else
+#ifdef LIGHT_MPI_COMM
+           igrid=reception(icpu,ilevel)%pcomm%igrid(jgrid)
+#else
            igrid=reception(icpu,ilevel)%igrid(jgrid)
+#endif
         end if
         npart1=numbp(igrid)  ! Number of particles in the grid
         if(npart1>0)then
@@ -726,7 +734,11 @@ subroutine apply_tree_moves(ilevel)
         if(icpu==myid)then
            igrid=active(ilevel)%igrid(jgrid)
         else
+#ifdef LIGHT_MPI_COMM
+           igrid=reception(icpu,ilevel)%pcomm%igrid(jgrid)
+#else
            igrid=reception(icpu,ilevel)%igrid(jgrid)
+#endif
         end if
         nmove=nmovep(igrid)  ! Number of particles leaving the grid
         if(nmove==0)cycle    ! Nothing recorded, do not walk the list at all
