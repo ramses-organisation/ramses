@@ -946,6 +946,11 @@ subroutine virtual_tree_fine(ilevel)
 #ifdef LIGHT_MPI_COMM
   integer:: offset_np, iactive
 #endif
+#ifdef LONGINT
+   integer::particle_mpi_int_type=MPI_INTEGER8
+#else
+   integer::particle_mpi_int_type=MPI_INTEGER
+#endif
   integer::ip,ipcom,npart1,next_part,ncache,ncache_tot
   integer::icpu,igrid,ipart,jpart
   integer::info,buf_count,tagf=102,tagu=102
@@ -1147,15 +1152,9 @@ subroutine virtual_tree_fine(ilevel)
      ncache=emission_part(ilevel)%nparts(iactive)
      buf_count=ncache*particle_data_width_int
      countrecv=countrecv+1
-#ifndef LONGINT
      call MPI_IRECV(emission_part(ilevel)%f8(1,offset_np),buf_count, &
-          & MPI_INTEGER,emission_part(ilevel)%cpuid(iactive)-1, &
+          & particle_mpi_int_type,emission_part(ilevel)%cpuid(iactive)-1, &
           & tagf,MPI_COMM_WORLD,reqrecv(countrecv),info)
-#else
-     call MPI_IRECV(emission_part(ilevel)%f8(1,offset_np),buf_count, &
-          & MPI_INTEGER8,emission_part(ilevel)%cpuid(iactive)-1, &
-          & tagf,MPI_COMM_WORLD,reqrecv(countrecv),info)
-#endif
      buf_count=ncache*particle_data_width
      countrecv=countrecv+1
      call MPI_IRECV(emission_part(ilevel)%u(1,offset_np),buf_count, &
@@ -1171,15 +1170,9 @@ subroutine virtual_tree_fine(ilevel)
      if(ncache>0)then
         buf_count=ncache*particle_data_width_int
         countrecv=countrecv+1
-#ifndef LONGINT
         call MPI_IRECV(emission(icpu,ilevel)%fp,buf_count, &
-             & MPI_INTEGER,icpu-1,&
+             & particle_mpi_int_type,icpu-1,&
              & tagf,MPI_COMM_WORLD,reqrecv(countrecv),info)
-#else
-        call MPI_IRECV(emission(icpu,ilevel)%fp,buf_count, &
-             & MPI_INTEGER8,icpu-1,&
-             & tagf,MPI_COMM_WORLD,reqrecv(countrecv),info)
-#endif
         buf_count=ncache*particle_data_width
         countrecv=countrecv+1
         call MPI_IRECV(emission(icpu,ilevel)%up,buf_count, &
@@ -1197,30 +1190,18 @@ subroutine virtual_tree_fine(ilevel)
         buf_count=ncache*particle_data_width_int
         countsend=countsend+1
 #ifdef LIGHT_MPI_COMM
-#ifndef LONGINT
         call MPI_ISEND(reception(icpu,ilevel)%pcomm%f8,buf_count, &
-             & MPI_INTEGER,icpu-1,&
+             & particle_mpi_int_type,icpu-1,&
              & tagf,MPI_COMM_WORLD,reqsend(countsend),info)
-#else
-        call MPI_ISEND(reception(icpu,ilevel)%pcomm%f8,buf_count, &
-             & MPI_INTEGER8,icpu-1,&
-             & tagf,MPI_COMM_WORLD,reqsend(countsend),info)
-#endif
         buf_count=ncache*particle_data_width
         countsend=countsend+1
         call MPI_ISEND(reception(icpu,ilevel)%pcomm%u,buf_count, &
              & MPI_DOUBLE_PRECISION,icpu-1,&
              & tagu,MPI_COMM_WORLD,reqsend(countsend),info)
 #else
-#ifndef LONGINT
         call MPI_ISEND(reception(icpu,ilevel)%fp,buf_count, &
-             & MPI_INTEGER,icpu-1,&
+             & particle_mpi_int_type,icpu-1,&
              & tagf,MPI_COMM_WORLD,reqsend(countsend),info)
-#else
-        call MPI_ISEND(reception(icpu,ilevel)%fp,buf_count, &
-             & MPI_INTEGER8,icpu-1,&
-             & tagf,MPI_COMM_WORLD,reqsend(countsend),info)
-#endif
         buf_count=ncache*particle_data_width
         countsend=countsend+1
         call MPI_ISEND(reception(icpu,ilevel)%up,buf_count, &
@@ -1270,16 +1251,13 @@ subroutine virtual_tree_fine(ilevel)
 #ifdef LIGHT_MPI_COMM
   offset_np=1
   do iactive=1,emission_part(ilevel)%nactive
-     ! Loop over particles by vector sweeps
      icpu=emission_part(ilevel)%cpuid(iactive)
      ncache=emission_part(ilevel)%nparts(iactive)
 #else
   do icpu=1,ncpu
-     ! Loop over particles by vector sweeps
      ncache=emission(icpu,ilevel)%npart
 #endif
-!!!$omp parallel do private(ipart,npart1,ip)
-! put the parallel do here to avoid issues with lighMPI
+     ! Loop over particles by vector sweeps
      do ipart=1,ncache,nvector
         npart1=min(nvector,ncache-ipart+1)
         do ip=1,npart1
