@@ -197,7 +197,7 @@ subroutine add_free_cond(ind_part,ok,np)
 
 !$omp critical(omp_particle_list)
   do j=1,np
-     if(ok(j))then call add_free_one(ind_part(j))
+     if(ok(j)) call add_free_one(ind_part(j))
   end do
 !$omp end critical(omp_particle_list)
 
