@@ -193,24 +193,7 @@ subroutine add_free_cond(ind_part,ok,np)
 
 !$omp critical(omp_particle_list)
   do j=1,np
-     if(ok(j))then
-        if(numbp_free>0)then
-           ! Add particle at the tail of its linked list
-           nextp(tailp_free)=ind_part(j)
-           prevp(ind_part(j))=tailp_free
-           nextp(ind_part(j))=0
-           tailp_free=ind_part(j)
-           numbp_free=numbp_free+1
-        else
-           ! Initialise linked list
-           headp_free=ind_part(j)
-           tailp_free=ind_part(j)
-           prevp(ind_part(j))=0
-           nextp(ind_part(j))=0
-           numbp_free=1
-        end if
-     endif
+     if(ok(j))then call add_free_one(ind_part(j))
   end do
-  npart=npartmax-numbp_free
 !$omp end critical(omp_particle_list)
 end subroutine add_free_cond
