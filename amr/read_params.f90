@@ -543,6 +543,9 @@ subroutine read_output_params(namelist_unit,nml_ok)
       aout(noutput)=aend
    endif
 
+   ! if no output time was requested at all, keep a single HUGE entry in the list
+   if(noutput==0)noutput=1
+
    ! set periodic output params
    tout_next=delta_tout
    aout_next=delta_aout
