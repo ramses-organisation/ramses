@@ -692,14 +692,16 @@ subroutine apply_tree_moves(ilevel)
   !-----------------------------------------------------------------------
   ! Perform the particle moves recorded by check_tree (called from
   ! make_tree_fine) or by kill_tree (called from kill_tree_fine).
+  ! These have been stored in newgridp.
   !
   ! Those routines run in parallel and must not touch the shared linked
   ! lists: several threads can be sending particles to the same destination
-  ! grid at the same time. Protecting the splice with a critical section is
-  ! correct but not reproducible, because mutual exclusion fixes *whether*
-  ! threads collide, not the order in which they get the lock. The resulting
-  ! list order, and with it anything that walks the list such as the MC
-  ! tracer random draws, then changes from run to run.
+  ! grid at the same time. To avoid race condition, the linked list update
+  ! can be protected with a critical section. This however changes the order
+  ! in which particles are linked, in an undeterminisitc way. This affects 
+  ! the result of anything that depends on the order of the tree walk, 
+  ! such as the MC tracer random moves.
+
   !
   ! Instead they only record the destination in newgridp, which is race free
   ! since a particle belongs to exactly one grid and a grid is processed in
@@ -966,6 +968,7 @@ subroutine virtual_tree_fine(ilevel)
   integer :: ipart2, jpart2
 
 !$omp threadprivate(ind_part,ind_com,ind_list)
+  ! OMP: no openmp in this routine, to avoid changing the order of the  particle lists.
 #endif
 
   if(numbtot(1,ilevel)==0)return
@@ -1055,8 +1058,6 @@ subroutine virtual_tree_fine(ilevel)
   end if
 
   ! Gather particle in communication buffer
-!!!$omp parallel do private(icpu,ip,ipcom,igrid,npart1,ipart,jpart,next_part)
-! we put openmp on icpu loop to avoid issues with ipcom
   do icpu=1,ncpu
      if(reception(icpu,ilevel)%npart>0)then
      ! Gather particles by vector sweeps
