@@ -232,11 +232,8 @@ subroutine make_tree_fine(ilevel)
   if(ndim>2)skip_loc(3)=dble(kcoarse_min)
   scale=boxlen/dble(nx_loc)
 
-  ! check_tree does not touch the linked lists: it only records, for each
-  ! particle that has to move, the grid it must end up in. The lists therefore
-  ! stay frozen for the whole parallel region below, which is both why the
-  ! traversal is safe and why no copy of the lists has to be made first.
-  ! apply_tree_moves then performs the moves serially, in traversal order.
+  ! First, walk the particle tree and record the changes to be made
+  ! We do no modify the tree during this walk. This makes it safe for OMP.
 
   ! Loop over cpus
 !$omp parallel private(icpu,igrid,ig,ip,jgrid,npart1,ipart,jpart,next_part)
@@ -290,7 +287,7 @@ subroutine make_tree_fine(ilevel)
   ! End loop over cpus
 !$omp end parallel
 
-  ! Apply the recorded moves, in traversal order
+  ! Apply the recorded moves
   call apply_tree_moves(ilevel)
 
   ! Periodic boundaries
@@ -324,7 +321,7 @@ subroutine check_tree(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   ! This routine checks if particles have moved from their parent grid and
   ! if so, records the neighboring grid they have to be connected to. The
   ! linked lists themselves are left untouched here and are updated later by
-  ! apply_tree_moves, once the parallel region in make_tree_fine is over.
+  ! apply_tree_moves.
   !-----------------------------------------------------------------------
   ! Input parameters
   ! ind_grid      => (input) list of parent grid indices, up to ng
@@ -433,15 +430,14 @@ subroutine check_tree(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      enddo
   enddo
 
-  ! Record where the escaped particles have to go. No linked list is touched
-  ! here: apply_tree_moves does that serially at the end of make_tree_fine.
-  ! Both writes are safe without synchronisation, because a particle belongs to
-  ! exactly one grid and a grid is processed in full by a single thread.
+  ! Record where the escaped particles have to go, so that the 
+  ! the tree can be updated later by apply_tree_moves.
+  ! No OMP critical needed, since a grid is proceded fully by a single thread.
   do j=1,np
      if(ok(j))then
-        igrid=ind_grid(ind_grid_part(j))
-        newgridp(ind_part(j))=igrid_son(j)
-        nmovep(igrid)=nmovep(igrid)+1
+        igrid=ind_grid(ind_grid_part(j))   ! old grid
+        newgridp(ind_part(j))=igrid_son(j) ! new grid
+        nmovep(igrid)=nmovep(igrid)+1      ! update number of moves to do
      end if
   end do
 
@@ -518,9 +514,8 @@ subroutine kill_tree_fine(ilevel)
 
   ! Sort particles between ilevel and ilevel+1
 
-  ! As in make_tree_fine, kill_tree only records where each particle has to go.
-  ! The lists at ilevel are therefore frozen during the parallel region and are
-  ! updated afterwards by apply_tree_moves, in traversal order.
+  ! First, walk the particle tree and record the changes to be made
+  ! We do no modify the tree during this walk. This makes it safe for OMP.
 
   ! Loop over cpus
 !$omp parallel private(icpu,ig,ip,jgrid,igrid,npart1,ipart,jpart,next_part)
@@ -572,7 +567,7 @@ subroutine kill_tree_fine(ilevel)
 !$omp end parallel
   ! End loop over cpus
 
-  ! Apply the recorded moves, in traversal order
+  ! Apply the recorded moves
   call apply_tree_moves(ilevel)
 
 111 format('   Entering kill_tree_fine for level ',I2)
@@ -590,12 +585,12 @@ subroutine kill_tree(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   integer,dimension(1:nvector)::ind_grid
   integer,dimension(1:nvector)::ind_grid_part,ind_part
   !-----------------------------------------------------------------------
-  ! This routine is called by subroutine kill_tree_fine.
+  ! This routine is called by subroutine kill_tree_fine, which moves particles to ilevel+1.
   ! This routine first finds the child grid each particle are located in
-  ! based on their position. It then records that the particle has to be
-  ! detached from its parent grid linked list at ilevel and attached to that
-  ! child grid at ilevel+1. If the child grid does not exist, nothing is
-  ! recorded and the particle stays where it is. The linked lists themselves
+  ! based on their position. If the child grid exists, it records that the particle
+  ! has to be moved from the parent grid linked list at ilevel to
+  ! child grid linked list at ilevel+1. If the child grid does not exist, nothing is
+  ! recorded and the particle stays with the parent. The linked lists themselves
   ! are updated later by apply_tree_moves.
   !-----------------------------------------------------------------------
   ! Input parameters
@@ -668,14 +663,12 @@ subroutine kill_tree(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      ok(j)=igrid_son(j)>0
   end do
 
-  ! Record the moves. They are applied serially in traversal order at the end
-  ! of kill_tree_fine instead of being performed here under a lock. See the
-  ! corresponding comment in check_tree for why no synchronisation is needed.
+  ! Record the moves, so they can be applied after the tree traversal
   do j=1,np
      if(ok(j))then
-        igrid=ind_grid(ind_grid_part(j))
-        newgridp(ind_part(j))=igrid_son(j)
-        nmovep(igrid)=nmovep(igrid)+1
+        igrid=ind_grid(ind_grid_part(j))   ! old grid
+        newgridp(ind_part(j))=igrid_son(j) ! new grid
+        nmovep(igrid)=nmovep(igrid)+1      ! update number of moves to do
      end if
   end do
 
@@ -702,13 +695,8 @@ subroutine apply_tree_moves(ilevel)
   ! the result of anything that depends on the order of the tree walk, 
   ! such as the MC tracer random moves.
 
-  !
-  ! Instead they only record the destination in newgridp, which is race free
-  ! since a particle belongs to exactly one grid and a grid is processed in
-  ! full by a single thread. This routine then walks the grids at ilevel in
-  ! the same order the parallel loop did, and performs the moves serially. It
-  ! therefore produces exactly the linked lists a serial run would have
-  ! produced, whatever the number of threads.
+  ! OMP: This routine MUST be done in serial, as the tree must be walked in 
+  ! this order (same order as check_tree, kill_tree, ...).
   !
   ! Note that a particle moved to a sister grid further down the traversal is
   ! visited again when that grid is reached. This is harmless: newgridp is
@@ -728,8 +716,7 @@ subroutine apply_tree_moves(ilevel)
   !-----------------------------------------------------------------------
   integer::icpu,jgrid,igrid,ipart,next_part,jmove,nmove
 
-  ! Loop over cpus, in the same order as the parallel loop that recorded the
-  ! moves. Serial by design: this is where the shared lists are modified.
+  ! Loop over cpus
   do icpu=1,ncpu
      ! Loop over grids
      do jgrid=1,numbl(icpu,ilevel)
@@ -744,7 +731,7 @@ subroutine apply_tree_moves(ilevel)
         end if
         nmove=nmovep(igrid)  ! Number of particles leaving the grid
         if(nmove==0)cycle    ! Nothing recorded, do not walk the list at all
-        nmovep(igrid)=0
+        nmovep(igrid)=0      ! reset nmovep
         jmove=0
         ipart=headp(igrid)
         ! Loop over particles
@@ -754,7 +741,7 @@ subroutine apply_tree_moves(ilevel)
            if(newgridp(ipart)>0)then
               call remove_list_one(ipart,igrid)
               call add_list_one(ipart,newgridp(ipart))
-              newgridp(ipart)=0
+              newgridp(ipart)=0  ! reset newgridp
               jmove=jmove+1
               ! All the particles recorded for this grid have been moved. Any
               ! particle left in the list either stays, or has just arrived
@@ -968,7 +955,7 @@ subroutine virtual_tree_fine(ilevel)
   integer :: ipart2, jpart2
 
 !$omp threadprivate(ind_part,ind_com,ind_list)
-  ! OMP: no openmp in this routine, to avoid changing the order of the  particle lists.
+  ! OMP: no openmp in this routine, to avoid changing the order of the  particle linked lists
 #endif
 
   if(numbtot(1,ilevel)==0)return
