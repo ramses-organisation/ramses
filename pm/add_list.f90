@@ -3,37 +3,38 @@
 !################################################################
 !################################################################
 subroutine add_list(ind_part,ind_grid,ok,np)
-  use amr_commons
-  use pm_commons
+  use amr_commons, only:nvector
   implicit none
   integer, intent(in)::np
   integer,dimension(1:nvector), intent(in)::ind_part,ind_grid
   logical,dimension(1:nvector), intent(in)::ok
-  !
+  !----------------------------------------------------
   ! Add particles to their new linked lists
-  !
+  !----------------------------------------------------
   integer::j
+
 !$omp critical(omp_particle_list)
   do j=1,np
      if(ok(j)) call add_list_one(ind_part(j),ind_grid(j))
   end do
 !$omp end critical(omp_particle_list)
+
 end subroutine add_list
 !################################################################
 !################################################################
 !################################################################
 !################################################################
 subroutine add_list_one(ipart,igrid)
-  use amr_commons
   use pm_commons
   implicit none
   integer, intent(in)::ipart,igrid
-  !
+  !----------------------------------------------------
   ! Append one particle to the tail of a grid linked list.
-  ! Contains no synchronisation of its own: callers must either hold the
+  ! OMP: Contains no synchronisation of its own: callers must either hold the
   ! particle-list critical section (add_list) or be running serially
   ! (apply_tree_moves).
-  !
+  !----------------------------------------------------
+
   if (numbp(igrid) > 0) then
      ! Add particle at the tail of its linked list
      nextp(tailp(igrid)) = ipart
@@ -49,6 +50,7 @@ subroutine add_list_one(ipart,igrid)
      nextp(ipart) = 0
      numbp(igrid) = 1
   end if
+
 end subroutine add_list_one
 !################################################################
 !################################################################
@@ -61,10 +63,10 @@ subroutine add_free(ind_part,np)
   implicit none
   integer, intent(in)::np
   integer,dimension(1:nvector), intent(in)::ind_part
-  !
+  !----------------------------------------------------
   ! Add particles to the free memory linked list
   ! and reset all particle variables
-  !
+  !----------------------------------------------------
   integer::j,idim
 
   do idim=1,ndim
@@ -101,22 +103,23 @@ subroutine add_free(ind_part,np)
      call add_free_one(ind_part(j))
   end do
 !$omp end critical(omp_particle_list)
+
 end subroutine add_free
 !################################################################
 !################################################################
 !################################################################
 !################################################################
 subroutine add_free_one(ipart)
-  use amr_commons
   use pm_commons
   implicit none
   integer, intent(in)::ipart
-  !
+  !----------------------------------------------------
   ! Append one particle to the tail of the free memory linked list.
   ! Splice only: the caller is responsible for resetting the particle data.
-  ! Contains no synchronisation of its own: callers must hold the
+  ! OMP: Contains no synchronisation of its own, callers must hold the
   ! particle-list critical section (add_free).
-  !
+  !----------------------------------------------------
+
   if(numbp_free>0)then
      ! Add particle at the tail of its linked list
      nextp(tailp_free)=ipart
@@ -133,6 +136,7 @@ subroutine add_free_one(ipart)
      numbp_free=1
   end if
   npart=npartmax-numbp_free
+
 end subroutine add_free_one
 !################################################################
 !################################################################
@@ -146,10 +150,10 @@ subroutine add_free_cond(ind_part,ok,np)
   integer::np
   integer,dimension(1:nvector)::ind_part
   logical,dimension(1:nvector)::ok
-  !
+  !----------------------------------------------------
   ! Add particles to the free memory linked list
   ! and reset all particle variables
-  !
+  !----------------------------------------------------
   integer::j,idim
 
   do idim=1,ndim
@@ -196,4 +200,5 @@ subroutine add_free_cond(ind_part,ok,np)
      if(ok(j))then call add_free_one(ind_part(j))
   end do
 !$omp end critical(omp_particle_list)
+
 end subroutine add_free_cond
