@@ -11,19 +11,35 @@ defaults:
 
 jobs:
     build:
-        name: "${{ matrix.test-type }} in ${{ matrix.ndim }}D"
+        name: "${{ matrix.test-type }} in ${{ matrix.ndim }}D (MPI=${{ matrix.mpi }} OpenMP=${{ matrix.openmp }})"
         runs-on: ubuntu-latest
         strategy:
+            fail-fast: false
             matrix:
                 test-type: [default, rt, mhd]
                 ndim: [1, 2, 3]
+                openmp: [0, 1]
+                mpi: [1]
                 exclude:
                     - test-type: rt
                       ndim: 1
+                # MPI=0 selects a different code path (WITHOUTMPI), which combined
+                # with OpenMP is not covered by the matrix above. Build it in 3D
+                # only, to keep the number of jobs down.
+                include:
+                    - {test-type: default, ndim: 3, mpi: 0, openmp: 0}
+                    - {test-type: default, ndim: 3, mpi: 0, openmp: 1}
+                    - {test-type: mhd,     ndim: 3, mpi: 0, openmp: 0}
+                    - {test-type: mhd,     ndim: 3, mpi: 0, openmp: 1}
+                    - {test-type: rt,      ndim: 3, mpi: 0, openmp: 0}
+                    - {test-type: rt,      ndim: 3, mpi: 0, openmp: 1}
         steps:
         - name: Checkout repository
           uses: actions/checkout@v4
         - name: Install OpenMPI
           run: sudo apt-get install -y openmpi-bin libopenmpi-dev
         - name: Build
+          env:
+            MPI: ${{ matrix.mpi }}
+            OPENMP: ${{ matrix.openmp }}
           run: bash tests/build.${{ matrix.test-type }}.sh ${{ matrix.ndim }}

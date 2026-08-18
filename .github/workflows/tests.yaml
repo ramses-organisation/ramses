@@ -15,6 +15,9 @@ jobs:
         name: "Tests ${{ matrix.test-family }}"
         runs-on: ubuntu-latest
         strategy:
+            # Run every family even after one fails, so a single bad family does
+            # not hide problems in the others.
+            fail-fast: false
             matrix:
                 test-family: [hydro,mhd,poisson,rt,sink,star,turb,tracer]
         steps:
@@ -36,14 +39,90 @@ jobs:
         - name: Setup headless display for pyvista
           uses: pyvista/setup-headless-display-action@v3
         - name: "Run tests ${{ matrix.test-family }}"
+          # GitHub-hosted Linux runners for public repositories have 4 vCPUs.
+          # OpenMPI counts slots from the physical cores reported by hwloc, which
+          # on these VMs can be fewer than the number of vCPUs, so allow
+          # oversubscription rather than have mpirun refuse to launch 4 ranks.
+          env:
+            OMPI_MCA_rmaps_base_oversubscribe: "true"
           run: |
             cd tests
-            bash run_test_suite.sh -p 2 -v -t ${{ matrix.test-family }}
+            bash run_test_suite.sh -p 4 -v -t ${{ matrix.test-family }}
         - name: "Upload artifacts  ${{ matrix.test-family }}"
           uses: actions/upload-artifact@v4
           if: always()
           with:
             name: "test-results-${{ matrix.test-family }}"
+            path: |
+              tests/test_results.pdf
+              tests/test_suite.log
+
+    run-openmp:
+        name: "Tests ${{ matrix.test-family }} (OpenMP, ${{ matrix.config.label }})"
+        runs-on: ubuntu-latest
+        # Two ways of running the OpenMP build, both compared against the same
+        # reference solutions:
+        #  - 1 thread: the parallel regions are entered but never run
+        #    concurrently, so the answer must still be the serial one. A failure
+        #    here cannot be a data race, which makes it much easier to track
+        #    down (this is how the "req" bug in add_gravity_source_terms was
+        #    found). It is a diagnostic aid, not extra coverage.
+        #  - 2 threads: the regions actually run concurrently, so this is what
+        #    exposes races. Run on 2 MPI ranks to match the number of ranks the
+        #    reference solutions were generated with, so that any difference
+        #    comes from threading alone and not from the domain decomposition.
+        # 2 ranks x 2 threads and 4 ranks x 1 thread both fit the 4 vCPUs.
+        #
+        # Only the 2-thread configuration runs by default, to save runner time:
+        # it is a superset of what 1 thread can catch. Uncomment the 1-thread
+        # line when a 2-thread job fails, to tell a data race (fails only on 2
+        # threads) from a privatisation bug (fails on 1 thread too).
+        strategy:
+            # Run every family even after one fails, so a single bad family does
+            # not hide problems in the others.
+            fail-fast: false
+            matrix:
+                test-family: [hydro,mhd,poisson,rt,sink,star,turb,tracer]
+                config:
+                  # - {nproc: 4, nthreads: 1, label: "1 thread"}
+                  - {nproc: 2, nthreads: 2, label: "2 threads"}
+        steps:
+        - name: Checkout repository
+          uses: actions/checkout@v4
+        - name: Install OpenMPI and FFTW
+          run: sudo apt-get install -y openmpi-bin libopenmpi-dev libfftw3-bin libfftw3-dev
+        - name: Setup python
+          uses: actions/setup-python@v5
+          with:
+            python-version: '3.13'
+            cache: 'pip' # caching pip dependencies
+        - name: Install python dependencies
+          run: pip install -r .github/workflows/requirements.txt
+        - name: Setup tectonic
+          uses: wtfjoke/setup-tectonic@v3
+          with:
+            tectonic-version: 0.15.0
+        - name: Setup headless display for pyvista
+          uses: pyvista/setup-headless-display-action@v3
+        - name: "Run tests ${{ matrix.test-family }} with OpenMP (${{ matrix.config.label }})"
+          env:
+            OMPI_MCA_rmaps_base_oversubscribe: "true"
+            # Precaution, not a fix for an observed failure: the suite maps each
+            # rank onto TEST_NTHREADS processing elements (--map-by slot:pe=N),
+            # which can ask for more PEs than the runner reports cores. Thread
+            # pinning buys nothing on a shared CI runner, so drop the binding
+            # rather than risk mpirun refusing to launch. Remove if unneeded.
+            OMPI_MCA_hwloc_base_binding_policy: "none"
+          run: |
+            cd tests
+            bash run_test_suite.sh -p ${{ matrix.config.nproc }} -m ${{ matrix.config.nthreads }} -o all -v -t ${{ matrix.test-family }}
+        - name: "Upload artifacts  ${{ matrix.test-family }} (OpenMP, ${{ matrix.config.label }})"
+          uses: actions/upload-artifact@v4
+          if: always()
+          with:
+            # Deliberately not starting with "test": the workflow that comments
+            # the report on the PR collects every artifact whose name does.
+            name: "openmp-results-${{ matrix.test-family }}-${{ matrix.config.nthreads }}thread"
             path: |
               tests/test_results.pdf
               tests/test_suite.log
