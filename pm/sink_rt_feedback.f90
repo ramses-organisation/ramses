@@ -175,11 +175,45 @@ END SUBROUTINE gather_ioni_flux
 !*************************************************************************
 SUBROUTINE sink_RT_vsweep_stellar(ind_grid,ind_part,ind_grid_part,ng,np,dt,ilevel,sink_ioni_flux)
 ! This routine is called by subroutine sink_rt_feedback.
-! Each sink and cloud  particle dumps a number of photons into the nearest grid cell
-! using array rtunew.
-! Radiation is injected into cells at level ilevel, but it is important
-! to know that ilevel-1 cells may also get some radiation. This is due
-! to sink and cloud particles that have just crossed to a coarser level.
+! Each sink and cloud particle dumps its share of the sink ionising flux into
+! array rtunew, spread over the cells of its CIC stencil at level ilevel.
+!
+! CIC and not NGP: the cloud is a regular lattice of spacing dx_min/2 (see
+! create_cloud_from_sink), so its particles routinely sit exactly on cell
+! boundaries. An NGP index resolves that tie by truncation, always towards the
+! cell above, so two cloud particles mirrored about the sink deposit on the same
+! side and the whole radiation source ends up offset by half a cell. That gives
+! the sink a spurious force along every axis on which it sits on a boundary.
+! CIC splits a particle lying on a boundary evenly between the two cells and so
+! has no such preference.
+!
+! Only the CIC volumes that are leaf cells at ilevel are deposited into.
+! cic_get_cells sets ok=.false. both for volumes whose neighbour grid does not
+! exist at ilevel and for volumes that are themselves refined. Skipping the
+! refined ones is required, not optional: rt_upload_fine re-imposes a split
+! cell's value as the average of its children at the end of every rt_step, so
+! photons put there would simply be erased.
+!
+! KNOWN LIMITATION. A cloud particle is only ever visited at the level of the
+! grid it is attached to, because sink_RT_feedback runs from rt_step, i.e. after
+! kill_tree_fine and before merge_tree_fine. The part of its stencil reaching
+! into a coarser neighbour is therefore dropped and no other level's call picks
+! it up, so a sink near a refinement boundary emits slightly less than its
+! stellar objects should, by a factor that depends on the local refinement and
+! so drifts as the mesh and the sink move.
+!
+! This is NOT the same situation as the cloud mass in cic_amr (rho_fine), which
+! can drop the overhang safely because rho_fine runs before kill_tree_fine and
+! so deposits every particle at every level - the coarse level holds the full
+! mass. Nor is it what accrete_sink does, which normalises by the accumulated
+! usable weight volume_gas so the sink always accretes the full Bondi rate.
+!
+! Renormalising the weights per particle would restore the total but push the
+! redistributed light away from the refinement boundary, which is the same kind
+! of asymmetry this routine already had to be fixed for. The clean fix is to
+! gather the per-cell injection rate before kill_tree_fine, where the whole
+! cloud is still attached to one level, store it in a work array and only apply
+! it here - the structure rho_fine uses for the mass. Left for a follow-up.
 !
 
 ! The ionising flux of each sink must be provided in sink_ioni_flux
@@ -204,17 +238,14 @@ SUBROUTINE sink_RT_vsweep_stellar(ind_grid,ind_part,ind_grid_part,ng,np,dt,ileve
   integer,dimension(1:nvector)::ind_grid_part,ind_part
   real(dp)::dt
   !-----------------------------------------------------------------------
-  integer::i,j,idim,nx_loc,isink,ig
+  integer::j,ind,idim,nx_loc,isink,ig
   real(dp)::dx,dx_loc,scale,vol_cgs
-  ! Grid based arrays
-  real(dp),dimension(1:nvector,1:ndim),save::x0
-  integer ,dimension(1:nvector),save::ind_cell
-  integer ,dimension(1:nvector,1:threetondim),save::nbors_father_cells
   ! Particle based arrays
-  logical,dimension(1:nvector),save::ok
-  real(dp),dimension(1:nvector,1:ndim),save::x
-  integer ,dimension(1:nvector,3),save::id=0,igd=0,icd=0
-  integer ,dimension(1:nvector),save::igrid,icell,indp,kg
+  real(dp),dimension(1:nvector,1:ndim),save::xpart
+  real(dp),dimension(1:nvector,1:ndim,1:twotondim),save::xx
+  real(dp),dimension(1:nvector,1:twotondim),save::vol
+  integer ,dimension(1:nvector,1:twotondim),save::indp
+  logical ,dimension(1:nvector,1:twotondim),save::ok
   real(dp),dimension(1:3)::skip_loc
   ! units and temporary quantities
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v,scale_Np,scale_Fp
@@ -238,90 +269,29 @@ SUBROUTINE sink_RT_vsweep_stellar(ind_grid,ind_part,ind_grid_part,ng,np,dt,ileve
 
   vol_cgs = (dx_loc*scale_l)**ndim
 
-  ! Lower left corners of 3x3x3 grid-cubes (with given grid in center)
-  do idim = 1, ndim
-     do i = 1, ng
-        x0(i,idim) = xg(ind_grid(i),idim) - 3.0D0*dx
-     end do
-  end do
-
-  ! Gather 27 neighboring father cells (should be present anytime !)
-  do i=1,ng
-     ind_cell(i) = father(ind_grid(i))
-  end do
-  call get3cubefather(ind_cell, nbors_father_cells, ng, ilevel)
-
-  ! Rescale position of stars to positions within 3x3x3 cell supercube
+  ! Get cloud particle CIC weights
   do idim = 1, ndim
      do j = 1, np
-        x(j,idim) = xp(ind_part(j),idim)/scale + skip_loc(idim)
-        x(j,idim) = x(j,idim) - x0(ind_grid_part(j),idim)
-        x(j,idim) = x(j,idim)/dx
+        xpart(j,idim) = xp(ind_part(j),idim)
      end do
   end do
+  call cic_get_cells(indp,xx,vol,ok,ind_grid,xpart,ind_grid_part,ng,np,ilevel)
 
-   ! NGP at level ilevel
-  do idim=1,ndim
+  ! Increase photon density in cell due to accretion luminosity.
+  ! Only the CIC volumes that are leaf cells at ilevel are used, as in cic_amr.
+  ! Loop over eight CIC volumes
+  do ind=1,twotondim
      do j=1,np
-        id(j,idim) = x(j,idim)
+        if( ok(j,ind) ) then   ! ilevel cell
+           ! Get sink index
+           isink=-idp(ind_part(j))
+           ! deposit the photons onto the grid
+           do ig=1,ngroups
+              rtunew(indp(j,ind),iGroups(ig))=rtunew(indp(j,ind),iGroups(ig)) + vol(j,ind) * &
+                   sink_ioni_flux(isink,ig) * dt / dble(ncloud_sink) / vol_cgs / scale_Np
+           end do
+        endif
      end do
-  end do
-
-  ! Compute parent grids
-  do idim = 1, ndim
-     do j = 1, np
-        igd(j,idim) = id(j,idim)/2
-     end do
-  end do
-  do j = 1, np
-     kg(j) = 1 + igd(j,1) + 3*igd(j,2) + 9*igd(j,3) ! 1 to 27
-  end do
-  do j = 1, np
-     igrid(j) = son(nbors_father_cells(ind_grid_part(j),kg(j)))
-  end do
-
-  ! Check if particles are entirely in level ilevel.
-  ok(1:np) = .true.
-  do j = 1, np
-     ok(j) = ok(j) .and. igrid(j) > 0
-  end do
-
-  ! Compute parent cell position within it's grid
-  do idim = 1, ndim
-     do j = 1, np
-        if( ok(j) ) then
-           icd(j,idim) = id(j,idim) - 2*igd(j,idim)
-        end if
-     end do
-  end do
-  do j = 1, np
-     if( ok(j) ) then
-        icell(j) = 1 + icd(j,1) + 2*icd(j,2) + 4*icd(j,3)
-     end if
-  end do
-
-  ! Compute parent cell adress
-  do j = 1, np
-     if( ok(j) )then
-        indp(j) = ncoarse + (icell(j)-1)*ngridmax + igrid(j)
-     else
-        indp(j) = nbors_father_cells(ind_grid_part(j),kg(j))
-     end if
-  end do
-
-
-  ! Increase photon density in cell due to accretion luminosity
-  do j=1,np
-     if( ok(j) ) then                                      !   ilevel cell
-        ! Get sink index
-        isink=-idp(ind_part(j))
-        ! deposit the photons onto the grid
-        do ig=1,ngroups
-           rtunew(indp(j),iGroups(ig))=rtunew(indp(j),iGroups(ig)) + &
-                sink_ioni_flux(isink,ig) * dt / dble(ncloud_sink) / vol_cgs / scale_Np
-        end do
-
-     endif
   end do
 
 END SUBROUTINE sink_RT_vsweep_stellar
