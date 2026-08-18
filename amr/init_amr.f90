@@ -238,12 +238,11 @@ subroutine init_amr
      allocate(tailp(1:ngridmax))
      allocate(numbp(1:ngridmax))
      headp=0; tailp=0; numbp=0
-#ifdef _OPENMP
-     allocate(numbp_old(1:ngridmax))
-     allocate(headp_old(1:ngridmax))
-     allocate(nextp_old(1:npartmax))
-     headp_old=0; nextp_old=0; numbp_old=0
-#endif
+     ! Pending particle moves. Allocated whether or not OpenMP is used, so that
+     ! the particle linked lists are built in the same order either way.
+     allocate(newgridp(1:npartmax))
+     allocate(nmovep(1:ngridmax))
+     newgridp=0; nmovep=0
   endif
 
   ! Initialize AMR grid linked list

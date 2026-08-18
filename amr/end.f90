@@ -123,11 +123,8 @@ subroutine deallocate_pm
      if(allocated(vp)) deallocate(vp)
      if(allocated(xp)) deallocate(xp)
 
-#ifdef _OPENMP
-     if(allocated(numbp_old)) deallocate(numbp_old)
-     if(allocated(headp_old)) deallocate(headp_old)
-     if(allocated(nextp_old)) deallocate(nextp_old)
-#endif
+     if(allocated(newgridp)) deallocate(newgridp)
+     if(allocated(nmovep)) deallocate(nmovep)
 endif
 
 end subroutine deallocate_pm
