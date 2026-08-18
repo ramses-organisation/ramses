@@ -430,7 +430,7 @@ subroutine check_tree(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      enddo
   enddo
 
-  ! Record where the escaped particles have to go, so that the 
+  ! Record where the escaped particles have to go, so that the
   ! the tree can be updated later by apply_tree_moves.
   ! No OMP critical needed, since a grid is proceded fully by a single thread.
   do j=1,np
@@ -691,11 +691,11 @@ subroutine apply_tree_moves(ilevel)
   ! lists: several threads can be sending particles to the same destination
   ! grid at the same time. To avoid race condition, the linked list update
   ! can be protected with a critical section. This however changes the order
-  ! in which particles are linked, in an undeterminisitc way. This affects 
-  ! the result of anything that depends on the order of the tree walk, 
+  ! in which particles are linked, in an undeterminisitc way. This affects
+  ! the result of anything that depends on the order of the tree walk,
   ! such as the MC tracer random moves.
 
-  ! OMP: This routine MUST be done in serial, as the tree must be walked in 
+  ! OMP: This routine MUST be done in serial, as the tree must be walked in
   ! this order (same order as check_tree, kill_tree, ...).
   !
   ! Note that a particle moved to a sister grid further down the traversal is
@@ -852,7 +852,7 @@ subroutine merge_tree_fine(ilevel)
            do i=1,ngrid
            if(ok(i))then
            if(numbp(ind_grid_son(i))>0)then
-              ! OMP: no critical needed here since each thread only updates 
+              ! OMP: no critical needed here since each thread only updates
               !      the linked lists of its own father cells
               if(numbp(ind_grid(i))>0)then
                  ! Connect son linked list at the tail of father linked list
