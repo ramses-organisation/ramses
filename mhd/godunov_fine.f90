@@ -256,7 +256,7 @@ subroutine set_uold(ilevel)
   dx=0.5d0**ilevel*scale
 
   ! Set uold to unew for myid cells
-!$omp parallel private(iskip,ivar,i,d,u,v,w,A,B,C,e_mag,e_kin,e_cons,e_prim,e_trunc,div)
+!$omp parallel private(iskip,ivar,i,d,u,v,w,A,B,C,e_mag,e_kin,e_cons,e_prim,e_trunc,div,ind_cell)
   do ind=1,twotondim
      iskip=ncoarse+(ind-1)*ngridmax
 

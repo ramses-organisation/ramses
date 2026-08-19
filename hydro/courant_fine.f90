@@ -44,7 +44,7 @@ subroutine courant_fine(ilevel)
 
   ! Loop over active grids by vector sweeps
   ncache=active(ilevel)%ngrid
-!$omp parallel do private(ngrid,iskip,nleaf,dt_lev) &
+!$omp parallel do private(ngrid,iskip,nleaf,dt_lev,ind,i,ivar,idim) &
 !$omp & reduction(+:mass_loc,ekin_loc,eint_loc) reduction(MIN:dt_loc)
   do igrid=1,ncache,nvector
      ngrid=MIN(nvector,ncache-igrid+1)

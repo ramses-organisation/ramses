@@ -70,7 +70,7 @@ subroutine rho_fine(ilevel,icount)
   !--------------------------
   ! Initialize fields to zero
   !--------------------------
-!$omp parallel private(ind,iskip,i)
+!$omp parallel private(ind,iskip,i,ind_cell)
   do ind=1,twotondim
      iskip=ncoarse+(ind-1)*ngridmax
 !$omp do

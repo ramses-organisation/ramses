@@ -93,7 +93,7 @@ subroutine save_phi_old(ilevel)
   !save the old potential for time extrapolation in case of subcycling
   integer::i,ncache,ind,igrid,iskip,istart,ibound,icell
 
-!$omp parallel do private(ncache,ind,igrid,iskip,ibound,icell)
+!$omp parallel do private(ncache,ind,igrid,iskip,ibound,icell,i)
   do ind=1,twotondim
      iskip=ncoarse+(ind-1)*ngridmax
      do ibound=1,nboundary+ncpu
