@@ -1123,7 +1123,11 @@ subroutine defrag
                  if(ibound==myid)then
                      igrid=active(ilevel)%igrid(i)
                  else
+#ifdef LIGHT_MPI_COMM
+                     igrid=reception(ibound,ilevel)%pcomm%igrid(i)
+#else
                      igrid=reception(ibound,ilevel)%igrid(i)
+#endif
                  end if
               else
                  igrid=boundary(ibound-ncpu,ilevel)%igrid(i)
@@ -1162,7 +1166,11 @@ subroutine defrag
                  if(ibound==myid)then
                      igrid=active(ilevel)%igrid(i)
                  else
+#ifdef LIGHT_MPI_COMM
+                     igrid=reception(ibound,ilevel)%pcomm%igrid(i)
+#else
                      igrid=reception(ibound,ilevel)%igrid(i)
+#endif
                  end if
               else
                  igrid=boundary(ibound-ncpu,ilevel)%igrid(i)
@@ -1214,7 +1222,11 @@ subroutine defrag
                  if(ibound==myid)then
                      igrid=active(ilevel)%igrid(i)
                  else
+#ifdef LIGHT_MPI_COMM
+                     igrid=reception(ibound,ilevel)%pcomm%igrid(i)
+#else
                      igrid=reception(ibound,ilevel)%igrid(i)
+#endif
                  end if
               else
                  igrid=boundary(ibound-ncpu,ilevel)%igrid(i)
@@ -1267,7 +1279,11 @@ subroutine defrag
                  if(ibound==myid)then
                      igrid=active(ilevel)%igrid(i)
                  else
+#ifdef LIGHT_MPI_COMM
+                     igrid=reception(ibound,ilevel)%pcomm%igrid(i)
+#else
                      igrid=reception(ibound,ilevel)%igrid(i)
+#endif
                  end if
               else
                  igrid=boundary(ibound-ncpu,ilevel)%igrid(i)
@@ -1309,7 +1325,11 @@ subroutine defrag
                  if(ibound==myid)then
                      igrid=active(ilevel)%igrid(i)
                  else
+#ifdef LIGHT_MPI_COMM
+                     igrid=reception(ibound,ilevel)%pcomm%igrid(i)
+#else
                      igrid=reception(ibound,ilevel)%igrid(i)
+#endif
                  end if
               else
                  igrid=boundary(ibound-ncpu,ilevel)%igrid(i)
@@ -1348,7 +1368,11 @@ subroutine defrag
                  if(ibound==myid)then
                      igrid=active(ilevel)%igrid(i)
                  else
+#ifdef LIGHT_MPI_COMM
+                     igrid=reception(ibound,ilevel)%pcomm%igrid(i)
+#else
                      igrid=reception(ibound,ilevel)%igrid(i)
+#endif
                  end if
               else
                  igrid=boundary(ibound-ncpu,ilevel)%igrid(i)
@@ -1387,7 +1411,11 @@ subroutine defrag
                  if(ibound==myid)then
                      igrid=active(ilevel)%igrid(i)
                  else
+#ifdef LIGHT_MPI_COMM
+                     igrid=reception(ibound,ilevel)%pcomm%igrid(i)
+#else
                      igrid=reception(ibound,ilevel)%igrid(i)
+#endif
                  end if
               else
                  igrid=boundary(ibound-ncpu,ilevel)%igrid(i)
@@ -1430,7 +1458,11 @@ subroutine defrag
                  if(ibound==myid)then
                      igrid=active(ilevel)%igrid(i)
                  else
+#ifdef LIGHT_MPI_COMM
+                     igrid=reception(ibound,ilevel)%pcomm%igrid(i)
+#else
                      igrid=reception(ibound,ilevel)%igrid(i)
+#endif
                  end if
               else
                  igrid=boundary(ibound-ncpu,ilevel)%igrid(i)
@@ -1478,7 +1510,11 @@ subroutine defrag
                  if(ibound==myid)then
                      igrid=active(ilevel)%igrid(i)
                  else
+#ifdef LIGHT_MPI_COMM
+                     igrid=reception(ibound,ilevel)%pcomm%igrid(i)
+#else
                      igrid=reception(ibound,ilevel)%igrid(i)
+#endif
                  end if
               else
                  igrid=boundary(ibound-ncpu,ilevel)%igrid(i)
@@ -1520,7 +1556,11 @@ subroutine defrag
                  if(ibound==myid)then
                      igrid=active(ilevel)%igrid(i)
                  else
+#ifdef LIGHT_MPI_COMM
+                     igrid=reception(ibound,ilevel)%pcomm%igrid(i)
+#else
                      igrid=reception(ibound,ilevel)%igrid(i)
+#endif
                  end if
               else
                  igrid=boundary(ibound-ncpu,ilevel)%igrid(i)
@@ -1565,7 +1605,11 @@ subroutine defrag
                  if(ibound==myid)then
                      igrid=active(ilevel)%igrid(i)
                  else
+#ifdef LIGHT_MPI_COMM
+                     igrid=reception(ibound,ilevel)%pcomm%igrid(i)
+#else
                      igrid=reception(ibound,ilevel)%igrid(i)
+#endif
                  end if
               else
                  igrid=boundary(ibound-ncpu,ilevel)%igrid(i)
@@ -1612,7 +1656,11 @@ subroutine defrag
                  if(ibound==myid)then
                      igrid=active(ilevel)%igrid(i)
                  else
+#ifdef LIGHT_MPI_COMM
+                     igrid=reception(ibound,ilevel)%pcomm%igrid(i)
+#else
                      igrid=reception(ibound,ilevel)%igrid(i)
+#endif
                  end if
               else
                  igrid=boundary(ibound-ncpu,ilevel)%igrid(i)
@@ -1658,7 +1706,11 @@ subroutine defrag
                  if(ibound==myid)then
                      igrid=active(ilevel)%igrid(i)
                  else
+#ifdef LIGHT_MPI_COMM
+                     igrid=reception(ibound,ilevel)%pcomm%igrid(i)
+#else
                      igrid=reception(ibound,ilevel)%igrid(i)
+#endif
                  end if
               else
                  igrid=boundary(ibound-ncpu,ilevel)%igrid(i)
@@ -1700,7 +1752,11 @@ subroutine defrag
                  if(ibound==myid)then
                      igrid=active(ilevel)%igrid(i)
                  else
+#ifdef LIGHT_MPI_COMM
+                     igrid=reception(ibound,ilevel)%pcomm%igrid(i)
+#else
                      igrid=reception(ibound,ilevel)%igrid(i)
+#endif
                  end if
               else
                  igrid=boundary(ibound-ncpu,ilevel)%igrid(i)
@@ -1748,7 +1804,11 @@ subroutine defrag
                  if(ibound==myid)then
                      igrid=active(ilevel)%igrid(i)
                  else
+#ifdef LIGHT_MPI_COMM
+                     igrid=reception(ibound,ilevel)%pcomm%igrid(i)
+#else
                      igrid=reception(ibound,ilevel)%igrid(i)
+#endif
                  end if
               else
                  igrid=boundary(ibound-ncpu,ilevel)%igrid(i)
@@ -1796,7 +1856,11 @@ subroutine defrag
                  if(ibound==myid)then
                      igrid=active(ilevel)%igrid(i)
                  else
+#ifdef LIGHT_MPI_COMM
+                     igrid=reception(ibound,ilevel)%pcomm%igrid(i)
+#else
                      igrid=reception(ibound,ilevel)%igrid(i)
+#endif
                  end if
               else
                  igrid=boundary(ibound-ncpu,ilevel)%igrid(i)
@@ -1839,7 +1903,11 @@ subroutine defrag
                  if(ibound==myid)then
                      igrid=active(ilevel)%igrid(i)
                  else
+#ifdef LIGHT_MPI_COMM
+                     igrid=reception(ibound,ilevel)%pcomm%igrid(i)
+#else
                      igrid=reception(ibound,ilevel)%igrid(i)
+#endif
                  end if
               else
                  igrid=boundary(ibound-ncpu,ilevel)%igrid(i)
