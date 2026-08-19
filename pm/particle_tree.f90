@@ -1351,12 +1351,20 @@ subroutine fill_comm(ind_part,ind_com,ind_list,np,ilevel,icpu)
   ! DICE init for gas temperature
   if(dice_init) then
      do i=1,np
+#ifdef LIGHT_MPI_COMM
+        reception(icpu,ilevel)%pcomm%u(current_property,ind_com(i))=up(ind_part(i))
+#else
         reception(icpu,ilevel)%up(ind_com(i),current_property)=up(ind_part(i))
+#endif
      end do
      current_property = current_property+1
      if(cosmo) then
        do i=1,np
+#ifdef LIGHT_MPI_COMM
+          reception(icpu,ilevel)%pcomm%u(current_property,ind_com(i))=maskp(ind_part(i))
+#else
           reception(icpu,ilevel)%up(ind_com(i),current_property)=maskp(ind_part(i))
+#endif
        end do
        current_property = current_property+1
      endif
@@ -1560,12 +1568,20 @@ subroutine empty_comm(ind_com,np,ilevel,icpu)
   ! DICE init for gas temperature
   if(dice_init) then
      do i=1,np
+#ifdef LIGHT_MPI_COMM
+       up(ind_part(i))=emission_part(ilevel)%u(current_property, offset_np+ind_com(i)-1)
+#else
        up(ind_part(i))=emission(icpu,ilevel)%up(ind_com(i),current_property)
+#endif
      end do
      current_property = current_property+1
      if(cosmo) then
        do i=1,np
+#ifdef LIGHT_MPI_COMM
+         maskp(ind_part(i))=emission_part(ilevel)%u(current_property, offset_np+ind_com(i)-1)
+#else
          maskp(ind_part(i))=emission(icpu,ilevel)%up(ind_com(i),current_property)
+#endif
        end do
        current_property = current_property+1
      endif
