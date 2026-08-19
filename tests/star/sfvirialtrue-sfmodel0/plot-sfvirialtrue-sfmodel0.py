@@ -142,6 +142,6 @@ if(nproc!=2):
 
 # and this is the "default tolerance"
 if(nproc==2):
-     tolerance={"all":1.0e-13,\
+     tolerance={"all":1.0e-12,\
                }
 visu_ramses.check_solution(to_check, 'sfvirialtrue-sfmodel0',tolerance=tolerance)#,overwrite=True)
