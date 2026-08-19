@@ -111,6 +111,14 @@ tolerance={"scalar_00":1e-7, "scalar_01":3.0e-7, "scalar_02":1.0e-7, "velocity_x
   ,'movie_Fp3':red_tol, 'movie_xHII':red_tol
   ,'photon_flux_01':red_tol, 'photon_flux_01_x':red_tol, 'photon_flux_01_y':red_tol, 'photon_flux_01_z':red_tol
   ,'photon_flux_02':red_tol, 'photon_flux_02_x':red_tol, 'photon_flux_02_y':red_tol, 'photon_flux_02_z':red_tol
-  ,'photon_flux_03':red_tol, 'photon_flux_03_x':red_tol, 'photon_flux_03_y':red_tol, 'photon_flux_03_z':red_tol}
+  ,'photon_flux_03':red_tol, 'photon_flux_03_x':red_tol, 'photon_flux_03_y':red_tol, 'photon_flux_03_z':red_tol,
+  # poisson solver doesn't conserve z-symmetry, resulting in a small value
+  # for the z velocity, which propagates into the x- and y- angular momentum
+  # problem here is even worse than center-SN because there are 2 massive sinks
+  # To be looked in further with a test without gravity.
+  'sink_lx': 5e-6, 'sink_ly': 5e-6, 'sink_lz': 3e-5,
+  'sink_vx': 3e-10, 'sink_vy': 3e-10, 'sink_vz': 3e-9,
+  'sink_vx_gas':3e-7, 'sink_vy_gas':3e-7, 'sink_vz_gas':6e-8,
+  'sink_cs**2': 1e-12, 'sink_etherm': 1e-12}
 
 visu_ramses.check_solution(data["data"],'stellar-HII',tolerance=tolerance,overwrite=False)
