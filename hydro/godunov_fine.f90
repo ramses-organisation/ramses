@@ -62,7 +62,7 @@ subroutine set_unew(ilevel)
   if(verbose)write(*,111)ilevel
 
   ! Set unew to uold for myid cells
-!$omp parallel private(iskip,ivar,i,d,u,v,w,e)
+!$omp parallel private(iskip,ivar,i,d,u,v,w,e,icell)
   do ind=1,twotondim
      iskip=ncoarse+(ind-1)*ngridmax
      do ivar=1,nvar_all
@@ -180,7 +180,7 @@ subroutine set_uold(ilevel)
   dx=0.5d0**ilevel*scale
 
   ! Set uold to unew for myid cells
-!$omp parallel private(iskip,ivar,i,d,u,v,w,e_kin,e_cons,e_prim,e_trunc,div)
+!$omp parallel private(iskip,ivar,i,d,u,v,w,e_kin,e_cons,e_prim,e_trunc,div,ind_cell)
   do ind=1,twotondim
      iskip=ncoarse+(ind-1)*ngridmax
 
