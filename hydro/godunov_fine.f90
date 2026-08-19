@@ -344,7 +344,7 @@ subroutine add_pdv_source_terms(ilevel)
   integer::irad
 !#endif
 
-!$omp threadprivate(ind_grid,ind_cell,igridn,ind_left,ind_right,velg,veld,dx_g,dx_d,divu_loc,irad)
+!$omp threadprivate(ind_grid,ind_cell,igridn,ind_left,ind_right,velg,veld,dx_g,dx_d,divu_loc)
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
@@ -356,7 +356,7 @@ subroutine add_pdv_source_terms(ilevel)
 
   ! Loop over myid grids by vector sweeps
   ncache=active(ilevel)%ngrid
-!$omp parallel do private(igrid,ngrid,i,idim,ind,iskip,id1,ig1,ih1,id2,ig2,ih2,d,u,v,w,eold)
+!$omp parallel do private(igrid,ngrid,i,idim,ind,iskip,id1,ig1,ih1,id2,ig2,ih2,d,u,v,w,eold,irad)
   do igrid=1,ncache,nvector
 
      ! Gather nvector grids
