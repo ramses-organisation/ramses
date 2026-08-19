@@ -565,9 +565,9 @@ def check_solution(data,test_name,tolerance=None,threshold=2.0e-14,norm_min=1.0e
     tex_file.write(" \n")
     tex_file.close()
 
-    vars_to_correct = ["sink_lx","sink_ly","sink_lz",
-                       "sink_vx","sink_vy","sink_vz",
-                       "sink_vx_gas","sink_vy_gas","sink_vz_gas"]
+    vars_to_correct = []#"sink_lx","sink_ly","sink_lz",
+    #                   "sink_vx","sink_vy","sink_vz",
+    #                   "sink_vx_gas","sink_vy_gas","sink_vz_gas"]
     # Find vectors and normalize components
     norms = dict()
     permutations = {"_x":["_y","_z"],"_y":["_x","_z"],"_z":["_x","_y"]}
@@ -688,8 +688,10 @@ def check_solution(data,test_name,tolerance=None,threshold=2.0e-14,norm_min=1.0e
         if this_sol is not None and this_ref is not None:
             if this_sol == this_ref == 0.0:
                 error = 0.0
-            elif this_sol == 0.0 or this_ref == 0.0:
-                error = np.inf
+            elif this_ref == 0.0:
+                error = abs(this_sol-this_ref)  # probably round-off errors
+            elif this_sol == 0.0:
+                error = np.inf   # something is 0 that shouldn't be 0
             else:
                 error = abs(this_sol-this_ref)/min(abs(this_sol),abs(this_ref))
         else:

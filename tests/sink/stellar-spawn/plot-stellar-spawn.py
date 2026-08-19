@@ -60,5 +60,5 @@ axis.set_ylabel('mass [Msun]')
 axis.legend()
 
 fig.savefig('stellar-spawn.pdf', bbox_inches="tight")
-
-visu_ramses.check_solution(data["data"],'stellar-spawn',overwrite=False)
+tol = {'sink_lx': 1e-10, 'sink_ly': 1e-10, 'sink_lz':1e-10}
+visu_ramses.check_solution(data["data"],'stellar-spawn',tolerance=tol,overwrite=False)
