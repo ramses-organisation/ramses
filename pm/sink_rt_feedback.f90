@@ -194,26 +194,35 @@ SUBROUTINE sink_RT_vsweep_stellar(ind_grid,ind_part,ind_grid_part,ng,np,dt,ileve
 ! cell's value as the average of its children at the end of every rt_step, so
 ! photons put there would simply be erased.
 !
-! KNOWN LIMITATION. A cloud particle is only ever visited at the level of the
-! grid it is attached to, because sink_RT_feedback runs from rt_step, i.e. after
-! kill_tree_fine and before merge_tree_fine. The part of its stencil reaching
-! into a coarser neighbour is therefore dropped and no other level's call picks
-! it up, so a sink near a refinement boundary emits slightly less than its
-! stellar objects should, by a factor that depends on the local refinement and
-! so drifts as the mesh and the sink move.
+! REQUIRES sink_refine. A cloud particle is only ever visited at the level of
+! the grid it is attached to, because sink_RT_feedback runs from rt_step, i.e.
+! after kill_tree_fine and before merge_tree_fine. So any part of its CIC
+! stencil reaching into a COARSER neighbour would be dropped, with no other
+! level's call to pick it up - unlike the cloud mass in cic_amr, where rho_fine
+! runs before kill_tree_fine and therefore deposits every particle at every
+! level, so the coarse level holds the full mass.
 !
-! This is NOT the same situation as the cloud mass in cic_amr (rho_fine), which
-! can drop the overhang safely because rho_fine runs before kill_tree_fine and
-! so deposits every particle at every level - the coarse level holds the full
-! mass. Nor is it what accrete_sink does, which normalises by the accumulated
-! usable weight volume_gas so the sink always accretes the full Bondi rate.
+! That does not happen with sink_refine=.true., which is the advised setting.
+! The sink_refine block in cic_amr marks ALL EIGHT CIC cells of every cloud
+! particle above the refinement threshold, at every level up to nlevelmax_sink -
+! and nlevelmax_sink is the *effective* levelmax, i.e. the finest level the
+! refinement criteria can actually reach (it exists because levelmax cannot be
+! changed on restart, so a run may be started with criteria that stop short of
+! it). The refined region is therefore guaranteed to cover the whole cloud
+! stencil, and no volume can fall into a coarser neighbour. Measured on
+! tests/sink/stellar-HII: the gathered flux equals the emitted flux to 1e-15 at
+! every level.
 !
-! Renormalising the weights per particle would restore the total but push the
-! redistributed light away from the refinement boundary, which is the same kind
-! of asymmetry this routine already had to be fixed for. The clean fix is to
-! gather the per-cell injection rate before kill_tree_fine, where the whole
-! cloud is still attached to one level, store it in a work array and only apply
-! it here - the structure rho_fine uses for the mass. Left for a follow-up.
+! With sink_refine=.false. that guarantee is gone and a sink near a refinement
+! boundary will emit slightly less than its stellar objects should. Use
+! sink_refine.
+!
+! Note this covers the coarser direction only. A volume falling in a neighbour
+! that is refined FINER than ilevel is skipped as well, and that is correct:
+! rt_upload_fine re-imposes a split cell's value from its children, so photons
+! put there would be erased. Those photons are lost, which is a real if much
+! smaller effect, and needs gas criteria to refine past nlevelmax_sink next to a
+! cloud for it to arise at all.
 !
 
 ! The ionising flux of each sink must be provided in sink_ioni_flux
