@@ -109,7 +109,8 @@ subroutine cmp_residual_mg_coarse(ilevel)
    ngrid=active_mg(myid,ilevel)%ngrid
 
    ! Loop over cells myid
-!$omp parallel private(iskip_mg,iskip_amr,igshift,igrid_nbor_mg,igrid_nbor_amr,igrid_amr,icell_nbor_mg,icell_mg,cpu_nbor_amr,nb_sum,phi_c)
+!$omp parallel private(iskip_mg,iskip_amr,igshift,igrid_nbor_mg,igrid_nbor_amr,igrid_amr,icell_nbor_mg,icell_mg,cpu_nbor_amr,nb_sum,phi_c) &
+!$omp & private(ind,idim,inbor)
    do ind=1,twotondim
       iskip_mg  = (ind-1)*ngrid
       iskip_amr = ncoarse+(ind-1)*ngridmax

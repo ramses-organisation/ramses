@@ -404,10 +404,7 @@ subroutine make_virtual_fine_dp(xx,ilevel)
   ! -------------------------------------------------------------------
 #ifndef WITHOUTMPI
 
-  integer::icpu,i,j,ncache,iskip,step,offset
-#ifdef LIGHT_MPI_COMM
-  integer::ind,idx
-#endif
+  integer::icpu,i,j,ncache,iskip,step,offset,idx
   integer::countsend,countrecv
   integer::info,tag=101
 #ifdef LIGHT_MPI_COMM
@@ -457,7 +454,7 @@ subroutine make_virtual_fine_dp(xx,ilevel)
   end do
 
   ! Gather emission array
-!$omp parallel do private(j,icpu,step,iskip,i,offset)
+!$omp parallel do private(j,icpu,step,iskip,i,offset,idx)
   do j=1,twotondim
 #ifdef LIGHT_MPI_COMM
     offset=0
@@ -565,10 +562,7 @@ subroutine make_virtual_fine_int(xx,ilevel)
   ! -------------------------------------------------------------------
 #ifndef WITHOUTMPI
 
-  integer::icpu,i,j,ncache,iskip,step,offset
-#ifdef LIGHT_MPI_COMM
-  integer::ind,idx
-#endif
+  integer::icpu,i,j,ncache,iskip,step,offset,idx
   integer::countsend,countrecv
   integer::info,tag=101
 #ifdef LIGHT_MPI_COMM
@@ -618,7 +612,7 @@ subroutine make_virtual_fine_int(xx,ilevel)
   end do
 
   ! Gather emission array
-!$omp parallel do private(j,icpu,step,iskip,i,offset)
+!$omp parallel do private(j,icpu,step,iskip,i,offset,idx)
   do j=1,twotondim
 #ifdef LIGHT_MPI_COMM
     offset=0
@@ -721,10 +715,7 @@ subroutine make_virtual_reverse_dp(xx,ilevel)
   ! at level ilevel in a reverse way for double precision arrays.
   ! -------------------------------------------------------------------
 #ifndef WITHOUTMPI
-  integer::icpu,i,j,ncache,iskip,step,icell,ibuf,offset
-#ifdef LIGHT_MPI_COMM
-  integer::ind,idx
-#endif
+  integer::icpu,i,j,ncache,iskip,step,icell,ibuf,offset,idx
   integer::countsend,countrecv
   integer::info,tag=101
 #ifdef LIGHT_MPI_COMM
@@ -857,7 +848,7 @@ subroutine make_virtual_reverse_dp(xx,ilevel)
 #endif
 
   ! Scatter reception array
-!$omp parallel do private(j,icpu,step,iskip,i,offset)
+!$omp parallel do private(j,icpu,step,iskip,i,offset,idx)
   do j=1,twotondim
 #ifdef LIGHT_MPI_COMM
     offset=0
@@ -952,7 +943,7 @@ subroutine make_virtual_reverse_dp(xx,ilevel)
 #endif
 
   ! Scatter reception array
-!$omp parallel do private(j,icpu,step,iskip,i,offset)
+!$omp parallel do private(j,icpu,step,iskip,i,offset,idx)
   do j=1,twotondim
 #ifdef LIGHT_MPI_COMM
     offset=0
@@ -1018,10 +1009,7 @@ subroutine make_virtual_reverse_int(xx,ilevel)
   ! -------------------------------------------------------------------
 #ifndef WITHOUTMPI
 
-  integer::icpu,i,j,ncache,iskip,step,icell,ibuf,offset
-#ifdef LIGHT_MPI_COMM
-  integer::ind,idx
-#endif
+  integer::icpu,i,j,ncache,iskip,step,icell,ibuf,offset,idx
   integer::countsend,countrecv
   integer::info,tag=101
 #ifdef LIGHT_MPI_COMM
@@ -1154,7 +1142,7 @@ subroutine make_virtual_reverse_int(xx,ilevel)
 #endif
 
   ! Scatter reception array
-!$omp parallel do private(j,icpu,step,iskip,i,offset)
+!$omp parallel do private(j,icpu,step,iskip,i,offset,idx)
   do j=1,twotondim
 #ifdef LIGHT_MPI_COMM
     offset=0
@@ -1249,7 +1237,7 @@ subroutine make_virtual_reverse_int(xx,ilevel)
 #endif
 
   ! Scatter reception array
-!$omp parallel do private(j,icpu,step,iskip,i,offset)
+!$omp parallel do private(j,icpu,step,iskip,i,offset,idx)
   do j=1,twotondim
 #ifdef LIGHT_MPI_COMM
     offset=0

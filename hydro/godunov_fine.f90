@@ -52,9 +52,9 @@ subroutine set_unew(ilevel)
   integer::i,ivar,ind,icpu,ncache,iskip,igrid,ngrid,icell
   real(dp)::d,u,v,w,e
   integer,dimension(1:nvector),save::ind_grid,ind_cell
-#if NENER>0
+!#if NENER>0
   integer::irad
-#endif
+!#endif
 
 !$omp threadprivate(ind_grid,ind_cell)
 
@@ -62,7 +62,7 @@ subroutine set_unew(ilevel)
   if(verbose)write(*,111)ilevel
 
   ! Set unew to uold for myid cells
-!$omp parallel private(iskip,ivar,i,d,u,v,w,e,icell)
+!$omp parallel private(iskip,ivar,i,ind,d,u,v,w,e,icell,irad)
   do ind=1,twotondim
      iskip=ncoarse+(ind-1)*ngridmax
      do ivar=1,nvar_all
@@ -168,9 +168,9 @@ subroutine set_uold(ilevel)
   integer::i,ivar,ind,iskip,nx_loc,ind_cell
   real(dp)::scale,d,u,v,w
   real(dp)::e_kin,e_cons,e_prim,e_trunc,div,dx
-#if NENER>0
+!#if NENER>0
   integer::irad
-#endif
+!#endif
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
@@ -180,7 +180,7 @@ subroutine set_uold(ilevel)
   dx=0.5d0**ilevel*scale
 
   ! Set uold to unew for myid cells
-!$omp parallel private(iskip,ivar,i,d,u,v,w,e_kin,e_cons,e_prim,e_trunc,div,ind_cell)
+!$omp parallel private(iskip,ivar,i,d,u,v,w,e_kin,e_cons,e_prim,e_trunc,div,ind_cell,irad)
   do ind=1,twotondim
      iskip=ncoarse+(ind-1)*ngridmax
 
@@ -340,11 +340,11 @@ subroutine add_pdv_source_terms(ilevel)
   real(dp),dimension(1:nvector,1:ndim,1:ndim),save::velg,veld
   real(dp),dimension(1:nvector,1:ndim),save::dx_g,dx_d
   real(dp),dimension(1:nvector),save::divu_loc
-#if NENER>0
+!#if NENER>0
   integer::irad
-#endif
+!#endif
 
-!$omp threadprivate(ind_grid,ind_cell,igridn,ind_left,ind_right,velg,veld,dx_g,dx_d,divu_loc)
+!$omp threadprivate(ind_grid,ind_cell,igridn,ind_left,ind_right,velg,veld,dx_g,dx_d,divu_loc,irad)
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
@@ -465,7 +465,7 @@ subroutine add_pdv_source_terms(ilevel)
 
   ! Update thermal internal energy
   if(pressure_fix)then
-!$omp parallel private(ind,iskip,i,ind_cell1,d,u,v,w,eold)
+!$omp parallel private(ind,iskip,i,ind_cell1,d,u,v,w,eold,irad)
      do ind=1,twotondim
         iskip=ncoarse+(ind-1)*ngridmax
 !$omp do

@@ -374,7 +374,8 @@ subroutine cmp_new_cpu_map
   end do
   ! Loop over levels
 !$omp parallel private(dx,ix,iy,iz,xc,ncache) &
-!$omp & private(ngrid,iskip,idim,ncell_loc,ncell_omp,isub,wflag)
+!$omp & private(ngrid,iskip,idim,ncell_loc,ncell_omp,isub,wflag) &
+!$omp & private(ilevel,ind,icpu,i)
   do ilevel=1,nlevelmax
      ! Cell size and cell center offset
      dx=0.5d0**ilevel
