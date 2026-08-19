@@ -75,6 +75,7 @@ sink_refine=.true.
 
 &POISSON_PARAMS
 gravity_type=0
+epsilon=1d-9  !tighten to get sink_vz close to 0
 /
 
 &SINK_PARAMS
