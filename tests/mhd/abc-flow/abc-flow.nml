@@ -52,8 +52,8 @@ scheme='induction'
 eta_mag=0.001
 /
 
-&REFINE_PARAMS
-err_grad_b2=0.1
-interpol_var=0
-interpol_type=2
-/
+!&REFINE_PARAMS
+!err_grad_b2=0.1
+!interpol_var=1
+!interpol_type=2
+!/
