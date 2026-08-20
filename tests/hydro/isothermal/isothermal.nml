@@ -61,3 +61,7 @@ isothermal=.true. !test backwards compatibility
 barotropic_eos_form='isothermal'
 T_eos=4.2194 !mu_gas=1 by default
 /
+
+&POISSON_PARAMS
+mg_maxiter=20  !added so lvl 14 poisson converges on init
+/
