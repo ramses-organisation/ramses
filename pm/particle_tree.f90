@@ -193,6 +193,9 @@ subroutine make_tree_fine(ilevel)
   ! not exist, the particle is left to its original parent grid.
   ! Particles must not move to a distance greater than direct neighbors
   ! boundaries. Otherwise an error message is issued and the code stops.
+  !
+  ! The name "make tree" refers to rebuilding the grid/particle tree at this
+  ! level, not to creating particles. Nothing is created or destroyed here.
   !-----------------------------------------------------------------------
   ! Input parameters
   ! ilevel        => (input) current level
@@ -432,6 +435,12 @@ subroutine kill_tree_fine(ilevel)
   ! list. If the child grid does not exist, the particle is left to its
   ! original parent grid.
   ! This routine resets all linked lists at level ilevel+1 before sorting.
+  !
+  ! The name "kill tree" probably refers to this routine first reseting
+  ! (kills) every particle linked list at ilevel+1, before refilling them
+  ! from ilevel. No particle is destroyed.
+  ! The counterpart of this routine is merge_tree_fine, which attaches
+  ! particles back from level+1 to level at the end of amr_step.
   !------------------------------------------------------------------------
   ! Input parameters
   ! ilevel        => (input) current level
@@ -631,9 +640,29 @@ subroutine merge_tree_fine(ilevel)
   implicit none
   integer::ilevel
   !----------------------------------------------------------------------
-  ! This routine disconnects all particles contained in children grids
-  ! at level ilevel+1 and connects them to their parent grid linked list
-  ! at level ilevel.
+  ! This routine appends ("merges") the particle linked list of every
+  ! child grid at level ilevel+1 to the linked list of its parent grid at
+  ! level ilevel. The two linked lists are simply spliced together instead
+  ! of moving particles one by one with add_list/remove_list, so the cost
+  ! scales with the number of grids.
+  ! Counterpart of kill_tree_fine; the two bracket the recursion in amr_step.
+  !
+  ! IMPORTANT: headp, tailp and numbp of the CHILD grids are deliberately NOT
+  ! reset here, and must not be. After the splice they still describe exactly
+  ! the run of particles that came from that child, because splicing only
+  ! rewrites the links at the join - the interior of the chain is untouched.
+  ! That stays true however many times the run is spliced further up, so the
+  ! child head/count remain a valid record of "the particles that were in this
+  ! grid" even once they have been merged several levels above.
+  !
+  ! pre_kill_grid_hook (pm/tracer_utils.f90) relies on exactly that: when a
+  ! grid is derefined, it walks headp/numbp of the doomed grid to find its gas
+  ! tracers, recentre them on the parent cell and update partp. By then the
+  ! particles themselves live in a grid several levels up, so this dangling
+  ! record is the only thing that identifies them.
+  !
+  ! The lists are cleared by the "Reset all linked lists at level ilevel+1"
+  ! loop at the top of kill_tree_fine, once the derefinement pass is over.
   !----------------------------------------------------------------------
   ! Input parameters
   ! ilevel        => (input) current level
@@ -705,6 +734,8 @@ subroutine merge_tree_fine(ilevel)
                  numbp(ind_grid(i))=numbp(ind_grid_son(i))
               end if
 
+              ! DO NOT reset headp/tailp/numbp of the child here. They are read
+              ! later by pre_kill_grid_hook, see the note at the top.
            end if
            end if
            end do
