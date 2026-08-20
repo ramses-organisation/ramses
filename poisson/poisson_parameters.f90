@@ -23,6 +23,9 @@ module poisson_parameters
   ! level >=cg_levelmin uses conjugate gradient
   integer :: cg_levelmin=999
 
+  ! Maximum number of multigrid cycles at a fine level before giving up
+  integer :: mg_maxiter=10
+
   ! Gauss-Seidel smoothing sweeps for fine multigrid
   integer, parameter :: ngs_fine   = 2
   integer, parameter :: ngs_coarse = 2

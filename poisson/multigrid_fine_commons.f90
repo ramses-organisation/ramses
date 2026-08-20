@@ -31,7 +31,6 @@ subroutine multigrid_fine(ilevel,icount)
 
    integer, intent(in) :: ilevel,icount
 
-   integer, parameter  :: MAXITER  = 10
    real(dp), parameter :: SAFE_FACTOR = 0.5d0
 
    integer :: ifine, i, iter, icpu
@@ -271,7 +270,7 @@ subroutine multigrid_fine(ilevel,icount)
          & iter,' Error=',err
 
       ! Converged?
-      if(err<epsilon .or. iter>=MAXITER) exit
+      if(err<epsilon .or. iter>=mg_maxiter) exit
 
       ! Not converged, check error and possibly enable safe mode for the level
       if(err > last_err*SAFE_FACTOR .and. (.not. safe_mode(ilevel))) then
@@ -283,7 +282,7 @@ subroutine multigrid_fine(ilevel,icount)
 
    if(myid==1) print '(A,I5,A,I5,A,1pE10.3)','   ==> Level=',ilevel, ' Step=', &
             iter,' Error=',err
-   if(myid==1 .and. iter==MAXITER) print *,'WARN: Fine multigrid &
+   if(myid==1 .and. iter>=mg_maxiter) print *,'WARN: Fine multigrid &
       &Poisson failed to converge...'
 
    ! ---------------------------------------------------------------------

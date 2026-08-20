@@ -27,6 +27,7 @@ These two methods can be combined by setting both `gravity_rho_ana_type` and `gr
 | `gravity_rho_ana_type`      | `integer`  | 0     | Add gravity from an analytical density profile. This will add an analytical contribution to the Poisson source term. 0 = no additional contribution, 2 = a point mass, 3 = galactic disk (see rho_ana.f90)
 | `gravity_force_ana_type`      | `integer`  | 0     | Add an analytical gravitational force. 0 = no additional contribution, 1 = constant vector, 2 = a point mass, 3 = galactic disk (see gravana.f90)
 | `epsilon`           | `real`  | 1e-4  | Stopping criterion for the iterative Poisson solver: residual 2-norm should be lower than `epsilon` times the right hand side 2-norm.
+| `mg_maxiter`        | `integer`  | 10 | Maximum number of multigrid cycles spent on a refined level before the solver gives up and moves on with a warning. Raise it for setups where the deepest levels converge slowly; note that a solve which has stalled rather than merely slowed will not be rescued by a larger budget.
 | `gravity_params`    | `real array`  | 0.0, | (deprecated) Parameters used to define the analytical gravity field (routine `gravana.f90`) or the analytical mass density field (routine `rho_ana.f90`).
 | `gravity_rho_ana_params`    | `real array`  | 0.0, | Parameters used to define the analytical mass density field (routine `rho_ana.f90`).
 | `gravity_force_ana_params`    | `real array`  | 0.0, | Parameters used to define the analytical gravity field (routine `gravana.f90`)
