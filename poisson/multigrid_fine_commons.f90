@@ -190,6 +190,7 @@ subroutine multigrid_fine(ilevel,icount)
 
    iter = 0
    err = 1.0d0
+   safe_mode(ilevel) = .false.  ! Reset safe_mode
    main_iteration_loop: do
       iter=iter+1
       ! Pre-smoothing
