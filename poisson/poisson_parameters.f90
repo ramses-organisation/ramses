@@ -26,6 +26,14 @@ module poisson_parameters
   ! Maximum number of multigrid cycles at a fine level before giving up
   integer :: mg_maxiter=10
 
+  ! Number of solves for which first-order reconstruction of the multigrid
+  ! boundaries ("safe mode") is kept ON once the solver has switched to it
+  ! for a certain level (counting the solve that triggered the switch)
+  !   1 = switch back after every solve
+  !  10 = good value quoted in Guillet & Teyssier (2011)
+  !   0 = never reset
+  integer :: mg_safe_mode_reset=1
+
   ! Gauss-Seidel smoothing sweeps for fine multigrid
   integer, parameter :: ngs_fine   = 2
   integer, parameter :: ngs_coarse = 2

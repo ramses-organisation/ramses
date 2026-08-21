@@ -60,7 +60,9 @@ subroutine init_poisson
   end do
 #endif
   allocate(safe_mode(1:nlevelmax))
+  allocate(safe_mode_countdown(1:nlevelmax))
   safe_mode = .false.
+  safe_mode_countdown = 0
 
   !--------------------------------
   ! For a restart, read poisson file

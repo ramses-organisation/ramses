@@ -132,6 +132,7 @@ subroutine deallocate_poisson
 
   if(allocated(lookup_mg)) deallocate(lookup_mg)
   if(allocated(safe_mode)) deallocate(safe_mode)
+  if(allocated(safe_mode_countdown)) deallocate(safe_mode_countdown)
   if(allocated(active_mg)) deallocate(active_mg)
   if(allocated(emission_mg)) deallocate(emission_mg)
 

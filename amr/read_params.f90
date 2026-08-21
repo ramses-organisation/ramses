@@ -684,7 +684,7 @@ subroutine read_poisson_params(namelist_unit,nml_ok)
 
    namelist/poisson_params/epsilon,gravity_type,gravity_params &
    & ,cg_levelmin,cic_levelmax,self_gravity,gravity_rho_ana_type,gravity_force_ana_type &
-   & ,gravity_rho_ana_params,gravity_force_ana_params,mg_maxiter
+   & ,gravity_rho_ana_params,gravity_force_ana_params,mg_maxiter,mg_safe_mode_reset
 
    ! Go to the beginning of the file
    rewind(namelist_unit)

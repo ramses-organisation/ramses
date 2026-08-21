@@ -190,7 +190,17 @@ subroutine multigrid_fine(ilevel,icount)
 
    iter = 0
    err = 1.0d0
-   safe_mode(ilevel) = .false.  ! Reset safe_mode
+
+   ! Reset safe_mode if required
+   if(safe_mode(ilevel) .and. mg_safe_mode_reset>0)then
+      safe_mode_countdown(ilevel) = safe_mode_countdown(ilevel) - 1 !previous solve used safe_mode
+      if(safe_mode_countdown(ilevel)<=0)then
+         safe_mode(ilevel) = .false.
+         safe_mode_countdown(ilevel) = 0
+         if(myid==1)print *,'CAUTION: Switching OFF safe MG mode for level ',ilevel
+      end if
+   end if
+
    main_iteration_loop: do
       iter=iter+1
       ! Pre-smoothing
@@ -275,8 +285,9 @@ subroutine multigrid_fine(ilevel,icount)
 
       ! Not converged, check error and possibly enable safe mode for the level
       if(err > last_err*SAFE_FACTOR .and. (.not. safe_mode(ilevel))) then
-         if(verbose)print *,'CAUTION: Switching to safe MG mode for level ',ilevel
+         if(myid==1)print *,'CAUTION: Switching ON safe MG mode for level ',ilevel
          safe_mode(ilevel) = .true.
+         safe_mode_countdown(ilevel) = mg_safe_mode_reset
       end if
 
    end do main_iteration_loop
