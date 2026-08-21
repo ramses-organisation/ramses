@@ -65,7 +65,3 @@ polytrope_index=1.666667
 T_eos=10d0
 mu_gas=2.37d0
 /
-
-&POISSON_PARAMS
-mg_maxiter=20  !added so lvl 14 poisson converges on init
-/
