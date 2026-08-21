@@ -68,9 +68,9 @@ subroutine backup_part(filename, filename_desc)
 
   ! Gather the order in which particles should be outputted. Dumping in tree
   ! order preserves the particle linked-list order upon restart. This is
-  ! needed for making processes that assign random numbers in tree order 
+  ! needed for making processes that assign random numbers in tree order
   ! (e.g. MC tracers) reproducable.
-  ! Remark that merge_tree_fine does not clean up the linked list, so 
+  ! Remark that merge_tree_fine does not clean up the linked list, so
   ! particles are duplicated accross levels. We track which particle is
   ! already gathered with the dumpedp array.
 
@@ -81,7 +81,7 @@ subroutine backup_part(filename, filename_desc)
      ! Loop over cpus and boundary regions:
      ! - The dump happens between make_tree_fine and virtual_tree_fine, so
      !   particles can sit in the ghostzones waiting for MPI transfer.
-     ! - Some particles could have gotten stuck in non-periodic boundaries.  
+     ! - Some particles could have gotten stuck in non-periodic boundaries.
      do ibound=1,nboundary+ncpu
         if(ibound<=ncpu)then
            ncache=numbl(ibound,ilevel)
