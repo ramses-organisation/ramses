@@ -32,7 +32,7 @@ module poisson_parameters
   !   1 = switch back after every solve
   !  10 = good value quoted in Guillet & Teyssier (2011)
   !   0 = never reset
-  integer :: mg_safe_mode_reset=1
+  integer :: mg_safe_mode_reset=0
 
   ! Gauss-Seidel smoothing sweeps for fine multigrid
   integer, parameter :: ngs_fine   = 2
