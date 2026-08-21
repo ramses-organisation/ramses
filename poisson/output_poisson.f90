@@ -195,7 +195,7 @@ subroutine restore_safe_mode
         write(*,*)'All levels restart with safe_mode=.false.'
      end if
   end if
-  
+
 
 #ifndef WITHOUTMPI
   call MPI_BCAST(safe_mode          ,nlevelmax,MPI_LOGICAL,0,MPI_COMM_WORLD,info)
