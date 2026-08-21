@@ -182,6 +182,9 @@ subroutine init_poisson
      call MPI_BARRIER(MPI_COMM_WORLD,info)
 #endif
      if(verbose)write(*,*)'POISSON backup files read completed'
+     ! read dumped safe_mode variable for reproducabilty on restart
+     call restore_safe_mode
+
   end if
 
 end subroutine init_poisson

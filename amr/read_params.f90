@@ -724,6 +724,11 @@ subroutine read_poisson_params(namelist_unit,nml_ok)
       nml_ok=.false.
    endif
 
+   if(mg_safe_mode_reset<0)then
+      if(myid==1)write(*,*)'Error: mg_safe_mode_reset must be >= 0.'
+      nml_ok=.false.
+   endif
+
 end subroutine read_poisson_params
 !###############################################################
 !###############################################################
