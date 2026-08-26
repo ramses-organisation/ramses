@@ -138,16 +138,27 @@ subroutine init_sink
 #endif
 
      nsink=0
-
+     ! Temporary, for check
+     ! if (myid == 1) then
+     !  write(*,*) 'IOGROUPSIZE    = ', IOGROUPSIZE
+     !  write(*,*) 'IOGROUPSIZEREP = ', IOGROUPSIZEREP
+     ! endif
      ! Create an empty sink file if the previous snapshot had no sinks.
-      inquire(file=fileloc, exist=ic_sink)
-      if (.not. ic_sink) then
-         open(10,file=fileloc,form='formatted',status='new',recl=500)
-         write(10,'(" # id,msink,x,y,z,vx,vy,vz,lx,ly,lz,tform,acc_rate,del_mass,rho_gas,cs**2,etherm,vx_gas,vy_gas,vz_gas,mbh,dmfsink,level ")')
-         write(10,'(" # 1,m,l,l,l,l t**-1,l t**-1,l t**-1,m l**2 t**-1,m l**2 t**-1,m l**2 t**-1,t,m t**-1,m,m l**-3,l**2 t**-2,m l**2 t**-2,l t**-1,l t**-1,l t**-1,m,m,1")')
-         close(10)
-      endif
-
+#ifndef WITHOUTMPI
+     if (myid == 1) then
+#endif
+        inquire(file=fileloc, exist=ic_sink)
+        if (.not. ic_sink) then
+           open(10,file=fileloc,form='formatted',status='new',recl=500)
+           write(10,'(" # id,msink,x,y,z,vx,vy,vz,lx,ly,lz,tform,acc_rate,del_mass,rho_gas,cs**2,etherm,vx_gas,vy_gas,vz_gas,mbh,dmfsink,level ")')
+           write(10,'(" # 1,m,l,l,l,l t**-1,l t**-1,l t**-1,m l**2 t**-1,m l**2 t**-1,m l**2 t**-1,t,m t**-1,m,m l**-3,l**2 t**-2,m l**2 t**-2,l t**-1,l t**-1,l t**-1,m,m,1")')
+           close(10)
+        endif
+#ifndef WITHOUTMPI
+     endif
+     ! Synchronize all CPUs.
+     call MPI_BARRIER(MPI_COMM_WORLD,info2)
+#endif
      open(10,file=fileloc,form='formatted')
      eof=.false.
      ! scrolling over the comment lines
