@@ -138,14 +138,9 @@ subroutine init_sink
 #endif
 
      nsink=0
-     ! Temporary, for check
-     ! if (myid == 1) then
-     !  write(*,*) 'IOGROUPSIZE    = ', IOGROUPSIZE
-     !  write(*,*) 'IOGROUPSIZEREP = ', IOGROUPSIZEREP
-     ! endif
      ! Create an empty sink file if the previous snapshot had no sinks.
 #ifndef WITHOUTMPI
-     if (myid == 1) then
+     if ((IOGROUPSIZE == 0 .and. myid == 1) .or. (IOGROUPSIZE > 0 .and. mod(myid-1,IOGROUPSIZE) == 0)) then
 #endif
         inquire(file=fileloc, exist=ic_sink)
         if (.not. ic_sink) then
