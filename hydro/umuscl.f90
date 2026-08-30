@@ -879,6 +879,19 @@ subroutine ctoprim(uin,q,gravin,dt,ngrid)
      end do
   end do
 
+  ! Override thermal pressure with stored internal energy scalar
+  if(energy_fix) then
+     do k = ku1, ku2
+        do j = ju1, ju2
+           do i = iu1, iu2
+              do l = 1, ngrid
+                 q(l,i,j,k,neul) = (gamma-one)*uin(l,i,j,k,ieint)
+              end do
+           end do
+        end do
+     end do
+  end if
+
 #if NVAR > NHYDRO + NENER
   ! Passive scalar
   do n = ndim+nener+3, nvar

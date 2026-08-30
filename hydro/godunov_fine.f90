@@ -214,6 +214,23 @@ subroutine set_uold(ilevel)
            end if
         end do
      end if
+     if(energy_fix)then
+        do i=1,active(ilevel)%ngrid
+           ind_cell=active(ilevel)%igrid(i)+iskip
+           d=max(uold(ind_cell,1),smallr)
+           u=0; v=0; w=0
+           if(ndim>0)u=uold(ind_cell,2)/d
+           if(ndim>1)v=uold(ind_cell,3)/d
+           if(ndim>2)w=uold(ind_cell,4)/d
+           e_kin=0.5d0*d*(u**2+v**2+w**2)
+#if NENER>0
+           do irad=1,nener
+              e_kin=e_kin+uold(ind_cell,nhydro+irad)
+           end do
+#endif
+           uold(ind_cell,neul)=uold(ind_cell,ieint)+e_kin
+        end do
+     end if
   end do
 
 111 format('   Entering set_uold for level ',i2)

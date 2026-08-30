@@ -135,8 +135,8 @@ subroutine backup_hydro(filename, filename_desc)
               end if
               call generic_dump(field_name, info_var_count, xdp, unit_out, dump_info_flag, unit_info)
 #if NVAR > NHYDRO+NENER
-              ! Write passive scalars if any
-              do ivar = nhydro+1+nener, nvar
+              ! Write passive scalars if any (excluding internal energy scalar if energy_fix active)
+              do ivar = nhydro+1+nener, last_pscal
                  if(write_conservative) then
                     if (metal .and. imetal == ivar) then
                        field_name = 'metal_density'
@@ -154,6 +154,12 @@ subroutine backup_hydro(filename, filename_desc)
                  end if
                  call generic_dump(field_name, info_var_count, xdp, unit_out, dump_info_flag, unit_info)
               end do
+              ! Write internal energy, which is stored at the end of uold when energy_fix is active
+              if(energy_fix) then
+                 field_name = 'internal_energy'
+                 call gather_conservative_from_uold(ind_grid, iskip, ieint, xdp, ncache)
+                 call generic_dump(field_name, info_var_count, xdp, unit_out, dump_info_flag, unit_info)
+              end if
 #endif
               if(strict_equilibrium>0)then
                  do i = 1, ncache
@@ -252,7 +258,7 @@ end subroutine gather_primitive_from_uold
 !#####################################################################
 !#####################################################################
 subroutine calc_thermal_pressure_from_total_energy(ind_grid, iskip, pressure, ncache)
-   use amr_parameters, only:dp
+   use amr_parameters, only:dp,energy_fix
    use hydro_commons
    implicit none
    integer,intent(in)::iskip,ncache
@@ -271,34 +277,40 @@ subroutine calc_thermal_pressure_from_total_energy(ind_grid, iskip, pressure, nc
    real(dp) :: A, B, C
 #endif
 
-   do i = 1, ncache
-      d = max(uold(ind_grid(i)+iskip, 1), smallr)
-      ! total energy
-      energy = uold(ind_grid(i)+iskip, neul)
-      ! subtract kinetic energy
-      energy = energy - 0.5d0*uold(ind_grid(i)+iskip, 2)**2/d
+   if(energy_fix) then
+      do i = 1, ncache
+         ! Use stored internal energy scalar directly (avoids cancellation errors)
+         pressure(i) = (gamma-1d0)*uold(ind_grid(i)+iskip, ieint)
+      end do
+   else
+      do i = 1, ncache
+         d = max(uold(ind_grid(i)+iskip, 1), smallr)
+         ! total energy
+         energy = uold(ind_grid(i)+iskip, neul)
+         ! subtract kinetic energy
+         energy = energy - 0.5d0*uold(ind_grid(i)+iskip, 2)**2/d
 #if NDIM > 1 || SOLVERmhd
-      energy = energy - 0.5d0*uold(ind_grid(i)+iskip, 3)**2/d
+         energy = energy - 0.5d0*uold(ind_grid(i)+iskip, 3)**2/d
 #endif
 #if NDIM > 2 || SOLVERmhd
-      energy = energy - 0.5d0*uold(ind_grid(i)+iskip, 4)**2/d
+         energy = energy - 0.5d0*uold(ind_grid(i)+iskip, 4)**2/d
 #endif
 #ifdef SOLVERmhd
-      ! subtract magnetic energy
-      A = 0.5d0*(uold(ind_grid(i)+iskip, 6)+uold(ind_grid(i)+iskip, nvar+1))
-      B = 0.5d0*(uold(ind_grid(i)+iskip, 7)+uold(ind_grid(i)+iskip, nvar+2))
-      C = 0.5d0*(uold(ind_grid(i)+iskip, 8)+uold(ind_grid(i)+iskip, nvar+3))
-      energy = energy - 0.5*(A**2+B**2+C**2)
+         ! subtract magnetic energy
+         A = 0.5d0*(uold(ind_grid(i)+iskip, 6)+uold(ind_grid(i)+iskip, nvar+1))
+         B = 0.5d0*(uold(ind_grid(i)+iskip, 7)+uold(ind_grid(i)+iskip, nvar+2))
+         C = 0.5d0*(uold(ind_grid(i)+iskip, 8)+uold(ind_grid(i)+iskip, nvar+3))
+         energy = energy - 0.5*(A**2+B**2+C**2)
 #endif
 #if NENER > 0
-      ! subtract non-thermal energies
-      do irad = 1, nener
-         energy = energy-uold(ind_grid(i)+iskip, nhydro+irad)
-      end do
+         ! subtract non-thermal energies
+         do irad = 1, nener
+            energy = energy-uold(ind_grid(i)+iskip, nhydro+irad)
+         end do
 #endif
-
-      ! convert to pressure
-      pressure(i) = (gamma-1d0)*energy
-   end do
+         ! convert to pressure
+         pressure(i) = (gamma-1d0)*energy
+      end do
+   end if
 
 end subroutine calc_thermal_pressure_from_total_energy
