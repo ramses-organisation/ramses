@@ -12,7 +12,7 @@ subroutine init_sink
 #endif
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   integer::isink, nsinkold
-  logical::eof,ic_sink=.false.
+  logical::eof,ic_sink, exists_sink_restart=.false.
   character(LEN=80)::filename
   character(LEN=80)::fileloc
   character(LEN=5)::nchar,ncharcpu
@@ -142,8 +142,8 @@ subroutine init_sink
 #ifndef WITHOUTMPI
      if ((IOGROUPSIZE == 0 .and. myid == 1) .or. (IOGROUPSIZE > 0 .and. mod(myid-1,IOGROUPSIZE) == 0)) then
 #endif
-        inquire(file=fileloc, exist=ic_sink)
-        if (.not. ic_sink) then
+        inquire(file=fileloc, exist=exists_sink_restart)
+        if (.not. exists_sink_restart) then
            open(10,file=fileloc,form='formatted',status='new',recl=500)
            write(10,'(" # id,msink,x,y,z,vx,vy,vz,lx,ly,lz,tform,acc_rate,del_mass,rho_gas,cs**2,etherm,vx_gas,vy_gas,vz_gas,mbh,dmfsink,level ")')
            write(10,'(" # 1,m,l,l,l,l t**-1,l t**-1,l t**-1,m l**2 t**-1,m l**2 t**-1,m l**2 t**-1,t,m t**-1,m,m l**-3,l**2 t**-2,m l**2 t**-2,l t**-1,l t**-1,l t**-1,m,m,1")')
