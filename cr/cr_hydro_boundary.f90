@@ -114,6 +114,15 @@ subroutine cr_make_boundary_hydro(ilevel)
                  end do
               end do
 
+              ! Reflexive-wall CR energy pin (Jiang & Oh 4.1.3/4.2.4): hold
+              ! group-1 CR energy at the wall while the flux still reflects.
+              if(trim(cr_boundana_kind)=='jiang_413' .or. &
+                   & trim(cr_boundana_kind)=='jiang_424')then
+                 do i=1,ngrid
+                    cruold(ind_cell(i),Ecr_idx(1))=3.0d0
+                 end do
+              end if
+
            ! Free or outflowing or zero gradient boundary conditions
            else if((boundary_type(ibound)/10).eq.1)then
 

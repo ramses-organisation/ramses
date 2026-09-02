@@ -49,6 +49,7 @@ module cr_parameters
   ! Boundaries / tests
   character(LEN=32)::jiang_test=''          ! Jiang & Oh test IC/BC dispatch
   character(LEN=32)::cr_condinit_kind=''    ! CR initial-condition selector
+  character(LEN=32)::cr_boundana_kind=''    ! CR boundary-condition selector
   ! Region-based CR initial conditions (per &init_params region geometry).
   ! cr_region_u(k,1)=E_cr, cr_region_u(k,2:ncrvar)=CR flux in region k.
   real(dp),dimension(1:MAXREGION,1:ncrvar)::cr_region_u=0d0
