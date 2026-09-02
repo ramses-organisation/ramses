@@ -205,7 +205,7 @@ subroutine dump_all
   end if
 
 #if USE_TURB==1
-     if (turb) then
+     if (driven_turb) then
         if(myid==1.and.print_when_io) write(*,*)'Start backup turb'
         if (myid==1) call write_turb_fields(filedir)
 #ifndef WITHOUTMPI

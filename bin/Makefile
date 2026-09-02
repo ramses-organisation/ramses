@@ -7,7 +7,7 @@
 DEBUG = 0
 # Do we want to test coverage?
 GCOV = 0
-# Compiler flavor: GNU or INTEL
+# Compiler flavor: GNU or INTEL (classic ifort) or INTELX (new LLVM-based ifx)
 COMPILER = GNU
 # Target cluster, to set cluster specific optimisation flags (see Makefile.machines)
 MACHINE = generic
@@ -122,13 +122,14 @@ LDFLAGS =
 
 # GNU compiler (gfortran)
 ifeq ($(COMPILER),GNU)
+   SERIALF90 = gfortran
    # set compiler commands
    ifeq ($(MPI),1)
       F90 = $(MPIF90)
    else
-      F90 = gfortran
+      F90 = $(SERIALF90)
    endif
-   FC = gfortran -ffree-line-length-none -fimplicit-none
+   FC = $(SERIALF90) -ffree-line-length-none -fimplicit-none
    FFLAGS_BASE += -ffree-line-length-none -fimplicit-none
    # add preprocessor macro definitions to compilation flags
    FFLAGS_BASE += -cpp $(DEFINES)
@@ -153,14 +154,19 @@ ifeq ($(COMPILER),GNU)
 endif
 
 # Intel compiler
-ifeq ($(COMPILER),INTEL)
+ifeq ($(COMPILER),$(filter $(COMPILER),INTEL INTELX))
    # set compiler commands
+   ifeq ($(COMPILER),INTEL)
+      SERIALF90 = ifort
+   else
+      SERIALF90 = ifx
+   endif
    ifeq ($(MPI),1)
       F90 = $(MPIF90)
    else
-      F90 = ifort
+      F90 = $(SERIALF90)
    endif
-   FC = ifort -fp-model source
+   FC = $(SERIALF90) -fp-model source
    FFLAGS_BASE += -fp-model source
    # add preprocessor macro definitions to compilation flags
    FFLAGS_BASE += -cpp $(DEFINES)
@@ -197,8 +203,11 @@ ifeq ($(GRACKLE),1)
    LIBS_OBJ     = -I$(HOME)/local/include -DCONFIG_BFLOAT_8 -DH5_USE_16_API -fPIC
 endif
 ifeq ($(USE_TURB),1)
-   LIBS_TURB = -L$(HOME)/local/lib -lfftw3
-   LIBS_OBJ_TURB = -I$(HOME)/local/include -lfftw3
+   # if FFTW_DIR is not already set, set it to the directory that matched the
+   # readme install instructions
+   FFTW_DIR ?= $(HOME)/local
+   LIBS_TURB = -L$(FFTW_DIR)/lib -lfftw3
+   LIBS_OBJ_TURB = -I$(FFTW_DIR)/include -lfftw3
 endif
 LIBS = $(LIBMPI) $(LIBS_GRACKLE) $(LIBS_TURB)
 #############################################################################
@@ -224,7 +233,7 @@ endif
 MODOBJ += poisson_commons.o hydro_parameters.o hydro_commons.o \
           cooling_module.o bisection.o sparse_mat.o clfind_commons.o \
           gadgetreadfile.o write_makefile.o write_patch.o write_gitinfo.o \
-          sink_sn_feedback.o
+          sink_sn_feedback.o dice_commons.o
 ifeq ($(RT),1)
    MODOBJ += rt_parameters.o rt_hydro_commons.o coolrates_module.o \
              rt_spectra.o rt_cooling_module.o rt_flux_module.o
@@ -258,7 +267,8 @@ POISSONOBJ = init_poisson.o phi_fine_cg.o interpol_phi.o force_fine.o \
 HYDROOBJ = init_hydro.o init_flow_fine.o write_screen.o output_hydro.o \
            courant_fine.o godunov_fine.o uplmde.o slope_types.o umuscl.o interpol_hydro.o \
            godunov_utils.o condinit.o hydro_flag.o hydro_boundary.o boundana.o \
-           read_hydro_params.o synchro_hydro_fine.o cooling_module_ism.o
+           read_hydro_params.o synchro_hydro_fine.o cooling_module_ism.o \
+	   init_dice.o
 # RT objects
 RTOBJ = rt_init_hydro.o rt_init_xion.o rt_init.o rt_init_flow_fine.o \
         rt_output_hydro.o rt_godunov_fine.o rt_interpol_hydro.o \

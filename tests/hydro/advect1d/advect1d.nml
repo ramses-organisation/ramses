@@ -5,7 +5,7 @@ a time of 1. This setup illustrates how slope_type can affect the results.
 
 &RUN_PARAMS
 hydro=.true.
-ncontrol=10000
+ncontrol=50
 /
 
 &AMR_PARAMS
@@ -28,8 +28,8 @@ p_region=1.0,1.0
 /
 
 &OUTPUT_PARAMS
-noutput=1
 tout=10
+output_to_log=.false.
 /
 
 &HYDRO_PARAMS

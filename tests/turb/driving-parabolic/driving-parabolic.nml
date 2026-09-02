@@ -1,0 +1,68 @@
+This is the RAMSES parameter file for the turbulence driving test with the
+'parabolic' forcing power spectrum (the module default). Identical to the
+turb/driving test except for forcing_power_spectrum.
+
+&RUN_PARAMS
+hydro=.true.
+/
+
+&AMR_PARAMS
+levelmin=6
+levelmax=6
+ngridmax=500000
+boxlen=4
+/
+
+&HYDRO_PARAMS
+gamma=1.666667
+courant_factor=0.8
+scheme='muscl'
+slope_type=1
+riemann='hllc'
+pressure_fix=.true.
+beta_fix=0.5
+/
+
+&INIT_PARAMS
+nregion=1
+region_type='square'
+x_center=2
+y_center=2
+z_center=2
+length_x=4
+length_y=4
+length_z=4
+exp_region=10
+d_region=0.28954719470909174
+p_region=0.030361026190591216
+/
+
+&OUTPUT_PARAMS
+noutput=1
+tout=0.25
+/
+
+&UNITS_PARAMS
+units_density=1.50492957435d-20
+units_time=3.1556926d13
+units_length=3.0857d18
+/
+
+&COOLING_PARAMS
+barotropic_eos=.true.
+barotropic_eos_form='isothermal'
+T_eos=4.2194
+/
+
+&TURB_PARAMS
+driven_turb=.true.
+turb_evolving=.true. ! .false. = one static field for the whole run
+turb_seed=1         ! -1 = random
+comp_frac=0.5       ! compressive fraction
+!instant_turb=.true. ! Generate initial turbulence before start
+forcing_power_spectrum='parabolic' !power_law, parabolic, konstandin, test
+turb_T=0.29241000937376255
+turb_Ndt=100       ! Number of timesteps per autocorr. time
+turb_rms=5.094074502271999      ! rms turbulent forcing acceleration
+turb_min_rho=2.5470372511355715d-6 ! Minimum density for turbulence
+/

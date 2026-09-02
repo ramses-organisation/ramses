@@ -133,9 +133,9 @@ recursive subroutine amr_step(ilevel,icount)
                                call timer('sinks','start')
   if(sink)call update_cloud(ilevel)
 #endif
-  !-----------------
-  ! Particle leakage
-  !-----------------
+  !--------------------------------------------------------------------
+  ! Particle leakage: attach particles to correct grid after they moved
+  !--------------------------------------------------------------------
                                call timer('particles','start')
   if(pic)call make_tree_fine(ilevel)
 
@@ -233,14 +233,14 @@ recursive subroutine amr_step(ilevel,icount)
      call rho_fine(ilevel,icount)
   endif
 
-  !-------------------------------------------
-  ! Sort particles between ilevel and ilevel+1
-  !-------------------------------------------
+  !------------------------------------------------------------------
+  ! Sort particles between ilevel and ilevel+1, and between MPI ranks
+  !------------------------------------------------------------------
   if(pic)then
-     ! Remove particles to finer levels
+     ! Hand particles in refined regions down to ilevel+1.
                                call timer('particles','start')
      call kill_tree_fine(ilevel)
-     ! Update boundary conditions for remaining particles
+     ! Communicate particles between domains
      call virtual_tree_fine(ilevel)
   end if
 
@@ -314,7 +314,7 @@ recursive subroutine amr_step(ilevel,icount)
 #if USE_TURB==1
   ! Compute turbulent forcing
                                call timer('turb','start')
-  if (turb .and. turb_type/=3) then
+  if (driven_turb) then
      ! Calculate turbulent acceleration on each cell in this level
      call calc_turb_forcing(ilevel)
   end if
@@ -445,7 +445,7 @@ recursive subroutine amr_step(ilevel,icount)
 #if USE_TURB==1
      ! Compute turbulent forcing
                                call timer('turb','start')
-     if (turb .AND. turb_type/=3) then
+     if (driven_turb) then
         ! Euler step, adding turbulent acceleration
         call synchro_hydro_fine(ilevel,dtnew(ilevel),2)
      end if
@@ -490,9 +490,9 @@ recursive subroutine amr_step(ilevel,icount)
   endif
 #endif
 
-  !---------------
-  ! Move particles
-  !---------------
+  !---------------------------------------------------------------------
+  ! Move particles (update position and velocity), see also synchro_fine
+  !---------------------------------------------------------------------
   if(pic)then
                                call timer('particles','start')
      if(static_dm.or.static_stars)then
@@ -548,9 +548,9 @@ recursive subroutine amr_step(ilevel,icount)
                                call timer('flag','start')
   if(.not.static.or.(nstep_coarse_old.eq.nstep_coarse.and.restart_remap)) call flag_fine(ilevel,icount)
 
-  !----------------------------
-  ! Merge finer level particles
-  !----------------------------
+  !-------------------------------------------------
+  ! Take all particle from ilevel+1 back into ilevel
+  !-------------------------------------------------
                                call timer('particles','start')
   if(pic)call merge_tree_fine(ilevel)
 

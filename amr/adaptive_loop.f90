@@ -50,7 +50,7 @@ subroutine adaptive_loop
   if(aton)call init_radiation        ! Initialize radiation variables
 #endif
 #if USE_TURB==1
-  if(turb) call init_turb
+  if(driven_turb .or. (initial_turb .and. nrestart==0)) call init_turb
 #endif
   if(nrestart==0)call init_refine    ! Build initial AMR grid
 

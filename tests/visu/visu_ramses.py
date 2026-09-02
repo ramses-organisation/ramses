@@ -8,7 +8,7 @@ def read_descriptor(fname):
             content = f.readlines()
     except IOError:
         # Clean exit if the file was not found
-        print("file descriptor not found: %s" % fname)
+        #print("file descriptor not found: %s" % fname)
         return [], []
     list_vars = []
     dtypes = []
@@ -89,7 +89,7 @@ def load_snapshot(nout, read_hydro=True, read_grav=False, read_rt=False, read_cr
     # We have to open the files in binary format, and count all the bytes in the ===
     # file structure to extract just the data we need. =============================
     # See output_amr.f90 and output_hydro.f90 in the RAMSES source. ================
-    print("Processing %i files in " % (info["ncpu"]) + infile)
+    print("Processing %i files in " % (info["ncpu"]) + infile + '...', end="")
 
     # We will store the cells in a dictionary which we build as we go along.
     # The final concatenation into a single array will be done once at the end.
@@ -136,7 +136,8 @@ def load_snapshot(nout, read_hydro=True, read_grav=False, read_rt=False, read_cr
         # Print progress
         percentage = int(float(k)*100.0/float(info["ncpu"]))
         if percentage >= iprog*istep:
-            print("%3i%% : read %10i cells" % (percentage,ncells_tot))
+            #print("%3i%% : read %10i cells" % (percentage,ncells_tot), end="")
+            print("%3i%%... " % percentage, end="")
             iprog += 1
 
         # Read binary AMR file
@@ -492,9 +493,10 @@ def load_snapshot(nout, read_hydro=True, read_grav=False, read_rt=False, read_cr
     del data_pieces,xcent,xg,son,var,xyz,ref
 
 
-    print("Total number of cells loaded: %i" % ncells_tot)
+    print("Total number of cells loaded: %i" % ncells_tot, end="")
     if npart_read > 0:
-        print("Total particles loaded: %i" % npart_read)
+        print(", total particles loaded: %i" % npart_read, end="")
+    print('')
 
     # This is the master data dictionary.
     data = {"data": {}, "info": info, "sinks": {"nsinks": 0}, "stellars": {"nstellars": 0}}
