@@ -41,4 +41,32 @@ subroutine read_cr_params(nml_ok)
      nml_ok=.false.
   endif
 
+  if(.not.(trim(cr_condinit_kind)==''         .or. &
+       &   trim(cr_condinit_kind)=='jiang_411'.or. &
+       &   trim(cr_condinit_kind)=='jiang_412'.or. &
+       &   trim(cr_condinit_kind)=='jiang_413'.or. &
+       &   trim(cr_condinit_kind)=='jiang_414'.or. &
+       &   trim(cr_condinit_kind)=='jiang_415'.or. &
+       &   trim(cr_condinit_kind)=='jiang_415_donut'.or. &
+       &   trim(cr_condinit_kind)=='jiang_411_triangular'.or. &
+       &   trim(cr_condinit_kind)=='jiang_421'.or. &
+       &   trim(cr_condinit_kind)=='jiang_422'.or. &
+       &   trim(cr_condinit_kind)=='jiang_424'))then
+     if(myid==1)write(*,*)'Error in cr_params: unknown cr_condinit_kind="'// &
+          & trim(cr_condinit_kind)//'". Valid values: '// &
+          & '"", jiang_411, jiang_412, jiang_413, jiang_414, jiang_415, '// &
+          & 'jiang_415_donut, jiang_411_triangular, jiang_421, jiang_422, jiang_424'
+     nml_ok=.false.
+  endif
+
+  if(.not.(trim(cr_boundana_kind)==''                    .or. &
+       &   trim(cr_boundana_kind)=='jiang_411_triangular'.or. &
+       &   trim(cr_boundana_kind)=='jiang_413'           .or. &
+       &   trim(cr_boundana_kind)=='jiang_424'))then
+     if(myid==1)write(*,*)'Error in cr_params: unknown cr_boundana_kind="'// &
+          & trim(cr_boundana_kind)//'". Valid values: '// &
+          & '"", jiang_411_triangular, jiang_413, jiang_424'
+     nml_ok=.false.
+  endif
+
 end subroutine read_cr_params

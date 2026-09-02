@@ -99,6 +99,8 @@ end subroutine cr_condinit
 subroutine cr_flux_from_region_velocity(x,u,dx,nn)
   ! Set the first CR group's x-flux to F = 4/3 u_region(k) E_cr on the same
   ! square CR regions cr_region_condinit filled.
+  ! Requires the CR and gas &INIT_PARAMS region lists to be declared in the
+  ! same order, since region k here indexes u_region(k) (gas velocity).
   use amr_parameters
   use cr_parameters
   use hydro_parameters, only: u_region

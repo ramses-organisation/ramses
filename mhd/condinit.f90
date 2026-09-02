@@ -57,11 +57,11 @@ subroutine  condinit(x,u,dx,nn)
 
   case('jiang_413')
      call region_condinit(x, q, dx, nn)
-     call jiang_density_step(x, q, dx, nn, 1d0)
+     call jiang_density_bump(x, q, dx, nn, 1d0)
 
   case('jiang_424')
      call region_condinit(x, q, dx, nn)
-     call jiang_density_step(x, q, dx, nn, 1d1)
+     call jiang_density_bump(x, q, dx, nn, 1d1)
 
   ! Add here, if you wish, some user-defined initial conditions
   ! ........
@@ -162,24 +162,25 @@ end subroutine jiang_loop_primitives
 !================================================================
 !================================================================
 !================================================================
-subroutine jiang_density_step(x,q,dx,nn,dright)
+subroutine jiang_density_bump(x,q,dx,nn,dpeak)
   !--------------------------------------------------------------
-  ! Jiang & Oh (2018) 4.1.3 / 4.2.4: tanh density profile rising from 0.1 to
-  ! dright over a width of 25 around x=200, which sets the Alfven speed
-  ! v_A = B/sqrt(rho) the CRs stream along. Sets the density only.
+  ! Jiang & Oh (2018) 4.1.3 / 4.2.4: symmetric sech^2 density bump of peak
+  ! dpeak over a baseline of 0.1, centred on x=200 with a width of 25. Sets
+  ! the Alfven speed v_A = B/sqrt(rho) the CRs stream along, producing the
+  ! bottleneck the test measures. Sets the density only.
   !--------------------------------------------------------------
   use amr_parameters
   use hydro_parameters
   implicit none
   integer ::nn
-  real(dp)::dx,dright
+  real(dp)::dx,dpeak
   real(dp),dimension(1:nvector,1:nvar+3)::q
   real(dp),dimension(1:nvector,1:ndim)::x
 
-  q(1:nn,1)=0.1d0+(dright-0.1d0)*(1d0+tanh((x(1:nn,1)-200d0)/25d0)) &
-       &                        *(1d0+tanh((200d0-x(1:nn,1))/25d0))
+  q(1:nn,1)=0.1d0+(dpeak-0.1d0)*(1d0+tanh((x(1:nn,1)-200d0)/25d0)) &
+       &                       *(1d0+tanh((200d0-x(1:nn,1))/25d0))
 
-end subroutine jiang_density_step
+end subroutine jiang_density_bump
 !================================================================
 !================================================================
 !================================================================
