@@ -31,7 +31,7 @@ C_bound=0.,0.
 /
 
 &CR_PARAMS
-jiang_test='422'
+cr_condinit_kind='jiang_422'
 Dcr=0.1
 cr_c_fraction=3.3356409297285193e-9   ! reduced light speed = 100
 cr_advect=.true.

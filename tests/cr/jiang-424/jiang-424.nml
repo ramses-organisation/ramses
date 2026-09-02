@@ -24,7 +24,8 @@ bound_type= 1, 2
 /
 
 &CR_PARAMS
-jiang_test='424'
+cr_condinit_kind='jiang_424'
+cr_boundana_kind='jiang_424'
 Dcr=1d-6
 cr_c_fraction=3.3356409297285193e-10   ! reduced light speed = 10
 cr_advect=.true.
@@ -39,6 +40,7 @@ cr_nregion=0
 /
 
 &INIT_PARAMS
+condinit_kind='jiang_424'
 nregion=1
 region_type(1)='square'
 x_center=2000.0

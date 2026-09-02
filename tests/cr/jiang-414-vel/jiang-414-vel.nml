@@ -23,7 +23,7 @@ bound_type= 0, 0
 /
 
 &CR_PARAMS
-jiang_test='414'
+cr_condinit_kind='jiang_414'
 Dcr=0.1
 cr_c_fraction=3.3356409297285193e-9   ! reduced light speed = 100
 cr_streaming_heating=.false.

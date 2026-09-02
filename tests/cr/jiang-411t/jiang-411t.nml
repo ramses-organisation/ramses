@@ -23,7 +23,8 @@ bound_type= 3, 3
 /
 
 &CR_PARAMS
-jiang_test='411_triangular'
+cr_condinit_kind='jiang_411_triangular'
+cr_boundana_kind='jiang_411_triangular'
 Dcr=1e-8
 cr_c_fraction=3.3356409297285193e-9   ! reduced light speed = 100
 cr_streaming_heating=.false.
