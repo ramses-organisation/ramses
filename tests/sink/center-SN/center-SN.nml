@@ -3,6 +3,8 @@
 ! 5 additional low mass sinks around to verify SN is done on the correct sink
 ! initially 2 sinks close together which merge before stellar particle is born (sink_id != isink)
 ! Initial dmf = initial mass
+! This test can only be run with 2 NRPOC (for which the reference
+! has been generated) because of the poisson solver.
 
 &RUN_PARAMS
 hydro=.true.
@@ -74,6 +76,7 @@ sink_refine=.true.
 
 &POISSON_PARAMS
 gravity_type=0
+epsilon=1d-8  !tighten to get sink_vz closer to 0
 /
 
 

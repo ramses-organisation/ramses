@@ -41,4 +41,5 @@ fig.savefig('smbh-bondi.pdf', bbox_inches="tight")
 data = visu_ramses.load_snapshot(15)
 for key in data["sinks"].keys():
     data["data"]["sink_"+key] = data["sinks"][key]
+tolerance = {"sink_cs**2": 1e-12, "sink_etherm":1e-12}
 visu_ramses.check_solution(data["data"],'smbh-bondi')

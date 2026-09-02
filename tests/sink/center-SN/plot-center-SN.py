@@ -68,4 +68,15 @@ ax[1].scatter(data["sinks"]['x'],data["sinks"]['y'], s = 20, marker='x', color='
 
 fig.savefig('center-SN.pdf', bbox_inches="tight")
 
-visu_ramses.check_solution(data["data"],'center-SN',overwrite=False)
+# Check results against reference solution
+for key in data["sinks"].keys():
+    data["data"]["sink_"+key] = data["sinks"][key]
+for key in data["stellars"].keys():
+    data["data"]["stellar_"+key] = data["stellars"][key]
+
+# poisson solver doesn't conserve z-symmetry, resulting in a small value
+# for the z velocity, which propagates into the x- and y- angular momentum
+tol = {'sink_lx': 8e-10, 'sink_ly': 8e-10, 'sink_lz': 1e-10,
+       'sink_vx': 1e-11, 'sink_vy': 1e-11, 'sink_vz': 8e-11,
+       'sink_vx_gas':1e-12, 'sink_vy_gas':1e-12, 'sink_vz_gas':8e-10}
+visu_ramses.check_solution(data["data"],'center-SN',tolerance=tol,overwrite=False)
