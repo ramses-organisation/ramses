@@ -83,11 +83,12 @@ subroutine init_part
      allocate(move_flag(npartmax))
      move_flag = 0
   end if
-  allocate(nextp (npartmax))
-  allocate(prevp (npartmax))
-  allocate(levelp(npartmax))
-  allocate(idp   (npartmax))
-  allocate(typep (npartmax))
+  allocate(dumpedp(npartmax))
+  allocate(nextp  (npartmax))
+  allocate(prevp  (npartmax))
+  allocate(levelp (npartmax))
+  allocate(idp    (npartmax))
+  allocate(typep  (npartmax))
 #ifdef OUTPUT_PARTICLE_POTENTIAL
   allocate(ptcl_phi(npartmax))
 #endif
