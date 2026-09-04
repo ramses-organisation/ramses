@@ -29,8 +29,14 @@ module poisson_commons
   ! Minimum MG level
   integer :: levelmin_mg
 
-  ! Multigrid safety switch
+  ! Multigrid safety switch for the order of the multigrid boundary reconstruction scheme
+  ! (see sect. 4 of Guillet & Teyssier 2011)
+  !   .false. = second-order (default)
+  !   .true.  = first-order
   logical, allocatable, dimension(:) :: safe_mode
+  ! Number of solves before safe_mode is reset to .false., per level
+  ! (includes the solve that triggered it)
+  integer, allocatable, dimension(:) :: safe_mode_countdown
 
   ! Multipole coefficients
   real(dp),dimension(1:ndim+1)::multipole

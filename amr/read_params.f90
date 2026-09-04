@@ -684,7 +684,7 @@ subroutine read_poisson_params(namelist_unit,nml_ok)
 
    namelist/poisson_params/epsilon,gravity_type,gravity_params &
    & ,cg_levelmin,cic_levelmax,self_gravity,gravity_rho_ana_type,gravity_force_ana_type &
-   & ,gravity_rho_ana_params,gravity_force_ana_params
+   & ,gravity_rho_ana_params,gravity_force_ana_params,mg_maxiter,mg_safe_mode_reset
 
    ! Go to the beginning of the file
    rewind(namelist_unit)
@@ -716,6 +716,16 @@ subroutine read_poisson_params(namelist_unit,nml_ok)
    ! Currently you cannot have both, since then it is unclear what to do with the gravity_params input array
    if(gravity_rho_ana_type>0.and.gravity_force_ana_type>0)then
       if(myid==1)write(*,*)'Error: you cannot have both gravity_rho_ana_type and gravity_force_ana_type > 0 at the same time.'
+      nml_ok=.false.
+   endif
+
+   if(mg_maxiter<1)then
+      if(myid==1)write(*,*)'Error: mg_maxiter must be at least 1.'
+      nml_ok=.false.
+   endif
+
+   if(mg_safe_mode_reset<0)then
+      if(myid==1)write(*,*)'Error: mg_safe_mode_reset must be >= 0.'
       nml_ok=.false.
    endif
 

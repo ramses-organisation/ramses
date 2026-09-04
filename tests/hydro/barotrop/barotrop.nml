@@ -47,6 +47,8 @@ p_region=2.418894075235192,24188.94075235192
 &OUTPUT_PARAMS
 tout=0.00049
 output_to_log=.false.
+write_conservative=.true.
+read_conservative=.true.
 /
 
 &UNITS_PARAMS
