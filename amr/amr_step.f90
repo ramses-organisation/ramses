@@ -11,6 +11,10 @@ recursive subroutine amr_step(ilevel,icount)
   use coolrates_module, only: update_coolrates_tables
   use rt_cooling_module, only: update_UVrates
 #endif
+#ifdef CRPHYS
+  use cr_parameters
+  use cr_hydro_commons
+#endif
   use sink_feedback_parameters, only: sn_feedback_sink
 #if USE_TURB==1
   use turb_commons
@@ -67,6 +71,14 @@ recursive subroutine amr_step(ilevel,icount)
                     call make_virtual_fine_dp(rtuold(1,ivar),i)
                  end do
                  if(simple_boundary)call rt_make_boundary_hydro(i)
+              end if
+#endif
+#ifdef CRPHYS
+              if(cr_advect)then
+                 do ivar=1,ncrvar
+                    call make_virtual_fine_dp(cruold(1,ivar),i)
+                 end do
+                 if(simple_boundary)call cr_make_boundary_hydro(i)
               end if
 #endif
               if(poisson)then
@@ -327,6 +339,11 @@ recursive subroutine amr_step(ilevel,icount)
   if(rt)call rt_set_unew(ilevel)
 #endif
 
+#ifdef CRPHYS
+                               call timer('cosmic rays - set unew','start')
+  if(cr_advect)call cr_set_unew(ilevel)
+#endif
+
   !---------------------------
   ! Recursive call to amr_step
   !---------------------------
@@ -370,8 +387,7 @@ recursive subroutine amr_step(ilevel,icount)
   !-----------
   ! Hydro step
   !-----------
-  if((hydro).and.(.not.static_gas))then
-
+  if(hydro .and. .not. static_gas)then
      ! Hyperbolic solver
                                call timer('hydro - godunov','start')
      call godunov_fine(ilevel)
@@ -410,6 +426,13 @@ recursive subroutine amr_step(ilevel,icount)
         call add_pdv_source_terms(ilevel)
      endif
 
+#ifdef CRPHYS
+      if(cr_advect)then
+      call timer('cosmic rays','start')
+      call crmom_step(ilevel)
+     endif
+#endif
+
      ! Set uold equal to unew
                                call timer('hydro - set uold','start')
      call set_uold(ilevel)
@@ -431,8 +454,10 @@ recursive subroutine amr_step(ilevel,icount)
      ! Restriction operator
                                call timer('hydro upload fine','start')
      call upload_fine(ilevel)
-
-  endif
+#ifdef CRPHYS
+     if(cr_advect)call cr_upload_fine(ilevel)
+#endif
+  endif ! hydro
 
   !---------------------
   ! Do RT/Chemistry step
@@ -497,6 +522,15 @@ recursive subroutine amr_step(ilevel,icount)
      if(strict_equilibrium>0)call make_virtual_fine_dp(p_eq(1),ilevel)
      if(simple_boundary)call make_boundary_hydro(ilevel)
   endif
+
+#ifdef CRPHYS
+  if(cr_advect)then
+     do ivar=1,ncrvar
+        call make_virtual_fine_dp(cruold(1,ivar),ilevel)
+     end do
+     if(simple_boundary)call cr_make_boundary_hydro(ilevel)
+  endif
+#endif
 
 #ifdef SOLVERmhd
   ! Magnetic diffusion step
