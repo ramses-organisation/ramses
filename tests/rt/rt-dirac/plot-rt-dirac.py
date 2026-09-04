@@ -125,4 +125,5 @@ fig.subplots_adjust(wspace=0.35)
 fig.savefig('rt-dirac.pdf',bbox_inches='tight')
 
 # Check results against reference solution
-visu_ramses.check_solution(data["data"],'rt-dirac',tolerance={"all":8.0e-11},overwrite=False)
+# scalar_02 (xHeIII) is the least populated species thus most sensitive to round-off errors
+visu_ramses.check_solution(data["data"],'rt-dirac',tolerance={"scalar_02":1.0e-11},overwrite=False)
