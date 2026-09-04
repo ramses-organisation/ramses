@@ -117,4 +117,4 @@ fig.subplots_adjust(wspace=0.35)
 fig.savefig('stromgren2d.pdf',bbox_inches='tight')
 
 # Check results against reference solution
-visu_ramses.check_solution(data["data"], 'stromgren2d', tolerance={"all":3.0e-06})
+visu_ramses.check_solution(data["data"], 'stromgren2d')
