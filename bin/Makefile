@@ -118,9 +118,15 @@ ifeq ($(COMPILER),GNU)
    ifeq ($(MPI),0)
       FFLAGS_BASE += -DWITHOUTMPI
    endif
-   # link-time optimization accross files
-   LDFLAGS += -flto -fwhole-program
-   FFLAGS_OPT += -flto -fwhole-program
+   # link-time optimization accross files.
+   # NOTE: do NOT add -fwhole-program here. It lets gcc assume that no symbol is
+   # referenced outside the compiled sources, which is false for an MPI program:
+   # the MPI_IN_PLACE sentinel then no longer compares equal to the address the
+   # MPI library expects, every MPI_REDUCE/MPI_ALLREDUCE using it silently drops
+   # the root's own contribution, and e.g. the merger tree writes corrupt
+   # progenitor metadata and crashes on the next snapshot.
+   LDFLAGS += -flto
+   FFLAGS_OPT += -flto
    # Flags for coverage calculation (resets optimization flags)
    ifeq ($(GCOV),1)
       FFLAGS_BASE += -fprofile-arcs -ftest-coverage
