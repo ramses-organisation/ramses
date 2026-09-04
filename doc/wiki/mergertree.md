@@ -59,7 +59,7 @@ Important notes
 
  * For accurate merger trees, consider running your simulation for a handful (I used 3) snapshots more than you actually need to make sure past merging events are actually mergers, not just two clumps too close to each other to be recognized as distinct clumps. You'll also need to check in these "extra snapshots" later whether any clump re-emerged later.
 
- * I'm not really able to predict how much memory the patch will need, because it will accumulate orphan galaxies over the simulation. It shouldn't be much, but obviously will depend on how big of a simulation you are trying to run. It never was a significant amount of memory (`< 10 Mb`) when I tried it with `512^3` particles, but I'd keep that in mind if you have memory issues.
+ * I'm not really able to predict how much memory the merger tree will need, because it will accumulate orphan galaxies over the simulation. It shouldn't be much, but obviously will depend on how big of a simulation you are trying to run. It never was a significant amount of memory (`< 10 Mb`) when I tried it with `512^3` particles, but I'd keep that in mind if you have memory issues.
 
  * For anything else regarding the merger trees, feel free to contact Mladen Ivkovic (mladen.ivkovic [at] hotmail DOT com)
 
@@ -162,7 +162,7 @@ For more details on how it works, some tests and results, you can have a look [h
 
 
 
-### New namelist parameters for this pach
+### New namelist parameters
 
 Can be set in the `MERGERTREE_PARAMS` block.
 
@@ -181,7 +181,7 @@ Can be set in the `MERGERTREE_PARAMS` block.
 
 ### Visualisation and Postprocessing
 
-`ramses/utils/py/mergertreeplot.py` is a python 2 script to plot the merger trees as found by this patch.
+`ramses/utils/py/mergertreeplot.py` is a python 2 script to plot the merger trees as found by this code.
 `ramses/utils/py/mergertree-extract.py` is a python3 script to extract the mass evolution of a
 single clump, a halo with all its subhaloes, or all haloes in the simulation.
 Details on options and usage are at the start of the scripts as a comment, or can be called using
@@ -194,7 +194,7 @@ the `--help` flags.
 ### Crashing on MPI writing routines?
 
 Apparently some MPI implementations have issues with collective writing routines, which are used by default
-in the merger tree patch. To circumvent this problem, the `-DMTREE_INDIVIDUAL_FILES` preprocessing directive
+in the merger tree code. To circumvent this problem, the `-DMTREE_INDIVIDUAL_FILES` preprocessing directive
 can be set in the Makefile. Just add it to the `DEFINES=` line at the top of the file.
 With this flag in use, instead of collective files every MPI task will write an individual unformatted
 Fortran file, and then read it back in at the later snapshot and communicate the data appropriately.
