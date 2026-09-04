@@ -189,7 +189,8 @@ module tracer_utils
                            tmp_xp(:) = xp(ipart, :)
                            call safe_move(tmp_xp, prevxp(1:ndim))
                            xp(ipart, :) = tmp_xp(:)
-                           partp(ipart) = igrid + iskip + ison
+                           iskip = ncoarse + (ison-1)*ngridmax
+                           partp(ipart) = igrid + iskip
                            exit
                         else
                            rand = rand - mass(ison) / mass(0)

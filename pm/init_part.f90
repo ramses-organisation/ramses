@@ -4,6 +4,7 @@ subroutine init_part
   use clfind_commons
   use dice_commons
   use gadgetreadfilemod
+  use tracer_utils, only: initialize_skip_loc
 #ifdef RT
   use rt_parameters,only: convert_birth_times
 #endif
@@ -69,6 +70,8 @@ subroutine init_part
      if(verbose)write(*,*)'Initial conditions already set'
      return
   end if
+
+  if (MC_tracer) call initialize_skip_loc
 
   ! Allocate particle variables
   allocate(xp    (npartmax,ndim))
