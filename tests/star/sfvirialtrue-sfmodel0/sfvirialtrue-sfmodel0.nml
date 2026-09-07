@@ -13,10 +13,9 @@ ncontrol=1
 /
 
 &OUTPUT_PARAMS
-noutput=5	!  not used
-tout=1.      	!  (using units_time)
-tend=0.51    	!  active
-delta_tout=0.5 	!  active
+!tout=1.      	!  (using units_time)
+tend=0.50    	!  active
+delta_tout=0.25 	!  active
 /
 
 &INIT_PARAMS

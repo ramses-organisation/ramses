@@ -34,7 +34,6 @@ p_region=1e-5,0.4
 /
 
 &OUTPUT_PARAMS
-noutput=1
 tout=1
 /
 

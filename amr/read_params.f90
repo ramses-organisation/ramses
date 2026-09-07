@@ -467,7 +467,7 @@ subroutine read_output_params(namelist_unit,nml_ok)
    implicit none
    integer,intent(in)::namelist_unit
    logical,intent(inout)::nml_ok
-   integer::nml_err
+   integer::nml_err,i
    real(kind=8)::tend=0  ! end time for the simulation
    real(kind=8)::aend=0  ! end expansion factor
 
@@ -487,20 +487,55 @@ subroutine read_output_params(namelist_unit,nml_ok)
       nml_ok=.false.
    endif
 
+   ! Reset deprecated noutput namelist param.
+   ! The number of outputs is now counted automatically below.
+   if(noutput>0)then
+      if(myid==1)write(*,*)'Deprecated parameter "noutput" ignored.'
+   endif
+   noutput=0
+
    !-------------------------------------------------
-   ! Compute time step for outputs
+   ! Process output parameters
    !-------------------------------------------------
+
    ! check how many predetermined output times are listed (either give tout or aout)
-   if(noutput==0.and..not.all(tout==HUGE(1.0D0)))then
+   if(.not.all(tout==HUGE(1.0D0)))then
       do while(tout(noutput+1)<HUGE(1.0D0))
          noutput = noutput+1
       enddo
    endif
-   if(noutput==0.and..not.all(aout==HUGE(1.0D0)))then
+   if(.not.all(aout==HUGE(1.0D0)))then
       do while(aout(noutput+1)<HUGE(1.0D0))
          noutput = noutput+1
       enddo
    endif
+
+   ! check if the output time/expansion factor lists contain increasing values
+   do i=1,noutput-1
+      if(tout(i)>tout(i+1))then
+         if(myid==1)write(*,*)'Error: tout list not increasing.'
+         nml_ok=.false.
+         exit
+      endif
+      if(aout(i)>aout(i+1))then
+         if(myid==1)write(*,*)'Error: aout list not increasing.'
+         nml_ok=.false.
+         exit
+      endif
+   end do
+
+   ! check if tend/aend are consistent with tout/aout
+   if(noutput>0)then
+      if(tout(noutput)<HUGE(1.0D0).and.tend>0.and.tend<tout(noutput))then
+         if(myid==1)write(*,*)'Error: Inconsistent tend. Should be larger or equal to last tout.'
+         nml_ok=.false.
+      endif
+      if(aout(noutput)<HUGE(1.0D0).and.aend>0.and.aend<aout(noutput))then
+         if(myid==1)write(*,*)'Error: Inconsistent aend. Should be larger or equal to last aout.'
+         nml_ok=.false.
+      endif
+   endif
+
    ! add final time and expansion factor at the back of the predetermined output list
    if(tend>0)then
       noutput=noutput+1
@@ -510,6 +545,10 @@ subroutine read_output_params(namelist_unit,nml_ok)
       noutput=noutput+1
       aout(noutput)=aend
    endif
+
+   ! if no output time was requested at all, keep a single HUGE entry in the list
+   if(noutput==0)noutput=1
+
    ! set periodic output params
    tout_next=delta_tout
    aout_next=delta_aout

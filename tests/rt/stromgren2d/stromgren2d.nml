@@ -29,7 +29,6 @@ p_region=8.69869d-8		! Initial pressure (~100 K)
 /
 
 &OUTPUT_PARAMS
-noutput=1
 tout=15                         ! End-time for the simulation (in unit_time=Myr)
 /
 

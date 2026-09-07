@@ -34,7 +34,6 @@ var_region=-1.0,1.0
 /
 
 &OUTPUT_PARAMS
-noutput=1
 tout=0.2
 /
 

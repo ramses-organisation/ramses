@@ -10,6 +10,7 @@ module deltaE_module
   logical::deltaE_correct_pressure_fix=.true. ! Whether to be "pressure_fix" aware when computing energy
   logical::deltaE_debug=.false. ! print intermediate energies
   logical::deltaE_force_all_levels=.false. ! Force computation on all levels for all processes
+  integer::deltaE_level_turb=0 ! Level at wich the turbulence energy is computed (0 = compute on leaf cells.)
 
   ! Arrays
   integer, parameter :: nb_energy_kind = 13
@@ -391,10 +392,12 @@ contains
     energies(iepot_gas) = epot_loc
 #endif
 
-    if (use_unew) then
-      energies(iekin_gas_turb) = compute_ekin_turb(ilevel, unew)
-    else 
-      energies(iekin_gas_turb) = compute_ekin_turb(ilevel, uold)
+    if (deltaE_level_turb == 0 .or. deltaE_level_turb == ilevel) then
+      if (use_unew) then
+        energies(iekin_gas_turb) = compute_ekin_turb(ilevel, unew)
+      else 
+        energies(iekin_gas_turb) = compute_ekin_turb(ilevel, uold)
+      end if
     end if
 
   end subroutine compute_energy_gas
@@ -414,8 +417,8 @@ contains
 
     ! AMR Variables
     integer :: i, ind, ncache, igrid, iskip, idim
-    integer :: nleaf, ngrid, nx_loc
-    integer, dimension(nvector) :: ind_grid, ind_cell, ind_leaf, index_current_grid
+    integer :: ncell_turb, ngrid, nx_loc
+    integer, dimension(nvector) :: ind_grid, ind_cell, ind_cell_turb, index_current_grid
     integer, dimension(1:nvector, 1:threetondim)::nbor_cells
     integer::i1, j1, k1, ind_father
 
@@ -488,21 +491,21 @@ contains
           ind_cell(i) = ind_grid(i) + iskip
         end do
 
-        ! Gather leaf cells
-        nleaf = 0
+        ! Gather cells on which the computation will be done (depending on whether deltaE_level_turb is set)
+        ncell_turb = 0
         do i = 1, ngrid
-          if (son(ind_cell(i)) == 0) then
-            nleaf = nleaf + 1
-            ind_leaf(nleaf) = ind_cell(i)
-            index_current_grid(nleaf) = i
+          if (son(ind_cell(i)) == 0 .or. deltaE_level_turb == ilevel) then
+            ncell_turb = ncell_turb + 1
+            ind_cell_turb(ncell_turb) = ind_cell(i)
+            index_current_grid(ncell_turb) = i
           end if
         end do
 
         ! Compute variance
-        do i = 1, nleaf
+        do i = 1, ncell_turb
           do idim = 1, ndim
-            vel = uarray(ind_leaf(i), 1 + idim)/max(uarray(ind_leaf(i), 1), smallr)
-            ekin_turb_loc = ekin_turb_loc + 0.5*(vol*uarray(ind_leaf(i), 1)*(vel - velocity_mean(index_current_grid(i), idim))**2)
+            vel = uarray(ind_cell_turb(i), 1 + idim)/max(uarray(ind_cell_turb(i), 1), smallr)
+            ekin_turb_loc = ekin_turb_loc + 0.5*(vol*uarray(ind_cell_turb(i), 1)*(vel - velocity_mean(index_current_grid(i), idim))**2)
           end do
         end do
       end do

@@ -70,4 +70,4 @@ fig.savefig('crossing-beams.pdf',bbox_inches='tight')
 plt.show()
 
 # Check results against reference solution
-visu_ramses.check_solution(data["data"], 'crossing-beams', tolerance={"all":3.0e-06},overwrite=False)
+visu_ramses.check_solution(data["data"], 'crossing-beams',overwrite=False)

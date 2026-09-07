@@ -4,7 +4,8 @@ test suite log (tests/test_suite.log).
 
 The log holds every test that was run, so the block belonging to one test has
 to be isolated before anything is parsed out of it. A block opens with e.g.
-'Test 1/1: turb/driving' and closes with 'Test turb/driving passed/failed'.
+'Test 1/1: turb/driving-evolving' and closes with 'Test turb/driving-evolving
+passed/failed'.
 Note that run_test_suite.sh calls the plotting scripts *before* it writes that
 closing line, so in practice a block normally runs to the end of the file; the
 header of the next test and EOF are used as fallbacks.
@@ -41,7 +42,7 @@ def read_turb_history(logfile, testname):
     logfile: str
         Path to the test suite log.
     testname: str
-        Test to isolate, as it appears in the log, e.g. 'turb/driving'.
+        Test to isolate, as it appears in the log, e.g. 'turb/driving-evolving'.
 
     Returns
     -------
@@ -118,8 +119,8 @@ def _pad_ylim(axis, lo, hi):
     span = hi - lo
     # Keep at least a few percent of the scale in view. A series that is
     # constant, or nearly so, would otherwise land on a wildly magnified axis
-    # with an offset label - which is exactly the expected case for the static
-    # field of turb_type=2.
+    # with an offset label - which is exactly the expected case for a frozen
+    # field (turb_evolving=.false.).
     floor = 0.02*max(abs(lo), abs(hi))
     if floor <= 0.0:
         floor = 0.1

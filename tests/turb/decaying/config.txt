@@ -1,1 +1,2 @@
 FLAGS: NDIM=3 SOLVER=hydro USE_TURB=1
+RESTART: true

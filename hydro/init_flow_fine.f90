@@ -539,16 +539,15 @@ subroutine init_flow_fine(ilevel)
         ! End loop over cells
      end do
      ! End loop over grids
+  end if
 
 #if USE_TURB==1
-     ! Add initial turbulent velocity
-     if (turb .AND. turb_type == 3) then
-        call calc_turb_forcing(ilevel)
-        call synchro_hydro_fine(ilevel,1.0_dp,2)
-     end if
+  ! Add initial turbulent velocity
+  if (initial_turb)then
+     call add_turb_init_velocity(ilevel)
+  end if
 #endif
 
-  end if
 
 111 format('   Entering init_flow_fine for level ',I2)
 

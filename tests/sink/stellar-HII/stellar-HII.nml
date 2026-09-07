@@ -42,7 +42,6 @@ boxlen=250. ! pc
 /
 
 &OUTPUT_PARAMS
-noutput=1
 tout=0.18
 /
 

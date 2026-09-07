@@ -34,7 +34,6 @@ condinit_kind='ana_disk_potential'
 /
 
 &OUTPUT_PARAMS
-noutput=1
 tout=0.620
 /
 

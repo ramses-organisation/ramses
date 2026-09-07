@@ -58,6 +58,7 @@ module pm_commons
   integer ,allocatable,dimension(:)    ::prevp    ! Previous particle in list
   integer ,allocatable,dimension(:)    ::levelp   ! Current level of particle
   integer(i8b),allocatable,dimension(:)::idp    ! Identity of particle
+  logical(kind=1), allocatable, dimension(:) :: dumpedp ! Working array for backup_part
   ! Tree related arrays
   integer ,allocatable,dimension(:)    ::headp    ! Head particle in grid
   integer ,allocatable,dimension(:)    ::tailp    ! Tail particle in grid

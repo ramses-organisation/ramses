@@ -133,9 +133,9 @@ recursive subroutine amr_step(ilevel,icount)
    if(deltaE_enable) call compute_transfer(levelmin, nlevelmax, .false., deltaE%star_formation, 2)
   end if
 #endif
-  !-----------------
-  ! Particle leakage
-  !-----------------
+  !--------------------------------------------------------------------
+  ! Particle leakage: attach particles to correct grid after they moved
+  !--------------------------------------------------------------------
                                call timer('particles','start')
                          
   if(pic) then 
@@ -252,29 +252,21 @@ recursive subroutine amr_step(ilevel,icount)
      call rho_fine(ilevel,icount)
   endif
 
-  !-------------------------------------------
-  ! Sort particles between ilevel and ilevel+1
-  !-------------------------------------------
-  if(pic)then
-   
-      if(deltaE_enable) call compute_transfer(levelmin, nlevelmax, .false., deltaE%flux_part, 1)
+  !------------------------------------------------------------------
+  ! Sort particles between ilevel and ilevel+1, and between MPI ranks
+  !------------------------------------------------------------------
+  if(pic)then  
+     if(deltaE_enable) call compute_transfer(levelmin, nlevelmax, .false., deltaE%flux_part, 1)
 
      ! Remove particles to finer levels: hands particles that sit in refined regions down to ilevel+1, so the finer level owns them for its sub-steps.
                                call timer('particles','start')
      call kill_tree_fine(ilevel)
 
-     if(deltaE_enable) call compute_transfer(levelmin, nlevelmax, .false., deltaE%flux_part, 2)
+     ! Communicate particles between domains
 
-
-     if(deltaE_enable) call compute_transfer(levelmin, nlevelmax, .false., deltaE%flux_part, 1)
-
-     ! Update boundary conditions for remaining particles: sends particles that have left this MPI domain to their new process, and receives incoming ones.
      call virtual_tree_fine(ilevel)
 
      if(deltaE_enable) call compute_transfer(levelmin, nlevelmax, .false., deltaE%flux_part, 2)
-
-
-
   end if
 
   !---------------
@@ -368,7 +360,7 @@ recursive subroutine amr_step(ilevel,icount)
 #if USE_TURB==1
   ! Compute turbulent forcing
                                call timer('turb','start')
-  if (turb .and. turb_type/=3) then
+  if (driven_turb) then
      ! Calculate turbulent acceleration on each cell in this level
      call calc_turb_forcing(ilevel)
   end if
@@ -524,10 +516,10 @@ recursive subroutine amr_step(ilevel,icount)
 #if USE_TURB==1
      ! Compute turbulent forcing
                                call timer('turb','start')
-     if (turb .AND. turb_type/=3) then
+     if (driven_turb) then
+
       if(deltaE_enable) call compute_transfer(ilevel, ilevel, .false., deltaE%turb_driving, 1) 
-        ! Euler step, adding turbulent acceleration
-      write(*,*) "Syncho TURB!!!!!"
+      ! Euler step, adding turbulent acceleration
       call synchro_hydro_fine(ilevel,dtnew(ilevel),2)
       if(deltaE_enable) call compute_transfer(ilevel, ilevel, .false., deltaE%turb_driving, 2) 
      end if
@@ -577,9 +569,9 @@ recursive subroutine amr_step(ilevel,icount)
    if(deltaE_enable) call compute_transfer(ilevel, ilevel, .false., deltaE%cooling, 2)    
 
 
-  !---------------
-  ! Move particles
-  !---------------
+  !---------------------------------------------------------------------
+  ! Move particles (update position and velocity), see also synchro_fine
+  !---------------------------------------------------------------------
   if(pic)then
       if(deltaE_enable) call compute_transfer(ilevel, ilevel, .false., deltaE%flux_part, 1)    
 
@@ -640,11 +632,9 @@ recursive subroutine amr_step(ilevel,icount)
                                call timer('flag','start')
   if(.not.static.or.(nstep_coarse_old.eq.nstep_coarse.and.restart_remap)) call flag_fine(ilevel,icount)
 
-
-  !----------------------------
-  ! Merge finer level particles
-  !----------------------------
-
+  !-------------------------------------------------
+  ! Take all particle from ilevel+1 back into ilevel
+  !-------------------------------------------------
 
                                call timer('particles','start')
 

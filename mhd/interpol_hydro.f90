@@ -143,6 +143,9 @@ subroutine upload_fine(ilevel)
                     igrid_son  (icell)=son(igridn(i,ig1)+ih1)
                  end if
               end do
+              ! interpol_var==0: conserve *total* energy, magentic energy is converted to heat
+              ! interpol_var==1: recalculate magnetic energy after interpolation,
+              !                  conserve other energies (but not Etot!)
               if(interpol_var==1)then
                  ! Remove magnetic energy
                  do i=1,nsplit
@@ -189,6 +192,7 @@ subroutine upload_fine(ilevel)
                     igrid_son  (icell)=son(igridn(i,ig2)+ih2)
                  end if
               end do
+              ! See the comment on the left neighbour above
               if(interpol_var==1)then
                  ! Remove magnetic energy
                  do i=1,nsplit
