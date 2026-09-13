@@ -21,5 +21,6 @@ describe them now
 | `slope_mag_type=1` |  `Integer`    | Type of slope limiter used in the Godunov scheme in the MHD solver |
 | `pressure_fix=.false.` |  `logical`    | Activate hybrid scheme (conservative or primitive) for high-Mach flows. Useful to prevent negative temperatures. |
 | `beta_fix=0d0` |  `Real`    | With pressure_fix=.true., changes the threshold at which the energy is truncated |
+| `energy_fix=.false.` |  `logical`    | Store the internal energy in a passive scalar instead of recomputing it by substracting other energies from the total energy. This avoids numerical errors when other energies are large. |
 | `difmag=0d0` |  `Real`    | Modifies diffusive flux in the PLDME integrator (hydro only). |
 | `eta_mag=0d0` |  `Real`    | Modifies dtdiff in PLDME integrator (MHD only, warning, divide by zero error if eta_mag=0d0) |

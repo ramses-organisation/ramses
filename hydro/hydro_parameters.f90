@@ -175,5 +175,7 @@ module hydro_parameters
   integer::ivirial2=imetal
   integer::ixion=imetal
   integer::ichem=imetal
+  integer::ieint=-1            ! index of internal energy passive scalar (-1 = energy_fix inactive)
+  integer::last_pscal=nvar   ! last real passive scalar index (excludes ieint when energy_fix active)
 
 end module hydro_parameters
