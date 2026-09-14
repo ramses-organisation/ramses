@@ -15,7 +15,7 @@ describe them now
 | `smallc=1d-10 `       |  `Real`    | Minimum sound speed to prevent floating exceptions |
 | `riemann=’llf’`       |`Character LEN=20`| Name of the desired Riemann solver. Possible choices are ’exact’, ’acoustic’, ’llf’, ’hll’ or ’hllc’ for the hydro solver and ’llf’, ’hll’, ’roe’, ’hlld’, ’upwind’ and ’hydro’ for the MHD solver. |
 | `riemann2d=’llf’`     |`Characher LEN=20`| Name of the desired 2D Riemann solver for the induction equation (MHD only). Possible choices are ’upwind’, ’llf’, ’roe’, ’hll’, and ’hlld’. |
-| `scheme=’muscl’`       |`Character LEN=20`| Name of the desired Godunov integrator. The hydro solver accepts ’muscl’ (MUSCL-HANCOCK scheme) or ’pldme’ (Collela's PLMDE scheme). The MHD solver accepts ’muscl’ or ’induction’. |
+| `scheme=’muscl’`       |`Character LEN=20`| Name of the desired Godunov integrator. The hydro solver accepts ’muscl’ (MUSCL-HANCOCK scheme) or ’pldme’ (Collela's PLMDE scheme). The MHD solver accepts ’muscl’ or ’induction’. The ’induction’ scheme evolves only the magnetic field, imposing the density, velocity and total energy analytically at every step, and requires `interpol_var=1`. |
 | `niter_riemann=10`    |  `Integer` | Maximum number of iterations used in the exact Riemann solver |
 | `slope_type=1` |  `Integer`    | Type of slope limiter used in the Godunov scheme for the piecewise linear reconstruction: slope_type=0: First order scheme, slope_type=1: MinMod limiter, slope_type=2: MonCen limiter, slope_type=3: Multi-dimensional MonCen limiter. In 1D runs only, it is also possible to choose:slope_type=4: Superbee limiter, slope_type=5: Ultrabee limiter |
 | `slope_mag_type=1` |  `Integer`    | Type of slope limiter used in the Godunov scheme in the MHD solver |

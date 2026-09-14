@@ -47,6 +47,9 @@ subroutine restrict_mask_coarse_reverse(ifinelevel)
       iskip_f_mg =(ind_f_cell-1)*active_mg(myid,ifinelevel)%ngrid
 
       ! Loop over fine grids of myid
+      ! OMP NOTE: STATIC schedule is required for correctness here. It guarantees
+      ! threads keep the same octs, accross outer loop iterations over ind, when
+      ! using nowait.
 !$omp do schedule(static)
       do igrid_f_mg=1,active_mg(myid,ifinelevel)%ngrid
          icell_f_mg=iskip_f_mg+igrid_f_mg
@@ -465,6 +468,9 @@ subroutine restrict_residual_coarse_reverse(ifinelevel)
       iskip_f_mg =(ind_f_cell-1)*active_mg(myid,ifinelevel)%ngrid
 
       ! Loop over fine grids of myid
+      ! OMP NOTE: STATIC schedule is required for correctness here. It guarantees
+      ! threads keep the same octs, accross outer loop iterations over ind, when
+      ! using nowait.
 !$omp do schedule(static)
       do igrid_f_mg=1,active_mg(myid,ifinelevel)%ngrid
          icell_f_mg=iskip_f_mg+igrid_f_mg

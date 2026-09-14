@@ -57,8 +57,6 @@ module tracer_utils
 
       real(dp), dimension(1:ndim) :: tmp_xp
 
-      call initialize_skip_loc
-
       ! print*, 'in pre_kill_grid_hook'
       dx = 0.5D0**ilevel
 
@@ -98,7 +96,6 @@ module tracer_utils
       ! Customize here
       !######################
 
-      call initialize_skip_loc
 
    end subroutine post_kill_grid_hook
 
@@ -115,7 +112,6 @@ module tracer_utils
       !######################
       ! Customize here
       !######################
-      call initialize_skip_loc
 
    end subroutine pre_make_grid_fine_hook
 
@@ -140,8 +136,6 @@ module tracer_utils
       logical :: ok
 
       real(dp), dimension(1:ndim) :: tmp_xp
-
-      call initialize_skip_loc
 
       dx = 0.5D0**ilevel           ! dx of the new level
       dxcoarse = 0.5D0**(ilevel-1) ! dx of the previous level
@@ -189,7 +183,8 @@ module tracer_utils
                            tmp_xp(:) = xp(ipart, :)
                            call safe_move(tmp_xp, prevxp(1:ndim))
                            xp(ipart, :) = tmp_xp(:)
-                           partp(ipart) = igrid + iskip + ison
+                           iskip = ncoarse + (ison-1)*ngridmax
+                           partp(ipart) = igrid + iskip
                            exit
                         else
                            rand = rand - mass(ison) / mass(0)

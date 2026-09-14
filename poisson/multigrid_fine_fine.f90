@@ -47,6 +47,9 @@ subroutine restrict_mask_fine_reverse(ifinelevel)
       iskip_f_amr=ncoarse+(ind_f_cell-1)*ngridmax
 
       ! Loop over fine grids of myid
+      ! OMP NOTE: STATIC schedule is required for correctness here. It guarantees
+      ! threads keep the same octs, accross outer loop iterations over ind, when
+      ! using nowait.
 !$omp do schedule(static)
       do igrid_f_mg=1,active(ifinelevel)%ngrid
          igrid_f_amr=active(ifinelevel)%igrid(igrid_f_mg)
@@ -380,6 +383,9 @@ subroutine restrict_residual_fine_reverse(ifinelevel)
       iskip_f_amr=ncoarse+(ind_f_cell-1)*ngridmax
 
       ! Loop over fine grids of myid
+      ! OMP NOTE: STATIC schedule is required for correctness here. It guarantees
+      ! threads keep the same octs, accross outer loop iterations over ind, when
+      ! using nowait.
 !$omp do schedule(static)
       do igrid_f_mg=1,active(ifinelevel)%ngrid
          igrid_f_amr=active(ifinelevel)%igrid(igrid_f_mg)

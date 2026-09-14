@@ -237,15 +237,10 @@ SUBROUTINE getAgeGyr(t_birth_proper, age)
   use constants,only: Gyr2sec
   implicit none
   real(dp):: t_birth_proper, age
-  real(dp),save:: scale_t_Gyr
-  logical,save::scale_init=.false.
+  real(dp):: scale_t_Gyr
   real(dp):: scale_nH, scale_T2, scale_l, scale_d, scale_t, scale_v
-  if( .not. scale_init) then
-     ! The timescale has not been initialized
-     call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
-     scale_t_Gyr = (scale_t/aexp**2)/Gyr2sec
-     scale_init=.true.
-  endif
+  call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
+  scale_t_Gyr = (scale_t/aexp**2)/Gyr2sec
   age = (texp - t_birth_proper) * scale_t_Gyr
 END SUBROUTINE getAgeGyr
 !------------------------------------------------------------------------

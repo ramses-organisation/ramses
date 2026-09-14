@@ -495,7 +495,7 @@ lifted them all up to ``ilevel`` at the end of the previous step.
    remain a valid record of "the particles that were in this grid" long after
    the particles themselves have been merged several levels above.
 
-   This mechanism is relied on my the MC tracer particles. When a grid is derefined,
+   This mechanism is relied on by the MC tracer particles. When a grid is derefined,
    ``pre_kill_grid_hook`` in ``pm/tracer_utils.f90`` walks ``headp``/``numbp``
    of the doomed grid to find its gas tracers, recentre them on the parent cell
    and update ``partp``.

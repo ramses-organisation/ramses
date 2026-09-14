@@ -1,8 +1,11 @@
- subroutine init_part
+subroutine init_part
   use amr_commons
   use merger_commons
   use pm_commons
   use clfind_commons
+  use tracer_utils, only: initialize_skip_loc
+  use constants, only:M_sun,kpc2cm
+
 #ifdef RT
   use rt_parameters,only: convert_birth_times
 #endif
@@ -41,7 +44,7 @@
   real(kind=8),dimension(1:nvector,1:3)::xx,vv
   real(kind=8),dimension(1:nvector)::mm
   type(part_t)::tmppart
-  real(kind=8)::dispmax=0.0
+  real(kind=8)::dispmax=0
   real(dp),dimension(1:3, 1:3)::Rot_gal, Prot, Qrot, Irot
   real(dp),dimension(1:3)::rot_axis
   real(dp)::cangle, sangle
@@ -72,6 +75,8 @@
      return
   end if
 
+  if (MC_tracer) call initialize_skip_loc
+
   ! Allocate particle variables
   allocate(xp    (npartmax,ndim))
   allocate(vp    (npartmax,ndim))
@@ -82,22 +87,23 @@
      allocate(move_flag(npartmax))
      move_flag = 0
   end if
-  allocate(nextp (npartmax))
-  allocate(prevp (npartmax))
-  allocate(levelp(npartmax))
-  allocate(idp   (npartmax))
-  allocate(typep (npartmax))
+  allocate(dumpedp(npartmax))
+  allocate(nextp  (npartmax))
+  allocate(prevp  (npartmax))
+  allocate(levelp (npartmax))
+  allocate(idp    (npartmax))
+  allocate(typep  (npartmax))
 #ifdef OUTPUT_PARTICLE_POTENTIAL
   allocate(ptcl_phi(npartmax))
 #endif
-  xp=0.0; vp=0.0; mp=0.0; levelp=0; idp=0;
+  xp=0; vp=0; mp=0; levelp=0; idp=0
   typep(1:npartmax)%family=FAM_UNDEF; typep(1:npartmax)%tag=0
   if(star.or.sink)then
      allocate(tp(npartmax))
-     tp=0.0
+     tp=0
      if(metal)then
         allocate(zp(npartmax))
-        zp=0.0
+        zp=0
      end if
   end if
 
@@ -230,7 +236,7 @@
 #endif
      ! Get nlevelmax_part from cosmological inital conditions
      if(cosmo)then
-        min_mdm_cpu = 1.0
+        min_mdm_cpu = 1
         do ipart=1,npart2
            ! Get dark matter only
            if (is_DM(typep(ipart))) then
@@ -247,7 +253,7 @@
         ilevel = 1
         do while(.true.)
            mm1 = 0.5d0**(3*ilevel)*(1.0d0-omega_b/omega_m)
-           if((mm1 > 0.90d0*min_mdm_all).AND.(mm1 < 1.10d0*min_mdm_all))then
+           if((mm1 > 0.80d0*min_mdm_all).AND.(mm1 < 1.20d0*min_mdm_all))then
               nlevelmax_part = ilevel
               exit
            endif
@@ -284,11 +290,12 @@
      end select
 
      ! Initialize tracer particles
-     if(MC_tracer) call init_tracer
+     if(tracer) call init_tracer
 
   end if
 
   if(sink)call init_sink
+  if(stellar)call init_stellar
 
 contains
 
@@ -504,7 +511,7 @@ contains
                    if(debug.and.mod(i3,10)==0)write(*,*)'Reading plane ',i3
                    read(10)((init_plane(i1,i2),i1=1,n1(ilevel)),i2=1,n2(ilevel))
                 else
-                   init_plane=0.0
+                   init_plane=0
                 endif
                 buf_count=n1(ilevel)*n2(ilevel)
 #ifndef WITHOUTMPI
@@ -531,7 +538,7 @@ contains
                       if(debug.and.mod(i3,10)==0)write(*,*)'Reading plane ',i3
                       read(10)((init_plane_x(i1,i2),i1=1,n1(ilevel)),i2=1,n2(ilevel))
                    else
-                      init_plane_x=0.0
+                      init_plane_x=0
                    endif
                    buf_count=n1(ilevel)*n2(ilevel)
 #ifndef WITHOUTMPI
@@ -558,7 +565,7 @@ contains
                       if(debug.and.mod(i3,10)==0)write(*,*)'Reading plane ',i3
                       read(10)((init_plane_id(i1,i2),i1=1,n1(ilevel)),i2=1,n2(ilevel))
                    else
-                      init_plane_id=0.0
+                      init_plane_id=0
                    endif
                    buf_count=n1(ilevel)*n2(ilevel)
 #ifndef WITHOUTMPI
@@ -649,13 +656,13 @@ contains
                          else
                             xp(ipart,idim)=xg(ind_grid(i),idim)+xc(ind,idim)+init_array_x(i1,i2,i3)
                             dispmax=max(dispmax,abs(init_array_x(i1,i2,i3)/dx))
-                          if (read_ids) then
-                            idp(ipart) = init_array_id(i1,i2,i3)
-                          end if
-                          if (read_mass) then
-                            mp(ipart) = 0.5d0**(3*ilevel) * init_array_m(i1,i2,i3)
-                          end if
                          endif
+                         if (read_ids) then
+                            idp(ipart) = init_array_id(i1,i2,i3)
+                         end if
+                         if (read_mass) then
+                            mp(ipart) = 0.5d0**(3*ilevel) * init_array_m(i1,i2,i3)
+                         end if
                       end if
                    end do
                 end do
@@ -956,7 +963,7 @@ contains
                 & MPI_INTEGER,icpu-1,&
                 & tagu,MPI_COMM_WORLD,reqsend(countsend),info)
 #else
-          call MPI_ISEND(emission_part(1)%f8(sendbuf_cum(icpu)+ncache),buf_count, &
+          call MPI_ISEND(emission_part(1)%f8(sendbuf_cum(icpu)+ncache,1),buf_count, &
                 & MPI_INTEGER8,icpu-1,&
                 & tagu,MPI_COMM_WORLD,reqsend(countsend),info)
 #endif
@@ -1026,6 +1033,7 @@ contains
     deallocate(emission_part(1)%u)
     deallocate(emission_part(1)%f8)
 #endif
+
     do icpu=1,ncpu
 #ifndef LIGHT_MPI_COMM
       if(sendbuf(icpu)>0) then
@@ -1044,7 +1052,7 @@ contains
        end if
     end do
 
-    write(*,*)'npart=',ipart,'/',npartmax,' for PE=',myid
+    if(debug)write(*,*)'npart=',ipart,'/',npartmax,' for PE=',myid
 #endif
 
     ! Compute particle initial level
@@ -1166,21 +1174,21 @@ contains
 
        ! File units are supposed to be in kpc, km/s and 10^9 Msol
        do while (.not.eof)
-          xx=0.0
+          xx=0
           if(myid==1)then
              jpart=0
              do i=1,nvector
-                read(10,*,end=100)xx1,xx2,xx3,vv1,vv2,vv3,mm1
+                read(10,*,end=111)xx1,xx2,xx3,vv1,vv2,vv3,mm1
                 jpart=jpart+1
                 indglob=indglob+1
 
-                xx1=xx1*3.085677581282D21/scale_l
-                xx2=xx2*3.085677581282D21/scale_l
-                xx3=xx3*3.085677581282D21/scale_l
+                xx1=xx1*kpc2cm/scale_l
+                xx2=xx2*kpc2cm/scale_l
+                xx3=xx3*kpc2cm/scale_l
                 vv1=vv1*1D5/scale_v
                 vv2=vv2*1D5/scale_v
                 vv3=vv3*1D5/scale_v
-                mm1=mm1*1D9*1.9891D33/scale_m
+                mm1=mm1*1D9*M_sun/scale_m
 
                 ! Shift to box coordinates right away: cmp_cpumap below expects
                 ! positions in [0,boxlen], not galaxy-centred ones.
@@ -1192,7 +1200,7 @@ contains
                 tmppart%tag    = 0
                 pp(i  )=part2int(tmppart)
              end do
-100          continue
+111          continue
              if(jpart<nvector)eof=.true.
           endif
           buf_count=nvector*3
@@ -1211,7 +1219,7 @@ contains
 #ifndef WITHOUTMPI
              if(cc(i)==myid)then
 #endif
-                if (maxval(abs(xx(i,1:3)-boxlen/2.0D0)) .LT. (boxlen/2.0)) then
+                if (maxval(abs(xx(i,1:3)-boxlen/2.0D0)) .LT. (boxlen/2.0)) then !check if in box
                    ipart=ipart+1
                    if(ipart>npartmax)then
                       write(*,*)'Maximum number of particles incorrect'
@@ -1292,13 +1300,13 @@ contains
                 jpart=jpart+1
                 indglob=indglob+1
 
-                xx1=xx1*3.085677581282D21/scale_l
-                xx2=xx2*3.085677581282D21/scale_l
-                xx3=xx3*3.085677581282D21/scale_l
+                xx1=xx1*kpc2cm/scale_l
+                xx2=xx2*kpc2cm/scale_l
+                xx3=xx3*kpc2cm/scale_l
                 vv1=vv1*1D5/scale_v
                 vv2=vv2*1D5/scale_v
                 vv3=vv3*1D5/scale_v
-                mm1=mm1*1D9*1.9891D33/scale_m
+                mm1=mm1*1D9*M_sun/scale_m
 
                 ! Box coordinates, as for galaxy #1
                 xx(i,:) = matmul(rot_gal, (/ xx1, xx2, xx3 /)) + gal_center2 + boxlen/2.0D0

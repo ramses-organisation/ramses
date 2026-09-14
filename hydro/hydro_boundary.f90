@@ -235,7 +235,10 @@ subroutine make_boundary_hydro(ilevel)
 
      end do
      ! End loop over grids
-!$omp end do nowait
+     ! OMP: NO "nowait" HERE!
+     ! A boundary region needs the previous one to be completely updated.
+     ! This is due to the way they are geometrically defined w.r.t each other.
+!$omp end do
   end do
 !$omp end parallel
   ! End loop over boundaries

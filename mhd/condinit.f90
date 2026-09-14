@@ -392,8 +392,11 @@ subroutine velana(x,v,dx,t,ncell)
   ! v(i,1:3) is the imposed 3-velocity in user units.
   !================================================================
   integer::i
-  real(dp)::xx,yy=0.,zz=0.,vx,vy,vz,aa,twopi
+  real(dp)::xx,yy,zz,vx,vy,vz,aa,twopi
 !!$  real(dp)::rr,tt,omega
+
+  yy=0.
+  zz=0.
 
   ! Add here, if you wish, some user-defined initial conditions
   aa=1.0+0.*t

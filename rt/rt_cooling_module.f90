@@ -882,11 +882,11 @@ SUBROUTINE cmp_chem_eq(TK, nH, t_rad_spec, nSpec, nTot, mu, Zsol)
   real(dp),dimension(1:7),intent(out)::nSpec!------------------------
   real(dp)::nHe
   real(dp)::n_H2, n_HI, n_HII, n_HEI, n_HEII, n_HEIII, n_E, n_E_min
-  real(dp)::g_H2=0,   g_HI=0,    g_HEI=0, g_HEII=0   ! Photoion/dissoc
-  real(dp)::aZ_H2=0,  aGP_H2,    a_HI=0,  a_HEI=0,   a_HEII=0  ! Formation
-  real(dp)::b_H2HI=0, b_H2H2=0,  b_H3B,   b_HI=0,    b_HEI=0, b_HEII=0!Col
-  real(dp)::C_HII=0,  C_H2=0,    D_H2=0,  f_HII=0,   f_H2=0  ! Cre & destr
-  real(dp)::D_HEI=0,  C_HEIII=0, f_HeI=0, f_HeIII=0, f_dust=0! Cre & destr
+  real(dp)::g_H2,   g_HI,    g_HEI, g_HEII           ! Photoion/dissoc
+  real(dp)::aZ_H2,  aGP_H2,  a_HI,  a_HEI,   a_HEII  ! Formation
+  real(dp)::b_H2HI, b_H2H2,  b_H3B, b_HI,    b_HEI, b_HEII !Col
+  real(dp)::C_HII,  C_H2,    D_H2,  f_HII,   f_H2    ! Cre & destr
+  real(dp)::D_HEI,  C_HEIII, f_HeI, f_HeIII, f_dust  ! Cre & destr
   real(dp)::err_nE, err_nH2, n_H2_old, n_H2_new, beta_H2
 !-------------------------------------------------------------------------
 

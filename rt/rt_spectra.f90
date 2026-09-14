@@ -953,6 +953,7 @@ SUBROUTINE inp_SED_table(age, Z, nProp, same, ret)
   integer,save:: ia, iz
   real(dp),save:: da, da0, da1, dz, dz0, dz1
 !-------------------------------------------------------------------------
+!$omp threadprivate(ia, iz, da, da0, da1, dz, dz0, dz1)
   ! ia, iz: lower indexes: 0<ia<sed_nA etc.
   ! da0, da1, dz0, dz1: proportional distances from edges:
   ! 0<=da0<=1, 0<=da1<=1 etc.

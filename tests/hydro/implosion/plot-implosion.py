@@ -58,4 +58,7 @@ for a in ax.flatten():
 fig.savefig('implosion.pdf',bbox_inches='tight')
 
 # Check results against reference solution
-visu_ramses.check_solution(data["data"],'implosion')
+# OMP: The atomics in godfine1 cause the buildup of roundoff errors to diverge
+# after a large number of steps, because the summation order is not preserved.
+tol = {'velocity_x': 1e-12, 'velocity_y': 1e-12, 'pressure': 1e-12}
+visu_ramses.check_solution(data["data"],'implosion', tolerance=tol)

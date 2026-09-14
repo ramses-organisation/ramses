@@ -1278,11 +1278,13 @@ subroutine cmpflxm(qm,im1,im2,jm1,jm2,km1,km2, &
   real(dp),dimension(1:nvar)::qleft,qright
   real(dp),dimension(1:nvar+1)::fgdnv
   real(dp)::zero_flux, bn_mean, entho
-  logical::check_switch_solver=.false.
+  logical::check_switch_solver
 
 #if NVAR>NHYDRO
   integer::n
 #endif
+
+  check_switch_solver=.false.
 
   xdim=ln-1
   entho=one/(gamma-one)
