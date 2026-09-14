@@ -58,7 +58,7 @@ contains
     logical,intent(inout)::nml_ok
     integer::nml_err
    
-    namelist/deltaE_params/deltaE_correct_pressure_fix,deltaE_debug,deltaE_enable,deltaE_force_all_levels
+    namelist/deltaE_params/deltaE_correct_pressure_fix,deltaE_debug,deltaE_enable,deltaE_force_all_levels,deltaE_level_turb
    ! Go to the beginning of the file
     rewind(namelist_unit)
 
