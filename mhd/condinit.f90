@@ -170,45 +170,23 @@ subroutine collapse_condinit(x,q,dx,nn)
   ! This routine generates initial conditions of a collapsing core
   !================================================================
   integer :: i,id,iu,iv,iw,ip
-  real(dp):: x0,y0,z0,rc,rs,xx,yy,zz,pi,r0,d0,B0,p0,omega0,mass_c_cu,scale_m
+  real(dp):: x0,y0,z0,rc,rs,xx,yy,zz,pi
   integer :: ivar, np
-  real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   real(dp),dimension(1:3,1:3):: rot_M,rot_invM,rot_tilde
   real(dp):: theta_mag_radians
 
   logical,save:: first=.true.
   integer:: ind_i, ind_j, ind_k
 
+  if(first) then
+    call prep_collapse(first)
+  end if
+
   id=1; iu=2; iv=3; iw=4; ip=5
   x0=0.5*boxlen
   y0=0.5*boxlen
   z0=0.5*boxlen
   pi=acos(-1.0d0)
-
-  ! Conversion factor from user units to cgs units
-  call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
-  scale_m=scale_d*scale_l**ndim
-
-  ! cloud mass (warning mass_c should not be changed, because condinit called not just once)
-  ! mass_c    is in solar mass
-  ! mass_c_cu is in code units
-  mass_c_cu = mass_c * (M_sun / scale_m )
-
-  ! cloud radius
-  r0=(alpha_dense_core*2.*6.67d-8*mass_c_cu*scale_m*mu_gas*mH/(5.*kB*T_eos))/scale_l
-  ! cloud density
-  d0 = 3.0d0*mass_c_cu/(4.0d0*pi*r0**3.)
-
-  ! cloud rotation ! remember that G=1 in code units
-  omega0 = sqrt(beta_dense_core*4.*pi*d0)
-
-  ! cloud pressure ! remember that G=1 in code units
-  p0 = alpha_dense_core*d0*d0*r0*r0*8.*pi/15.
-
-  ! vertical magnetic field ! remember that G=1 in code units (and that B as a factor 1/sqrt(4pi) between SI and Gaussian units)
-  B0 = sqrt(4.*pi/5.)/0.53*crit_dense_core*d0*r0
-  ! B0 could be defined equivalently as
-  !B0 = mass_c_cu*3./sqrt(5.)/0.53*crit_dense_core/r0**2/sqrt(4.*pi)
 
   ! angle between the rotation axis and the magnetic field
   theta_mag_radians= theta_mag/180.0d0*pi
@@ -224,11 +202,6 @@ subroutine collapse_condinit(x,q,dx,nn)
   rot_tilde(1,1:3) = (/0.0d0,1.0d0,0.0d0/)
   rot_tilde(2,1:3) = (/-1.0d0,0.0d0,0.0d0/)
   rot_tilde(3,1:3) = (/0.0d0,0.0d0,0.0d0/)
-
-  if(first) then
-    call prep_collapse(r0,d0,first)
-  end if
-
 
   DO i=1,nn
      xx=x(i,1)-x0
@@ -306,7 +279,7 @@ end subroutine collapse_condinit
 !================================================================
 !================================================================
 !================================================================
-subroutine prep_collapse(r0,d0,first)
+subroutine prep_collapse(first)
   use amr_commons, only:myid
   use amr_parameters
   use collapse_parameters
@@ -315,7 +288,6 @@ subroutine prep_collapse(r0,d0,first)
   use poisson_parameters
   use constants, only:mH,kB,M_sun,pc2cm
   implicit none
-  real(dp),intent(in)::r0,d0
   logical,intent(out)::first
   ! local
   real(dp):: C_s
@@ -324,9 +296,35 @@ subroutine prep_collapse(r0,d0,first)
   integer :: i,j,k
   real(dp):: xi,yi,zi,vx,vy,vz,rs,x0,y0,z0
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
+  real(dp)::scale_m,mass_c_cu,pi
+
+  pi=acos(-1.0d0)
 
   ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
+  scale_m=scale_d*scale_l**ndim
+
+  ! cloud mass (warning mass_c should not be changed, because condinit called not just once)
+  ! mass_c    is in solar mass
+  ! mass_c_cu is in code units
+  mass_c_cu = mass_c * (M_sun / scale_m )
+
+  ! cloud radius
+  r0=(alpha_dense_core*2.*6.67d-8*mass_c_cu*scale_m*mu_gas*mH/(5.*kB*T_eos))/scale_l
+
+  ! cloud density
+  d0 = 3.0d0*mass_c_cu/(4.0d0*pi*r0**3.)
+
+  ! cloud rotation ! remember that G=1 in code units
+  omega0 = sqrt(beta_dense_core*4.*pi*d0)
+
+  ! cloud pressure ! remember that G=1 in code units
+  p0 = alpha_dense_core*d0*d0*r0*r0*8.*pi/15.
+
+  ! vertical magnetic field ! remember that G=1 in code units (and that B as a factor 1/sqrt(4pi) between SI and Gaussian units)
+  B0 = sqrt(4.*pi/5.)/0.53*crit_dense_core*d0*r0
+  ! B0 could be defined equivalently as
+  !B0 = mass_c_cu*3./sqrt(5.)/0.53*crit_dense_core/r0**2/sqrt(4.*pi)
 
   ! sound speed
   C_s = sqrt(kB*T_eos/(mu_gas*mH))/scale_v

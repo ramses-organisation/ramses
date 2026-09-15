@@ -524,6 +524,7 @@ subroutine read_init_params(namelist_unit,nml_ok)
    use amr_parameters
    use amr_commons
    use hydro_parameters
+   use collapse_parameters
    implicit none
    integer,intent(in)::namelist_unit
    logical,intent(inout)::nml_ok
@@ -559,5 +560,9 @@ subroutine read_init_params(namelist_unit,nml_ok)
       if(myid==1)write(*,*)'Error reading namelist &INIT_PARAMS. Check formatting.'
       nml_ok=.false.
    endif
+
+   !if(condinit_kind=='collapse')then
+   !   call prep_collapse()
+   !endif
 
 end subroutine read_init_params

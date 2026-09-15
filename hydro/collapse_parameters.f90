@@ -9,6 +9,14 @@ module collapse_parameters
   real(dp)::theta_mag=0.0         ! angle in degrees for rotation misalignment between Bfield and rotation
   real(dp)::mass_c=1.0            ! mass of the cloud in solar masses
   real(dp)::Mach=0.0              ! Mach number of the cloud
+
+  ! derived cloud parameters
+  real(dp)::r0      ! radius
+  real(dp)::d0      ! density
+  real(dp)::omega0  ! rotation
+  real(dp)::p0      ! pressure
+  real(dp)::B0      ! vertical magnetic field
+
 end module collapse_parameters
 
 module collapse_commons
