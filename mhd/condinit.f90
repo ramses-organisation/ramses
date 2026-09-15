@@ -156,6 +156,8 @@ end subroutine orzag_tang_condinit
 subroutine collapse_condinit(x,q,dx,nn)
   use amr_commons, only:myid
   use amr_parameters
+  use collapse_parameters
+  use collapse_commons
   use hydro_commons
   use poisson_parameters
   use constants, only:mH,kB,M_sun,pc2cm
@@ -175,12 +177,7 @@ subroutine collapse_condinit(x,q,dx,nn)
   real(dp):: theta_mag_radians
 
   logical,save:: first=.true.
-  real(dp),dimension(1:3,1:100,1:100,1:100),save::q_idl
-  real(dp),save::vx_tot,vy_tot,vz_tot
-  integer,save:: n_size
   integer:: ind_i, ind_j, ind_k
-  real(dp),save:: v_rms
-  integer, save :: count_vrms
 
   id=1; iu=2; iv=3; iw=4; ip=5
   x0=0.5*boxlen
@@ -229,7 +226,7 @@ subroutine collapse_condinit(x,q,dx,nn)
   rot_tilde(3,1:3) = (/0.0d0,0.0d0,0.0d0/)
 
   if(first) then
-    call prep_collapse(r0,d0,vx_tot,vy_tot,vz_tot,v_rms,count_vrms,n_size,q_idl,first)
+    call prep_collapse(r0,d0,first)
   end if
 
 
@@ -309,18 +306,16 @@ end subroutine collapse_condinit
 !================================================================
 !================================================================
 !================================================================
-subroutine prep_collapse(r0,d0,vx_tot,vy_tot,vz_tot,v_rms,count_vrms,n_size,q_idl,first)
+subroutine prep_collapse(r0,d0,first)
   use amr_commons, only:myid
   use amr_parameters
+  use collapse_parameters
+  use collapse_commons
   use hydro_commons
   use poisson_parameters
   use constants, only:mH,kB,M_sun,pc2cm
   implicit none
   real(dp),intent(in)::r0,d0
-  real(dp),intent(out)::vx_tot,vy_tot,vz_tot,v_rms
-  integer,intent(out)::count_vrms
-  integer,intent(out)::n_size
-  real(dp),dimension(1:3,1:100,1:100,1:100),intent(out)::q_idl
   logical,intent(out)::first
   ! local
   real(dp):: C_s
@@ -329,7 +324,6 @@ subroutine prep_collapse(r0,d0,vx_tot,vy_tot,vz_tot,v_rms,count_vrms,n_size,q_id
   integer :: i,j,k
   real(dp):: xi,yi,zi,vx,vy,vz,rs,x0,y0,z0
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
-
 
   ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
