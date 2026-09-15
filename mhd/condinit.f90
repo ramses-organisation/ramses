@@ -175,12 +175,7 @@ subroutine collapse_condinit(x,q,dx,nn)
   real(dp),dimension(1:3,1:3):: rot_M,rot_invM,rot_tilde
   real(dp):: theta_mag_radians
 
-  logical,save:: first=.true.
   integer:: ind_i, ind_j, ind_k
-
-  if(first) then
-    call prep_collapse(first)
-  end if
 
   id=1; iu=2; iv=3; iw=4; ip=5
   x0=0.5*boxlen
@@ -279,7 +274,7 @@ end subroutine collapse_condinit
 !================================================================
 !================================================================
 !================================================================
-subroutine prep_collapse(first)
+subroutine prep_collapse
   use amr_commons, only:myid
   use amr_parameters
   use collapse_parameters
@@ -288,7 +283,6 @@ subroutine prep_collapse(first)
   use poisson_parameters
   use constants, only:mH,kB,M_sun,pc2cm
   implicit none
-  logical,intent(out)::first
   ! local
   real(dp):: C_s
   real(dp)::vx2_tot,vy2_tot,vz2_tot
@@ -394,7 +388,6 @@ subroutine prep_collapse(first)
      print*,'r0,boxlen (in code units)=',r0,boxlen
      print*,'r0,boxlen (in pc)=',r0*scale_l/pc2cm,boxlen*scale_l/pc2cm
   endif
-  first = .false.
 
 end subroutine prep_collapse
 !================================================================

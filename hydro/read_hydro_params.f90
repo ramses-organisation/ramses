@@ -561,8 +561,4 @@ subroutine read_init_params(namelist_unit,nml_ok)
       nml_ok=.false.
    endif
 
-   !if(condinit_kind=='collapse')then
-   !   call prep_collapse()
-   !endif
-
 end subroutine read_init_params
