@@ -361,11 +361,11 @@ subroutine prep_collapse
                  vx_tot = vx_tot + vx
                  vy_tot = vy_tot + vy
                  vz_tot = vz_tot + vz
-   
+
                  vx2_tot = vx2_tot + vx**2
                  vy2_tot = vy2_tot + vy**2
                  vz2_tot = vz2_tot + vz**2
-   
+
                  count_vrms=count_vrms+1
               end if
            end do
