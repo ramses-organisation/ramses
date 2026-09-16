@@ -545,13 +545,13 @@ subroutine kill_tree(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   integer,dimension(1:nvector)::ind_grid
   integer,dimension(1:nvector)::ind_grid_part,ind_part
   !-----------------------------------------------------------------------
-  ! This routine is called by subroutine kill_tree_fine, which moves 
-  ! particles to ilevel+1. 
+  ! This routine is called by subroutine kill_tree_fine, which moves
+  ! particles to ilevel+1.
   ! This routine first finds the child grid each particle are located in
   ! based on their position. If the child grid exists, it records that the
   ! particle has to be moved from the parent grid linked list at ilevel
-  ! to the corresponding child grid linked list at ilevel+1. If the child 
-  ! grid does not exist, nothing is recorded and the particle stays with 
+  ! to the corresponding child grid linked list at ilevel+1. If the child
+  ! grid does not exist, nothing is recorded and the particle stays with
   ! the parent.
   ! The linked lists themselves are updated later by apply_tree_moves.
   !-----------------------------------------------------------------------
