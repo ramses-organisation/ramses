@@ -25,7 +25,6 @@ bound_type= 2, 2, 2, 2
 /
 
 &CR_PARAMS
-jiang_test='423'
 Dcr=0.1
 cr_c_fraction=1e-8
 cr_advect=.true.

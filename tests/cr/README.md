@@ -19,6 +19,11 @@ cd tests && ./run_test_suite.sh -t cr        # add -p 2 to run under MPI
 CR transport requires `SOLVER=mhd`: the closure and the streaming/scattering
 source terms need the magnetic field.
 
+Each test selects its initial and boundary conditions from its namelist:
+`condinit_kind` (`&INIT_PARAMS`) for the gas, `cr_condinit_kind` and
+`cr_boundana_kind` (`&CR_PARAMS`) for the CR state. No source patch is
+involved — the tests exercise the shipped `cr/` and `mhd/` files.
+
 ## Tests
 
 | Test | Dim | What it tests | Reference |
