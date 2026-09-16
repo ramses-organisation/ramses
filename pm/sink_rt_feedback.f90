@@ -187,7 +187,7 @@ SUBROUTINE sink_RT_vsweep_stellar(ind_grid,ind_part,ind_grid_part,ng,np,dt,ileve
 ! after kill_tree_fine and before merge_tree_fine. So any part of its CIC
 ! stencil reaching into a coarser neighbour would be dropped, with no other
 ! level's call to pick it up. This causes the total radiation to be lower
-! than it should be. 
+! than it should be.
 ! This behaviour is different from the cloud mass in cic_amr, where rho_fine
 ! runs before kill_tree_fine and therefore deposits every particle at every
 ! level, so the coarse level holds the full mass.
