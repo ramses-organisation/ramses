@@ -502,7 +502,7 @@ subroutine kill_entire_cloud(ilevel)
                  ind_grid_part(ip)=ig
               endif
               if(ip==nvector)then
-                 call remove_list(ind_part,ind_grid_part,ok,ip)
+                 call remove_list(ind_part,ind_grid_part,ip)
                  call add_free_cond(ind_part,ok,ip)
                  ip=0
                  ig=0
@@ -517,7 +517,7 @@ subroutine kill_entire_cloud(ilevel)
 
      ! End loop over grids
      if(ip>0)then
-        call remove_list(ind_part,ind_grid_part,ok,ip)
+        call remove_list(ind_part,ind_grid_part,ip)
         call add_free_cond(ind_part,ok,ip)
      end if
   end do

@@ -606,7 +606,7 @@ progenitor or when a black hole accretes a cloud particle:
 
 .. code:: fortran
 
-     call remove_list(ind_part,ind_grid,ok_free,nSN_loc)
+     call remove_list(ind_part,ind_grid,nSN_loc)
      call add_free_cond(ind_part,ok_free,nSN_loc)
 
 Note that ``add_free`` is also responsible for *zeroing* the particle data

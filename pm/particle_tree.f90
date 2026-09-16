@@ -665,7 +665,6 @@ subroutine apply_tree_moves(ilevel)
   !-----------------------------------------------------------------------
   integer::ip,icpu,jgrid,igrid,ipart,next_part,jmove,nmove
   integer,dimension(1:nvector),save::ind_part,ind_grid_old,ind_grid_new
-  logical,dimension(1:nvector)::ok=.true.
 
   ! Loop over cpus
   do icpu=1,ncpu
@@ -699,7 +698,7 @@ subroutine apply_tree_moves(ilevel)
               jmove=jmove+1
            endif
            if(ip==nvector)then
-              call remove_list(ind_part,ind_grid_old,ok,ip)
+              call remove_list(ind_part,ind_grid_old,ip)
               call add_list(ind_part,ind_grid_new,ip)
               ip=0
            end if
@@ -710,7 +709,7 @@ subroutine apply_tree_moves(ilevel)
      end do
      ! End loop over grids
      if(ip>0)then
-        call remove_list(ind_part,ind_grid_old,ok,ip)
+        call remove_list(ind_part,ind_grid_old,ip)
         call add_list(ind_part,ind_grid_new,ip)
      endif
   end do
@@ -1372,7 +1371,6 @@ subroutine fill_comm(ind_part,ind_com,ind_list,np,ilevel,icpu)
   integer,dimension(1:nvector)::ind_part,ind_com,ind_list
   integer::current_property
   integer::i,idim
-  logical,dimension(1:nvector),save::ok=.true.
 
   ! Gather particle level and identity
   do i=1,np
@@ -1489,7 +1487,7 @@ subroutine fill_comm(ind_part,ind_com,ind_list,np,ilevel,icpu)
   endif
 
   ! Remove particles from parent linked list
-  call remove_list(ind_part,ind_list,ok,np)
+  call remove_list(ind_part,ind_list,np)
   call add_free(ind_part,np)
 
 end subroutine fill_comm

@@ -638,7 +638,7 @@ subroutine kinetic_feedback
   ! Remove GMC particle
   if(nSN_loc>0)then
      ok_free=.true.
-     call remove_list(ind_part,ind_grid,ok_free,nSN_loc)
+     call remove_list(ind_part,ind_grid,nSN_loc)
      call add_free_cond(ind_part,ok_free,nSN_loc)
      deallocate(ind_part,ind_grid,ok_free)
   endif
