@@ -496,7 +496,6 @@ subroutine kinetic_feedback
   real(dp)::scale,dx_min,vol_min,mstar
   integer::nx_loc
   integer,dimension(:),allocatable::ind_part,ind_grid
-  logical,dimension(:),allocatable::ok_free
   integer,dimension(:),allocatable::indSN
   real(dp),dimension(:),allocatable::mSN,sSN,ZSN,m_gas,vol_gas,ekBlast
   real(dp),dimension(:,:),allocatable::xSN,vSN,u_gas,dq
@@ -587,7 +586,7 @@ subroutine kinetic_feedback
   xSN=0; vSN=0; mSN=0; sSN=0; ZSN=0
   ! Allocate arrays for particles index and parent grid
   if(nSN_loc>0)then
-     allocate(ind_part(1:nSN_loc),ind_grid(1:nSN_loc),ok_free(1:nSN_loc))
+     allocate(ind_part(1:nSN_loc),ind_grid(1:nSN_loc))
   endif
 
   !------------------------------------------------------
@@ -637,10 +636,9 @@ subroutine kinetic_feedback
 
   ! Remove GMC particle
   if(nSN_loc>0)then
-     ok_free=.true.
      call remove_list(ind_part,ind_grid,nSN_loc)
-     call add_free_cond(ind_part,ok_free,nSN_loc)
-     deallocate(ind_part,ind_grid,ok_free)
+     call add_free(ind_part,nSN_loc)
+     deallocate(ind_part,ind_grid)
   endif
 
 #ifndef WITHOUTMPI

@@ -448,7 +448,6 @@ subroutine kill_entire_cloud(ilevel)
   integer::igrid,jgrid,ipart,jpart,next_part
   integer::ig,ip,npart1,npart2,icpu,ncache,istart
   integer,dimension(1:nvector)::ind_grid,ind_part,ind_grid_part
-  logical,dimension(1:nvector)::ok=.true.
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
@@ -503,7 +502,7 @@ subroutine kill_entire_cloud(ilevel)
               endif
               if(ip==nvector)then
                  call remove_list(ind_part,ind_grid_part,ip)
-                 call add_free_cond(ind_part,ok,ip)
+                 call add_free(ind_part,ip)
                  ip=0
                  ig=0
               end if
@@ -518,7 +517,7 @@ subroutine kill_entire_cloud(ilevel)
      ! End loop over grids
      if(ip>0)then
         call remove_list(ind_part,ind_grid_part,ip)
-        call add_free_cond(ind_part,ok,ip)
+        call add_free(ind_part,ip)
      end if
   end do
 111 format('   Entering kill_cloud for level ',I2)

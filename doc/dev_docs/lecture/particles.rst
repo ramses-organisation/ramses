@@ -336,7 +336,7 @@ batch is acted on:
 |                   | indices to the caller                                            |
 +-------------------+------------------------------------------------------------------+
 | ``add_free``      | Reset all particle data and append the slots at the tail of the  |
-|                   | free list (``add_free_cond`` does the same behind a mask)        |
+|                   | free list                                                        |
 +-------------------+------------------------------------------------------------------+
 
 Note the asymmetry between the two "remove" routines: ``remove_list`` is told
@@ -373,7 +373,7 @@ several situations to handle, and it is worth seeing them side by side:
 +---------------------------------------+---------------------------------------+-------------------------------------+
 | Particle is created                   | ``star_formation``, ``sink_particle`` | ``remove_free`` + ``add_list``      |
 +---------------------------------------+---------------------------------------+-------------------------------------+
-| Particle is destroyed                 | ``feedback``, ``sink_particle``       | ``remove_list`` + ``add_free_cond`` |
+| Particle is destroyed                 | ``feedback``, ``sink_particle``       | ``remove_list`` + ``add_free``      |
 +---------------------------------------+---------------------------------------+-------------------------------------+
 
 .. note::
@@ -607,7 +607,7 @@ progenitor or when a black hole accretes a cloud particle:
 .. code:: fortran
 
      call remove_list(ind_part,ind_grid,nSN_loc)
-     call add_free_cond(ind_part,ok_free,nSN_loc)
+     call add_free(ind_part,nSN_loc)
 
 Note that ``add_free`` is also responsible for *zeroing* the particle data
 (``xp``, ``vp``, ``mp``, the type, …). This matters: a slot handed out later by
