@@ -664,10 +664,13 @@ subroutine apply_tree_moves(ilevel)
   ! newgridp <= (modify) reset to 0 as the moves are applied
   ! nmovep   <= (modify) reset to 0 as the moves are applied
   !-----------------------------------------------------------------------
-  integer::icpu,jgrid,igrid,ipart,next_part,jmove,nmove
+  integer::ip,icpu,jgrid,igrid,ipart,next_part,jmove,nmove
+  integer,dimension(1:nvector),save::ind_part,ind_grid_old,ind_grid_new
+  logical,dimension(1:nvector)::ok=.true.
 
   ! Loop over cpus
   do icpu=1,ncpu
+     ip=0
      ! Loop over grids
      do jgrid=1,numbl(icpu,ilevel)
         if(icpu==myid)then
@@ -689,17 +692,28 @@ subroutine apply_tree_moves(ilevel)
            ! Save next particle  <--- Very important !!!
            next_part=nextp(ipart)
            if(newgridp(ipart)>0)then
-              call remove_list_one(ipart,igrid)
-              call add_list_one(ipart,newgridp(ipart))
+              ip=ip+1
+              ind_part(ip)=ipart
+              ind_grid_new(ip)=newgridp(ipart)
+              ind_grid_old(ip)=igrid
               newgridp(ipart)=0  ! reset newgridp
               jmove=jmove+1
-              if(jmove==nmove)exit ! everything has been moved -> go to next grid
+           endif
+           if(ip==nvector)then
+              call remove_list(ind_part,ind_grid_old,ok,ip)
+              call add_list(ind_part,ind_grid_new,ok,ip)
+              ip=0
            end if
-           ipart=next_part  ! Go to next particle
+           if(jmove==nmove)exit ! everything has been moved for this grid -> go to next grid
+           ipart=next_part  ! Go to next particle in current grid
         end do
         ! End loop over particles
      end do
      ! End loop over grids
+     if(ip>0)then
+        call remove_list(ind_part,ind_grid_old,ok,ip)
+        call add_list(ind_part,ind_grid_new,ok,ip)
+     endif
   end do
   ! End loop over cpus
 
