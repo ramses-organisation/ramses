@@ -175,58 +175,26 @@ END SUBROUTINE gather_ioni_flux
 !*************************************************************************
 SUBROUTINE sink_RT_vsweep_stellar(ind_grid,ind_part,ind_grid_part,ng,np,dt,ilevel,sink_ioni_flux)
 ! This routine is called by subroutine sink_rt_feedback.
+!
 ! Each sink and cloud particle dumps its share of the sink ionising flux into
 ! array rtunew, spread over the cells of its CIC stencil at level ilevel.
+! Only the CIC volumes that are leaf cells at ilevel are deposited into
+! (rt_upload_fine takes care of non-leaf cells).
 !
-! CIC and not NGP: the cloud is a regular lattice of spacing dx_min/2 (see
-! create_cloud_from_sink), so its particles routinely sit exactly on cell
-! boundaries. An NGP index resolves that tie by truncation, always towards the
-! cell above, so two cloud particles mirrored about the sink deposit on the same
-! side and the whole radiation source ends up offset by half a cell. That gives
-! the sink a spurious force along every axis on which it sits on a boundary.
-! CIC splits a particle lying on a boundary evenly between the two cells and so
-! has no such preference.
-!
-! Only the CIC volumes that are leaf cells at ilevel are deposited into.
-! cic_get_cells sets ok=.false. both for volumes whose neighbour grid does not
-! exist at ilevel and for volumes that are themselves refined. Skipping the
-! refined ones is required, not optional: rt_upload_fine re-imposes a split
-! cell's value as the average of its children at the end of every rt_step, so
-! photons put there would simply be erased.
-!
-! REQUIRES sink_refine. A cloud particle is only ever visited at the level of
+! KNOWN ISSUE: A cloud particle is only ever visited at the level of
 ! the grid it is attached to, because sink_RT_feedback runs from rt_step, i.e.
 ! after kill_tree_fine and before merge_tree_fine. So any part of its CIC
-! stencil reaching into a COARSER neighbour would be dropped, with no other
-! level's call to pick it up - unlike the cloud mass in cic_amr, where rho_fine
+! stencil reaching into a coarser neighbour would be dropped, with no other
+! level's call to pick it up. This causes the total radiation to be lower
+! than it should be. 
+! This behaviour is different from the cloud mass in cic_amr, where rho_fine
 ! runs before kill_tree_fine and therefore deposits every particle at every
 ! level, so the coarse level holds the full mass.
+! SOLUTION: Setting sink_refine=.true. ensures all CIC cells of every cloud
+! particle sit at nlevelmax_sink. So nothing is ever in coarser grids.
 !
-! That does not happen with sink_refine=.true., which is the advised setting.
-! The sink_refine block in cic_amr marks ALL EIGHT CIC cells of every cloud
-! particle above the refinement threshold, at every level up to nlevelmax_sink -
-! and nlevelmax_sink is the *effective* levelmax, i.e. the finest level the
-! refinement criteria can actually reach (it exists because levelmax cannot be
-! changed on restart, so a run may be started with criteria that stop short of
-! it). The refined region is therefore guaranteed to cover the whole cloud
-! stencil, and no volume can fall into a coarser neighbour. Measured on
-! tests/sink/stellar-HII: the gathered flux equals the emitted flux to 1e-15 at
-! every level.
-!
-! With sink_refine=.false. that guarantee is gone and a sink near a refinement
-! boundary will emit slightly less than its stellar objects should. Use
-! sink_refine.
-!
-! Note this covers the coarser direction only. A volume falling in a neighbour
-! that is refined FINER than ilevel is skipped as well, and that is correct:
-! rt_upload_fine re-imposes a split cell's value from its children, so photons
-! put there would be erased. Those photons are lost, which is a real if much
-! smaller effect, and needs gas criteria to refine past nlevelmax_sink next to a
-! cloud for it to arise at all.
-!
-
 ! The ionising flux of each sink must be provided in sink_ioni_flux
-
+!
 ! ind_grid       =>  grid indexes in amr_commons (1 to ng)
 ! ind_part       =>  sink indexes in pm_commons(1 to np)
 ! ind_grid_part  =>  points from star to grid (ind_grid) it resides in

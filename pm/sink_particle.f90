@@ -2699,19 +2699,11 @@ subroutine read_sink_params()
 112 rewind(1)
 
 #ifdef RT
-  ! Radiation from the sink clouds is deposited with a CIC stencil at the level
-  ! each cloud particle is attached to, and sink_RT_feedback runs after
-  ! kill_tree_fine, so a stencil volume reaching into a coarser neighbour is
-  ! dropped with no other level's call to pick it up. sink_refine is what makes
-  ! that impossible: it refines all eight CIC cells of every cloud particle up to
-  ! nlevelmax_sink. Without it, a sink near a refinement boundary silently emits
-  ! less than its stellar objects should. See the header of
-  ! sink_RT_vsweep_stellar in pm/sink_rt_feedback.f90.
   if (rt_sink .and. .not.sink_refine)then
      if(myid==1)then
         write(*,*)'WARNING: rt_sink=.true. with sink_refine=.false.'
-        write(*,*)'         Part of the sink radiation will be lost where a cloud'
-        write(*,*)'         straddles a refinement boundary. Set sink_refine=.true.'
+        write(*,*)'         Part of the sink radiation will be lost where a sink overlaps'
+        write(*,*)'         with a refinement boundary. To avoid this, set sink_refine=.true.'
      endif
   endif
 #endif
