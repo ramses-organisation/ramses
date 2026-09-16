@@ -3,38 +3,50 @@
 !################################################################
 !################################################################
 subroutine add_list(ind_part,ind_grid,ok,np)
-  use amr_commons
-  use pm_commons
+  use amr_commons, only:nvector
   implicit none
   integer, intent(in)::np
   integer,dimension(1:nvector), intent(in)::ind_part,ind_grid
   logical,dimension(1:nvector), intent(in)::ok
-  !
+  !----------------------------------------------------
   ! Add particles to their new linked lists
-  !
+  !----------------------------------------------------
   integer::j
 
   do j=1,np
-     if(ok(j))then
-        if (numbp(ind_grid(j)) > 0) then
-           ! Add particle at the tail of its linked list
-           nextp(tailp(ind_grid(j))) = ind_part(j)
-           prevp(ind_part(j)) = tailp(ind_grid(j))
-           nextp(ind_part(j))=0
-           tailp(ind_grid(j)) = ind_part(j)
-           numbp(ind_grid(j)) = numbp(ind_grid(j)) + 1
-        else
-           ! Initialise linked list
-           headp(ind_grid(j)) = ind_part(j)
-           tailp(ind_grid(j)) = ind_part(j)
-           prevp(ind_part(j))=0
-           nextp(ind_part(j))=0
-           numbp(ind_grid(j)) = 1
-        end if
-     end if
+     if(ok(j)) call add_list_one(ind_part(j),ind_grid(j))
   end do
 
 end subroutine add_list
+!################################################################
+!################################################################
+!################################################################
+!################################################################
+subroutine add_list_one(ipart,igrid)
+  use pm_commons
+  implicit none
+  integer, intent(in)::ipart,igrid
+  !----------------------------------------------------
+  ! Append one particle to the tail of a grid linked list.
+  !----------------------------------------------------
+
+  if (numbp(igrid) > 0) then
+     ! Add particle at the tail of its linked list
+     nextp(tailp(igrid)) = ipart
+     prevp(ipart) = tailp(igrid)
+     nextp(ipart) = 0
+     tailp(igrid) = ipart
+     numbp(igrid) = numbp(igrid) + 1
+  else
+     ! Initialise linked list
+     headp(igrid) = ipart
+     tailp(igrid) = ipart
+     prevp(ipart) = 0
+     nextp(ipart) = 0
+     numbp(igrid) = 1
+  end if
+
+end subroutine add_list_one
 !################################################################
 !################################################################
 !################################################################
@@ -46,10 +58,10 @@ subroutine add_free(ind_part,np)
   implicit none
   integer, intent(in)::np
   integer,dimension(1:nvector), intent(in)::ind_part
-  !
+  !----------------------------------------------------
   ! Add particles to the free memory linked list
   ! and reset all particle variables
-  !
+  !----------------------------------------------------
   integer::j,idim
 
   do idim=1,ndim
@@ -113,10 +125,10 @@ subroutine add_free_cond(ind_part,ok,np)
   integer::np
   integer,dimension(1:nvector)::ind_part
   logical,dimension(1:nvector)::ok
-  !
+  !----------------------------------------------------
   ! Add particles to the free memory linked list
   ! and reset all particle variables
-  !
+  !----------------------------------------------------
   integer::j,idim
 
   do idim=1,ndim

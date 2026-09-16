@@ -228,6 +228,9 @@ subroutine make_tree_fine(ilevel)
   if(ndim>2)skip_loc(3)=dble(kcoarse_min)
   scale=boxlen/dble(nx_loc)
 
+  ! First, walk the particle tree and record the changes to be made.
+  ! We do not modify the tree during this walk.
+
   ! Loop over cpus
   do icpu=1,ncpu
      igrid=headl(icpu,ilevel)
@@ -268,6 +271,9 @@ subroutine make_tree_fine(ilevel)
   end do
   ! End loop over cpus
 
+  ! Apply the recorded moves
+  call apply_tree_moves(ilevel)
+
   ! Periodic boundaries
   if(sink)then
      do idim=1,ndim
@@ -297,8 +303,9 @@ subroutine check_tree(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   !-----------------------------------------------------------------------
   ! This routine is called by make_tree_fine.
   ! This routine checks if particles have moved from their parent grid and
-  ! if does, disconnects them from parent grid linked list and connects them
-  ! to the corresponding neighboring grid linked list.
+  ! if so, records the neighboring grid they have to be connected to. The
+  ! linked lists themselves are left untouched here and are updated later by
+  ! apply_tree_moves.
   !-----------------------------------------------------------------------
   ! Input parameters
   ! ind_grid      => (input) list of parent grid indices, up to ng
@@ -309,14 +316,11 @@ subroutine check_tree(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   ! ilevel        => (input) current level
   !
   ! Common arrays updated
-  ! headp <= (modify) head pointer of particle linked list
-  ! tailp <= (modify) tail pointer of particle linked list
-  ! nextp <= (modify) next pointer of particle linked list
-  ! prevp <= (modify) previous pointer of particle linked list
-  ! numbp <= (modify) number of particles in each grid
+  ! newgridp <= (modify) destination grid of each moving particle
+  ! nmovep   <= (modify) number of particles leaving each grid
   !----------------------------------------------------------------------
   logical::error
-  integer::i,j,idim,nx_loc
+  integer::i,j,idim,nx_loc,igrid
   real(dp)::dx,xxx,scale
   real(dp),dimension(1:3)::xbound
   ! Grid-based arrays
@@ -325,7 +329,6 @@ subroutine check_tree(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   integer ,dimension(1:nvector),save::ind_father
   ! Particle-based arrays
   integer,dimension(1:nvector),save::ind_son,igrid_son
-  integer,dimension(1:nvector),save::list1,list2
   logical,dimension(1:nvector),save::ok
   real(dp),dimension(1:3)::skip_loc
 
@@ -408,15 +411,15 @@ subroutine check_tree(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      enddo
   enddo
 
-  ! Switch particles linked list
+  ! Record where the escaped particles have to go, so that the
+  ! the tree can be updated later by apply_tree_moves.
   do j=1,np
      if(ok(j))then
-        list1(j)=ind_grid(ind_grid_part(j))
-        list2(j)=igrid_son(j)
+        igrid=ind_grid(ind_grid_part(j))   ! old grid
+        newgridp(ind_part(j))=igrid_son(j) ! new grid
+        nmovep(igrid)=nmovep(igrid)+1      ! update number of moves to do
      end if
   end do
-  call remove_list(ind_part,list1,ok,np)
-  call add_list(ind_part,list2,ok,np)
 
 end subroutine check_tree
 !################################################################
@@ -483,6 +486,9 @@ subroutine kill_tree_fine(ilevel)
 
   ! Sort particles between ilevel and ilevel+1
 
+  ! First, walk the particle tree and record the changes to be made
+  ! We do not modify the tree during this walk.
+
   ! Loop over cpus
   do icpu=1,ncpu
      igrid=headl(icpu,ilevel)
@@ -522,6 +528,9 @@ subroutine kill_tree_fine(ilevel)
   end do
   ! End loop over cpus
 
+  ! Apply the recorded moves
+  call apply_tree_moves(ilevel)
+
 111 format('   Entering kill_tree_fine for level ',I2)
 
 end subroutine kill_tree_fine
@@ -537,12 +546,15 @@ subroutine kill_tree(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   integer,dimension(1:nvector)::ind_grid
   integer,dimension(1:nvector)::ind_grid_part,ind_part
   !-----------------------------------------------------------------------
-  ! This routine is called by subroutine kill_tree_fine.
+  ! This routine is called by subroutine kill_tree_fine, which moves 
+  ! particles to ilevel+1. 
   ! This routine first finds the child grid each particle are located in
-  ! based on their position. It then detaches particles from their parent
-  ! grid linked list at ilevel and attaches them to their corresponding
-  ! child grid linked list at ilevel+1. If the child grid does not exist,
-  ! the particle linked list is left unchanged.
+  ! based on their position. If the child grid exists, it records that the
+  ! particle has to be moved from the parent grid linked list at ilevel
+  ! to the corresponding child grid linked list at ilevel+1. If the child 
+  ! grid does not exist, nothing is recorded and the particle stays with 
+  ! the parent.
+  ! The linked lists themselves are updated later by apply_tree_moves.
   !-----------------------------------------------------------------------
   ! Input parameters
   ! ind_grid      => (input) list of parent grid indices, up to ng
@@ -553,20 +565,16 @@ subroutine kill_tree(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   ! ilevel        => (input) current level
   !
   ! Common arrays updated
-  ! headp <= (modify) head pointer of particle linked list
-  ! tailp <= (modify) tail pointer of particle linked list
-  ! nextp <= (modify) next pointer of particle linked list
-  ! prevp <= (modify) previous pointer of particle linked list
-  ! numbp <= (modify) number of particles in each grid
+  ! newgridp <= (modify) destination grid of each moving particle
+  ! nmovep   <= (modify) number of particles leaving each grid
   !----------------------------------------------------------------------
 
-  integer::i,j,idim,nx_loc
+  integer::i,j,idim,nx_loc,igrid
   real(dp)::dx,xxx,scale
   ! Grid based arrays
   real(dp),dimension(1:nvector,1:ndim),save::x0
   ! Particle based arrays
   integer,dimension(1:nvector),save::igrid_son,ind_son
-  integer,dimension(1:nvector),save::list1,list2
   logical,dimension(1:nvector),save::ok
   real(dp),dimension(1:3)::skip_loc
 
@@ -616,20 +624,86 @@ subroutine kill_tree(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      ok(j)=igrid_son(j)>0
   end do
 
-  ! Compute particle linked list
+  ! Record the moves, so they can be applied after the tree traversal
   do j=1,np
      if(ok(j))then
-        list1(j)=ind_grid(ind_grid_part(j))
-        list2(j)=igrid_son(j)
+        igrid=ind_grid(ind_grid_part(j))   ! old grid
+        newgridp(ind_part(j))=igrid_son(j) ! new grid
+        nmovep(igrid)=nmovep(igrid)+1      ! update number of moves to do
      end if
   end do
 
-  ! Remove particles from their original linked lists
-  call remove_list(ind_part,list1,ok,np)
-  ! Add particles to their new linked lists
-  call add_list(ind_part,list2,ok,np)
-
 end subroutine kill_tree
+!################################################################
+!################################################################
+!################################################################
+!################################################################
+subroutine apply_tree_moves(ilevel)
+  use amr_commons
+  use pm_commons
+  implicit none
+  integer::ilevel
+  !-----------------------------------------------------------------------
+  ! Perform the particle moves recorded by check_tree (called from
+  ! make_tree_fine) or by kill_tree (called from kill_tree_fine).
+  ! These have been stored in newgridp.
+  !
+  ! Note that a particle moved to a sister grid further down the traversal is
+  ! visited again when that grid is reached. This is harmless: newgridp is
+  ! cleared as the move is applied, so the particle is simply skipped.
+  !-----------------------------------------------------------------------
+  ! Input parameters
+  ! ilevel        => (input) current level
+  !
+  ! Common arrays updated
+  ! headp    <= (modify) head pointer of particle linked list
+  ! tailp    <= (modify) tail pointer of particle linked list
+  ! nextp    <= (modify) next pointer of particle linked list
+  ! prevp    <= (modify) previous pointer of particle linked list
+  ! numbp    <= (modify) number of particles in each grid
+  ! newgridp <= (modify) reset to 0 as the moves are applied
+  ! nmovep   <= (modify) reset to 0 as the moves are applied
+  !-----------------------------------------------------------------------
+  integer::icpu,jgrid,igrid,ipart,next_part,jmove,nmove
+
+  ! Loop over cpus
+  do icpu=1,ncpu
+     ! Loop over grids
+     do jgrid=1,numbl(icpu,ilevel)
+        if(icpu==myid)then
+           igrid=active(ilevel)%igrid(jgrid)
+        else
+#ifdef LIGHT_MPI_COMM
+           igrid=reception(icpu,ilevel)%pcomm%igrid(jgrid)
+#else
+           igrid=reception(icpu,ilevel)%igrid(jgrid)
+#endif
+        end if
+        nmove=nmovep(igrid)  ! Number of particles leaving the grid
+        if(nmove==0)cycle    ! Nothing recorded, do not walk the list at all
+        nmovep(igrid)=0      ! reset nmovep
+        jmove=0
+        ipart=headp(igrid)
+        ! Loop over particles
+        do while(ipart>0)
+           ! Save next particle  <--- Very important !!!
+           next_part=nextp(ipart)
+           if(newgridp(ipart)>0)then
+              call remove_list_one(ipart,igrid)
+              call add_list_one(ipart,newgridp(ipart))
+              newgridp(ipart)=0  ! reset newgridp
+              jmove=jmove+1
+              if(jmove==nmove)exit ! everything has been moved -> go to next grid
+           end if
+           ipart=next_part  ! Go to next particle
+        end do
+        ! End loop over particles
+     end do
+     ! End loop over grids
+  end do
+  ! End loop over cpus
+
+end subroutine apply_tree_moves
 !################################################################
 !################################################################
 !################################################################
