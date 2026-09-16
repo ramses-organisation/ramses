@@ -161,8 +161,6 @@ subroutine init_sink
      read(10,'(A200)')comment_line
      do
         ! Must match the write format in output_sink_csv exactly.
-        ! Files written before the ES21.10 -> ES25.16 change remain restartable,
-        ! thanks to the comma separator.
         read(10,'(I10,21(A1,ES25.16E3),A1,I10)',end=104)sid,co, sm1,co,&
                            sx1,co,sx2,co,sx3,co, &
                            sv1,co,sv2,co,sv3,co, &

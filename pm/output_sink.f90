@@ -9,13 +9,6 @@ subroutine output_sink_csv(filename)
   if(verbose)write(*,*)'Entering output_sink_csv'
 
   fileloc=TRIM(filename)
-  ! recl must hold the whole record: I10 + 21*(A1+ES25.16) + A1 + I10 = 567.
-  ! ES25.16 is 17 significant digits, which is what an IEEE double needs to
-  ! restart exactly. 
-  ! The explicit E3 matters. Without it Fortran drops the 'E' when the exponent
-  ! needs three digits, writing e.g. 1.2345678901234567-123. Fortran reads that back
-  ! correctly, but numpy cannot, so visu_ramses turns any such value into NaN
-  ! when the test suite reads the file. E3 always emits the E.
   open(unit=123,file=TRIM(fileloc),form='formatted',status='replace', recl=1000)
   !======================
   ! Write sink properties
