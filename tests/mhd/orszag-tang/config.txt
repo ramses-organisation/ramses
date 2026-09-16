@@ -1,1 +1,2 @@
 FLAGS: NDIM=2 SOLVER=mhd
+RESTART: true

@@ -40,7 +40,6 @@ initfile(1)='ic'
 /
 
 &OUTPUT_PARAMS
-noutput=1
 tout=0.25
 /
 

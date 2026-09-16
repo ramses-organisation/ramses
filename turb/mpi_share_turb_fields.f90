@@ -38,4 +38,30 @@ subroutine mpi_share_turb_fields(include_last)
                   & MPI_COMM_WORLD, ierr)
 
 end subroutine mpi_share_turb_fields
+
+subroutine mpi_share_turb_init_field
+  use turb_commons
+  use mpi_mod
+  implicit none
+
+  ! Set MPI_REAL_DP to the appropriate MPI type integer
+#ifndef NPRE
+  integer, parameter :: MPI_REAL_DP=MPI_REAL
+#else
+#if NPRE==4
+  integer, parameter :: MPI_REAL_DP=MPI_REAL
+#else
+  integer, parameter :: MPI_REAL_DP=MPI_DOUBLE_PRECISION
+#endif
+#endif
+
+   integer, parameter :: message_length=NDIM*TURB_GS**NDIM
+                                               ! Length of flattened array
+   integer            :: ierr                  ! MPI error variable
+
+   ! Share the field used for the turbulent initial velocity
+   call MPI_BCAST(afield_init, message_length, MPI_REAL_DP, 0, &
+                  & MPI_COMM_WORLD, ierr)
+
+end subroutine mpi_share_turb_init_field
 #endif

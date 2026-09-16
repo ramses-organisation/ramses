@@ -5,9 +5,13 @@
 subroutine init_flow
   use amr_commons
   use hydro_commons, ONLY: nvar_all, uold
+  use dice_commons
   implicit none
 
   integer::ilevel,ivar
+#ifdef SOLVERmhd
+  integer::i
+#endif
 
   if(verbose)write(*,*)'Entering init_flow'
   do ilevel=nlevelmax,1,-1
@@ -19,6 +23,29 @@ subroutine init_flow
      if(simple_boundary)call make_boundary_hydro(ilevel)
   end do
   if(verbose)write(*,*)'Complete init_flow'
+
+#ifdef SOLVERmhd
+  if (filetype.eq.'dice') then
+     ! magnetic field parameters
+     if(myid==1) write(*,'(A50)')"__________________________________________________"
+     if(myid==1) write(*,*) 'Background magnetic field'
+     if(myid==1) write(*,'(A50)')"__________________________________________________"
+     if(myid==1) write(*,'(A,E15.7)') 'Bx:',ic_mag_const(1)
+     if(myid==1) write(*,'(A,E15.7)') 'By:',ic_mag_const(2)
+     if(myid==1) write(*,'(A,E15.7)') 'Bz:',ic_mag_const(3)
+
+     do i=1,MAXGAL
+        if (ic_mag_scale_B(i) .EQ. 0.0) cycle
+        if(myid==1) write(*,'(A50)')"__________________________________________________"
+        if(myid==1) write(*,'(A,I3)') ' Foreground magnetic field',i
+        if(myid==1) write(*,'(A50)')"__________________________________________________"
+        if(myid==1) write(*,'(A,E15.7)') 'pos x:', ic_mag_center_x(i)
+        if(myid==1) write(*,'(A,E15.7)') 'pos y:', ic_mag_center_y(i)
+        if(myid==1) write(*,'(A,E15.7)') 'pos z:', ic_mag_center_z(i)
+     enddo
+     if(myid==1) write(*,'(A50)')"__________________________________________________"
+end if
+#endif
 
 end subroutine init_flow
 !################################################################
@@ -33,6 +60,7 @@ subroutine init_flow_fine(ilevel)
 #if USE_TURB==1
   use turb_commons
 #endif
+  use dice_commons
   implicit none
 #ifndef WITHOUTMPI
   integer::info,info2,dummy_io
@@ -55,6 +83,7 @@ subroutine init_flow_fine(ilevel)
   real(dp),dimension(1:nvector)       ,save::vv
   real(dp),dimension(1:nvector,1:ndim),save::xx
   real(dp),dimension(1:nvector,1:nvar_all),save::uu
+  real(dp)::axlen
 
   real(dp),allocatable,dimension(:,:,:)::init_array
   real(kind=4),allocatable,dimension(:,:)  ::init_plane
@@ -436,6 +465,39 @@ subroutine init_flow_fine(ilevel)
      ! End loop over grids
 
   !-------------------------------------------------------
+  ! DICE initial conditions
+  !-------------------------------------------------------
+  elseif(filetype.eq.'dice') then
+
+#ifdef SOLVERmhd
+     do i=1,MAXGAL
+        if (ic_mag_scale_B(i) .EQ. 0.0) cycle
+        ! renormalise axes
+        axlen = SQRT(ic_mag_axis_x(i)**2 + ic_mag_axis_y(i)**2 + ic_mag_axis_z(i)**2)
+        ic_mag_axis_x(i) = ic_mag_axis_x(i) / axlen
+        ic_mag_axis_y(i) = ic_mag_axis_y(i) / axlen
+        ic_mag_axis_z(i) = ic_mag_axis_z(i) / axlen
+     enddo
+#endif
+
+     ! Initialise uold with values from the DICE_PARAMS namelist
+     call dice_reset_uold(ilevel)
+     ! Update the grid using the gas particles read from the Gadget1 file
+     ! NGP scheme is used
+     call condinit_dice(ilevel)
+     ! Reverse update boundaries
+     do ivar=1,nvar_all
+        call make_virtual_reverse_dp(uold(1,ivar),ilevel)
+     end do
+     call dice_init_uold(ilevel)
+     do ivar=1,nvar
+        call make_virtual_fine_dp(uold(1,ivar),ilevel)
+     end do
+
+     ! FIXME: should we do the initial turbulent velocity thing?
+
+
+  !-------------------------------------------------------
   ! Compute initial conditions from subroutine condinit
   !-------------------------------------------------------
   else
@@ -477,16 +539,15 @@ subroutine init_flow_fine(ilevel)
         ! End loop over cells
      end do
      ! End loop over grids
+  end if
 
 #if USE_TURB==1
-     ! Add initial turbulent velocity
-     if (turb .AND. turb_type == 3) then
-        call calc_turb_forcing(ilevel)
-        call synchro_hydro_fine(ilevel,1.0_dp,2)
-     end if
+  ! Add initial turbulent velocity
+  if (initial_turb)then
+     call add_turb_init_velocity(ilevel)
+  end if
 #endif
 
-  end if
 
 111 format('   Entering init_flow_fine for level ',I2)
 

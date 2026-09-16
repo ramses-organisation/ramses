@@ -13,7 +13,7 @@ subroutine turb_next_field
    ! Copy current field, and add more turbulence
    turb_last = turb_next
    afield_last = afield_next
-   call add_turbulence(turb_next, turb_dt)
+   call add_turbulence(turb_next, power_spec, comp_frac, sol_frac, turb_dt)
 
    ! Subtract decay of turbulence
    call decay_turbulence(turb_last, turb_next)

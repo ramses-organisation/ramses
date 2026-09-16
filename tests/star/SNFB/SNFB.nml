@@ -9,7 +9,6 @@ verbose=.false.
 /
 
 &OUTPUT_PARAMS
-noutput=1
 aout=4.66e-02
 /
 
