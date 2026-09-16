@@ -9,6 +9,7 @@ subroutine init_sink
 #ifndef WITHOUTMPI
   integer,parameter::tag=1112,tag2=1113
   integer::dummy_io,info2
+  logical::create_sink_file
 #endif
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   integer::isink, nsinkold
@@ -139,8 +140,14 @@ subroutine init_sink
 
      nsink=0
      ! Create an empty sink file if the previous snapshot had no sinks.
+     ! One process per file does it. The two cases are kept apart because
+     ! Fortran does not short-circuit .and.: in a single condition,
+     ! mod(myid-1,IOGROUPSIZE) is evaluated with IOGROUPSIZE=0 and divides
+     ! by zero in builds without optimisation.
 #ifndef WITHOUTMPI
-     if ((IOGROUPSIZE == 0 .and. myid == 1) .or. (IOGROUPSIZE > 0 .and. mod(myid-1,IOGROUPSIZE) == 0)) then
+     create_sink_file = (myid == 1)
+     if (IOGROUPSIZE > 0) create_sink_file = (mod(myid-1,IOGROUPSIZE) == 0)
+     if (create_sink_file) then
 #endif
         inquire(file=fileloc, exist=exists_sink_restart)
         if (.not. exists_sink_restart) then
