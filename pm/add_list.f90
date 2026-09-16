@@ -2,35 +2,32 @@
 !################################################################
 !################################################################
 !################################################################
-subroutine add_list(ind_part,ind_grid,ok,np)
+subroutine add_list(ind_part,ind_grid,np)
   use amr_commons
   use pm_commons
   implicit none
   integer, intent(in)::np
   integer,dimension(1:nvector), intent(in)::ind_part,ind_grid
-  logical,dimension(1:nvector), intent(in)::ok
   !----------------------------------------------------
   ! Add particles to their new linked lists
   !----------------------------------------------------
   integer::j
 
   do j=1,np
-     if(ok(j))then
-        if (numbp(ind_grid(j)) > 0) then
-           ! Add particle at the tail of its linked list
-           nextp(tailp(ind_grid(j))) = ind_part(j)
-           prevp(ind_part(j)) = tailp(ind_grid(j))
-           nextp(ind_part(j))=0
-           tailp(ind_grid(j)) = ind_part(j)
-           numbp(ind_grid(j)) = numbp(ind_grid(j)) + 1
-        else
-           ! Initialise linked list
-           headp(ind_grid(j)) = ind_part(j)
-           tailp(ind_grid(j)) = ind_part(j)
-           prevp(ind_part(j))=0
-           nextp(ind_part(j))=0
-           numbp(ind_grid(j)) = 1
-        end if
+     if (numbp(ind_grid(j)) > 0) then
+        ! Add particle at the tail of its linked list
+        nextp(tailp(ind_grid(j))) = ind_part(j)
+        prevp(ind_part(j)) = tailp(ind_grid(j))
+        nextp(ind_part(j))=0
+        tailp(ind_grid(j)) = ind_part(j)
+        numbp(ind_grid(j)) = numbp(ind_grid(j)) + 1
+     else
+        ! Initialise linked list
+        headp(ind_grid(j)) = ind_part(j)
+        tailp(ind_grid(j)) = ind_part(j)
+        prevp(ind_part(j))=0
+        nextp(ind_part(j))=0
+        numbp(ind_grid(j)) = 1
      end if
   end do
 

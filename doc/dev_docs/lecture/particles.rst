@@ -599,7 +599,7 @@ slots, then fill in the particle data, then ``add_list`` to attach them to a gri
 
            ! Update linked list for stars
            call remove_free(ind_part,nnew)
-           call add_list(ind_part,ind_grid_new,ok_new,nnew)
+           call add_list(ind_part,ind_grid_new,nnew)
 
 **Destroying.** The mirror image, for example when a supernova removes its
 progenitor or when a black hole accretes a cloud particle:

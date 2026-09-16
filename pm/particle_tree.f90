@@ -31,7 +31,6 @@ integer::ipart,idim,i,nxny,ilevel
   real(dp),dimension(1:3)::xbound
   integer,dimension(1:nvector),save::ix,iy,iz
   integer,dimension(1:nvector),save::ind_grid,ind_part
-  logical,dimension(1:nvector),save::ok=.true.
   real(dp),dimension(1:3)::skip_loc
   real(dp)::scale
 
@@ -151,7 +150,7 @@ integer::ipart,idim,i,nxny,ilevel
         call clean_stop
      end if
      ! Add particle to level 1 linked list
-     call add_list(ind_part,ind_grid,ok,npart1)
+     call add_list(ind_part,ind_grid,npart1)
   end do
 
   ! destroy and recreate cloud particles to account for changes in sink
@@ -701,7 +700,7 @@ subroutine apply_tree_moves(ilevel)
            endif
            if(ip==nvector)then
               call remove_list(ind_part,ind_grid_old,ok,ip)
-              call add_list(ind_part,ind_grid_new,ok,ip)
+              call add_list(ind_part,ind_grid_new,ip)
               ip=0
            end if
            if(jmove==nmove)exit ! everything has been moved for this grid -> go to next grid
@@ -712,7 +711,7 @@ subroutine apply_tree_moves(ilevel)
      ! End loop over grids
      if(ip>0)then
         call remove_list(ind_part,ind_grid_old,ok,ip)
-        call add_list(ind_part,ind_grid_new,ok,ip)
+        call add_list(ind_part,ind_grid_new,ip)
      endif
   end do
   ! End loop over cpus
@@ -1555,7 +1554,6 @@ subroutine empty_comm(ind_com,np,ilevel,icpu)
 
   integer::i,idim,igrid
   integer,dimension(1:nvector),save::ind_list,ind_part
-  logical,dimension(1:nvector),save::ok=.true.
   integer::current_property
 
 #ifdef LIGHT_MPI_COMM
@@ -1588,7 +1586,7 @@ subroutine empty_comm(ind_com,np,ilevel,icpu)
 
   ! Add particle to parent linked list
   call remove_free(ind_part,np)
-  call add_list(ind_part,ind_list,ok,np)
+  call add_list(ind_part,ind_list,np)
 
   ! Scatter particle level and identity
   do i=1,np
