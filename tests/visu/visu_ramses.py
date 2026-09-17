@@ -25,9 +25,10 @@ def read_descriptor(fname):
 # =======================================================================
 # Load RAMSES data a la OSIRIS
 # =======================================================================
-def load_snapshot(nout, read_hydro=True, read_grav=False, read_rt=False, read_cr=False):
+def load_snapshot(nout, read_hydro=True, read_grav=False, read_rt=False, read_cr=False, path='./'):
 
     infile = generate_fname(nout)
+    infile = '%s/%s'%(path,infile)
 
     # Read info file and create info dictionary
     infofile = infile+"/info_"+infile.split("_")[-1]+".txt"
@@ -141,31 +142,32 @@ def load_snapshot(nout, read_hydro=True, read_grav=False, read_rt=False, read_cr
             iprog += 1
 
         # Read binary AMR file
-        amr_fname = generate_fname(nout,ftype="amr",cpuid=k+1)
+        amr_fname = '%s/%s'%(path,generate_fname(nout,ftype="amr",cpuid=k+1))
         with open(amr_fname, mode='rb') as amr_file: # b is important -> binary
             amrContent = amr_file.read()
 
         # Read binary HYDRO file
         if read_hydro:
-            hydro_fname = generate_fname(nout,ftype="hydro",cpuid=k+1)
+            hydro_fname = '%s/%s'%(path,generate_fname(nout,ftype="hydro",cpuid=k+1))
+
             with open(hydro_fname, mode='rb') as hydro_file: # b is important -> binary
                 hydroContent = hydro_file.read()
 
         # Read binary GRAV file
         if read_grav:
-            grav_fname = generate_fname(nout,ftype="grav",cpuid=k+1)
+            grav_fname = '%s/%s'%(path,generate_fname(nout,ftype="grav",cpuid=k+1))
             with open(grav_fname, mode='rb') as grav_file: # b is important -> binary
                 gravContent = grav_file.read()
 
         # Read binary RT file
         if read_rt:
-            rt_fname = generate_fname(nout,ftype="rt",cpuid=k+1)
+            rt_fname = '%s/%s'%(path,generate_fname(nout,ftype="rt",cpuid=k+1))
             with open(rt_fname, mode='rb') as rt_file: # b is important -> binary
                 rtContent = rt_file.read()
 
         # Read binary CR file
         if read_cr:
-            cr_fname = generate_fname(nout,ftype="cr",cpuid=k+1)
+            cr_fname = '%s/%s'%(path,generate_fname(nout,ftype="cr",cpuid=k+1))
             with open(cr_fname, mode='rb') as cr_file: # b is important -> binary
                 crContent = cr_file.read()
 
