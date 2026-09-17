@@ -194,30 +194,30 @@ subroutine add_cr_source_terms(ilevel)
            id1=jjj(idim,1,ind); ig1=iii(idim,1,ind)
            ih1=ncoarse+(id1-1)*ngridmax
            do i=1,ngrid
-           do iGrp=1,ncr_groups
-              icrE = Ecr_idx(iGrp)  ! starting index of cr variables
-              if(igridn(i,ig1)>0)then
+              do iGrp=1,ncr_groups
+                icrE = Ecr_idx(iGrp)  ! starting index of cr variables
+                if(igridn(i,ig1)>0)then
                   pcrg(i,idim,iGrp)   = max(cruold(igridn(i,ig1)+ih1,icrE),cr_efloor)
                   dx_g(i,idim) = dx_loc
-              else
+                else
                   pcrg(i,idim,iGrp)   = max(cruold(ind_left(i,idim),icrE),cr_efloor)
                   dx_g(i,idim) = dx_loc*1.5_dp
-              end if
-           enddo
+                end if
+              enddo
            enddo
            id2=jjj(idim,2,ind); ig2=iii(idim,2,ind)
            ih2=ncoarse+(id2-1)*ngridmax
            do i=1,ngrid
-           do iGrp=1,ncr_groups
-              icrE = Ecr_idx(iGrp)  ! starting index of cr variables
-              if(igridn(i,ig2)>0)then
+              do iGrp=1,ncr_groups
+                icrE = Ecr_idx(iGrp)  ! starting index of cr variables
+                if(igridn(i,ig2)>0)then
                   pcrd(i,idim,iGrp)  = max(cruold(igridn(i,ig2)+ih2,icrE),cr_efloor)
                   dx_d(i,idim)=dx_loc
-              else
+                else
                   pcrd(i,idim,iGrp)  = max(cruold(ind_right(i,idim),icrE),cr_efloor)
                   dx_d(i,idim)=dx_loc*1.5_dp
-              end if
-           enddo
+                end if
+            enddo
            enddo
         end do
         ! End loop over dimensions
@@ -370,12 +370,13 @@ subroutine add_cr_source_terms(ilevel)
               new_ec = new_ec / e_coef
 
               old_ec = crunew(ind_cell(i),icrE)
-              crunew(ind_cell(i),icrE) = crunew(ind_cell(i),icrE) + (new_ec-old_ec) * f_decouple
+              if(son(ind_cell(i))==0) &
+                crunew(ind_cell(i),icrE) = crunew(ind_cell(i),icrE) + (new_ec-old_ec) * f_decouple
 
               ! Floor the CR energy and update total energy if necessary
-              if ( crunew(ind_cell(i),icrE) .lt. cr_efloor ) crunew(ind_cell(i),icrE) = cr_efloor
+              if(son(ind_cell(i))==0 .and. crunew(ind_cell(i),icrE) .lt. cr_efloor ) crunew(ind_cell(i),icrE) = cr_efloor
               ! Thermal energy update:
-              if(gas_coupled) then
+              if(son(ind_cell(i))==0 .and. gas_coupled) then
                  unew(ind_cell(i),5) = unew(ind_cell(i),5) - (crunew(ind_cell(i),icrE) - old_ec)*f_decouple
                  unew(ind_cell(i),5) = max(smallp*uold(ind_cell(i),1), unew(ind_cell(i),5))
               endif
@@ -393,22 +394,22 @@ subroutine add_cr_source_terms(ilevel)
               ! Rotate the flux back to the simulation coordinate system
               call invrotatevec(sint, cost, sinp, cosp, frotx, froty, frotz)
 
-              crunew(ind_cell(i),icrE+1) = frotx
+              if(son(ind_cell(i))==0) crunew(ind_cell(i),icrE+1) = frotx
               ! Momentum update
-              if(gas_coupled) then
+              if(son(ind_cell(i))==0 .and. gas_coupled) then
                  mom_change = -gradpcr_loc(i,1,iGrp)*dt
                  unew(ind_cell(i),2) = unew(ind_cell(i),2) + mom_change*f_decouple
               endif
 #if NDIM>1
-              crunew(ind_cell(i),icrE+2) = froty
-              if(gas_coupled) then
+              if(son(ind_cell(i))==0) crunew(ind_cell(i),icrE+2) = froty
+              if(son(ind_cell(i))==0 .and. gas_coupled) then
                  mom_change = -gradpcr_loc(i,2,iGrp)*dt
                  unew(ind_cell(i),3) = unew(ind_cell(i),3) + mom_change*f_decouple
               endif
 #endif
 #if NDIM>2
-              crunew(ind_cell(i),icrE+3) = frotz
-              if(gas_coupled) then
+              if(son(ind_cell(i))==0) crunew(ind_cell(i),icrE+3) = frotz
+              if(son(ind_cell(i))==0 .and. gas_coupled) then
                  mom_change = -gradpcr_loc(i,3,iGrp)*dt
                  unew(ind_cell(i),4) = unew(ind_cell(i),4) + mom_change*f_decouple
               endif
@@ -416,20 +417,22 @@ subroutine add_cr_source_terms(ilevel)
 
            end do ! End loop over CR groups
 
-           ! Floor the gas thermal energy of the updated state
-           ekin=0d0
-           do idim=1,ndim
-              ekin = ekin + 0.5d0*unew(ind_cell(i),idim+1)**2/unew(ind_cell(i),1)
-           end do
-           emag=0d0
-           do idim=1,ndim
-              emag = emag + 0.125d0*(unew(ind_cell(i),idim+5)+unew(ind_cell(i),idim+nvar))**2
-           end do
+           if(son(ind_cell(i))==0) then
+              ! Floor the gas thermal energy of the updated state
+              ekin=0d0
+              do idim=1,ndim
+                ekin = ekin + 0.5d0*unew(ind_cell(i),idim+1)**2/unew(ind_cell(i),1)
+              end do
+              emag=0d0
+              do idim=1,ndim
+                emag = emag + 0.125d0*(unew(ind_cell(i),idim+5)+unew(ind_cell(i),idim+nvar))**2
+              end do
 
-           etherm = unew(ind_cell(i),5) - ekin - emag
-           if(etherm .lt. smallp*uold(ind_cell(i),1)) then
-              unew(ind_cell(i),5) = ekin + emag + smallp*uold(ind_cell(i),1)
-              if(myid.eq.1) print*,'add_cr_source_terms: gas thermal energy floored'
+              etherm = unew(ind_cell(i),5) - ekin - emag
+              if(etherm .lt. smallp*uold(ind_cell(i),1)) then
+                unew(ind_cell(i),5) = ekin + emag + smallp*uold(ind_cell(i),1)
+                if(myid.eq.1) print*,'add_cr_source_terms: gas thermal energy floored'
+              endif
            endif
 
         end do ! End loop over cells in the vector sweep
@@ -838,10 +841,12 @@ SUBROUTINE cr_godfine1(ind_grid, ncache, ilevel)
          k3=1+k2
          ! Update conservative CR variables (new state vector)
          do i=1,ncache
-            crunew(ind_cell(i),1:ncrvar)= &
-               crunew(ind_cell(i),1:ncrvar)   &
-               & +(flux(i,i3   ,j3   ,k3   ,1:ncrvar,idim)  &
-               & - flux(i,i3+i0,j3+j0,k3+k0,1:ncrvar,idim))
+            if(son(ind_cell(i))==0) then
+              crunew(ind_cell(i),1:ncrvar)= &
+                crunew(ind_cell(i),1:ncrvar)   &
+                & +(flux(i,i3   ,j3   ,k3   ,1:ncrvar,idim)  &
+                & - flux(i,i3+i0,j3+j0,k3+k0,1:ncrvar,idim))
+            endif
          end do
       end do
       end do
