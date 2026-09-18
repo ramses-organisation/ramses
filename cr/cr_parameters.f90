@@ -19,9 +19,9 @@ module cr_parameters
   ! --- &cr_params namelist ---------------------------------------------
   ! Master switch & scheme
   logical::cr_advect=.false.                ! Master CR transport switch
-  logical::cr_HLLE=.true.                   ! HLLE Riemann solver for CR
+  logical::cr_HLLE=.false.                  ! HLLE Riemann solver for CR
   logical::cr_isotropic_pressure=.true.        ! .true.=P1 closure, .false.=M1
-  logical::cr_flux_correction=.false. ! Rescale superluminal fluxes
+  logical::cr_flux_correction=.true. ! Rescale superluminal fluxes
   ! Physics
   real(dp),dimension(1:ncr_groups)::gamma_cr=4d0/3d0 ! CR adiabatic index
   logical::cr_feedback=.true.               ! master CR->gas back-reaction switch (gradPcr momentum + energy)
