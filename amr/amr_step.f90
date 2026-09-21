@@ -432,9 +432,9 @@ recursive subroutine amr_step(ilevel,icount)
    endif ! .not.static_gas (gas hyperbolic update)
 
 #ifdef CRPHYS
-      if(cr_advect)then
-      call timer('cosmic rays','start')
-      call crmom_step(ilevel)
+     if(cr_advect)then
+        call timer('cosmic rays','start')
+        call crmom_step(ilevel)
      endif
 #endif
 

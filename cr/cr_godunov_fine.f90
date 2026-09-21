@@ -70,7 +70,8 @@ subroutine crmom_step(ilevel)
 
   call cr_upload_fine(ilevel)
 
-  if(myid==1 .and. mod(nstep_coarse,ncontrol)==0)then
+  if(myid==1 .and. mod(nstep_coarse,ncontrol)==0 &
+    .and. cr_nsubcycle.ne.1 .and. i_substep .ne. 0)then
      call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
      write(*,901)ilevel,i_substep,cr_vmax(ilevel)*scale_v/1e5, &
           cr_vmax(ilevel)*scale_v/c_cgs,dt_cr
