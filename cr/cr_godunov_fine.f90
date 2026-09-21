@@ -28,9 +28,6 @@ subroutine crmom_step(ilevel)
   ! strictly necessary as CR advection has no explicit time dependence.
   t_save=t ; t=t-t_left
 
-  ! Initialise crunew=cruold for the first subcycle (zeroes virtual cells).
-  call cr_set_unew(ilevel)
-
   call get_crmom_courant(dt_cr,ilevel)
   i_substep=0
   do while(t_left>0)                         !                CR sub-cycle
