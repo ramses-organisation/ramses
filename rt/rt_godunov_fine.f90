@@ -306,6 +306,7 @@ SUBROUTINE rt_godfine1(ind_grid, ncache, ilevel, dt)
                  uloc(ind_exist(i),i3,j3,k3,1:nrtvar) =  0d0
               else
                  do ivar=1,nrtvar
+                 ! VSLA: cell at the same level -> already has correct light speed
                     uloc(ind_exist(i),i3,j3,k3,ivar) =                   &
                                                   rtuold(ind_cell(i),ivar)
                  end do
@@ -329,6 +330,7 @@ SUBROUTINE rt_godfine1(ind_grid, ncache, ilevel, dt)
         else
            do ivar=1,nrtvar
               do i=1,nexist
+                 ! VSLA: cell at the same level -> already has correct light speed
                  uloc(ind_exist(i),i3,j3,k3,ivar)=rtuold(ind_cell(i),ivar)
               end do
               do i=1,nbuffer
