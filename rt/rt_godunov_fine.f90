@@ -308,12 +308,6 @@ SUBROUTINE rt_godfine1(ind_grid, ncache, ilevel, dt)
                  do ivar=1,nrtvar
                     uloc(ind_exist(i),i3,j3,k3,ivar) =                   &
                                                   rtuold(ind_cell(i),ivar)
-                    if(son(ind_cell(i))>0 .and. mod(ivar,ndim+1)==1)  then
-                       ! VSLA: finer level and different light speed
-                       uloc(ind_exist(i),i3,j3,k3,ivar)        &
-                            = uloc(ind_exist(i),i3,j3,k3,ivar) &
-                            * rt_c(ilevel+1)/rt_c(ilevel)
-                    endif
                  end do
               endif
            end do
@@ -336,12 +330,6 @@ SUBROUTINE rt_godfine1(ind_grid, ncache, ilevel, dt)
            do ivar=1,nrtvar
               do i=1,nexist
                  uloc(ind_exist(i),i3,j3,k3,ivar)=rtuold(ind_cell(i),ivar)
-                 if(son(ind_cell(i))>0 .and. mod(ivar,ndim+1)==1) then
-                    ! VSLA: finer level and different light speed
-                    uloc(ind_exist(i),i3,j3,k3,ivar) &
-                         = uloc(ind_exist(i),i3,j3,k3,ivar) &
-                         * rt_c(ilevel+1)/rt_c(ilevel)
-                 endif
               end do
               do i=1,nbuffer
                  uloc(ind_nexist(i),i3,j3,k3,ivar)=u2(i,ind_son,ivar)

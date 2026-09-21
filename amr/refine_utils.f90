@@ -965,20 +965,14 @@ subroutine kill_grid(ind_cell,ilevel,nn,ibound,boundary_region)
   if(upload_equilibrium_x) then
      ! Enforce equilibrium on ionization states when merging, to
      ! prevent unnatural values (e.g when merging hot and cold cells).
-     call updateRTGroups_CoolConstants(ilevel)
+     ! Father cells are at ilevel-1 and hold values for that level.
+     call updateRTGroups_CoolConstants(ilevel-1)
      do i=1,nn
         call calc_equilibrium_xion(uold(ind_cell(i),:) &
              , rtuold(ind_cell(i),1:nrtvar), xion)
         uold(ind_cell(i),iIons:iIons+nIons-1)=xion*uold(ind_cell(i),1)
      enddo
   endif
-  do ivar=1,nrtvar
-     do i=1,nn
-        ! Rescale according to speed of light difference
-        if (ilevel .gt. levelmin .and. ivar.le. nrtvar .and. mod(ivar,ndim+1).eq.1) &
-            rtuold(ind_cell(i),ivar) = rtuold(ind_cell(i),ivar) * rt_c(ilevel)/rt_c(ilevel-1)
-     end do
-  end do
 #endif
 
   ! Gather son grids
