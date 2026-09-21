@@ -96,7 +96,7 @@ SUBROUTINE update_rt_c
   integer::i
 !-------------------------------------------------------------------------
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
-  do i=nlevelmax,levelmin,-1
+  do i=nlevelmax,1,-1
     rt_c(i)=rt_c_cgs(i)/scale_v
     rt_c2(i)=rt_c(i)**2
   enddo
@@ -179,10 +179,11 @@ SUBROUTINE read_rt_params(nml_ok)
   do ilevel=nlevelmax,levelmin,-1
      rt_c_fraction(ilevel)=rt_c_fraction(ilevel-levelmin+1)
   end do
-  do ilevel=1,levelmin-1     ! Just a dummy lightspeed for non-leaf levels
-     rt_c_fraction(ilevel)=1.0
+  ! Use levelmin value for non-leaf levels, for consistency
+  do ilevel=1,levelmin-1
+     rt_c_fraction(ilevel)=rt_c_fraction(levelmin)
   end do
-  do ilevel=nlevelmax,levelmin,-1 !Set the light speed(s) according to f_c
+  do ilevel=nlevelmax,1,-1 !Set the light speed(s) according to f_c
      rt_c_cgs(ilevel) = c_cgs * rt_c_fraction(ilevel)
   end do
 
