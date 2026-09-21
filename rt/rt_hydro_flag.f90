@@ -17,7 +17,8 @@ subroutine rt_hydro_flag(ilevel)
   integer,dimension(1:nvector),save::ind_grid,ind_cell
   integer,dimension(1:nvector,0:twondim),save::igridn
   integer,dimension(1:nvector,1:twondim),save::indn
-  integer,dimension(1:nvector,1:twondim),save::c_factor
+  real(dp),dimension(1:nvector,1:twondim),save::c_factor
+  real(dp)::c_level,c_father
 
   logical,dimension(1:nvector),save::ok
 
@@ -51,7 +52,10 @@ subroutine rt_hydro_flag(ilevel)
   end do
 
   if( rt_err_grad_cn==-1.0) return
-  c_factor(:,:)=rt_c(ilevel)
+
+  ! rt_c is only defined from levelmin to nlevelmax
+  c_level =rt_c(max(ilevel  ,levelmin))
+  c_father=rt_c(max(ilevel-1,levelmin))
 
   ! Loop over active grids
   ncache=active(ilevel)%ngrid
@@ -84,11 +88,12 @@ subroutine rt_hydro_flag(ilevel)
 
         ! If a neighbor cell does not exist,
         ! replace it by its father cell
+        c_factor(:,:)=c_level
         do j=1,twondim
            do i=1,ngrid
               if(indn(i,j)==0)then
                  indn(i,j)=nbor(ind_grid(i),j)
-                 c_factor(i,j) = rt_c(ilevel-1)
+                 c_factor(i,j) = c_father
               end if
            end do
         end do
@@ -99,7 +104,7 @@ subroutine rt_hydro_flag(ilevel)
            do ivar=1,nrtvar
               do i=1,ngrid
                  uug(i,ivar)=rtuold(indn(i,2*idim-1),ivar)*c_factor(i,2*idim-1)
-                 uum(i,ivar)=rtuold(ind_cell(i     ),ivar)*rt_c(ilevel)
+                 uum(i,ivar)=rtuold(ind_cell(i     ),ivar)*c_level
                  uud(i,ivar)=rtuold(indn(i,2*idim  ),ivar)*c_factor(i,2*idim)
               end do
            end do
