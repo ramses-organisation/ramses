@@ -600,14 +600,14 @@ SUBROUTINE rt_sources_vsweep(x,uu,dx,dt,nn,ilevel)
               uu(i,group_ind) = rt_n_source(k)/rt_c_cgs(ilevel)/scale_Np
               ! The input flux is the fraction Fp/(c*Np) (Max 1 magnitude)
               uu(i,group_ind+1) =                                       &
-                      rt_u_source(k)*rt_c(ilevel)*rt_n_source(k)/scale_Np
+                      rt_u_source(k)*rt_c(ilevel)*uu(i,group_ind)
 #if NDIM>1
               uu(i,group_ind+2) =                                       &
-                      rt_v_source(k)*rt_c(ilevel)*rt_n_source(k)/scale_Np
+                      rt_v_source(k)*rt_c(ilevel)*uu(i,group_ind)
 #endif
 #if NDIM>2
               uu(i,group_ind+3) =                                       &
-                      rt_w_source(k)*rt_c(ilevel)*rt_n_source(k)/scale_Np
+                      rt_w_source(k)*rt_c(ilevel)*uu(i,group_ind)
 #endif
            end if
         end do
