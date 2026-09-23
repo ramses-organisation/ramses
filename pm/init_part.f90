@@ -861,7 +861,7 @@ contains
        write(*,*)myid
        write(*,*)jpart,npart_new
        write(*,*)bound_key
-       call MPI_ABORT(MPI_COMM_WORLD,1,info)
+       call clean_stop
     end if
 
     ! Allocate communication buffer in reception

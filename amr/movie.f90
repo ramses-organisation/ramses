@@ -899,12 +899,12 @@ subroutine output_frame()
     allocate(data_single(1:nw_frame*nh_frame),stat=ierr)
     if(ierr .ne. 0)then
        write(*,*) 'Error - Movie frame allocation failed'
-       call MPI_ABORT(MPI_COMM_WORLD,1,info)
+       call clean_stop
     endif
     allocate(data_single_all(1:nw_frame*nh_frame),stat=ierr)
     if(ierr .ne. 0)then
        write(*,*) 'Error - Movie frame allocation failed'
-       call MPI_ABORT(MPI_COMM_WORLD,1,info)
+       call clean_stop
     endif
     ! Loop over maps
     do kk=1,n_movie_vars
@@ -936,7 +936,7 @@ subroutine output_frame()
     enddo
     if(info.ne.MPI_SUCCESS)then
        if(myid==1) write(*,*) 'MPI error - map reduce failed'
-       call MPI_ABORT(MPI_COMM_WORLD,1,info)
+       call clean_stop
     endif
     ! Weights communication
     if(is_mean)then
@@ -959,7 +959,7 @@ subroutine output_frame()
        endif
        if(info.ne.MPI_SUCCESS)then
           if(myid==1) write(*,*) 'MPI error - weigths reduce failed'
-          call MPI_ABORT(MPI_COMM_WORLD,1,info)
+          call clean_stop
        endif
     endif
     deallocate(data_single)
