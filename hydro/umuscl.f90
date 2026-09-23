@@ -736,8 +736,9 @@ subroutine cmpflxm(qm,im1,im2,jm1,jm2,km1,km2, &
            else if (riemann.eq.'hll')then
               call riemann_hll     (qleft,qright,fgdnv,ngrid)
            else
+              ! unreachable: riemann is checked in read_hydro_params
               write(*,*)'unknown Riemann solver'
-              stop
+              call clean_stop
            end if
 
            ! Compute fluxes
