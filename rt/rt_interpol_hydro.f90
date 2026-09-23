@@ -50,7 +50,7 @@ SUBROUTINE rt_upload_fine(ilevel)
                  ind_split(icell)=ind_cell(i)
               end if
            end do
-           call rt_upl(ind_split,nsplit)
+           call rt_upl(ind_split,nsplit,ilevel)
         end if
 
      end do
@@ -63,14 +63,16 @@ SUBROUTINE rt_upload_fine(ilevel)
 
 END SUBROUTINE rt_upload_fine
 !************************************************************************
-SUBROUTINE rt_upl(ind_cell,ncell)
+SUBROUTINE rt_upl(ind_cell,ncell,ilevel)
 ! This routine performs a restriction operation (averaging down)
-! for only the RT variables
+! for only the RT variables. Photon densities are converted to the speed
+! of light of the father level ilevel, so that every cell holds values
+! consistent with its own level.
 !------------------------------------------------------------------------
   use amr_commons
   use rt_hydro_commons
   implicit none
-  integer::ncell
+  integer::ncell,ilevel
   integer,dimension(1:nvector)::ind_cell
   integer ::ivar,i,ind_son,iskip_son
   integer ,dimension(1:nvector),save::igrid_son,ind_cell_son
@@ -94,6 +96,9 @@ SUBROUTINE rt_upl(ind_cell,ncell)
            getx(i)=getx(i)+rtuold(ind_cell_son(i),ivar)
         end do
      end do
+
+     ! Rescale photon densities according to different speeds of light
+     if(mod(ivar,ndim+1).eq.1) getx(1:ncell)=getx(1:ncell)*rt_c(ilevel+1)/rt_c(ilevel)
 
      ! Scatter result to cells
      do i=1,ncell
