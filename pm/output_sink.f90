@@ -9,14 +9,14 @@ subroutine output_sink_csv(filename)
   if(verbose)write(*,*)'Entering output_sink_csv'
 
   fileloc=TRIM(filename)
-  open(unit=123,file=TRIM(fileloc),form='formatted',status='replace', recl=500)
+  open(unit=123,file=TRIM(fileloc),form='formatted',status='replace', recl=1000)
   !======================
   ! Write sink properties
   !======================
   write(123,'(" # id,msink,x,y,z,vx,vy,vz,lx,ly,lz,tform,acc_rate,del_mass,rho_gas,cs**2,etherm,vx_gas,vy_gas,vz_gas,mbh,dmfsink,level ")')
   write(123,'(" # 1,m,l,l,l,l t**-1,l t**-1,l t**-1,m l**2 t**-1,m l**2 t**-1,m l**2 t**-1,t,m t**-1,m,m l**-3,l**2 t**-2,m l**2 t**-2,l t**-1,l t**-1,l t**-1,m,m,1")')
   do isink=1,nsink
-     write(123,'(I10,21(A1,ES21.10),A1,I10)')idsink(isink),',',msink(isink),&
+     write(123,'(I10,21(A1,ES25.16E3),A1,I10)')idsink(isink),',',msink(isink),&
           ',',xsink(isink,1),',',xsink(isink,2),',',xsink(isink,3),&
           ',',vsink(isink,1),',',vsink(isink,2),',',vsink(isink,3),&
           ',',lsink(isink,1),',',lsink(isink,2),',',lsink(isink,3),&
