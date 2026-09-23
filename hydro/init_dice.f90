@@ -1205,11 +1205,14 @@ subroutine kill_gas_part(ilevel)
   ! initially present in the gadget1 DICE output
   !--------------------------------------------------------
   integer::igrid,jgrid,ipart,jpart,next_part
-  integer::ig,ip,npart1,npart2,icpu,info
+  integer::ig,ip,npart1,npart2,icpu
   integer,dimension(1:nvector)::ind_grid,ind_part,ind_grid_part
   logical,dimension(1:nvector)::ok=.true.
   integer::npart_all
   integer,dimension(1:ncpu)::npart_cpu,npart_cpu_all
+#ifndef WITHOUTMPI
+  integer:: info
+#endif
 
   npart_cpu = 0
   npart_all = 0
