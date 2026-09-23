@@ -68,4 +68,10 @@ ax[1].scatter(data["sinks"]['x'],data["sinks"]['y'], s = 20, marker='x', color='
 
 fig.savefig('center-SN.pdf', bbox_inches="tight")
 
+# Check results against reference solution
+for key in data["sinks"].keys():
+    data["data"]["sink_"+key] = data["sinks"][key]
+for key in data["stellars"].keys():
+    data["data"]["stellar_"+key] = data["stellars"][key]
+
 visu_ramses.check_solution(data["data"],'center-SN',overwrite=False)
