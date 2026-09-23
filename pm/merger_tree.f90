@@ -3519,7 +3519,7 @@ subroutine make_galaxies()
   if((opened.and.(npart_out==0)).or.((.not.opened).and.(npart_out>0))) then
      write(*,*)'Error in output_gal_cone'
      write(*,*)'npart_out=',npart_out,'opened=',opened
-     stop
+     call clean_stop
   endif
 
   endif

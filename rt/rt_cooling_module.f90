@@ -286,7 +286,7 @@ SUBROUTINE rt_solve_cooling(T2, xion, Np, Fp, p_gas, dNpdt, dFpdt        &
            nAct_next=nAct_next+1 ; indAct(nAct_next) = i
         else if(tleft(i) .lt. 0.) then        ! Overshot by abs(tleft(i))
            print*,'In rt_solve_cooling: tleft < 0  !!'
-           stop
+           call clean_stop
         endif
         ddt(i)=min(dt_rec,tleft(i))    ! Use recommended dt from cool_step
      end do ! end loop over active cells

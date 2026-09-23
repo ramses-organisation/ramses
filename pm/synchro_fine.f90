@@ -302,7 +302,7 @@ subroutine sync(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
            endif
         end do
      end do
-     stop
+     call clean_stop
   end if
 
   ! CIC at level ilevel (dd: right cloud boundary; dg: left cloud boundary)

@@ -39,7 +39,7 @@ subroutine init_tracer
         call load_tracers
     else
         write(*, '(a,a,a)')'Data input format not understood: "', (tracer_feed_fmt), '"'
-        stop
+        call clean_stop
     end if
 
     ! Reset first balance flags
@@ -113,7 +113,7 @@ subroutine load_tracers
              if(ipart>npartmax)then
                 write(*,*)'Maximum number of particles incorrect'
                 write(*,*)'npartmax should be greater than',ipart, 'got', npartmax
-                stop
+                call clean_stop
              endif
              xp(ipart,:ndim)  = xx(i,:ndim)
              vp(ipart,:ndim)  = vv(i,:ndim)
@@ -312,7 +312,7 @@ subroutine load_tracers_inplace
                    if (ipart > npartmax) then
                       write(*,*) 'Maximum number of particles incorrect'
                       write(*,*) 'npartmax should be greater than', ipart, 'got', npartmax
-                      stop
+                      call clean_stop
                    end if
                    do idim = 1, ndim
                      xp(ipart, idim) = xcell(idim)
@@ -496,7 +496,7 @@ subroutine load_tracers_bin_v1(ntot)
              if(ipart>npartmax)then
                 write(*,*)'Maximum number of particles incorrect'
                 write(*,*)'npartmax should be greater than',ipart, 'got', npartmax
-                stop
+                call clean_stop
              end if
              xp(ipart, 1)  = xx1(j)
              xp(ipart, 2)  = xx2(j)
@@ -700,7 +700,7 @@ subroutine load_tracers_bin_v2(ntot)
        if(ipart>npartmax)then
           write(*,*)'Maximum number of particles incorrect'
           write(*,*)'npartmax should be greater than', ipart, 'got', npartmax, 'for PE=', myid
-          stop
+          call clean_stop
        end if
        xp(ipart, 1)  = receiver%up(j, 1)
        xp(ipart, 2)  = receiver%up(j, 2)
@@ -808,7 +808,7 @@ subroutine convert_global_index_to_local_index(npart)
           if (is_star_tracer(typep(i))) then
              if (isp8(partp(i)) == -1) then
                 write(*, *) 'An error occured while loading star tracers. Aborting.'
-                stop 1
+                call clean_stop
              end if
              partp(i) = isp8(partp(i))
           end if
@@ -832,7 +832,7 @@ subroutine convert_global_index_to_local_index(npart)
              end do star_loop
              if (.not. is_star(typep(partp(i)))) then
                 write(*, *) 'An error occured while loading star tracers. Aborting.'
-                stop 1
+                call clean_stop
              end if
           end if
        end do

@@ -449,11 +449,7 @@ subroutine output_info(filename)
   open(unit=ilun,file=fileloc,form='formatted',iostat=ierr)
   if(ierr .ne. 0)then
      write(*,*) 'Error - Could not write ',fileloc
-#ifndef WITHOUTMPI
-     call MPI_ABORT(MPI_COMM_WORLD,1,ierr)
-#else
-     stop
-#endif
+     call clean_stop
   endif
 
   ! Write run parameters
@@ -709,11 +705,7 @@ subroutine create_output_dirs(filedir)
       call mkdir(TRIM(filedir),mode,ierr)
       if(ierr.ne.0 .and. ierr.ne.127)then
         write(*,*) 'Error - Could not create ',TRIM(filedir),' error code=',ierr
-#ifndef WITHOUTMPI
-        call MPI_ABORT(MPI_COMM_WORLD,1,info)
-#else
-        stop
-#endif
+        call clean_stop
       endif
 #endif
     endif

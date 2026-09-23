@@ -66,9 +66,6 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
 #endif
   use mpi_mod
   implicit none
-#if defined(grackle) && !defined(WITHOUTMPI)
-  integer::info
-#endif
   integer::ilevel,ngrid
   integer,dimension(1:nvector)::ind_grid
   !-------------------------------------------------------------------
@@ -457,11 +454,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
         iresult = solve_chemistry(my_grackle_units, my_grackle_fields, %VAL(dtnew(ilevel)))
         if(iresult.eq.0)then
             write(*,*) 'Grackle: error in solve_chemistry'
-#ifndef WITHOUTMPI
-            call MPI_ABORT(MPI_COMM_WORLD,1,info)
-#else
-            stop
-#endif
+            call clean_stop
         endif
 
         do i = 1, nleaf

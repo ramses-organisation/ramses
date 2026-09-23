@@ -167,10 +167,7 @@ contains
                                                         & + tmp_bxmax(cur_cell,dir)*lncpu1(i) )/lncpu )
                if(bisec_wall(cur_cell)==tmp_bxmin(cur_cell,dir) .or. bisec_wall(cur_cell)==tmp_bxmax(cur_cell,dir)) then
                   if(myid==1) print *,"Problem in bisection tree creation : insufficient resolution"
-#ifndef WITHOUTMPI
-                  call MPI_ABORT(MPI_COMM_WORLD,1,ierr)
-#endif
-                  stop
+                  call clean_stop
                end if
             end do
             ! don't stay in the dichotomy loop

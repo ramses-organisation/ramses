@@ -56,7 +56,7 @@ subroutine make_stellar_from_sinks
      if(nobj_new .gt. nsink) then
         write(*,*) 'number of new objects is larger than the number of sinks ',nobj_new, nsink
         write(*,*) "use stellar_strategy='local'"
-        stop
+        call clean_stop
      endif
 
      do iobj = nsink - nobj_new + 1, nsink

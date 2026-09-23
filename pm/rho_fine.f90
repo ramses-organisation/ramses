@@ -433,7 +433,7 @@ subroutine cic_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel)
            endif
         end do
      end do
-     stop
+     call clean_stop
   end if
 
   ! CIC at level ilevel (dd: right cloud boundary; dg: left cloud boundary)
@@ -996,7 +996,7 @@ subroutine cic_cell(ind_grid,ngrid,ilevel)
               endif
            end do
         end do
-        stop
+        call clean_stop
      end if
 
      ! Compute cloud volumes
@@ -1567,7 +1567,7 @@ subroutine tsc_cell(ind_grid,ngrid,ilevel)
               endif
            end do
         end do
-        stop
+        call clean_stop
      end if
 
      ! Compute cloud volumes

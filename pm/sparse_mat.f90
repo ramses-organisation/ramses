@@ -60,7 +60,7 @@ contains
 
     if(mat%used.eq.NSPARSEMAX)then
        write(*,*)'Maximum size reached',mat%used
-       stop
+       call clean_stop
     endif
 
     ! if corresponding line is empty
