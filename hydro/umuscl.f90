@@ -736,8 +736,8 @@ subroutine cmpflxm(qm,im1,im2,jm1,jm2,km1,km2, &
            else if (riemann.eq.'hll')then
               call riemann_hll     (qleft,qright,fgdnv,ngrid)
            else
-              ! unreachable: riemann is checked in read_hydro_params
               write(*,*)'unknown Riemann solver'
+              write(*,*)'This should have been caught during namelist reading: the two lists have drifted apart'
               call clean_stop
            end if
 
@@ -972,6 +972,7 @@ subroutine uslope(q,dq,dtdx,i,j,k,ngrid)
 
       else
          write(*,*)'Unknown slope type'
+         write(*,*)'This should have been caught during namelist reading: the two lists have drifted apart'
          call clean_stop
       endif
    end do
