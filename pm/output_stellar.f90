@@ -16,7 +16,7 @@ subroutine output_stellar_csv(filename)
   write(123,'(" # id,mstellar,tform,tlife ")')
   write(123,'(" # 1,m,t,t")')
   do istellar=1,nstellar
-     write(123,'(I10,3(A1,ES21.10))')id_stellar(istellar),',',mstellar(istellar),&
+     write(123,'(I10,3(A1,ES25.16E3))')id_stellar(istellar),',',mstellar(istellar),&
           ',',tstellar(istellar),',',ltstellar(istellar)
   end do
 
