@@ -1,7 +1,6 @@
 subroutine move_fine(ilevel)
   use amr_commons
   use pm_commons
-  use mpi_mod
   implicit none
   integer::ilevel
   !----------------------------------------------------------------------
@@ -79,7 +78,6 @@ end subroutine move_fine
 subroutine move_fine_static(ilevel)
   use amr_commons
   use pm_commons
-  use mpi_mod
   implicit none
   integer::ilevel
   !----------------------------------------------------------------------

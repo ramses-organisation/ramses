@@ -9,7 +9,6 @@ subroutine init_time
 #ifdef RT
   use rt_cooling_module
 #endif
-  use mpi_mod
   implicit none
   integer::i,Nmodel
   real(kind=8)::T2_sim

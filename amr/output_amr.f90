@@ -421,7 +421,6 @@ subroutine output_info(filename)
   use amr_commons
   use hydro_commons
   use pm_commons
-  use mpi_mod
   implicit none
   character(LEN=80)::filename
 

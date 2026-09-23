@@ -2130,7 +2130,6 @@ end subroutine dissolve_small_clumps
 
 subroutine read_unbinding_params()
   use clfind_commons
-  use mpi_mod
   implicit none
 
   namelist/unbinding_params/nmassbins,logbins,particlebased_clump_output &

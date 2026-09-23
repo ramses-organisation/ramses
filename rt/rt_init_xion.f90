@@ -6,7 +6,6 @@ SUBROUTINE rt_init_xion(ilevel)
 !-------------------------------------------------------------------------
   use amr_commons
   use hydro_commons
-  use mpi_mod
   implicit none
   integer:: ilevel
   integer:: ncache,i,igrid,ngrid

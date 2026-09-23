@@ -2,7 +2,6 @@ subroutine make_stellar_from_sinks
   use pm_commons
   use amr_commons
   use sink_feedback_parameters
-  use mpi_mod
   implicit none
 
   integer:: isink

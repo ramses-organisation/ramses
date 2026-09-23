@@ -5,7 +5,6 @@ subroutine cooling_fine(ilevel)
 #ifdef grackle
   use grackle_parameters
 #endif
-  use mpi_mod
   implicit none
   integer::ilevel
   !-------------------------------------------------------------------
@@ -64,7 +63,6 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
        ,rt_pressBoost,iIRtrapVar,kappaSc,kappaAbs,is_kIR_T,rt_vc
   use constants, only: a_r, Myr2sec
 #endif
-  use mpi_mod
   implicit none
   integer::ilevel,ngrid
   integer,dimension(1:nvector)::ind_grid

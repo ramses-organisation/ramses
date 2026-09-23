@@ -1266,7 +1266,6 @@ SUBROUTINE heat_unresolved_HII_regions(ilevel)
   use amr_commons
   use hydro_commons
   use cooling_module
-  use mpi_mod
   implicit none
   integer::ilevel
   integer::ncache,i,igrid,ngrid
@@ -1305,7 +1304,6 @@ SUBROUTINE heat_unresolved_HII_regions_vsweep(ind_grid,ngrid,ilevel)
   use rt_cooling_module, only:T2_min_fix, X
   use cooling_module,only:X
   use constants,only:pi, twopi, factG_in_cgs,  mH, rhoc
-  use mpi_mod
   implicit none
   integer::ilevel,ngrid
   integer,dimension(1:nvector)::ind_grid

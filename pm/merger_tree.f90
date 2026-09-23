@@ -3912,7 +3912,6 @@ subroutine read_mergertree_params()
   !------------------------------------------------------------------
 
   use clfind_commons
-  use mpi_mod
   implicit none
 
   namelist/mergertree_params/nmost_bound, max_past_snapshots, &

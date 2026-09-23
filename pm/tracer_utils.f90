@@ -5,9 +5,6 @@ module tracer_utils
    use pm_commons          ! xp, tp, idp, levelp, headp, mp, localseed, numbp, nextp, move_flag
    use random, only        : ranf
    use hydro_commons, only : uold, if1, if2, jf1, jf2, kf1, kf2, nvar
-#ifndef WITHOUTMPI
-   use mpi_mod
-#endif
    implicit none
 
    real(kind=dp), dimension(1:3) :: skip_loc

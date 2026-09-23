@@ -350,7 +350,6 @@ end subroutine clump_finder
 subroutine count_test_particle(xx,ilevel,nskip,action)
   use amr_commons
   use clfind_commons
-  use mpi_mod
   implicit none
   integer::ilevel,nskip,action
   real(dp),dimension(1:ncoarse+ngridmax*twotondim)::xx
@@ -428,7 +427,6 @@ end subroutine count_test_particle
 subroutine count_peaks(xx,n)
   use amr_commons
   use clfind_commons
-  use mpi_mod
   implicit none
   integer::n
   real(dp),dimension(1:ncoarse+ngridmax*twotondim)::xx
@@ -473,7 +471,6 @@ end subroutine count_peaks
 subroutine flag_peaks(xx,ipeak)
   use amr_commons
   use clfind_commons
-  use mpi_mod
   implicit none
   integer::ipeak
   real(dp),dimension(1:ncoarse+ngridmax*twotondim)::xx
@@ -499,7 +496,6 @@ end subroutine flag_peaks
 subroutine propagate_flag(nmove,nzero)
   use amr_commons
   use clfind_commons
-  use mpi_mod
   implicit none
   integer::nmove,nzero
   !----------------------------------------------------------------------
@@ -524,7 +520,6 @@ end subroutine propagate_flag
 subroutine saddlepoint_search(xx)
   use amr_commons
   use clfind_commons
-  use mpi_mod
   implicit none
   real(dp),dimension(1:ncoarse+ngridmax*twotondim)::xx
   !---------------------------------------------------------------------------
@@ -874,7 +869,6 @@ end subroutine get_cell_index
 !#########################################################################
 subroutine read_clumpfind_params()
   use clfind_commons
-  use mpi_mod
   implicit none
 
   namelist/clumpfind_params/ivar_clump,&
@@ -1129,7 +1123,6 @@ subroutine rho_only(ilevel)
   use pm_commons
   use hydro_commons
   use poisson_commons
-  use mpi_mod
   implicit none
   integer::ilevel
   !------------------------------------------------------------------
