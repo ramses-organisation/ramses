@@ -330,7 +330,9 @@ subroutine sphere_average(navg, center, radius, rpow, upow, avg)
     real(dp), dimension(1:twotondim, 1:3):: xc
     real(dp), dimension(1:nvector, 1:ndim):: xx
 
+#ifndef WITHOUTMPI
     integer:: info
+#endif
     real(dp), dimension(1:navg):: avg_loc
     real(dp), dimension(1:navg):: integrand
     real(dp), dimension(1:navg):: utemp
