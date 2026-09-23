@@ -394,7 +394,7 @@ subroutine load_tracers_bin_v1(ntot)
     integer, intent(in) :: ntot
 #if NDIM < 3
     write(*,*) "Can only initialize tracer particles in 3D with method 'binary'"
-    call clean_end()
+    call clean_stop
 #else
 
     integer :: unit_in
@@ -555,7 +555,7 @@ subroutine load_tracers_bin_v2(ntot)
 
 #if NDIM < 3
     write(*,*) "Can only initialize tracer particles in 3D with method 'binary2'"
-    call clean_end()
+    call clean_stop
 #else
     integer :: unit_in
     real(dp), dimension(:, :), allocatable :: allpos
