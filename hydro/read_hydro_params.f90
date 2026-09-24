@@ -20,22 +20,6 @@ subroutine read_hydro_params(nml_ok)
   ! Namelist definitions
   !--------------------------------------------------
 
-  ! Initial conditions parameters
-  namelist/init_params/condinit_kind,filetype,initfile,multiple,nregion,region_type &
-       & ,x_center,y_center,z_center,aexp_ini &
-       & ,length_x,length_y,length_z,exp_region &
-       & ,d_region,u_region,v_region,w_region,p_region &
-#ifdef SOLVERmhd
-       & ,A_region,B_region,C_region,B_ave &
-#endif
-#if NVAR>NHYDRO+NENER
-       & ,var_region &
-#endif
-#if NENER>0
-       & ,prad_region &
-#endif
-       & ,omega_b,alpha_dense_core,beta_dense_core,crit_dense_core,delta_rho,theta_mag,mass_c,Mach
-
   ! Hydro parameters
   namelist/hydro_params/gamma,courant_factor,smallr,smallc &
        & ,niter_riemann,slope_type,difmag &
@@ -116,12 +100,9 @@ subroutine read_hydro_params(nml_ok)
 #endif
 
   ! Read namelist file
+  call read_init_params(1,nml_ok)
+
   rewind(1)
-  read(1,NML=init_params,END=121)
-  goto 122
-121 write(*,*)' You need to set up namelist &INIT_PARAMS in parameter file'
-  call clean_stop
-122 rewind(1)
 
   ! Fail if physics params is found
   read(1, NML=physics_params, end=110)
@@ -536,3 +517,48 @@ subroutine read_hydro_params(nml_ok)
 #endif
 
 end subroutine read_hydro_params
+!###############################################################
+!###############################################################
+!###############################################################
+subroutine read_init_params(namelist_unit,nml_ok)
+   use amr_parameters
+   use amr_commons
+   use hydro_parameters
+   use collapse_parameters
+   implicit none
+   integer,intent(in)::namelist_unit
+   logical,intent(inout)::nml_ok
+   integer::nml_err
+
+  ! Initial conditions parameters
+  namelist/init_params/condinit_kind,filetype,initfile,multiple,nregion,region_type &
+       & ,x_center,y_center,z_center,aexp_ini &
+       & ,length_x,length_y,length_z,exp_region &
+       & ,d_region,u_region,v_region,w_region,p_region &
+#ifdef SOLVERmhd
+       & ,A_region,B_region,C_region,B_ave &
+#endif
+#if NVAR>NHYDRO+NENER
+       & ,var_region &
+#endif
+#if NENER>0
+       & ,prad_region &
+#endif
+       & ,omega_b,alpha_dense_core,beta_dense_core,crit_dense_core,delta_rho,theta_mag,mass_c,Mach
+
+   ! Go to the beginning of the file
+   rewind(namelist_unit)
+
+   ! Read namelist
+   read(namelist_unit,NML=init_params,IOSTAT=nml_err)
+
+   if(nml_err<0)then
+      ! EOF reached before namelist was found
+      if(myid==1)write(*,*)'You need to set up namelist &INIT_PARAMS in parameter file.'
+      nml_ok=.false.
+   elseif(nml_err>0)then
+      if(myid==1)write(*,*)'Error reading namelist &INIT_PARAMS. Check formatting.'
+      nml_ok=.false.
+   endif
+
+end subroutine read_init_params

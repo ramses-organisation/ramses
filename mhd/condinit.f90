@@ -156,6 +156,8 @@ end subroutine orzag_tang_condinit
 subroutine collapse_condinit(x,q,dx,nn)
   use amr_commons, only:myid
   use amr_parameters
+  use collapse_parameters
+  use collapse_commons
   use hydro_commons
   use poisson_parameters
   use constants, only:mH,kB,M_sun,pc2cm
@@ -167,52 +169,19 @@ subroutine collapse_condinit(x,q,dx,nn)
   !================================================================
   ! This routine generates initial conditions of a collapsing core
   !================================================================
-  integer :: i,j,k,id,iu,iv,iw,ip
-  real(dp):: x0,y0,z0,rc,rs,xx,yy,zz,pi,r0,d0,B0,p0,omega0,mass_c_cu,scale_m
+  integer :: i,id,iu,iv,iw,ip
+  real(dp):: x0,y0,z0,rc,rs,xx,yy,zz,pi
   integer :: ivar, np
-  real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   real(dp),dimension(1:3,1:3):: rot_M,rot_invM,rot_tilde
   real(dp):: theta_mag_radians
 
-  logical,save:: first=.true.
-  real(dp),dimension(1:3,1:100,1:100,1:100),save::q_idl
-  real(dp),save::vx_tot,vy_tot,vz_tot,vx2_tot,vy2_tot,vz2_tot
-  integer,save:: n_size
   integer:: ind_i, ind_j, ind_k
-  real(dp),save:: ind,seed1,seed2,seed3,xi,yi,zi,vx,vy,vz
-  real(dp),save:: C_s,v_rms
-  integer, save :: count_vrms
 
   id=1; iu=2; iv=3; iw=4; ip=5
   x0=0.5*boxlen
   y0=0.5*boxlen
   z0=0.5*boxlen
   pi=acos(-1.0d0)
-
-  ! Conversion factor from user units to cgs units
-  call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
-  scale_m=scale_d*scale_l**ndim
-
-  ! cloud mass (warning mass_c should not be changed, because condinit called not just once)
-  ! mass_c    is in solar mass
-  ! mass_c_cu is in code units
-  mass_c_cu = mass_c * (M_sun / scale_m )
-
-  ! cloud radius
-  r0=(alpha_dense_core*2.*6.67d-8*mass_c_cu*scale_m*mu_gas*mH/(5.*kB*T_eos))/scale_l
-  ! cloud density
-  d0 = 3.0d0*mass_c_cu/(4.0d0*pi*r0**3.)
-
-  ! cloud rotation ! remember that G=1 in code units
-  omega0 = sqrt(beta_dense_core*4.*pi*d0)
-
-  ! cloud pressure ! remember that G=1 in code units
-  p0 = alpha_dense_core*d0*d0*r0*r0*8.*pi/15.
-
-  ! vertical magnetic field ! remember that G=1 in code units (and that B as a factor 1/sqrt(4pi) between SI and Gaussian units)
-  B0 = sqrt(4.*pi/5.)/0.53*crit_dense_core*d0*r0
-  ! B0 could be defined equivalently as
-  !B0 = mass_c_cu*3./sqrt(5.)/0.53*crit_dense_core/r0**2/sqrt(4.*pi)
 
   ! angle between the rotation axis and the magnetic field
   theta_mag_radians= theta_mag/180.0d0*pi
@@ -228,76 +197,6 @@ subroutine collapse_condinit(x,q,dx,nn)
   rot_tilde(1,1:3) = (/0.0d0,1.0d0,0.0d0/)
   rot_tilde(2,1:3) = (/-1.0d0,0.0d0,0.0d0/)
   rot_tilde(3,1:3) = (/0.0d0,0.0d0,0.0d0/)
-
-  if(first) then
-    ! sound speed
-    C_s = sqrt(kB*T_eos/(mu_gas*mH))/scale_v
-    !C_s could be defined equivalently as sqrt( T_eos / (mu_gas*scale_T2) )
-
-    vx_tot=0.d0
-    vy_tot=0.d0
-    vz_tot=0.d0
-    vx2_tot=0.d0
-    vy2_tot=0.d0
-    vz2_tot=0.d0
-    v_rms=0.d0
-    count_vrms=0
-    if(Mach .ne. 0)then
-      if (myid==1) write(*,*) 'Read the file which contains the initial turbulent velocity field'
-      open(20,file='init_turb.data',form='formatted')
-      read(20,*) n_size, ind, seed1,seed2,seed3
-      if(n_size .ne. 100) then
-          write(*,*) 'Unexpected field size'
-          stop
-      endif
-      do k=1,n_size
-        do j=1,n_size
-          do i=1,n_size
-            read(20,*)xi,yi,zi,vx,vy,vz
-            q_idl(1,i,j,k) = vx
-            q_idl(2,i,j,k) = vy
-            q_idl(3,i,j,k) = vz
-            xi = boxlen*((i-0.5)/n_size)-x0
-            yi = boxlen*((j-0.5)/n_size)-y0
-            zi = boxlen*((k-0.5)/n_size)-z0
-            rs=sqrt(xi**2+yi**2+zi**2)
-
-            IF(rs .le. r0) THEN
-              !print*, vx_tot,vy_tot,vz_tot,vx2_tot,vy2_tot,vz2_tot
-              vx_tot = vx_tot + vx
-              vy_tot = vy_tot + vy
-              vz_tot = vz_tot + vz
-
-              vx2_tot = vx2_tot + vx**2
-              vy2_tot = vy2_tot + vy**2
-              vz2_tot = vz2_tot + vz**2
-
-              count_vrms=count_vrms+1
-            end if
-          end do
-        end do
-      end do
-      close(20)
-      v_rms=sqrt((vx2_tot+vy2_tot+vz2_tot)/dble(count_vrms)-((vx_tot+vy_tot+vz_tot)/dble(count_vrms))**2)
-      if (myid == 1) print *, 'v_rms for given seed =',v_rms
-      ! correction factor to have the expected Mach number stored in v_rms
-      v_rms = Mach*C_s/v_rms
-      if (myid == 1) print *, 'correction factor for turbulent field =',v_rms
-   end if
-
-   if(myid==1)then
-      print*,'alpha_dense_core=',alpha_dense_core
-      print*,'beta_dense_core=',beta_dense_core
-      print*,'Mass=',mass_c,' Msun'
-      print*,'d0 (in g/cc)=',d0*scale_d
-      print*,'Turbulent Mach,cs (km/s)=',Mach,C_s*scale_v/1e5
-      print*,'r0,boxlen (in code units)=',r0,boxlen
-      print*,'r0,boxlen (in pc)=',r0*scale_l/pc2cm,boxlen*scale_l/pc2cm
-    endif
-    first = .false.
-  end if
-
-
 
   DO i=1,nn
      xx=x(i,1)-x0
@@ -371,6 +270,126 @@ subroutine collapse_condinit(x,q,dx,nn)
   ENDDO
 
 end subroutine collapse_condinit
+!================================================================
+!================================================================
+!================================================================
+!================================================================
+subroutine prep_collapse
+  use amr_commons, only:myid
+  use amr_parameters
+  use collapse_parameters
+  use collapse_commons
+  use hydro_commons
+  use poisson_parameters
+  use constants, only:mH,kB,M_sun,pc2cm
+  implicit none
+  ! local
+  real(dp):: C_s
+  real(dp)::vx2_tot,vy2_tot,vz2_tot
+  real(dp):: ind,seed1,seed2,seed3
+  integer :: i,j,k
+  real(dp):: xi,yi,zi,vx,vy,vz,rs,x0,y0,z0
+  real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
+  real(dp)::scale_m,mass_c_cu,pi
+
+  pi=acos(-1.0d0)
+
+  ! Conversion factor from user units to cgs units
+  call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
+  scale_m=scale_d*scale_l**ndim
+
+  ! cloud mass (warning mass_c should not be changed, because condinit called not just once)
+  ! mass_c    is in solar mass
+  ! mass_c_cu is in code units
+  mass_c_cu = mass_c * (M_sun / scale_m )
+
+  ! cloud radius
+  r0=(alpha_dense_core*2.*6.67d-8*mass_c_cu*scale_m*mu_gas*mH/(5.*kB*T_eos))/scale_l
+
+  ! cloud density
+  d0 = 3.0d0*mass_c_cu/(4.0d0*pi*r0**3.)
+
+  ! cloud rotation ! remember that G=1 in code units
+  omega0 = sqrt(beta_dense_core*4.*pi*d0)
+
+  ! cloud pressure ! remember that G=1 in code units
+  p0 = alpha_dense_core*d0*d0*r0*r0*8.*pi/15.
+
+  ! vertical magnetic field ! remember that G=1 in code units (and that B as a factor 1/sqrt(4pi) between SI and Gaussian units)
+  B0 = sqrt(4.*pi/5.)/0.53*crit_dense_core*d0*r0
+  ! B0 could be defined equivalently as
+  !B0 = mass_c_cu*3./sqrt(5.)/0.53*crit_dense_core/r0**2/sqrt(4.*pi)
+
+  ! sound speed
+  C_s = sqrt(kB*T_eos/(mu_gas*mH))/scale_v
+  !C_s could be defined equivalently as sqrt( T_eos / (mu_gas*scale_T2) )
+
+  x0=0.5*boxlen
+  y0=0.5*boxlen
+  z0=0.5*boxlen
+
+  vx_tot=0.d0
+  vy_tot=0.d0
+  vz_tot=0.d0
+  vx2_tot=0.d0
+  vy2_tot=0.d0
+  vz2_tot=0.d0
+  v_rms=0.d0
+  count_vrms=0
+  if(Mach .ne. 0)then
+     if (myid==1) write(*,*) 'Read the file which contains the initial turbulent velocity field'
+     open(20,file='init_turb.data',form='formatted')
+     read(20,*) n_size, ind, seed1,seed2,seed3
+     if(n_size .ne. 100) then
+        write(*,*) 'Unexpected field size'
+        stop
+     endif
+     do k=1,n_size
+        do j=1,n_size
+           do i=1,n_size
+              read(20,*)xi,yi,zi,vx,vy,vz
+              q_idl(1,i,j,k) = vx
+              q_idl(2,i,j,k) = vy
+              q_idl(3,i,j,k) = vz
+              xi = boxlen*((i-0.5)/n_size)-x0
+              yi = boxlen*((j-0.5)/n_size)-y0
+              zi = boxlen*((k-0.5)/n_size)-z0
+              rs=sqrt(xi**2+yi**2+zi**2)
+
+              IF(rs .le. r0) THEN
+                 !print*, vx_tot,vy_tot,vz_tot,vx2_tot,vy2_tot,vz2_tot
+                 vx_tot = vx_tot + vx
+                 vy_tot = vy_tot + vy
+                 vz_tot = vz_tot + vz
+
+                 vx2_tot = vx2_tot + vx**2
+                 vy2_tot = vy2_tot + vy**2
+                 vz2_tot = vz2_tot + vz**2
+
+                 count_vrms=count_vrms+1
+              end if
+           end do
+        end do
+     end do
+     close(20)
+     v_rms=sqrt((vx2_tot+vy2_tot+vz2_tot)/dble(count_vrms)-((vx_tot+vy_tot+vz_tot)/dble(count_vrms))**2)
+     if (myid == 1) print *, 'v_rms for given seed =',v_rms
+     ! correction factor to have the expected Mach number stored in v_rms
+     v_rms = Mach*C_s/v_rms
+     if (myid == 1) print *, 'correction factor for turbulent field =',v_rms
+  end if
+
+  if(myid==1)then
+     print*,'alpha_dense_core=',alpha_dense_core
+     print*,'beta_dense_core=',beta_dense_core
+     print*,'Mass=',mass_c,' Msun'
+     print*,'d0 (in g/cc)=',d0*scale_d
+     print*,'Turbulent Mach,cs (km/s)=',Mach,C_s*scale_v/1e5
+     print*,'r0,boxlen (in code units)=',r0,boxlen
+     print*,'r0,boxlen (in pc)=',r0*scale_l/pc2cm,boxlen*scale_l/pc2cm
+  endif
+
+end subroutine prep_collapse
 !================================================================
 !================================================================
 !================================================================
