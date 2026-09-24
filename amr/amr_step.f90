@@ -497,6 +497,14 @@ recursive subroutine amr_step(ilevel,icount)
      if(strict_equilibrium>0)call make_virtual_fine_dp(p_eq(1),ilevel)
      if(simple_boundary)call make_boundary_hydro(ilevel)
   endif
+#ifdef RT
+  if(rt)then
+     do ivar=1,nrtvar
+        call make_virtual_fine_dp(rtuold(1,ivar),ilevel)
+     end do
+     if(simple_boundary)call rt_make_boundary_hydro(ilevel)
+  endif
+#endif
 
 #ifdef SOLVERmhd
   ! Magnetic diffusion step
