@@ -233,11 +233,15 @@ subroutine init_amr
   father=0; nbor=0; next=0; prev=0
 
   ! Allocate pointer to particles linked lists
+  ! and helper arrays for particle moves
   if(pic)then
      allocate(headp(1:ngridmax))
      allocate(tailp(1:ngridmax))
      allocate(numbp(1:ngridmax))
      headp=0; tailp=0; numbp=0
+     allocate(newgridp(1:npartmax))
+     allocate(nmovep(1:ngridmax))
+     newgridp=0; nmovep=0
   endif
 
   ! Initialize AMR grid linked list

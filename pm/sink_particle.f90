@@ -150,7 +150,6 @@ subroutine create_cloud_from_sink
   real(dp),dimension(1:ndim)::xrel
   real(dp),dimension(1:nvector,1:ndim)::xtest
   integer ,dimension(1:nvector)::ind_grid,cc,ind_cloud
-  logical ,dimension(1:nvector)::ok_true
   logical ,dimension(1:ndim)::period
   logical ::in_box
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
@@ -164,8 +163,6 @@ subroutine create_cloud_from_sink
 #endif
   ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
-
-  ok_true=.true.
 
   if(numbtot(1,1)==0) return
   if(verbose)write(*,*)' Entering create_cloud_from_sink'
@@ -341,7 +338,7 @@ if (cloud_pts_check) then
 
                        if(cc(1).eq.myid)then
                           call remove_free(ind_cloud,1)
-                          call add_list(ind_cloud,ind_grid,ok_true,1)
+                          call add_list(ind_cloud,ind_grid,1)
                           indp               = ind_cloud(1)
                           idp(indp)          = -isink
                           typep(indp)%family = FAM_CLOUD
@@ -392,7 +389,7 @@ else !perform the code the traditional way
                  if(in_box)call cmp_cpumap(xtest,cc,1)
                  if(cc(1).eq.myid)then
                     call remove_free(ind_cloud,1)
-                    call add_list(ind_cloud,ind_grid,ok_true,1)
+                    call add_list(ind_cloud,ind_grid,1)
                     indp               = ind_cloud(1)
                     idp(indp)          = -isink
                     typep(indp)%family = FAM_CLOUD
@@ -451,7 +448,6 @@ subroutine kill_entire_cloud(ilevel)
   integer::igrid,jgrid,ipart,jpart,next_part
   integer::ig,ip,npart1,npart2,icpu,ncache,istart
   integer,dimension(1:nvector)::ind_grid,ind_part,ind_grid_part
-  logical,dimension(1:nvector)::ok=.true.
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
@@ -505,8 +501,8 @@ subroutine kill_entire_cloud(ilevel)
                  ind_grid_part(ip)=ig
               endif
               if(ip==nvector)then
-                 call remove_list(ind_part,ind_grid_part,ok,ip)
-                 call add_free_cond(ind_part,ok,ip)
+                 call remove_list(ind_part,ind_grid_part,ip)
+                 call add_free(ind_part,ip)
                  ip=0
                  ig=0
               end if
@@ -520,8 +516,8 @@ subroutine kill_entire_cloud(ilevel)
 
      ! End loop over grids
      if(ip>0)then
-        call remove_list(ind_part,ind_grid_part,ok,ip)
-        call add_free_cond(ind_part,ok,ip)
+        call remove_list(ind_part,ind_grid_part,ip)
+        call add_free(ind_part,ip)
      end if
   end do
 111 format('   Entering kill_cloud for level ',I2)

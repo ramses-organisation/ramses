@@ -55,7 +55,7 @@ subroutine star_formation(ilevel)
   integer ,dimension(1:nvector),save::ind_grid_new,ind_cell_new,ind_part
   integer ,dimension(1:nvector),save::ind_debris
   integer ,dimension(1:nvector,0:twondim)::ind_nbor
-  logical ,dimension(1:nvector),save::ok,ok_new=.true.
+  logical ,dimension(1:nvector),save::ok
   integer ,dimension(1:ncpu)::ntot_star_cpu,ntot_star_all
   character(LEN=80)::filename,filedir,fileloc,filedirini
   character(LEN=5)::nchar,ncharcpu
@@ -692,12 +692,12 @@ subroutine star_formation(ilevel)
 
         ! Update linked list for stars
         call remove_free(ind_part,nnew)
-        call add_list(ind_part,ind_grid_new,ok_new,nnew)
+        call add_list(ind_part,ind_grid_new,nnew)
 
         ! Update linked list for debris
         if(f_w>0)then
            call remove_free(ind_debris,nnew)
-           call add_list(ind_debris,ind_grid_new,ok_new,nnew)
+           call add_list(ind_debris,ind_grid_new,nnew)
         endif
 
         ! Calculate new star particle and modify gas density
