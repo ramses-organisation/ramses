@@ -74,6 +74,7 @@ sink_refine=.true.
 
 &POISSON_PARAMS
 gravity_type=0
+mg_safe_mode_reset=0
 /
 
 

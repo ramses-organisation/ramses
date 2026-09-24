@@ -160,6 +160,10 @@ subroutine dump_all
      if(myid==1.and.print_when_io) write(*,*)'Start backup poisson'
      filename=TRIM(filedir)//'grav_'//TRIM(nchar)//'.out'
      call backup_poisson(filename)
+     if(myid==1)then
+        filename=TRIM(filedir)//'safe_mode_'//TRIM(nchar)//'.txt'
+        call backup_safe_mode(filename)
+     end if
 #ifndef WITHOUTMPI
      if(synchro_when_io) call MPI_BARRIER(MPI_COMM_WORLD,info)
 #endif
