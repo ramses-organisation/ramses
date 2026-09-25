@@ -13,6 +13,9 @@ subroutine dump_all
 #if USE_TURB==1
   use turb_commons
 #endif
+#ifdef CRPHYS
+  use cr_parameters, only: cr_advect
+#endif
   use mpi_mod
   use buildinfo
   implicit none
@@ -142,6 +145,19 @@ subroutine dump_all
      if(synchro_when_io) call MPI_BARRIER(MPI_COMM_WORLD,info)
 #endif
      if(myid==1.and.print_when_io) write(*,*)'End backup rt'
+  endif
+#endif
+
+#ifdef CRPHYS
+  if(cr_advect)then
+     if(myid==1.and.print_when_io) write(*,*)'Start backup cr'
+     filename=TRIM(filedir)//'cr_'//TRIM(nchar)//'.out'
+     filename_desc = trim(filedir) // 'cr_file_descriptor.txt'
+     call cr_backup_hydro(filename, filename_desc)
+#ifndef WITHOUTMPI
+     if(synchro_when_io) call MPI_BARRIER(MPI_COMM_WORLD,info)
+#endif
+     if(myid==1.and.print_when_io) write(*,*)'End backup cr'
   endif
 #endif
 
