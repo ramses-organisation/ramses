@@ -88,6 +88,9 @@ ifeq ($(LIGHT_MPI_COMM), 1)
 endif
 # Add any user-provided flags from the command line
 DEFINES += $(USER_FLAGS)
+# Report make variable. Used by test suite coverage.
+print-%:
+	@echo '$($*)'
 #############################################################################
 # Compiler command for regular compilation (mpi or serial)
 F90 =
@@ -97,6 +100,8 @@ FC =
 FFLAGS_BASE =
 # Compiler flags for optimization
 FFLAGS_OPT = -O3
+# Compiler flags for test coverage
+FFLAGS_GCOV =
 # Compiler flags for linking
 LDFLAGS =
 # Load presets for MPIF90 and FFLAGS_OPT for specified machine
@@ -123,8 +128,9 @@ ifeq ($(COMPILER),GNU)
    FFLAGS_OPT += -flto -fwhole-program
    # Flags for coverage calculation (resets optimization flags)
    ifeq ($(GCOV),1)
-      FFLAGS_BASE += -fprofile-arcs -ftest-coverage
-      LDFLAGS = -fprofile-arcs -ftest-coverage
+      FFLAGS_GCOV = -fprofile-arcs -ftest-coverage
+      FFLAGS_BASE += $(FFLAGS_GCOV)
+      LDFLAGS = $(FFLAGS_GCOV)
       FFLAGS_OPT = -O0
    else ifeq ($(DEBUG),1)
       # Flags for debugging (resets optimization flags)
@@ -281,7 +287,7 @@ ramses_aton: $(MODOBJ) $(ATON_MODOBJ) $(AMRLIB) $(ATON_OBJ) ramses.o
 	rm write_patch.f90
 #############################################################################
 write_gitinfo.o: FORCE
-	$(FC) -O0 -cpp -DPATCH=\'$(PATCH)\' -DGITBRANCH=\'$(GITBRANCH)\' \
+	$(FC) -O0 $(FFLAGS_GCOV) -cpp -DPATCH=\'$(PATCH)\' -DGITBRANCH=\'$(GITBRANCH)\' \
 		-DGITHASH=\'"$(GITHASH)"\' -DGITREPO=\'$(GITREPO)\' \
 		-DBUILDDATE=\'"$(BUILDDATE)"\' -DBUILDCOMMAND=\'"$(BUILDCOMMAND)"\' -c ../amr/write_gitinfo.f90 -o $@
 write_makefile.o: FORCE
