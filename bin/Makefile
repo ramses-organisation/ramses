@@ -95,6 +95,8 @@ F90 =
 FC =
 # Base compiler flags for compilation
 FFLAGS_BASE =
+# Compiler flags to run the preprocessor
+FFLAGS_PP =
 # Compiler flags for optimization
 FFLAGS_OPT = -O3
 # Compiler flags for linking
@@ -117,7 +119,8 @@ ifeq ($(COMPILER),GNU)
    FFLAGS_BASE += -ffree-line-length-none -fimplicit-none
    # -cpp: run the C preprocessor on all files, also expanding macros
    # (NDIM, NVECTOR, ...) in the Fortran source; add macro definitions
-   FFLAGS_BASE += -cpp $(DEFINES)
+   FFLAGS_PP = -cpp
+   FFLAGS_BASE += $(FFLAGS_PP) $(DEFINES)
    ifeq ($(MPI),0)
       FFLAGS_BASE += -DWITHOUTMPI
    endif
@@ -162,7 +165,8 @@ ifeq ($(COMPILER),$(filter $(COMPILER),INTEL INTELX))
    FC = $(SERIALF90) -fp-model source
    FFLAGS_BASE += -fp-model source
    # -cpp: run the C preprocessor on all files; add macro definitions
-   FFLAGS_BASE += -cpp $(DEFINES)
+   FFLAGS_PP = -cpp
+   FFLAGS_BASE += $(FFLAGS_PP) $(DEFINES)
    ifeq ($(MPI),1)
       # use the POSIX PXF routines for the signal handler and mkdir
       FFLAGS_BASE += -DNOSYSTEM
@@ -208,7 +212,8 @@ ifeq ($(COMPILER),CRAY)
    # -e Z: run the preprocessor on all files (also writes a .i file)
    # -F: expand macros in the Fortran source, not only on directive lines;
    # add macro definitions
-   FFLAGS_BASE += -e Z -F $(DEFINES)
+   FFLAGS_PP = -e Z -F
+   FFLAGS_BASE += $(FFLAGS_PP) $(DEFINES)
    # SIGNAL does not work with CCE: skip setting the signal handler
    FFLAGS_BASE += -DCRAY
    ifeq ($(MPI),0)
@@ -338,7 +343,7 @@ ramses_aton: $(MODOBJ) $(ATON_MODOBJ) $(AMRLIB) $(ATON_OBJ) ramses.o
 	rm write_patch.f90
 #############################################################################
 write_gitinfo.o: FORCE
-	$(FC) -O0 -cpp -DPATCH=\'$(PATCH)\' -DGITBRANCH=\'$(GITBRANCH)\' \
+	$(FC) -O0 $(FFLAGS_PP) -DPATCH=\'$(PATCH)\' -DGITBRANCH=\'$(GITBRANCH)\' \
 		-DGITHASH=\'"$(GITHASH)"\' -DGITREPO=\'$(GITREPO)\' \
 		-DBUILDDATE=\'"$(BUILDDATE)"\' -DBUILDCOMMAND=\'"$(BUILDCOMMAND)"\' -c ../amr/write_gitinfo.f90 -o $@
 write_makefile.o: FORCE
