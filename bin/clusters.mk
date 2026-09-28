@@ -27,8 +27,10 @@ endif
 #
 ifeq ($(MACHINE),lumi)
    MPIF90 = ftn
-   # mismatch flag needed to circumvent MPI_ALLREDUCE error
-   FFLAGS_BASE += -fallow-argument-mismatch
+   # mismatch flag needed to circumvent MPI_ALLREDUCE error (gfortran only)
+   ifeq ($(COMPILER),GNU)
+      FFLAGS_BASE += -fallow-argument-mismatch
+   endif
 endif
 
 #
