@@ -7,7 +7,7 @@
 DEBUG = 0
 # Do we want to test coverage?
 GCOV = 0
-# Compiler flavor: GNU or INTEL (classic ifort) or INTELX (new LLVM-based ifx)
+# Compiler flavor: GNU or INTEL (classic ifort) or INTELX (new LLVM-based ifx) or CRAY (CCE)
 COMPILER = GNU
 # Target cluster, to set cluster specific optimisation flags (see Makefile.machines)
 MACHINE = generic
@@ -165,6 +165,44 @@ ifeq ($(COMPILER),$(filter $(COMPILER),INTEL INTELX))
       FFLAGS_BASE += -g -traceback -check bounds -warn all
       FFLAGS_BASE += -fpe0 -ftrapuv -init=zero -init=snan -init=arrays
       LDFLAGS = -g -traceback
+      FFLAGS_OPT = -O0
+   endif
+endif
+
+# Cray compiler (CCE, through the ftn wrapper)
+ifeq ($(COMPILER),CRAY)
+   SERIALF90 = ftn
+   # set compiler commands
+   ifeq ($(MPI),1)
+      F90 = $(MPIF90)
+   else
+      F90 = $(SERIALF90)
+   endif
+   # -N 1023: maximum line length (default is 132)
+   # -e I: act as if every unit starts with 'implicit none'
+   # -h fp1: value-safe floating point, comparable to Intel's -fp-model source
+   # (the default, fp2, allows reassociation and reciprocal division)
+   FC = $(SERIALF90) -N 1023 -e I -h fp1
+   FFLAGS_BASE += -N 1023 -e I -h fp1
+   # -e m: write .mod files
+   FFLAGS_BASE += -e m
+   # -e Z: run the preprocessor on all files (also writes a .i file)
+   # -F: expand macros in the Fortran source, not only on directive lines;
+   # add macro definitions
+   FFLAGS_BASE += -e Z -F $(DEFINES)
+   # SIGNAL does not work with CCE: skip setting the signal handler
+   FFLAGS_BASE += -DCRAY
+   ifeq ($(MPI),0)
+      FFLAGS_BASE += -DWITHOUTMPI
+   endif
+   # Flags for debugging (resets optimization flags)
+   ifeq ($(DEBUG),1)
+      # -g: debug symbols
+      # -R bcps: runtime checks on array bounds, array conformance, pointers
+      # and substrings
+      # -K trap=fp: stop on division by zero, overflow and invalid operations
+      FFLAGS_BASE += -g -R bcps -K trap=fp
+      LDFLAGS = -g
       FFLAGS_OPT = -O0
    endif
 endif
