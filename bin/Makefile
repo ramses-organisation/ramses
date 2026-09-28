@@ -207,6 +207,8 @@ ifeq ($(COMPILER),CRAY)
    # (the default, fp2, allows reassociation and reciprocal division)
    FC = $(SERIALF90) -N 1023 -e I -h fp1
    FFLAGS_BASE += -N 1023 -e I -h fp1
+   # -O3 breaks the initial mesh (make_grid_fine fails on sedov3d), use -O2
+   FFLAGS_OPT := $(patsubst -O3,-O2,$(FFLAGS_OPT))
    # -e m: write .mod files
    FFLAGS_BASE += -e m
    # -e Z: run the preprocessor on all files (also writes a .i file)
