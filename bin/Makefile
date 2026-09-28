@@ -111,14 +111,18 @@ ifeq ($(COMPILER),GNU)
    else
       F90 = $(SERIALF90)
    endif
+   # -ffree-line-length-none: no limit on line length (default is 132)
+   # -fimplicit-none: act as if every unit starts with 'implicit none'
    FC = $(SERIALF90) -ffree-line-length-none -fimplicit-none
    FFLAGS_BASE += -ffree-line-length-none -fimplicit-none
-   # add preprocessor macro definitions to compilation flags
+   # -cpp: run the C preprocessor on all files, also expanding macros
+   # (NDIM, NVECTOR, ...) in the Fortran source; add macro definitions
    FFLAGS_BASE += -cpp $(DEFINES)
    ifeq ($(MPI),0)
       FFLAGS_BASE += -DWITHOUTMPI
    endif
-   # link-time optimization accross files
+   # -flto: link-time optimization (inlining) accross files
+   # -fwhole-program: treat the linked program as a single unit
    LDFLAGS += -flto -fwhole-program
    FFLAGS_OPT += -flto -fwhole-program
    # Flags for coverage calculation (resets optimization flags)
@@ -128,7 +132,12 @@ ifeq ($(COMPILER),GNU)
       FFLAGS_OPT = -O0
    else ifeq ($(DEBUG),1)
       # Flags for debugging (resets optimization flags)
+      # -g: debug symbols; -fbacktrace: print a backtrace on runtime errors
+      # -fbounds-check: check array bounds at runtime
+      # -Wuninitialized -Wall: warn about uninitialized variables and more
       FFLAGS_BASE += -g -fbacktrace -fbounds-check -Wuninitialized -Wall
+      # -ffpe-trap: stop on division by zero, underflow, overflow and NaN
+      # -finit-real=nan: initialize local reals to NaN
       FFLAGS_BASE += -ffpe-trap=zero,underflow,overflow,invalid -finit-real=nan
       LDFLAGS = -g
       FFLAGS_OPT = -O0
@@ -148,21 +157,31 @@ ifeq ($(COMPILER),$(filter $(COMPILER),INTEL INTELX))
    else
       F90 = $(SERIALF90)
    endif
+   # -fp-model source: value-safe floating point, i.e. no reassociation or
+   # other optimizations that change results (the default, fast=1, allows them)
    FC = $(SERIALF90) -fp-model source
    FFLAGS_BASE += -fp-model source
-   # add preprocessor macro definitions to compilation flags
+   # -cpp: run the C preprocessor on all files; add macro definitions
    FFLAGS_BASE += -cpp $(DEFINES)
    ifeq ($(MPI),1)
+      # use the POSIX PXF routines for the signal handler and mkdir
       FFLAGS_BASE += -DNOSYSTEM
    else
       FFLAGS_BASE += -DWITHOUTMPI
    endif
-   # link-time optimization and inlining accross files
+   # -ipo: interprocedural optimization (inlining) accross files
+   # -inline-forceinline: inline whenever possible, ignoring the heuristics
    LDFLAGS += -ipo -inline-forceinline
    FFLAGS_OPT += -ipo -inline-forceinline
    # Flags for debugging (resets optimization flags)
    ifeq ($(DEBUG),1)
+      # -g: debug symbols; -traceback: print a backtrace on runtime errors
+      # -check bounds: check array bounds at runtime; -warn all: all warnings
       FFLAGS_BASE += -g -traceback -check bounds -warn all
+      # -fpe0: stop on division by zero, overflow and invalid operations (NaN)
+      # -ftrapuv: fill uninitialized stack variables with an unusual value
+      # -init: initialize reals to signaling NaN, integers and logicals to
+      # zero, arrays included
       FFLAGS_BASE += -fpe0 -ftrapuv -init=zero -init=snan -init=arrays
       LDFLAGS = -g -traceback
       FFLAGS_OPT = -O0
