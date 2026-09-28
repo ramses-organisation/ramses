@@ -116,7 +116,7 @@ subroutine backup_hydro_recv
         list_recv(src)=.true.
      else
         print *,'Error: unexpected message received by ',myid_world
-        call MPI_ABORT(MPI_COMM_WORLD,1,ierr)
+        call clean_stop
      end if
 
      ! Generate filename
@@ -132,7 +132,7 @@ subroutine backup_hydro_recv
      open(unit=ilun,file=trim(scratchdir)//trim(filename),status="replace",form="unformatted",action="write",iostat=ierr)
      if(ierr/=0)then
         print *,'Error: open file failed in backup_hydro_recv'
-        call MPI_ABORT(MPI_COMM_WORLD,1,ierr)
+        call clean_stop
      end if
 
      write(ilun)ncpu

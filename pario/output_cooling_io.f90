@@ -31,7 +31,7 @@ subroutine output_cool_recv
   open(unit=ilun,file=trim(scratchdir)//trim(filename),status="replace",form="unformatted",action="write",iostat=ierr)
   if(ierr/=0)then
      print *,'Error: open file failed in output_cool_recv'
-     call MPI_ABORT(MPI_COMM_WORLD,1,ierr)
+     call clean_stop
   end if
 
   call MPI_RECV(nn,1,MPI_INTEGER,1,tag,MPI_COMM_IOGROUP,MPI_STATUS_IGNORE,ierr)
