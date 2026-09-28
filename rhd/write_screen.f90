@@ -197,7 +197,7 @@ subroutine write_screen
                     endif
                     if ((qq(icell,1)<0d0).or.(qq(icell,5)<0d0).or.E<0d0 ) then
                        write(*,*) 'negative pressure or density output'
-                       stop
+                       call clean_stop
                     endif
                     dd(icell)=qq(icell,1)
                     uu(icell)=qq(icell,2)
