@@ -1353,7 +1353,6 @@ subroutine cmpflxm(qm,im1,im2,jm1,jm2,km1,km2, &
                  CALL hydro_acoustic   (qleft,qright,fgdnv)
               CASE DEFAULT
                  write(*,*)'unknown riemann solver'
-                 write(*,*)'This should have been caught during namelist reading: the two lists have drifted apart'
                  call clean_stop
               END SELECT
               ELSE
@@ -1893,7 +1892,6 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
                      CALL upwind       (qleft,qright,fmean_x,zero_flux)
                   CASE DEFAULT
                      write(*,*)'unknown 2D riemann solver'
-                     write(*,*)'This should have been caught during namelist reading: the two lists have drifted apart'
                      call clean_stop
                   END SELECT
 
@@ -1948,7 +1946,6 @@ SUBROUTINE cmp_mag_flx(qRT,irt1,irt2,jrt1,jrt2,krt1,krt2, &
                      CALL upwind       (qleft,qright,fmean_y,zero_flux)
                   CASE DEFAULT
                      write(*,*)'unknown 2D riemann solver'
-                     write(*,*)'This should have been caught during namelist reading: the two lists have drifted apart'
                      call clean_stop
                   END SELECT
 
@@ -2167,7 +2164,6 @@ subroutine uslope(q,dq,dtdx,i,j,k,ngrid)
 #endif
       else
          write(*,*)'Unknown slope type'
-         write(*,*)'This should have been caught during namelist reading: the two lists have drifted apart'
          call clean_stop
       endif
    end do
@@ -2381,7 +2377,6 @@ subroutine uslope_mag(bf,dbf,dx,dt,ngrid)
 #endif
   else
      write(*,*)'Unknown slope_mag_type'
-     write(*,*)'This should have been caught during namelist reading: the two lists have drifted apart'
      call clean_stop
   endif
 #endif

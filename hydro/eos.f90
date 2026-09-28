@@ -30,7 +30,6 @@ subroutine barotropic_eos_temperature(nH, temperature)
       endif
    CASE DEFAULT
      write(*,*)'unknown barotropic eos form'
-     write(*,*)'This should have been caught during namelist reading: the two lists have drifted apart'
      call clean_stop
    END SELECT
 

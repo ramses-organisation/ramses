@@ -367,7 +367,6 @@ subroutine interpol_hydro(u1,u2,nn)
      if(interpol_type==4)then
         if (interpol_var .ne. 2)then
            write(*,*)'interpol_type=4 is designed for interpol_var=2'
-           write(*,*)'This should have been caught during namelist reading: the two lists have drifted apart'
            call clean_stop
         end if
         if (ivar>1 .and. (ivar <= 1+ndim))then
