@@ -614,7 +614,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
      if(rt_isIRtrap) then
         if(nener .le. 0) then
            print*,'Trying to store E_trapped pressure, but NERAD too small!!'
-           STOP
+           call clean_stop
         endif
         iNp=iGroups(iIR)
         unit_tau = 1.5d0 * dx_loc * scale_d * scale_l
