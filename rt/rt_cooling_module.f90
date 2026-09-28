@@ -102,7 +102,7 @@ SUBROUTINE rt_set_model(h,omegab, omega0, omegaL, astart_sim, T2_sim)
      write(*,*) 'ERROR in set_model : astart_sim is too small.'
      write(*,*) 'astart     =',astart
      write(*,*) 'astart_sim =',astart_sim
-     STOP
+     call clean_stop
   endif
   aend=astart_sim
   dasura=0.02d0
@@ -846,7 +846,7 @@ SUBROUTINE display_coolinfo(stopRun, loopcnt, i, dtDone, dt, ddt, nH    &
   print*,group_egy(:)
   if(stopRun) then
      print *,'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
-     STOP
+     call clean_stop
   endif
 
 111 format(' Stopping because of large number of timestesps in', &
