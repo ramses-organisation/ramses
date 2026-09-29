@@ -302,7 +302,7 @@ contains
 
         if (poisson) then 
           do i = 1, nleaf
-            epot_leaf = 0.5*vol*uu(i, 1)*phi_old(ind_leaf(i))
+            epot_leaf = 0.5*vol*uu(i, 1)*scale*phi_old(ind_leaf(i))
             epot_loc = epot_loc + epot_leaf
           end do
         end if
@@ -653,7 +653,7 @@ contains
 #ifdef OUTPUT_PARTICLE_POTENTIAL
       phi_part(i) = ptcl_phi(ind_part(i))
       epot_loc = epot_loc + 0.5 * mass_part(i) * phi_part(i)
-      epot_families_loc(type_part(i)) = epot_families_loc(type_part(i)) + 0.5 * mass_part(i) *  phi_part(i)
+      epot_families_loc(type_part(i)) = epot_families_loc(type_part(i)) + 0.5 * mass_part(i) *  phi_part(i) * scale
 #endif
     end do
 
