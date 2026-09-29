@@ -338,7 +338,7 @@ contains
         end do
 #endif
 
-        if(pressure_fix .and. deltaE_correct_pressure_fix)then
+        if(pressure_fix .and. deltaE_correct_pressure_fix .and. use_unew) then
           ! Correct internal energy if too small
           do i=1, nleaf
             ekin_leaf = 0.
