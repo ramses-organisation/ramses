@@ -114,7 +114,6 @@ subroutine update_time(ilevel)
            if (deltaE_enable) then 
                call print_energies(energies)
                call deltaE%print_processes()
-               call deltaE%initialize_processes()
            end if
 
            if(cooling.or.pressure_fix)then
@@ -136,6 +135,7 @@ subroutine update_time(ilevel)
 
            itest=1
         end if
+        if(deltaE_enable) call deltaE%initialize_processes()
         output_done=.false.
      end if
 
