@@ -39,7 +39,7 @@ recursive subroutine amr_step(ilevel,icount)
 
   if(deltaE_enable) then 
       deltaE_use_unew = .false.
-      deltaE_use_phi_old = .false.
+      deltaE_use_phi_old(ilevel) = .false.
   end if
   !-------------------------------------------
   ! Make new refinements and update boundaries
@@ -254,7 +254,7 @@ recursive subroutine amr_step(ilevel,icount)
      !save old potential for time-extrapolation at level boundaries
      call save_phi_old(ilevel)
 
-     if (deltaE_enable) deltaE_use_phi_old = .true. 
+     if (deltaE_enable) deltaE_use_phi_old(ilevel) = .true. 
                                call timer('rho','start')
      call rho_fine(ilevel,icount)
 
@@ -313,7 +313,7 @@ recursive subroutine amr_step(ilevel,icount)
      ! Compute gravitational acceleration
      call force_fine(ilevel,icount)
      if (deltaE_enable) then 
-         deltaE_use_phi_old = .false. 
+         deltaE_use_phi_old(ilevel) = .false. 
          call compute_transfer(ilevel, ilevel, deltaE%poisson, 2)
      end if
 

@@ -14,7 +14,7 @@ module deltaE_module
 
   ! DeltaE status
   logical::deltaE_use_unew
-  logical::deltaE_use_phi_old
+  logical, dimension(:), allocatable :: deltaE_use_phi_old
 
   ! Arrays
   integer, parameter :: nb_energy_kind = 13
@@ -75,6 +75,8 @@ contains
       if(myid==1)write(*,*)'Error reading namelist &DELTAE_PARAMS. Check formatting.'
       nml_ok=.false.
     end if
+
+    allocate(deltaE_use_phi_old(levelmin:nlevelmax))
 
     call deltaE%initialize_processes
 
@@ -244,6 +246,8 @@ contains
     real(kind=8)::mass_loc, ekin_loc, eint_loc, emag_loc, epot_loc, ekin_leaf, emag_leaf, epot_leaf
     real(kind=8)::mass_all
     real(dp), dimension(1:nvector, 1:nvar_all), save::uu
+    real(dp), dimension(1:nvector), save::phi_level
+
     real(dp), dimension(1:nvector, 1:ndim), save::gg
 
     real(dp):: e_cons, e_prim, e_trunc, div
@@ -304,9 +308,20 @@ contains
           end if
         end do
 
+
         if (poisson) then 
+          if (deltaE_use_phi_old(ilevel)) then 
+            do i = 1, nleaf
+              phi_level(i) = phi_old(ind_leaf(i))
+            end do
+          else
+            do i = 1, nleaf
+              phi_level(i) = phi(ind_leaf(i))
+            end do
+          end if
+
           do i = 1, nleaf
-            epot_leaf = 0.5*vol*uu(i, 1)*scale*phi_old(ind_leaf(i))
+            epot_leaf = 0.5*vol*uu(i, 1)*scale*phi_level(i)
             epot_loc = epot_loc + epot_leaf
           end do
         end if
