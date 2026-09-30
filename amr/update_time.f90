@@ -92,7 +92,7 @@ subroutine update_time(ilevel)
          if (deltaE_enable) then 
             energies = 0.0_dp
             do i=levelmin,nlevelmax
-               call compute_energies(i, .false., energies_level)
+               call compute_energies(i, energies_level)
                energies = energies + energies_level
             end do
          end if

@@ -37,6 +37,10 @@ recursive subroutine amr_step(ilevel,icount)
 
   if(verbose)write(*,999)icount,ilevel
 
+  if(deltaE_enable) then 
+      deltaE_use_unew = .false.
+      deltaE_use_phi_old = .false.
+  end if
   !-------------------------------------------
   ! Make new refinements and update boundaries
   !-------------------------------------------
@@ -96,7 +100,7 @@ recursive subroutine amr_step(ilevel,icount)
   ok_defrag=.false.
   if(levelmin.lt.nlevelmax)then
      if(ilevel==levelmin)then
-        if(deltaE_enable) call compute_transfer(levelmin, nlevelmax, .false., deltaE%flux_part, 1)
+        if(deltaE_enable) call compute_transfer(levelmin, nlevelmax, deltaE%flux_part, 1)
 
         if(nremap>0)then
            ! Skip first load balance because it has been performed before file dump
@@ -116,7 +120,7 @@ recursive subroutine amr_step(ilevel,icount)
               endif
            end if
         end if
-        if(deltaE_enable) call compute_transfer(levelmin, nlevelmax, .false., deltaE%flux_part, 2)
+        if(deltaE_enable) call compute_transfer(levelmin, nlevelmax, deltaE%flux_part, 2)
      end if
   end if
 
@@ -128,9 +132,9 @@ recursive subroutine amr_step(ilevel,icount)
                                call timer('sinks','start')
          
   if(sink) then 
-   if(deltaE_enable) call compute_transfer(levelmin, nlevelmax, .false., deltaE%star_formation, 1)
+   if(deltaE_enable) call compute_transfer(levelmin, nlevelmax, deltaE%star_formation, 1)
    call update_cloud(ilevel)
-   if(deltaE_enable) call compute_transfer(levelmin, nlevelmax, .false., deltaE%star_formation, 2)
+   if(deltaE_enable) call compute_transfer(levelmin, nlevelmax, deltaE%star_formation, 2)
   end if
 #endif
   !--------------------------------------------------------------------
@@ -139,9 +143,9 @@ recursive subroutine amr_step(ilevel,icount)
                                call timer('particles','start')
                          
   if(pic) then 
-    if(deltaE_enable) call compute_transfer(levelmin, nlevelmax, .false., deltaE%flux_part, 1)
+    if(deltaE_enable) call compute_transfer(levelmin, nlevelmax, deltaE%flux_part, 1)
     call make_tree_fine(ilevel)
-    if(deltaE_enable) call compute_transfer(levelmin, nlevelmax, .false., deltaE%flux_part, 2)
+    if(deltaE_enable) call compute_transfer(levelmin, nlevelmax, deltaE%flux_part, 2)
   end if
 
   !------------------------
@@ -214,12 +218,12 @@ recursive subroutine amr_step(ilevel,icount)
      ! Kinetic feedback from giant molecular clouds
      !----------------------------------------------------
 
-     if(deltaE_enable) call compute_transfer(levelmin, nlevelmax, .false., deltaE%feedback, 1)
+     if(deltaE_enable) call compute_transfer(levelmin, nlevelmax, deltaE%feedback, 1)
 
      call timer('feedback','start')
      if(hydro.and.star.and.eta_sn>0.and.f_w>0)call kinetic_feedback
 
-     if(deltaE_enable) call compute_transfer(levelmin, nlevelmax, .false., deltaE%feedback, 2)
+     if(deltaE_enable) call compute_transfer(levelmin, nlevelmax, deltaE%feedback, 2)
 
 
   endif
@@ -232,11 +236,11 @@ recursive subroutine amr_step(ilevel,icount)
      call make_stellar_from_sinks
   endif
   if (sn_feedback_sink) then
-     if(deltaE_enable) call compute_transfer(levelmin, nlevelmax, .false., deltaE%feedback, 1)
+     if(deltaE_enable) call compute_transfer(levelmin, nlevelmax, deltaE%feedback, 1)
 
      call make_sn_stellar
 
-     if(deltaE_enable) call compute_transfer(levelmin, nlevelmax, .false., deltaE%feedback, 2)
+     if(deltaE_enable) call compute_transfer(levelmin, nlevelmax, deltaE%feedback, 2)
 
   endif
 
@@ -245,18 +249,22 @@ recursive subroutine amr_step(ilevel,icount)
   ! Poisson source term
   !--------------------
   if(poisson)then
+
                                call timer('poisson','start')
      !save old potential for time-extrapolation at level boundaries
      call save_phi_old(ilevel)
+
+     if (deltaE_enable) deltaE_use_phi_old = .true. 
                                call timer('rho','start')
      call rho_fine(ilevel,icount)
+
   endif
 
   !------------------------------------------------------------------
   ! Sort particles between ilevel and ilevel+1, and between MPI ranks
   !------------------------------------------------------------------
   if(pic)then  
-     if(deltaE_enable) call compute_transfer(levelmin, nlevelmax, .false., deltaE%flux_part, 1)
+     if(deltaE_enable) call compute_transfer(levelmin, nlevelmax, deltaE%flux_part, 1)
 
      ! Remove particles to finer levels: hands particles that sit in refined regions down to ilevel+1, so the finer level owns them for its sub-steps.
                                call timer('particles','start')
@@ -266,7 +274,7 @@ recursive subroutine amr_step(ilevel,icount)
 
      call virtual_tree_fine(ilevel)
 
-     if(deltaE_enable) call compute_transfer(levelmin, nlevelmax, .false., deltaE%flux_part, 2)
+     if(deltaE_enable) call compute_transfer(levelmin, nlevelmax, deltaE%flux_part, 2)
   end if
 
   !---------------
@@ -278,14 +286,16 @@ recursive subroutine amr_step(ilevel,icount)
      ! Remove gravity source term with half time step and old force
      if(hydro)then
    
-        if(deltaE_enable) call compute_transfer(ilevel, ilevel, .false., deltaE%gravity_gas, 1)
+        if(deltaE_enable) call compute_transfer(ilevel, ilevel, deltaE%gravity_gas, 1)
 
         call synchro_hydro_fine(ilevel,-0.5*dtnew(ilevel),1)
         
-        if(deltaE_enable) call compute_transfer(ilevel, ilevel, .false., deltaE%gravity_gas, 2)
+        if(deltaE_enable) call compute_transfer(ilevel, ilevel, deltaE%gravity_gas, 2)
 
      endif
 
+
+     if(deltaE_enable) call compute_transfer(ilevel, ilevel, deltaE%poisson, 1)
 
      ! Compute gravitational potential
      if(ilevel>levelmin)then
@@ -302,6 +312,10 @@ recursive subroutine amr_step(ilevel,icount)
 
      ! Compute gravitational acceleration
      call force_fine(ilevel,icount)
+     if (deltaE_enable) then 
+         deltaE_use_phi_old = .false. 
+         call compute_transfer(ilevel, ilevel, deltaE%poisson, 2)
+     end if
 
 
 
@@ -309,13 +323,13 @@ recursive subroutine amr_step(ilevel,icount)
      if(pic)then
         call timer('particles','start')
    
-        if(deltaE_enable) call compute_transfer(ilevel, ilevel, .false., deltaE%gravity_part, 1)            
+        if(deltaE_enable) call compute_transfer(ilevel, ilevel, deltaE%gravity_part, 1)            
         if(static_dm.or.static_stars)then
            call synchro_fine_static(ilevel)
         else
            call synchro_fine(ilevel)
         end if
-        if(deltaE_enable) call compute_transfer(ilevel, ilevel, .false., deltaE%gravity_part, 2)     
+        if(deltaE_enable) call compute_transfer(ilevel, ilevel, deltaE%gravity_part, 2)     
    
 
      end if
@@ -326,10 +340,10 @@ recursive subroutine amr_step(ilevel,icount)
      if(hydro)then
         call timer('poisson','start')
    
-        if(deltaE_enable) call compute_transfer(ilevel, ilevel, .false., deltaE%gravity_gas, 1)     
+        if(deltaE_enable) call compute_transfer(ilevel, ilevel, deltaE%gravity_gas, 1)     
         ! Add gravity source term with half time step and new force
         call synchro_hydro_fine(ilevel,+0.5*dtnew(ilevel),1)
-        if(deltaE_enable) call compute_transfer(ilevel, ilevel, .false., deltaE%gravity_gas, 2)     
+        if(deltaE_enable) call compute_transfer(ilevel, ilevel, deltaE%gravity_gas, 2)     
 
 
 
@@ -375,9 +389,10 @@ recursive subroutine amr_step(ilevel,icount)
      dtnew(ilevel)=MIN(dtnew(ilevel-1)/real(nsubcycle(ilevel-1)),dtnew(ilevel))
   end if
 
-  if(deltaE_enable .and. deltaE_debug) call compute_transfer(ilevel, ilevel, .false., deltaE%corrections, 1)     
+  if(deltaE_enable .and. deltaE_debug) call compute_transfer(ilevel, ilevel, deltaE%corrections, 1)     
   ! Set unew equal to uold
                                call timer('hydro - set unew','start')
+  if(deltaE_enable) deltaE_use_unew = .true.
   if(hydro)call set_unew(ilevel)
 
 #ifdef RT
@@ -385,22 +400,25 @@ recursive subroutine amr_step(ilevel,icount)
                                call timer('radiative transfer','start')
   if(rt)call rt_set_unew(ilevel)
 #endif
-   if(deltaE_enable .and. deltaE_debug) call compute_transfer(ilevel, ilevel, .true., deltaE%corrections, 2)     
+   if(deltaE_enable .and. deltaE_debug) call compute_transfer(ilevel, ilevel, deltaE%corrections, 2)     
 
 
   !---------------------------
   ! Recursive call to amr_step
   !---------------------------
+
   if(ilevel<nlevelmax)then
      if(numbtot(1,ilevel+1)>0)then
+        if(deltaE_enable) deltaE_use_unew = .false.
         if(nsubcycle(ilevel)==2)then
            call amr_step(ilevel+1,1)
            call amr_step(ilevel+1,2)
         else
            call amr_step(ilevel+1,1)
         endif
-        if(deltaE_enable .and. deltaE_debug) call compute_transfer(levelmin, nlevelmax, .false., deltaE%corrections, 1)     
-        if(deltaE_enable .and. deltaE_debug) call compute_transfer(levelmin, nlevelmax, .true., deltaE%corrections, 2)     
+        if(deltaE_enable) deltaE_use_unew = .true.
+        if(deltaE_enable .and. deltaE_debug) call compute_transfer(levelmin, nlevelmax, deltaE%corrections, 1)     
+        if(deltaE_enable .and. deltaE_debug) call compute_transfer(levelmin, nlevelmax, deltaE%corrections, 2)     
 
      else
         ! Otherwise, update time and finer level time-step
@@ -424,9 +442,9 @@ recursive subroutine amr_step(ilevel,icount)
 #if NDIM==3
                                call timer('feedback','start')
 
-      if(deltaE_enable) call compute_transfer(levelmin, nlevelmax, .true., deltaE%feedback, 1)     
+      if(deltaE_enable) call compute_transfer(levelmin, nlevelmax, deltaE%feedback, 1)     
       if(hydro.and.star.and.eta_sn>0)call thermal_feedback(ilevel)
-      if(deltaE_enable) call compute_transfer(levelmin, nlevelmax, .true., deltaE%feedback, 2)     
+      if(deltaE_enable) call compute_transfer(levelmin, nlevelmax, deltaE%feedback, 2)     
 #endif
 
 
@@ -435,9 +453,9 @@ recursive subroutine amr_step(ilevel,icount)
 #if NDIM==3
   if(sink.and.hydro)then
                                call timer('sinks','start')
-     if(deltaE_enable) call compute_transfer(levelmin, nlevelmax, .true., deltaE%star_formation, 1)     
+     if(deltaE_enable) call compute_transfer(levelmin, nlevelmax, deltaE%star_formation, 1)     
      call grow_sink(ilevel,.false.)
-     if(deltaE_enable) call compute_transfer(levelmin, nlevelmax, .true., deltaE%star_formation, 2)     
+     if(deltaE_enable) call compute_transfer(levelmin, nlevelmax, deltaE%star_formation, 2)     
   end if
 #endif
   !-----------
@@ -446,7 +464,7 @@ recursive subroutine amr_step(ilevel,icount)
   if((hydro).and.(.not.static_gas))then
 
 
-    if(deltaE_enable) call compute_transfer(levelmin, nlevelmax, .true., deltaE%flux_gas, 1)     
+    if(deltaE_enable) call compute_transfer(levelmin, nlevelmax, deltaE%flux_gas, 1)     
         ! Hyperbolic solver
                                call timer('hydro - godunov','start')
      call godunov_fine(ilevel)
@@ -476,22 +494,22 @@ recursive subroutine amr_step(ilevel,icount)
         call make_virtual_reverse_dp(divu(1),ilevel)
      endif
 
-    if(deltaE_enable) call compute_transfer(levelmin, nlevelmax, .true., deltaE%flux_gas, 2)     
+    if(deltaE_enable) call compute_transfer(levelmin, nlevelmax, deltaE%flux_gas, 2)     
 
    ! Add gravity source terms to unew
      if(poisson)then
-      if(deltaE_enable) call compute_transfer(ilevel, ilevel, .true., deltaE%gravity_gas, 1)     
+      if(deltaE_enable) call compute_transfer(ilevel, ilevel, deltaE%gravity_gas, 1)     
       call add_gravity_source_terms(ilevel)
-      if(deltaE_enable) call compute_transfer(ilevel, ilevel, .true., deltaE%gravity_gas, 2)     
+      if(deltaE_enable) call compute_transfer(ilevel, ilevel, deltaE%gravity_gas, 2)     
      end if
 
 
      ! Add non conservative pdV terms to unew
      ! for thermal and/or non-thermal energies
      if(pressure_fix.OR.nener>0)then
-        if(deltaE_enable) call compute_transfer(levelmin, nlevelmax, .true., deltaE%flux_gas, 1)     
+        if(deltaE_enable) call compute_transfer(levelmin, nlevelmax, deltaE%flux_gas, 1)     
         call add_pdv_source_terms(ilevel)
-        if(deltaE_enable) call compute_transfer(levelmin, nlevelmax, .true., deltaE%flux_gas, 2)
+        if(deltaE_enable) call compute_transfer(levelmin, nlevelmax, deltaE%flux_gas, 2)
      endif
 
 
@@ -499,18 +517,22 @@ recursive subroutine amr_step(ilevel,icount)
      ! Set uold equal to unew
                                call timer('hydro - set uold','start')
 
-     if(deltaE_enable) call compute_transfer(ilevel, ilevel, .true., deltaE%corrections, 1)     
+     if(deltaE_enable) then 
+         call compute_transfer(ilevel, ilevel, deltaE%corrections, 1)  
+         deltaE_use_unew = .false.
+     end if
+
      call set_uold(ilevel)
-     if(deltaE_enable) call compute_transfer(ilevel, ilevel, .false., deltaE%corrections, 2)   ! correction = pressure fix 
+     if(deltaE_enable) call compute_transfer(ilevel, ilevel, deltaE%corrections, 2)   ! correction = pressure fix 
 
 
      ! Add gravity source term with half time step and old force
      ! in order to complete the time step
                                call timer('poisson','start')
 
-     if(deltaE_enable) call compute_transfer(ilevel, ilevel, .false., deltaE%gravity_gas, 1)     
+     if(deltaE_enable) call compute_transfer(ilevel, ilevel, deltaE%gravity_gas, 1)     
      if(poisson)call synchro_hydro_fine(ilevel,+0.5*dtnew(ilevel),1)
-     if(deltaE_enable) call compute_transfer(ilevel, ilevel, .false., deltaE%gravity_gas, 2)     
+     if(deltaE_enable) call compute_transfer(ilevel, ilevel, deltaE%gravity_gas, 2)     
 
 
 #if USE_TURB==1
@@ -518,18 +540,18 @@ recursive subroutine amr_step(ilevel,icount)
                                call timer('turb','start')
      if (driven_turb) then
 
-      if(deltaE_enable) call compute_transfer(ilevel, ilevel, .false., deltaE%turb_driving, 1) 
+      if(deltaE_enable) call compute_transfer(ilevel, ilevel, deltaE%turb_driving, 1) 
       ! Euler step, adding turbulent acceleration
       call synchro_hydro_fine(ilevel,dtnew(ilevel),2)
-      if(deltaE_enable) call compute_transfer(ilevel, ilevel, .false., deltaE%turb_driving, 2) 
+      if(deltaE_enable) call compute_transfer(ilevel, ilevel, deltaE%turb_driving, 2) 
      end if
 #endif
 
      ! Restriction operator
                                call timer('hydro upload fine','start')
-     if(deltaE_enable) call compute_transfer(levelmin, nlevelmax, .false., deltaE%corrections, 1)     
+     if(deltaE_enable) call compute_transfer(levelmin, nlevelmax, deltaE%corrections, 1)     
      call upload_fine(ilevel)
-     if(deltaE_enable) call compute_transfer(levelmin, nlevelmax, .false., deltaE%corrections, 2)     
+     if(deltaE_enable) call compute_transfer(levelmin, nlevelmax, deltaE%corrections, 2)     
   endif
 
 
@@ -538,7 +560,7 @@ recursive subroutine amr_step(ilevel,icount)
   !---------------------
   ! Do RT/Chemistry step
   !---------------------
-  if(deltaE_enable) call compute_transfer(ilevel, ilevel, .false., deltaE%cooling, 1)    
+  if(deltaE_enable) call compute_transfer(ilevel, ilevel, deltaE%cooling, 1)    
 #ifdef RT
   if(rt .and. rt_advect) then
                                call timer('radiative transfer','start')
@@ -566,14 +588,14 @@ recursive subroutine amr_step(ilevel,icount)
     if(neq_chem.or.cooling.or.T2_star>0.0.or.barotropic_eos)call cooling_fine(ilevel)
   endif
 #endif
-   if(deltaE_enable) call compute_transfer(ilevel, ilevel, .false., deltaE%cooling, 2)    
+   if(deltaE_enable) call compute_transfer(ilevel, ilevel, deltaE%cooling, 2)    
 
 
   !---------------------------------------------------------------------
   ! Move particles (update position and velocity), see also synchro_fine
   !---------------------------------------------------------------------
   if(pic)then
-      if(deltaE_enable) call compute_transfer(ilevel, ilevel, .false., deltaE%flux_part, 1)    
+      if(deltaE_enable) call compute_transfer(ilevel, ilevel, deltaE%flux_part, 1)    
 
                                call timer('particles','start')
      if(static_dm.or.static_stars)then
@@ -581,7 +603,7 @@ recursive subroutine amr_step(ilevel,icount)
      else
         call move_fine(ilevel) ! Only remaining particles
      end if
-     if(deltaE_enable) call compute_transfer(ilevel, ilevel, .false., deltaE%flux_part, 2)    
+     if(deltaE_enable) call compute_transfer(ilevel, ilevel, deltaE%flux_part, 2)    
   end if
 
 
@@ -593,10 +615,10 @@ recursive subroutine amr_step(ilevel,icount)
   !----------------------------------
 #if NDIM==3
                                call timer('feedback','start')
-  if(deltaE_enable) call compute_transfer(ilevel, ilevel, .false., deltaE%star_formation, 1) 
+  if(deltaE_enable) call compute_transfer(ilevel, ilevel, deltaE%star_formation, 1) 
 
   if(hydro.and.star.and.(.not.static_gas))call star_formation(ilevel)
-  if(deltaE_enable) call compute_transfer(ilevel, ilevel, .false., deltaE%star_formation, 2) 
+  if(deltaE_enable) call compute_transfer(ilevel, ilevel, deltaE%star_formation, 2) 
 #endif 
 
   !---------------------------------------
@@ -617,11 +639,11 @@ recursive subroutine amr_step(ilevel,icount)
   ! Magnetic diffusion step
   if((hydro).and.(.not.static_gas))then
      if(eta_mag>0d0.and.ilevel==levelmin)then
-      if(deltaE_enable) call compute_transfer(levelmin, nlevelmax, .false., deltaE%magnetic_diffusion, 1) 
+      if(deltaE_enable) call compute_transfer(levelmin, nlevelmax, deltaE%magnetic_diffusion, 1) 
 
                                call timer('mhd - diffusion','start')
         call diffusion
-      if(deltaE_enable) call compute_transfer(levelmin, nlevelmax, .false., deltaE%magnetic_diffusion, 2) 
+      if(deltaE_enable) call compute_transfer(levelmin, nlevelmax, deltaE%magnetic_diffusion, 2) 
      endif
   end if
 #endif
@@ -638,9 +660,9 @@ recursive subroutine amr_step(ilevel,icount)
 
                                call timer('particles','start')
 
-  if(deltaE_enable) call compute_transfer(levelmin, nlevelmax, .false., deltaE%flux_part, 1) 
+  if(deltaE_enable) call compute_transfer(levelmin, nlevelmax, deltaE%flux_part, 1) 
   if(pic)call merge_tree_fine(ilevel)
-  if(deltaE_enable) call compute_transfer(levelmin, nlevelmax, .false., deltaE%flux_part, 2) 
+  if(deltaE_enable) call compute_transfer(levelmin, nlevelmax, deltaE%flux_part, 2) 
 
 
 
@@ -671,9 +693,9 @@ recursive subroutine amr_step(ilevel,icount)
      !---------------
 #if NDIM==3
    if(ilevel==levelmin) then
-     if(deltaE_enable) call compute_transfer(levelmin, nlevelmax, .false., deltaE%star_formation, 1) 
+     if(deltaE_enable) call compute_transfer(levelmin, nlevelmax, deltaE%star_formation, 1) 
      call create_sink
-     if(deltaE_enable) call compute_transfer(levelmin, nlevelmax, .false., deltaE%star_formation, 2) 
+     if(deltaE_enable) call compute_transfer(levelmin, nlevelmax, deltaE%star_formation, 2) 
      end if
 #endif
   end if

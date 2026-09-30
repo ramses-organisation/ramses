@@ -12,6 +12,10 @@ module deltaE_module
   logical::deltaE_force_all_levels=.false. ! Force computation on all levels for all processes
   integer::deltaE_level_turb=0 ! Level at wich the turbulence energy is computed (0 = compute on leaf cells.)
 
+  ! DeltaE status
+  logical::deltaE_use_unew
+  logical::deltaE_use_phi_old
+
   ! Arrays
   integer, parameter :: nb_energy_kind = 13
   integer, parameter :: iekin = 1, iepot = 2, ieint = 3, iemag = 4, iekin_gas = 5, &
@@ -32,7 +36,8 @@ module deltaE_module
 
   type processes
     type(process) :: flux_gas, flux_part, cooling, gravity_gas, gravity_part, &
-                      &  star_formation, feedback, turb_driving, magnetic_diffusion, corrections
+                      &  star_formation, feedback, turb_driving, poisson, &
+                      & magnetic_diffusion, corrections
   contains
     procedure :: initialize_processes
     procedure :: print_processes
@@ -47,6 +52,7 @@ module deltaE_module
     process(0.0d0, "star_formation"), &
     process(0.0d0, "feedback"), &
     process(0.0d0, "turb_driving"), &
+    process(0.0d0, "poisson"), &
     process(0.0d0, "magnetic_diffusion"), &
     process(0.0d0, "corrections"))
 
@@ -87,6 +93,7 @@ contains
     this%star_formation%v = 0.0d0
     this%feedback%v = 0.0d0
     this%turb_driving%v = 0.0d0
+    this%poisson%v = 0.0d0
     this%magnetic_diffusion%v = 0.0d0
     this%corrections%v = 0d0
 
@@ -115,12 +122,12 @@ contains
 
     write (*, *) "DeltaE output"
     write (*, 997) " ", this%flux_gas%name, this%flux_part%name, this%cooling%name, this%gravity_gas%name, &
-                        this%gravity_part%name, this%star_formation%name, this%feedback%name,  this%turb_driving%name, this%magnetic_diffusion%name, &
-                        & this%corrections%name
+                        this%gravity_part%name, this%star_formation%name, this%feedback%name,  this%turb_driving%name, &
+                        this%poisson%name, this%magnetic_diffusion%name, this%corrections%name
     do i = 1, nb_energy_kind
       write (*, 998) energy_names(i), this%flux_gas%v(i), this%flux_part%v(i), this%cooling%v(i), this%gravity_gas%v(i), &
-                   this%gravity_part%v(i), this%star_formation%v(i), this%feedback%v(i), this%turb_driving%v(i),  this%magnetic_diffusion%v(i), &
-                   & this%corrections%v(i)
+                   this%gravity_part%v(i), this%star_formation%v(i), this%feedback%v(i), this%turb_driving%v(i), &
+                   this%poisson%v(i), this%magnetic_diffusion%v(i), this%corrections%v(i)
     end do
     write (*, *) "End deltaE output"
 
@@ -129,16 +136,15 @@ contains
 
   end subroutine
 
-  subroutine compute_energies(ilevel, use_unew, energies)
+  subroutine compute_energies(ilevel, energies)
     implicit none
 
     integer, intent(in):: ilevel
-    logical, intent(in):: use_unew
     real(dp), dimension(1:nb_energy_kind), intent(inout) :: energies
 
     energies = 0.0d0
     if (hydro) then
-      call compute_energy_gas(ilevel, energies, use_unew)
+      call compute_energy_gas(ilevel, energies)
     end if
     if (pic) then
       !call make_tree_fine(ilevel)
@@ -149,12 +155,11 @@ contains
 
   end subroutine
 
-  subroutine compute_transfer(levelstart, levelend, use_unew, deltaE_process, step)
+  subroutine compute_transfer(levelstart, levelend, deltaE_process, step)
 
     implicit none
     integer, intent(in):: levelstart, levelend
     integer :: act_levelstart, act_levelend
-    logical, intent(in):: use_unew
     type(process), intent(inout) :: deltaE_process
     integer, intent(in) :: step
 
@@ -178,7 +183,7 @@ contains
     end if
 
     do ilevel = act_levelstart, act_levelend
-      call compute_energies(ilevel, use_unew, energy_level)
+      call compute_energies(ilevel, energy_level)
       if (step == 1) then
         energy_before = energy_before + energy_level
       else
@@ -218,7 +223,7 @@ contains
 
   end subroutine
 
-  subroutine compute_energy_gas(ilevel, energies, use_unew)
+  subroutine compute_energy_gas(ilevel, energies)
     use amr_commons
     use hydro_commons
     use poisson_commons
@@ -230,7 +235,6 @@ contains
 #endif
     integer, intent(in)::ilevel
     real(dp), dimension(1:nb_energy_kind), intent(inout) :: energies
-    logical, intent(in)::use_unew
 
     integer::i, ivar,  ind, ncache, igrid, iskip
     integer::nleaf, ngrid, nx_loc
@@ -253,7 +257,7 @@ contains
     energies(iekin_gas) = 0.0d0
     energies(ieint) = 0.0d0
     energies(iemag) = 0.0d0
-    energies(iepot) = 0.0d0
+    energies(iepot_gas) = 0.0d0
 
     if (numbtot(1, ilevel) == 0) return
 
@@ -289,7 +293,7 @@ contains
 
         ! Gather hydro variables
         do ivar = 1, nvar_all
-          if (use_unew) then
+          if (deltaE_use_unew) then
             do i = 1, nleaf
               uu(i, ivar) = unew(ind_leaf(i), ivar)
             end do
@@ -338,7 +342,7 @@ contains
         end do
 #endif
 
-        if(pressure_fix .and. deltaE_correct_pressure_fix .and. use_unew) then
+        if(pressure_fix .and. deltaE_correct_pressure_fix .and. deltaE_use_unew) then
           ! Correct internal energy if too small
           do i=1, nleaf
             ekin_leaf = 0.
@@ -393,7 +397,7 @@ contains
 #endif
 
     if (deltaE_level_turb == 0 .or. deltaE_level_turb == ilevel) then
-      if (use_unew) then
+      if (deltaE_use_unew) then
         energies(iekin_gas_turb) = compute_ekin_turb(ilevel, unew)
       else 
         energies(iekin_gas_turb) = compute_ekin_turb(ilevel, uold)
@@ -667,303 +671,6 @@ contains
 
   end subroutine ekin_part_helper
 
-  !#########################################################################
-  !#########################################################################
-  !#########################################################################
-  !#########################################################################
-!   subroutine epot_part_helper(ind_grid, ind_part, ind_grid_part, epot_loc, epot_families_loc, ng, np, ilevel)
-!     use amr_commons
-!     use pm_commons
-!     use poisson_commons
-!     use hydro_commons, ONLY: uold, smallr
-!     use, intrinsic :: ieee_arithmetic
-
-!     implicit none
-!     integer::ng, np, ilevel
-!     integer, dimension(1:nvector)::ind_grid
-!     integer, dimension(1:nvector)::ind_grid_part, ind_part
-!     !------------------------------------------------------------
-!     ! This routine computes the potential energy of each particle by
-!     ! inverse CIC.
-!     ! If particle sits entirely in fine level, then CIC is performed
-!     ! at level ilevel. Otherwise, it is performed at level ilevel-1.
-!     ! This routine is called by compute_epot_part.
-!     !------------------------------------------------------------
-
-!     ! Results
-!     real(dp), dimension(-NFAMILIES:NFAMILIES), intent(inout) :: epot_families_loc
-!     real(dp), intent(inout):: epot_loc
-
-!     ! Temporary scalar
-!     real(dp) :: epot_part
-!     integer :: family_part
-
-!     logical::error
-!     integer::i, j, ind, idim, nx_loc, isink
-!     real(dp)::dx, dx_loc, scale, vol_loc
-!     ! Grid-based arrays
-!     integer, dimension(1:nvector), save::father_cell
-!     real(dp), dimension(1:nvector, 1:ndim), save::x0
-!     integer, dimension(1:nvector, 1:threetondim), save::nbors_father_cells
-!     ! Particle-based arrays
-!     logical, dimension(1:nvector), save::ok
-!     real(dp), dimension(1:nvector, 1:ndim), save::x, ff, new_xp, new_vp, dd, dg
-!     integer, dimension(1:nvector, 1:ndim), save::ig, id, igg, igd, icg, icd
-!     real(dp), dimension(1:nvector, 1:twotondim), save::vol
-!     integer, dimension(1:nvector, 1:twotondim), save::igrid, icell, indp, kg
-!     real(dp), dimension(1:3)::skip_loc
-
-!     if (isnan(epot_loc)) then 
-!       return 
-!     end if
-
-!     ! Mesh spacing in that level
-!     dx = 0.5D0**ilevel
-!     nx_loc = (icoarse_max - icoarse_min + 1)
-!     skip_loc = (/0.0d0, 0.0d0, 0.0d0/)
-!     if (ndim > 0) skip_loc(1) = dble(icoarse_min)
-!     if (ndim > 1) skip_loc(2) = dble(jcoarse_min)
-!     if (ndim > 2) skip_loc(3) = dble(kcoarse_min)
-!     scale = boxlen/dble(nx_loc)
-!     dx_loc = dx*scale
-!     vol_loc = dx_loc**3
-
-!     ! Lower left corner of 3x3x3 grid-cube
-!     do idim = 1, ndim
-!       do i = 1, ng
-!         x0(i, idim) = xg(ind_grid(i), idim) - 3.0D0*dx
-!       end do
-!     end do
-
-!     ! Gather neighboring father cells (should be present anytime !)
-!     do i = 1, ng
-!       father_cell(i) = father(ind_grid(i))
-!     end do
-!     call get3cubefather(father_cell, nbors_father_cells, &
-!          & ng, ilevel)
-
-!     ! Rescale particle position at level ilevel
-!     do idim = 1, ndim
-!       do j = 1, np
-!         x(j, idim) = xp(ind_part(j), idim)/scale + skip_loc(idim)
-!       end do
-!     end do
-!     do idim = 1, ndim
-!       do j = 1, np
-!         x(j, idim) = x(j, idim) - x0(ind_grid_part(j), idim)
-!       end do
-!     end do
-!     do idim = 1, ndim
-!       do j = 1, np
-!         x(j, idim) = x(j, idim)/dx
-!       end do
-!     end do
-
-!     ! Check for illegal moves
-!     error = .false.
-!     do idim = 1, ndim
-!       do j = 1, np
-!         if (x(j, idim) < 0.5D0 .or. x(j, idim) > 5.5D0) error = .true.
-!       end do
-!     end do
-!     if (error) then
-!       epot_loc =  ieee_value(epot_loc, ieee_quiet_nan)
-!       epot_families_loc(:) = ieee_value(epot_loc, ieee_quiet_nan)
-!       return
-!     end if
-
-!     ! CIC at level ilevel (dd: right cloud boundary; dg: left cloud boundary)
-!     do idim = 1, ndim
-!       do j = 1, np
-!         dd(j, idim) = x(j, idim) + 0.5D0
-!         id(j, idim) = int(dd(j, idim))
-!         dd(j, idim) = dd(j, idim) - id(j, idim)
-!         dg(j, idim) = 1.0D0 - dd(j, idim)
-!         ig(j, idim) = id(j, idim) - 1
-!       end do
-!     end do
-
-!     ! Compute parent grids
-!     do idim = 1, ndim
-!       do j = 1, np
-!         igg(j, idim) = ig(j, idim)/2
-!         igd(j, idim) = id(j, idim)/2
-!       end do
-!     end do
-! #if NDIM==1
-!     do j = 1, np
-!       kg(j, 1) = 1 + igg(j, 1)
-!       kg(j, 2) = 1 + igd(j, 1)
-!     end do
-! #endif
-! #if NDIM==2
-!     do j = 1, np
-!       kg(j, 1) = 1 + igg(j, 1) + 3*igg(j, 2)
-!       kg(j, 2) = 1 + igd(j, 1) + 3*igg(j, 2)
-!       kg(j, 3) = 1 + igg(j, 1) + 3*igd(j, 2)
-!       kg(j, 4) = 1 + igd(j, 1) + 3*igd(j, 2)
-!     end do
-! #endif
-! #if NDIM==3
-!     do j = 1, np
-!       kg(j, 1) = 1 + igg(j, 1) + 3*igg(j, 2) + 9*igg(j, 3)
-!       kg(j, 2) = 1 + igd(j, 1) + 3*igg(j, 2) + 9*igg(j, 3)
-!       kg(j, 3) = 1 + igg(j, 1) + 3*igd(j, 2) + 9*igg(j, 3)
-!       kg(j, 4) = 1 + igd(j, 1) + 3*igd(j, 2) + 9*igg(j, 3)
-!       kg(j, 5) = 1 + igg(j, 1) + 3*igg(j, 2) + 9*igd(j, 3)
-!       kg(j, 6) = 1 + igd(j, 1) + 3*igg(j, 2) + 9*igd(j, 3)
-!       kg(j, 7) = 1 + igg(j, 1) + 3*igd(j, 2) + 9*igd(j, 3)
-!       kg(j, 8) = 1 + igd(j, 1) + 3*igd(j, 2) + 9*igd(j, 3)
-!     end do
-! #endif
-!     do ind = 1, twotondim
-!       do j = 1, np
-!         igrid(j, ind) = son(nbors_father_cells(ind_grid_part(j), kg(j, ind)))
-!       end do
-!     end do
-
-!     ! Check if particles are entirely in level ilevel
-!     ok(1:np) = .true.
-!     do ind = 1, twotondim
-!       do j = 1, np
-!         ok(j) = ok(j) .and. igrid(j, ind) > 0
-!       end do
-!     end do
-
-!     ! If not, rescale position at level ilevel-1
-!     do idim = 1, ndim
-!       do j = 1, np
-!         if (.not. ok(j)) then
-!           x(j, idim) = x(j, idim)/2.0D0
-!         end if
-!       end do
-!     end do
-!     ! If not, redo CIC at level ilevel-1
-!     do idim = 1, ndim
-!       do j = 1, np
-!         if (.not. ok(j)) then
-!           dd(j, idim) = x(j, idim) + 0.5D0
-!           id(j, idim) = int(dd(j, idim))
-!           dd(j, idim) = dd(j, idim) - id(j, idim)
-!           dg(j, idim) = 1.0D0 - dd(j, idim)
-!           ig(j, idim) = id(j, idim) - 1
-!         end if
-!       end do
-!     end do
-
-!     ! Compute parent cell position
-!     do idim = 1, ndim
-!       do j = 1, np
-!         if (ok(j)) then
-!           icg(j, idim) = ig(j, idim) - 2*igg(j, idim)
-!           icd(j, idim) = id(j, idim) - 2*igd(j, idim)
-!         else
-!           icg(j, idim) = ig(j, idim)
-!           icd(j, idim) = id(j, idim)
-!         end if
-!       end do
-!     end do
-! #if NDIM==1
-!     do j = 1, np
-!       icell(j, 1) = 1 + icg(j, 1)
-!       icell(j, 2) = 1 + icd(j, 1)
-!     end do
-! #endif
-! #if NDIM==2
-!     do j = 1, np
-!       if (ok(j)) then
-!         icell(j, 1) = 1 + icg(j, 1) + 2*icg(j, 2)
-!         icell(j, 2) = 1 + icd(j, 1) + 2*icg(j, 2)
-!         icell(j, 3) = 1 + icg(j, 1) + 2*icd(j, 2)
-!         icell(j, 4) = 1 + icd(j, 1) + 2*icd(j, 2)
-!       else
-!         icell(j, 1) = 1 + icg(j, 1) + 3*icg(j, 2)
-!         icell(j, 2) = 1 + icd(j, 1) + 3*icg(j, 2)
-!         icell(j, 3) = 1 + icg(j, 1) + 3*icd(j, 2)
-!         icell(j, 4) = 1 + icd(j, 1) + 3*icd(j, 2)
-!       end if
-!     end do
-! #endif
-! #if NDIM==3
-!     do j = 1, np
-!       if (ok(j)) then
-!         icell(j, 1) = 1 + icg(j, 1) + 2*icg(j, 2) + 4*icg(j, 3)
-!         icell(j, 2) = 1 + icd(j, 1) + 2*icg(j, 2) + 4*icg(j, 3)
-!         icell(j, 3) = 1 + icg(j, 1) + 2*icd(j, 2) + 4*icg(j, 3)
-!         icell(j, 4) = 1 + icd(j, 1) + 2*icd(j, 2) + 4*icg(j, 3)
-!         icell(j, 5) = 1 + icg(j, 1) + 2*icg(j, 2) + 4*icd(j, 3)
-!         icell(j, 6) = 1 + icd(j, 1) + 2*icg(j, 2) + 4*icd(j, 3)
-!         icell(j, 7) = 1 + icg(j, 1) + 2*icd(j, 2) + 4*icd(j, 3)
-!         icell(j, 8) = 1 + icd(j, 1) + 2*icd(j, 2) + 4*icd(j, 3)
-!       else
-!         icell(j, 1) = 1 + icg(j, 1) + 3*icg(j, 2) + 9*icg(j, 3)
-!         icell(j, 2) = 1 + icd(j, 1) + 3*icg(j, 2) + 9*icg(j, 3)
-!         icell(j, 3) = 1 + icg(j, 1) + 3*icd(j, 2) + 9*icg(j, 3)
-!         icell(j, 4) = 1 + icd(j, 1) + 3*icd(j, 2) + 9*icg(j, 3)
-!         icell(j, 5) = 1 + icg(j, 1) + 3*icg(j, 2) + 9*icd(j, 3)
-!         icell(j, 6) = 1 + icd(j, 1) + 3*icg(j, 2) + 9*icd(j, 3)
-!         icell(j, 7) = 1 + icg(j, 1) + 3*icd(j, 2) + 9*icd(j, 3)
-!         icell(j, 8) = 1 + icd(j, 1) + 3*icd(j, 2) + 9*icd(j, 3)
-!       end if
-!     end do
-! #endif
-
-!     ! Compute parent cell adresses
-!     do ind = 1, twotondim
-!       do j = 1, np
-!         if (ok(j)) then
-!           indp(j, ind) = ncoarse + (icell(j, ind) - 1)*ngridmax + igrid(j, ind)
-!         else
-!           indp(j, ind) = nbors_father_cells(ind_grid_part(j), icell(j, ind))
-!         end if
-!       end do
-!     end do
-
-!     ! Compute cloud volumes
-! #if NDIM==1
-!     do j = 1, np
-!       vol(j, 1) = dg(j, 1)
-!       vol(j, 2) = dd(j, 1)
-!     end do
-! #endif
-! #if NDIM==2
-!     do j = 1, np
-!       vol(j, 1) = dg(j, 1)*dg(j, 2)
-!       vol(j, 2) = dd(j, 1)*dg(j, 2)
-!       vol(j, 3) = dg(j, 1)*dd(j, 2)
-!       vol(j, 4) = dd(j, 1)*dd(j, 2)
-!     end do
-! #endif
-! #if NDIM==3
-!     do j = 1, np
-!       vol(j, 1) = dg(j, 1)*dg(j, 2)*dg(j, 3)
-!       vol(j, 2) = dd(j, 1)*dg(j, 2)*dg(j, 3)
-!       vol(j, 3) = dg(j, 1)*dd(j, 2)*dg(j, 3)
-!       vol(j, 4) = dd(j, 1)*dd(j, 2)*dg(j, 3)
-!       vol(j, 5) = dg(j, 1)*dg(j, 2)*dd(j, 3)
-!       vol(j, 6) = dd(j, 1)*dg(j, 2)*dd(j, 3)
-!       vol(j, 7) = dg(j, 1)*dd(j, 2)*dd(j, 3)
-!       vol(j, 8) = dd(j, 1)*dd(j, 2)*dd(j, 3)
-!     end do
-! #endif
-
-!     ! Gather potential energ
-
-!     if (poisson) then
-!       do ind = 1, twotondim
-!         do j = 1, np
-!           family_part = typep(ind_part(j))%family
-!           epot_part = mp(ind_part(j))*phi(indp(j, ind))*vol(j, ind)
-!           epot_loc = epot_loc + epot_part
-!           epot_families_loc(family_part) = epot_families_loc(family_part) + epot_part
-!         end do
-!       end do
-!     end if
-
-!   end subroutine epot_part_helper
-  !#########################################################################
-  !#########################################################################
-  !#########################################################################
   !#########################################################################
 
 end module deltaE_module
