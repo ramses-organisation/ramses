@@ -656,7 +656,7 @@ contains
       type_part(i) = typep(ind_part(i))%family
 #ifdef OUTPUT_PARTICLE_POTENTIAL
       phi_part(i) = ptcl_phi(ind_part(i))
-      epot_loc = epot_loc + 0.5 * mass_part(i) * phi_part(i)
+      epot_loc = epot_loc + 0.5 * mass_part(i) * phi_part(i) * scale
       epot_families_loc(type_part(i)) = epot_families_loc(type_part(i)) + 0.5 * mass_part(i) *  phi_part(i) * scale
 #endif
     end do
