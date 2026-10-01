@@ -91,6 +91,7 @@ subroutine init_part
   allocate(typep  (npartmax))
 #ifdef OUTPUT_PARTICLE_POTENTIAL
   allocate(ptcl_phi(npartmax))
+  ptcl_phi = 0.0
 #endif
   ! Define up array (and maskp) for DICE ICs
   if (filetype.eq.'dice') then
