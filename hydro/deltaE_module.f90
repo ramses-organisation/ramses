@@ -414,7 +414,7 @@ contains
 #endif
 
     if (deltaE_level_turb == 0 .or. deltaE_level_turb == ilevel) then
-      if (deltaE_use_unew) then
+      if (deltaE_use_unew(ilevel)) then
         energies(iekin_gas_turb) = compute_ekin_turb(ilevel, unew)
       else 
         energies(iekin_gas_turb) = compute_ekin_turb(ilevel, uold)
