@@ -177,7 +177,7 @@ contains
       act_levelend = nlevelmax
     else 
       act_levelstart = levelstart
-      act_levelend = levelend
+      act_levelend = min(levelend + 1, nlevelmax)
     end if
 
     if (step == 1) then
