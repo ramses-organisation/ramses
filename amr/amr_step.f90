@@ -38,7 +38,7 @@ recursive subroutine amr_step(ilevel,icount)
   if(verbose)write(*,999)icount,ilevel
 
   if(deltaE_enable) then 
-      deltaE_use_unew = .false.
+      deltaE_use_unew(ilevel) = .false.
       deltaE_use_phi_old(ilevel) = .false.
   end if
   !-------------------------------------------
@@ -392,7 +392,7 @@ recursive subroutine amr_step(ilevel,icount)
   if(deltaE_enable .and. deltaE_debug) call compute_transfer(ilevel, ilevel, deltaE%corrections, 1)     
   ! Set unew equal to uold
                                call timer('hydro - set unew','start')
-  if(deltaE_enable) deltaE_use_unew = .true.
+  if(deltaE_enable) deltaE_use_unew(ilevel) = .true.
   if(hydro)call set_unew(ilevel)
 
 #ifdef RT
@@ -409,14 +409,12 @@ recursive subroutine amr_step(ilevel,icount)
 
   if(ilevel<nlevelmax)then
      if(numbtot(1,ilevel+1)>0)then
-        if(deltaE_enable) deltaE_use_unew = .false.
         if(nsubcycle(ilevel)==2)then
            call amr_step(ilevel+1,1)
            call amr_step(ilevel+1,2)
         else
            call amr_step(ilevel+1,1)
         endif
-        if(deltaE_enable) deltaE_use_unew = .true.
         if(deltaE_enable .and. deltaE_debug) call compute_transfer(levelmin, nlevelmax, deltaE%corrections, 1)     
         if(deltaE_enable .and. deltaE_debug) call compute_transfer(levelmin, nlevelmax, deltaE%corrections, 2)     
 
@@ -519,7 +517,7 @@ recursive subroutine amr_step(ilevel,icount)
 
      if(deltaE_enable) then 
          call compute_transfer(ilevel, ilevel, deltaE%corrections, 1)  
-         deltaE_use_unew = .false.
+         deltaE_use_unew(ilevel) = .false.
      end if
 
      call set_uold(ilevel)

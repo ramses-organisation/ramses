@@ -12,8 +12,9 @@ module deltaE_module
   logical::deltaE_force_all_levels=.false. ! Force computation on all levels for all processes
   integer::deltaE_level_turb=0 ! Level at wich the turbulence energy is computed (0 = compute on leaf cells.)
 
-  ! DeltaE status
-  logical::deltaE_use_unew
+
+  ! DeltaE status flags
+  logical, dimension(:), allocatable :: deltaE_use_unew
   logical, dimension(:), allocatable :: deltaE_use_phi_old
 
   ! Arrays
@@ -76,6 +77,7 @@ contains
       nml_ok=.false.
     end if
 
+    allocate(deltaE_use_unew(levelmin:nlevelmax))
     allocate(deltaE_use_phi_old(levelmin:nlevelmax))
 
     call deltaE%initialize_processes
@@ -153,7 +155,7 @@ contains
       call compute_energy_part(ilevel, energies)
     end if
     energies(iekin) = energies(iekin_gas) + energies(iekin_part)
-    energies(iepot) = energies(iepot_gas) +  energies(iepot_part)
+    energies(iepot) = energies(iepot_gas) + energies(iepot_part)
 
   end subroutine
 
@@ -297,7 +299,7 @@ contains
 
         ! Gather hydro variables
         do ivar = 1, nvar_all
-          if (deltaE_use_unew) then
+          if (deltaE_use_unew(ilevel)) then
             do i = 1, nleaf
               uu(i, ivar) = unew(ind_leaf(i), ivar)
             end do
@@ -357,7 +359,7 @@ contains
         end do
 #endif
 
-        if(pressure_fix .and. deltaE_correct_pressure_fix .and. deltaE_use_unew) then
+        if(pressure_fix .and. deltaE_correct_pressure_fix .and. deltaE_use_unew(ilevel)) then
           ! Correct internal energy if too small
           do i=1, nleaf
             ekin_leaf = 0.
