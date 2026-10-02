@@ -8,6 +8,7 @@ subroutine star_formation(ilevel)
   use constants, only: Myr2sec, Gyr2sec, mH, pi, rhoc, twopi, kB, factG_in_cgs
   use random
   use mpi_mod
+  use deltaE_module
   implicit none
 #ifndef WITHOUTMPI
   integer::info,info2,dummy_io
@@ -847,6 +848,16 @@ subroutine star_formation(ilevel)
         end do
      end do
   end do
+
+
+  ! Refresh the boundaries with the conservative variables
+#ifndef WITHOUTMPI
+   if(deltaE_enable) then
+      do ivar=1,4
+         call make_virtual_fine_dp(uold(1,ivar),ilevel)
+      end do
+   end if   
+#endif
 
   if(sf_log_properties) close(ilun)
 

@@ -80,6 +80,9 @@ contains
     allocate(deltaE_use_unew(levelmin:nlevelmax))
     allocate(deltaE_use_phi_old(levelmin:nlevelmax))
 
+    deltaE_use_phi_old = .false.
+    deltaE_use_unew = .false.
+
     call deltaE%initialize_processes
 
   end subroutine read_deltaE_params
@@ -151,7 +154,6 @@ contains
       call compute_energy_gas(ilevel, energies)
     end if
     if (pic) then
-      !call make_tree_fine(ilevel)
       call compute_energy_part(ilevel, energies)
     end if
     energies(iekin) = energies(iekin_gas) + energies(iekin_part)
@@ -197,23 +199,6 @@ contains
 
 
     if (step == 2) then
-
-      if (isnan(energy_after(iepot_part)) .or. isnan(energy_before(iepot_part))) then
-        if (myid == 1) write(*,*) "DeltaE Warning: nan epot found in ", deltaE_process%name
-        energy_after(iepot_part) = 0.0d0
-        energy_before(iepot_part) = 0.0d0
-        energy_after(iepot) = energy_after(iepot_gas) 
-        energy_before(iepot) = energy_before(iepot_gas) 
-      end if
-
-
-      if (isnan(energy_after(iepot_gas)) .or. isnan(energy_before(iepot_gas))) then
-        if (myid == 1) write(*,*) "DeltaE Warning: nan epot found in ", deltaE_process%name
-        energy_after(iepot_gas) = 0.0d0
-        energy_before(iepot_gas) = 0.0d0
-        energy_after(iepot) = energy_after(iepot_part) 
-        energy_before(iepot) = energy_before(iepot_part) 
-      end if
 
       deltaE_process%v = deltaE_process%v + energy_after - energy_before
 
