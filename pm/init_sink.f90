@@ -9,6 +9,7 @@ subroutine init_sink
 #ifndef WITHOUTMPI
   integer,parameter::tag=1112,tag2=1113
   integer::dummy_io,info2
+  logical::create_sink_file
 #endif
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   integer::isink, nsinkold
@@ -140,7 +141,12 @@ subroutine init_sink
      nsink=0
      ! Create an empty sink file if the previous snapshot had no sinks.
 #ifndef WITHOUTMPI
-     if ((IOGROUPSIZE == 0 .and. myid == 1) .or. (IOGROUPSIZE > 0 .and. mod(myid-1,IOGROUPSIZE) == 0)) then
+     if(IOGROUPSIZE==0)then
+        create_sink_file = (myid==1)
+     else !(IOGROUPSIZE > 0)
+        create_sink_file = (mod(myid-1,IOGROUPSIZE)==0)
+     endif
+     if(create_sink_file)then
 #endif
         inquire(file=fileloc, exist=exists_sink_restart)
         if (.not. exists_sink_restart) then
@@ -160,7 +166,8 @@ subroutine init_sink
      read(10,'(A200)')comment_line
      read(10,'(A200)')comment_line
      do
-        read(10,'(I10,21(A1,ES21.10),A1,I10)',end=104)sid,co, sm1,co,&
+        ! Must match the write format in output_sink_csv exactly.
+        read(10,'(I10,21(A1,ES25.16E3),A1,I10)',end=104)sid,co, sm1,co,&
                            sx1,co,sx2,co,sx3,co, &
                            sv1,co,sv2,co,sv3,co, &
                            sl1,co,sl2,co,sl3,co, &

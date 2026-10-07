@@ -98,6 +98,12 @@ for i in range(len(vars)):
 
 fig.savefig('stellar-HII.pdf', bbox_inches="tight")
 
+# Add sink and stellar object data to the reference check =========================================
+for key in data["sinks"].keys():
+    data["data"]["sink_"+key] = data["sinks"][key]
+for key in data["stellars"].keys():
+    data["data"]["stellar_"+key] = data["stellars"][key]
+
 # Check if test results match reference, both for outputs and movie frames =========================
 # Why is this so inaccurate on multiple cores?
 red_tol = 3e-6

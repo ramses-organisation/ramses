@@ -82,7 +82,7 @@ slice_y = y
 slice_d = np.log10(rho)
 slice_p = np.log10(P)
 
-nx = 128
+nx = 256
 xmin = ymin = 0.0
 xmax = ymax = rmax
 dpx = (xmax-xmin)/float(nx)

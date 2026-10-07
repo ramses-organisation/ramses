@@ -31,7 +31,6 @@ subroutine multigrid_fine(ilevel,icount)
 
    integer, intent(in) :: ilevel,icount
 
-   integer, parameter  :: MAXITER  = 10
    real(dp), parameter :: SAFE_FACTOR = 0.5d0
 
    integer :: ifine, i, iter, icpu
@@ -191,6 +190,17 @@ subroutine multigrid_fine(ilevel,icount)
 
    iter = 0
    err = 1.0d0
+
+   ! Reset safe_mode if required
+   if(safe_mode(ilevel) .and. mg_safe_mode_reset>0)then
+      safe_mode_countdown(ilevel) = safe_mode_countdown(ilevel) - 1 !previous solve used safe_mode
+      if(safe_mode_countdown(ilevel)<=0)then
+         safe_mode(ilevel) = .false.
+         safe_mode_countdown(ilevel) = 0
+         if(myid==1)print *,'CAUTION: Switching OFF safe MG mode for level ',ilevel
+      end if
+   end if
+
    main_iteration_loop: do
       iter=iter+1
       ! Pre-smoothing
@@ -271,19 +281,20 @@ subroutine multigrid_fine(ilevel,icount)
          & iter,' Error=',err
 
       ! Converged?
-      if(err<epsilon .or. iter>=MAXITER) exit
+      if(err<epsilon .or. iter>=mg_maxiter) exit
 
       ! Not converged, check error and possibly enable safe mode for the level
       if(err > last_err*SAFE_FACTOR .and. (.not. safe_mode(ilevel))) then
-         if(verbose)print *,'CAUTION: Switching to safe MG mode for level ',ilevel
+         if(myid==1)print *,'CAUTION: Switching ON safe MG mode for level ',ilevel
          safe_mode(ilevel) = .true.
+         safe_mode_countdown(ilevel) = mg_safe_mode_reset
       end if
 
    end do main_iteration_loop
 
    if(myid==1) print '(A,I5,A,I5,A,1pE10.3)','   ==> Level=',ilevel, ' Step=', &
             iter,' Error=',err
-   if(myid==1 .and. iter==MAXITER) print *,'WARN: Fine multigrid &
+   if(myid==1 .and. iter>=mg_maxiter) print *,'WARN: Fine multigrid &
       &Poisson failed to converge...'
 
    ! ---------------------------------------------------------------------

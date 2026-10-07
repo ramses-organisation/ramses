@@ -250,7 +250,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
            rtuold(il,iNp) = max(rtuold(il,iNp),smallnp)
            ! Reduce the flux to c*Np if necessary:
            fred = sqrt(sum(rtuold(il,iNp+1:iNp+ndim)**2)) &
-                / rtuold(il,iNp)*rt_c(ilevel)
+                / (rtuold(il,iNp)*rt_c(ilevel))
            if(fred .gt. 1.d0) &
                 rtuold(il,iNp+1:iNp+ndim) = rtuold(il,iNp+1:iNp+ndim)/fred
         enddo
@@ -663,7 +663,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
 
            ! Reduce the flux to c*Np if necessary:
            fred = sqrt(sum(rtuold(il,iNp+1:iNp+ndim)**2)) &
-                / rtuold(il,iNp)*rt_c(ilevel)
+                / (rtuold(il,iNp)*rt_c(ilevel))
            if(fred .gt. 1.d0) &
                 rtuold(il,iNp+1:iNp+ndim) = rtuold(il,iNp+1:iNp+ndim)/fred
         end do ! i=1,nleaf

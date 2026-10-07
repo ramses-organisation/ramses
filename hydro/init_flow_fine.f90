@@ -14,6 +14,14 @@ subroutine init_flow
 #endif
 
   if(verbose)write(*,*)'Entering init_flow'
+
+  ! Things to do once for user-specific condinit
+#ifdef SOLVERmhd
+  if(condinit_kind=='collapse')then
+     call prep_collapse
+  endif
+#endif
+
   do ilevel=nlevelmax,1,-1
      if(ilevel>=levelmin)call init_flow_fine(ilevel)
      call upload_fine(ilevel)

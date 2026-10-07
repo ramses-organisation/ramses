@@ -2664,6 +2664,9 @@ subroutine read_sink_params()
   use pm_commons
   use amr_commons
   use constants, only: pi,yr2sec
+#ifdef RT
+  use rt_parameters, only: rt_sink
+#endif
   implicit none
 
   !----------------------------------------------------------------------------
@@ -2694,6 +2697,16 @@ subroutine read_sink_params()
 111 if(myid==1)write(*,*)'You did not set up &SINK_PARAMS in the namelist file'
   if(myid==1)write(*,*)'Using default values '
 112 rewind(1)
+
+#ifdef RT
+  if (rt_sink .and. .not.sink_refine)then
+     if(myid==1)then
+        write(*,*)'WARNING: rt_sink=.true. with sink_refine=.false.'
+        write(*,*)'         Part of the sink radiation will be lost where a sink overlaps'
+        write(*,*)'         with a refinement boundary. To avoid this, set sink_refine=.true.'
+     endif
+  endif
+#endif
 
   if (sink .and. (ndim .ne. 3))then
      if(myid==1)write(*,*)'Sink particles are only implemented for 3d sims.'

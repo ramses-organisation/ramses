@@ -43,7 +43,7 @@ for i in range(1,out_end+1):
 data = visu_ramses.load_snapshot(out_end)
 for key in data["stellars"].keys():
     data["data"]["stellar_"+key] = data["stellars"][key]
-for key in ['nsinks','id','msink','dmfsink','x', 'y', 'z']:
+for key in data["sinks"].keys():
     data["data"]["sink_"+key] = data["sinks"][key]
 
 fig = plt.figure()

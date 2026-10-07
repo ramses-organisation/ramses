@@ -7,8 +7,8 @@ ncontrol=100
 /
 
 &AMR_PARAMS
-levelmin=7                      ! Min resolution level - here 128^3 cells
-levelmax=7                      ! Max resolution level
+levelmin=7                      ! Min resolution level - here 128^2 cells
+levelmax=8                      ! Max resolution level - here 256^2 cells
 ngridtot=300000                 ! Total number of octs reserved
 boxlen=1                        ! Box length in units_length (1 kpc)
 /
@@ -63,7 +63,7 @@ Y=0.24d0                           ! Helium mass fraction
 rt_flux_scheme='glf'            ! HLL vs GLF
 hll_evals_file='../../rt/hll_evals.list' ! HLL eigenvalues file'
 rt_courant_factor=0.8           ! Courant number for RT timesteps
-rt_c_fraction=0.001             ! Light speed fraction
+rt_c_fraction=0.001,0.0005       ! Light speed fraction per level, from levelmin
 rt_smooth=.true.                ! Smoothed RT to battle operator splitting
 rt_nsubcycle=1                  ! Maximum number of RT steps per hydro step
 rt_otsa=.true.                  ! On-the-spot approximation?
