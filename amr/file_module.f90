@@ -6,6 +6,11 @@ module file_module
       character(kind=c_char), dimension(*) :: name
       integer(C_INT), VALUE :: mode
     end function c_mkdir
+    integer(c_int) function c_access(name,mode) BIND(C,NAME="access")
+      USE, INTRINSIC :: ISO_C_BINDING, ONLY : C_CHAR, C_INT
+      character(kind=c_char), dimension(*) :: name
+      integer(C_INT), VALUE :: mode
+    end function c_access
   end interface
 
   contains
@@ -26,8 +31,10 @@ module file_module
           if (i.gt.1 .and. name(i:i).eq.'/') then
             c_name(i) = c_null_char
             rc = c_mkdir(c_name,mode)
-            if (rc .ne. 0 .and. ierrno() .ne. 17) then
-              if (present(errno)) errno = ierrno()
+            ! an existing directory is not an error (access with F_OK=0
+            ! checks existence, portable replacement for ierrno()==EEXIST)
+            if (rc .ne. 0 .and. c_access(c_name,0) .ne. 0) then
+              if (present(errno)) errno = rc
             end if
           endif
         end if
@@ -35,8 +42,8 @@ module file_module
       end do
       c_name(len(name)+1) = c_null_char
       rc = c_mkdir(c_name,mode)
-      if (rc .ne. 0 .and. ierrno() .ne. 17) then
-        if (present(errno)) errno = ierrno()
+      if (rc .ne. 0 .and. c_access(c_name,0) .ne. 0) then
+        if (present(errno)) errno = rc
       end if
     end subroutine mkdir
 

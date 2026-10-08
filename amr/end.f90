@@ -29,10 +29,14 @@ subroutine clean_stop
   ! an error.
   !-----------------------------------------------------
   use mpi_mod
+  use iso_fortran_env, only: output_unit
   implicit none
 #ifndef WITHOUTMPI
   integer::info
 #endif
+
+  ! Force write of (buffered) log before the abort discards it
+  flush(output_unit)
 
 #ifndef WITHOUTMPI
   call MPI_ABORT(MPI_COMM_WORLD, 2, info)
