@@ -32,5 +32,6 @@ __pycache__
 *.tex
 *.pdf
 *.log
+*.ipynb
 # IDEs files
 .vscode

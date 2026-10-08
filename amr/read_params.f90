@@ -179,6 +179,9 @@ endif
 #ifdef RT
   call read_rt_params(nml_ok)
 #endif
+#ifdef CRPHYS
+  call read_cr_params(nml_ok)
+#endif
 #if NDIM==3
   if (sink)call read_sink_params
   if (clumpfind .or. sink)call read_clumpfind_params
