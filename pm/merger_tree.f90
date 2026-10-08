@@ -244,7 +244,7 @@ subroutine process_progenitor_data()
   if (make_mock_galaxies) then
     dummy_real(1:npastprogs) = pmprogs_mpeak(1:npastprogs)
     do i = 1, npastprogs
-      pmprogs_mass(i) = dummy_real(sort_ind_past(i))
+      pmprogs_mpeak(i) = dummy_real(sort_ind_past(i))
     enddo
   endif
 
