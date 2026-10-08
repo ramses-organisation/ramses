@@ -204,6 +204,7 @@ module amr_parameters
   logical ::self_shielding=.false.
   logical ::pressure_fix=.false.
   logical ::nordlund_fix=.true.
+  logical ::energy_fix=.false.          ! Use stored internal energy instead of reconstruction from total energy
   logical ::cooling=.false.
   logical ::neq_chem=.false.            ! Non-equilbrium chemistry activated
   logical ::isothermal=.false.          ! Enable equation of state for gas (heating and cooling disabled if .true.)
