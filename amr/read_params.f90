@@ -128,6 +128,46 @@ subroutine read_params
 
   ! Read parameter blocks
   call read_run_params(1,nml_ok)  !should be read first
+
+  !-------------------------------------------------
+  ! Read optional nrestart command-line argument
+  !-------------------------------------------------
+
+  ! Will overwrite whatever was set in the namelist
+  if (myid==1 .and. narg == 2) then
+   CALL getarg(2,cmdarg)
+   read(cmdarg,*) nrestart
+endif
+
+! Check if info file of restart output exists,
+! otherwise look for earlier outputs
+if (myid==1 .and. nrestart .gt. 0) then
+   call title(nrestart,nchar)
+   info_file='output_'//TRIM(nchar)//'/info_'//TRIM(nchar)//'.txt'
+   inquire(file=info_file, exist=info_ok)
+   do while(.not. info_ok .and. nrestart .gt. 1)
+      nrestart = nrestart - 1
+      call title(nrestart,nchar)
+      info_file='output_'//TRIM(nchar)//'/info_'//TRIM(nchar)//'.txt'
+      inquire(file=info_file, exist=info_ok)
+   enddo
+endif
+
+#ifndef WITHOUTMPI
+  call MPI_BCAST(info_ok,1,MPI_LOGICAL,0,MPI_COMM_WORLD,ierr)
+#endif
+
+if (nrestart .gt. 0 .and. .not. info_ok) then
+   if (myid==1) then
+       write(*,*) "Error: Could not find restart file"
+   endif
+   call clean_stop
+endif
+
+#ifndef WITHOUTMPI
+  call MPI_BCAST(nrestart,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+#endif
+
   call read_amr_params(1,nml_ok)
   call read_output_params(1,nml_ok)
   call read_movie_params(1,nml_ok)
@@ -219,45 +259,6 @@ subroutine read_params
     write(*,*) "--------------------------------------------------------------------------------------------------------------"
   endif
 #endif
-#endif
-
-  !-------------------------------------------------
-  ! Read optional nrestart command-line argument
-  !-------------------------------------------------
-
-  ! Will overwrite whatever was set in the namelist
-  if (myid==1 .and. narg == 2) then
-     CALL getarg(2,cmdarg)
-     read(cmdarg,*) nrestart
-  endif
-
-  ! Check if info file of restart output exists,
-  ! otherwise look for earlier outputs
-  if (myid==1 .and. nrestart .gt. 0) then
-     call title(nrestart,nchar)
-     info_file='output_'//TRIM(nchar)//'/info_'//TRIM(nchar)//'.txt'
-     inquire(file=info_file, exist=info_ok)
-     do while(.not. info_ok .and. nrestart .gt. 1)
-        nrestart = nrestart - 1
-        call title(nrestart,nchar)
-        info_file='output_'//TRIM(nchar)//'/info_'//TRIM(nchar)//'.txt'
-        inquire(file=info_file, exist=info_ok)
-     enddo
-  endif
-
-#ifndef WITHOUTMPI
-  call MPI_BCAST(info_ok,1,MPI_LOGICAL,0,MPI_COMM_WORLD,ierr)
-#endif
-
-  if (nrestart .gt. 0 .and. .not. info_ok) then
-     if (myid==1) then
-         write(*,*) "Error: Could not find restart file"
-     endif
-     call clean_stop
-  endif
-
-#ifndef WITHOUTMPI
-  call MPI_BCAST(nrestart,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
 #endif
 
 
