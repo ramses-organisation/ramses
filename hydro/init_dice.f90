@@ -1207,7 +1207,6 @@ subroutine kill_gas_part(ilevel)
   integer::igrid,jgrid,ipart,jpart,next_part
   integer::ig,ip,npart1,npart2,icpu,info
   integer,dimension(1:nvector)::ind_grid,ind_part,ind_grid_part
-  logical,dimension(1:nvector)::ok=.true.
   integer::npart_all
   integer,dimension(1:ncpu)::npart_cpu,npart_cpu_all
 
@@ -1259,8 +1258,8 @@ subroutine kill_gas_part(ilevel)
                  ind_grid_part(ip)=ig
               endif
               if(ip==nvector)then
-                 call remove_list(ind_part,ind_grid_part,ok,ip)
-                 call add_free_cond(ind_part,ok,ip)
+                 call remove_list(ind_part,ind_grid_part,ip)
+                 call add_free(ind_part,ip)
                  ip=0
                  ig=0
               end if
@@ -1274,8 +1273,8 @@ subroutine kill_gas_part(ilevel)
 
      ! End loop over grids
      if(ip>0)then
-        call remove_list(ind_part,ind_grid_part,ok,ip)
-        call add_free_cond(ind_part,ok,ip)
+        call remove_list(ind_part,ind_grid_part,ip)
+        call add_free(ind_part,ip)
      end if
   end do
 
