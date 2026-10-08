@@ -612,11 +612,7 @@ subroutine star_formation(ilevel)
   if(.not. ok_free)then
      write(*,*)'No more free memory for particles'
      write(*,*)'Increase npartmax'
-#ifndef WITHOUTMPI
-    call MPI_ABORT(MPI_COMM_WORLD,1,info)
-#else
-    stop
-#endif
+    call clean_stop
   end if
 
   !---------------------------------

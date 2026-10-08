@@ -89,7 +89,7 @@ FUNCTION integrateSpectrum(X, Y, N, e0, e1, species, func)
   !      do i=1,N
   !         write(*,*) xx(i),f(i),yy(i)
   !      end do
-  !      stop
+  !      call clean_stop
   !   endif
   !endif
 

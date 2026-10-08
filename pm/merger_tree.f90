@@ -3519,7 +3519,7 @@ subroutine make_galaxies()
   if((opened.and.(npart_out==0)).or.((.not.opened).and.(npart_out>0))) then
      write(*,*)'Error in output_gal_cone'
      write(*,*)'npart_out=',npart_out,'opened=',opened
-     stop
+     call clean_stop
   endif
 
   endif
@@ -3912,7 +3912,6 @@ subroutine read_mergertree_params()
   !------------------------------------------------------------------
 
   use clfind_commons
-  use mpi_mod
   implicit none
 
   namelist/mergertree_params/nmost_bound, max_past_snapshots, &

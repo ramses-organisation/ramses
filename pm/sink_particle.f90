@@ -8,7 +8,6 @@ subroutine create_sink
   use pm_commons
   use hydro_commons
   use clfind_commons
-  use mpi_mod
   implicit none
 
   !----------------------------------------------------------------------------
@@ -1185,7 +1184,6 @@ subroutine compute_accretion_rate(write_sinks)
   use amr_commons
   use hydro_commons
   use constants, only: pi, twopi, c_cgs, factG_in_cgs, M_sun, mH, sigma_T
-  use mpi_mod
   implicit none
   logical::write_sinks
 
@@ -1365,7 +1363,6 @@ subroutine print_sink_properties(dMEDoverdt,dMEDoverdt_smbh,rho_inf,r2)
   use amr_commons
   use hydro_commons
   use constants, only: twopi, M_sun, pc2cm, yr2sec
-  use mpi_mod
   implicit none
   real(dp),dimension(1:nsinkmax)::dMEDoverdt,rho_inf,r2
   real(dp),dimension(1:nsinkmax)::dMEDoverdt_smbh
@@ -1922,7 +1919,6 @@ subroutine update_sink(ilevel)
   use hydro_commons
   use sink_feedback_parameters
   use constants, only: twopi, M_sun, yr2sec
-  use mpi_mod
   implicit none
   integer::ilevel
 
@@ -2586,7 +2582,6 @@ subroutine f_sink_sink
   use amr_commons
   use pm_commons
   use constants, only: twopi
-  use mpi_mod
   implicit none
 
   !----------------------------------------------------------------------------

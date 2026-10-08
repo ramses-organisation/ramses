@@ -379,7 +379,7 @@ subroutine check_tree(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
            endif
         end do
      end do
-     stop
+     call clean_stop
   end if
 
   ! Compute neighboring grid index
@@ -1114,7 +1114,7 @@ subroutine virtual_tree_fine(ilevel)
 #endif
      write(*,*)'============================'
      write(*,*)reception(1:ncpu,ilevel)%npart
-     call MPI_ABORT(MPI_COMM_WORLD,1,info)
+     call clean_stop
   end if
 
   ! Scatter new particles from communication buffer

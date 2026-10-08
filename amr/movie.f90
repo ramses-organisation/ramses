@@ -163,8 +163,7 @@ subroutine output_frame()
        call MPI_BCAST(ierr,1,MPI_INTEGER,0,MPI_COMM_WORLD,info)
        if(ierr.ne.0 .and. ierr.ne.127)then
           write(*,*) 'Error - Could not create ',trim(moviedir)
-          call MPI_ABORT(MPI_COMM_WORLD,1,info)
-          stop
+          call clean_stop
        endif
 #endif
 #endif
@@ -308,21 +307,13 @@ subroutine output_frame()
     allocate(data_frame(1:nw_frame,1:nh_frame,1:n_movie_vars),stat=ierr)
     if(ierr .ne. 0)then
        write(*,*) 'Error - Movie frame allocation failed'
-#ifndef WITHOUTMPI
-       call MPI_ABORT(MPI_COMM_WORLD,1,info)
-#else
-       stop
-#endif
+       call clean_stop
     endif
 
     allocate(weights(1:nw_frame,1:nh_frame),stat=ierr)
     if(ierr .ne. 0)then
        write(*,*) 'Error - Movie frame allocation failed'
-#ifndef WITHOUTMPI
-       call MPI_ABORT(MPI_COMM_WORLD,1,info)
-#else
-       stop
-#endif
+       call clean_stop
     endif
 
     if(is_min)then
@@ -908,12 +899,12 @@ subroutine output_frame()
     allocate(data_single(1:nw_frame*nh_frame),stat=ierr)
     if(ierr .ne. 0)then
        write(*,*) 'Error - Movie frame allocation failed'
-       call MPI_ABORT(MPI_COMM_WORLD,1,info)
+       call clean_stop
     endif
     allocate(data_single_all(1:nw_frame*nh_frame),stat=ierr)
     if(ierr .ne. 0)then
        write(*,*) 'Error - Movie frame allocation failed'
-       call MPI_ABORT(MPI_COMM_WORLD,1,info)
+       call clean_stop
     endif
     ! Loop over maps
     do kk=1,n_movie_vars
@@ -945,7 +936,7 @@ subroutine output_frame()
     enddo
     if(info.ne.MPI_SUCCESS)then
        if(myid==1) write(*,*) 'MPI error - map reduce failed'
-       call MPI_ABORT(MPI_COMM_WORLD,1,info)
+       call clean_stop
     endif
     ! Weights communication
     if(is_mean)then
@@ -968,7 +959,7 @@ subroutine output_frame()
        endif
        if(info.ne.MPI_SUCCESS)then
           if(myid==1) write(*,*) 'MPI error - weigths reduce failed'
-          call MPI_ABORT(MPI_COMM_WORLD,1,info)
+          call clean_stop
        endif
     endif
     deallocate(data_single)
@@ -1003,11 +994,7 @@ subroutine output_frame()
        ilun = 10
        if(ierr .ne. 0)then
           write(*,*) 'Error - Cannot alllocate movie frame'
-#ifndef WITHOUTMPI
-          call MPI_ABORT(MPI_COMM_WORLD,1,info)
-#else
-          stop
-#endif
+          call clean_stop
        endif
        ! Write the frames to files
        do kk=1, n_movie_vars
@@ -1015,11 +1002,7 @@ subroutine output_frame()
           open(ilun,file=TRIM(filename),form='unformatted',iostat=ierr)
           if(ierr .ne. 0)then
              write(*,*) 'Error - Could not open ',TRIM(filename)
-#ifndef WITHOUTMPI
-             call MPI_ABORT(MPI_COMM_WORLD,1,info)
-#else
-             stop
-#endif
+             call clean_stop
           endif
           rewind(ilun)
           if(tendmov>0)then

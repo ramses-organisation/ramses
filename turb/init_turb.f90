@@ -78,7 +78,10 @@ subroutine init_turb_driving
    allocate(afield_next(1:NDIM,0:TGRID_X,0:TGRID_Y,0:TGRID_Z), stat=all_stat(3))
    allocate(afield_now(1:NDIM,0:TGRID_X,0:TGRID_Y,0:TGRID_Z), stat=all_stat(4))
 
-   if (any(all_stat /= 0)) stop 'Out of memory in init_turb_driving!'
+   if (any(all_stat /= 0)) then
+         write(*,*) 'Out of memory in init_turb_driving!'
+         call clean_stop
+      end if
 
    ! Set turbulence update time from autocorrelation time and number of substeps
    turb_dt = turb_T / real(turb_Ndt,dp)
@@ -97,7 +100,10 @@ subroutine init_turb_driving
       allocate(turb_next(1:NDIM,0:TGRID_X,0:TGRID_Y,0:TGRID_Z), stat=all_stat(2))
       allocate(power_spec(0:TGRID_X,0:TGRID_Y,0:TGRID_Z), stat=all_stat(3))
 
-      if (any(all_stat(1:3) /= 0)) stop 'Out of memory in init_turb_driving!'
+      if (any(all_stat(1:3) /= 0)) then
+         write(*,*) 'Out of memory in init_turb_driving!'
+         call clean_stop
+      end if
 
       ! Set decay fraction per timestep dt
       turb_decay_frac = turb_dt / turb_T ! == 1 / turbNdt
@@ -232,19 +238,28 @@ subroutine init_turb_initial
 
    ! Allocated on every task: the root task fills it, the others receive it
    allocate(afield_init(1:NDIM,0:TGRID_X,0:TGRID_Y,0:TGRID_Z), stat=all_stat)
-   if (all_stat /= 0) stop 'Out of memory in init_turb_initial!'
+   if (all_stat /= 0) then
+         write(*,*) 'Out of memory in init_turb_initial!'
+         call clean_stop
+      end if
 
    if (myid == 1) then
 
       allocate(power_spec_init(0:TGRID_X,0:TGRID_Y,0:TGRID_Z), stat=all_stat)
-      if (all_stat /= 0) stop 'Out of memory in init_turb_initial!'
+      if (all_stat /= 0) then
+         write(*,*) 'Out of memory in init_turb_initial!'
+         call clean_stop
+      end if
       call build_power_spectrum(initial_turb_spectrum, power_spec_init)
 
       ! Draw into a scratch spectrum of its own, so that with driving switched on
       ! the Ornstein-Uhlenbeck state in turb_next is left untouched and the two
       ! fields stay uncorrelated.
       allocate(turb_ic(1:NDIM,0:TGRID_X,0:TGRID_Y,0:TGRID_Z), stat=all_stat)
-      if (all_stat /= 0) stop 'Out of memory in init_turb_initial!'
+      if (all_stat /= 0) then
+         write(*,*) 'Out of memory in init_turb_initial!'
+         call clean_stop
+      end if
 
       ! add_turbulence takes the variance of the Wiener increment as its last
       ! argument. Starting from an empty field, that increment is the whole field

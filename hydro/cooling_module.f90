@@ -259,7 +259,7 @@ subroutine set_model(Nmodel,J0in_in,J0min_in,alpha_in,normfacJ0_in,zreioniz_in, 
      else
         write(*,*) 'ERROR in set_model : wrong value of Nmodel'
         write(*,*) 'Nmodel =',Nmodel
-        STOP
+        call clean_stop
      endif
   endif
   if (J0in_in >= 0.0) J0in=J0in_in
@@ -275,7 +275,7 @@ subroutine set_model(Nmodel,J0in_in,J0min_in,alpha_in,normfacJ0_in,zreioniz_in, 
   elseif (correct_cooling /= -1) then
      write(*,*) 'ERROR in set_model : wrong value of correct_cooling'
      write(*,*) 'correct_cooling =',correct_cooling
-     STOP
+     call clean_stop
   endif
   if (realistic_ne == 0) then
      astart=5d-4
@@ -293,13 +293,13 @@ subroutine set_model(Nmodel,J0in_in,J0min_in,alpha_in,normfacJ0_in,zreioniz_in, 
   else
      write(*,*) 'ERROR in set_model : wrong value of realistic_ne'
      write(*,*) 'realistic_ne =',realistic_ne
-     STOP
+     call clean_stop
   endif
   if (astart_sim < astart) then
      write(*,*) 'ERROR in set_model : astart_sim is too small.'
      write(*,*) 'astart     =',astart
      write(*,*) 'astart_sim =',astart_sim
-     STOP
+     call clean_stop
   endif
   ! Calcul de la temperature initiale
   aend=astart_sim
@@ -426,7 +426,7 @@ subroutine evol_single_cell(astart,aend,dasura,h,omegab,omega0,omegaL, &
      end do
      if (niter > 100) then
         write(*,*) 'ERROR in evol_single_cell : too many iterations'
-        STOP
+        call clean_stop
      endif
      T2_com=T2*aexp**2
      aexp = aexp + daexp
@@ -470,7 +470,7 @@ subroutine compute_J0min(h,omegab,omega0,omegaL,J0min_in)
   enddo
   if (niter > 100) then
      write(*,*) 'ERROR in compute_J0min : too many iterations'
-     STOP
+     call clean_stop
   endif
   if (verbose_cooling)  write(*,*) 'J0min found ',J0min_in
 end subroutine compute_J0min
@@ -525,7 +525,7 @@ subroutine solve_cooling(nH,T2,zsolar,boost,dt,deltaT2,ncell)
   if (tau_negative) then
      write(*,*)'ERROR in solve_cooling :'
      write(*,*)'Initial temperature is negative'
-     STOP
+     call clean_stop
   endif
 
   ! Loop over active cells
@@ -539,7 +539,7 @@ subroutine solve_cooling(nH,T2,zsolar,boost,dt,deltaT2,ncell)
         do i=1,n
            write(*,*)i,tau(ind(i)),T2(ind(i)),nH(ind(i)),i_nH(ind(i))
         end do
-        STOP
+        call clean_stop
      endif
 
      n_active=0
@@ -653,7 +653,7 @@ subroutine solve_cooling(nH,T2,zsolar,boost,dt,deltaT2,ncell)
   if (tau_negative) then
      write(*,*)'ERROR in solve_cooling :'
      write(*,*)'Final temperature is negative'
-     STOP
+     call clean_stop
   endif
 
   ! Compute delta T
@@ -1129,7 +1129,7 @@ subroutine cmp_cooling(T2,nH,t_rad_spec,h_rad_spec,cool_tot,heat_tot,cool_com,he
   end do
   if (niter > 50) then
      write(*,*) 'ERROR in cmp_cooling : too many iterations.'
-     STOP
+     call clean_stop
   endif
 
   ! Get equilibrium abundances

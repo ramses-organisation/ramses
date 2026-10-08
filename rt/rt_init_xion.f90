@@ -6,7 +6,6 @@ SUBROUTINE rt_init_xion(ilevel)
 !-------------------------------------------------------------------------
   use amr_commons
   use hydro_commons
-  use mpi_mod
   implicit none
   integer:: ilevel
   integer:: ncache,i,igrid,ngrid
@@ -247,7 +246,7 @@ SUBROUTINE cmp_Equilibrium_Abundances(T2,nH,phI_rates,mu,nSpec,Zsolar)
   end do
   if (niter > 50) then
      write(*,*) 'ERROR in cmp_Equilibrium_Abundances : too many iterations.'
-     STOP
+     call clean_stop
   endif
 
 END SUBROUTINE cmp_Equilibrium_Abundances

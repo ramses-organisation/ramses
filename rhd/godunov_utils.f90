@@ -579,7 +579,7 @@ implicit none
      endif
      if ((q(k,1)<0d0).or.(q(k,5)<0d0).or.E<0d0) then
         write(*,*) 'negative pressure or density ctoprim 2'
-        stop
+        call clean_stop
      endif
      ! Passive scalar
      do idim = 6, nvar

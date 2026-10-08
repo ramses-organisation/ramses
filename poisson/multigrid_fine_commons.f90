@@ -318,7 +318,6 @@ end subroutine multigrid_fine
 recursive subroutine recursive_multigrid_coarse(ifinelevel, safe)
    use amr_commons
    use poisson_commons
-   use mpi_mod
    implicit none
 
    integer, intent(in) :: ifinelevel

@@ -99,7 +99,7 @@ subroutine unsplit(uin,gravin,flux,tmp,dx,dy,dz,dt,ngrid)
 #endif
    else
       write(*,*),'no valid scheme'
-      stop
+      call clean_stop
 
    endif
 
@@ -1006,7 +1006,7 @@ subroutine cmpflxm(qm,im1,im2,jm1,jm2,km1,km2, &
                  call riemann_hllc     (qleft,qright,fgdnv)
               else
                  write(*,*)'unknown Riemann solver'
-                 stop
+                 call clean_stop
               end if
 
 
@@ -1145,7 +1145,7 @@ subroutine ctoprim(uin,q,gravin,dt,ngrid)
              endif
              if ((q(l,i,j,k,1)<0d0).or.(q(l,i,j,k,5)<0d0).or.E<0d0) then
                 write(*,*) 'negative pressure or density'
-                stop
+                call clean_stop
              endif
 
              ! Passive scalar
@@ -1272,7 +1272,7 @@ subroutine uslope(q,dq,dx,dt,ngrid)
                  end if
               else
                  write(*,*)'Unknown slope type'
-                 stop
+                 call clean_stop
               end if
            end do
         end do
@@ -1353,7 +1353,7 @@ subroutine uslope(q,dq,dx,dt,ngrid)
      end do
   else
      write(*,*)'Unknown slope type'
-     stop
+     call clean_stop
   endif
 #endif
 
@@ -1512,7 +1512,7 @@ subroutine uslope(q,dq,dx,dt,ngrid)
      end do
   else
      write(*,*)'Unknown slope type'
-     stop
+     call clean_stop
   endif
 #endif
 

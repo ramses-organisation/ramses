@@ -213,7 +213,7 @@ subroutine cmpdt(uu,gg,dx,dt,ncell)
            write(*,*)'rho  =',uu(k,1)
            write(*,*)'P    =',uu(k,neul)
            write(*,*)'vel  =',uu(k,2:ndim+1)
-           stop
+           call clean_stop
         end if
      end do
   end if
