@@ -468,6 +468,7 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   end do
   ! Gather 3-force
   ff(1:np,1:ndim)=0.0D0
+  kappa_num(1:np,1:ndim)=0.0D0
   if(tracer.and.hydro)then
      do ind=1,twotondim
         do idim=1,ndim
@@ -475,8 +476,8 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
               if (classical_tracer(j)) then
                   if (ito_tracer) then
                      ! Get velocity from the CIC-interpolated mass flux
-                     fluxL = fluxes(indp(j,ind), 1 + idim) 
-                     fluxR = fluxes(indp(j,ind), 1 + idim + ndim)
+                     fluxL = fluxes(indp(j,ind), (idim - 1)*2 + 1) 
+                     fluxR = fluxes(indp(j,ind), (idim - 1)*2 + 2)
                      pr = max(fluxR,0.d0) 
                      pl = max(-fluxL,0.d0) 
                      cfl_plus = pr + pl
@@ -563,7 +564,7 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
               noise_amp = sqrt(max(0.d0,2.d0*kappa_num(j, idim)*dtnew(ilevel)))
               ! TODO Check random generator  initialization, pregenerate numbers?
               call ranf(tracer_seed, xi)
-              new_xp(j,idim) = new_xp(j,idim) + noise_amp*xi
+              new_xp(j,idim) = new_xp(j,idim) !+ noise_amp*xi
            end if
         end do
      endif
