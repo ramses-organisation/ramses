@@ -35,6 +35,7 @@ p_region=1e-5,0.4
 
 &OUTPUT_PARAMS
 tout=1
+write_conservative=.true.
 /
 
 &HYDRO_PARAMS
