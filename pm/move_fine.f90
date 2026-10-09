@@ -478,7 +478,7 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
                      ! Get velocity from the CIC-interpolated mass flux
                      fluxL = fluxes(indp(j,ind), (idim - 1)*2 + 1) 
                      fluxR = fluxes(indp(j,ind), (idim - 1)*2 + 2)
-                     pr = max(fluxR,0.d0) 
+                     pr = max(-fluxR,0.d0) 
                      pl = max(-fluxL,0.d0) 
                      cfl_plus = pr + pl
                      cfl_minus = pr - pl
