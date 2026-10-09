@@ -147,4 +147,4 @@ dt["time"] = data.meta["time"].magnitude
 #}
 
 import visu_ramses
-visu_ramses.check_solution(dt, 'sedov-ito-tracers', overwrite=True)
+visu_ramses.check_solution(dt, 'sedov-ito-tracers')
