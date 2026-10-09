@@ -62,7 +62,7 @@ module tracer_utils
       ! print*, 'in pre_kill_grid_hook'
       dx = 0.5D0**ilevel
 
-      if (MC_tracer) then
+      if (MC_tracer .and. .not. ito_tracer) then
          ! For all particles, recenter them in the center of the grid that's being deleted
          ! (becoming a cell)
          do j = 1, nn
@@ -147,7 +147,7 @@ module tracer_utils
       dxcoarse = 0.5D0**(ilevel-1) ! dx of the previous level
 
       ! print*, 'in post_make_grid_fine_hook'
-      if (MC_tracer) then
+      if (MC_tracer .and. .not. ito_tracer) then
          ! Compute the expected location of particles relative to xg in dx units
          loc(3) = (ind-1) / 4
          loc(2) = (ind-1-loc(3)*4) / 2

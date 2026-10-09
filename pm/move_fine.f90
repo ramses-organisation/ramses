@@ -36,8 +36,8 @@ subroutine move_fine(ilevel)
               ig=1
               ind_grid(ig)=igrid
            end if
-           ! Skip tracers (except "classic" tracers)
-           if (.not. (MC_tracer .and. is_tracer(typep(ipart)))) then
+           ! Skip tracers (except "classic" and Itô tracers)
+           if (.not. (MC_tracer .and. .not. ito_tracer .and. is_tracer(typep(ipart)))) then
               local_counter=local_counter+1
               ip=ip+1
               ind_part(ip)=ipart
@@ -66,7 +66,7 @@ subroutine move_fine(ilevel)
   !---------------
   ! Moving tracers
   !---------------
-  if (MC_tracer) then  ! Loop over grids for MC tracers
+  if (MC_tracer .and. .not. ito_tracer) then  ! Loop over grids for MC tracers
      call move_tracer_fine(ilevel)
   end if
 111 format('   Entering move_fine for level ',I2)
@@ -192,7 +192,8 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   use amr_commons
   use pm_commons
   use poisson_commons
-  use hydro_commons, ONLY: uold,smallr
+  use hydro_commons, ONLY: uold,smallr,fluxes
+  use random
   implicit none
   integer::ng,np,ilevel
   integer,dimension(1:nvector)::ind_grid
@@ -220,6 +221,9 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   real(dp),dimension(1:3)::skip_loc
   ! Family
   logical,dimension(1:nvector),save :: classical_tracer
+  ! Ito tracers variables
+  real(dp) fluxL, fluxR, pr, pl, cfl_plus, cfl_minus, u_cell, kappa_num_cell, noise_amp, xi
+  real(dp) ,dimension(1:nvector, 1:ndim)::kappa_num
 
   ! Mesh spacing in that level
   dx=0.5D0**ilevel
@@ -464,14 +468,31 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   end do
   ! Gather 3-force
   ff(1:np,1:ndim)=0.0D0
+  kappa_num(1:np,1:ndim)=0.0D0
   if(tracer.and.hydro)then
      do ind=1,twotondim
         do idim=1,ndim
            do j=1,np
               if (classical_tracer(j)) then
-                 ff(j,idim)=ff(j,idim) + &
-                      uold(indp(j,ind),idim+1)/max(uold(indp(j,ind),1),smallr)*vol(j,ind)
-              end if
+                  if (ito_tracer .and. ok(j)) then
+                     ! Get velocity from the CIC-interpolated mass flux
+                     ! Fallback to uold velocity if the CIC is done at a coarser level
+                     fluxL = fluxes(indp(j,ind), (idim - 1)*2 + 1)
+                     fluxR = fluxes(indp(j,ind), (idim - 1)*2 + 2)
+                     pr = max(-fluxR,0.d0)
+                     pl = max(-fluxL,0.d0)
+                     cfl_plus = pr + pl
+                     cfl_minus = pr - pl
+                     u_cell = cfl_minus*dx_loc/dtnew(ilevel)
+                     kappa_num_cell = 0.5d0*(cfl_plus - cfl_minus**2.d0)*dx_loc**2.d0/dtnew(ilevel)
+                     kappa_num(j, idim) = kappa_num(j, idim) + kappa_num_cell*vol(j,ind)
+                     ff(j, idim) = ff(j, idim) + u_cell*vol(j, ind)
+                  else
+                     ! CIC-Interpolate the velocity of the cells
+                     ff(j,idim)=ff(j,idim) + &
+                     uold(indp(j,ind),idim+1)/max(uold(indp(j,ind),1),smallr)*vol(j,ind)
+                  end if
+               end if
            end do
         end do
      end do
@@ -539,6 +560,13 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      else
         do j=1,np
            new_xp(j,idim)=xp(ind_part(j),idim)+new_vp(j,idim)*dtnew(ilevel)
+           if (ito_tracer .and. classical_tracer(j)) then
+              ! Uniform ditribution (TODO make this parametrizable?)
+              noise_amp = sqrt(max(0.d0,2.d0*kappa_num(j, idim)*dtnew(ilevel)))
+              call ranf(tracer_seed, xi)
+              xi = (2.0d0*xi - 1.0d0) * sqrt(3.0d0)
+              new_xp(j,idim) = new_xp(j,idim) + noise_amp*xi
+           end if
         end do
      endif
   end do

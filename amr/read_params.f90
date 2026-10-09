@@ -635,7 +635,7 @@ end subroutine read_lightcone_params
 !###############################################################
 !###############################################################
 subroutine read_tracer_params(namelist_unit,nml_ok)
-   use amr_parameters, only:tracer,mc_tracer,pic,nlevelmax
+   use amr_parameters, only:tracer,mc_tracer,ito_tracer,pic,nlevelmax
    use amr_commons, only:myid
    use pm_parameters
    implicit none
@@ -643,7 +643,7 @@ subroutine read_tracer_params(namelist_unit,nml_ok)
    logical,intent(inout)::nml_ok
    integer::nml_err
 
-   namelist/tracer_params/MC_tracer,tracer_feed,tracer_feed_fmt &
+   namelist/tracer_params/MC_tracer, ito_tracer, tracer_feed,tracer_feed_fmt &
    & ,tracer_mass,tracer_first_balance_part_per_cell &
    & ,tracer_first_balance_levelmin
 
@@ -660,6 +660,10 @@ subroutine read_tracer_params(namelist_unit,nml_ok)
 
    ! Verify input
    if (tracer_first_balance_levelmin <= 0) tracer_first_balance_levelmin = nlevelmax + 1
+
+   if(ito_tracer) then
+      MC_tracer = .true.
+   end if
 
    if(MC_tracer .and. (.not. tracer))then
       if(myid==1)write(*,*)'Error: you have activated the MC tracer but not the tracers in RUN_PARAMS.'
