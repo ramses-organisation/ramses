@@ -138,7 +138,7 @@ dt = {
     "gas_density": rho,
 }
 
-dt["time"] = data.meta["time"].msagnitude
+dt["time"] = data.meta["time"].magnitude
 
 # Use a relative tolerance within ± 2 Poisson noise
 #rtol = {
