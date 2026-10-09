@@ -37,7 +37,7 @@ subroutine move_fine(ilevel)
               ind_grid(ig)=igrid
            end if
            ! Skip tracers (except "classic" and Itô tracers)
-           if (.not. (MC_tracer .and. .not. ito_tracer) .and. is_tracer(typep(ipart))) then
+           if (.not. (MC_tracer .and. .not. ito_tracer .and. is_tracer(typep(ipart)))) then
               local_counter=local_counter+1
               ip=ip+1
               ind_part(ip)=ipart
