@@ -474,8 +474,9 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
         do idim=1,ndim
            do j=1,np
               if (classical_tracer(j)) then
-                  if (ito_tracer) then
+                  if (ito_tracer .and. ok(j)) then 
                      ! Get velocity from the CIC-interpolated mass flux
+                     ! Fallback to uold velocity if the CIC is done at a coarser level
                      fluxL = fluxes(indp(j,ind), (idim - 1)*2 + 1) 
                      fluxR = fluxes(indp(j,ind), (idim - 1)*2 + 2)
                      pr = max(-fluxR,0.d0) 
@@ -562,7 +563,6 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
            if (ito_tracer .and. classical_tracer(j)) then
               ! Uniform ditribution (TODO make this parametrizable?)
               noise_amp = sqrt(max(0.d0,2.d0*kappa_num(j, idim)*dtnew(ilevel)))
-              ! TODO Check random generator  initialization, pregenerate numbers?
               call ranf(tracer_seed, xi)
               xi = (2.0d0*xi - 1.0d0) * sqrt(3.0d0)
               new_xp(j,idim) = new_xp(j,idim) + noise_amp*xi
