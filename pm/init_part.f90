@@ -71,13 +71,13 @@ subroutine init_part
      return
   end if
 
-  if (MC_tracer) call initialize_skip_loc
+  if (MC_tracer .and. .not. ito_tracer) call initialize_skip_loc
 
   ! Allocate particle variables
   allocate(xp    (npartmax,ndim))
   allocate(vp    (npartmax,ndim))
   allocate(mp    (npartmax))
-  if (MC_tracer) then
+  if (MC_tracer .and. .not. ito_tracer) then
      allocate(itmpp (npartmax))
      allocate(partp (npartmax))
      allocate(move_flag(npartmax))
@@ -217,7 +217,7 @@ subroutine init_part
         deallocate(xdp)
      end if
 
-     if (MC_tracer) then
+     if (MC_tracer .and. .not. ito_tracer) then
         allocate(isp(1:npart2))
         ! Now read partp
         read(ilun)isp

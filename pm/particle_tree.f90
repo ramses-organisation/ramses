@@ -839,7 +839,7 @@ subroutine virtual_tree_fine(ilevel)
   ! Calculate how many particle properties are being transferred
   ! igrid, level, id, families
   particle_data_width_int = 4
-  if (MC_tracer) then
+  if (MC_tracer .and. .not. ito_tracer) then
      ! Also send partp
      particle_data_width_int = particle_data_width_int + 1
   end if
@@ -872,7 +872,7 @@ subroutine virtual_tree_fine(ilevel)
 #endif
      end if
   end do
-  if (MC_tracer) then
+  if (MC_tracer .and. .not. ito_tracer) then
      ! Use itmpp to store the index within communicator
      ! Note: itmpp is also used in `sink_particle_tracer` for
      ! `gas_tracers`, so there is no interference here.
@@ -1141,7 +1141,7 @@ subroutine virtual_tree_fine(ilevel)
 #endif
      end do
      ! Loop on star tracers in the communicator
-     if (MC_tracer) then
+     if (MC_tracer .and. .not. ito_tracer) then
         do ipart = 1, ncache
 #ifdef LIGHT_MPI_COMM
            jpart = emission_part(ilevel)%f8(1,offset_np+ipart-1)
@@ -1358,7 +1358,7 @@ subroutine fill_comm(ind_part,ind_com,ind_list,np,ilevel,icpu)
      end if
   end if
   ! MC Tracer
-  if (MC_tracer) then
+  if (MC_tracer .and. .not. ito_tracer) then
      do i=1,np
         if (is_star_tracer(typep(ind_part(i)))) then
            ! Store index of the star *within* communicator
@@ -1575,7 +1575,7 @@ subroutine empty_comm(ind_com,np,ilevel,icpu)
   end if
 
   ! MC Tracer
-  if (MC_tracer) then
+  if (MC_tracer .and. .not. ito_tracer) then
      do i=1,np
         ! Store the target
         ! NB: this 'partp' contains for star tracers: the adress in
