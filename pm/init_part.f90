@@ -268,7 +268,7 @@ subroutine init_part
      if(debug)write(*,*)'part.tmp read for processor ',myid
      npart=npart2
 
-     if (tracer .and. MC_tracer) then
+     if (tracer .and. (MC_tracer .and. .not. ito_tracer)) then
         ! Attempt to read mass from binary file
         call read_tracer_mass
      end if
