@@ -37,7 +37,7 @@ subroutine move_fine(ilevel)
               ind_grid(ig)=igrid
            end if
            ! Skip tracers (except "classic" and Itô tracers)
-           if (.not. (MC_tracer .and. .not. ito_tracer .and. is_tracer(typep(ipart)))) then 
+           if (.not. (MC_tracer .and. .not. ito_tracer .and. is_tracer(typep(ipart)))) then
               local_counter=local_counter+1
               ip=ip+1
               ind_part(ip)=ipart
@@ -474,24 +474,24 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
         do idim=1,ndim
            do j=1,np
               if (classical_tracer(j)) then
-                  if (ito_tracer .and. ok(j)) then 
+                  if (ito_tracer .and. ok(j)) then
                      ! Get velocity from the CIC-interpolated mass flux
                      ! Fallback to uold velocity if the CIC is done at a coarser level
-                     fluxL = fluxes(indp(j,ind), (idim - 1)*2 + 1) 
+                     fluxL = fluxes(indp(j,ind), (idim - 1)*2 + 1)
                      fluxR = fluxes(indp(j,ind), (idim - 1)*2 + 2)
-                     pr = max(-fluxR,0.d0) 
-                     pl = max(-fluxL,0.d0) 
+                     pr = max(-fluxR,0.d0)
+                     pl = max(-fluxL,0.d0)
                      cfl_plus = pr + pl
                      cfl_minus = pr - pl
                      u_cell = cfl_minus*dx_loc/dtnew(ilevel)
                      kappa_num_cell = 0.5d0*(cfl_plus - cfl_minus**2.d0)*dx_loc**2.d0/dtnew(ilevel)
                      kappa_num(j, idim) = kappa_num(j, idim) + kappa_num_cell*vol(j,ind)
                      ff(j, idim) = ff(j, idim) + u_cell*vol(j, ind)
-                  else 
+                  else
                      ! CIC-Interpolate the velocity of the cells
                      ff(j,idim)=ff(j,idim) + &
                      uold(indp(j,ind),idim+1)/max(uold(indp(j,ind),1),smallr)*vol(j,ind)
-                  end if 
+                  end if
                end if
            end do
         end do
