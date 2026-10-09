@@ -37,7 +37,7 @@ subroutine move_fine(ilevel)
               ind_grid(ig)=igrid
            end if
            ! Skip tracers (except "classic" and Itô tracers)
-           if (.not. (MC_tracer .and. .not. ito_tracer .and. is_tracer(typep(ipart)))) then
+           if (.not. (MC_tracer .and. .not. ito_tracer .and. is_tracer(typep(ipart)))) then 
               local_counter=local_counter+1
               ip=ip+1
               ind_part(ip)=ipart
@@ -564,7 +564,8 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
               noise_amp = sqrt(max(0.d0,2.d0*kappa_num(j, idim)*dtnew(ilevel)))
               ! TODO Check random generator  initialization, pregenerate numbers?
               call ranf(tracer_seed, xi)
-              new_xp(j,idim) = new_xp(j,idim) !+ noise_amp*xi
+              xi = (2.0d0*xi - 1.0d0) * sqrt(3.0d0)
+              new_xp(j,idim) = new_xp(j,idim) + noise_amp*xi
            end if
         end do
      endif
