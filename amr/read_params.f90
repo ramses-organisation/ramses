@@ -661,13 +661,16 @@ subroutine read_tracer_params(namelist_unit,nml_ok)
    ! Verify input
    if (tracer_first_balance_levelmin <= 0) tracer_first_balance_levelmin = nlevelmax + 1
 
-   if(ito_tracer) then
+   if(ito_tracer .and. (.not. MC_tracer)) then
+      if(myid==1)write(*,*)'Warning: you have activated the Itô tracer but not the MC tracers.'
+      if(myid==1)write(*,*)'Warning: activating the parameter MC_tracer'
       MC_tracer = .true.
    end if
 
    if(MC_tracer .and. (.not. tracer))then
-      if(myid==1)write(*,*)'Error: you have activated the MC tracer but not the tracers in RUN_PARAMS.'
-      nml_ok=.false.
+      if(myid==1)write(*,*)'Warning: you have activated the MC tracer but not the tracers in RUN_PARAMS.'
+      if(myid==1)write(*,*)'Warning: activating the parameter RUN_PARAMS/tracer'
+      tracer = .true.
    end if
 
    if(MC_tracer .and. (.not. pic)) then
