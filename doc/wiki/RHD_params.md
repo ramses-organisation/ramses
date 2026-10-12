@@ -20,7 +20,7 @@ and the [documentation page about RHD simulations](./RHD).
 | `isHe=.true.`                |  `logical`    | Include helium ionization?|
 | `rt_flux_scheme=’glf’`       |  `character(len=10)`    | Intercell flux function for the advection of radiation (see §3.2 in [1]). Use either ’glf’ or ’hll’. Note that only the GLF flux function is compatible with the inclusion of trapped IR radiation (see §2.2 in [2]). |
 | `hll_evals_file=”`           |  `character(len=128)`    | Eigenvalues file, necessary only for the HLL intercell flux. Can also be set by environment variable `RAMSES_HLLFILE`. Such a file can be found with the source code (rt/hll_evals.list).|
-| `rt_c_fraction=1.`           |  `real`    | Reduced light speed fraction, for keeping a manageable timestep-length (see §4.1 in [1]). The default corresponds to a full light speed.|
+| `rt_c_fraction=1.`           |  `real array`    | Reduced light speed fraction, for keeping a manageable timestep-length (see §4.1 in [1]). The default corresponds to a full light speed. Can be set level by level. |
 | `rt_courant_factor=0.8`      |  `real`    | Courant factor for photon advection between cells.|
 | `rt_nsubcycle=1`             |  `integer` | Maximum number of RT-steps during one hydro/gravity/etc timestep.|
 | `rt_smooth=.true.`           |  `logical` | Smooth out the operator splitting of photon advection and thermochemistry by incrementally updating the advected quantities in the chemistry. Usually speeds up the calculation. See §4.4 in [1].  |
