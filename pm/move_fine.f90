@@ -1,7 +1,6 @@
 subroutine move_fine(ilevel)
   use amr_commons
   use pm_commons
-  use mpi_mod
   implicit none
   integer::ilevel
   !----------------------------------------------------------------------
@@ -79,7 +78,6 @@ end subroutine move_fine
 subroutine move_fine_static(ilevel)
   use amr_commons
   use pm_commons
-  use mpi_mod
   implicit none
   integer::ilevel
   !----------------------------------------------------------------------
@@ -279,7 +277,7 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
            endif
         end do
      end do
-     stop
+     call clean_stop
   end if
 
   ! CIC at level ilevel (dd: right cloud boundary; dg: left cloud boundary)
