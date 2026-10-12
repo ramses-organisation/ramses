@@ -174,7 +174,7 @@ subroutine upl(ind_cell,ncell)
                  if ((qd<0d0).or.(qp<0d0).or.E<0d0) then
                     write(*,*) 'negative pressure or density interpol hydro'
 !                    write(*,*),qp,qd,D,M,E
-                    stop
+                    call clean_stop
                  endif
 
 
@@ -338,7 +338,7 @@ subroutine interpol_hydro(u1,g1,u2,g2,nn)
 
            if ((qd<0d0).or.(qp<0d0).or. (E<0d0)) then
               write(*,*) 'negative pressure or density interpol hydro'
-              stop
+              call clean_stop
            endif
 
            !store total energie

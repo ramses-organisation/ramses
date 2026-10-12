@@ -2050,7 +2050,7 @@ subroutine ctoprim(uin,q,bf,gravin,dt,ngrid)
                  if(uin(l,i,j,k,1).le.smallr)then
                     write(*,*)'negative density'
                     write(*,*)uin(l,i,j,k,1)
-                    stop
+                    call clean_stop
                  end if
               end do
            end if
