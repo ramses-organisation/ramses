@@ -772,7 +772,7 @@ subroutine add_viscosity_source_terms(ilevel)
             end if
 
 
-      
+
           end do
         end do
 
@@ -784,13 +784,13 @@ subroutine add_viscosity_source_terms(ilevel)
         do jdim = 1, ndim
           do idim = 1, ndim
               if (idim == jdim) cycle ! this case corresponds to a non crossed term, which is already included in the previous loop
-  
-              v_ileft_jtop     = vel_neigh(i, - e(1, idim) - e(1, jdim), - e(2, idim) - e(2, jdim), - e(3, idim) - e(3, jdim), idim)
-              v_ileft_jbottom  = vel_neigh(i, - e(1, idim) + e(1, jdim), - e(2, idim) + e(2, jdim), - e(3, idim) + e(3, jdim), idim) 
 
-              v_iright_jtop    = vel_neigh(i,   e(1, idim) - e(1, jdim),   e(2, idim) - e(2, jdim),   e(3, idim) - e(3, jdim), idim) 
+              v_ileft_jtop     = vel_neigh(i, - e(1, idim) - e(1, jdim), - e(2, idim) - e(2, jdim), - e(3, idim) - e(3, jdim), idim)
+              v_ileft_jbottom  = vel_neigh(i, - e(1, idim) + e(1, jdim), - e(2, idim) + e(2, jdim), - e(3, idim) + e(3, jdim), idim)
+
+              v_iright_jtop    = vel_neigh(i,   e(1, idim) - e(1, jdim),   e(2, idim) - e(2, jdim),   e(3, idim) - e(3, jdim), idim)
               v_iright_jbottom = vel_neigh(i,   e(1, idim) + e(1, jdim),   e(2, idim) + e(2, jdim),   e(3, idim) + e(3, jdim), idim)
-             
+
               ! First derivative of the velocity at the left and right neighbor center in the direction jdim
               den_dvel_left  = den_left(i, idim)*nu_viscosity_left(idim) * (v_ileft_jbottom - v_ileft_jtop)/(2 * dx_loc)
               den_dvel_right = den_right(i, idim)*nu_viscosity_right(idim) * (v_iright_jbottom - v_iright_jtop)/(2 * dx_loc)
@@ -805,7 +805,7 @@ subroutine add_viscosity_source_terms(ilevel)
         do jdim = 1, ndim
           do idim = 1, ndim
               if (idim == jdim) cycle ! this case corresponds to a non crossed term
-               
+
               v_ileft_jtop     = vel_neigh(i, - e(1, idim) - e(1, jdim), - e(2, idim) - e(2, jdim), - e(3, idim) - e(3, jdim), jdim)
               v_ileft_jbottom  = vel_neigh(i, - e(1, idim) + e(1, jdim), - e(2, idim) + e(2, jdim), - e(3, idim) + e(3, jdim), jdim)
 
