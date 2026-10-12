@@ -15,7 +15,7 @@ from matplotlib.colors import LogNorm
 fig, ax = plt.subplots(nrows=3, ncols=3, figsize=(12, 8))
 
 # Load RAMSES output
-data = visu_ramses.load_snapshot(2,read_hydro=True)
+data = visu_ramses.load_snapshot(3,read_hydro=True)
 xp = data["particle"]["position_x"]
 yp = data["particle"]["position_y"]
 zp = data["particle"]["position_z"]

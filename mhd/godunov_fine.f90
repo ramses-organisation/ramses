@@ -291,6 +291,9 @@ subroutine set_uold(ilevel)
      end if
   end do
 
+  ! Overwrite state if using induction scheme
+  if(ischeme == 1) call velocity_fine(ilevel)
+
 111 format('   Entering set_uold for level ',i2)
 
 end subroutine set_uold

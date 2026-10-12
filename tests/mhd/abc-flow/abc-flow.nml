@@ -39,7 +39,6 @@ C_region=1.0e-3
 
 &OUTPUT_PARAMS
 !delta_tout=0.1
-noutput=1
 tout=10.0
 /
 
@@ -53,8 +52,8 @@ scheme='induction'
 eta_mag=0.001
 /
 
-&REFINE_PARAMS
-err_grad_b2=0.1
-interpol_var=0
-interpol_type=2
-/
+!&REFINE_PARAMS
+!err_grad_b2=0.1
+!interpol_var=1
+!interpol_type=2
+!/

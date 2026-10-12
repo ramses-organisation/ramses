@@ -8,6 +8,7 @@ module turb_commons
   real(dp), allocatable     :: afield_last(:,:,:,:) ! Forcing field at time = t
   real(dp), allocatable     :: afield_next(:,:,:,:) ! Forcing field at time = t + dt
   real(dp), allocatable     :: afield_now(:,:,:,:)  ! Forcing field now
+  real(dp), allocatable     :: afield_init(:,:,:,:) ! Field for the initial velocity
   real(dp), allocatable     :: power_spec(:,:,:)    ! Power spectrum of turbulence
 
   real(dp)    :: sol_frac         ! Solenoidal fraction
@@ -15,7 +16,6 @@ module turb_commons
   real(dp)    :: turb_next_time   ! Time of next turbulent field
   real(dp)    :: turb_dt          ! Turbulent velocity evolution timestep
   real(dp)    :: turb_decay_frac  ! Decay fraction per dt
-  real(dp)    :: turb_space(1:3)  ! Grid spacing
   real(dp)    :: turb_norm        ! Normalizing constant from combination
                                        ! of Ornstein-Uhlenbeck process, initial
                                        ! power spectrum and projection

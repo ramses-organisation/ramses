@@ -188,10 +188,10 @@ subroutine update_time(ilevel)
   end if
 
 #if USE_TURB==1
-  if (turb) then
+  if (driven_turb) then
      call turb_check_time
      if (myid==1) then
-        call current_turb_rms(cur_turb_rms)
+        call current_turb_rms(afield_now, cur_turb_rms)
         write (6,*) ' Current turbulent rms: ', cur_turb_rms
      end if
   end if

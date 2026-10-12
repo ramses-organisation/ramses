@@ -3,6 +3,7 @@ nrestart=0                      ! Restart from some snapshot
 hydro=.true.                    ! Baryons included? (Must be for RT)
 rt=.true.                       ! Activate radiative transfer
 static=.false.                   ! Deactivate hydrodynamics (RHD if false)
+ncontrol=100
 /
 
 &AMR_PARAMS
@@ -28,7 +29,6 @@ p_region=1.4d-08, 1.4d-08	    ! 8000 K and 40 K
 /
 
 &OUTPUT_PARAMS
-noutput=1
 tout=5                           ! End-time for the simulation (in unit_time=Myr)
 /
 

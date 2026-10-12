@@ -36,7 +36,6 @@ prad_region(2,2)=0.02
 /
 
 &OUTPUT_PARAMS
-noutput=1
 tout=0.245
 /
 

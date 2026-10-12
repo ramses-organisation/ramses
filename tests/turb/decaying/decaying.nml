@@ -1,0 +1,74 @@
+This is the RAMSES parameter file for the decaying turbulence test, using the built-in turbulence module.
+
+&RUN_PARAMS
+hydro=.true.
+/
+
+&AMR_PARAMS
+levelmin=6
+levelmax=6
+ngridmax=500000
+boxlen=4
+/
+
+&HYDRO_PARAMS
+gamma=1.666667
+courant_factor=0.8
+scheme='muscl'
+slope_type=1
+riemann='hllc'
+pressure_fix=.true.
+beta_fix=0.5
+/
+
+&INIT_PARAMS
+nregion=1
+region_type='square'
+x_center=2
+y_center=2
+z_center=2
+length_x=4
+length_y=4
+length_z=4
+exp_region=10
+d_region=0.28954719470909174
+p_region=0.030361026190591216
+/
+
+&OUTPUT_PARAMS
+noutput=1
+! Longer than the driven test on purpose. With the driving off there is no cap
+! on dt at turb_dt, so the CFL timestep is ~0.04 rather than 0.0029 and t=0.25
+! would be reached in a handful of steps, showing almost no decay. The eddy
+! turnover time is boxlen/|v|_rms ~ 4/0.87 ~ 4.6, so t=2 shows a clear decay in
+! about 45 steps, i.e. cheaper than the driven test.
+tout=2.0
+/
+
+&UNITS_PARAMS
+units_density=1.50492957435d-20
+units_time=3.1556926d13
+units_length=3.0857d18
+/
+
+&COOLING_PARAMS
+barotropic_eos=.true.
+barotropic_eos_form='isothermal'
+T_eos=4.2194
+/
+
+&TURB_PARAMS
+driven_turb=.false.         ! no driving: the turbulence decays freely
+initial_turb=.true.  ! start from a turbulent velocity field
+turb_seed=1          ! -1 = random
+! Initial velocity dispersion |v|_rms. This is a velocity, unlike the forcing
+! turb_rms: the sound speed here is sqrt(p_region/d_region) = 0.324, so this is
+! Mach ~2.7, comparable to the driven test.
+initial_turb_vrms=0.8660254037844386
+initial_turb_spectrum='power_law' !power_law, parabolic, konstandin, test
+initial_turb_comp_frac=0.5        ! compressive fraction
+turb_min_rho=2.5470372511355715d-6 ! Minimum density for turbulence
+! The driving parameters (comp_frac, forcing_power_spectrum, turb_T, turb_Ndt,
+! turb_rms, instant_turb) play no part here: with driven_turb=.false. there is nothing
+! to drive, and the initial field has parameters of its own.
+/

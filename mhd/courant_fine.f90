@@ -91,7 +91,8 @@ subroutine courant_fine(ilevel)
         end if
 
 #if USE_TURB==1
-        if (turb .AND. turb_type/=3) then
+        ! Gather turbulence driving acceleration
+        if (driven_turb) then
            do idim=1,ndim
               do i=1,nleaf
                  gg(i,idim)=gg(i,idim)+fturb(ind_leaf(i),idim)
@@ -376,7 +377,7 @@ subroutine velocity_fine(ilevel)
                call velana(xx,vv,dx_loc,t,ngrid)
          end select
 
-        ! Impose induction variables
+        ! Impose induction variables (rho=1, P=1)
         do i=1,ngrid
            uold(ind_cell(i),1)=1.0
         end do
@@ -394,7 +395,7 @@ subroutine velocity_fine(ilevel)
            A=0.5*(uold(ind_cell(i),6)+uold(ind_cell(i),nvar+1))
            B=0.5*(uold(ind_cell(i),7)+uold(ind_cell(i),nvar+2))
            C=0.5*(uold(ind_cell(i),8)+uold(ind_cell(i),nvar+3))
-           uold(ind_cell(i),neul)=1.0+0.5*d*(u**2+v**2+w**2)+0.5*(A**2+B**2+C**2)
+           uold(ind_cell(i),neul)=1.0/(gamma-1d0)+0.5*d*(u**2+v**2+w**2)+0.5*(A**2+B**2+C**2)
         end do
 
      end do

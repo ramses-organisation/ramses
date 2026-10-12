@@ -9,10 +9,11 @@ subroutine init_sink
 #ifndef WITHOUTMPI
   integer,parameter::tag=1112,tag2=1113
   integer::dummy_io,info2
+  logical::create_sink_file
 #endif
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   integer::isink, nsinkold
-  logical::eof,ic_sink=.false.
+  logical::eof,ic_sink, exists_sink_restart=.false.
   character(LEN=80)::filename
   character(LEN=80)::fileloc
   character(LEN=5)::nchar,ncharcpu
@@ -138,13 +139,35 @@ subroutine init_sink
 #endif
 
      nsink=0
+     ! Create an empty sink file if the previous snapshot had no sinks.
+#ifndef WITHOUTMPI
+     if(IOGROUPSIZE==0)then
+        create_sink_file = (myid==1)
+     else !(IOGROUPSIZE > 0)
+        create_sink_file = (mod(myid-1,IOGROUPSIZE)==0)
+     endif
+     if(create_sink_file)then
+#endif
+        inquire(file=fileloc, exist=exists_sink_restart)
+        if (.not. exists_sink_restart) then
+           open(10,file=fileloc,form='formatted',status='new',recl=500)
+           write(10,'(" # id,msink,x,y,z,vx,vy,vz,lx,ly,lz,tform,acc_rate,del_mass,rho_gas,cs**2,etherm,vx_gas,vy_gas,vz_gas,mbh,dmfsink,level ")')
+           write(10,'(" # 1,m,l,l,l,l t**-1,l t**-1,l t**-1,m l**2 t**-1,m l**2 t**-1,m l**2 t**-1,t,m t**-1,m,m l**-3,l**2 t**-2,m l**2 t**-2,l t**-1,l t**-1,l t**-1,m,m,1")')
+           close(10)
+        endif
+#ifndef WITHOUTMPI
+     endif
+     ! Synchronize all CPUs.
+     call MPI_BARRIER(MPI_COMM_WORLD,info2)
+#endif
      open(10,file=fileloc,form='formatted')
      eof=.false.
      ! scrolling over the comment lines
      read(10,'(A200)')comment_line
      read(10,'(A200)')comment_line
      do
-        read(10,'(I10,21(A1,ES21.10),A1,I10)',end=104)sid,co, sm1,co,&
+        ! Must match the write format in output_sink_csv exactly.
+        read(10,'(I10,21(A1,ES25.16E3),A1,I10)',end=104)sid,co, sm1,co,&
                            sx1,co,sx2,co,sx3,co, &
                            sv1,co,sv2,co,sv3,co, &
                            sl1,co,sl2,co,sl3,co, &

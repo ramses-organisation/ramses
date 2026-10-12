@@ -82,7 +82,7 @@ slice_y = y
 slice_d = np.log10(rho)
 slice_p = np.log10(P)
 
-nx = 128
+nx = 256
 xmin = ymin = 0.0
 xmax = ymax = rmax
 dpx = (xmax-xmin)/float(nx)
@@ -117,4 +117,4 @@ fig.subplots_adjust(wspace=0.35)
 fig.savefig('stromgren2d.pdf',bbox_inches='tight')
 
 # Check results against reference solution
-visu_ramses.check_solution(data["data"], 'stromgren2d', tolerance={"all":3.0e-06})
+visu_ramses.check_solution(data["data"], 'stromgren2d')

@@ -131,7 +131,6 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
 #endif
   endif
   nISM = MAX(nCOM,nISM)
-  polytrope_rho_cu = polytrope_rho/scale_d
 
   ! Polytropic constant for Jeans length related polytropic EOS
   if(jeans_ncells>0)then
@@ -251,7 +250,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
            rtuold(il,iNp) = max(rtuold(il,iNp),smallnp)
            ! Reduce the flux to c*Np if necessary:
            fred = sqrt(sum(rtuold(il,iNp+1:iNp+ndim)**2)) &
-                / rtuold(il,iNp)*rt_c(ilevel)
+                / (rtuold(il,iNp)*rt_c(ilevel))
            if(fred .gt. 1.d0) &
                 rtuold(il,iNp+1:iNp+ndim) = rtuold(il,iNp+1:iNp+ndim)/fred
         enddo
@@ -327,6 +326,10 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
      ! Compute temperature from polytrope EOS
      !==========================================
      if(barotropic_eos.and.(barotropic_eos_form.ne.'legacy'))then
+        ! convert user-inputted EOS parameters from g/cm3 to H/cc
+        do i=1,5
+           polytrope_n(i) = polytrope_rho(i) * X/mH
+        end do
         do i=1,nleaf
            ! analytic EOS
            call barotropic_eos_temperature(nH(i), T2min(i))
@@ -660,7 +663,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
 
            ! Reduce the flux to c*Np if necessary:
            fred = sqrt(sum(rtuold(il,iNp+1:iNp+ndim)**2)) &
-                / rtuold(il,iNp)*rt_c(ilevel)
+                / (rtuold(il,iNp)*rt_c(ilevel))
            if(fred .gt. 1.d0) &
                 rtuold(il,iNp+1:iNp+ndim) = rtuold(il,iNp+1:iNp+ndim)/fred
         end do ! i=1,nleaf
@@ -673,7 +676,70 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
   ! End loop over cells
 
 end subroutine coolfine1
+!#####################################################################
+!#####################################################################
+!#####################################################################
+!#####################################################################
+subroutine cmp_energy_components(ind_cell,ncell,rho,ekin,erad,emag)
+  use amr_commons
+  use hydro_commons
+  implicit none
+  integer,intent(in)::ncell
+  integer,dimension(1:nvector),intent(in)::ind_cell
+  real(dp),dimension(1:nvector),intent(in)::rho      !density
+  real(dp),dimension(1:nvector),intent(out)::ekin,erad,emag
+  !-------------------------------------------------------------------
+  ! Gather the non-thermal energy components:
+  !   ekin: kinetic
+  !   erad: non-thermal,radiative
+  !   emag: magnetic
+  ! With these, the thermal energy can be calculated as
+  !   etherm = uold(:,neul) - ekin - erad - emag
+  !-------------------------------------------------------------------
+  integer::i,idim
+#if NENER>0
+  integer::irad
+#endif
 
+  ekin=0d0
+  erad=0d0
+  emag=0d0
+
+  ! Kinetic energy
+  do i=1,ncell
+     ekin(i)=uold(ind_cell(i),2)**2
+#if NDIM > 1 || SOLVERmhd
+     ekin(i)=ekin(i)+uold(ind_cell(i),3)**2
+#endif
+#if NDIM > 2 || SOLVERmhd
+     ekin(i)=ekin(i)+uold(ind_cell(i),4)**2
+#endif
+     ekin(i)=0.5d0 * ekin(i)/rho(i)
+  end do
+
+  ! Non-thermal energy
+#if NENER>0
+  do irad=0,nener-1
+     do i=1,ncell
+        erad(i)=erad(i)+uold(ind_cell(i),inener+irad)
+     end do
+  end do
+#endif
+
+  ! Magnetic energy
+#ifdef SOLVERmhd
+  do idim=1,3
+     do i=1,ncell
+        emag(i)=emag(i)+0.125d0*(uold(ind_cell(i),idim+neul)+uold(ind_cell(i),idim+nvar))**2
+     end do
+  end do
+#endif
+
+end subroutine cmp_energy_components
+!###########################################################
+!###########################################################
+!###########################################################
+!###########################################################
 #ifdef RT
 !************************************************************************
 subroutine cmp_Eddington_tensor(Npc,Fp,T_Edd)

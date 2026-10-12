@@ -1052,7 +1052,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
                  ! on sink creation, new sinks
                  m_acc     =mass_sink_seed*M_sun/scale_m*weight/volume
                  m_acc_smbh=mass_smbh_seed*M_sun/scale_m*weight/volume
-                 if (agn_acc_method=='mass') then
+                 if (bondi_accretion.and.agn_acc_method=='mass') then
                     m_acc      = m_acc * (d/density)
                     m_acc_smbh = m_acc_smbh * (d/density)
                  endif
@@ -1065,16 +1065,15 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
               if (bondi_accretion)then
                  m_acc      = dMsink_overdt(isink)*dtnew(ilevel)*weight/volume
                  m_acc_smbh = dMsmbh_overdt(isink)*dtnew(ilevel)*weight/volume
-              end if
+                 if (agn_acc_method=='mass') then
+                    m_acc      = m_acc * (d/density)
+                    m_acc_smbh = m_acc_smbh * (d/density)
+                 endif
 
-              if (threshold_accretion.and.d_sink>0.0)then
+              else if (threshold_accretion.and.d_sink>0.0)then
                  m_acc=c_acc*weight*(d-d_sink)
+                 m_acc_smbh = 0.
               end if
-
-              if (agn_acc_method=='mass') then
-                 m_acc      = m_acc * (d/density)
-                 m_acc_smbh = m_acc_smbh * (d/density)
-              endif
 
               if(agn.and.msink(isink).gt.0)then
                  if(mass_smbh_seed>0.0)then
@@ -2665,6 +2664,9 @@ subroutine read_sink_params()
   use pm_commons
   use amr_commons
   use constants, only: pi,yr2sec
+#ifdef RT
+  use rt_parameters, only: rt_sink
+#endif
   implicit none
 
   !----------------------------------------------------------------------------
@@ -2696,6 +2698,16 @@ subroutine read_sink_params()
   if(myid==1)write(*,*)'Using default values '
 112 rewind(1)
 
+#ifdef RT
+  if (rt_sink .and. .not.sink_refine)then
+     if(myid==1)then
+        write(*,*)'WARNING: rt_sink=.true. with sink_refine=.false.'
+        write(*,*)'         Part of the sink radiation will be lost where a sink overlaps'
+        write(*,*)'         with a refinement boundary. To avoid this, set sink_refine=.true.'
+     endif
+  endif
+#endif
+
   if (sink .and. (ndim .ne. 3))then
      if(myid==1)write(*,*)'Sink particles are only implemented for 3d sims.'
      print*, ndim
@@ -2708,7 +2720,7 @@ subroutine read_sink_params()
      call clean_stop
   end if
 
-  if (nlevelmax_sink .eq. 0) then
+  if (nlevelmax_sink <= 0 .or. nlevelmax_sink > nlevelmax) then
      nlevelmax_sink = nlevelmax
   end if
 
@@ -3145,16 +3157,16 @@ subroutine synchronize_sink_info
   !----------------------------------------------------------------------------
   integer::info
 
-  call MPI_BCAST(msink,      nsinkmax, MPI_DOUBLE_PRECISION, 1, MPI_COMM_WORLD, info)
-  call MPI_BCAST(msmbh,      nsinkmax, MPI_DOUBLE_PRECISION, 1, MPI_COMM_WORLD, info)
-  call MPI_BCAST(dmfsink,    nsinkmax, MPI_DOUBLE_PRECISION, 1, MPI_COMM_WORLD, info)
-  call MPI_BCAST(xsink,    3*nsinkmax, MPI_DOUBLE_PRECISION, 1, MPI_COMM_WORLD, info)
-  call MPI_BCAST(vsink,    3*nsinkmax, MPI_DOUBLE_PRECISION, 1, MPI_COMM_WORLD, info)
-  call MPI_BCAST(lsink,    3*nsinkmax, MPI_DOUBLE_PRECISION, 1, MPI_COMM_WORLD, info)
-  call MPI_BCAST(delta_mass, nsinkmax, MPI_DOUBLE_PRECISION, 1, MPI_COMM_WORLD, info)
-  call MPI_BCAST(idsink,     nsinkmax, MPI_INTEGER,          1, MPI_COMM_WORLD, info)
-  call MPI_BCAST(tsink,      nsinkmax, MPI_DOUBLE_PRECISION, 1, MPI_COMM_WORLD, info)
-  call MPI_BCAST(new_born,   nsinkmax, MPI_LOGICAL,          1, MPI_COMM_WORLD, info)
+  call MPI_BCAST(msink,      nsinkmax, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, info)
+  call MPI_BCAST(msmbh,      nsinkmax, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, info)
+  call MPI_BCAST(dmfsink,    nsinkmax, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, info)
+  call MPI_BCAST(xsink,    3*nsinkmax, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, info)
+  call MPI_BCAST(vsink,    3*nsinkmax, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, info)
+  call MPI_BCAST(lsink,    3*nsinkmax, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, info)
+  call MPI_BCAST(delta_mass, nsinkmax, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, info)
+  call MPI_BCAST(idsink,     nsinkmax, MPI_INTEGER,          0, MPI_COMM_WORLD, info)
+  call MPI_BCAST(tsink,      nsinkmax, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, info)
+  call MPI_BCAST(new_born,   nsinkmax, MPI_LOGICAL,          0, MPI_COMM_WORLD, info)
 
 end subroutine synchronize_sink_info
 #endif

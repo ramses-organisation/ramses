@@ -1,6 +1,7 @@
 subroutine read_hydro_params(nml_ok)
   use amr_commons
   use hydro_commons
+  use cooling_module, only:X,Y
   use mpi_mod
   implicit none
   logical::nml_ok
@@ -18,22 +19,6 @@ subroutine read_hydro_params(nml_ok)
   !--------------------------------------------------
   ! Namelist definitions
   !--------------------------------------------------
-
-  ! Initial conditions parameters
-  namelist/init_params/condinit_kind,filetype,initfile,multiple,nregion,region_type &
-       & ,x_center,y_center,z_center,aexp_ini &
-       & ,length_x,length_y,length_z,exp_region &
-       & ,d_region,u_region,v_region,w_region,p_region &
-#ifdef SOLVERmhd
-       & ,A_region,B_region,C_region,B_ave &
-#endif
-#if NVAR>NHYDRO+NENER
-       & ,var_region &
-#endif
-#if NENER>0
-       & ,prad_region &
-#endif
-       & ,omega_b,alpha_dense_core,beta_dense_core,crit_dense_core,delta_rho,theta_mag,mass_c,Mach
 
   ! Hydro parameters
   namelist/hydro_params/gamma,courant_factor,smallr,smallc &
@@ -54,6 +39,8 @@ subroutine read_hydro_params(nml_ok)
   ! Refinement parameters
   namelist/refine_params/x_refine,y_refine,z_refine,r_refine &
        & ,a_refine,b_refine,exp_refine,jeans_refine,mass_cut_refine &
+       & ,collapse_jeans_refine,collapse_jeans_Tfloor &
+       & ,collapse_jeans_rho_low,collapse_jeans_rho_high &
        & ,m_refine,mass_sph,err_grad_d,err_grad_p,err_grad_u &
        & ,floor_d,floor_u,floor_p,ivar_refine,var_cut_refine &
 #ifdef SOLVERmhd
@@ -86,7 +73,7 @@ subroutine read_hydro_params(nml_ok)
   namelist/cooling_params/cooling,metal,isothermal,haardt_madau,J21 &
        & ,barotropic_eos,barotropic_eos_form,polytrope_rho,polytrope_index,T_eos,mu_gas &
        & ,a_spec,self_shielding,z_ave,z_reion,ind_rsink,T2max,neq_chem &
-       & ,cooling_ism
+       & ,cooling_ism,X,Y
 
   ! Star formation parameters
   namelist/sf_params/m_star,n_star,T2_star,g_star,del_star &
@@ -115,12 +102,9 @@ subroutine read_hydro_params(nml_ok)
 #endif
 
   ! Read namelist file
+  call read_init_params(1,nml_ok)
+
   rewind(1)
-  read(1,NML=init_params,END=121)
-  goto 122
-121 write(*,*)' You need to set up namelist &INIT_PARAMS in parameter file'
-  call clean_stop
-122 rewind(1)
 
   ! Fail if physics params is found
   read(1, NML=physics_params, end=110)
@@ -170,11 +154,21 @@ subroutine read_hydro_params(nml_ok)
     ischeme = 0
   CASE ('induction')
     ischeme = 1
-
   CASE DEFAULT
     write(*,*)'unknown scheme'
     nml_ok=.false.
   END SELECT
+
+  ! Force interpol_var==1 for induction scheme.
+  ! This scheme re-imposes the total energy analytically by forcing P=1,
+  ! so total energy is not conserved anyway and interpol_var=0 is meaningless.
+  ! Worse, it makes the coarse-fine magnetic energy correction end up in the
+  ! thermal energy, which spoils the imposed pressure.
+  ! Only relevant when AMR is enabled (otherwise interpol_var in namelist not read).
+  if(ischeme==1.and.nlevelmax>levelmin.and.interpol_var.ne.1)then
+     if(myid==1)write(*,*)'Error: the induction scheme requires interpol_var=1'
+     nml_ok=.false.
+  endif
   !------------------------------------------------
   ! set iriemann
   !------------------------------------------------
@@ -222,6 +216,17 @@ subroutine read_hydro_params(nml_ok)
   ! account for staggered mesh representation
   !--------------------------------------------------
   nexpand_bound=2
+#else
+  !------------------------------------------------
+  ! check the hydro scheme name
+  !------------------------------------------------
+  SELECT CASE (scheme)
+  CASE ('muscl')
+  CASE ('plmde')
+  CASE DEFAULT
+    if(myid==1)write(*,*)'Error: unknown scheme, the hydro solver accepts muscl or plmde'
+    nml_ok=.false.
+  END SELECT
 #endif
 
   !--------------------------------------------------
@@ -514,3 +519,48 @@ subroutine read_hydro_params(nml_ok)
 #endif
 
 end subroutine read_hydro_params
+!###############################################################
+!###############################################################
+!###############################################################
+subroutine read_init_params(namelist_unit,nml_ok)
+   use amr_parameters
+   use amr_commons
+   use hydro_parameters
+   use collapse_parameters
+   implicit none
+   integer,intent(in)::namelist_unit
+   logical,intent(inout)::nml_ok
+   integer::nml_err
+
+  ! Initial conditions parameters
+  namelist/init_params/condinit_kind,filetype,initfile,multiple,nregion,region_type &
+       & ,x_center,y_center,z_center,aexp_ini &
+       & ,length_x,length_y,length_z,exp_region &
+       & ,d_region,u_region,v_region,w_region,p_region &
+#ifdef SOLVERmhd
+       & ,A_region,B_region,C_region,B_ave &
+#endif
+#if NVAR>NHYDRO+NENER
+       & ,var_region &
+#endif
+#if NENER>0
+       & ,prad_region &
+#endif
+       & ,omega_b,alpha_dense_core,beta_dense_core,crit_dense_core,delta_rho,theta_mag,mass_c,Mach
+
+   ! Go to the beginning of the file
+   rewind(namelist_unit)
+
+   ! Read namelist
+   read(namelist_unit,NML=init_params,IOSTAT=nml_err)
+
+   if(nml_err<0)then
+      ! EOF reached before namelist was found
+      if(myid==1)write(*,*)'You need to set up namelist &INIT_PARAMS in parameter file.'
+      nml_ok=.false.
+   elseif(nml_err>0)then
+      if(myid==1)write(*,*)'Error reading namelist &INIT_PARAMS. Check formatting.'
+      nml_ok=.false.
+   endif
+
+end subroutine read_init_params

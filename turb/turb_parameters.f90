@@ -32,11 +32,13 @@ module turb_parameters
 #endif
   real(dp), parameter :: turb_gs_real=real(TURB_GS,dp) ! real(TURB_GS, dp)
 
-  logical  :: turb=.FALSE.        ! Use turbulence?
-  integer  :: turb_type=1         ! Turbulence type
-                                  ! 1 = forced, evolving turbulence
-                                  ! 2 = forced, fixed turbulence
-                                  ! 3 = decaying turbulence
+  logical  :: driven_turb=.FALSE. ! Use turbulence driving?
+  logical  :: turb=.FALSE.        ! Deprecated namelist parameter, replaced be driven_turb
+  logical  :: turb_evolving=.TRUE. ! Does the driving field evolve over time?
+                                  ! .true.  = Ornstein-Uhlenbeck evolution
+                                  ! .false. = one static field for the whole run
+  integer  :: turb_type=-1        ! Deprecated, replaced by turb_evolving and
+                                  ! initial_turb. -1 means "not specified"
   integer  :: turb_seed=-1        ! Turbulent seed (-1=random)
   logical  :: instant_turb=.TRUE. ! Generate initial turbulence before start?
   character (LEN=100) :: forcing_power_spectrum='parabolic'
@@ -46,7 +48,22 @@ module turb_parameters
   real(dp) :: turb_T=1.0_dp       ! Turbulent velocity autocorrelation time
   integer  :: turb_Ndt=100        ! Number of timesteps per autocorr. time
   real(dp) :: turb_rms=1.0_dp     ! rms turbulent forcing acceleration
+  logical  :: turb_exact_rms=.FALSE. ! Set the forcing rms to exactly match turb_rms?
 
   real(dp) :: turb_min_rho=1d-50  ! Minimum density for turbulence
+
+  ! Turbulent initial velocity field, independent of the driving above
+  logical  :: initial_turb=.FALSE.       ! Add turbulent velocity to the initial conditions?
+  real(dp) :: initial_turb_vrms=0.0_dp   ! Velocity dispersion |v|_rms of that field
+  real(dp) :: initial_turb_comp_frac=0.3333_dp
+                                  ! Compressive fraction of the initial velocity
+                                  ! field. 1/3 spreads the power evenly over the
+                                  ! one longitudinal and two transverse degrees
+                                  ! of freedom
+  character (LEN=100) :: initial_turb_spectrum='power_law'
+                                  ! Power spectrum of the initial velocity field.
+                                  ! Broadband by default: initial conditions want
+                                  ! power on every scale, whereas the driving
+                                  ! usually acts on a few large-scale modes
 
 end module turb_parameters
