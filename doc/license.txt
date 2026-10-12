@@ -1,4 +1,4 @@
-Copyright CEA and Romain Teyssoer
+Copyright CEA and Romain Teyssier
 
 romain.teyssier@cea.fr
 

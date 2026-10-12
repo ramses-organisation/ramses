@@ -34,3 +34,7 @@ To generate cosmological initial conditions, check out [MUSIC][6].
 To visualize RAMSES data, we encourage you to use [YT][9], [OSYRIS][7] or [PYNBODY][8].
 
 You'll find a lot of useful ressources, links and news about the Ramses community on https://ramses.cnrs.fr/, a website edited by the French "SNO" Ramses.
+
+### ⚖️ License
+
+Ramses is distributed under the [CeCILL v2.0](https://cecill.info/licences/Licence_CeCILL_V2-en.html) free software license, governed by French law and compatible with the GNU GPL. See the [LICENSE](LICENSE) file for the full text.
