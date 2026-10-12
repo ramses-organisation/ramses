@@ -118,7 +118,7 @@ axes[1, 2].set_xlabel("x")
 axes[1, 2].set_ylabel(r"Dens. diff. ${\rho_\mathrm{gas}-\rho_\mathrm{tracer}}$")
 axes[1, 2].yaxis.tick_right()
 
-fig.savefig("sedov.pdf", bbox_inches="tight")
+fig.savefig("sedov-MC-tracers.pdf", bbox_inches="tight")
 
 # Check results against reference solution
 dt = {
@@ -145,4 +145,4 @@ for key in data["particle"].keys():
 #    for key in dt
 #}
 
-visu_ramses.check_solution(to_check, 'sedov')#, tolerance=rtol)
+visu_ramses.check_solution(to_check, 'sedov-MC-tracers')#, tolerance=rtol)
