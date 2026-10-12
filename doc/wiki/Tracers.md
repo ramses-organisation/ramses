@@ -6,13 +6,13 @@ The block named `&TRACER_PARAMS` contains the parameters related to tracer parti
 Tracers particles are used to follow the gas in a Lagrangian way.
 There are three different implementation of tracers in Ramses.
 
-- The classical tracers ([Pichon et al 2011](https://ui.adsabs.harvard.edu/abs/2011MNRAS.418.2493P), [Dubois et al 2012](https://ui.adsabs.harvard.edu/abs/2012MNRAS.423.3616D)). 
+- The classical tracers ([Pichon et al 2011](https://ui.adsabs.harvard.edu/abs/2011MNRAS.418.2493P), [Dubois et al 2012](https://ui.adsabs.harvard.edu/abs/2012MNRAS.423.3616D)).
 The velocity of the tracers is computed from a CIC-interpolation of the velocity of the cells.
 The trajectory is continuous but this kind of tracers is known to eventually decorrelate with the gas flow ([Price & Federrath 2010](https://ui.adsabs.harvard.edu/abs/2010MNRAS.406.1659P), [Genel 2013](https://ui.adsabs.harvard.edu/abs/2013MNRAS.435.1426G)).
 They are activated with the `tracer` parameter in the `RUN_PARAMS` block.
 
 
-- The Monte Carlo tracer particles ([Cadiou et al 2018](https://arxiv.org/abs/1810.11401)). 
+- The Monte Carlo tracer particles ([Cadiou et al 2018](https://arxiv.org/abs/1810.11401)).
 Each tracer is attached to a cell. Tracers jumps randomly from a cell to another with a probably matching the fraction of the mass flux between the two cell. If there is enough tracer particles per cell, the flow of tracers statistically matches the flow of the gas. The trajectory is discontinuous.
 They are activated with the `tracer` parameter in the `&RUN_PARAMS` block, and the `MC_tracers` in the `&TRACERS_PARAMS` bloc.
 
@@ -31,7 +31,7 @@ They are activated with the `tracer` parameter in the `&RUN_PARAMS` block, and t
 
 
 
-## Overview of parameters of `&TRACERS_PARAMS` 
+## Overview of parameters of `&TRACERS_PARAMS`
 
 | Variable name         | Fortran type | Default value | Description               |
 |:----------------------|:------------ |:------------- |:------------------------- |
