@@ -17,7 +17,7 @@ Each tracer is attached to a cell. Tracers jumps randomly from a cell to another
 They are activated with the `tracer` parameter in the `&RUN_PARAMS` block, and the `MC_tracers` in the `&TRACERS_PARAMS` bloc.
 
 
-- The Itô tracer particles ([Moseley et al 2026](https://ui.adsabs.harvard.edu/abs/2026MNRAS.551g1536M)) can be seen as a mix the two methods above. The velocity of the tracers (the drift) is computed from a CIC-interpolation of the fluxes of the cells. Additionally to this drift, each tracer undergo a random kick at each step, so that the diffusion of the gas is reproduced. As a result, the tracers have a continuous trajectory, and the flow of the gas is reproduced almost as well as with the discrete Monte-Carlo tracers.
+- The Itô tracer particles ([Moseley et al 2026](https://ui.adsabs.harvard.edu/abs/2026MNRAS.551g1536M)) can be seen as a mix the two methods above. The velocity of the tracers (the drift) is computed from a CIC-interpolation of the fluxes of the cells. Additionally to this drift, each tracer undergo a random kick at each step, so that the diffusion of the gas is reproduced. As a result, the tracers have a continuous trajectory, and the flow of the gas is reproduced almost as well as with the discrete Monte-Carlo tracers. The scheme implemented is RAMSES is the "CIC Itô-2 tracers".
 They are activated with the `tracer` parameter in the `&RUN_PARAMS` block, and the `MC_tracers` and `ito_tracers` in the `&TRACERS_PARAMS` bloc.
 
 
