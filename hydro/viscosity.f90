@@ -28,14 +28,10 @@ subroutine add_viscous_stress_terms(ilevel)
     real(dp), dimension(1:nvector) :: energy_visc
     real(dp) :: e_prev, nu_viscosity
     real(dp), dimension(1:ndim) :: vel
-    real(dp) :: den
+    real(dp) :: d, den, du, dv, dw
     real(dp) ::vel_left, vel_right
     real(dp) :: den_dvel_left, den_dvel_right ! density times velocity derivative left and right
-     real(dp):: den_En_left, den_En_right ! density times velocity times velocity derivative left and right
-    real(dp) :: d = 0, u = 0, v = 0, w = 0, du = 0, dv = 0, dw = 0, e_kin = 0, e_nokin = 0
-
-    real(dp), dimension(1:twotondim, 1:3)::xc
-    real(dp), dimension(1:3)::skip_loc
+    real(dp):: den_En_left, den_En_right ! density times velocity times velocity derivative left and right
 
     real(dp), dimension(1:ndim):: nu_viscosity_left, nu_viscosity_right
 
@@ -43,7 +39,9 @@ subroutine add_viscous_stress_terms(ilevel)
     real(dp), dimension(1:nvector, 0:twondim, 1:nvar_all), save::u1
     real(dp), dimension(1:nvector, 1:twotondim, 1:nvar_all), save::u2
     real(dp), dimension(1:nvector, iu1:iu2, ju1:ju2, ku1:ku2, 1:nvar_all), save::uloc
+#if SOLVERmhd
     integer, dimension(1:nvector,0:twondim), save :: ind1
+#endif
 
     integer::i1, j1, k1, i2, j2, k2, i3, j3, k3, nexist, nbuffer, ind_son, ind_father, ivar
     integer, dimension(1:nvector), save::igrid_nbor, ind_buffer, ind_exist, ind_nexist
@@ -54,17 +52,6 @@ subroutine add_viscous_stress_terms(ilevel)
 
     if (numbtot(1, ilevel) == 0) return
     if (verbose) write (*, 111) ilevel
-
-    nx_loc = icoarse_max - icoarse_min + 1
-    skip_loc = (/0.0d0, 0.0d0, 0.0d0/)
-    if (ndim > 0) skip_loc(1) = dble(icoarse_min)
-    if (ndim > 1) skip_loc(2) = dble(jcoarse_min)
-    if (ndim > 2) skip_loc(3) = dble(kcoarse_min)
-    scale = boxlen/dble(nx_loc)
-    dx = 0.5D0**ilevel
-    dx_loc = dx*scale
-
-    call units(scale_l, scale_t, scale_d, scale_v, scale_nH, scale_T2)
 
   ! These arrays are neccesary to obtain the correct neighbors according to each cell
     i3l(1:8) = (/0, 1, 0, 1, 0, 1, 0, 1/); j3l(1:8) = (/0, 0, 1, 1, 0, 0, 1, 1/); k3l(1:8) = (/0, 0, 0, 0, 1, 1, 1, 1/)
@@ -412,8 +399,10 @@ subroutine add_viscous_stress_terms(ilevel)
 #endif
           du = du + viscosity_term(i, 1)*dtnew(ilevel)
           unew(ind_cell(i), 2) = du
+#if NDIM > 1
           dv = dv + viscosity_term(i, 2)*dtnew(ilevel)
           unew(ind_cell(i), 3) = dv
+#endif
 #if NDIM > 2
           dw = dw + viscosity_term(i, 3)*dtnew(ilevel)
           unew(ind_cell(i), 4) = dw
@@ -444,7 +433,7 @@ function viscous_dt(dx) result(dt_visc)
 
   select case (viscosity_kind)
       case('constant_uniform')
-         dt_visc = courant_factor*dx*dx/(2*ndim*((2-2/ndim)*nu_viscosity_shear + nu_viscosity_bulk))
+         dt_visc = courant_factor*dx*dx/(2*ndim*((2.0d0-2.0d0/ndim)*nu_viscosity_shear + nu_viscosity_bulk))
   end select
 
 end function viscous_dt

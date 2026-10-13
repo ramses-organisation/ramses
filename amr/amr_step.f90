@@ -411,9 +411,9 @@ recursive subroutine amr_step(ilevel,icount)
      endif
 
      ! Add viscous source terms to unew
-      if(add_viscosity)then
-         call add_viscous_stress_terms(ilevel)
-      endif
+     if(add_viscosity)then
+        call add_viscous_stress_terms(ilevel)
+     endif
 
      ! Set uold equal to unew
                                call timer('hydro - set uold','start')
