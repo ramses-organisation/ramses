@@ -32,6 +32,12 @@ The block named `&SINK_PARAMS` contains the parameters related to the sink parti
 | `eddington_limit`     | `boolean`    | `.false.`     | Controls if accretion rate should be limited by Eddington rate
 | `acc_sink_boost`      | `float`      | `1`           | Value of boost factor in Bondi velocity (-1 to depend on density)
 | `boost_threshold_density` | `float`  | `0.1`         | Threshold density for boosting, typically the same as n_star; in H/cc
+| `drag_gas`            | `boolean`    | `.false.`     | Activates dynamical friction from gas on sinks (Ostriker 1999, Chapon et al. 2013)
+| `drag_part`           | `boolean`    | `.false.`     | Activates dynamical friction from stars and dark matter on sinks (Antonini and Merritt 2012, Pfister et al. 2019)
+| `DF_ncells`           | `integer`    | `4`           | Radius in cells at levelmax of the sphere used for dynamical friction from stars and dark matter
+| `boost_drag`          | `float`      | `2`           | Power of the density boost of gas friction above boost_threshold_density
+| `boost_drag_part`     | `float`      | `0`           | Power of the density boost of star and dark matter friction above boost_threshold_density
+| `adfmax`              | `float`      | `-1`          | Maximum acceleration from gas friction in km/s/Myr, not used if negative
 | `bondi_use_vrel`      | `boolean`    | `.false.`     | Excludes relative velocity between gas and sink from the accretion calculations
 | `mass_merger_vel_check_AGN` | `float` | `-1`         | Mass above which the check for two sinks' binding energy is applied, in Msun
 | `merging_timescale `  | `float`      | `-1`          | Time during which sinks are considered for merging (non-SMBH only)
