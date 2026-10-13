@@ -60,7 +60,9 @@ subroutine init_poisson
   end do
 #endif
   allocate(safe_mode(1:nlevelmax))
+  allocate(safe_mode_countdown(1:nlevelmax))
   safe_mode = .false.
+  safe_mode_countdown = 0
 
   !--------------------------------
   ! For a restart, read poisson file
@@ -180,6 +182,9 @@ subroutine init_poisson
      call MPI_BARRIER(MPI_COMM_WORLD,info)
 #endif
      if(verbose)write(*,*)'POISSON backup files read completed'
+     ! read dumped safe_mode variable for reproducabilty on restart
+     call restore_safe_mode
+
   end if
 
 end subroutine init_poisson

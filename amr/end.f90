@@ -29,10 +29,14 @@ subroutine clean_stop
   ! an error.
   !-----------------------------------------------------
   use mpi_mod
+  use iso_fortran_env, only: output_unit
   implicit none
 #ifndef WITHOUTMPI
   integer::info
 #endif
+
+  ! Force write of (buffered) log before the abort discards it
+  flush(output_unit)
 
 #ifndef WITHOUTMPI
   call MPI_ABORT(MPI_COMM_WORLD, 2, info)
@@ -42,7 +46,7 @@ subroutine clean_stop
   call deallocate_pm
   call deallocate_poisson
 
-  stop
+  stop 2
 end subroutine clean_stop
 
 subroutine deallocate_amr
@@ -132,6 +136,7 @@ subroutine deallocate_poisson
 
   if(allocated(lookup_mg)) deallocate(lookup_mg)
   if(allocated(safe_mode)) deallocate(safe_mode)
+  if(allocated(safe_mode_countdown)) deallocate(safe_mode_countdown)
   if(allocated(active_mg)) deallocate(active_mg)
   if(allocated(emission_mg)) deallocate(emission_mg)
 
