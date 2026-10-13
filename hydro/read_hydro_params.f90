@@ -72,8 +72,7 @@ subroutine read_hydro_params(nml_ok)
 #endif
 
   ! Read namelist file
-  !if(nlevelmax>levelmin)
-  call read_refine_params(1,nml_ok)
+  call read_refine_params(1,nml_ok) !must be read before hydro solver params
   if(hydro)call read_solver_params(1,nml_ok)
   call read_init_params(1,nml_ok)
 
