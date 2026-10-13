@@ -433,3 +433,18 @@ subroutine add_viscous_stress_terms(ilevel)
   111 format('    Entering add_viscosity_terms for level ', i2)
 
 end subroutine add_viscous_stress_terms
+
+
+function viscous_dt(dx) result(dt_visc)
+  use amr_parameters
+  use hydro_parameters
+  implicit none
+  real(dp), intent(in):: dx
+  real(dp) :: dt_visc
+
+  select case (viscosity_kind)
+      case('constant_uniform')
+         dt_visc = courant_factor*dx*dx/(2*ndim*((2-2/ndim)*nu_viscosity_shear + nu_viscosity_bulk))
+  end select
+
+end function viscous_dt
