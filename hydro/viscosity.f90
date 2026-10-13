@@ -33,9 +33,6 @@ subroutine add_viscous_stress_terms(ilevel)
     real(dp) :: den_dvel_left, den_dvel_right ! density times velocity derivative left and right
      real(dp):: den_En_left, den_En_right ! density times velocity times velocity derivative left and right
     real(dp) :: d = 0, u = 0, v = 0, w = 0, du = 0, dv = 0, dw = 0, e_kin = 0, e_nokin = 0
-#ifdef SOLVERMHD
-    real(dp) :: A, B, C
-#endif
 
     real(dp), dimension(1:twotondim, 1:3)::xc
     real(dp), dimension(1:3)::skip_loc
@@ -43,9 +40,10 @@ subroutine add_viscous_stress_terms(ilevel)
     real(dp), dimension(1:ndim):: nu_viscosity_left, nu_viscosity_right
 
     integer, dimension(1:nvector, 0:twondim), save::ibuffer_father
-    real(dp), dimension(1:nvector, 0:twondim, 1:nvar), save::u1
-    real(dp), dimension(1:nvector, 1:twotondim, 1:nvar), save::u2
-    real(dp), dimension(1:nvector, iu1:iu2, ju1:ju2, ku1:ku2, 1:nvar), save::uloc
+    real(dp), dimension(1:nvector, 0:twondim, 1:nvar_all), save::u1
+    real(dp), dimension(1:nvector, 1:twotondim, 1:nvar_all), save::u2
+    real(dp), dimension(1:nvector, iu1:iu2, ju1:ju2, ku1:ku2, 1:nvar_all), save::uloc
+    integer, dimension(1:nvector,0:twondim), save :: ind1
 
     integer::i1, j1, k1, i2, j2, k2, i3, j3, k3, nexist, nbuffer, ind_son, ind_father, ivar
     integer, dimension(1:nvector), save::igrid_nbor, ind_buffer, ind_exist, ind_nexist
@@ -90,11 +88,8 @@ subroutine add_viscous_stress_terms(ilevel)
       end do
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! Here begins the diagonal neighbors block of code !!!!!!!!!!!!!!!!!!!!!!!!!!!
-  !This was taken from the godfine1 subroutine in this same file
-
-  ! TODO : just call the stencil method
-
-      ! Compute father cell index
+  
+       ! Compute father cell index
       do i = 1, ngrid
         ind_cell(i) = father(ind_grid(i))
       end do
@@ -143,13 +138,22 @@ subroutine add_viscous_stress_terms(ilevel)
         if (nbuffer > 0) then
           call getnborfather(ind_buffer, ibuffer_father, nbuffer, ilevel)
           do j = 0, twondim
-            do ivar = 1, nvar
+            do ivar = 1, nvar_all
               do i = 1, nbuffer
                 u1(i, j, ivar) = uold(ibuffer_father(i, j), ivar)
               end do
             end do
           end do
+#ifdef SOLVERmhd
+          do j = 0, twondim
+            do i = 1, nbuffer
+              ind1(i,j) = son(ibuffer_father(i,j))
+            end do
+          end do
+          call interpol_hydro(u1, ind1, u2, nbuffer)
+#else
           call interpol_hydro(u1, u2, nbuffer)
+#endif        
         end if
 
         ! Loop over 2x2x2 cells
@@ -208,8 +212,6 @@ subroutine add_viscous_stress_terms(ilevel)
         end do
 
         do i = 1, ngrid
-
-
           ! Central value
           vel_neigh(i, 0, 0, 0, 1:ndim) = uloc(i, i3c(ind), j3c(ind), k3c(ind), 2:ndim + 1)/max(uloc(i, i3c(ind), j3c(ind), k3c(ind), 1), smallr)
 
@@ -258,8 +260,8 @@ subroutine add_viscous_stress_terms(ilevel)
 #endif
         end do
 
-
-  ! Compute the viscosity term
+        ! Compute the viscosity term
+        ! Beware, in MHD 1D/2D the velocity has 3 components, but only 1:ndim are diffused
         viscosity_term(1:ngrid, 1:ndim) = 0.0d0
         energy_visc(1:ngrid) = 0.0d0
         do i = 1, ngrid
@@ -418,8 +420,8 @@ subroutine add_viscous_stress_terms(ilevel)
 #endif
 
           ! Update the energy
-          e_prev = unew(ind_cell(i), ndim + 2)
-          unew(ind_cell(i), ndim + 2) = e_prev + energy_visc(i)*dtnew(ilevel) 
+          e_prev = unew(ind_cell(i), neul)
+          unew(ind_cell(i), neul) = e_prev + energy_visc(i)*dtnew(ilevel) 
 
         end do
 
@@ -430,4 +432,4 @@ subroutine add_viscous_stress_terms(ilevel)
 
   111 format('    Entering add_viscosity_terms for level ', i2)
 
-  end subroutine add_viscous_stress_terms
+end subroutine add_viscous_stress_terms
