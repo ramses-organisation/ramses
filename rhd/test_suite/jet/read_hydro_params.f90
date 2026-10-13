@@ -1,7 +1,6 @@
 subroutine read_hydro_params(nml_ok)
   use amr_commons
   use hydro_commons
-  use mpi_mod
   implicit none
   logical::nml_ok
   !--------------------------------------------------

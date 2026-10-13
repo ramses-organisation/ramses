@@ -46,7 +46,7 @@ subroutine clean_stop
   call deallocate_pm
   call deallocate_poisson
 
-  stop
+  stop 2
 end subroutine clean_stop
 
 subroutine deallocate_amr
