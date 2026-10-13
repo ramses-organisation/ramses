@@ -346,8 +346,11 @@ subroutine add_viscosity_source_terms(ilevel)
                 viscosity_term(i, jdim) = viscosity_term(i, jdim) + (den_dvel_right - den_dvel_left) / (2* dx_loc)
 
                 ! First derivative for the energy term
-                den_En_left  =  ((vel(jdim) + vel_left) / 2.0 ) * den_dvel_left
-                den_En_right =  ((vel(jdim) + vel_right) / 2.0) * den_dvel_right
+                vel_left  = vel_neigh(i, - e(1, idim), - e(2, idim), - e(3, idim), jdim)
+                vel_right = vel_neigh(i,   e(1, idim),   e(2, idim),   e(3, idim), jdim)
+
+                den_En_left  =  vel_left * den_dvel_left
+                den_En_right =  vel_right * den_dvel_right
 
                 ! Second derivative for energy term
                 energy_visc(i) = energy_visc(i) + (den_En_right - den_En_left) / (2* dx_loc)
@@ -377,8 +380,11 @@ subroutine add_viscosity_source_terms(ilevel)
                 viscosity_term(i, idim) = viscosity_term(i, idim) - (2.0/ndim)*(den_dvel_right - den_dvel_left) / (2 * dx_loc)
 
                 ! First derivative for the energy term
-                den_En_left  =  ((vel(idim) + vel_left) / 2.0 ) * den_dvel_left
-                den_En_right =  ((vel(idim) + vel_right) / 2.0) * den_dvel_right
+                vel_left  = vel_neigh(i, - e(1, idim), - e(2, idim), - e(3, idim), idim)
+                vel_right = vel_neigh(i,   e(1, idim),   e(2, idim),   e(3, idim), idim)
+
+                den_En_left  =  vel_left * den_dvel_left
+                den_En_right =  vel_right * den_dvel_right
 
                 ! Second derivative for energy term
                 energy_visc(i) = energy_visc(i) - (2.0/ndim) * (den_En_right - den_En_left) / (2* dx_loc)
@@ -389,8 +395,8 @@ subroutine add_viscosity_source_terms(ilevel)
 
                 viscosity_term(i, idim) = viscosity_term(i, idim) + (den_dvel_right - den_dvel_left) / (2 * dx_loc)
 
-                den_En_left  =  ((vel(idim) + vel_left) / 2.0 ) * den_dvel_left
-                den_En_right =  ((vel(idim) + vel_right) / 2.0) * den_dvel_right
+                den_En_left  =  vel_left * den_dvel_left
+                den_En_right =  vel_right * den_dvel_right
                 energy_visc(i) = energy_visc(i) + (den_En_right - den_En_left) / (2* dx_loc)
             end do
           end do
@@ -402,7 +408,9 @@ subroutine add_viscosity_source_terms(ilevel)
           d = max(unew(ind_cell(i), 1), smallr)
           du = 0.0d0; dv = 0.0d0; dw = 0.0d0
           du = unew(ind_cell(i), 2)
+#if NDIM > 1
           dv = unew(ind_cell(i), 3)
+#endif
 #if NDIM > 2
           dw = unew(ind_cell(i), 4)
 #endif
