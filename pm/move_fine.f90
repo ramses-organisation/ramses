@@ -220,8 +220,9 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   ! Family
   logical,dimension(1:nvector),save :: classical_tracer
   ! Ito tracers variables
-  real(dp) fluxL, fluxR, pr, pl, cfl_plus, cfl_minus, u_cell, kappa_num_cell, noise_amp, xi
-  real(dp) ,dimension(1:nvector, 1:ndim)::kappa_num
+  real(dp) :: fluxL, fluxR, pr, pl, cfl_plus, cfl_minus, drift_cell, diffusion_cell
+  real(dp) :: rand_num, noise_amp, one_over_dt
+  real(dp), dimension(1:nvector, 1:ndim)::diffusion
 
   ! Mesh spacing in that level
   dx=0.5D0**ilevel
@@ -233,6 +234,7 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   scale=boxlen/dble(nx_loc)
   dx_loc=dx*scale
   vol_loc=dx_loc**3
+  one_over_dt = 1. / dtnew(ilevel)
 
   ! Lower left corner of 3x3x3 grid-cube
   do idim=1,ndim
@@ -466,7 +468,7 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   end do
   ! Gather 3-force
   ff(1:np,1:ndim)=0.0D0
-  kappa_num(1:np,1:ndim)=0.0D0
+  diffusion(1:np,1:ndim)=0.0D0
   if(tracer.and.hydro)then
      do ind=1,twotondim
         do idim=1,ndim
@@ -481,10 +483,10 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
                      pl = max(-fluxL,0.d0)
                      cfl_plus = pr + pl
                      cfl_minus = pr - pl
-                     u_cell = cfl_minus*dx_loc/dtnew(ilevel)
-                     kappa_num_cell = 0.5d0*(cfl_plus - cfl_minus**2.d0)*dx_loc**2.d0/dtnew(ilevel)
-                     kappa_num(j, idim) = kappa_num(j, idim) + kappa_num_cell*vol(j,ind)
-                     ff(j, idim) = ff(j, idim) + u_cell*vol(j, ind)
+                     drift_cell = cfl_minus*dx_loc*one_over_dt
+                     diffusion_cell = 0.5d0*(cfl_plus - cfl_minus*cfl_minus)*dx_loc*dx_loc*one_over_dt
+                     diffusion(j, idim) = diffusion(j, idim) + diffusion_cell*vol(j,ind)
+                     ff(j, idim) = ff(j, idim) + drift_cell*vol(j, ind)
                   else
                      ! CIC-Interpolate the velocity of the cells
                      ff(j,idim)=ff(j,idim) + &
@@ -549,6 +551,7 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      end do
   end do
 
+
   ! Update position
   do idim=1,ndim
      if(static)then
@@ -560,10 +563,10 @@ subroutine move1(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
            new_xp(j,idim)=xp(ind_part(j),idim)+new_vp(j,idim)*dtnew(ilevel)
            if (ito_tracer .and. classical_tracer(j)) then
               ! Uniform ditribution (TODO make this parametrizable?)
-              noise_amp = sqrt(max(0.d0,2.d0*kappa_num(j, idim)*dtnew(ilevel)))
-              call ranf(tracer_seed, xi)
-              xi = (2.0d0*xi - 1.0d0) * sqrt(3.0d0)
-              new_xp(j,idim) = new_xp(j,idim) + noise_amp*xi
+              noise_amp = sqrt(max(0.d0,2.d0*diffusion(j, idim)*dtnew(ilevel)))
+              call ranf(tracer_seed, rand_num)
+              rand_num = (2.0d0*rand_num - 1.0d0) * sqrt(3.0d0)
+              new_xp(j,idim) = new_xp(j,idim) + noise_amp*rand_num
            end if
         end do
      endif
