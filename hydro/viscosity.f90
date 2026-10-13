@@ -25,7 +25,7 @@ subroutine add_viscosity_source_terms(ilevel)
     integer, dimension(1:nvector, 1:threetondim), save::nbors_father_cells
     real(dp), dimension(1:nvector, 1:ndim), save::den_left, den_right
     real(dp), dimension(1:nvector, 1:ndim), save::viscosity_term
-    real(dp) :: energy_visc, e_prev
+    real(dp), dimension(1:nvector) :: energy_visc, e_prev
     real(dp) :: nu_viscosity
     real(dp), dimension(1:ndim) :: vel
     real(dp) :: den
@@ -267,7 +267,7 @@ subroutine add_viscosity_source_terms(ilevel)
 
   ! Compute the viscosity term
         viscosity_term(1:ngrid, 1:ndim) = 0.0d0
-        energy_visc = 0.0d0
+        energy_visc(1:ngrid) = 0.0d0
         do i = 1, ngrid
 
           den = max(uold(ind_cell(i), 1), smallr) ! density of the cell
@@ -305,7 +305,7 @@ subroutine add_viscosity_source_terms(ilevel)
               den_En_right =  ((vel(jdim) + vel_right) / 2.0) * den_dvel_right
 
               ! Second derivative for energy term
-              energy_visc = energy_visc + (den_En_right - den_En_left) / (2* dx_loc)
+              energy_visc(i) = energy_visc(i) + (den_En_right - den_En_left) / (2* dx_loc)
 
               ! Bulk viscosity
               if (idim == jdim) then
@@ -343,7 +343,7 @@ subroutine add_viscosity_source_terms(ilevel)
                 den_En_right =  ((vel(idim) + vel_right) / 2.0) * den_dvel_right
 
                 ! Second derivative for energy term
-                energy_visc = energy_visc + (den_En_right - den_En_left) / (2* dx_loc)
+                energy_visc(i) = energy_visc(i) + (den_En_right - den_En_left) / (2* dx_loc)
 
             end do
           end do
@@ -372,7 +372,7 @@ subroutine add_viscosity_source_terms(ilevel)
                 den_En_right =  ((vel(jdim) + vel_right) / 2.0) * den_dvel_right
 
                 ! Second derivative for energy term
-                energy_visc = energy_visc + (den_En_right - den_En_left) / (2* dx_loc)
+                energy_visc(i) = energy_visc(i) + (den_En_right - den_En_left) / (2* dx_loc)
 
                 ! Bulk viscosity contribution
                 den_dvel_left = den_left(i, idim) * nu_viscosity_bulk*(v_ileft_jbottom - v_ileft_jtop)/(2 * dx_loc)
@@ -404,7 +404,7 @@ subroutine add_viscosity_source_terms(ilevel)
 
           ! Update the energy
           e_prev = unew(ind_cell(i), ndim + 2)
-          unew(ind_cell(i), ndim + 2) = e_prev + energy_visc
+          unew(ind_cell(i), ndim + 2) = e_prev + energy_visc(i)
 
         end do
 
