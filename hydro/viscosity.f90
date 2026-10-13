@@ -46,7 +46,6 @@ subroutine add_viscosity_source_terms(ilevel)
     real(dp), dimension(1:nvector, 0:twondim, 1:nvar), save::u1
     real(dp), dimension(1:nvector, 1:twotondim, 1:nvar), save::u2
     real(dp), dimension(1:nvector, iu1:iu2, ju1:ju2, ku1:ku2, 1:nvar), save::uloc
-    real(dp), dimension(1:nvector, iu1:iu2, ju1:ju2, ku1:ku2, 1:ndim), save::x_diag
 
     integer::i1, j1, k1, i2, j2, k2, i3, j3, k3, nexist, nbuffer, ind_son, ind_father, ivar
     integer, dimension(1:nvector), save::igrid_nbor, ind_buffer, ind_exist, ind_nexist
@@ -182,12 +181,6 @@ subroutine add_viscosity_source_terms(ilevel)
             end do
             do i = 1, nbuffer
               uloc(ind_nexist(i), i3, j3, k3, ivar) = u2(i, ind_son, ivar)
-            end do
-          end do
-          ! Gather neighboring positions for the dx and neighboring viscosities for the laplacian
-          do idim = 1, ndim
-            do i = 1, ngrid
-              x_diag(i, i3, j3, k3, idim) = (xg(igrid_nbor(i), idim) + xc(ind_son, idim) - skip_loc(idim))*scale
             end do
           end do
 
