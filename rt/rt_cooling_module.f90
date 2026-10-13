@@ -102,7 +102,7 @@ SUBROUTINE rt_set_model(h,omegab, omega0, omegaL, astart_sim, T2_sim)
      write(*,*) 'ERROR in set_model : astart_sim is too small.'
      write(*,*) 'astart     =',astart
      write(*,*) 'astart_sim =',astart_sim
-     STOP
+     call clean_stop
   endif
   aend=astart_sim
   dasura=0.02d0
@@ -286,7 +286,7 @@ SUBROUTINE rt_solve_cooling(T2, xion, Np, Fp, p_gas, dNpdt, dFpdt        &
            nAct_next=nAct_next+1 ; indAct(nAct_next) = i
         else if(tleft(i) .lt. 0.) then        ! Overshot by abs(tleft(i))
            print*,'In rt_solve_cooling: tleft < 0  !!'
-           stop
+           call clean_stop
         endif
         ddt(i)=min(dt_rec,tleft(i))    ! Use recommended dt from cool_step
      end do ! end loop over active cells
@@ -846,7 +846,7 @@ SUBROUTINE display_coolinfo(stopRun, loopcnt, i, dtDone, dt, ddt, nH    &
   print*,group_egy(:)
   if(stopRun) then
      print *,'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
-     STOP
+     call clean_stop
   endif
 
 111 format(' Stopping because of large number of timestesps in', &
@@ -1266,7 +1266,6 @@ SUBROUTINE heat_unresolved_HII_regions(ilevel)
   use amr_commons
   use hydro_commons
   use cooling_module
-  use mpi_mod
   implicit none
   integer::ilevel
   integer::ncache,i,igrid,ngrid
@@ -1305,7 +1304,6 @@ SUBROUTINE heat_unresolved_HII_regions_vsweep(ind_grid,ngrid,ilevel)
   use rt_cooling_module, only:T2_min_fix, X
   use cooling_module,only:X
   use constants,only:pi, twopi, factG_in_cgs,  mH, rhoc
-  use mpi_mod
   implicit none
   integer::ilevel,ngrid
   integer,dimension(1:nvector)::ind_grid

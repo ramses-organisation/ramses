@@ -448,7 +448,7 @@ subroutine cmp_new_cpu_map
                     wflag = flag1(ncell)*niter_cost(ilevel)
                     if (wflag > 2147483647) then
                        write(*,*) ' wrong type for flag1 --> change to integer kind=8: ',wflag
-                       stop
+                       call clean_stop
                     endif
                     flag1(ncell)=flag1(ncell)*niter_cost(ilevel)
                     npart_sub(isub)=npart_sub(isub)+flag1(ncell)
@@ -788,12 +788,8 @@ end subroutine cmp_dommap
 subroutine cmp_ordering(x,order,nn)
   use amr_parameters
   use amr_commons
-  use mpi_mod
   implicit none
   integer ::nn
-#ifndef WITHOUTMPI
-  integer::info
-#endif
   real(dp),dimension(1:nvector,1:ndim)::x
   real(qdp),dimension(1:nvector)::order
   !--------------------------------------------------------
@@ -861,11 +857,7 @@ subroutine cmp_ordering(x,order,nn)
      end do
      if(bit_length==32) then
         write(*,*)'Error in cmp_minmaxorder'
-#ifndef WITHOUTMPI
-        call MPI_ABORT(MPI_COMM_WORLD,1,info)
-#else
-        stop
-#endif
+        call clean_stop
      end if
 
      do i=1,nn
@@ -896,11 +888,7 @@ end subroutine cmp_ordering
 subroutine cmp_minmaxorder(x,order_min,order_max,dx,nn)
   use amr_parameters
   use amr_commons
-  use mpi_mod
   implicit none
-#ifndef WITHOUTMPI
-  integer::info
-#endif
   integer ::nn
   integer ::temp
   real(dp)::dx
@@ -1019,11 +1007,7 @@ subroutine cmp_minmaxorder(x,order_min,order_max,dx,nn)
      end do
      if(bit_length==32) then
         write(*,*)'Error in cmp_minmaxorder'
-#ifndef WITHOUTMPI
-        call MPI_ABORT(MPI_COMM_WORLD,1,info)
-#else
-        stop
-#endif
+        call clean_stop
      end if
 
      do i=1,nn

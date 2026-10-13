@@ -595,7 +595,6 @@ subroutine rt_step(ilevel)
   use rt_hydro_commons
   use UV_module
   use SED_module,     only: star_RT_feedback
-  use mpi_mod
   implicit none
   integer, intent(in) :: ilevel
 
