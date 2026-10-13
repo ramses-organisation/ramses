@@ -156,6 +156,15 @@ subroutine read_hydro_params(nml_ok)
   if(barotropic_eos)then
     ! set T2 for computations
     T2_eos = T_eos/mu_gas
+
+    ! check the EOS form
+    SELECT CASE (barotropic_eos_form)
+    CASE ('legacy','isothermal','polytrope','double_polytrope','2nd_collapse','custom')
+       ! accepted values
+    CASE DEFAULT
+       if(myid==1)write(*,*)'Error: unknown barotropic_eos_form ',barotropic_eos_form
+       nml_ok=.false.
+    END SELECT
   endif
 
   !--------------------------------------------------
