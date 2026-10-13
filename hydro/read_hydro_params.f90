@@ -303,8 +303,8 @@ subroutine read_hydro_params(nml_ok)
         if(myid==1)write(*,*)'Error: unimplemented viscosity_kind selected'
         if(myid==1)write(*,*)'Implemented schemes are: constant_uniform'
         nml_ok=.false.
-     end select    
-  end if 
+     end select
+  end if
 
   !--------------------------------------------------
   ! Check ind_rsink

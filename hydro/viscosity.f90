@@ -88,7 +88,7 @@ subroutine add_viscous_stress_terms(ilevel)
       end do
 
   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! Here begins the diagonal neighbors block of code !!!!!!!!!!!!!!!!!!!!!!!!!!!
-  
+
        ! Compute father cell index
       do i = 1, ngrid
         ind_cell(i) = father(ind_grid(i))
@@ -153,7 +153,7 @@ subroutine add_viscous_stress_terms(ilevel)
           call interpol_hydro(u1, ind1, u2, nbuffer)
 #else
           call interpol_hydro(u1, u2, nbuffer)
-#endif        
+#endif
         end if
 
         ! Loop over 2x2x2 cells
@@ -281,7 +281,7 @@ subroutine add_viscous_stress_terms(ilevel)
 
           ! Add non crossed terms (F1_j = d_i (rho nu d_i v_j ))
           ! + (1 - 2/dim) d_i (rho nu d_i v_i) from the non-crossed terms F2 and F3 when idim = jdim
-          ! Same for energy : E1 = d_i (rho nu v_j d_i v_j )) 
+          ! Same for energy : E1 = d_i (rho nu v_j d_i v_j ))
           ! + (1 - 2/dim) d_i (rho nu v_i d_i v_i) from the non-crossed terms E2 and E3 when idim = jdim
 
           do jdim = 1, ndim ! component of the laplacian and the velocity
@@ -421,7 +421,7 @@ subroutine add_viscous_stress_terms(ilevel)
 
           ! Update the energy
           e_prev = unew(ind_cell(i), neul)
-          unew(ind_cell(i), neul) = e_prev + energy_visc(i)*dtnew(ilevel) 
+          unew(ind_cell(i), neul) = e_prev + energy_visc(i)*dtnew(ilevel)
 
         end do
 
