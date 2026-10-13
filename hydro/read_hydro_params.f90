@@ -289,6 +289,24 @@ subroutine read_hydro_params(nml_ok)
   endif
 #endif
 
+  !----------------------------------
+  ! Check viscosity parameters
+  !----------------------------------
+  if (add_viscosity) then
+     select case (viscosity_kind)
+     case('constant_uniform')
+      if (nu_viscosity_bulk + nu_viscosity_shear == 0 .or. nu_viscosity_bulk < 0 .or. nu_viscosity_shear < 0) then
+         if(myid==1)write(*,*)'nu_viscosity_bulk + nu_viscosity_shear should be > 0 and both positive'
+         nml_ok=.false.
+      end if
+
+     case default
+        if(myid==1)write(*,*)'Error: unimplemented viscosity_kind selected'
+        if(myid==1)write(*,*)'Implemented schemes are: constant_uniform'
+        nml_ok=.false.
+     end select    
+  end if 
+
   !--------------------------------------------------
   ! Check ind_rsink
   !--------------------------------------------------
