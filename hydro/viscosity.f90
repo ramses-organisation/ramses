@@ -404,7 +404,7 @@ subroutine add_viscosity_source_terms(ilevel)
 
           ! Update the energy
           e_prev = unew(ind_cell(i), ndim + 2)
-          unew(ind_cell(i), ndim + 2) = e_prev + energy_visc(i)
+          unew(ind_cell(i), ndim + 2) = e_prev + energy_visc(i)*dtnew(ilevel) 
 
         end do
 
