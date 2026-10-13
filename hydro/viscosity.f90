@@ -305,7 +305,7 @@ subroutine add_viscosity_source_terms(ilevel)
               den_En_right =  ((vel(jdim) + vel_right) / 2.0) * den_dvel_right
 
               ! Second derivative for energy term
-              energy_visc(i) = energy_visc(i) + (den_En_right - den_En_left) / (2* dx_loc)
+              energy_visc(i) = energy_visc(i) + (den_En_right - den_En_left) / dx_loc
 
               ! Bulk viscosity
               if (idim == jdim) then
