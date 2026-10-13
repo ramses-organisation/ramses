@@ -19,20 +19,6 @@ subroutine read_hydro_params(nml_ok)
   ! Namelist definitions
   !--------------------------------------------------
 
-
-  ! Refinement parameters
-  namelist/refine_params/x_refine,y_refine,z_refine,r_refine &
-       & ,a_refine,b_refine,exp_refine,jeans_refine,mass_cut_refine &
-       & ,collapse_jeans_refine,collapse_jeans_Tfloor &
-       & ,collapse_jeans_rho_low,collapse_jeans_rho_high &
-       & ,m_refine,mass_sph,err_grad_d,err_grad_p,err_grad_u &
-       & ,floor_d,floor_u,floor_p,ivar_refine,var_cut_refine &
-#ifdef SOLVERmhd
-       & ,err_grad_A,err_grad_B,err_grad_C,err_grad_B2 &
-       & ,floor_A,floor_B,floor_C,floor_B2,interpol_mag_type &
-#endif
-       & ,interpol_var,interpol_type,sink_refine
-
   ! Boundary parameters
   namelist/boundary_params/nboundary,bound_type &
        & ,ibound_min,ibound_max,jbound_min,jbound_max &
@@ -88,6 +74,7 @@ subroutine read_hydro_params(nml_ok)
   ! Read namelist file
   call read_solver_params(1,nml_ok)
   call read_init_params(1,nml_ok)
+  if(nlevelmax>levelmin)call read_refine_params(1,nml_ok)
 
   rewind(1)
 
@@ -97,8 +84,6 @@ subroutine read_hydro_params(nml_ok)
        write(*, *) 'ERROR: the namelist contains the old `physics_params`. It has been depreciated in favor of the sections feedback_, cooling_, sf_ and units_params.'
   call clean_stop
 110 rewind(1)
-  if(nlevelmax>levelmin)read(1,NML=refine_params)
-  rewind(1)
   read(1,NML=boundary_params,END=103)
   simple_boundary=.true.
   goto 104
@@ -360,16 +345,6 @@ subroutine read_hydro_params(nml_ok)
 #endif
   end do
 
-  !-----------------------------------
-  ! Rearrange level dependent arrays
-  !-----------------------------------
-  do i=nlevelmax,levelmin,-1
-     jeans_refine(i)=jeans_refine(i-levelmin+1)
-  end do
-  do i=1,levelmin-1
-     jeans_refine(i)=-1
-  end do
-
   !-------------------------------------------------------------
   ! Shift passive variable indices depending on namelist params
   !-------------------------------------------------------------
@@ -412,11 +387,6 @@ subroutine read_hydro_params(nml_ok)
 
   ! Last variable is ichem
 
-#ifdef SOLVERmhd
-  if (interpol_mag_type == -1) then
-    interpol_mag_type = interpol_type
-  endif
-#endif
 end subroutine read_hydro_params
 !###############################################################
 !###############################################################
@@ -470,7 +440,6 @@ subroutine read_solver_params(namelist_unit,nml_ok)
    use amr_parameters
    use amr_commons
    use hydro_parameters
-   use collapse_parameters
    implicit none
    integer,intent(in)::namelist_unit
    logical,intent(inout)::nml_ok
@@ -494,7 +463,7 @@ subroutine read_solver_params(namelist_unit,nml_ok)
    rewind(namelist_unit)
 
    ! Read namelist
-   read(namelist_unit,NML=init_params,IOSTAT=nml_err)
+   read(namelist_unit,NML=hydro_params,IOSTAT=nml_err)
 
    if(nml_err>0)then
       if(myid==1)write(*,*)'Error reading namelist &HYDRO_PARAMS. Check formatting.'
@@ -635,3 +604,93 @@ subroutine read_solver_params(namelist_unit,nml_ok)
 #endif
 
 end subroutine read_solver_params
+!###############################################################
+!###############################################################
+!###############################################################
+subroutine read_refine_params(namelist_unit,nml_ok)
+   use amr_parameters
+   use amr_commons
+   use hydro_parameters
+   implicit none
+   integer,intent(in)::namelist_unit
+   logical,intent(inout)::nml_ok
+   integer::nml_err
+
+  ! Refinement parameters
+  namelist/refine_params/x_refine,y_refine,z_refine,r_refine &
+       & ,a_refine,b_refine,exp_refine,jeans_refine,mass_cut_refine &
+       & ,collapse_jeans_refine,collapse_jeans_Tfloor &
+       & ,collapse_jeans_rho_low,collapse_jeans_rho_high &
+       & ,m_refine,mass_sph,err_grad_d,err_grad_p,err_grad_u &
+       & ,floor_d,floor_u,floor_p,ivar_refine,var_cut_refine &
+#ifdef SOLVERmhd
+       & ,err_grad_A,err_grad_B,err_grad_C,err_grad_B2 &
+       & ,floor_A,floor_B,floor_C,floor_B2,interpol_mag_type &
+#endif
+       & ,interpol_var,interpol_type,sink_refine
+
+   ! Go to the beginning of the file
+   rewind(namelist_unit)
+
+   ! Read namelist
+   read(namelist_unit,NML=refine_params,IOSTAT=nml_err)
+
+   if(nml_err>0)then
+      if(myid==1)write(*,*)'Error reading namelist &REFINE_PARAMS. Check formatting.'
+      nml_ok=.false.
+   endif
+
+  !-----------------------------------
+  ! Check interpolation settings
+  !-----------------------------------
+
+#ifdef SOLVERmhd
+   if(interpol_var<0.or.interpol_var>1)THEN
+      write(*,*)'Choose interpol_var = 0 or 1'
+      nml_ok=.false.
+   endif
+
+   if(interpol_type<0.or.interpol_type>3)then
+      write(*,*)'Choose 0<= interpol_type <= 3'
+      nml_ok=.false.
+   endif
+
+   ! set interpol_mag_type the same as interpol_type if unset
+   if(interpol_mag_type==-1)then
+      interpol_mag_type = interpol_type
+   endif
+
+   if(interpol_mag_type<0.or.interpol_mag_type>3)then
+      write(*,*)'Choose 0<= interpol_mag_type <= 3'
+      nml_ok=.false.
+   endif
+
+#else
+   ! hydro solver case
+   if(interpol_var<0.or.interpol_var>2)THEN
+      write(*,*)'Choose interpol_var = 0, 1 or 2'
+      nml_ok=.false.
+   endif
+
+   if(interpol_type<0.or.interpol_type>4)then
+      write(*,*)'Choose 0<= interpol_type <= 4'
+      nml_ok=.false.
+   else
+      if(interpol_type==4.and.interpol_var.ne.2)then
+         write(*,*)'interpol_type=4 is designed for interpol_var=2'
+         nml_ok=.false.
+      endif
+   endif
+#endif
+
+  !-----------------------------------
+  ! Rearrange level dependent arrays
+  !-----------------------------------
+  do i=nlevelmax,levelmin,-1
+     jeans_refine(i)=jeans_refine(i-levelmin+1)
+  end do
+  do i=1,levelmin-1
+     jeans_refine(i)=-1
+  end do
+
+end subroutine read_refine_params
