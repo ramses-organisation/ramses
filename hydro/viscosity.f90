@@ -235,14 +235,15 @@ subroutine add_viscosity_source_terms(ilevel)
           den_left(i, 3)  = max(uloc(i, i3c(ind), j3c(ind), k3l(ind), 1), smallr)
           den_right(i, 3) = max(uloc(i, i3c(ind), j3c(ind), k3r(ind), 1), smallr)
 #endif
-
+#if NDIM > 1
           ! Diagonal neighbors
           ! same z coordinate
           vel_neigh(i, -1, -1, 0, 1:ndim) = uloc(i, i3l(ind), j3l(ind), k3c(ind), 2:ndim + 1)/max(uloc(i, i3l(ind), j3l(ind), k3c(ind), 1), smallr)
           vel_neigh(i, -1, 1, 0, 1:ndim)  = uloc(i, i3l(ind), j3r(ind), k3c(ind), 2:ndim + 1)/max(uloc(i, i3l(ind), j3r(ind), k3c(ind), 1), smallr)
           vel_neigh(i, 1, -1, 0, 1:ndim)  = uloc(i, i3r(ind), j3l(ind), k3c(ind), 2:ndim + 1)/max(uloc(i, i3r(ind), j3l(ind), k3c(ind), 1), smallr)
           vel_neigh(i, 1, 1,  0, 1:ndim)  = uloc(i, i3r(ind), j3r(ind), k3c(ind), 2:ndim + 1)/max(uloc(i, i3r(ind), j3r(ind), k3c(ind), 1), smallr)
-
+#endif
+#if NDIM > 2
           ! same y coordinate
           vel_neigh(i, -1, 0, -1, 1:ndim) = uloc(i, i3l(ind), j3c(ind), k3l(ind), 2:ndim + 1)/max(uloc(i, i3l(ind), j3c(ind), k3l(ind), 1), smallr)
           vel_neigh(i, -1, 0, 1, 1:ndim)  = uloc(i, i3l(ind), j3c(ind), k3r(ind), 2:ndim + 1)/max(uloc(i, i3l(ind), j3c(ind), k3r(ind), 1), smallr)
@@ -254,7 +255,7 @@ subroutine add_viscosity_source_terms(ilevel)
           vel_neigh(i, 0, -1, 1, 1:ndim)  = uloc(i, i3c(ind), j3l(ind), k3r(ind), 2:ndim + 1)/max(uloc(i, i3c(ind), j3l(ind), k3r(ind), 1), smallr)
           vel_neigh(i, 0, 1, -1, 1:ndim)  = uloc(i, i3c(ind), j3r(ind), k3l(ind), 2:ndim + 1)/max(uloc(i, i3c(ind), j3r(ind), k3l(ind), 1), smallr)
           vel_neigh(i, 0, 1, 1, 1:ndim)   = uloc(i, i3c(ind), j3r(ind), k3r(ind), 2:ndim + 1)/max(uloc(i, i3c(ind), j3r(ind), k3r(ind), 1), smallr)
-
+#endif
         end do
 
 
