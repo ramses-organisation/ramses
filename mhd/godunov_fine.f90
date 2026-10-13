@@ -289,6 +289,26 @@ subroutine set_uold(ilevel)
            end if
         end do
      end if
+     if(energy_fix)then
+        do i=1,active(ilevel)%ngrid
+           ind_cell=active(ilevel)%igrid(i)+iskip
+           d=max(uold(ind_cell,1),smallr)
+           u=uold(ind_cell,2)/d
+           v=uold(ind_cell,3)/d
+           w=uold(ind_cell,4)/d
+           A=0.5*(uold(ind_cell,6)+uold(ind_cell,nvar+1))
+           B=0.5*(uold(ind_cell,7)+uold(ind_cell,nvar+2))
+           C=0.5*(uold(ind_cell,8)+uold(ind_cell,nvar+3))
+           e_kin=0.5*d*(u**2+v**2+w**2)
+#if NENER>0
+           do irad=1,nener
+              e_kin=e_kin+uold(ind_cell,nhydro+irad)
+           end do
+#endif
+           e_mag=0.5*(A**2+B**2+C**2)
+           uold(ind_cell,neul)=uold(ind_cell,ieint)+e_kin+e_mag
+        end do
+     end if
   end do
 
   ! Overwrite state if using induction scheme
