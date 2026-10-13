@@ -25,8 +25,8 @@ subroutine add_viscous_stress_terms(ilevel)
     integer, dimension(1:nvector, 1:threetondim), save::nbors_father_cells
     real(dp), dimension(1:nvector, 1:ndim), save::den_left, den_right
     real(dp), dimension(1:nvector, 1:ndim), save::viscosity_term
-    real(dp), dimension(1:nvector) :: energy_visc, e_prev
-    real(dp) :: nu_viscosity
+    real(dp), dimension(1:nvector) :: energy_visc
+    real(dp) :: e_prev, nu_viscosity
     real(dp), dimension(1:ndim) :: vel
     real(dp) :: den
     real(dp) ::vel_left, vel_right
