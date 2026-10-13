@@ -1,4 +1,4 @@
-subroutine add_viscosity_source_terms(ilevel)
+subroutine add_viscous_stress_terms(ilevel)
     use amr_commons
     use hydro_commons
     use poisson_commons
@@ -430,4 +430,4 @@ subroutine add_viscosity_source_terms(ilevel)
 
   111 format('    Entering add_viscosity_terms for level ', i2)
 
-  end subroutine add_viscosity_source_terms
+  end subroutine add_viscous_stress_terms
