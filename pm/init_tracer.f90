@@ -160,7 +160,7 @@ subroutine load_tracers_bin(iversion)
     use mpi_mod
     implicit none
     integer, intent(in) :: iversion
-    integer :: unit_record, ntot, ipos
+    integer :: unit_record, ntot
     real(dp) :: tmp_tracer_mass
 
     if (myid == 1) then
@@ -181,7 +181,6 @@ subroutine load_tracers_bin(iversion)
           end if
        end if
 
-       call ftell(unit_record, ipos)
        close(unit_record)
     end if
 
