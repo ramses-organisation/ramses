@@ -272,13 +272,10 @@ end subroutine io_loop
 subroutine local_output
   use amr_commons
   use io_commons
-  use mpi_mod
   implicit none
 
-  integer ierr
-
   print *,'Error: local_output does not exist anymore!'
-  call MPI_ABORT(MPI_COMM_WORLD,1,ierr)
+  call clean_stop
 end subroutine local_output
 
 subroutine local_backup

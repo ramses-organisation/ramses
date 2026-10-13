@@ -861,7 +861,7 @@ contains
        write(*,*)myid
        write(*,*)jpart,npart_new
        write(*,*)bound_key
-       call MPI_ABORT(MPI_COMM_WORLD,1,info)
+       call clean_stop
     end if
 
     ! Allocate communication buffer in reception
@@ -1603,11 +1603,7 @@ contains
                    ipart          = ipart+1
                    if(ipart.gt.npartmax) then
                       write(*,*) "Increase npartmax"
-#ifndef WITHOUTMPI
-                      call MPI_ABORT(MPI_COMM_WORLD,1,info)
-#else
-                      stop
-#endif
+                      call clean_stop
                    endif
                    xp(ipart,1:3)  = xx(i,1:3)+boxlen/2.0D0-ic_center(1:3)
                    vp(ipart,1:3)  = vv(i,1:3)

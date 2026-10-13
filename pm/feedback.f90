@@ -853,7 +853,6 @@ subroutine Sedov_blast(xSN,vSN,mSN,sSN,ZSN,indSN,vol_gas,dq,ekBlast,nSN)
   use amr_commons
   use hydro_commons
   use constants, only: M_sun, pc2cm
-  use mpi_mod
   implicit none
   !------------------------------------------------------------------------
   ! This routine merges SN using the FOF algorithm.

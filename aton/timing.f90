@@ -60,7 +60,6 @@ end subroutine
 
 subroutine timer_inc_count(timer, delta)
   use timing
-  use mpi_mod
   implicit none
   type(timer_state)::timer
   integer::delta

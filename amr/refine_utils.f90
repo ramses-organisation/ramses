@@ -66,11 +66,7 @@ subroutine refine_coarse
   if(.not. ok_free)then
      write(*,*)'No more free memory'
      write(*,*)'Increase ngridmax'
-#ifndef WITHOUTMPI
-     call MPI_ABORT(MPI_COMM_WORLD,1,info)
-#else
-     stop
-#endif
+     call clean_stop
   end if
 
   ! Refine marked cells
@@ -436,11 +432,7 @@ subroutine refine_fine(ilevel)
            if(ncreate_tmp>=numbf) then
               write(*,*)'No more free memory'
               write(*,*)'Increase ngridmax'
-#ifndef WITHOUTMPI
-              call MPI_ABORT(MPI_COMM_WORLD,1,info)
-#else
-              stop
-#endif
+              call clean_stop
            end if
 
            ! Refine selected cells
@@ -697,7 +689,7 @@ subroutine make_grid_fine(ind_grid,ind_cell,ind,ilevel,nn,ibound,boundary_region
                  write(*,*)'Fatal error in make_grid_fine'
                  write(*,*)myid,cpu_map(ind_cell(i))
                  write(*,*)ilevel,j,ibound,boundary_region
-                 stop
+                 call clean_stop
               endif
            end if
         end do
