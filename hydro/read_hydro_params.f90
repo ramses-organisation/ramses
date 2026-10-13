@@ -72,9 +72,10 @@ subroutine read_hydro_params(nml_ok)
 #endif
 
   ! Read namelist file
-  call read_solver_params(1,nml_ok)
+  !if(nlevelmax>levelmin)
+  call read_refine_params(1,nml_ok)
+  if(hydro)call read_solver_params(1,nml_ok)
   call read_init_params(1,nml_ok)
-  if(nlevelmax>levelmin)call read_refine_params(1,nml_ok)
 
   rewind(1)
 
@@ -479,12 +480,12 @@ subroutine read_solver_params(namelist_unit,nml_ok)
    ! set ischeme
    SELECT CASE (scheme)
    CASE ('muscl')
-     ischeme = 0
+      ischeme = 0
    CASE ('induction')
-     ischeme = 1
+      ischeme = 1
    CASE DEFAULT
-     write(*,*)'unknown scheme'
-     nml_ok=.false.
+      if(myid==1)write(*,*)'unknown scheme'
+      nml_ok=.false.
    END SELECT
 
    ! Force interpol_var==1 for induction scheme.
@@ -503,8 +504,8 @@ subroutine read_solver_params(namelist_unit,nml_ok)
    CASE ('muscl')
    CASE ('plmde')
    CASE DEFAULT
-     if(myid==1)write(*,*)'Error: unknown scheme, the hydro solver accepts muscl or plmde'
-     nml_ok=.false.
+      if(myid==1)write(*,*)'Error: unknown scheme, the hydro solver accepts muscl or plmde'
+      nml_ok=.false.
    END SELECT
 #endif
 
@@ -516,49 +517,49 @@ subroutine read_solver_params(namelist_unit,nml_ok)
    ! set iriemann
    SELECT CASE (riemann)
    CASE ('llf')
-     iriemann = 0
+      iriemann = 0
    CASE ('roe')
-     iriemann = 1
+      iriemann = 1
    CASE ('hll')
-     iriemann = 2
+      iriemann = 2
    CASE ('hlld')
-     iriemann = 3
+      iriemann = 3
    CASE ('upwind')
-     iriemann = 4
+      iriemann = 4
    CASE ('hydro')
-     iriemann = 5
+      iriemann = 5
 
    CASE DEFAULT
-     write(*,*)'unknown riemann solver'
-     nml_ok=.false.
+      if(myid==1)write(*,*)'unknown riemann solver'
+      nml_ok=.false.
    END SELECT
 
    ! set iriemann2d
    SELECT CASE (riemann2d)
    CASE ('llf')
-     iriemann2d = 0
+      iriemann2d = 0
    CASE ('roe')
-     iriemann2d = 1
+      iriemann2d = 1
    CASE ('upwind')
-     iriemann2d = 2
+      iriemann2d = 2
    CASE ('hll')
-     iriemann2d = 3
+      iriemann2d = 3
    CASE ('hlla')
-     iriemann2d = 4
+      iriemann2d = 4
    CASE ('hlld')
-     iriemann2d = 5
+      iriemann2d = 5
    CASE DEFAULT
-     write(*,*)'unknown 2D riemann solver'
-     nml_ok=.false.
+      if(myid==1)write(*,*)'unknown 2D riemann solver'
+      nml_ok=.false.
    END SELECT
 #else
    ! Hydro solver
    SELECT CASE (riemann)
    CASE ('acoustic','exact','llf','hllc','hll')
-      ! nothing to do
+      ! accepted values
    CASE DEFAULT
-     write(*,*)'unknown riemann solver'
-     nml_ok=.false.
+      if(myid==1)write(*,*)'unknown riemann solver'
+      nml_ok=.false.
    END SELECT
 #endif
 
@@ -568,35 +569,54 @@ subroutine read_solver_params(namelist_unit,nml_ok)
 #ifdef SOLVERmhd
    ! Supported slope types for mhd solver
    if(slope_type<0.or.slope_type>8)then
-     write(*,*)'unknown slope type'
-     nml_ok=.false.
-   else if(slope_type==4.or.slope_type==5)then
-     write(*,*)'slope type 4 and 5 not supported for MHD'
-     nml_ok=.false.
+      if(myid==1)write(*,*)'unknown slope type'
+      nml_ok=.false.
+   else
+      if(slope_type==4.or.slope_type==5.or.slope_type==6)then
+         if(myid==1)write(*,*)'slope type 4, 5 and 6 are not supported for MHD'
+         nml_ok=.false.
+#if NDIM<3
+      else if (slope_type==7.or.slope_type==8)then
+         if(myid==1)write(*,*)'slope type 7 and 8 are only supported in 3D for MHD'
+         nml_ok=.false.
+#if NDIM==1
+      else if(slope_type==3)then
+         if(myid==1)write(*,*)'slope type 3 not supported for MHD in 1D'
+         nml_ok=.false.
+#endif
+#endif
+      endif
    endif
 
    ! If magnetic slope limiter is unset, pick the same as slope_type
    if (slope_mag_type == -1) then
-     slope_mag_type = slope_type
+      slope_mag_type = slope_type
    endif
 
    ! Check chosen magnetic slope limiter is supported
    if(slope_mag_type<0.or.slope_mag_type>8)then
-     write(*,*)'unknown slope type'
-     nml_ok=.false.
-   else if(slope_mag_type>=3.and.slope_mag_type<=6)then
-     write(*,*)'slope_mag_type 3, 4, 5 and 6 not supported for MHD'
-     nml_ok=.false.
+      if(myid==1)write(*,*)'unknown slope type'
+      nml_ok=.false.
+   else
+      if(slope_mag_type>=3.and.slope_mag_type<=6)then
+         if(myid==1)write(*,*)'slope_mag_type 3, 4, 5 and 6 not supported for MHD'
+         nml_ok=.false.
+#if NDIM<3
+      else if(slope_mag_type==7.or.slope_mag_type==8)then
+         if(myid==1)write(*,*)'slope_mag_type 7 and 8 are only supported in 3D for MHD'
+         nml_ok=.false.
+#endif
+      endif
    endif
 #else
    ! Supported slope types for hydro solver
    if(slope_type<0.or.slope_type>8)then
-      write(*,*)'unknown slope type'
+      if(myid==1)write(*,*)'unknown slope type'
       nml_ok=.false.
 #if NDIM>1
    else
       if(slope_type==4.or.slope_type==5.or.slope_type==6)then
-         write(*,*)'slope type 4, 5 and 6 are only supported for NDIM==1'
+         if(myid==1)write(*,*)'slope type 4, 5 and 6 are only supported for NDIM==1'
          nml_ok=.false.
       endif
 #endif
@@ -614,10 +634,10 @@ subroutine read_refine_params(namelist_unit,nml_ok)
    implicit none
    integer,intent(in)::namelist_unit
    logical,intent(inout)::nml_ok
-   integer::nml_err
+   integer::nml_err,i
 
-  ! Refinement parameters
-  namelist/refine_params/x_refine,y_refine,z_refine,r_refine &
+   ! Refinement parameters
+   namelist/refine_params/x_refine,y_refine,z_refine,r_refine &
        & ,a_refine,b_refine,exp_refine,jeans_refine,mass_cut_refine &
        & ,collapse_jeans_refine,collapse_jeans_Tfloor &
        & ,collapse_jeans_rho_low,collapse_jeans_rho_high &
@@ -646,12 +666,12 @@ subroutine read_refine_params(namelist_unit,nml_ok)
 
 #ifdef SOLVERmhd
    if(interpol_var<0.or.interpol_var>1)THEN
-      write(*,*)'Choose interpol_var = 0 or 1'
+      if(myid==1)write(*,*)'Choose interpol_var = 0 or 1'
       nml_ok=.false.
    endif
 
    if(interpol_type<0.or.interpol_type>3)then
-      write(*,*)'Choose 0<= interpol_type <= 3'
+      if(myid==1)write(*,*)'Choose 0<= interpol_type <= 3'
       nml_ok=.false.
    endif
 
@@ -661,36 +681,36 @@ subroutine read_refine_params(namelist_unit,nml_ok)
    endif
 
    if(interpol_mag_type<0.or.interpol_mag_type>3)then
-      write(*,*)'Choose 0<= interpol_mag_type <= 3'
+      if(myid==1)write(*,*)'Choose 0<= interpol_mag_type <= 3'
       nml_ok=.false.
    endif
 
 #else
    ! hydro solver case
    if(interpol_var<0.or.interpol_var>2)THEN
-      write(*,*)'Choose interpol_var = 0, 1 or 2'
+      if(myid==1)write(*,*)'Choose interpol_var = 0, 1 or 2'
       nml_ok=.false.
    endif
 
    if(interpol_type<0.or.interpol_type>4)then
-      write(*,*)'Choose 0<= interpol_type <= 4'
+      if(myid==1)write(*,*)'Choose 0<= interpol_type <= 4'
       nml_ok=.false.
    else
       if(interpol_type==4.and.interpol_var.ne.2)then
-         write(*,*)'interpol_type=4 is designed for interpol_var=2'
+         if(myid==1)write(*,*)'interpol_type=4 is designed for interpol_var=2'
          nml_ok=.false.
       endif
    endif
 #endif
 
-  !-----------------------------------
-  ! Rearrange level dependent arrays
-  !-----------------------------------
-  do i=nlevelmax,levelmin,-1
-     jeans_refine(i)=jeans_refine(i-levelmin+1)
-  end do
-  do i=1,levelmin-1
-     jeans_refine(i)=-1
-  end do
+   !-----------------------------------
+   ! Rearrange level dependent arrays
+   !-----------------------------------
+   do i=nlevelmax,levelmin,-1
+      jeans_refine(i)=jeans_refine(i-levelmin+1)
+   end do
+   do i=1,levelmin-1
+      jeans_refine(i)=-1
+   end do
 
 end subroutine read_refine_params
