@@ -42,7 +42,6 @@ module cr_parameters
   logical::cr_streaming_diffusion=.false.  ! Streaming term in sigma
   logical::cr_streaming_heating=.false.    ! Streaming heating of gas
   real(dp)::cr_v_alfven=0d0                    ! Imposed Alfven speed (tests)
-  real(dp)::cr_f_taucell=1d0                ! Cell optical-depth stability factor
   ! Cooling: Fitz Axen et al. 2024 (used from phase 4)
   logical::cr_cooling=.false.               ! CR collisional cooling
   real(dp)::zeta_cr=7.51d-16                ! Coulomb loss rate coefficient

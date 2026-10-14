@@ -241,7 +241,7 @@ PURE FUNCTION cmp_cr_lmax(dx_loc, dcoeff, vmax, dt)
   real(dp)::cmp_cr_lmax
   real(dp)::tau, r_factor
 !------------------------------------------------------------------------
-  tau = cr_f_taucell * 0.5d0 * dx_loc**2 / dcoeff / dt
+  tau = 0.5d0 * dx_loc**2 / dcoeff / dt
   if(tau.lt.1e-3) then
     r_factor = sqrt((1.0 - 0.5*tau**2))
   else

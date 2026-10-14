@@ -32,7 +32,6 @@ cr_c_fraction=3.3356409297285193e-10   ! reduced light speed = 10
 cr_advect=.true.
 cr_streaming_heating=.true.
 cr_streaming_diffusion=.true.
-cr_f_taucell=0.5
 cr_nsubcycle=10
 cr_varvmax=.true.
 cr_flux_correction=.true.

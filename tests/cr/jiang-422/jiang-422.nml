@@ -39,7 +39,6 @@ cr_advect=.true.
 cr_streaming_heating=.true.
 cr_streaming_diffusion=.true.
 cr_v_alfven=1.0
-cr_f_taucell=1.0
 cr_nsubcycle=1
 cr_varvmax=.false.
 ! CR energy per region (cral region_condinit reads this); replicated by

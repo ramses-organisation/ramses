@@ -31,7 +31,6 @@ cr_c_fraction=1e-8
 cr_advect=.true.
 cr_streaming_heating=.false.
 cr_streaming_diffusion=.true.
-cr_f_taucell=1.0
 cr_nsubcycle=10
 cr_varvmax=.true.
 DCRmax=1d5

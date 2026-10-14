@@ -14,7 +14,7 @@ subroutine read_cr_params(nml_ok)
        & ,cr_smallr_decouple,cr_efloor,cr_c_fraction,cr_nsubcycle &
        & ,cr_varvmax,cr_varvmax_fudge,cr_varvmax_vdvs &
        & ,Dcr,DCRmax,Dcr_perp_factor,cr_streaming_diffusion &
-       & ,cr_streaming_heating,cr_v_alfven,cr_f_taucell &
+       & ,cr_streaming_heating,cr_v_alfven &
        & ,cr_cooling,zeta_cr,cr_ne,cr_fneut &
        & ,cr_condinit_kind,cr_boundana_kind,err_grad_cr &
        & ,cr_region_u,cr_boundary_u &
