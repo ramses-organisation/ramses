@@ -16,7 +16,7 @@ MODULE cr_flux_module
   integer,parameter::jfcr1=1-ndim/2
   integer,parameter::kfcr1=1-ndim/3
 
-  public cmp_cr_faces, cr_limit_flux, rotatevec, invrotatevec
+  public cmp_cr_faces, rotatevec, invrotatevec
 
 CONTAINS
 
@@ -421,21 +421,6 @@ SUBROUTINE cmp_cr_faces(uin_gas,uin_cr,iFlx,dx,dt,iGrp,ngrid,ilevel)
   end do
 
 end subroutine cmp_cr_faces
-
-!************************************************************************
-PURE SUBROUTINE cr_limit_flux(Ecr, Fcr, vmax)
-
-! Rescale a superluminal CR flux back to |F| <= vmax*Ecr (M1 closure)
-! or vmax*Ecr/sqrt(3) (P1 closure).
-!------------------------------------------------------------------------
-  real(dp),intent(in)::Ecr, vmax
-  real(dp),dimension(ndim),intent(inout)::Fcr
-  real(dp)::fred
-!------------------------------------------------------------------------
-  fred = sqrt(sum(Fcr**2))/(vmax*Ecr)
-  if(cr_isotropic_pressure) fred = fred*sqrt(3d0)
-  if(fred>1.0) Fcr = Fcr/fred
-END SUBROUTINE cr_limit_flux
 
 !************************************************************************
 PURE SUBROUTINE rotatevec(sint, cost, sinp, cosp, v1, v2, v3)

@@ -23,7 +23,6 @@ module cr_parameters
   logical::cr_advect=.false.                ! Evolve CRs (requires cr)
   logical::cr_HLLE=.false.                  ! HLLE Riemann solver for CR
   logical::cr_isotropic_pressure=.true.        ! .true.=P1 closure, .false.=M1
-  logical::cr_flux_correction=.true. ! Rescale superluminal fluxes
   ! Physics
   real(dp),dimension(1:ncr_groups)::gamma_cr=4d0/3d0 ! CR adiabatic index
   logical::cr_feedback=.true.               ! master CR->gas back-reaction switch (gradPcr momentum + energy)
