@@ -11,7 +11,7 @@ subroutine add_viscous_stress_terms(ilevel)
     ! Only the momentum and the
     ! total energy are modified in array unew.
     !--------------------------------------------------------------------------
-    integer::i, ind, iskip, nx_loc, j, iskip_son
+    integer::i, ind, iskip, nx_loc, j
     integer::ncache, igrid, ngrid, idim, jdim
     integer, dimension(1:8)::i3l, j3l, k3l, i3r, j3r, k3r, i3c, j3c, k3c
     real(kind=8)::scale, dx, dx_loc
@@ -25,7 +25,7 @@ subroutine add_viscous_stress_terms(ilevel)
     real(dp), dimension(1:nvector) :: energy_visc
     real(dp) :: e_prev, nu_viscosity
     real(dp), dimension(1:ndim) :: vel
-    real(dp) :: d, den, du, dv, dw
+    real(dp) :: den, du, dv, dw
     real(dp) ::vel_left, vel_right
     real(dp) :: den_dvel_left, den_dvel_right ! density times velocity derivative left and right
     real(dp):: den_En_left, den_En_right ! density times velocity times velocity derivative left and right
@@ -192,8 +192,6 @@ subroutine add_viscous_stress_terms(ilevel)
       ! Loop over cells
       do ind = 1, twotondim
 
-        iskip_son = ncoarse + (ind - 1)*ngridmax
-
         ! Compute central cell index
         iskip = ncoarse + (ind - 1)*ngridmax
         do i = 1, ngrid
@@ -254,6 +252,9 @@ subroutine add_viscous_stress_terms(ilevel)
         viscosity_term(1:ngrid, 1:ndim) = 0.0d0
         energy_visc(1:ngrid) = 0.0d0
         do i = 1, ngrid
+
+          ! Skip refined cells since the value will be overriden anyway
+          if (son(ind_cell(i)) > 0) cycle
 
           den = max(uold(ind_cell(i), 1), smallr) ! density of the cell
           vel(1:ndim) = uold(ind_cell(i), 2:ndim + 1)/ den! velocity of the cell
@@ -390,7 +391,7 @@ subroutine add_viscous_stress_terms(ilevel)
 
         do i = 1, ngrid
           ! Add viscosity term at time t
-          d = max(unew(ind_cell(i), 1), smallr)
+
           du = 0.0d0; dv = 0.0d0; dw = 0.0d0
           du = unew(ind_cell(i), 2)
 #if NDIM > 1
