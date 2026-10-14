@@ -52,6 +52,9 @@ NHYDRO = 2+$(NDIM)
 ifeq ($(SOLVER),mhd)
    NHYDRO = 8
 endif
+ifeq ($(SOLVER),rhd)
+   NHYDRO = 5
+endif
 NVAR := $(NHYDRO)+$(NENER)+$(NPSCAL)+$(NMETALS)
 ifeq ($(RT),1)
    NVAR := $(NVAR)+$(NIONS)
