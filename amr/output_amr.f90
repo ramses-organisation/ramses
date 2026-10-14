@@ -13,7 +13,7 @@ subroutine dump_all
 #if USE_TURB==1
   use turb_commons
 #endif
-#ifdef CRPHYS
+#ifdef DO_CR
   use cr_parameters, only: cr_advect
 #endif
   use mpi_mod
@@ -148,7 +148,7 @@ subroutine dump_all
   endif
 #endif
 
-#ifdef CRPHYS
+#ifdef DO_CR
   if(cr_advect)then
      if(myid==1.and.print_when_io) write(*,*)'Start backup cr'
      filename=TRIM(filedir)//'cr_'//TRIM(nchar)//'.out'

@@ -596,7 +596,7 @@ subroutine make_grid_fine(ind_grid,ind_cell,ind,ilevel,nn,ibound,boundary_region
 #ifdef RT
   use rt_hydro_commons
 #endif
-#ifdef CRPHYS
+#ifdef DO_CR
   use cr_hydro_commons, ONLY:cruold
   use cr_parameters, ONLY:ncrvar,cr_advect
 #endif
@@ -636,7 +636,7 @@ subroutine make_grid_fine(ind_grid,ind_cell,ind,ilevel,nn,ibound,boundary_region
   real(dp),dimension(1:nvector,0:twondim  ,1:nrtvar),save::urt1
   real(dp),dimension(1:nvector,1:twotondim,1:nrtvar),save::urt2
 #endif
-#ifdef CRPHYS
+#ifdef DO_CR
   real(dp),dimension(1:nvector,0:twondim  ,1:ncrvar),save::ucr1
   real(dp),dimension(1:nvector,1:twotondim,1:ncrvar),save::ucr2
 #endif
@@ -892,7 +892,7 @@ subroutine make_grid_fine(ind_grid,ind_cell,ind,ilevel,nn,ibound,boundary_region
         enddo
      end if
 #endif
-#ifdef CRPHYS
+#ifdef DO_CR
      !============================
      ! Interpolate CR variables
      !============================
@@ -974,7 +974,7 @@ subroutine kill_grid(ind_cell,ilevel,nn,ibound,boundary_region)
   use rt_hydro_commons
   use rt_parameters
 #endif
-#ifdef CRPHYS
+#ifdef DO_CR
   use cr_parameters, ONLY:cr_advect,ncrvar
   use cr_hydro_commons, ONLY:cruold,crunew
 #endif
@@ -1149,7 +1149,7 @@ subroutine kill_grid(ind_cell,ilevel,nn,ibound,boundary_region)
         end do
      end if
 #endif
-#ifdef CRPHYS
+#ifdef DO_CR
      if(cr_advect)then
         do ivar=1,ncrvar
            do i=1,nn

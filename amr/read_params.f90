@@ -179,7 +179,7 @@ endif
 #ifdef RT
   call read_rt_params(nml_ok)
 #endif
-#ifdef CRPHYS
+#ifdef DO_CR
   call read_cr_params(nml_ok)
 #endif
 #if NDIM==3

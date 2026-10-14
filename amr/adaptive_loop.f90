@@ -7,11 +7,11 @@ subroutine adaptive_loop
 #ifdef RT
   use rt_hydro_commons
 #endif
-#ifdef CRPHYS
+#ifdef DO_CR
   use cr_parameters, only: cr_advect,ncrvar
   use cr_hydro_commons, only: cruold
 #endif
-#ifdef CRPHYS
+#ifdef DO_CR
   use cr_parameters, only: ecrs_tot
 #endif
 #if USE_TURB==1
@@ -42,7 +42,7 @@ subroutine adaptive_loop
 #ifdef RT
   if(rt.or.neq_chem) call rt_init_hydro ! Initialize radiation variables
 #endif
-#ifdef CRPHYS
+#ifdef DO_CR
   if(cr_advect)call cr_init_hydro    ! Allocate cosmic-ray variables
 #endif
   if(poisson)call init_poisson       ! Initialize poisson variables
@@ -101,7 +101,7 @@ subroutine adaptive_loop
 #ifdef SOLVERmhd
      emag_tot=0.0D0  ! Reset total magnetic energy
 #endif
-#ifdef CRPHYS
+#ifdef DO_CR
      ecrs_tot=0.0D0  ! Reset total cosmic rays energy
 #endif
 
@@ -128,7 +128,7 @@ subroutine adaptive_loop
               if(simple_boundary)call rt_make_boundary_hydro(ilevel)
            endif
 #endif
-#ifdef CRPHYS
+#ifdef DO_CR
            if(cr_advect)then
               do ivar=1,ncrvar
                  call make_virtual_fine_dp(cruold(1,ivar),ilevel)
@@ -179,7 +179,7 @@ subroutine adaptive_loop
               if(simple_boundary)call rt_make_boundary_hydro(ilevel)
            end if
 #endif
-#ifdef CRPHYS
+#ifdef DO_CR
            if(cr_advect)then
               call cr_upload_fine(ilevel)
               do ivar=1,ncrvar

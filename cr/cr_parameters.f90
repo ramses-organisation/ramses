@@ -1,9 +1,9 @@
 module cr_parameters
   use amr_parameters
 
-  ! Compile-time guards: this file is only compiled when CRPHYS is enabled
-#ifndef CRPHYS
-#error "cr/ sources require -DCRPHYS: set CRPHYS=1 in bin/Makefile"
+  ! Compile-time guards: this file is only compiled when DO_CR is enabled
+#ifndef DO_CR
+#error "cr/ sources require -DDO_CR: set DO_CR=1 in bin/Makefile"
 #endif
 #ifndef NCR_GROUPS
 #error "cr/ sources require -DNCR_GROUPS=<ngroups>: set NCR_GROUPS in bin/Makefile"

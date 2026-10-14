@@ -13,14 +13,14 @@ For each CR group, the module evolves the CR energy density `E_cr` and its flux 
 
 ## Compiling for CR runs
 
-CR transport is enabled at compile time with the `CRPHYS` and `NCR_GROUPS` Makefile variables:
+CR transport is enabled at compile time with the `DO_CR` and `NCR_GROUPS` Makefile variables:
 
 ```bash
 cd bin
-make NDIM=3 SOLVER=mhd CRPHYS=1 NCR_GROUPS=1 MPI=1
+make NDIM=3 SOLVER=mhd DO_CR=1 NCR_GROUPS=1 MPI=1
 ```
 
-This adds `-DCRPHYS -DNCR_GROUPS=1` and compiles the `cr/` sources. The module requires `SOLVER=mhd` (the closure and the streaming/scattering source terms need the magnetic field). Because the CR state is stored in separate arrays, `NVAR` is unchanged.
+This adds `-DDO_CR -DNCR_GROUPS=1` and compiles the `cr/` sources. The module requires `SOLVER=mhd` (the closure and the streaming/scattering source terms need the magnetic field). Because the CR state is stored in separate arrays, `NVAR` is unchanged.
 
 ## The transport scheme
 
