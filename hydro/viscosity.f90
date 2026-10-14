@@ -36,7 +36,7 @@ subroutine add_viscous_stress_terms(ilevel)
     real(dp), dimension(1:nvector, 0:twondim, 1:nvar_all), save::u1
     real(dp), dimension(1:nvector, 1:twotondim, 1:nvar_all), save::u2
     real(dp), dimension(1:nvector, iu1:iu2, ju1:ju2, ku1:ku2, 1:nvar_all), save::uloc
-#if SOLVERmhd
+#ifdef SOLVERmhd
     integer, dimension(1:nvector,0:twondim), save :: ind1
 #endif
 
