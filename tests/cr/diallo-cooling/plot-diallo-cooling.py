@@ -16,7 +16,7 @@ E_MAX_CGS = 2.5e-10                      # erg cm^-3
 SIGMA_PC = 10.0
 ZETA_CR, CR_NE, CR_FNEUT = 7.51e-16, 1e-3, 0.875
 LAMBDA_CR = ZETA_CR * (1.0 + 0.22 * CR_NE + 0.125 * CR_FNEUT)   # cm^3 s^-1
-TOL_PROFILE = 1e-3
+TOL_PROFILE = 1e-5
 TOL_TOTAL = 1e-9
 
 

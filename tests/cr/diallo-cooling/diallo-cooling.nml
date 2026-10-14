@@ -8,8 +8,8 @@ static_gas=.true.
 /
 
 &AMR_PARAMS
-levelmin=6
-levelmax=6
+levelmin=9                   ! 512 cells, dx = 1.95 pc
+levelmax=9
 ngridmax=1000
 nexpand=1
 boxlen=1000.0
@@ -39,7 +39,7 @@ C_region=0.0
 &CR_PARAMS
 cr_advect=.true.
 cr_condinit_kind='diallo_314'
-Dcr=1d20                     ! negligible diffusion [cm^2/s]
+Dcr=1d10                     ! diffusion off in practice [cm^2/s]
 cr_c_fraction=1d-4           ! reduced light speed ~ 30 km/s
 cr_nsubcycle=10
 cr_streaming_diffusion=.false.

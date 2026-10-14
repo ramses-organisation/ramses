@@ -65,7 +65,7 @@ default up to `3e-6`.
 Two tests differ:
 
 - `diallo-cooling` first checks every output against the analytic solution
-  (profile within 1e-3 of the peak, total CR energy within 1e-9) and fails
+  (profile within 1e-5 of the peak, total CR energy within 1e-9) and fails
   before the regression check if either is exceeded.
 - `g8-lowres` follows the star-formation tests: `1e-13` on 2 MPI ranks. Star
   formation draws random numbers, so its reference must be generated with the
