@@ -27,8 +27,8 @@ initfile(1)='./dwarf_galaxy/'
 
 &AMR_PARAMS
 boxlen=50                 ! 50 kpc
-levelmin=7                ! 50 kpc / 2^7  = 390 pc resolution
-levelmax=11               ! 50 kpc / 2^11 =  25 pc resolution
+levelmin=6                ! 50 kpc / 2^6 = 781 pc resolution
+levelmax=9                ! 50 kpc / 2^9 =  98 pc resolution
 ngridmax=200000
 npartmax=1000000
 /
