@@ -15,11 +15,8 @@ subroutine add_viscous_stress_terms(ilevel)
     integer::ncache, igrid, ngrid, idim, jdim
     integer, dimension(1:8)::i3l, j3l, k3l, i3r, j3r, k3r, i3c, j3c, k3c
     real(kind=8)::scale, dx, dx_loc
-    real(dp)::scale_l, scale_t, scale_d, scale_v, scale_nH, scale_T2
 
     integer, dimension(1:nvector), save::ind_grid, ind_cell
-    integer, dimension(1:nvector, 0:twondim), save::igridn
-    integer, dimension(1:nvector, 1:ndim), save::ind_left, ind_right
     real(dp), dimension(1:nvector, -1:1, -1:1, -1:1, 1:ndim), save::vel_neigh
     real(dp) :: v_ileft_jtop, v_iright_jtop, v_ileft_jbottom, v_iright_jbottom
     integer, dimension(1:nvector, 1:threetondim), save::nbors_father_cells
@@ -52,6 +49,11 @@ subroutine add_viscous_stress_terms(ilevel)
 
     if (numbtot(1, ilevel) == 0) return
     if (verbose) write (*, 111) ilevel
+
+    nx_loc = icoarse_max - icoarse_min + 1
+    scale  = boxlen/dble(nx_loc)
+    dx     = 0.5D0**ilevel
+    dx_loc = dx*scale
 
   ! These arrays are neccesary to obtain the correct neighbors according to each cell
     i3l(1:8) = (/0, 1, 0, 1, 0, 1, 0, 1/); j3l(1:8) = (/0, 0, 1, 1, 0, 0, 1, 1/); k3l(1:8) = (/0, 0, 0, 0, 1, 1, 1, 1/)
