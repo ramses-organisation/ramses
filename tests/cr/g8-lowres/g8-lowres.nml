@@ -149,7 +149,7 @@ ic_mag_axis_y=0.0             ! Magnetic field normal vector y-component
 ic_mag_axis_z=1.0             ! Magnetic field normal vector z-component
 ic_mag_scale_R=2.5            ! Toroidal magnetic field scalelength [kpc]
 ic_mag_scale_H=0.5            ! Toroidal magnetic field scaleheight [kpc]
-ic_mag_scale_B=5.2d-3         ! Peak toroidal field, ~1 muG (code units)
+ic_mag_scale_B=5.2d-6         ! Peak toroidal field, ~1e-3 muG (code units): sets the CR diffusion direction only
 /
 
 ! Feedback
