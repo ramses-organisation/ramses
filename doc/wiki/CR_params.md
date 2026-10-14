@@ -12,7 +12,7 @@ For detailed descriptions of the scheme, see:
 | Variable name, syntax, default value | Fortran type  | Description       |
 |:---------------------------- |:------------- |:------------------------- |
 | `cr_advect=.false.`          |  `logical`    | Evolve the CRs: transport, scattering/streaming source terms, gas back-reaction and cooling. Requires `cr=.true.` in `&RUN_PARAMS`; with `cr=.true.` and `cr_advect=.false.` the CR field is initialised, refined and written to outputs but stays frozen. |
-| `cr_HLLE=.true.`             |  `logical`    | Use the HLLE intercell flux function. If false, a local Lax-Friedrichs flux is used instead. |
+| `cr_HLLE=.false.`            |  `logical`    | Intercell flux function. The default is the local Lax-Friedrichs (LLF) flux; true selects HLLE. |
 | `cr_isotropic_pressure=.true.` |  `logical`  | Closure relation: isotropic CR pressure `P_cr = E_cr/3` ("P1"). If false, an M1-like Eddington tensor is used, with the anisotropic component aligned with the local magnetic field (see §2 in [1]). |
 | `cr_flux_correction=.false.` |  `logical`    | Rescale superluminal CR fluxes back to the causality limit after the transport step. |
 | `gamma_cr=1.3333`            |  `real array` | CR adiabatic index of each group (relativistic gas: 4/3). |
