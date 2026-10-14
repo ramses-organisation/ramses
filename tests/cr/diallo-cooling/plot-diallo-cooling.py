@@ -44,6 +44,11 @@ def analytic_errors(d):
     return err_profile, err_total
 
 
+def check_failed(err_profile, err_total):
+    """True unless both errors are within tolerance (NaN fails)."""
+    return not (err_profile <= TOL_PROFILE and err_total <= TOL_TOTAL)
+
+
 if __name__ == "__main__":
     snaps = sorted(int(os.path.basename(p).split("_")[-1])
                    for p in glob.glob("output_?????") if os.path.isdir(p))
@@ -57,7 +62,7 @@ if __name__ == "__main__":
         err_profile, err_total = analytic_errors(d)
         t_myr = float(d["time"]) * d["unit_t"] / MYR
         print("t=%g Myr: profile error %.3e, total-energy error %.3e" % (t_myr, err_profile, err_total))
-        if err_profile > TOL_PROFILE or err_total > TOL_TOTAL:
+        if check_failed(err_profile, err_total):
             failed.append(t_myr)
         x = d["x"]; srt = np.argsort(x)
         ax1.plot(x[srt], d["CRegy_01"][srt], "o", ms=3, color=cols[i], label="t=%g Myr" % t_myr)
