@@ -32,7 +32,7 @@ points = np.transpose([x,y])
 # Density
 time = data["data"]["time"]
 
-solution_vx = lambda y: amplitude * np.exp(-nu_visco*zeta**2*time)*np.sin(zeta*y) 
+solution_vx = lambda y: amplitude * np.exp(-nu_visco*zeta**2*time)*np.sin(zeta*y)
 profile_vx = griddata(y,vx,ypx,method='linear')
 profile_dens = griddata(y,rho,ypx,method='linear')
 

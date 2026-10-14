@@ -37,10 +37,10 @@ subroutine condinit(x,u,dx,nn)
   case('ana_disk_potential')
      call ana_disk_potential_condinit(x, q, dx, nn)
 
-#if NDIM > 1 
+#if NDIM > 1
   case('shear_wave')
     call shear_wave_condinit(x, q, dx, nn)
-#endif 
+#endif
 
   ! Add here, if you wish, some user-defined initial conditions
   ! ........
@@ -157,8 +157,8 @@ subroutine shear_wave_condinit(x,q,dx,nn)
   integer::i
 
   real(dp), parameter :: amplitude = 0.01d0
-  real(dp) :: wavenumber 
-  
+  real(dp) :: wavenumber
+
   wavenumber = twopi / boxlen
 
   ! Call built-in initial condition generator
@@ -170,4 +170,4 @@ subroutine shear_wave_condinit(x,q,dx,nn)
   end do
 
 end subroutine shear_wave_condinit
-#endif 
+#endif

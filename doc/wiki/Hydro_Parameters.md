@@ -27,4 +27,3 @@ describe them now
 | `viscosity_kind="constant_uniform"` |  `character(LEN=20)`    | Type of viscosity (for now only constant uniform)|
 | `nu_viscosity_bulk=0.0d0` |  `real(dp)`    | Value of the bulk velocity |
 | `nu_viscosity_shear=0.001d0` |  `real(dp)`    | Value of the shear velocity|
-

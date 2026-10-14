@@ -41,7 +41,5 @@ pressure_fix=.true.
 add_viscosity=.true.
 viscosity_kind="constant_uniform"
 nu_viscosity_bulk=0.0d0
-nu_viscosity_shear=1.0d0 
+nu_viscosity_shear=1.0d0
 /
-
-
