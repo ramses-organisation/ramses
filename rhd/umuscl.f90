@@ -28,7 +28,7 @@
 ! ----------------------------------------------------------------
 !
 ! ----------------------------------------------------------------
-subroutine unsplit(uin,gravin,flux,tmp,dx,dy,dz,dt,ngrid)
+subroutine unsplit(uin,gravin,pin,flux,tmp,dx,dy,dz,dt,ngrid)
   use amr_parameters
   use const
   use hydro_parameters
@@ -40,6 +40,7 @@ subroutine unsplit(uin,gravin,flux,tmp,dx,dy,dz,dt,ngrid)
   ! Input states
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:nvar)::uin
   real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2,1:ndim)::gravin
+  real(dp),dimension(1:nvector,iu1:iu2,ju1:ju2,ku1:ku2)::pin ! Dummy (stellar momentum not used in RHD)
 
   ! Output fluxes
   real(dp),dimension(1:nvector,if1:if2,jf1:jf2,kf1:kf2,1:nvar,1:ndim)::flux
@@ -98,8 +99,8 @@ subroutine unsplit(uin,gravin,flux,tmp,dx,dy,dz,dt,ngrid)
      call tracexyz(qin,dq,cin,qm,qp,dx,dy,dz,dt,ngrid)
 #endif
    else
-      write(*,*),'no valid scheme'
-      stop
+      write(*,*) 'no valid scheme'
+      call clean_stop
 
    endif
 
@@ -1006,7 +1007,7 @@ subroutine cmpflxm(qm,im1,im2,jm1,jm2,km1,km2, &
                  call riemann_hllc     (qleft,qright,fgdnv)
               else
                  write(*,*)'unknown Riemann solver'
-                 stop
+                 call clean_stop
               end if
 
 
@@ -1090,13 +1091,13 @@ subroutine ctoprim(uin,q,gravin,dt,ngrid)
              E = uin(l,i,j,k,5)
              !Method from Mignone,McKinney,2007. Same as BS2011 except one uses E'=U-D and u^2=Lor^2*v^2
              if (D<0) then
-               write(*,*),'D<0 in ctoprim'
+               write(*,*) 'D<0 in ctoprim'
                 D=small_bigD
                 uin(l,i,j,k,1)=D
              endif
              if (E<0) then
                 E=sqrt(M**2+d**2+1d-8)
-               write(*,*),'E<0 in ctoprim'
+               write(*,*) 'E<0 in ctoprim'
                 uin(l,i,j,k,5)=E
              endif
 
@@ -1145,7 +1146,7 @@ subroutine ctoprim(uin,q,gravin,dt,ngrid)
              endif
              if ((q(l,i,j,k,1)<0d0).or.(q(l,i,j,k,5)<0d0).or.E<0d0) then
                 write(*,*) 'negative pressure or density'
-                stop
+                call clean_stop
              endif
 
              ! Passive scalar
@@ -1158,9 +1159,9 @@ subroutine ctoprim(uin,q,gravin,dt,ngrid)
              D2= q(l,i,j,k,1)*lor
              M2=lor**2*q(l,i,j,k,1)*h*sqrt(q(l,i,j,k,2)**2+q(l,i,j,k,3)**2+q(l,i,j,k,4)**2)
              E2=lor**2*q(l,i,j,k,1)*h-q(l,i,j,k,5)
-!             if ((abs(D-d2)/D2 .gt. 1e-5 )) write(*,*),D,D2,'D'
+!             if ((abs(D-d2)/D2 .gt. 1e-5 )) write(*,*) D,D2,'D'
 !             if ((abs(Mx-M2)/M2 .gt. 1e-5))  write (*,*)M,M2,'M'
-!             if ((abs(E-E2)/E2 .gt. 1e-5))  write(*,*),E,E2,'E'
+!             if ((abs(E-E2)/E2 .gt. 1e-5))  write(*,*) E,E2,'E'
 
 
         end do
@@ -1272,7 +1273,7 @@ subroutine uslope(q,dq,dx,dt,ngrid)
                  end if
               else
                  write(*,*)'Unknown slope type'
-                 stop
+                 call clean_stop
               end if
            end do
         end do
@@ -1353,7 +1354,7 @@ subroutine uslope(q,dq,dx,dt,ngrid)
      end do
   else
      write(*,*)'Unknown slope type'
-     stop
+     call clean_stop
   endif
 #endif
 
@@ -1512,7 +1513,7 @@ subroutine uslope(q,dq,dx,dt,ngrid)
      end do
   else
      write(*,*)'Unknown slope type'
-     stop
+     call clean_stop
   endif
 #endif
 

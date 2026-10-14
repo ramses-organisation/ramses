@@ -209,7 +209,7 @@ subroutine process_particle(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   if(error)then
      write(*,*)'problem in sn2'
      write(*,*)ilevel,ng,np
-     stop
+     call clean_stop
   end if
 
   ! NGP at level ilevel
