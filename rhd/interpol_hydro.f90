@@ -132,18 +132,18 @@ subroutine upl(ind_cell,ncell)
                  !Method from Mignone,McKinney,2007. Same as BS2011 except one uses E'=U-D and u^2=Lor^2*v^2
 
                  if (D<0) then
-                    write(*,*),'D<0 switch'
+                    write(*,*) 'D<0 switch'
                     D=small_bigD
                     uold(ind_cell_son(i),1)=D
                  endif
                  if (E<0) then
-                    write(*,*),'E<0 switch'
+                    write(*,*) 'E<0 switch'
                     E=sqrt((M**2+d**2)*(1+1d-8))
                     uold(ind_cell_son(i),5)=E
                  endif
 
                  if (E**2<M**2+D**2) then
-                    write(*,*),'E<M switch'
+                    write(*,*) 'E<M switch'
                     E=sqrt((M**2+d**2)*(1+1d-8))
                     uold(ind_cell_son(i),5)=E
                  endif
@@ -173,8 +173,8 @@ subroutine upl(ind_cell,ncell)
                  endif
                  if ((qd<0d0).or.(qp<0d0).or.E<0d0) then
                     write(*,*) 'negative pressure or density interpol hydro'
-!                    write(*,*),qp,qd,D,M,E
-                    stop
+!                    write(*,*) qp,qd,D,M,E
+                    call clean_stop
                  endif
 
 
@@ -232,16 +232,14 @@ end subroutine upl
 !###########################################################
 !###########################################################
 !###########################################################
-subroutine interpol_hydro(u1,g1,u2,g2,nn)
+subroutine interpol_hydro(u1,u2,nn)
   use amr_commons
   use hydro_commons
   use poisson_commons
   implicit none
   integer::nn
   real(dp),dimension(1:nvector,0:twondim  ,1:nvar)::u1
-  real(dp),dimension(1:nvector,0:twondim  ,1:ndim)::g1
   real(dp),dimension(1:nvector,1:twotondim,1:nvar)::u2
-  real(dp),dimension(1:nvector,1:twotondim,1:ndim)::g2
   !----------------------------------------------------------
   ! This routine performs a prolongation (interpolation)
   ! operation for newly refined cells or buffer cells.
@@ -297,17 +295,17 @@ subroutine interpol_hydro(u1,g1,u2,g2,nn)
            !Method from Mignone,McKinney,2007. Same as BS2011 except one uses E'=U-D and u^2=Lor^2*v^2
 
            if (D<0) then
-              write(*,*),'D<0 switch'
+              write(*,*) 'D<0 switch'
               D=small_bigD
               u1(i,j,1)=D
            endif
            if (E<0) then
-              write(*,*),'E<0 switch'
+              write(*,*) 'E<0 switch'
               E=sqrt(M**2+d**2+1d-8)
               u1(i,j,5)=E
            endif
            if (E**2<M**2+D**2) then
-              write(*,*),'E<M switch'
+              write(*,*) 'E<M switch'
               E=sqrt(M**2+d**2+1d-8)
               u1(i,j,5)=E
            endif
@@ -338,7 +336,7 @@ subroutine interpol_hydro(u1,g1,u2,g2,nn)
 
            if ((qd<0d0).or.(qp<0d0).or. (E<0d0)) then
               write(*,*) 'negative pressure or density interpol hydro'
-              stop
+              call clean_stop
            endif
 
            !store total energie
@@ -386,7 +384,7 @@ subroutine interpol_hydro(u1,g1,u2,g2,nn)
   do j=0,twondim
      do i=1,nn
         if (u1(i,j,5) <0 )then
-           write(*,*),'oops pere'
+           write(*,*) 'oops pere'
         endif
      end do
   end do
@@ -432,7 +430,7 @@ subroutine interpol_hydro(u1,g1,u2,g2,nn)
     do ind=1,twotondim
        do idim=1,ndim
           do i=1,nn
-             write(*,*),'back to first order'
+             write(*,*) 'back to first order'
              do ivar=1,nvar
                 u2(i,ind,ivar)=u_record(i,ind,ivar)
              enddo

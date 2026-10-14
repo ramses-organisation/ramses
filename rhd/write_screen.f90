@@ -139,13 +139,13 @@ subroutine write_screen
                     !Method from Mignone,McKinney,2007. Same as BS2011 except one uses E'=U-D and u^2=Lor^2*v^2
 
                     if (D<0) then
-                       write(*,*),'D<0 in ctoprimbis'
+                       write(*,*) 'D<0 in ctoprimbis'
                        D=small_bigD
                        uold(ind_cell(i),1)=D
                     endif
                     if (E<0) then
                        E=sqrt(M**2+d**2+1d-8)
-                       write(*,*),'E<0 in ctoprimbis'
+                       write(*,*) 'E<0 in ctoprimbis'
                        uold(ind_cell(i),5)=E
                     endif
 
@@ -197,7 +197,7 @@ subroutine write_screen
                     endif
                     if ((qq(icell,1)<0d0).or.(qq(icell,5)<0d0).or.E<0d0 ) then
                        write(*,*) 'negative pressure or density output'
-                       stop
+                       call clean_stop
                     endif
                     dd(icell)=qq(icell,1)
                     uu(icell)=qq(icell,2)
