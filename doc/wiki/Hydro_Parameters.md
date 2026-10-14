@@ -35,6 +35,6 @@ The implementation of the artificial viscosity is recent (2026, PR [#259](https:
 **Know limitations**
 
 - It is an explicit source term. Momentum and energy are not conserved at coarse/fine level boundaries.
-- The large viscosity can reduce the timestep and make simulation more expansive.
+- Large viscosities can significantly reduce the timestep and make the simulation more expensive.
 - In 1D and 2D, $v_y$ and $v_z$ are ignored.
 :::
