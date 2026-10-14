@@ -48,9 +48,9 @@ SUBROUTINE cr_cooling_fine(ilevel)
         end do
         if(nleaf==0)cycle
 
-        ! Gas density
+        ! Hydrogen number density [cm^-3]
         do i=1,nleaf
-           nH(i)=MAX(uold(ind_leaf(i),1),smallr)
+           nH(i)=MAX(uold(ind_leaf(i),1),smallr)*scale_nH
         end do
 
         ! Exponential decay of E_cr and F_cr per group (Fitz Axen et al. 2024)
