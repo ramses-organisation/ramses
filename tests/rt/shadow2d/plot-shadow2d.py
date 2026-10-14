@@ -70,5 +70,4 @@ fig.savefig('shadow2d.pdf',bbox_inches='tight')
 plt.show()
 
 # Check results against reference solution
-tol = {'velocity_x':1e-12, 'velocity_y':1e-12}
-visu_ramses.check_solution(data["data"], 'shadow2d', tolerance=tol, overwrite=False)
+visu_ramses.check_solution(data["data"], 'shadow2d',overwrite=False)

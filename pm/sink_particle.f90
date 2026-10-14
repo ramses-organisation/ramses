@@ -8,7 +8,6 @@ subroutine create_sink
   use pm_commons
   use hydro_commons
   use clfind_commons
-  use mpi_mod
   implicit none
 
   !----------------------------------------------------------------------------
@@ -1185,7 +1184,6 @@ subroutine compute_accretion_rate(write_sinks)
   use amr_commons
   use hydro_commons
   use constants, only: pi, twopi, c_cgs, factG_in_cgs, M_sun, mH, sigma_T
-  use mpi_mod
   implicit none
   logical::write_sinks
 
@@ -1365,7 +1363,6 @@ subroutine print_sink_properties(dMEDoverdt,dMEDoverdt_smbh,rho_inf,r2)
   use amr_commons
   use hydro_commons
   use constants, only: twopi, M_sun, pc2cm, yr2sec
-  use mpi_mod
   implicit none
   real(dp),dimension(1:nsinkmax)::dMEDoverdt,rho_inf,r2
   real(dp),dimension(1:nsinkmax)::dMEDoverdt_smbh
@@ -1922,7 +1919,6 @@ subroutine update_sink(ilevel)
   use hydro_commons
   use sink_feedback_parameters
   use constants, only: twopi, M_sun, yr2sec
-  use mpi_mod
   implicit none
   integer::ilevel
 
@@ -2586,7 +2582,6 @@ subroutine f_sink_sink
   use amr_commons
   use pm_commons
   use constants, only: twopi
-  use mpi_mod
   implicit none
 
   !----------------------------------------------------------------------------
@@ -2664,6 +2659,9 @@ subroutine read_sink_params()
   use pm_commons
   use amr_commons
   use constants, only: pi,yr2sec
+#ifdef RT
+  use rt_parameters, only: rt_sink
+#endif
   implicit none
 
   !----------------------------------------------------------------------------
@@ -2694,6 +2692,16 @@ subroutine read_sink_params()
 111 if(myid==1)write(*,*)'You did not set up &SINK_PARAMS in the namelist file'
   if(myid==1)write(*,*)'Using default values '
 112 rewind(1)
+
+#ifdef RT
+  if (rt_sink .and. .not.sink_refine)then
+     if(myid==1)then
+        write(*,*)'WARNING: rt_sink=.true. with sink_refine=.false.'
+        write(*,*)'         Part of the sink radiation will be lost where a sink overlaps'
+        write(*,*)'         with a refinement boundary. To avoid this, set sink_refine=.true.'
+     endif
+  endif
+#endif
 
   if (sink .and. (ndim .ne. 3))then
      if(myid==1)write(*,*)'Sink particles are only implemented for 3d sims.'
