@@ -269,9 +269,13 @@ subroutine rho_from_current_level(ilevel)
   ! Mesh spacing in that level
   dx=0.5D0**ilevel
 
-  ! multipole is updated in cic_amr, so we first calculate all contributions from omp processes
-  ! then reduce them and update the global multipole variable.
-  multipole_loc = 0
+  ! multipole is updated in cic_amr, so we accumulate into multipole_loc, which is
+  ! reduced over omp threads. It is seeded with multipole (the reduction adds the
+  ! seed once) so that without OpenMP the summation order is the same as summing
+  ! directly into multipole. Seeding with 0 and adding afterwards changes rho_tot
+  ! by an ULP and breaks bit-reproducibility of the reference solutions.
+  ! static schedule to avoid floating point errors caused summation order differences
+  multipole_loc = multipole
 
   ! Loop over cpus
 !$omp parallel private(icpu,ig,ip,jgrid,igrid,npart1,ipart,counter) &
@@ -281,7 +285,7 @@ subroutine rho_from_current_level(ilevel)
      ! Loop over grids
      ig=0
      ip=0
-!$omp do schedule(dynamic,10)
+!$omp do schedule(static)
      do jgrid=1,numbl(icpu,ilevel)
         if(icpu==myid)then
            igrid=active(ilevel)%igrid(jgrid)
@@ -363,7 +367,7 @@ subroutine rho_from_current_level(ilevel)
 !$omp end parallel
   ! End loop over cpus
 
-  multipole = multipole + multipole_loc
+  multipole = multipole_loc
 
 end subroutine rho_from_current_level
 
@@ -472,7 +476,7 @@ subroutine cic_amr(ind_cell,ind_part,ind_grid_part,x0,ng,np,ilevel,multipole_loc
            endif
         end do
      end do
-     stop
+     call clean_stop
   end if
 
   ! CIC at level ilevel (dd: right cloud boundary; dg: left cloud boundary)
@@ -703,7 +707,6 @@ subroutine multipole_fine(ilevel)
   use amr_commons
   use hydro_commons
   use poisson_commons
-  use mpi_mod
   implicit none
   integer::ilevel
   !-------------------------------------------------------------------
@@ -866,7 +869,6 @@ subroutine cic_from_multipole(ilevel)
   use amr_commons
   use hydro_commons
   use poisson_commons
-  use mpi_mod
   implicit none
   integer::ilevel
   !-------------------------------------------------------------------
@@ -926,14 +928,16 @@ subroutine cic_from_multipole(ilevel)
 
   if(hydro)then
 
-     ! multipole is updated in cic_cell, so we first calculate all contributions from omp processes
-     ! then reduce them and update the global multipole variable.
-     multipole_loc = 0
+     ! multipole is updated in cic_cell, so we accumulate into multipole_loc, which is
+     ! reduced over omp threads. Seeded with multipole for the same reason as in
+     ! rho_from_current_level.
+     ! static schedule to avoid floating point errors caused summation order differences
+     multipole_loc = multipole
 
      ! Perform a restriction over split cells (ilevel+1)
      ncache=active(ilevel)%ngrid
 !$omp parallel do private(igrid,ngrid,i) &
-!$omp & reduction(+:multipole_loc)
+!$omp & reduction(+:multipole_loc) schedule(static)
      do igrid=1,ncache,nvector
         ! Gather nvector grids
         ngrid=MIN(nvector,ncache-igrid+1)
@@ -947,7 +951,7 @@ subroutine cic_from_multipole(ilevel)
 #endif
      end do
 
-     multipole = multipole + multipole_loc
+     multipole = multipole_loc
   end if
 
 111 format('   Entering cic_from_multipole for level',i2)
@@ -1072,7 +1076,7 @@ subroutine cic_cell(ind_grid,ngrid,ilevel,multipole_loc)
               endif
            end do
         end do
-        stop
+        call clean_stop
      end if
 
      ! Compute cloud volumes
@@ -1657,7 +1661,7 @@ subroutine tsc_cell(ind_grid,ngrid,ilevel,multipole_loc)
               endif
            end do
         end do
-        stop
+        call clean_stop
      end if
 
      ! Compute cloud volumes

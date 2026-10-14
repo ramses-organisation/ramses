@@ -68,11 +68,7 @@ subroutine refine_coarse
   if(.not. ok_free)then
      write(*,*)'No more free memory'
      write(*,*)'Increase ngridmax'
-#ifndef WITHOUTMPI
-     call MPI_ABORT(MPI_COMM_WORLD,1,info)
-#else
-     stop
-#endif
+     call clean_stop
   end if
 
   ! Refine marked cells
@@ -442,11 +438,7 @@ subroutine refine_fine(ilevel)
            if(ncreate_tmp>=numbf) then
               write(*,*)'No more free memory'
               write(*,*)'Increase ngridmax'
-#ifndef WITHOUTMPI
-              call MPI_ABORT(MPI_COMM_WORLD,1,info)
-#else
-              stop
-#endif
+              call clean_stop
            end if
 
            ! Refine selected cells
@@ -707,7 +699,7 @@ subroutine make_grid_fine(ind_grid,ind_cell,ind,ilevel,nn,ibound,boundary_region
                  write(*,*)'Fatal error in make_grid_fine'
                  write(*,*)myid,cpu_map(ind_cell(i))
                  write(*,*)ilevel,j,ibound,boundary_region
-                 stop
+                 call clean_stop
               endif
            end if
         end do
@@ -977,20 +969,14 @@ subroutine kill_grid(ind_cell,ilevel,nn,ibound,boundary_region)
   if(upload_equilibrium_x) then
      ! Enforce equilibrium on ionization states when merging, to
      ! prevent unnatural values (e.g when merging hot and cold cells).
-     call updateRTGroups_CoolConstants(ilevel)
+     ! Father cells are at ilevel-1 and hold values for that level.
+     call updateRTGroups_CoolConstants(ilevel-1)
      do i=1,nn
         call calc_equilibrium_xion(uold(ind_cell(i),:) &
              , rtuold(ind_cell(i),1:nrtvar), xion)
         uold(ind_cell(i),iIons:iIons+nIons-1)=xion*uold(ind_cell(i),1)
      enddo
   endif
-  do ivar=1,nrtvar
-     do i=1,nn
-        ! Rescale according to speed of light difference
-        if (ilevel .gt. levelmin .and. ivar.le. nrtvar .and. mod(ivar,ndim+1).eq.1) &
-            rtuold(ind_cell(i),ivar) = rtuold(ind_cell(i),ivar) * rt_c(ilevel)/rt_c(ilevel-1)
-     end do
-  end do
 #endif
 
   ! Gather son grids

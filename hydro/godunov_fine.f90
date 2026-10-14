@@ -180,6 +180,8 @@ subroutine set_uold(ilevel)
   dx=0.5d0**ilevel*scale
 
   ! Set uold to unew for myid cells
+  ! OpenMP: needs static schedule otherwise cells that still have to be modified by the
+  !         by the first block may already be used in the later blocks after nowait.
 !$omp parallel private(iskip,ivar,i,d,u,v,w,e_kin,e_cons,e_prim,e_trunc,div,ind_cell,irad)
   do ind=1,twotondim
      iskip=ncoarse+(ind-1)*ngridmax
@@ -187,7 +189,7 @@ subroutine set_uold(ilevel)
      ! -------------------------------------------------------------------------------------------------------------------------------------------------------------
      ! L. Romano 13.06.2023 -- Catch advection errors due to smallr
 #if NVAR > NHYDRO+NENER
-!$omp do
+!$omp do schedule(static)
      do i=1,active(ilevel)%ngrid
         if(uold(active(ilevel)%igrid(i)+iskip,1).lt.smallr.and.unew(active(ilevel)%igrid(i)+iskip,1).gt.uold(active(ilevel)%igrid(i)+iskip,1))then
            ! inflow into previously floored cell: fix concentrations
@@ -206,14 +208,14 @@ subroutine set_uold(ilevel)
      ! -------------------------------------------------------------------------------------------------------------------------------------------------------------
 
      do ivar=1,nvar_all
-!$omp do
+!$omp do schedule(static)
         do i=1,active(ilevel)%ngrid
            uold(active(ilevel)%igrid(i)+iskip,ivar) = unew(active(ilevel)%igrid(i)+iskip,ivar)
         end do
 !$omp end do nowait
      end do
      if(momentum_feedback>0)then
-!$omp do
+!$omp do schedule(static)
         do i=1,active(ilevel)%ngrid
            pstarold(active(ilevel)%igrid(i)+iskip) = pstarnew(active(ilevel)%igrid(i)+iskip)
         end do
@@ -221,7 +223,7 @@ subroutine set_uold(ilevel)
      endif
      if(pressure_fix)then
         ! Correct total energy if internal energy is too small
-!$omp do
+!$omp do schedule(static)
         do i=1,active(ilevel)%ngrid
            ind_cell=active(ilevel)%igrid(i)+iskip
            d=max(uold(ind_cell,1),smallr)

@@ -234,7 +234,7 @@ subroutine make_boundary_flag(ilevel)
 
      end do
      ! End loop over grids
-
+     ! No OMP nowait, because boundaries need to be fully finished in this order.
   end do
   ! End loop over boundaries
 !$omp end parallel

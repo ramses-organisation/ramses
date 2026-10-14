@@ -34,4 +34,5 @@ interpol_type=0
 
 &POISSON_PARAMS
 epsilon=1d-4
+mg_safe_mode_reset=0
 /

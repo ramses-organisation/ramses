@@ -5,7 +5,6 @@ subroutine cooling_fine(ilevel)
 #ifdef grackle
   use grackle_parameters
 #endif
-  use mpi_mod
   implicit none
   integer::ilevel
   !-------------------------------------------------------------------
@@ -71,11 +70,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
        ,rt_pressBoost,iIRtrapVar,kappaSc,kappaAbs,is_kIR_T,rt_vc
   use constants, only: a_r, Myr2sec
 #endif
-  use mpi_mod
   implicit none
-#if defined(grackle) && !defined(WITHOUTMPI)
-  integer::info
-#endif
   integer::ilevel,ngrid
   integer,dimension(1:nvector)::ind_grid
   !-------------------------------------------------------------------
@@ -83,7 +78,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
   integer::i,ind,iskip,idim,nleaf,nx_loc
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   real(kind=8)::dtcool,nISM,nCOM,damp_factor,cooling_switch,t_blast
-  real(dp)::polytropic_constant=1
+  real(dp)::polytropic_constant
   integer,dimension(1:nvector),save::ind_cell,ind_leaf
   real(kind=8),dimension(1:nvector),save::nH,T2,delta_T2,ekk,err,emag
   real(kind=8),dimension(1:nvector),save::T2min,Zsolar,boost
@@ -145,6 +140,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
   nISM = MAX(nCOM,nISM)
 
   ! Polytropic constant for Jeans length related polytropic EOS
+  polytropic_constant=1
   if(jeans_ncells>0)then
      polytropic_constant=factG_in_cgs*(boxlen*jeans_ncells*0.5d0**dble(nlevelmax)*scale_l/aexp)**2/ pi / gamma
   endif
@@ -262,7 +258,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
            rtuold(il,iNp) = max(rtuold(il,iNp),smallnp)
            ! Reduce the flux to c*Np if necessary:
            fred = sqrt(sum(rtuold(il,iNp+1:iNp+ndim)**2)) &
-                / rtuold(il,iNp)*rt_c(ilevel)
+                / (rtuold(il,iNp)*rt_c(ilevel))
            if(fred .gt. 1.d0) &
                 rtuold(il,iNp+1:iNp+ndim) = rtuold(il,iNp+1:iNp+ndim)/fred
         enddo
@@ -469,11 +465,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
         iresult = solve_chemistry(my_grackle_units, my_grackle_fields, %VAL(dtnew(ilevel)))
         if(iresult.eq.0)then
             write(*,*) 'Grackle: error in solve_chemistry'
-#ifndef WITHOUTMPI
-            call MPI_ABORT(MPI_COMM_WORLD,1,info)
-#else
-            stop
-#endif
+            call clean_stop
         endif
 
         do i = 1, nleaf
@@ -637,7 +629,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
      if(rt_isIRtrap) then
         if(nener .le. 0) then
            print*,'Trying to store E_trapped pressure, but NERAD too small!!'
-           STOP
+           call clean_stop
         endif
         iNp=iGroups(iIR)
         unit_tau = 1.5d0 * dx_loc * scale_d * scale_l
@@ -677,7 +669,7 @@ subroutine coolfine1(ind_grid,ngrid,ilevel)
 
            ! Reduce the flux to c*Np if necessary:
            fred = sqrt(sum(rtuold(il,iNp+1:iNp+ndim)**2)) &
-                / rtuold(il,iNp)*rt_c(ilevel)
+                / (rtuold(il,iNp)*rt_c(ilevel))
            if(fred .gt. 1.d0) &
                 rtuold(il,iNp+1:iNp+ndim) = rtuold(il,iNp+1:iNp+ndim)/fred
         end do ! i=1,nleaf
