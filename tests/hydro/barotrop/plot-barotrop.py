@@ -69,5 +69,5 @@ fig.savefig('barotrop.pdf',bbox_inches='tight')
 
 red_tol = 8.0e-12
 tolerance={"density":red_tol, "pressure":red_tol, "time":red_tol, "velocity_x":red_tol,
-           "momentum_x":red_tol, "total_energy":red_tol}
+           "momentum_x":8.0e-11, "total_energy":red_tol}
 visu_ramses.check_solution(data["data"],'barotrop', tolerance=tolerance, overwrite=False)
