@@ -23,3 +23,18 @@ describe them now
 | `beta_fix=0d0` |  `Real`    | With pressure_fix=.true., changes the threshold at which the energy is truncated |
 | `difmag=0d0` |  `Real`    | Modifies diffusive flux in the PLDME integrator (hydro only). |
 | `eta_mag=0d0` |  `Real`    | Modifies dtdiff in PLDME integrator (MHD only, warning, divide by zero error if eta_mag=0d0) |
+| `add_viscosity=.false.` |  `logical`    | Add artificial viscosity (implemented as a source term)|
+| `viscosity_kind="constant_uniform"` |  `character(LEN=20)`    | Type of viscosity (for now only constant uniform)|
+| `nu_viscosity_bulk=0.0d0` |  `real(dp)`    | Value of the bulk viscosity (code units of L²/T). |
+| `nu_viscosity_shear=0.001d0` |  `real(dp)`    | Value of the shear viscosity (code units of L²/T).|
+
+
+:::{warning}
+The implementation of the artificial viscosity is recent (2026, PR [#259](https://github.com/ramses-organisation/ramses/pull/259)), so please report any unexpected behaviour.
+
+**Know limitations**
+
+- It is an explicit source term. Momentum and energy are not conserved at coarse/fine level boundaries.
+- Large viscosities can significantly reduce the timestep and make the simulation more expensive.
+- In 1D and 2D, $v_y$ and $v_z$ are ignored.
+:::

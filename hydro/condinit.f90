@@ -37,6 +37,11 @@ subroutine condinit(x,u,dx,nn)
   case('ana_disk_potential')
      call ana_disk_potential_condinit(x, q, dx, nn)
 
+#if NDIM > 1
+  case('shear_wave')
+    call shear_wave_condinit(x, q, dx, nn)
+#endif
+
   ! Add here, if you wish, some user-defined initial conditions
   ! ........
 
@@ -129,3 +134,40 @@ subroutine ana_disk_potential_condinit(x,q,dx,nn)
   end do
 
 end subroutine ana_disk_potential_condinit
+
+
+#if NDIM > 1
+!================================================================
+!================================================================
+!================================================================
+!================================================================
+subroutine shear_wave_condinit(x,q,dx,nn)
+  use amr_parameters
+  use hydro_parameters
+  use constants
+
+  implicit none
+  integer ::nn                            ! Number of cells
+  real(dp)::dx                            ! Cell size
+  real(dp),dimension(1:nvector,1:nvar)::q ! Primitive variables
+  real(dp),dimension(1:nvector,1:ndim)::x ! Cell center position.
+  !================================================================
+  ! This routine generates a shear wave velocity profile
+  !================================================================
+  integer::i
+
+  real(dp), parameter :: amplitude = 0.01d0
+  real(dp) :: wavenumber
+
+  wavenumber = twopi / boxlen
+
+  ! Call built-in initial condition generator
+  call region_condinit(x,q,dx,nn)
+
+  do i=1,nn
+    ! Impose sinusoidal y-dependent perturbation of the x-velocity.
+    q(i,2) = amplitude * sin(wavenumber*x(i, 2))
+  end do
+
+end subroutine shear_wave_condinit
+#endif
