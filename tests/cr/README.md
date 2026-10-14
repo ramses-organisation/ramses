@@ -22,7 +22,9 @@ source terms need the magnetic field.
 Each test selects its initial and boundary conditions from its namelist:
 `condinit_kind` (`&INIT_PARAMS`) for the gas, `cr_condinit_kind` and
 `cr_boundana_kind` (`&CR_PARAMS`) for the CR state. No source patch is
-involved — the tests exercise the shipped `cr/` and `mhd/` files.
+involved — the tests exercise the shipped `cr/` and `mhd/` files. The exception
+is `g8-lowres`, whose `before-test.sh` downloads the DICE `dwarf_galaxy` initial
+conditions shared with `star/sfvirialtrue-sfmodel0`.
 
 ## Tests
 
@@ -54,11 +56,20 @@ jiang-423 and jiang-424 use 10; jiang-421, a non-AMR 1D test, also uses 10).
 ## Regression checks
 
 Each test's `plot-<name>.py` produces a comparison figure and then calls
-`visu_ramses.check_solution` against the committed `<name>-ref.dat`. The whole
-family uses `tolerance={"all": 1e-12}` on the per-field cell sums. That is
-looser than the framework default of `3e-13` because the sums are not
-bit-reproducible across MPI domain decompositions; the `rt/` family itself
-spans the framework default up to `3e-6`.
+`visu_ramses.check_solution` against the committed `<name>-ref.dat`. Most tests
+use `tolerance={"all": 1e-12}` on the per-field cell sums. That is looser than
+the framework default of `3e-13` because the sums are not bit-reproducible
+across MPI domain decompositions; the `rt/` family itself spans the framework
+default up to `3e-6`.
+
+Two tests differ:
+
+- `diallo-cooling` first checks every output against the analytic solution
+  (profile within 1e-3 of the peak, total CR energy within 1e-9) and fails
+  before the regression check if either is exceeded.
+- `g8-lowres` follows the star-formation tests: `1e-13` on 2 MPI ranks. Star
+  formation draws random numbers, so its reference must be generated with the
+  same toolchain as CI.
 
 ## References
 

@@ -33,7 +33,7 @@ For detailed descriptions of the scheme, see:
 | `cr_streaming_heating=.false.` |  `logical`  | Include the streaming velocity in the source-term velocity, which transfers the streaming work `v_A . grad(P_cr)` to the gas as heat. |
 | `cr_v_alfven=0.`             |  `real`       | Imposed Alfven speed in code units, used by idealised tests. The default 0 uses the local `B/sqrt(rho)`. |
 | **====================** | **====================** | **Collisional cooling (Fitz Axen et al. 2024)** |
-| `cr_cooling=.false.`         |  `logical`    | Enable CR collisional (Coulomb + hadronic) losses: exponential decay of `E_cr` and `F_cr` at the rate `lambda_cr*n_H`, with `lambda_cr = zeta_cr*(1 + 0.22*cr_ne + 0.125*cr_fneut)`. |
+| `cr_cooling=.false.`         |  `logical`    | Enable CR collisional (Coulomb + hadronic) losses: exponential decay of `E_cr` and `F_cr` at the rate `lambda_cr*n_H`, where `n_H` is the hydrogen number density in cm^-3 and `lambda_cr = zeta_cr*(1 + 0.22*cr_ne + 0.125*cr_fneut)`. |
 | `zeta_cr=7.51e-16`           |  `real`       | Loss-rate coefficient entering `lambda_cr` (cm^3/s). |
 | `cr_ne=1e-3`                 |  `real`       | Number of free electrons per hydrogen nucleus. |
 | `cr_fneut=0.875`             |  `real`       | Neutral gas fraction. |
