@@ -184,7 +184,7 @@ ifeq ($(COMPILER),$(filter $(COMPILER),INTEL INTELX))
    # -cpp: run the C preprocessor on all files; add macro definitions
    FFLAGS_PP = -cpp
    FFLAGS_BASE += $(FFLAGS_PP) $(DEFINES)
-   ifeq ($(or $(MPI),$(OPENMP)),1)
+   ifneq ($(filter 1,$(MPI) $(OPENMP)),)
       # use the POSIX PXF routines for the signal handler and mkdir
       FFLAGS_BASE += -DNOSYSTEM
    endif
