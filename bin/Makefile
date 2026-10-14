@@ -86,6 +86,9 @@ endif
 ifeq ($(RT),1)
    DEFINES += -DRT -DNIONS=$(NIONS) -DNGROUPS=$(NGROUPS)
 endif
+ifneq ($(origin CRPHYS),undefined)
+   $(error CRPHYS has been renamed to DO_CR; use DO_CR=1)
+endif
 ifeq ($(DO_CR),1)
    ifeq ($(NCR_GROUPS),0)
       $(error DO_CR=1 requires NCR_GROUPS>=1)
