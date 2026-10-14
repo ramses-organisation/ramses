@@ -181,7 +181,7 @@ subroutine init_flag(ilevel)
         call test_flag(ilevel)
      else
         ! If ilevel < levelmin, set flag to 1 for all cells
-!$omp parallel private(ind,iskip,i) reduction(+:nflag)
+!$omp parallel private(ind,iskip,i)
         do ind=1,twotondim
            iskip=ncoarse+(ind-1)*ngridmax
 !$omp do
@@ -189,9 +189,10 @@ subroutine init_flag(ilevel)
               flag1(active(ilevel)%igrid(i)+iskip)=1
            end do
 !$omp end do nowait
-           nflag=nflag+active(ilevel)%ngrid
         end do
 !$omp end parallel
+        ! OMP: counted outside the region; inside it every thread would add it
+        nflag=nflag+twotondim*active(ilevel)%ngrid
      end if
   end if
 
