@@ -52,6 +52,7 @@ cr_fneut=0.875d0
 
 &OUTPUT_PARAMS
 tout=1.,10.,100.
+exact_output_time=.true.
 /
 
 &HYDRO_PARAMS
