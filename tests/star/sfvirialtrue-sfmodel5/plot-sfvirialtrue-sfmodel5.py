@@ -117,8 +117,8 @@ for i in [0,1,2]:
 for c in cb:
     c.ax.yaxis.set_label_coords(-1.1, 0.5)
 
-fig.savefig('sfvirialtrue-sfmodel0.pdf',bbox_inches='tight')
-fig.savefig('sfvirialtrue-sfmodel0.png') # => produces a sharper figure on mac
+fig.savefig('sfvirialtrue-sfmodel5.pdf',bbox_inches='tight')
+fig.savefig('sfvirialtrue-sfmodel5.png') # => produces a sharper figure on mac
 
 #to_check={}
 #to_check = data["particle"]
