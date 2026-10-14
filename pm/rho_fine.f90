@@ -269,9 +269,12 @@ subroutine rho_from_current_level(ilevel)
   ! Mesh spacing in that level
   dx=0.5D0**ilevel
 
-  ! multipole is updated in cic_amr, so we first calculate all contributions from omp processes
-  ! then reduce them and update the global multipole variable.
-  multipole_loc = 0
+  ! multipole is updated in cic_amr, so we accumulate into multipole_loc, which is
+  ! reduced over omp threads. It is seeded with multipole (the reduction adds the
+  ! seed once) so that without OpenMP the summation order is the same as summing
+  ! directly into multipole. Seeding with 0 and adding afterwards changes rho_tot
+  ! by an ULP and breaks bit-reproducibility of the reference solutions.
+  multipole_loc = multipole
 
   ! Loop over cpus
 !$omp parallel private(icpu,ig,ip,jgrid,igrid,npart1,ipart,counter) &
@@ -363,7 +366,7 @@ subroutine rho_from_current_level(ilevel)
 !$omp end parallel
   ! End loop over cpus
 
-  multipole = multipole + multipole_loc
+  multipole = multipole_loc
 
 end subroutine rho_from_current_level
 
@@ -924,9 +927,10 @@ subroutine cic_from_multipole(ilevel)
 
   if(hydro)then
 
-     ! multipole is updated in cic_cell, so we first calculate all contributions from omp processes
-     ! then reduce them and update the global multipole variable.
-     multipole_loc = 0
+     ! multipole is updated in cic_cell, so we accumulate into multipole_loc, which is
+     ! reduced over omp threads. Seeded with multipole for the same reason as in
+     ! rho_from_current_level.
+     multipole_loc = multipole
 
      ! Perform a restriction over split cells (ilevel+1)
      ncache=active(ilevel)%ngrid
@@ -945,7 +949,7 @@ subroutine cic_from_multipole(ilevel)
 #endif
      end do
 
-     multipole = multipole + multipole_loc
+     multipole = multipole_loc
   end if
 
 111 format('   Entering cic_from_multipole for level',i2)
