@@ -3,7 +3,7 @@
 Tests for the two-moment CR transport module (`cr/`). The `jiang-4xx` tests
 reproduce the benchmark suite of Jiang & Oh (2018) — the test number is the
 paper section number. The `tp-*` tests are two-pressure (gas + CR) shock tubes
-following the CR-modified Riemann problems of Thomas, Pfrommer & Pakmor (2021).
+following the CR-modified Riemann problems of Thomas, Pfrommer & Pakmor (2021). The `diallo-cooling` test checks collisional CR losses against an analytic solution, after Diallo et al. (2026).
 
 See [`doc/wiki/CR.md`](../../doc/wiki/CR.md) for the scheme and
 [`doc/wiki/CR_params.md`](../../doc/wiki/CR_params.md) for the `&CR_PARAMS`
@@ -45,6 +45,7 @@ involved — the tests exercise the shipped `cr/` and `mhd/` files.
 | `tp-nostream` | 1D | Two-pressure (gas + CR) Riemann problem, pure diffusion | TPP 2021 |
 | `tp-stream-va075` | 1D | Two-pressure shock tube with streaming + heating at `v_A=0.75` | TPP 2021 |
 | `tp-stream-va15` | 1D | Two-pressure shock tube with streaming + heating at `v_A=1.5` | TPP 2021 |
+| `diallo-cooling` | 1D | Collisional cooling of a Gaussian CR-energy profile against the analytic exponential decay | Diallo 2026 3.1.1/3.1.4 |
 
 AMR CR tests must set `cr_nsubcycle>1` (jiang-414-refine, jiang-414-vel-refine,
 jiang-423 and jiang-424 use 10; jiang-421, a non-AMR 1D test, also uses 10).
@@ -62,3 +63,4 @@ spans the framework default up to `3e-6`.
 
 - Jiang, Y.-F., & Oh, S. P. 2018, ApJ, 854, 5 — [arXiv:1712.07117](https://arxiv.org/abs/1712.07117)
 - Thomas, T., Pfrommer, C., & Pakmor, R. 2021, MNRAS, 503, 2242 — [arXiv:2010.11960](https://arxiv.org/abs/2010.11960)
+- Diallo, N.-S., Dubois, Y., Marcowith, A., Rosdahl, J., & Commerçon, B. 2026 — [arXiv:2602.21147](https://arxiv.org/abs/2602.21147)
