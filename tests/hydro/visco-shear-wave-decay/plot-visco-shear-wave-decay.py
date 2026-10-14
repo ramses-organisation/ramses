@@ -34,7 +34,7 @@ points = np.transpose([x,y])
 time = data["data"]["time"]
 
 expected_amplitude = amplitude * np.exp(-nu_visco*k**2*time)
-solution_vx = lambda y: expected_amplitude*np.sin(k*y) 
+solution_vx = lambda y: expected_amplitude*np.sin(k*y)
 
 profile_vx = griddata(y,vx,ypx,method='linear')
 profile_dens = griddata(y,rho,ypx,method='linear')

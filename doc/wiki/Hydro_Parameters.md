@@ -38,4 +38,3 @@ The implementation of the artificial viscosity is recent (2026, PR [#259](https:
 - The large viscosity can reduce the timestep and make simulation more expansive.
 - In 1D and 2D, $v_y$ and $v_z$ are ignored.
 :::
-
