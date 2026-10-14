@@ -1,6 +1,7 @@
 ! Jiang & Oh (2018) 4.1.4 -- 1D static CR Gaussian pulse with CR-gradient AMR.
 &RUN_PARAMS
 hydro=.true.
+cr=.true.
 nremap=0
 ncontrol=100
 nsubcycle=10*2,

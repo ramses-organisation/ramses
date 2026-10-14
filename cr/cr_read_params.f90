@@ -40,6 +40,10 @@ subroutine read_cr_params(nml_ok)
      if(myid==1)write(*,*)'Error in cr_params: cr_c_fraction must be in (0,1]'
      nml_ok=.false.
   endif
+  if(cr_advect .and. .not.cr)then
+     if(myid==1)write(*,*)'Error in cr_params: cr_advect=.true. requires cr=.true. in &RUN_PARAMS'
+     nml_ok=.false.
+  endif
 
   if(.not.(trim(cr_condinit_kind)==''         .or. &
        &   trim(cr_condinit_kind)=='jiang_411'.or. &

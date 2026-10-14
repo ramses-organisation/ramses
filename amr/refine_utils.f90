@@ -598,7 +598,7 @@ subroutine make_grid_fine(ind_grid,ind_cell,ind,ilevel,nn,ibound,boundary_region
 #endif
 #ifdef DO_CR
   use cr_hydro_commons, ONLY:cruold
-  use cr_parameters, ONLY:ncrvar,cr_advect
+  use cr_parameters, ONLY:ncrvar,cr
 #endif
 #ifdef ATON
   use radiation_commons, ONLY:Erad
@@ -896,7 +896,7 @@ subroutine make_grid_fine(ind_grid,ind_cell,ind,ilevel,nn,ibound,boundary_region
      !============================
      ! Interpolate CR variables
      !============================
-     if(hydro .and. cr_advect)then
+     if(hydro .and. cr)then
         do j=0,twondim
            do ivar=1,ncrvar
               do i=1,nn
@@ -975,7 +975,7 @@ subroutine kill_grid(ind_cell,ilevel,nn,ibound,boundary_region)
   use rt_parameters
 #endif
 #ifdef DO_CR
-  use cr_parameters, ONLY:cr_advect,ncrvar
+  use cr_parameters, ONLY:cr,ncrvar
   use cr_hydro_commons, ONLY:cruold,crunew
 #endif
 #ifdef ATON
@@ -1150,7 +1150,7 @@ subroutine kill_grid(ind_cell,ilevel,nn,ibound,boundary_region)
      end if
 #endif
 #ifdef DO_CR
-     if(cr_advect)then
+     if(cr)then
         do ivar=1,ncrvar
            do i=1,nn
               cruold(ind_cell_son(i),ivar)=0.0D0

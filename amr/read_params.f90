@@ -315,12 +315,18 @@ subroutine read_run_params(namelist_unit,nml_ok)
    use amr_parameters
    use amr_commons
    use hydro_parameters, only:nhydro,nvar
+#ifdef DO_CR
+   use cr_parameters, only:cr
+#endif
    implicit none
    integer,intent(in)::namelist_unit
    logical,intent(inout)::nml_ok
    integer::nml_err
 #if NVAR>NHYDRO
    integer::i
+#endif
+#ifndef DO_CR
+   logical::cr=.false.
 #endif
 
    ! Namelist definition for general run parameters
@@ -329,6 +335,7 @@ subroutine read_run_params(namelist_unit,nml_ok)
    & ,bisec_tol,static,overload,cost_weighting,aton,nrestart_quad,restart_remap &
    & ,static_dm,static_gas,static_stars,convert_birth_times,use_proper_time,remap_pscalar &
    & ,unbind,make_mergertree,stellar
+   namelist/run_params/cr
 
   ! Default passive scalar map
 #if NVAR>NHYDRO
@@ -355,6 +362,13 @@ subroutine read_run_params(namelist_unit,nml_ok)
 
    ! Verify input
    if(myid>1)verbose=.false.
+
+#ifndef DO_CR
+   if(cr)then
+      if(myid==1)write(*,*)'Error in the namelist: cr=.true. requires a DO_CR=1 build'
+      nml_ok=.false.
+   endif
+#endif
 
    if(stellar.and.(.not.sink))then
       if(myid==1)write(*,*)'Error in the namelist: sink=.true. is needed if stellar=.true. !'

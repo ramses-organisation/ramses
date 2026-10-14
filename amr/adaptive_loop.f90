@@ -8,7 +8,7 @@ subroutine adaptive_loop
   use rt_hydro_commons
 #endif
 #ifdef DO_CR
-  use cr_parameters, only: cr_advect,ncrvar
+  use cr_parameters, only: cr,ncrvar
   use cr_hydro_commons, only: cruold
 #endif
 #ifdef DO_CR
@@ -43,7 +43,7 @@ subroutine adaptive_loop
   if(rt.or.neq_chem) call rt_init_hydro ! Initialize radiation variables
 #endif
 #ifdef DO_CR
-  if(cr_advect)call cr_init_hydro    ! Allocate cosmic-ray variables
+  if(cr)call cr_init_hydro    ! Allocate cosmic-ray variables
 #endif
   if(poisson)call init_poisson       ! Initialize poisson variables
 #ifdef ATON
@@ -129,7 +129,7 @@ subroutine adaptive_loop
            endif
 #endif
 #ifdef DO_CR
-           if(cr_advect)then
+           if(cr)then
               do ivar=1,ncrvar
                  call make_virtual_fine_dp(cruold(1,ivar),ilevel)
               end do
@@ -180,7 +180,7 @@ subroutine adaptive_loop
            end if
 #endif
 #ifdef DO_CR
-           if(cr_advect)then
+           if(cr)then
               call cr_upload_fine(ilevel)
               do ivar=1,ncrvar
                  call make_virtual_fine_dp(cruold(1,ivar),ilevel)

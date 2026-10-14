@@ -6,7 +6,7 @@ subroutine init_refine
   use amr_commons
   use pm_commons
 #ifdef DO_CR
-  use cr_parameters, only: cr_advect
+  use cr_parameters, only: cr
 #endif
   implicit none
   !-------------------------------------------
@@ -31,7 +31,7 @@ subroutine init_refine
      if(rt)call rt_init_flow
 #endif
 #ifdef DO_CR
-     if(cr_advect)call cr_init_flow
+     if(cr)call cr_init_flow
 #endif
      if(ivar_refine==0)call init_refmap
      call flag
@@ -47,7 +47,7 @@ subroutine init_refine
   if(rt)call rt_init_flow
 #endif
 #ifdef DO_CR
-  if(cr_advect)call cr_init_flow
+  if(cr)call cr_init_flow
 #endif
 
 end subroutine init_refine
@@ -68,7 +68,7 @@ subroutine init_refine_2
   use rt_hydro_commons
 #endif
 #ifdef DO_CR
-  use cr_parameters, only: cr_advect,ncrvar
+  use cr_parameters, only: cr,ncrvar
   use cr_hydro_commons, only: cruold
 #endif
   use pm_commons
@@ -103,7 +103,7 @@ subroutine init_refine_2
            if(rt)call rt_init_flow_fine(ilevel)
 #endif
 #ifdef DO_CR
-           if(cr_advect)call cr_init_flow_fine(ilevel)
+           if(cr)call cr_init_flow_fine(ilevel)
 #endif
         end do
 
@@ -141,7 +141,7 @@ subroutine init_refine_2
            end if
 #endif
 #ifdef DO_CR
-           if(cr_advect)then
+           if(cr)then
               call cr_upload_fine(ilevel)
               do ivar=1,ncrvar
                  call make_virtual_fine_dp(cruold(1,ivar),ilevel)

@@ -1,6 +1,7 @@
 ! Jiang & Oh (2018) 4.1.2 -- 2D Gaussian CR-energy pulse + advective flux.
 &RUN_PARAMS
 hydro=.true.
+cr=.true.
 nremap=0
 ncontrol=100
 nsubcycle=4*1,

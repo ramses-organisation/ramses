@@ -16,9 +16,11 @@ module cr_parameters
   ! Filled in read_cr_params (cr_read_params.f90), like rt_init fills iGroups.
   integer,dimension(1:ncr_groups)::Ecr_idx=1
 
+  logical::cr=.false.                       ! CRs present in the run (&RUN_PARAMS)
+
   ! --- &cr_params namelist ---------------------------------------------
   ! Master switch & scheme
-  logical::cr_advect=.false.                ! Master CR transport switch
+  logical::cr_advect=.false.                ! Evolve CRs (requires cr)
   logical::cr_HLLE=.false.                  ! HLLE Riemann solver for CR
   logical::cr_isotropic_pressure=.true.        ! .true.=P1 closure, .false.=M1
   logical::cr_flux_correction=.true. ! Rescale superluminal fluxes

@@ -37,7 +37,7 @@ Since the reduced speed of light usually exceeds every gas signal speed, the CR 
 
 ## CR runtime parameters
 
-CR transport is activated by setting `cr_advect=.true.` in the dedicated `&CR_PARAMS` namelist. For transport-only tests on a frozen gas background, set `static_gas=.true.` in `&RUN_PARAMS` (velocities are kept but the gas state is not updated). All CR parameters are described in:
+CRs are added to a run with `cr=.true.` in `&RUN_PARAMS` and evolved with `cr_advect=.true.` in the dedicated `&CR_PARAMS` namelist. For transport-only tests on a frozen gas background, set `static_gas=.true.` in `&RUN_PARAMS` (velocities are kept but the gas state is not updated). All CR parameters are described in:
 
 * [CR_PARAMS](./CR_params)
 

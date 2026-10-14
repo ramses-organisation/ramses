@@ -74,7 +74,7 @@ recursive subroutine amr_step(ilevel,icount)
               end if
 #endif
 #ifdef DO_CR
-              if(cr_advect)then
+              if(cr)then
                  do ivar=1,ncrvar
                     call make_virtual_fine_dp(cruold(1,ivar),i)
                  end do
@@ -541,7 +541,7 @@ recursive subroutine amr_step(ilevel,icount)
 #endif
 
 #ifdef DO_CR
-  if(cr_advect)then
+  if(cr)then
      do ivar=1,ncrvar
         call make_virtual_fine_dp(cruold(1,ivar),ilevel)
      end do

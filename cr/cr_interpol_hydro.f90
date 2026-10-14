@@ -12,7 +12,7 @@ SUBROUTINE cr_upload_fine(ilevel)
   integer,dimension(1:nvector),save::ind_grid,ind_cell,ind_split
   logical,dimension(1:nvector),save::ok
 !------------------------------------------------------------------------
-  if(.not.cr_advect)return
+  if(.not.cr)return
   if(ilevel==nlevelmax)return
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel

@@ -1,6 +1,7 @@
 ! Jiang & Oh (2018) 4.1.4 -- 1D CR Gaussian pulse advected by a frozen background flow on a uniform periodic grid.
 &RUN_PARAMS
 hydro=.true.
+cr=.true.
 nremap=0
 ncontrol=100
 nsubcycle=4*1,

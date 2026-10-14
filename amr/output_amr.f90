@@ -14,7 +14,7 @@ subroutine dump_all
   use turb_commons
 #endif
 #ifdef DO_CR
-  use cr_parameters, only: cr_advect
+  use cr_parameters, only: cr
 #endif
   use mpi_mod
   use buildinfo
@@ -149,7 +149,7 @@ subroutine dump_all
 #endif
 
 #ifdef DO_CR
-  if(cr_advect)then
+  if(cr)then
      if(myid==1.and.print_when_io) write(*,*)'Start backup cr'
      filename=TRIM(filedir)//'cr_'//TRIM(nchar)//'.out'
      filename_desc = trim(filedir) // 'cr_file_descriptor.txt'

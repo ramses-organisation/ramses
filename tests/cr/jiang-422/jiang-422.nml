@@ -1,6 +1,7 @@
 ! Jiang & Oh (2018) 4.2.2 -- 1D colliding flow (u = +10 / -10) with cosmic rays.
 &RUN_PARAMS
 hydro=.true.
+cr=.true.
 nremap=0
 ncontrol=100
 nsubcycle=10*2,

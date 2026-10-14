@@ -30,7 +30,7 @@ subroutine cr_make_boundary_hydro(ilevel)
   real(dp),dimension(1:nvector,1:ncrvar),save::uu
 
   if(.not. simple_boundary)return
-  if(.not. cr_advect)return
+  if(.not. cr)return
   if(verbose)write(*,111)ilevel
 
   ! Mesh size at level ilevel

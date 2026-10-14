@@ -32,7 +32,7 @@ subroutine cr_init_hydro
   if(verbose)write(*,*)'Allocate done for',ncrvar,'CR variables'
 
   if(nrestart==0)return
-  if(.not.cr_advect)return
+  if(.not.cr)return
 
   !--------------------------------
   ! For a restart, read the CR file

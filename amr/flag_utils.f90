@@ -308,7 +308,7 @@ subroutine userflag_fine(ilevel)
   use hydro_commons
   use cooling_module
 #ifdef DO_CR
-  use cr_parameters, only: cr_advect
+  use cr_parameters, only: cr
 #endif
   implicit none
   integer::ilevel
@@ -450,7 +450,7 @@ subroutine userflag_fine(ilevel)
 
 #ifdef DO_CR
   ! Do the same for CR
-  if(cr_advect)call cr_hydro_flag(ilevel)
+  if(cr)call cr_hydro_flag(ilevel)
 #endif
 
   ! Update boundaries

@@ -1,6 +1,7 @@
 ! Jiang & Oh (2018) 4.2.3 -- 2D CR-blast / Sedov-type explosion with AMR.
 &RUN_PARAMS
 hydro=.true.
+cr=.true.
 nremap=0
 ncontrol=1
 nsubcycle=4*2,
