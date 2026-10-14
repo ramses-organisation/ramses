@@ -274,6 +274,7 @@ subroutine rho_from_current_level(ilevel)
   ! seed once) so that without OpenMP the summation order is the same as summing
   ! directly into multipole. Seeding with 0 and adding afterwards changes rho_tot
   ! by an ULP and breaks bit-reproducibility of the reference solutions.
+  ! static schedule to avoid floating point errors caused summation order differences
   multipole_loc = multipole
 
   ! Loop over cpus
@@ -284,7 +285,7 @@ subroutine rho_from_current_level(ilevel)
      ! Loop over grids
      ig=0
      ip=0
-!$omp do schedule(dynamic,10)
+!$omp do schedule(static)
      do jgrid=1,numbl(icpu,ilevel)
         if(icpu==myid)then
            igrid=active(ilevel)%igrid(jgrid)
@@ -930,12 +931,13 @@ subroutine cic_from_multipole(ilevel)
      ! multipole is updated in cic_cell, so we accumulate into multipole_loc, which is
      ! reduced over omp threads. Seeded with multipole for the same reason as in
      ! rho_from_current_level.
+     ! static schedule to avoid floating point errors caused summation order differences
      multipole_loc = multipole
 
      ! Perform a restriction over split cells (ilevel+1)
      ncache=active(ilevel)%ngrid
 !$omp parallel do private(igrid,ngrid,i) &
-!$omp & reduction(+:multipole_loc)
+!$omp & reduction(+:multipole_loc) schedule(static)
      do igrid=1,ncache,nvector
         ! Gather nvector grids
         ngrid=MIN(nvector,ncache-igrid+1)
