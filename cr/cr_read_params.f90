@@ -55,11 +55,13 @@ subroutine read_cr_params(nml_ok)
        &   trim(cr_condinit_kind)=='jiang_411_triangular'.or. &
        &   trim(cr_condinit_kind)=='jiang_421'.or. &
        &   trim(cr_condinit_kind)=='jiang_422'.or. &
-       &   trim(cr_condinit_kind)=='jiang_424'))then
+       &   trim(cr_condinit_kind)=='jiang_424'.or. &
+       &   trim(cr_condinit_kind)=='diallo_314'))then
      if(myid==1)write(*,*)'Error in cr_params: unknown cr_condinit_kind="'// &
           & trim(cr_condinit_kind)//'". Valid values: '// &
           & '"", jiang_411, jiang_412, jiang_413, jiang_414, jiang_415, '// &
-          & 'jiang_415_donut, jiang_411_triangular, jiang_421, jiang_422, jiang_424'
+          & 'jiang_415_donut, jiang_411_triangular, jiang_421, jiang_422, jiang_424, '// &
+          & 'diallo_314'
      nml_ok=.false.
   endif
 
