@@ -26,6 +26,7 @@ module cr_parameters
   ! Physics
   real(dp),dimension(1:ncr_groups)::gamma_cr=4d0/3d0 ! CR adiabatic index
   logical::cr_feedback=.true.               ! master CR->gas back-reaction switch (gradPcr momentum + energy)
+  real(dp)::fecr=0d0                        ! SN energy fraction injected into CRs
   real(dp)::cr_smallr_decouple=1d4          ! Decouple CRs where rho<smallr*this
   real(dp)::cr_efloor=1d-30                   ! CR energy floor
   ! Timestep / reduced light speed

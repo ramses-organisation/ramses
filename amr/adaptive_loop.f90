@@ -8,7 +8,7 @@ subroutine adaptive_loop
   use rt_hydro_commons
 #endif
 #ifdef DO_CR
-  use cr_parameters, only: cr,ncrvar
+  use cr_parameters, only: cr,cr_advect,fecr,ncrvar
   use cr_hydro_commons, only: cruold
 #endif
 #ifdef DO_CR
@@ -151,6 +151,14 @@ subroutine adaptive_loop
      if(MC_tracer) then
         fluxes = 0_dp
      end if
+
+#ifdef DO_CR
+     ! Switch CR transport on between coarse steps once stars exist
+     if(cr .and. .not.cr_advect .and. fecr>0d0 .and. nstar_tot>0)then
+        if(myid==1)write(*,*)'CR advection switched on: stars present and fecr>0'
+        cr_advect=.true.
+     endif
+#endif
 
      ! Call base level
      call amr_step(levelmin,1)

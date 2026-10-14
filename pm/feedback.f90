@@ -155,6 +155,10 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   use hydro_commons
   use random
   use constants, only: M_sun, Myr2sec, pc2cm
+#ifdef DO_CR
+  use cr_parameters, only: fecr,cr_advect,Ecr_idx
+  use cr_hydro_commons, only: crunew
+#endif
   implicit none
   integer::ng,np,ilevel
   integer,dimension(1:nvector)::ind_grid
@@ -446,6 +450,11 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      unew(indp(j),4)=unew(indp(j),4)+mloss(j)*vp(ind_part(j),3)
      unew(indp(j),5)=unew(indp(j),5)+mloss(j)*ekinetic(j)+ &
           & ethermal(j)*(1d0+RAD_BOOST)
+#ifdef DO_CR
+     ! CR energy on top of the full thermal SN energy (single group)
+     if(fecr>0d0 .and. cr_advect) crunew(indp(j),Ecr_idx(1))= &
+          & crunew(indp(j),Ecr_idx(1))+ethermal(j)*(1d0+RAD_BOOST)*fecr
+#endif
   end do
 
   ! Add metals

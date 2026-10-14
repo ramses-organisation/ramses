@@ -37,6 +37,8 @@ For detailed descriptions of the scheme, see:
 | `zeta_cr=7.51e-16`           |  `real`       | Loss-rate coefficient entering `lambda_cr` (cm^3/s). |
 | `cr_ne=1e-3`                 |  `real`       | Number of free electrons per hydrogen nucleus. |
 | `cr_fneut=0.875`             |  `real`       | Neutral gas fraction. |
+| **====================** | **====================** | **Supernova injection** |
+| `fecr=0.`                    |  `real`       | Fraction of the thermal SN energy additionally injected as CR energy into the SN cell (thermal feedback; the gas still receives the full SN energy). Requires `cr=.true.`. With `fecr>0` and `cr_advect=.false.`, CR transport is switched on at the start of the first coarse step in which star particles exist. |
 | **====================** | **====================** | **CR initialisation regions** |
 | `cr_nregion=0`               |  `integer`    | Number of CR initial-condition regions. The region geometry is independent of the gas `&INIT_PARAMS` regions but follows the same conventions. |
 | `cr_region_type='square'`    |  `character array` | Geometry of each region: 'square' (generalized ellipsoid, CR state replaced inside) or 'point' (CIC-deposited point value). |
