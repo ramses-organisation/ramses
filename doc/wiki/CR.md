@@ -13,23 +13,23 @@ For each CR group, the module evolves the CR energy density `E_cr` and its flux 
 
 ## Compiling for CR runs
 
-CR transport is enabled at compile time with the `CRPHYS` and `NCR_GROUPS` Makefile variables:
+CR transport is enabled at compile time with the `DO_CR` and `NCR_GROUPS` Makefile variables:
 
 ```bash
 cd bin
-make NDIM=3 SOLVER=mhd CRPHYS=1 NCR_GROUPS=1 MPI=1
+make NDIM=3 SOLVER=mhd DO_CR=1 NCR_GROUPS=1 MPI=1
 ```
 
-This adds `-DCRPHYS -DNCR_GROUPS=1` and compiles the `cr/` sources. The module requires `SOLVER=mhd` (the closure and the streaming/scattering source terms need the magnetic field). Because the CR state is stored in separate arrays, `NVAR` is unchanged.
+This adds `-DDO_CR -DNCR_GROUPS=1` and compiles the `cr/` sources. The module requires `SOLVER=mhd` (the closure and the streaming/scattering source terms need the magnetic field). Because the CR state is stored in separate arrays, `NVAR` is unchanged.
 
 ## The transport scheme
 
 CR transport runs once per hydro step at each AMR level, after the MHD Godunov update. Each CR step consists of:
 
-1. **Explicit transport** of `(E_cr, F_cr)`, using HLLE (or local Lax-Friedrichs) intercell fluxes with monotonized slope reconstruction. The signal speed is the reduced CR free-streaming speed `V_m = cr_c_fraction * c`, lowered by the Jiang & Oh correction factor in cells that are optically thick to scattering, and combined with the gas velocity.
+1. **Explicit transport** of `(E_cr, F_cr)`, using local Lax-Friedrichs intercell fluxes (or HLLE with `cr_HLLE=.true.`) with monotonized slope reconstruction. The signal speed is the reduced CR free-streaming speed `V_m = cr_c_fraction * c`, lowered by the Jiang & Oh correction factor in cells that are optically thick to scattering, and combined with the gas velocity.
 2. **Implicit scattering/streaming source terms**, solved per cell as a 4x4 linear system with the flux rotated onto the local magnetic field. The scattering coefficient is anisotropic: parallel to B it is set by the diffusion coefficient `Dcr` (plus the streaming term when `cr_streaming_diffusion=.true.`, so CRs stream at the Alfven speed down their pressure gradient), perpendicular to B it is suppressed by `Dcr_perp_factor`.
 3. **Gas back-reaction** (when `cr_feedback=.true.` and the gas is not static): the CR pressure gradient accelerates the gas, the corresponding energy change is exchanged with the gas total energy, and with `cr_streaming_heating=.true.` the gas is additionally heated at the streaming rate. CRs are smoothly decoupled from the gas below densities of order `smallr*cr_smallr_decouple`.
-4. **Collisional cooling** (when `cr_cooling=.true.`): `E_cr` and `F_cr` decay exponentially at the rate `lambda_cr * n_H`, with `lambda_cr = zeta_cr*(1 + 0.22*cr_ne + 0.125*cr_fneut)` (Fitz Axen et al. 2024).
+4. **Collisional cooling** (when `cr_cooling=.true.`): `E_cr` and `F_cr` decay exponentially at the rate `lambda_cr * n_H`, where `n_H` is the hydrogen number density of the gas in cm^-3 and `lambda_cr = zeta_cr*(1 + 0.22*cr_ne + 0.125*cr_fneut)` (Fitz Axen et al. 2024).
 
 The closure is either isotropic CR pressure, `P_cr = E_cr/3` (`cr_isotropic_pressure=.true.`, the default "P1" mode), or an M1-like Eddington tensor whose anisotropic part is aligned with the magnetic field.
 
@@ -37,9 +37,13 @@ Since the reduced speed of light usually exceeds every gas signal speed, the CR 
 
 ## CR runtime parameters
 
-CR transport is activated by setting `cr_advect=.true.` in the dedicated `&CR_PARAMS` namelist. For transport-only tests on a frozen gas background, set `static_gas=.true.` in `&RUN_PARAMS` (velocities are kept but the gas state is not updated). All CR parameters are described in:
+CRs are added to a run with `cr=.true.` in `&RUN_PARAMS` (this requires a `DO_CR=1` build) and evolved with `cr_advect=.true.` in the dedicated `&CR_PARAMS` namelist. With `cr=.true.` and `cr_advect=.false.`, the CR field is initialised, refined, load-balanced and written to outputs, but not evolved. For transport-only tests on a frozen gas background, set `static_gas=.true.` in `&RUN_PARAMS` (velocities are kept but the gas state is not updated). All CR parameters are described in:
 
 * [CR_PARAMS](./CR_params)
+
+## Supernova CR injection
+
+With star formation and thermal SN feedback (`eta_sn>0` in `&FEEDBACK_PARAMS`), setting `fecr>0` in `&CR_PARAMS` injects CR energy equal to `fecr` times the thermal SN energy into the cell of each exploding star particle. This comes on top of the full thermal energy given to the gas. Only thermal feedback injects CRs, and only into the first CR group. If the run starts with `cr_advect=.false.`, CR transport is switched on at the start of the first coarse step in which star particles exist, so a run can carry an empty CR field until the first stars form.
 
 ## Initial and boundary conditions
 
@@ -49,11 +53,11 @@ Boundaries follow the hydro boundary regions: reflexive walls mirror the CR stat
 
 ## CR outputs
 
-The CR variables are written separately in each output to files named `cr_XXXXX.outYYYYY`, where XXXXX is the output number and YYYYY the cpu number, with the same format as the hydro files. For each CR group there are 1+ndim cell variables — `CRegy_NN` (CR energy density) and `CRflx_NN_x`, `CRflx_NN_y`, `CRflx_NN_z` (CR flux) — listed in `cr_file_descriptor.txt`. All CR variables are stored in code units.
+The CR variables are written separately in each output to files named `cr_XXXXX.outYYYYY`, where XXXXX is the output number and YYYYY the cpu number, with the same format as the hydro files. For each CR group there are 1+ndim cell variables — `CRegy_NN` (CR energy density) and `CRflx_NN_x`, `CRflx_NN_y`, `CRflx_NN_z` (CR flux) — listed in `cr_file_descriptor.txt`. All CR variables are stored in code units. On a restart (`nrestart>0`), the CR state is read back from these files.
 
 ## Testing
 
-The CR benchmark suite (the Jiang & Oh 2018 tests plus two-pressure shock tubes) lives under `tests/cr/`. Each test selects its initial and boundary conditions from the namelist through `condinit_kind`, `cr_condinit_kind` and `cr_boundana_kind`, so the suite exercises the shipped source directly. Run it with:
+The CR test suite lives under `tests/cr/` (see its `README.md`): the Jiang & Oh 2018 benchmarks, two-pressure shock tubes, a collisional-cooling test checked against its analytic solution (after Diallo et al. 2026), and a G8-mass disc galaxy with SN CR injection. Except for the galaxy, which downloads DICE initial conditions, each test selects its initial and boundary conditions from the namelist through `condinit_kind`, `cr_condinit_kind` and `cr_boundana_kind`, so the suite exercises the shipped source directly. Run it with:
 
 ```bash
 cd tests

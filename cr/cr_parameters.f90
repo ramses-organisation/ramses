@@ -1,9 +1,9 @@
 module cr_parameters
   use amr_parameters
 
-  ! Compile-time guards: this file is only compiled when CRPHYS is enabled
-#ifndef CRPHYS
-#error "cr/ sources require -DCRPHYS: set CRPHYS=1 in bin/Makefile"
+  ! Compile-time guards: this file is only compiled when DO_CR is enabled
+#ifndef DO_CR
+#error "cr/ sources require -DDO_CR: set DO_CR=1 in bin/Makefile"
 #endif
 #ifndef NCR_GROUPS
 #error "cr/ sources require -DNCR_GROUPS=<ngroups>: set NCR_GROUPS in bin/Makefile"
@@ -16,15 +16,17 @@ module cr_parameters
   ! Filled in read_cr_params (cr_read_params.f90), like rt_init fills iGroups.
   integer,dimension(1:ncr_groups)::Ecr_idx=1
 
+  logical::cr=.false.                       ! CRs present in the run (&RUN_PARAMS)
+
   ! --- &cr_params namelist ---------------------------------------------
   ! Master switch & scheme
-  logical::cr_advect=.false.                ! Master CR transport switch
+  logical::cr_advect=.false.                ! Evolve CRs (requires cr)
   logical::cr_HLLE=.false.                  ! HLLE Riemann solver for CR
   logical::cr_isotropic_pressure=.true.        ! .true.=P1 closure, .false.=M1
-  logical::cr_flux_correction=.true. ! Rescale superluminal fluxes
   ! Physics
   real(dp),dimension(1:ncr_groups)::gamma_cr=4d0/3d0 ! CR adiabatic index
   logical::cr_feedback=.true.               ! master CR->gas back-reaction switch (gradPcr momentum + energy)
+  real(dp)::fecr=0d0                        ! SN energy fraction injected into CRs
   real(dp)::cr_smallr_decouple=1d4          ! Decouple CRs where rho<smallr*this
   real(dp)::cr_efloor=1d-30                   ! CR energy floor
   ! Timestep / reduced light speed
@@ -40,7 +42,6 @@ module cr_parameters
   logical::cr_streaming_diffusion=.false.  ! Streaming term in sigma
   logical::cr_streaming_heating=.false.    ! Streaming heating of gas
   real(dp)::cr_v_alfven=0d0                    ! Imposed Alfven speed (tests)
-  real(dp)::cr_f_taucell=1d0                ! Cell optical-depth stability factor
   ! Cooling: Fitz Axen et al. 2024 (used from phase 4)
   logical::cr_cooling=.false.               ! CR collisional cooling
   real(dp)::zeta_cr=7.51d-16                ! Coulomb loss rate coefficient

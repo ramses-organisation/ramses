@@ -293,7 +293,7 @@ subroutine condinit(x,u,dx,nn)
   real(dp)::a2,aa,Vcirc, HH_max
   real(dp)::rho_0_1, rho_0_2, rho_0, weight, da1, Vrot
   logical, save:: init_nml=.false.
-#ifdef CRPHYS
+#ifdef DO_CR
   integer::ind_cr=8,icr
 #endif
 

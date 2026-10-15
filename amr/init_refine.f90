@@ -5,8 +5,8 @@
 subroutine init_refine
   use amr_commons
   use pm_commons
-#ifdef CRPHYS
-  use cr_parameters, only: cr_advect
+#ifdef DO_CR
+  use cr_parameters, only: cr
 #endif
   implicit none
   !-------------------------------------------
@@ -30,8 +30,8 @@ subroutine init_refine
 #ifdef RT
      if(rt)call rt_init_flow
 #endif
-#ifdef CRPHYS
-     if(cr_advect)call cr_init_flow
+#ifdef DO_CR
+     if(cr)call cr_init_flow
 #endif
      if(ivar_refine==0)call init_refmap
      call flag
@@ -46,8 +46,8 @@ subroutine init_refine
 #ifdef RT
   if(rt)call rt_init_flow
 #endif
-#ifdef CRPHYS
-  if(cr_advect)call cr_init_flow
+#ifdef DO_CR
+  if(cr)call cr_init_flow
 #endif
 
 end subroutine init_refine
@@ -67,8 +67,8 @@ subroutine init_refine_2
 #ifdef RT
   use rt_hydro_commons
 #endif
-#ifdef CRPHYS
-  use cr_parameters, only: cr_advect,ncrvar
+#ifdef DO_CR
+  use cr_parameters, only: cr,ncrvar
   use cr_hydro_commons, only: cruold
 #endif
   use pm_commons
@@ -102,8 +102,8 @@ subroutine init_refine_2
 #ifdef RT
            if(rt)call rt_init_flow_fine(ilevel)
 #endif
-#ifdef CRPHYS
-           if(cr_advect)call cr_init_flow_fine(ilevel)
+#ifdef DO_CR
+           if(cr)call cr_init_flow_fine(ilevel)
 #endif
         end do
 
@@ -140,8 +140,8 @@ subroutine init_refine_2
               if(simple_boundary)call rt_make_boundary_hydro(ilevel)
            end if
 #endif
-#ifdef CRPHYS
-           if(cr_advect)then
+#ifdef DO_CR
+           if(cr)then
               call cr_upload_fine(ilevel)
               do ivar=1,ncrvar
                  call make_virtual_fine_dp(cruold(1,ivar),ilevel)

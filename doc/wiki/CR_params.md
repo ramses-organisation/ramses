@@ -1,7 +1,7 @@
 
 # CR Params
 
-This set of parameters, contained in the namelist block `&CR_PARAMS`, controls cosmic-ray transport in RAMSES. Note that the number of CR groups (`NCR_GROUPS`) is a compilation parameter, to be set in the Makefile together with `CRPHYS=1` (see the [documentation page about CR simulations](./CR)). Only `NCR_GROUPS=1` is currently supported; the Makefile rejects other values. Parameters marked `real array` have one entry per CR group.
+This set of parameters, contained in the namelist block `&CR_PARAMS`, controls cosmic-ray transport in RAMSES. Note that the number of CR groups (`NCR_GROUPS`) is a compilation parameter, to be set in the Makefile together with `DO_CR=1` (see the [documentation page about CR simulations](./CR)). Only `NCR_GROUPS=1` is currently supported; the Makefile rejects other values. Parameters marked `real array` have one entry per CR group.
 
 For detailed descriptions of the scheme, see:
 
@@ -11,10 +11,9 @@ For detailed descriptions of the scheme, see:
 
 | Variable name, syntax, default value | Fortran type  | Description       |
 |:---------------------------- |:------------- |:------------------------- |
-| `cr_advect=.false.`          |  `logical`    | Master switch for CR transport. Nothing CR-related happens unless this is true. |
-| `cr_HLLE=.true.`             |  `logical`    | Use the HLLE intercell flux function. If false, a local Lax-Friedrichs flux is used instead. |
+| `cr_advect=.false.`          |  `logical`    | Evolve the CRs: transport, scattering/streaming source terms, gas back-reaction and cooling. Requires `cr=.true.` in `&RUN_PARAMS`; with `cr=.true.` and `cr_advect=.false.` the CR field is initialised, refined and written to outputs but stays frozen. |
+| `cr_HLLE=.false.`            |  `logical`    | Intercell flux function. The default is the local Lax-Friedrichs (LLF) flux; true selects HLLE. |
 | `cr_isotropic_pressure=.true.` |  `logical`  | Closure relation: isotropic CR pressure `P_cr = E_cr/3` ("P1"). If false, an M1-like Eddington tensor is used, with the anisotropic component aligned with the local magnetic field (see §2 in [1]). |
-| `cr_flux_correction=.false.` |  `logical`    | Rescale superluminal CR fluxes back to the causality limit after the transport step. |
 | `gamma_cr=1.3333`            |  `real array` | CR adiabatic index of each group (relativistic gas: 4/3). |
 | **====================** | **====================** | **CR-gas coupling** |
 | `cr_feedback=.true.`         |  `logical`    | Master switch for the CR back-reaction on the gas: momentum from the CR pressure gradient and the corresponding energy exchange. Inert when the gas is static (`static_gas=.true.`). |
@@ -33,12 +32,13 @@ For detailed descriptions of the scheme, see:
 | `cr_streaming_diffusion=.false.` |  `logical` | Add the streaming contribution to the parallel scattering coefficient, so CRs stream down their pressure gradient along B at the Alfven speed (eq. 18 in [1]). |
 | `cr_streaming_heating=.false.` |  `logical`  | Include the streaming velocity in the source-term velocity, which transfers the streaming work `v_A . grad(P_cr)` to the gas as heat. |
 | `cr_v_alfven=0.`             |  `real`       | Imposed Alfven speed in code units, used by idealised tests. The default 0 uses the local `B/sqrt(rho)`. |
-| `cr_f_taucell=1.`            |  `real`       | Prefactor of the cell scattering optical depth `tau` used to reduce the transport wave speeds in scattering-thick cells (the correction factor on p. 6 of [1]); lower values are more diffusive but more stable. |
 | **====================** | **====================** | **Collisional cooling (Fitz Axen et al. 2024)** |
-| `cr_cooling=.false.`         |  `logical`    | Enable CR collisional (Coulomb + hadronic) losses: exponential decay of `E_cr` and `F_cr` at the rate `lambda_cr*n_H`, with `lambda_cr = zeta_cr*(1 + 0.22*cr_ne + 0.125*cr_fneut)`. |
+| `cr_cooling=.false.`         |  `logical`    | Enable CR collisional (Coulomb + hadronic) losses: exponential decay of `E_cr` and `F_cr` at the rate `lambda_cr*n_H`, where `n_H` is the hydrogen number density in cm^-3 and `lambda_cr = zeta_cr*(1 + 0.22*cr_ne + 0.125*cr_fneut)`. |
 | `zeta_cr=7.51e-16`           |  `real`       | Loss-rate coefficient entering `lambda_cr` (cm^3/s). |
 | `cr_ne=1e-3`                 |  `real`       | Number of free electrons per hydrogen nucleus. |
 | `cr_fneut=0.875`             |  `real`       | Neutral gas fraction. |
+| **====================** | **====================** | **Supernova injection** |
+| `fecr=0.`                    |  `real`       | Fraction of the thermal SN energy additionally injected as CR energy into the SN cell (thermal feedback; the gas still receives the full SN energy). Requires `cr=.true.`. With `fecr>0` and `cr_advect=.false.`, CR transport is switched on at the start of the first coarse step in which star particles exist. |
 | **====================** | **====================** | **CR initialisation regions** |
 | `cr_nregion=0`               |  `integer`    | Number of CR initial-condition regions. The region geometry is independent of the gas `&INIT_PARAMS` regions but follows the same conventions. |
 | `cr_region_type='square'`    |  `character array` | Geometry of each region: 'square' (generalized ellipsoid, CR state replaced inside) or 'point' (CIC-deposited point value). |
@@ -52,5 +52,5 @@ For detailed descriptions of the scheme, see:
 | **====================** | **====================** | **Refinement** |
 | `err_grad_cr=-1.0`           |  `real array` | Relative CR-energy gradient above which a cell is refined, per CR group. Negative values (the default) disable CR refinement. |
 | **====================** | **====================** | **Idealised tests** |
-| `cr_condinit_kind=''`        |  `character(len=32)` | Selects an analytic CR initial-condition profile in `cr_condinit`: `jiang_411`/`jiang_414` (Gaussian pulse), `jiang_412` (2D Gaussian pulse), `jiang_411_triangular`, `jiang_421` (sinusoid), `jiang_413`/`jiang_424` (uniform floor), `jiang_415`/`jiang_415_donut` (arc on a magnetic loop; requires `NDIM>1`), `jiang_422` (regions plus advected flux). Empty, the default, fills the CR regions above. |
+| `cr_condinit_kind=''`        |  `character(len=32)` | Selects an analytic CR initial-condition profile in `cr_condinit`: `jiang_411`/`jiang_414` (Gaussian pulse), `jiang_412` (2D Gaussian pulse), `jiang_411_triangular`, `jiang_421` (sinusoid), `jiang_413`/`jiang_424` (uniform floor), `jiang_415`/`jiang_415_donut` (arc on a magnetic loop; requires `NDIM>1`), `jiang_422` (regions plus advected flux), `diallo_314` (Gaussian pulse in physical units: peak 2.5e-10 erg cm^-3, sigma 10 pc, centred in the box; Diallo et al. 2026). Empty, the default, fills the CR regions above. |
 | `cr_boundana_kind=''`        |  `character(len=32)` | Selects a test-specific CR boundary treatment. `jiang_411_triangular` imposes a time-dependent streaming wave in `cr_boundana`; `jiang_413` and `jiang_424` instead pin the CR energy at a reflexive wall, in `cr_make_boundary_hydro`. Empty, the default, imposes `cr_boundary_u` in `cr_boundana`. |

@@ -1,6 +1,7 @@
 ! Jiang & Oh (2018) 4.1.4 -- 1D uniform magnetized gas with an advecting CR Gaussian pulse (periodic box).
 &RUN_PARAMS
 hydro=.true.
+cr=.true.
 nremap=0
 ncontrol=100
 nsubcycle=4*1,

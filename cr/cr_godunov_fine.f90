@@ -486,7 +486,6 @@ SUBROUTINE cr_set_unew(ilevel)
    use amr_commons
    use cr_hydro_commons
    use cr_parameters
-   use cr_flux_module, only: cr_limit_flux
    implicit none
    integer::ilevel
    !--------------------------------------------------------------------------
@@ -494,24 +493,10 @@ SUBROUTINE cr_set_unew(ilevel)
    ! calling the CR advection scheme. crunew is set to zero in virtual
    ! boundaries.
    !--------------------------------------------------------------------------
-   integer::i,ivar,ind,icpu,iskip,icell,iGrp,icrE
+   integer::i,ivar,ind,icpu,iskip
 
    if(numbtot(1,ilevel)==0)return
    if(verbose)write(*,111)ilevel
-
-   if(cr_flux_correction)then
-      do ind=1,twotondim
-         iskip=ncoarse+(ind-1)*ngridmax
-         do iGrp=1,ncr_groups
-            icrE=Ecr_idx(iGrp)
-            do i=1,active(ilevel)%ngrid
-               icell=active(ilevel)%igrid(i)+iskip
-               call cr_limit_flux(cruold(icell,icrE), &
-                  cruold(icell,icrE+1:icrE+ndim),cr_vmax(ilevel))
-            end do
-         end do
-      end do
-   endif
 
    ! Set crunew to cruold for myid cells
    do ind=1,twotondim
@@ -551,7 +536,6 @@ SUBROUTINE cr_set_uold(ilevel)
    use amr_commons
    use cr_hydro_commons
    use cr_parameters
-   use cr_flux_module, only: cr_limit_flux
    implicit none
    integer::ilevel
    !--------------------------------------------------------------------------
@@ -565,24 +549,10 @@ SUBROUTINE cr_set_uold(ilevel)
    ! cruold. This is pure transport robustness -- no scattering/streaming/
    ! cooling source physics.
    !--------------------------------------------------------------------------
-   integer::i,ivar,ind,iskip,iGrp,icrE,icell
+   integer::i,ivar,ind,iskip,iGrp,icrE
 
    if(numbtot(1,ilevel)==0)return
    if(verbose)write(*,111)ilevel
-
-   if(cr_flux_correction)then
-      do ind=1,twotondim
-         iskip=ncoarse+(ind-1)*ngridmax
-         do iGrp=1,ncr_groups
-            icrE=Ecr_idx(iGrp)
-            do i=1,active(ilevel)%ngrid
-               icell=active(ilevel)%igrid(i)+iskip
-               call cr_limit_flux(crunew(icell,icrE), &
-                  crunew(icell,icrE+1:icrE+ndim),cr_vmax(ilevel))
-            end do
-         end do
-      end do
-   endif
 
    ! Set cruold to crunew for myid cells
    do ind=1,twotondim
@@ -653,7 +623,7 @@ SUBROUTINE cr_godfine1(ind_grid, ncache, ilevel)
 
    integer::i,j,idim,ind_son,ind_father,iskip,nbuffer
    integer::i0,j0,k0,i1,j1,k1,i2,j2,k2,i3,j3,k3,nx_loc,nb_noneigh,nexist
-   integer::ivar,iGrp,icrE
+   integer::ivar,iGrp
    real(dp)::dx,scale,oneontwotondim
 !------------------------------------------------------------------------
    oneontwotondim = 1d0/dble(twotondim) ! 1/8 in 3D
@@ -721,17 +691,6 @@ SUBROUTINE cr_godfine1(ind_grid, ncache, ilevel)
          end do
          call interpol_hydro(u1_gas,ind1,u2_gas,nbuffer)
          call cr_interpol_hydro(u1_cr,u2_cr,nbuffer)
-         if(cr_flux_correction)then
-            do j=1,twotondim
-               do i=1,nbuffer
-                  do iGrp=1,ncr_groups
-                     icrE = Ecr_idx(iGrp)  ! starting index of cr variables
-                     call cr_limit_flux(u2_cr(i,j,icrE), &
-                        u2_cr(i,j,icrE+1:icrE+ndim),cr_vmax(ilevel))
-                  end do
-               end do
-            end do
-         endif
       endif
 
       ! Loop 2x2x2 cells within father cell and add them to the stencils

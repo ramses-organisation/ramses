@@ -7,11 +7,11 @@ subroutine adaptive_loop
 #ifdef RT
   use rt_hydro_commons
 #endif
-#ifdef CRPHYS
-  use cr_parameters, only: cr_advect,ncrvar
+#ifdef DO_CR
+  use cr_parameters, only: cr,cr_advect,fecr,ncrvar
   use cr_hydro_commons, only: cruold
 #endif
-#ifdef CRPHYS
+#ifdef DO_CR
   use cr_parameters, only: ecrs_tot
 #endif
 #if USE_TURB==1
@@ -46,8 +46,8 @@ subroutine adaptive_loop
 #ifdef RT
   if(rt.or.neq_chem) call rt_init_hydro ! Initialize radiation variables
 #endif
-#ifdef CRPHYS
-  if(cr_advect)call cr_init_hydro    ! Allocate cosmic-ray variables
+#ifdef DO_CR
+  if(cr)call cr_init_hydro    ! Allocate cosmic-ray variables
 #endif
   if(poisson)call init_poisson       ! Initialize poisson variables
 #ifdef ATON
@@ -107,7 +107,7 @@ subroutine adaptive_loop
 #ifdef SOLVERmhd
      emag_tot=0.0D0  ! Reset total magnetic energy
 #endif
-#ifdef CRPHYS
+#ifdef DO_CR
      ecrs_tot=0.0D0  ! Reset total cosmic rays energy
 #endif
 
@@ -134,8 +134,8 @@ subroutine adaptive_loop
               if(simple_boundary)call rt_make_boundary_hydro(ilevel)
            endif
 #endif
-#ifdef CRPHYS
-           if(cr_advect)then
+#ifdef DO_CR
+           if(cr)then
               do ivar=1,ncrvar
                  call make_virtual_fine_dp(cruold(1,ivar),ilevel)
               end do
@@ -157,6 +157,14 @@ subroutine adaptive_loop
      if(MC_tracer) then
         fluxes = 0_dp
      end if
+
+#ifdef DO_CR
+     ! Switch CR transport on between coarse steps once stars exist
+     if(cr .and. .not.cr_advect .and. fecr>0d0 .and. nstar_tot>0)then
+        if(myid==1)write(*,*)'CR advection switched on: stars present and fecr>0'
+        cr_advect=.true.
+     endif
+#endif
 
      ! Call base level
      call amr_step(levelmin,1)
@@ -185,8 +193,8 @@ subroutine adaptive_loop
               if(simple_boundary)call rt_make_boundary_hydro(ilevel)
            end if
 #endif
-#ifdef CRPHYS
-           if(cr_advect)then
+#ifdef DO_CR
+           if(cr)then
               call cr_upload_fine(ilevel)
               do ivar=1,ncrvar
                  call make_virtual_fine_dp(cruold(1,ivar),ilevel)

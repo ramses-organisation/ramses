@@ -5,6 +5,7 @@
 subroutine cr_condinit(x,u,dx,nn,ilevel)
   use amr_parameters
   use cr_parameters
+  use constants, only: pc2cm
   implicit none
   integer ::nn                              ! Number of cells
   integer:: ilevel                          ! Refinement level
@@ -19,6 +20,7 @@ subroutine cr_condinit(x,u,dx,nn,ilevel)
   integer::i
   real(dp),dimension(1:nvector)::tmp
   real(dp)::pi
+  real(dp)::scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2,emax,sig
 #if NDIM>1
   real(dp)::xx,yy,rr,theta
 #endif
@@ -85,6 +87,15 @@ subroutine cr_condinit(x,u,dx,nn,ilevel)
   case('jiang_422')                          ! Regions, plus advected CR flux
      call cr_region_condinit(x,u,dx,nn,ilevel)
      call cr_flux_from_region_velocity(x,u,dx,nn)
+
+  case('diallo_314')                         ! Gaussian CR-energy pulse, physical units
+     ! e_max=2.5e-10 erg/cm^3, sigma=10 pc, centred in the box.
+     call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
+     emax=2.5d-10/(scale_d*scale_v**2)
+     sig=10d0*pc2cm/scale_l
+     do i=1,nn
+        u(i,Ecr_idx(1))=emax*exp(-0.5d0*((x(i,1)-boxlen*0.5d0)/sig)**2)
+     end do
 
   case DEFAULT                               ! CR regions from &CR_PARAMS
      call cr_region_condinit(x,u,dx,nn,ilevel)

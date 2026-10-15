@@ -4,7 +4,7 @@
 !################################################################
 subroutine cr_init_flow
   ! Initialise the separated cosmic-ray state arrays cruold(:,1:ncrvar)
-  ! on refinement. Inert unless cr_advect.
+  ! on refinement. Inert unless cr.
   use amr_commons
   use cr_parameters
   use cr_hydro_commons, ONLY: cruold
@@ -12,7 +12,7 @@ subroutine cr_init_flow
 
   integer::ilevel,ivar
 
-  if(.not.cr_advect)return
+  if(.not.cr)return
   if(verbose)write(*,*)'Entering cr_init_flow'
   do ilevel=nlevelmax,1,-1
      if(ilevel>=levelmin)call cr_init_flow_fine(ilevel)
@@ -50,7 +50,7 @@ subroutine cr_init_flow_fine(ilevel)
   real(dp),dimension(1:nvector,1:ndim),save::xx
   real(dp),dimension(1:nvector,1:ncrvar),save::uu
 
-  if(.not.cr_advect)return
+  if(.not.cr)return
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
 

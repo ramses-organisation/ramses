@@ -11,7 +11,7 @@ recursive subroutine amr_step(ilevel,icount)
   use coolrates_module, only: update_coolrates_tables
   use rt_cooling_module, only: update_UVrates
 #endif
-#ifdef CRPHYS
+#ifdef DO_CR
   use cr_parameters
   use cr_hydro_commons
 #endif
@@ -73,8 +73,8 @@ recursive subroutine amr_step(ilevel,icount)
                  if(simple_boundary)call rt_make_boundary_hydro(i)
               end if
 #endif
-#ifdef CRPHYS
-              if(cr_advect)then
+#ifdef DO_CR
+              if(cr)then
                  do ivar=1,ncrvar
                     call make_virtual_fine_dp(cruold(1,ivar),i)
                  end do
@@ -339,7 +339,7 @@ recursive subroutine amr_step(ilevel,icount)
   if(rt)call rt_set_unew(ilevel)
 #endif
 
-#ifdef CRPHYS
+#ifdef DO_CR
                                call timer('cosmic rays - set unew','start')
   if(cr_advect)call cr_set_unew(ilevel)
 #endif
@@ -431,7 +431,7 @@ recursive subroutine amr_step(ilevel,icount)
 
    endif ! .not.static_gas (gas hyperbolic update)
 
-#ifdef CRPHYS
+#ifdef DO_CR
      if(cr_advect)then
         call timer('cosmic rays','start')
         call crmom_step(ilevel)
@@ -461,7 +461,7 @@ recursive subroutine amr_step(ilevel,icount)
      ! Restriction operator
                                call timer('hydro upload fine','start')
      call upload_fine(ilevel)
-#ifdef CRPHYS
+#ifdef DO_CR
      if(cr_advect)call cr_upload_fine(ilevel)
 #endif
 
@@ -540,8 +540,8 @@ recursive subroutine amr_step(ilevel,icount)
   endif
 #endif
 
-#ifdef CRPHYS
-  if(cr_advect)then
+#ifdef DO_CR
+  if(cr)then
      do ivar=1,ncrvar
         call make_virtual_fine_dp(cruold(1,ivar),ilevel)
      end do

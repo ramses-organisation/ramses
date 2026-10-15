@@ -10,12 +10,12 @@ subroutine read_cr_params(nml_ok)
   integer::ig
 
   namelist/cr_params/cr_advect,cr_HLLE,cr_isotropic_pressure &
-       & ,cr_flux_correction,gamma_cr,cr_feedback &
+       & ,gamma_cr,cr_feedback &
        & ,cr_smallr_decouple,cr_efloor,cr_c_fraction,cr_nsubcycle &
        & ,cr_varvmax,cr_varvmax_fudge,cr_varvmax_vdvs &
        & ,Dcr,DCRmax,Dcr_perp_factor,cr_streaming_diffusion &
-       & ,cr_streaming_heating,cr_v_alfven,cr_f_taucell &
-       & ,cr_cooling,zeta_cr,cr_ne,cr_fneut &
+       & ,cr_streaming_heating,cr_v_alfven &
+       & ,cr_cooling,zeta_cr,cr_ne,cr_fneut,fecr &
        & ,cr_condinit_kind,cr_boundana_kind,err_grad_cr &
        & ,cr_region_u,cr_boundary_u &
        & ,cr_nregion,cr_region_type,cr_reg_x_center,cr_reg_y_center,cr_reg_z_center &
@@ -40,6 +40,18 @@ subroutine read_cr_params(nml_ok)
      if(myid==1)write(*,*)'Error in cr_params: cr_c_fraction must be in (0,1]'
      nml_ok=.false.
   endif
+  if(cr_advect .and. .not.cr)then
+     if(myid==1)write(*,*)'Error in cr_params: cr_advect=.true. requires cr=.true. in &RUN_PARAMS'
+     nml_ok=.false.
+  endif
+  if(fecr<0d0)then
+     if(myid==1)write(*,*)'Error in cr_params: fecr must be >= 0'
+     nml_ok=.false.
+  endif
+  if(fecr>0d0 .and. .not.cr)then
+     if(myid==1)write(*,*)'Error in cr_params: fecr>0 requires cr=.true. in &RUN_PARAMS'
+     nml_ok=.false.
+  endif
 
   if(.not.(trim(cr_condinit_kind)==''         .or. &
        &   trim(cr_condinit_kind)=='jiang_411'.or. &
@@ -51,11 +63,13 @@ subroutine read_cr_params(nml_ok)
        &   trim(cr_condinit_kind)=='jiang_411_triangular'.or. &
        &   trim(cr_condinit_kind)=='jiang_421'.or. &
        &   trim(cr_condinit_kind)=='jiang_422'.or. &
-       &   trim(cr_condinit_kind)=='jiang_424'))then
+       &   trim(cr_condinit_kind)=='jiang_424'.or. &
+       &   trim(cr_condinit_kind)=='diallo_314'))then
      if(myid==1)write(*,*)'Error in cr_params: unknown cr_condinit_kind="'// &
           & trim(cr_condinit_kind)//'". Valid values: '// &
           & '"", jiang_411, jiang_412, jiang_413, jiang_414, jiang_415, '// &
-          & 'jiang_415_donut, jiang_411_triangular, jiang_421, jiang_422, jiang_424'
+          & 'jiang_415_donut, jiang_411_triangular, jiang_421, jiang_422, jiang_424, '// &
+          & 'diallo_314'
      nml_ok=.false.
   endif
 

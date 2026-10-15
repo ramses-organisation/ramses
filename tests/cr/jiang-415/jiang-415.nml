@@ -1,6 +1,7 @@
 ! Jiang & Oh (2018) 4.1.5 -- 2D CR transport along a magnetic loop (hardest 2D).
 &RUN_PARAMS
 hydro=.true.
+cr=.true.
 nremap=0
 ncontrol=100
 nsubcycle=4*1,

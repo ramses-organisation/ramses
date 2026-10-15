@@ -26,8 +26,8 @@ RT = 0
 # Cosmic-ray physics: 1=on, 0=off. Two-moment CR transport (E_cr + F_cr per
 # group); requires SOLVER=mhd. NENER is deliberately NOT tied to CR (difference
 # from ramses_cral).
-CRPHYS = 0
-# Number of CR groups (>=1 required when CRPHYS=1)
+DO_CR = 0
+# Number of CR groups (>=1 required when DO_CR=1)
 NCR_GROUPS = 1
 # Use turbulence? 1=Yes, 0=No (requires fftw3)
 USE_TURB = 0
@@ -89,17 +89,20 @@ endif
 ifeq ($(RT),1)
    DEFINES += -DRT -DNIONS=$(NIONS) -DNGROUPS=$(NGROUPS)
 endif
-ifeq ($(CRPHYS),1)
+ifneq ($(origin CRPHYS),undefined)
+   $(error CRPHYS has been renamed to DO_CR; use DO_CR=1)
+endif
+ifeq ($(DO_CR),1)
    ifeq ($(NCR_GROUPS),0)
-      $(error CRPHYS=1 requires NCR_GROUPS>=1)
+      $(error DO_CR=1 requires NCR_GROUPS>=1)
    endif
    ifneq ($(NCR_GROUPS),1)
-      $(error CRPHYS=1 currently supports NCR_GROUPS=1 only; multi-group CR transport is not implemented yet)
+      $(error DO_CR=1 currently supports NCR_GROUPS=1 only; multi-group CR transport is not implemented yet)
    endif
    ifneq ($(SOLVER),mhd)
-      $(error CRPHYS=1 requires SOLVER=mhd: the CR closure and source terms need the magnetic field)
+      $(error DO_CR=1 requires SOLVER=mhd: the CR closure and source terms need the magnetic field)
    endif
-   DEFINES += -DCRPHYS -DNCR_GROUPS=$(NCR_GROUPS)
+   DEFINES += -DDO_CR -DNCR_GROUPS=$(NCR_GROUPS)
 endif
 ifeq ($(USE_TURB),1)
    DEFINES += -DUSE_TURB
@@ -289,7 +292,7 @@ VPATH = $(PATCH):../$(SOLVER):../aton:
 ifeq ($(RT),1)
    VPATH += ../rt:
 endif
-ifeq ($(CRPHYS),1)
+ifeq ($(DO_CR),1)
    VPATH += ../cr:
 endif
 ifeq ($(USE_TURB),1)
@@ -311,7 +314,7 @@ ifeq ($(RT),1)
    MODOBJ += rt_parameters.o rt_hydro_commons.o coolrates_module.o \
              rt_spectra.o rt_cooling_module.o rt_flux_module.o
 endif
-ifeq ($(CRPHYS),1)
+ifeq ($(DO_CR),1)
    MODOBJ += cr_parameters.o cr_hydro_commons.o cr_flux_module.o
 endif
 ifeq ($(USE_TURB),1)
@@ -364,7 +367,7 @@ AMRLIB = $(AMROBJ) $(HYDROOBJ) $(PMOBJ) $(POISSONOBJ)
 ifeq ($(RT),1)
    AMRLIB += $(RTOBJ)
 endif
-ifeq ($(CRPHYS),1)
+ifeq ($(DO_CR),1)
    AMRLIB += $(CROBJ)
 endif
 ifeq ($(USE_TURB),1)

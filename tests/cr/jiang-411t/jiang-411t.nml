@@ -1,6 +1,7 @@
 ! Jiang & Oh (2018) 4.1.1 variant -- 1D triangular CR-energy profile with a time-dependent analytic streaming-wave boundary.
 &RUN_PARAMS
 hydro=.true.
+cr=.true.
 nremap=0
 ncontrol=100
 nsubcycle=20*2,
@@ -31,7 +32,6 @@ cr_streaming_heating=.false.
 cr_streaming_diffusion=.true.
 cr_varvmax=.false.
 cr_nsubcycle=1
-cr_f_taucell=1.0
 cr_v_alfven=1.0
 cr_advect=.true.
 cr_nregion=1

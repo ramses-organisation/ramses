@@ -2,6 +2,7 @@ This namelist contains various input parameters for RAMSES runs
 
 &RUN_PARAMS
 hydro=.true.
+cr=.true.
 nremap=0
 ncontrol=100
 nsubcycle=10*2,
@@ -47,10 +48,8 @@ cr_streaming_heating=.false.
 cr_streaming_diffusion=.false.
 cr_varvmax=.false.
 cr_v_alfven = 0.0
-cr_f_taucell = 1.0
 cr_nsubcycle=1
 cr_hlle=.false.
-cr_flux_correction=.true.
 cr_nregion=2
 cr_region_type='square','square'
 cr_reg_x_center=2.5,7.5

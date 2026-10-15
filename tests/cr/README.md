@@ -3,7 +3,7 @@
 Tests for the two-moment CR transport module (`cr/`). The `jiang-4xx` tests
 reproduce the benchmark suite of Jiang & Oh (2018) — the test number is the
 paper section number. The `tp-*` tests are two-pressure (gas + CR) shock tubes
-following the CR-modified Riemann problems of Thomas, Pfrommer & Pakmor (2021).
+following the CR-modified Riemann problems of Thomas, Pfrommer & Pakmor (2021). The `diallo-cooling` test checks collisional CR losses against an analytic solution, after Diallo et al. (2026). The `g8-lowres` test runs a G8-mass disc galaxy with SN CR injection.
 
 See [`doc/wiki/CR.md`](../../doc/wiki/CR.md) for the scheme and
 [`doc/wiki/CR_params.md`](../../doc/wiki/CR_params.md) for the `&CR_PARAMS`
@@ -12,7 +12,7 @@ reference. The module is currently limited to a single CR group.
 ## Building and running
 
 ```bash
-bash tests/build.cr.sh 3          # NDIM=3; SOLVER=mhd CRPHYS=1 NCR_GROUPS=1 MPI=1 DEBUG=1
+bash tests/build.cr.sh 3          # NDIM=3; SOLVER=mhd DO_CR=1 NCR_GROUPS=1 MPI=1 DEBUG=1
 cd tests && ./run_test_suite.sh -t cr        # add -p 2 to run under MPI
 ```
 
@@ -22,7 +22,9 @@ source terms need the magnetic field.
 Each test selects its initial and boundary conditions from its namelist:
 `condinit_kind` (`&INIT_PARAMS`) for the gas, `cr_condinit_kind` and
 `cr_boundana_kind` (`&CR_PARAMS`) for the CR state. No source patch is
-involved — the tests exercise the shipped `cr/` and `mhd/` files.
+involved — the tests exercise the shipped `cr/` and `mhd/` files. The exception
+is `g8-lowres`, whose `before-test.sh` downloads the DICE `dwarf_galaxy` initial
+conditions shared with `star/sfvirialtrue-sfmodel0`.
 
 ## Tests
 
@@ -45,6 +47,8 @@ involved — the tests exercise the shipped `cr/` and `mhd/` files.
 | `tp-nostream` | 1D | Two-pressure (gas + CR) Riemann problem, pure diffusion | TPP 2021 |
 | `tp-stream-va075` | 1D | Two-pressure shock tube with streaming + heating at `v_A=0.75` | TPP 2021 |
 | `tp-stream-va15` | 1D | Two-pressure shock tube with streaming + heating at `v_A=1.5` | TPP 2021 |
+| `diallo-cooling` | 1D | Collisional cooling of a Gaussian CR-energy profile against the analytic exponential decay | Diallo 2026 3.1.1/3.1.4 |
+| `g8-lowres` | 3D | G8-mass disc galaxy (hosted DICE ICs) with star formation, thermal SN feedback and SN CR injection (`fecr`) | RAMSES disc tutorial ICs |
 
 AMR CR tests must set `cr_nsubcycle>1` (jiang-414-refine, jiang-414-vel-refine,
 jiang-423 and jiang-424 use 10; jiang-421, a non-AMR 1D test, also uses 10).
@@ -52,13 +56,23 @@ jiang-423 and jiang-424 use 10; jiang-421, a non-AMR 1D test, also uses 10).
 ## Regression checks
 
 Each test's `plot-<name>.py` produces a comparison figure and then calls
-`visu_ramses.check_solution` against the committed `<name>-ref.dat`. The whole
-family uses `tolerance={"all": 1e-12}` on the per-field cell sums. That is
-looser than the framework default of `3e-13` because the sums are not
-bit-reproducible across MPI domain decompositions; the `rt/` family itself
-spans the framework default up to `3e-6`.
+`visu_ramses.check_solution` against the committed `<name>-ref.dat`. Most tests
+use `tolerance={"all": 1e-12}` on the per-field cell sums. That is looser than
+the framework default of `3e-13` because the sums are not bit-reproducible
+across MPI domain decompositions; the `rt/` family itself spans the framework
+default up to `3e-6`.
+
+Two tests differ:
+
+- `diallo-cooling` first checks every output against the analytic solution
+  (profile within 1e-5 of the peak, total CR energy within 1e-9) and fails
+  before the regression check if either is exceeded.
+- `g8-lowres` follows the star-formation tests: `1e-13` on 2 MPI ranks. Star
+  formation draws random numbers, so its reference must be generated with the
+  same toolchain as CI.
 
 ## References
 
 - Jiang, Y.-F., & Oh, S. P. 2018, ApJ, 854, 5 — [arXiv:1712.07117](https://arxiv.org/abs/1712.07117)
 - Thomas, T., Pfrommer, C., & Pakmor, R. 2021, MNRAS, 503, 2242 — [arXiv:2010.11960](https://arxiv.org/abs/2010.11960)
+- Diallo, N.-S., Dubois, Y., Marcowith, A., Rosdahl, J., & Commerçon, B. 2026 — [arXiv:2602.21147](https://arxiv.org/abs/2602.21147)

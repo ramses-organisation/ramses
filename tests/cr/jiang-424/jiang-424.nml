@@ -1,6 +1,7 @@
 ! Jiang & Oh (2018) 4.2.4 -- 1D CR-driven outflow with AMR and a variable CR light-speed.
 &RUN_PARAMS
 hydro=.true.
+cr=.true.
 nremap=0
 ncontrol=1
 nsubcycle=4*2,
@@ -31,10 +32,8 @@ cr_c_fraction=3.3356409297285193e-10   ! reduced light speed = 10
 cr_advect=.true.
 cr_streaming_heating=.true.
 cr_streaming_diffusion=.true.
-cr_f_taucell=0.5
 cr_nsubcycle=10
 cr_varvmax=.true.
-cr_flux_correction=.true.
 err_grad_cr(1)=0.05   ! moved from &refine_params (CR refinement lives in &cr_params)
 cr_nregion=0
 /
