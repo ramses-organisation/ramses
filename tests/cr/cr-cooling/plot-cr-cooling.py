@@ -5,7 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import visu_ramses
 
-title = "diallo-cooling"
+title = "cr-cooling"
 
 # Must match amr/constants.f90, hydro/cooling_module.f90, cr_condinit 'diallo_314' and the namelist
 X_H = 0.76
