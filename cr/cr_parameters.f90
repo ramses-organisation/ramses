@@ -5,11 +5,11 @@ module cr_parameters
 #ifndef DO_CR
 #error "cr/ sources require -DDO_CR: set DO_CR=1 in bin/Makefile"
 #endif
-#ifndef NCR_GROUPS
-#error "cr/ sources require -DNCR_GROUPS=<ngroups>: set NCR_GROUPS in bin/Makefile"
+#ifndef NCRGRP
+#error "cr/ sources require -DNCRGRP=<ngroups>: set NCRGRP in bin/Makefile"
 #endif
 
-  integer,parameter::ncr_groups=NCR_GROUPS         ! Number of CR groups
+  integer,parameter::ncr_groups=NCRGRP             ! Number of CR groups
   integer,parameter::ncrvar=ncr_groups*(ndim+1)   ! Per group: E_cr + ndim fluxes
   ! Energy index of each CR group in cruold/crunew (mirrors rt iGroups);
   ! group g energy at Ecr_idx(g), fluxes at Ecr_idx(g)+1:Ecr_idx(g)+ndim.
@@ -58,7 +58,7 @@ module cr_parameters
   ! for the tp_* two-pressure shock tests.
   real(dp),dimension(1:MAXBOUND,1:ncrvar)::cr_boundary_u=0d0
   ! CR-owned IC region geometry: lets CR regions differ from gas regions;
-  ! cr_reg_group selects the target group (inert when NCR_GROUPS=1).
+  ! cr_reg_group selects the target group (inert when NCRGRP=1).
   integer::cr_nregion=0
   character(LEN=10),dimension(1:MAXREGION)::cr_region_type='square'
   real(dp),dimension(1:MAXREGION)::cr_reg_x_center=0d0
