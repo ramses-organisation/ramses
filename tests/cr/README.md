@@ -12,7 +12,7 @@ reference. The module is currently limited to a single CR group.
 ## Building and running
 
 ```bash
-bash tests/build.cr.sh 3          # NDIM=3; SOLVER=mhd DO_CR=1 NCR_GROUPS=1 MPI=1 DEBUG=1
+bash tests/build.cr.sh 3          # NDIM=3; SOLVER=mhd DO_CR=1 NCRGRP=1 MPI=1 DEBUG=1
 cd tests && ./run_test_suite.sh -t cr        # add -p 2 to run under MPI
 ```
 
