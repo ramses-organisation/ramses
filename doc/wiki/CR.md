@@ -13,14 +13,14 @@ For each CR group, the module evolves the CR energy density `E_cr` and its flux 
 
 ## Compiling for CR runs
 
-CR transport is enabled at compile time with the `DO_CR` and `NCR_GROUPS` Makefile variables:
+CR transport is enabled at compile time with the `DO_CR` and `NCRGRP` Makefile variables:
 
 ```bash
 cd bin
-make NDIM=3 SOLVER=mhd DO_CR=1 NCR_GROUPS=1 MPI=1
+make NDIM=3 SOLVER=mhd DO_CR=1 NCRGRP=1 MPI=1
 ```
 
-This adds `-DDO_CR -DNCR_GROUPS=1` and compiles the `cr/` sources. The module requires `SOLVER=mhd` (the closure and the streaming/scattering source terms need the magnetic field). Because the CR state is stored in separate arrays, `NVAR` is unchanged.
+This adds `-DDO_CR -DNCRGRP=1` and compiles the `cr/` sources. The module requires `SOLVER=mhd` (the closure and the streaming/scattering source terms need the magnetic field). Because the CR state is stored in separate arrays, `NVAR` is unchanged.
 
 ## The transport scheme
 
@@ -43,7 +43,7 @@ CRs are added to a run with `cr=.true.` in `&RUN_PARAMS` (this requires a `DO_CR
 
 ## Supernova CR injection
 
-With star formation and thermal SN feedback (`eta_sn>0` in `&FEEDBACK_PARAMS`), setting `fecr>0` in `&CR_PARAMS` injects CR energy equal to `fecr` times the thermal SN energy into the cell of each exploding star particle. This comes on top of the full thermal energy given to the gas. Only thermal feedback injects CRs, and only into the first CR group. If the run starts with `cr_advect=.false.`, CR transport is switched on at the start of the first coarse step in which star particles exist, so a run can carry an empty CR field until the first stars form.
+With star formation and SN feedback (`eta_sn>0` in `&FEEDBACK_PARAMS`), setting `fecr>0` in `&CR_PARAMS` injects CR energy equal to `fecr` times the SN energy: into the cell of each exploding star particle for thermal feedback, and spread over the blast bubble like its thermal part for kinetic feedback (`f_w>0`). This comes on top of the full SN energy given to the gas. Only the first CR group receives it. If the run starts with `cr_advect=.false.`, CR transport is switched on as soon as star particles exist: the check runs at the start of every level step, and each AMR level starts evolving the CRs at the beginning of its next step. A run can therefore carry an empty CR field until the first stars form.
 
 ## Initial and boundary conditions
 

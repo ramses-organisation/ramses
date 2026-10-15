@@ -107,4 +107,4 @@ if(nproc!=2):
 if(nproc==2):
      tolerance={"all":1.0e-13,\
                }
-visu_ramses.check_solution(to_check, 'g8-lowres',tolerance=tolerance,overwrite=True)
+visu_ramses.check_solution(to_check, 'g8-lowres',tolerance=tolerance,overwrite=False)

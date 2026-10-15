@@ -3,7 +3,7 @@
 Tests for the two-moment CR transport module (`cr/`). The `jiang-4xx` tests
 reproduce the benchmark suite of Jiang & Oh (2018) — the test number is the
 paper section number. The `tp-*` tests are two-pressure (gas + CR) shock tubes
-following the CR-modified Riemann problems of Thomas, Pfrommer & Pakmor (2021). The `diallo-cooling` test checks collisional CR losses against an analytic solution, after Diallo et al. (2026). The `g8-lowres` test runs a G8-mass disc galaxy with SN CR injection.
+following the CR-modified Riemann problems of Thomas, Pfrommer & Pakmor (2021). The `cr-cooling` test checks collisional CR losses against an analytic solution, after Diallo et al. (2026). The `g8-lowres` test runs a G8-mass disc galaxy with SN CR injection.
 
 See [`doc/wiki/CR.md`](../../doc/wiki/CR.md) for the scheme and
 [`doc/wiki/CR_params.md`](../../doc/wiki/CR_params.md) for the `&CR_PARAMS`
@@ -12,7 +12,7 @@ reference. The module is currently limited to a single CR group.
 ## Building and running
 
 ```bash
-bash tests/build.cr.sh 3          # NDIM=3; SOLVER=mhd DO_CR=1 NCR_GROUPS=1 MPI=1 DEBUG=1
+bash tests/build.cr.sh 3          # NDIM=3; SOLVER=mhd DO_CR=1 NCRGRP=1 MPI=1 DEBUG=1
 cd tests && ./run_test_suite.sh -t cr        # add -p 2 to run under MPI
 ```
 
@@ -47,7 +47,7 @@ conditions shared with `star/sfvirialtrue-sfmodel0`.
 | `tp-nostream` | 1D | Two-pressure (gas + CR) Riemann problem, pure diffusion | TPP 2021 |
 | `tp-stream-va075` | 1D | Two-pressure shock tube with streaming + heating at `v_A=0.75` | TPP 2021 |
 | `tp-stream-va15` | 1D | Two-pressure shock tube with streaming + heating at `v_A=1.5` | TPP 2021 |
-| `diallo-cooling` | 1D | Collisional cooling of a Gaussian CR-energy profile against the analytic exponential decay | Diallo 2026 3.1.1/3.1.4 |
+| `cr-cooling` | 1D | Collisional cooling of a Gaussian CR-energy profile against the analytic exponential decay | Diallo 2026 3.1.1/3.1.4 |
 | `g8-lowres` | 3D | G8-mass disc galaxy (hosted DICE ICs) with star formation, thermal SN feedback and SN CR injection (`fecr`) | RAMSES disc tutorial ICs |
 
 AMR CR tests must set `cr_nsubcycle>1` (jiang-414-refine, jiang-414-vel-refine,
@@ -64,7 +64,7 @@ default up to `3e-6`.
 
 Two tests differ:
 
-- `diallo-cooling` first checks every output against the analytic solution
+- `cr-cooling` first checks every output against the analytic solution
   (profile within 1e-5 of the peak, total CR energy within 1e-9) and fails
   before the regression check if either is exceeded.
 - `g8-lowres` follows the star-formation tests: `1e-13` on 2 MPI ranks. Star

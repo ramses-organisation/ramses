@@ -28,7 +28,7 @@ RT = 0
 # from ramses_cral).
 DO_CR = 0
 # Number of CR groups (>=1 required when DO_CR=1)
-NCR_GROUPS = 1
+NCRGRP = 1
 # Use turbulence? 1=Yes, 0=No (requires fftw3)
 USE_TURB = 0
 # Use MPI? 1=Yes, 0=No
@@ -92,17 +92,20 @@ endif
 ifneq ($(origin CRPHYS),undefined)
    $(error CRPHYS has been renamed to DO_CR; use DO_CR=1)
 endif
+ifneq ($(origin NCR_GROUPS),undefined)
+   $(error NCR_GROUPS has been renamed to NCRGRP; use NCRGRP=1)
+endif
 ifeq ($(DO_CR),1)
-   ifeq ($(NCR_GROUPS),0)
-      $(error DO_CR=1 requires NCR_GROUPS>=1)
+   ifeq ($(NCRGRP),0)
+      $(error DO_CR=1 requires NCRGRP>=1)
    endif
-   ifneq ($(NCR_GROUPS),1)
-      $(error DO_CR=1 currently supports NCR_GROUPS=1 only; multi-group CR transport is not implemented yet)
+   ifneq ($(NCRGRP),1)
+      $(error DO_CR=1 currently supports NCRGRP=1 only; multi-group CR transport is not implemented yet)
    endif
    ifneq ($(SOLVER),mhd)
       $(error DO_CR=1 requires SOLVER=mhd: the CR closure and source terms need the magnetic field)
    endif
-   DEFINES += -DDO_CR -DNCR_GROUPS=$(NCR_GROUPS)
+   DEFINES += -DDO_CR -DNCRGRP=$(NCRGRP)
 endif
 ifeq ($(USE_TURB),1)
    DEFINES += -DUSE_TURB
