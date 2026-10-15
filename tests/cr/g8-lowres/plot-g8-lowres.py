@@ -12,122 +12,70 @@ from matplotlib.colors import LogNorm
 # this is because of the random number generator use in the star formation routine
 
 
-fig, ax = plt.subplots(nrows=4, ncols=3, figsize=(12, 10.5))
+X_H, M_H, K_B = 0.76, 1.6605390e-24, 1.3806490e-16   # amr/constants.f90
 
 # Load RAMSES output
 data = visu_ramses.load_snapshot(3,read_hydro=True,read_cr=True)
-xp = data["particle"]["position_x"]
-yp = data["particle"]["position_y"]
-zp = data["particle"]["position_z"]
-mp = data["particle"]["mass"]
 x      = data["data"]["x"]
 y      = data["data"]["y"]
 z      = data["data"]["z"]
-dx     = data["data"]["dx"]
 rho    = data["data"]["density"]
 p      = data["data"]["pressure"]
-l      = data["data"]["level"]
 metals = data["data"]["metallicity"]
 ecr    = data["data"]["CRegy_01"]
+unit_d = data["data"]["unit_d"]
+unit_v = data["data"]["unit_l"]/data["data"]["unit_t"]
 
-temp=p/rho
-# find highest density cell as most likely SN site
-itmax=np.argmax(rho)
-xtmax=x[itmax]
-ytmax=y[itmax]
-ztmax=z[itmax]
+# 10 kpc wide slices through the box centre, sampled on npix^2 pixels
+centre = np.array([25., 25., 25.])   # kpc
+half   = 5.
+npix   = 2**7
+s      = np.linspace(-half, half, npix, endpoint=False) + half/npix   # pixel centres
+cut    = centre + s[npix//2]         # slice just off the centre, avoiding cell-face ties
+h, v   = np.meshgrid(s, s)
 
-# override => use center of domain
-xtmax=25.
-ytmax=25.
-ztmax=25.
+fields = np.transpose([rho*unit_d*X_H/M_H,           # n_H [cm^-3]
+                       p/rho*unit_v**2*M_H/K_B,      # T/mu [K]
+                       metals,                       # Z
+                       ecr*unit_d*unit_v**2])        # E_CR [erg cm^-3]
+points = np.transpose([x, y, z])
+planes = [(0, 1, 2), (1, 0, 2), (2, 0, 1)]   # (normal, horizontal, vertical) axis
+slices = []
+for normal, hor, ver in planes:
+    q = np.empty((npix*npix, 3))
+    q[:, normal] = cut[normal]
+    q[:, hor]    = centre[hor] + h.ravel()
+    q[:, ver]    = centre[ver] + v.ravel()
+    slices.append(griddata(points, fields, q, method='nearest').reshape(npix, npix, -1))
 
-zoomdx=5.
+# (row title, colorbar label, colormap, max decades shown or None for the full range)
+rows = [("Gas density",               r"$n_{\rm H}$ [cm$^{-3}$]",      "viridis", None),
+        ("Gas temperature",           r"$T/\mu$ [K]",                  "inferno", None),
+        ("Metallicity",               r"$Z$ (metal mass fraction)",    "cividis", None),
+        ("Cosmic-ray energy density", r"$E_{\rm CR}$ [erg cm$^{-3}$]", "magma",   6)]
+axname = "xyz"
 
-xmin = xtmax-zoomdx
-xmax = xtmax+zoomdx
-ymin = ytmax-zoomdx
-ymax = ytmax+zoomdx
-zmin = ztmax-zoomdx
-zmax = ztmax+zoomdx
-
-
-
-# make a subcube of half-size zoomdx around max rho
-nx  = 2**7
-dpx = (xmax-xmin)/float(nx)
-dpy = (ymax-ymin)/float(nx)
-dpz = (zmax-zmin)/float(nx)
-xpx = np.linspace(xmin+0.5*dpx,xmax-0.5*dpx,nx)
-ypx = np.linspace(ymin+0.5*dpy,ymax-0.5*dpy,nx)
-zpx = np.linspace(zmin+0.5*dpz,zmax-0.5*dpz,nx)
-grid_x, grid_y, grid_z = np.meshgrid(xpx,ypx,zpx)
-points = np.transpose([x,y,z])
-z1 = griddata(points,rho,(grid_x,grid_y, grid_z),method='nearest')
-z5 = griddata(points,p,(grid_x,grid_y, grid_z),method='nearest')
-zl = griddata(points,l,(grid_x,grid_y, grid_z),method='nearest')
-Z = griddata(points,metals,(grid_x,grid_y, grid_z),method='nearest')
-E = griddata(points,ecr,(grid_x,grid_y, grid_z),method='nearest')
-
-temp=z5/z1
-
-rho_proj2=z1[:,int(nx/2.),:]
-rho_proj1=z1[int(nx/2.),:,:]
-rho_proj3=z1[:,:,int(nx/2.)]
-
-Z_proj2=Z[:,int(nx/2.),:]
-Z_proj1=Z[int(nx/2.),:,:]
-Z_proj3=Z[:,:,int(nx/2.)]
-
-
-
-T_proj2=temp[:,int(nx/2.),:]
-T_proj1=temp[int(nx/2.),:,:]
-T_proj3=temp[:,:,int(nx/2.)]
-
-E_proj2=E[:,int(nx/2.),:]
-E_proj1=E[int(nx/2.),:,:]
-E_proj3=E[:,:,int(nx/2.)]
-
-im1 = ax[0,0].imshow(np.transpose(np.log10(rho_proj1)), origin="lower",aspect='equal', extent=[ymin, ymax, zmin, zmax],interpolation='none')
-im2 = ax[0,1].imshow(np.transpose(np.log10(rho_proj2)), origin="lower", aspect='equal', extent=[xmin, xmax, zmin, zmax],interpolation='none')
-im3 = ax[0,2].imshow(np.transpose(np.log10(rho_proj3)), origin="lower", aspect='equal', extent=[xmin, xmax, ymin, ymax],interpolation='none')
-im4 = ax[1,0].imshow(np.transpose(np.log10(T_proj1)), origin="lower", aspect='equal', extent=[ymin, ymax, zmin, zmax],interpolation='none')
-im5 = ax[1,1].imshow(np.transpose(np.log10(T_proj2)), origin="lower", aspect='equal', extent=[xmin, xmax, zmin, zmax],interpolation='none')
-im6 = ax[1,2].imshow(np.transpose(np.log10(T_proj3)), origin="lower", aspect='equal', extent=[xmin, xmax, ymin, ymax],interpolation='none')
-im7 = ax[2,0].imshow(np.transpose(np.log10(Z_proj1+1.e-10)), origin="lower", aspect='equal', extent=[ymin, ymax, zmin, zmax],interpolation='none')
-im8 = ax[2,1].imshow(np.transpose(np.log10(Z_proj2+1.e-10)), origin="lower", aspect='equal', extent=[xmin, xmax, zmin, zmax],interpolation='none')
-im9 = ax[2,2].imshow(np.transpose(np.log10(Z_proj3+1.e-10)), origin="lower", aspect='equal', extent=[xmin, xmax, ymin, ymax],interpolation='none')
-im10 = ax[3,0].imshow(np.transpose(np.log10(E_proj1+1.e-30)), origin="lower", aspect='equal', extent=[ymin, ymax, zmin, zmax],interpolation='none')
-im11 = ax[3,1].imshow(np.transpose(np.log10(E_proj2+1.e-30)), origin="lower", aspect='equal', extent=[xmin, xmax, zmin, zmax],interpolation='none')
-im12 = ax[3,2].imshow(np.transpose(np.log10(E_proj3+1.e-30)), origin="lower", aspect='equal', extent=[xmin, xmax, ymin, ymax],interpolation='none')
-
-
-cb = []
-cb.append(plt.colorbar(im1, ax=ax[0,0], label='Density slice'))
-cb.append(plt.colorbar(im2, ax=ax[0,1], label='Density slice'))
-cb.append(plt.colorbar(im3, ax=ax[0,2], label='Density slice'))
-cb.append(plt.colorbar(im4, ax=ax[1,0], label='Temp slice'))
-cb.append(plt.colorbar(im5, ax=ax[1,1], label='Temp slice'))
-cb.append(plt.colorbar(im6, ax=ax[1,2], label='Temp slice'))
-cb.append(plt.colorbar(im7, ax=ax[2,0], label='Abs metals slice'))
-cb.append(plt.colorbar(im8, ax=ax[2,1], label='Abs metals slice'))
-cb.append(plt.colorbar(im9, ax=ax[2,2], label='Abs metals slice'))
-cb.append(plt.colorbar(im10, ax=ax[3,0], label='CR energy slice'))
-cb.append(plt.colorbar(im11, ax=ax[3,1], label='CR energy slice'))
-cb.append(plt.colorbar(im12, ax=ax[3,2], label='CR energy slice'))
-
-for i in [0,1,2,3]:
-    ax[i,0].set_xlabel('y')
-    ax[i,0].set_ylabel('z')
-    ax[i,1].set_xlabel('x')
-    ax[i,1].set_ylabel('z')
-    ax[i,2].set_xlabel('x')
-    ax[i,2].set_ylabel('y')
-
-
-for c in cb:
-    c.ax.yaxis.set_label_coords(-1.1, 0.5)
+fig = plt.figure(figsize=(11, 13), layout="constrained")
+for k, (sf, (title, label, cmap, decades)) in enumerate(zip(fig.subfigures(len(rows), 1), rows)):
+    imgs = [sl[:, :, k] for sl in slices]
+    pos  = np.concatenate([im[im > 0] for im in imgs])
+    if pos.size == 0:
+        pos = np.ones(1)
+    vmax = pos.max()
+    vmin = pos.min() if decades is None else max(pos.min(), vmax*10.**(-decades))
+    cm = mpl.colormaps[cmap].copy()
+    cm.set_bad(cm(0.)); cm.set_under(cm(0.))           # zero and clipped values at the low end
+    norm = LogNorm(vmin=vmin, vmax=vmax)               # one scale shared by the row
+    axs = sf.subplots(1, 3)
+    for ax, img, (normal, hor, ver) in zip(axs, imgs, planes):
+        im = ax.imshow(np.ma.masked_less_equal(img, 0.), origin="lower", cmap=cm, norm=norm,
+                       interpolation='none',
+                       extent=[centre[hor]-half, centre[hor]+half, centre[ver]-half, centre[ver]+half])
+        ax.set_title("%s = %.2f kpc" % (axname[normal], cut[normal]), fontsize=9)
+        ax.set_xlabel(axname[hor]+" [kpc]")
+        ax.set_ylabel(axname[ver]+" [kpc]")
+    sf.colorbar(im, ax=axs, label=label, extend="min" if vmin > pos.min() else "neither")
+    sf.suptitle(title, fontweight="bold")
 
 fig.savefig('g8-lowres.pdf',bbox_inches='tight')
 
