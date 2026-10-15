@@ -43,7 +43,7 @@ CRs are added to a run with `cr=.true.` in `&RUN_PARAMS` (this requires a `DO_CR
 
 ## Supernova CR injection
 
-With star formation and thermal SN feedback (`eta_sn>0` in `&FEEDBACK_PARAMS`), setting `fecr>0` in `&CR_PARAMS` injects CR energy equal to `fecr` times the thermal SN energy into the cell of each exploding star particle. This comes on top of the full thermal energy given to the gas. Only thermal feedback injects CRs, and only into the first CR group. If the run starts with `cr_advect=.false.`, CR transport is switched on at the start of the first coarse step in which star particles exist, so a run can carry an empty CR field until the first stars form.
+With star formation and thermal SN feedback (`eta_sn>0` in `&FEEDBACK_PARAMS`), setting `fecr>0` in `&CR_PARAMS` injects CR energy equal to `fecr` times the thermal SN energy into the cell of each exploding star particle. This comes on top of the full thermal energy given to the gas. Only thermal feedback injects CRs, and only into the first CR group. If the run starts with `cr_advect=.false.`, CR transport is switched on as soon as star particles exist: the check runs at the start of every level step, and each AMR level starts evolving the CRs at the beginning of its next step. A run can therefore carry an empty CR field until the first stars form.
 
 ## Initial and boundary conditions
 
