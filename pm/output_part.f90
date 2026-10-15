@@ -207,7 +207,7 @@ subroutine backup_part(filename, filename_desc)
      deallocate(xdp)
   end if
 
-  if (MC_tracer) then
+  if (MC_tracer .and. .not. ito_tracer) then
      ! Dump particle pointer
      allocate(ll(1:npart))
      ! Get the idp of the stars on which tracers are attached
