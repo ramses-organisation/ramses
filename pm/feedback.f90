@@ -483,6 +483,10 @@ subroutine kinetic_feedback
   use hydro_commons
   use constants, only:Myr2sec
   use mpi_mod
+#ifdef DO_CR
+  use cr_parameters, only: fecr,cr_advect,ncrvar
+  use cr_hydro_commons, only: cruold
+#endif
   implicit none
 #ifndef WITHOUTMPI
   integer::info
@@ -685,6 +689,14 @@ subroutine kinetic_feedback
      do ivar=1,nvar
         call make_virtual_fine_dp(uold(1,ivar),ilevel)
      enddo
+#ifdef DO_CR
+     if(fecr>0d0 .and. cr_advect)then
+        call cr_upload_fine(ilevel)
+        do ivar=1,ncrvar
+           call make_virtual_fine_dp(cruold(1,ivar),ilevel)
+        enddo
+     endif
+#endif
   enddo
 
 end subroutine kinetic_feedback
@@ -862,6 +874,10 @@ subroutine Sedov_blast(xSN,vSN,mSN,sSN,ZSN,indSN,vol_gas,dq,ekBlast,nSN)
   use amr_commons
   use hydro_commons
   use constants, only: M_sun, pc2cm
+#ifdef DO_CR
+  use cr_parameters, only: fecr,cr_advect,Ecr_idx
+  use cr_hydro_commons, only: cruold
+#endif
   implicit none
   !------------------------------------------------------------------------
   ! This routine merges SN using the FOF algorithm.
@@ -878,6 +894,9 @@ subroutine Sedov_blast(xSN,vSN,mSN,sSN,ZSN,indSN,vol_gas,dq,ekBlast,nSN)
   real(dp),dimension(1:nSN,1:3)::xSN,vSN,dq
   integer ,dimension(1:nSN)::indSN
   logical ,dimension(1:nvector),save::ok
+#ifdef DO_CR
+  real(dp),dimension(1:nSN)::e_cr
+#endif
 
   if(nSN==0)return
   if(verbose)write(*,*)'Entering Sedov_blast'
@@ -934,6 +953,17 @@ subroutine Sedov_blast(xSN,vSN,mSN,sSN,ZSN,indSN,vol_gas,dq,ekBlast,nSN)
         p_gas(iSN)=eta_sn2*sSN(iSN)*ESN/ekBlast(iSN)
         if(metal)d_metal(iSN)=ZSN(iSN)*mSN(iSN)/ekBlast(iSN)
      endif
+#ifdef DO_CR
+     ! CR energy on top of the full SN energy (single group)
+     e_cr(iSN)=0d0
+     if(fecr>0d0 .and. cr_advect)then
+        if(vol_gas(iSN)>0d0)then
+           e_cr(iSN)=fecr*eta_sn2*sSN(iSN)*ESN/vol_gas(iSN)
+        else
+           e_cr(iSN)=fecr*eta_sn2*sSN(iSN)*ESN/ekBlast(iSN)
+        endif
+     endif
+#endif
   end do
 
   ! Loop over levels
@@ -999,6 +1029,9 @@ subroutine Sedov_blast(xSN,vSN,mSN,sSN,ZSN,indSN,vol_gas,dq,ekBlast,nSN)
                        uold(ind_cell(i),4)=uold(ind_cell(i),4)+d_gas(iSN)*w
                        ! Finally update the total energy of the gas
                        uold(ind_cell(i),5)=uold(ind_cell(i),5)+0.5d0*d_gas(iSN)*(u*u+v*v+w*w)+p_gas(iSN)
+#ifdef DO_CR
+                       cruold(ind_cell(i),Ecr_idx(1))=cruold(ind_cell(i),Ecr_idx(1))+e_cr(iSN)
+#endif
                     endif
                  end do
               endif
@@ -1023,6 +1056,9 @@ subroutine Sedov_blast(xSN,vSN,mSN,sSN,ZSN,indSN,vol_gas,dq,ekBlast,nSN)
            uold(indSN(iSN),4)=uold(indSN(iSN),4)+d_gas(iSN)*w
            uold(indSN(iSN),5)=uold(indSN(iSN),5)+d_gas(iSN)*0.5d0*(u*u+v*v+w*w)+p_gas(iSN)
            if(metal)uold(indSN(iSN),imetal)=uold(indSN(iSN),imetal)+d_metal(iSN)
+#ifdef DO_CR
+           cruold(indSN(iSN),Ecr_idx(1))=cruold(indSN(iSN),Ecr_idx(1))+e_cr(iSN)
+#endif
         endif
      endif
   end do
