@@ -11,6 +11,10 @@ recursive subroutine amr_step(ilevel,icount)
   use coolrates_module, only: update_coolrates_tables
   use rt_cooling_module, only: update_UVrates
 #endif
+#ifdef DO_CR
+  use cr_parameters
+  use cr_hydro_commons
+#endif
   use sink_feedback_parameters, only: sn_feedback_sink
 #if USE_TURB==1
   use turb_commons
@@ -29,6 +33,9 @@ recursive subroutine amr_step(ilevel,icount)
   integer::i,idim,ivar
   logical::ok_defrag,output_now_all
   logical,save::first_step=.true.
+#ifdef DO_CR
+  logical::cr_advect_lev
+#endif
 
   if(numbtot(1,ilevel)==0)return
 
@@ -67,6 +74,14 @@ recursive subroutine amr_step(ilevel,icount)
                     call make_virtual_fine_dp(rtuold(1,ivar),i)
                  end do
                  if(simple_boundary)call rt_make_boundary_hydro(i)
+              end if
+#endif
+#ifdef DO_CR
+              if(cr)then
+                 do ivar=1,ncrvar
+                    call make_virtual_fine_dp(cruold(1,ivar),i)
+                 end do
+                 if(simple_boundary)call cr_make_boundary_hydro(i)
               end if
 #endif
               if(poisson)then
@@ -308,6 +323,16 @@ recursive subroutine amr_step(ilevel,icount)
   end if
 #endif
 
+#ifdef DO_CR
+  ! Switch CR transport on once stars exist. A coarser level already
+  ! mid-step (no cr_set_unew yet) keeps its CRs frozen until its next step.
+  if(cr .and. .not.cr_advect .and. fecr>0d0 .and. nstar_tot>0)then
+     if(myid==1)write(*,*)'CR advection switched on: stars present and fecr>0'
+     cr_advect=.true.
+  endif
+  cr_advect_lev=cr_advect
+#endif
+
   !----------------------
   ! Compute new time step
   !----------------------
@@ -325,6 +350,11 @@ recursive subroutine amr_step(ilevel,icount)
   ! Set rtunew equal to rtuold
                                call timer('radiative transfer','start')
   if(rt)call rt_set_unew(ilevel)
+#endif
+
+#ifdef DO_CR
+                               call timer('cosmic rays - set unew','start')
+  if(cr_advect_lev)call cr_set_unew(ilevel)
 #endif
 
   !---------------------------
@@ -370,8 +400,10 @@ recursive subroutine amr_step(ilevel,icount)
   !-----------
   ! Hydro step
   !-----------
-  if((hydro).and.(.not.static_gas))then
-
+  if(hydro)then
+   ! Only the gas pieces are gated by .not.static_gas, so the CR step still
+   ! runs on a frozen gas background.
+   if(.not.static_gas)then
      ! Hyperbolic solver
                                call timer('hydro - godunov','start')
      call godunov_fine(ilevel)
@@ -410,6 +442,17 @@ recursive subroutine amr_step(ilevel,icount)
         call add_pdv_source_terms(ilevel)
      endif
 
+   endif ! .not.static_gas (gas hyperbolic update)
+
+#ifdef DO_CR
+     if(cr_advect_lev)then
+        call timer('cosmic rays','start')
+        call crmom_step(ilevel)
+     endif
+#endif
+
+   if(.not.static_gas)then
+
      ! Set uold equal to unew
                                call timer('hydro - set uold','start')
      call set_uold(ilevel)
@@ -431,8 +474,12 @@ recursive subroutine amr_step(ilevel,icount)
      ! Restriction operator
                                call timer('hydro upload fine','start')
      call upload_fine(ilevel)
+#ifdef DO_CR
+     if(cr_advect_lev)call cr_upload_fine(ilevel)
+#endif
 
-  endif
+   endif ! .not.static_gas (gas set_uold / restriction)
+  endif ! hydro
 
   !---------------------
   ! Do RT/Chemistry step
@@ -503,6 +550,15 @@ recursive subroutine amr_step(ilevel,icount)
         call make_virtual_fine_dp(rtuold(1,ivar),ilevel)
      end do
      if(simple_boundary)call rt_make_boundary_hydro(ilevel)
+  endif
+#endif
+
+#ifdef DO_CR
+  if(cr)then
+     do ivar=1,ncrvar
+        call make_virtual_fine_dp(cruold(1,ivar),ilevel)
+     end do
+     if(simple_boundary)call cr_make_boundary_hydro(ilevel)
   endif
 #endif
 
