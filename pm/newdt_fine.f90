@@ -6,6 +6,9 @@ subroutine newdt_fine(ilevel)
 #ifdef RT
   use rt_parameters, ONLY: rt_advect, rt_nsubcycle
 #endif
+#ifdef DO_CR
+  use cr_parameters, ONLY: cr
+#endif
 #if USE_TURB==1
   use turb_commons
 #endif
@@ -175,6 +178,9 @@ subroutine newdt_fine(ilevel)
   end if
 
   if(hydro)call courant_fine(ilevel)
+#ifdef DO_CR
+  if(hydro.and.cr)call cr_courant_fine(ilevel)
+#endif
 
   !------------------------------------------------------------
   ! Adjust timestep to ensure outputs occur exactly at target a

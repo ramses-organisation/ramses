@@ -6,16 +6,7 @@ subroutine courant_fine(ilevel)
 #if USE_TURB==1
   use turb_commons
 #endif
-#ifdef DO_CR
-  use cr_parameters, only: cr,cr_advect,cr_va_max,ncr_groups,Ecr_idx, &
-       & ecrs_tot
-  use cr_hydro_commons, only: cruold
-#endif
   implicit none
-#ifdef DO_CR
-  real(kind=8)::ecrs_loc,ecrs_all, cr_va_max_all
-  real(dp),dimension(1:nvector,1:ncr_groups),save::cr_egather
-#endif
 #ifndef WITHOUTMPI
   integer::info
   real(kind=8),dimension(4)::comm_buffin,comm_buffout
@@ -34,9 +25,6 @@ subroutine courant_fine(ilevel)
   real(kind=8)::mass_all,ekin_all,eint_all,emag_all,dt_all
   real(dp),dimension(1:nvector,1:nvar_all),save::uu
   real(dp),dimension(1:nvector,1:ndim),save::gg
-#ifdef DO_CR
-  integer::igrp
-#endif
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
@@ -45,10 +33,6 @@ subroutine courant_fine(ilevel)
   ekin_all=0.0d0; ekin_loc=0.0d0
   emag_all=0.0d0; emag_loc=0.0d0
   eint_all=0.0d0; eint_loc=0.0d0
-#ifdef DO_CR
-  ecrs_all=0.0d0; ecrs_loc=0.0d0
-  cr_va_max=0.0d0
-#endif
   dt_all=dtnew(ilevel); dt_loc=dt_all
 
   ! Mesh spacing at that level
@@ -95,16 +79,6 @@ subroutine courant_fine(ilevel)
               uu(i,ivar)=uold(ind_leaf(i),ivar)
            end do
         end do
-
-#ifdef DO_CR
-        if(cr_advect)then
-           do igrp=1,ncr_groups
-              do i=1,nleaf
-                 cr_egather(i,igrp)=cruold(ind_leaf(i),Ecr_idx(igrp))
-              end do
-           end do
-        endif
-#endif
 
         ! Gather gravitational acceleration
         gg=0.0d0
@@ -162,23 +136,9 @@ subroutine courant_fine(ilevel)
         end do
 #endif
 
-#ifdef DO_CR
-        if(cr)then
-           do igrp=1,ncr_groups
-              do i=1,nleaf
-                 ecrs_loc=ecrs_loc+cruold(ind_leaf(i),Ecr_idx(igrp))*vol
-              end do
-           end do
-        endif
-#endif
-
         ! Compute CFL time-step
         if(nleaf>0)then
-#ifdef DO_CR
-           call cmpdt(uu,gg,dx,dt_lev,nleaf,cr_egather)
-#else
            call cmpdt(uu,gg,dx,dt_lev,nleaf)
-#endif
            dt_loc=min(dt_loc,dt_lev)
         end if
 
@@ -202,22 +162,12 @@ subroutine courant_fine(ilevel)
   ekin_all=comm_buffout(2)
   eint_all=comm_buffout(3)
   emag_all=comm_buffout(4)
-#ifdef DO_CR
-  call MPI_ALLREDUCE(ecrs_loc,ecrs_all,1,MPI_DOUBLE_PRECISION,MPI_SUM,&
-       &MPI_COMM_WORLD,info)
-  call MPI_ALLREDUCE(cr_va_max,cr_va_max_all,1,MPI_DOUBLE_PRECISION,MPI_MAX,&
-       &MPI_COMM_WORLD,info)
-  cr_va_max=cr_va_max_all
-#endif
 #endif
 #ifdef WITHOUTMPI
   mass_all=mass_loc
   ekin_all=ekin_loc
   eint_all=eint_loc
   emag_all=emag_loc
-#ifdef DO_CR
-  ecrs_all=ecrs_loc
-#endif
   dt_all=dt_loc
 #endif
 
@@ -225,14 +175,7 @@ subroutine courant_fine(ilevel)
   ekin_tot=ekin_tot+ekin_all
   eint_tot=eint_tot+eint_all
   emag_tot=emag_tot+emag_all
-#ifdef DO_CR
-  ecrs_tot=ecrs_tot+ecrs_all
-#endif
   dtnew(ilevel)=MIN(dtnew(ilevel),dt_all)
-
-#ifdef DO_CR
-  if(cr_advect) call cr_courant_fine(ilevel)
-#endif
 
 111 format('   Entering courant_fine for level ',I2)
 
@@ -241,27 +184,16 @@ end subroutine courant_fine
 !###########################################################
 !###########################################################
 !###########################################################
-#ifdef DO_CR
-subroutine cmpdt(uu,gg,dx,dt,ncell,crgather)
-#else
 subroutine cmpdt(uu,gg,dx,dt,ncell)
-#endif
   use amr_parameters
   use hydro_parameters
   use const
-#ifdef DO_CR
-  use cr_parameters, only: cr_advect,ncr_groups, &
-       & cr_varvmax,cr_varvmax_vdvs,cr_streaming_diffusion
-#endif
   implicit none
   integer::ncell
   real(dp)::dx,dt
   real(dp),dimension(1:nvector,1:nvar+3)::uu
   real(dp),dimension(1:nvector,1:ndim)::gg
   real(dp),dimension(1:nvector),save::a2,B2,rho,ctot
-#ifdef DO_CR
-  real(dp),dimension(1:nvector,1:ncr_groups)::crgather
-#endif
 
   real(dp)::dtcell,smallp,cf,cc,bc,bn
   integer::k,idim
@@ -312,9 +244,6 @@ subroutine cmpdt(uu,gg,dx,dt,ncell)
      end do
   end do
 #endif
-#ifdef DO_CR
-  if(cr_advect)call cr_cmpdt_a2(a2,rho,crgather,ncell)
-#endif
 
   ! Compute maximum wave speed (fast magnetosonic)
   do k = 1, ncell
@@ -357,11 +286,6 @@ subroutine cmpdt(uu,gg,dx,dt,ncell)
      dtcell=dx/ctot(k)*(sqrt(one+two*courant_factor*rho(k))-one)/rho(k)
      dt = min(dt,dtcell)
   end do
-
-#ifdef DO_CR
-  if(cr_advect .and. cr_varvmax .and. cr_varvmax_vdvs .and. cr_streaming_diffusion) &
-       & call cr_cmpdt_vamax(uu,ncell)
-#endif
 
 end subroutine cmpdt
 !#########################################################
