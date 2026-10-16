@@ -1286,6 +1286,9 @@ end subroutine make_virtual_reverse_int
 subroutine build_comm(ilevel)
   use amr_commons
   use poisson_commons, only: lookup_mg
+!--- TEMPORARY DEBUG  
+  use poisson_commons, only: lookup_mg_ref
+!--- TEMPORARY DEBUG
   use mpi_mod
   implicit none
   integer::ilevel
@@ -1411,6 +1414,9 @@ subroutine build_comm(ilevel)
      igrid=headl(myid,ilevel)
      do jgrid=1,numbl(myid,ilevel)
         lookup_mg(igrid)=0
+!--- TEMPORARY DEBUG
+        lookup_mg_ref(igrid)=lookup_mg(igrid)
+!--- TEMPORARY DEBUG
         igrid=next(igrid)
      end do
   end if
@@ -1515,8 +1521,14 @@ subroutine build_comm(ilevel)
             do i=1,ncache
 #ifdef LIGHT_MPI_COMM
                lookup_mg(reception(icpu,ilevel)%pcomm%igrid(i))= -reception(icpu,ilevel)%pcomm%f(i,1)
+!--- TEMPORARY DEBUG
+               lookup_mg_ref(reception(icpu,ilevel)%pcomm%igrid(i))=lookup_mg(reception(icpu,ilevel)%pcomm%igrid(i))
+!--- TEMPORARY DEBUG
 #else
                lookup_mg(reception(icpu,ilevel)%igrid(i))= -reception(icpu,ilevel)%f(i,1)
+!--- TEMPORARY DEBUG
+               lookup_mg_ref(reception(icpu,ilevel)%igrid(i))=lookup_mg(reception(icpu,ilevel)%igrid(i))
+!--- TEMPORARY DEBUG
 #endif
             end do
          end if

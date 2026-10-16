@@ -10,7 +10,11 @@ module poisson_commons
 
   ! Multigrid lookup table for amr -> mg index mapping
   integer, allocatable, dimension(:) :: lookup_mg   ! Lookup table
-
+  integer, allocatable, dimension(:) :: lookup_mg_backup ! Persitent copy to restore lookup_mg after mg
+!--- TEMPORARY DEBUG
+  integer, allocatable, dimension(:) :: lookup_mg_ref
+  integer :: n_old_mg_backup_fail=0
+!--- TEMPORARY DEBUG
   ! Communicator arrays for multigrid levels
 #ifdef LIGHT_MPI_COMM
   type(communicator_light), allocatable, dimension(:,:) :: active_mg
