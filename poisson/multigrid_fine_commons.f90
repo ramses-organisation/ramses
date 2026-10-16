@@ -430,9 +430,6 @@ subroutine build_parent_comms_mg(active_loc, ifinelevel)
    integer, dimension(1:ncpu) :: nreq, nreq2
    integer :: nact_tot, nreq_tot, nreq_tot2
 
-!--- TEMPORARY DEBUG   
-   integer, save :: n_lookup_debug=0
-!--- TEMPORARY DEBUG
 #ifndef WITHOUTMPI
 #ifdef LIGHT_MPI_COMM
    integer :: idx,offset
@@ -481,25 +478,6 @@ subroutine build_parent_comms_mg(active_loc, ifinelevel)
 
             cur_cpu=cpu_map(father(cur_grid))
             if(cur_cpu==0) cycle
-!--- TEMPORARY DEBUG
-            if(lookup_mg_ref(cur_grid) /= huge(1))then
-               if(lookup_mg(cur_grid) /= lookup_mg_ref(cur_grid))then
-                  if(n_lookup_debug < 100)then
-                     write(*,*) 'MG LOOKUP DIFFERS FROM BUILD_COMM'
-                     write(*,*) 'myid               =',myid
-                     write(*,*) 'ifinelevel          =',ifinelevel
-                     write(*,*) 'icoarselevel        =',icoarselevel
-                     write(*,*) 'cur_grid            =',cur_grid
-                     write(*,*) 'father(cur_grid)    =',father(cur_grid)
-                     write(*,*) 'cpu_map(father)     =',cpu_map(father(cur_grid))
-                     write(*,*) 'lookup_mg           =',lookup_mg(cur_grid)
-                     write(*,*) 'lookup_mg_ref       =',lookup_mg_ref(cur_grid)
-                     write(*,*) 'flag2(cur_grid)      =',flag2(cur_grid)
-                  endif
-                  n_lookup_debug=n_lookup_debug+1
-               endif
-            endif
-!--- TEMPORARY DEBUG
             if(cur_cpu==myid) then
                ! We own the grid: fill lookup_mg with its final value
                ! Stack grid for local activation. flag2 is scratch storage here and
@@ -512,26 +490,6 @@ subroutine build_parent_comms_mg(active_loc, ifinelevel)
                ! Stack grid into 2nd part of flag2 for remote activation
                ! Here, lookup_mg(cur_grid) should be MINUS the AMR index
                ! of the grid in the corresponding CPU AMR structure.
-!--- TEMPORARY DEBUG
-               if(lookup_mg(cur_grid) >= 0) then
-                  write(*,*) 'INVALID REMOTE MG LOOKUP'
-                  write(*,*) 'myid                 =',myid
-                  write(*,*) 'ifinelevel            =',ifinelevel
-                  write(*,*) 'icoarselevel          =',icoarselevel
-                  write(*,*) 'active fine grid      =',active_loc%igrid(istart+i-1)
-                  write(*,*) 'fine father cell      =',ind_cell_father(i)
-                  write(*,*) 'neighbor index        =',ind
-                  write(*,*) 'cur_grid              =',cur_grid
-                  write(*,*) 'father(cur_grid)      =',father(cur_grid)
-                  write(*,*) 'cur_cpu               =',cur_cpu
-                  write(*,*) 'lookup_mg(cur_grid)   =',lookup_mg(cur_grid)
-                  write(*,*) 'flag2(cur_grid)       =',flag2(cur_grid)
-                  write(*,*) 'flag2(father)         =',flag2(father(cur_grid))
-                  write(*,*) 'mod(flag2,ngridmax)   =',mod(flag2(cur_grid),ngridmax)
-                  write(*,*) 'total lookup discrepancies =',n_lookup_debug
-                  call clean_stop
-               endif
-!--- TEMPORARY DEBUG
                nreq_tot=nreq_tot+1
                nreq(cur_cpu)=nreq(cur_cpu)+1
                flag2(ngridmax+nreq_tot)=cur_grid ! "home" index in 2nd part
@@ -579,19 +537,6 @@ subroutine build_parent_comms_mg(active_loc, ifinelevel)
       cur_grid=flag2(ngridmax+i) ! Local AMR index
       cur_cpu =cpu_map(father(cur_grid))
       nreq(cur_cpu)=nreq(cur_cpu)+1
-!--- TEMPORARY DEBUG
-      if(icoarselevel==1 .and. lookup_mg(cur_grid)==ngridmax)then
-         write(*,*) 'MG STAGE 2: SENDING NGRIDMAX'
-         write(*,*) 'myid               =',myid
-         write(*,*) 'to cpu             =',cur_cpu
-         write(*,*) 'ifinelevel          =',ifinelevel
-         write(*,*) 'icoarselevel        =',icoarselevel
-         write(*,*) 'cur_grid            =',cur_grid
-         write(*,*) 'father(cur_grid)    =',father(cur_grid)
-         write(*,*) 'lookup_mg(cur_grid) =',lookup_mg(cur_grid)
-         write(*,*) 'flag2(cur_grid)     =',flag2(cur_grid)
-      endif
-!--- TEMPORARY DEBUG
       comm_send(cur_cpu)%igrid(nreq(cur_cpu))=lookup_mg(cur_grid) ! Remote
    end do
 
@@ -618,19 +563,6 @@ subroutine build_parent_comms_mg(active_loc, ifinelevel)
          do i=1,ngrids
             cur_grid=comm_receive(icpu)%igrid(i) ! Local AMR index
             if(lookup_mg(cur_grid)>0) cycle      ! Already active: cycle
-!--- TEMPORARY DEBUG
-            if(icoarselevel==1 .and. father(cur_grid)>ncoarse)then
-               write(*,*) 'MG STAGE 2: BAD ACTIVATION RECEIVED'
-               write(*,*) 'myid               =',myid
-               write(*,*) 'from cpu           =',icpu
-               write(*,*) 'ifinelevel          =',ifinelevel
-               write(*,*) 'icoarselevel        =',icoarselevel
-               write(*,*) 'cur_grid            =',cur_grid
-               write(*,*) 'father(cur_grid)    =',father(cur_grid)
-               write(*,*) 'ncoarse             =',ncoarse
-               write(*,*) 'ngridmax            =',ngridmax
-            endif
-!--- TEMPORARY DEBUG
             ! Stack newly activated grid. flag2 is reused as scratch storage here;
             ! entries from previous build_parent_comms_mg calls are not preserved.
             nact_tot=nact_tot+1
@@ -1017,37 +949,6 @@ subroutine cleanup_mg_level(ilevel)
             ! Locally owned AMR grids have canonical lookup_mg value zero.
             lookup_mg(cur_grid)=0
          else
-!--- TEMPORARY DEBUG
-            if((mod(flag2(cur_grid)-1,ngridmax)+1) /= lookup_mg_backup(cur_grid))then
-
-               n_old_mg_backup_fail=n_old_mg_backup_fail+1
-
-               write(*,*) 'OLD MG BACKUP OVERWRITTEN, WOULD FAIL'
-               write(*,*) 'occurrence            =',n_old_mg_backup_fail
-               write(*,*) 'myid                  =',myid
-               write(*,*) 'ilevel                =',ilevel
-               write(*,*) 'cur_grid              =',cur_grid
-               write(*,*) 'father(cur_grid)       =',father(cur_grid)
-               write(*,*) 'cur_cpu                =',cur_cpu
-               write(*,*) 'old flag2 backup       =',flag2(cur_grid)
-               write(*,*) 'old decoded backup     =',mod(flag2(cur_grid)-1,ngridmax)+1
-               write(*,*) 'persistent backup      =',lookup_mg_backup(cur_grid)
-
-            endif
-
-            ! The persistent backup must contain a valid remote AMR grid index.
-            if(lookup_mg_backup(cur_grid)<1 .or. &
-               lookup_mg_backup(cur_grid)>ngridmax)then
-               write(*,*) 'INVALID MG BACKUP'
-               write(*,*) 'myid                 =',myid
-               write(*,*) 'ilevel               =',ilevel
-               write(*,*) 'cur_grid             =',cur_grid
-               write(*,*) 'father(cur_grid)      =',father(cur_grid)
-               write(*,*) 'cur_cpu               =',cur_cpu
-               write(*,*) 'lookup_mg_backup      =',lookup_mg_backup(cur_grid)
-               call clean_stop
-            endif
-!--- TEMPORARY DEBUG
             ! Restore the remote AMR grid index saved during the final communication
             ! setup stage of build_parent_comms_mg. Do not use flag2 here: it is
             ! scratch storage and may have been repurposed by subsequent calls to
@@ -1057,38 +958,8 @@ subroutine cleanup_mg_level(ilevel)
             ! operation is redundant. The previous mapping for flag2 should have been
             ! lookup_mg(cur_grid)=-(mod(flag2(cur_grid)-1,ngridmax)+1)
             ! because it could hold values N*ngridmax+index.
-            ! lookup_mg(cur_grid)=-lookup_mg_backup(cur_grid)
-            lookup_mg(cur_grid)=-(mod(lookup_mg_backup(cur_grid)-1,ngridmax)+1)
-!--- TEMPORARY DEBUG            
-            if(lookup_mg(cur_grid)/=-lookup_mg_backup(cur_grid))then
-               write(*,*) 'MODULO REQUIRED FOR PERSISTENT MG BACKUP'
-               write(*,*) 'myid                 =',myid
-               write(*,*) 'ilevel               =',ilevel
-               write(*,*) 'cur_grid             =',cur_grid
-               write(*,*) 'lookup_mg_backup      =',lookup_mg_backup(cur_grid)
-               write(*,*) 'decoded backup        =',mod(lookup_mg_backup(cur_grid)-1,ngridmax)+1
-            endif
-!--- TEMPORARY DEBUG
+            lookup_mg(cur_grid)=-lookup_mg_backup(cur_grid)
          end if
-!--- TEMPORARY DEBUG
-         ! Verify that cleanup restored the mapping originally
-         ! established by build_comm.
-         if(lookup_mg_ref(cur_grid)/=huge(1))then
-            if(lookup_mg(cur_grid)/=lookup_mg_ref(cur_grid))then
-               write(*,*) 'NEW MG BACKUP RESTORED WRONG VALUE'
-               write(*,*) 'myid                 =',myid
-               write(*,*) 'ilevel               =',ilevel
-               write(*,*) 'cur_grid             =',cur_grid
-               write(*,*) 'father(cur_grid)      =',father(cur_grid)
-               write(*,*) 'cur_cpu               =',cur_cpu
-               write(*,*) 'lookup_mg             =',lookup_mg(cur_grid)
-               write(*,*) 'lookup_mg_ref         =',lookup_mg_ref(cur_grid)
-               write(*,*) 'lookup_mg_backup      =',lookup_mg_backup(cur_grid)
-               write(*,*) 'flag2                 =',flag2(cur_grid)
-               call clean_stop
-            endif
-         endif
-!--- TEMPORARY DEBUG
       end do
    end do
 

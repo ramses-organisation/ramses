@@ -1033,9 +1033,6 @@ subroutine kill_grid(ind_cell,ilevel,nn,ibound,boundary_region)
   end do
   do i=1,nn
      father(ind_grid_son(i))=0
-!--- TEMPORARY DEBUG
-     lookup_mg_ref(ind_grid_son(i))=huge(1)
-!--- TEMPORARY DEBUG
   end do
   do j=1,twondim
      do i=1,nn
