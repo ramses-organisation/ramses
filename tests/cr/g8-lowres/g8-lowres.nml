@@ -87,7 +87,7 @@ fecr=0.1                     ! SN energy fraction injected into CRs
 Dcr=1d28                     ! [cm^2/s]
 cr_c_fraction=1d-3           ! floor of the reduced light speed ~ 300 km/s
 cr_varvmax=.true.            ! keep the reduced light speed >= 10x the gas signal speed
-cr_nsubcycle=20
+cr_nsubcycle=10
 cr_streaming_diffusion=.false.
 cr_streaming_heating=.false.
 cr_cooling=.true.
