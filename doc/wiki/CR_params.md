@@ -16,7 +16,8 @@ For detailed descriptions of the scheme, see:
 | `cr_isotropic_pressure=.true.` |  `logical`  | Closure relation: isotropic CR pressure `P_cr = E_cr/3` ("P1"). If false, an M1-like Eddington tensor is used, with the anisotropic component aligned with the local magnetic field (see §2 in [1]). |
 | `gamma_cr=1.3333`            |  `real array` | CR adiabatic index of each group (relativistic gas: 4/3). |
 | **====================** | **====================** | **CR-gas coupling** |
-| `cr_feedback=.true.`         |  `logical`    | Master switch for the CR back-reaction on the gas: momentum from the CR pressure gradient and the corresponding energy exchange. Inert when the gas is static (`static_gas=.true.`). |
+| `cr_gas_coupled=.true.`      |  `logical`    | Master switch for the CR back-reaction on the gas: the momentum injection selected by `cr_gradpcr_mom` and the corresponding energy exchange. Inert when the gas is static (`static_gas=.true.`). |
+| `cr_gradpcr_mom=.false.`     |  `logical`    | CR momentum injection into the gas. False: the gas gains the CR momentum removed by the scattering/streaming source terms, `d(rho v) = -(F_new - F_old)/V_m^2`, which conserves the total (gas + CR) momentum. True: the gas is accelerated by the CR pressure gradient, `d(rho v) = -grad(P_cr) dt`. |
 | `cr_smallr_decouple=1e4`     |  `real`       | CRs are smoothly decoupled from the gas at low densities: source terms are multiplied by `exp(-smallr*cr_smallr_decouple/rho)`. |
 | `cr_efloor=1e-30`            |  `real`       | Floor applied to the CR energy density (code units). |
 | **====================** | **====================** | **Timestep and reduced light speed** |

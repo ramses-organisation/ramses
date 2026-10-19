@@ -94,6 +94,10 @@ subroutine add_cr_source_terms(ilevel)
   ! coefficient sigma=1/Dcr_code(iGrp) via a 4x4 coefficient matrix reduced
   ! with a Schur complement on E_cr; the flux is rotated onto the local B
   ! field with rotatevec and back with invrotatevec.
+  !
+  ! With cr_gas_coupled, the gas gets the CR energy change as heat and a
+  ! momentum kick: -grad(P_cr)*dt (cr_gradpcr_mom=.true.), or the CR
+  ! momentum lost in the solve, -(F_new-F_old)/v_m^2 (cr_gradpcr_mom=.false.).
   !---------------------------------------------------------
   use amr_commons
   use hydro_commons
@@ -135,7 +139,7 @@ subroutine add_cr_source_terms(ilevel)
   if(verbose)write(*,111)ilevel
 
   smallp = smallc**2/gamma
-  gas_coupled = .not.static_gas .and. .not.static .and. cr_feedback
+  gas_coupled = .not.static_gas .and. .not.static .and. cr_gas_coupled
 
   nx_loc=icoarse_max-icoarse_min+1
   scale=boxlen/dble(nx_loc)
@@ -393,22 +397,35 @@ subroutine add_cr_source_terms(ilevel)
               call invrotatevec(sint, cost, sinp, cosp, frotx, froty, frotz)
 
               if(son(ind_cell(i))==0) crunew(ind_cell(i),icrE+1) = frotx
-              ! Momentum update
+              ! Momentum update: either the CR pressure gradient, or the CR
+              ! momentum F/v_m^2 removed from the flux by the implicit solve
               if(son(ind_cell(i))==0 .and. gas_coupled) then
-                 mom_change = -gradpcr_loc(i,1,iGrp)*dt
+                 if(cr_gradpcr_mom) then
+                    mom_change = -gradpcr_loc(i,1,iGrp)*dt
+                 else
+                    mom_change = (f1 - frotx) / cr_vmax(ilevel)**2
+                 endif
                  unew(ind_cell(i),2) = unew(ind_cell(i),2) + mom_change*f_decouple
               endif
 #if NDIM>1
               if(son(ind_cell(i))==0) crunew(ind_cell(i),icrE+2) = froty
               if(son(ind_cell(i))==0 .and. gas_coupled) then
-                 mom_change = -gradpcr_loc(i,2,iGrp)*dt
+                 if(cr_gradpcr_mom) then
+                    mom_change = -gradpcr_loc(i,2,iGrp)*dt
+                 else
+                    mom_change = (f2 - froty) / cr_vmax(ilevel)**2
+                 endif
                  unew(ind_cell(i),3) = unew(ind_cell(i),3) + mom_change*f_decouple
               endif
 #endif
 #if NDIM>2
               if(son(ind_cell(i))==0) crunew(ind_cell(i),icrE+3) = frotz
               if(son(ind_cell(i))==0 .and. gas_coupled) then
-                 mom_change = -gradpcr_loc(i,3,iGrp)*dt
+                 if(cr_gradpcr_mom) then
+                    mom_change = -gradpcr_loc(i,3,iGrp)*dt
+                 else
+                    mom_change = (f3 - frotz) / cr_vmax(ilevel)**2
+                 endif
                  unew(ind_cell(i),4) = unew(ind_cell(i),4) + mom_change*f_decouple
               endif
 #endif
