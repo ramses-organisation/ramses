@@ -10,7 +10,7 @@ subroutine read_cr_params(nml_ok)
   integer::ig
 
   namelist/cr_params/cr_advect,cr_HLLE,cr_isotropic_pressure &
-       & ,gamma_cr,cr_gas_coupled &
+       & ,gamma_cr,cr_gas_coupled,cr_gradpcr_mom &
        & ,cr_smallr_decouple,cr_efloor,cr_c_fraction,cr_nsubcycle &
        & ,cr_varvmax,cr_varvmax_fudge,cr_varvmax_vdvs &
        & ,Dcr,DCRmax,Dcr_perp_factor,cr_streaming_diffusion &

@@ -25,7 +25,8 @@ module cr_parameters
   logical::cr_isotropic_pressure=.true.        ! .true.=P1 closure, .false.=M1
   ! Physics
   real(dp),dimension(1:ncr_groups)::gamma_cr=4d0/3d0 ! CR adiabatic index
-  logical::cr_gas_coupled=.true.            ! master CR->gas back-reaction switch (gradPcr momentum + energy)
+  logical::cr_gas_coupled=.true.            ! master CR->gas back-reaction switch (momentum + energy)
+  logical::cr_gradpcr_mom=.false.           ! Momentum from the CR flux change; .true.: from -grad(P_cr)
   real(dp)::fecr=0d0                        ! SN energy fraction injected into CRs
   real(dp)::cr_smallr_decouple=1d4          ! Decouple CRs where rho<smallr*this
   real(dp)::cr_efloor=1d-30                   ! CR energy floor
