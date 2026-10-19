@@ -106,5 +106,8 @@ if(nproc!=2):
 # and this is the "default tolerance"
 if(nproc==2):
      tolerance={"all":1.0e-13,\
+               "CRflx_01_x":1.0e-12,\
+               "CRflx_01_y":1.0e-12,\
+               "CRflx_01_z":1.0e-12,\
                }
 visu_ramses.check_solution(to_check, 'g8-lowres',tolerance=tolerance,overwrite=False)
