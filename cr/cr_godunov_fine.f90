@@ -135,7 +135,7 @@ subroutine add_cr_source_terms(ilevel)
   if(verbose)write(*,111)ilevel
 
   smallp = smallc**2/gamma
-  gas_coupled = .not.static_gas .and. .not.static .and. cr_feedback
+  gas_coupled = .not.static_gas .and. .not.static .and. cr_gas_coupled
 
   nx_loc=icoarse_max-icoarse_min+1
   scale=boxlen/dble(nx_loc)
