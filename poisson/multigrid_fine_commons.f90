@@ -868,9 +868,6 @@ subroutine build_parent_comms_mg(active_loc, ifinelevel)
       ! restores the persistent AMR-to-MG mapping.
       lookup_mg_backup(cur_grid)=lookup_mg(cur_grid)
 
-      ! BUG: Retain the old backup mechanism to detect cases where flag2
-      ! is repurposed before cleanup and would have corrupted the mapping.
-      flag2(cur_grid)=lookup_mg(cur_grid)
       ! Temporarily use lookup_mg as the reception-position index.
       lookup_mg(cur_grid)=nreq(cur_cpu)
    end do
@@ -892,9 +889,6 @@ subroutine build_parent_comms_mg(active_loc, ifinelevel)
          ! restores the persistent AMR-to-MG mapping.
          lookup_mg_backup(cur_grid)=-lookup_mg(cur_grid)
 
-         ! BUG: Retain the old backup mechanism to detect cases where flag2
-         ! is repurposed before cleanup and would have corrupted the mapping.
-         flag2(cur_grid)=-lookup_mg(cur_grid)
          ! Temporarily use lookup_mg as the reception-position index.
          lookup_mg(cur_grid)=indx(cur_cpu)
       end if
