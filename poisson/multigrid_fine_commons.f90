@@ -486,7 +486,9 @@ subroutine build_parent_comms_mg(active_loc, ifinelevel)
                flag2(nact_tot)=cur_grid
                lookup_mg(cur_grid)=nact_tot
             else
-               ! Activate grid
+               ! Stack grid into 2nd part of flag2 for remote activation
+               ! Here, lookup_mg(cur_grid) should be MINUS the AMR index
+               ! of the grid in the corresponding CPU AMR structure.
                nreq_tot=nreq_tot+1
                nreq(cur_cpu)=nreq(cur_cpu)+1
                flag2(ngridmax+nreq_tot)=cur_grid ! "home" index in 2nd part
@@ -560,8 +562,7 @@ subroutine build_parent_comms_mg(active_loc, ifinelevel)
          do i=1,ngrids
             cur_grid=comm_receive(icpu)%igrid(i) ! Local AMR index
             if(lookup_mg(cur_grid)>0) cycle      ! Already active: cycle
-            ! Stack newly activated grid. flag2 is reused as scratch storage here;
-            ! entries from previous build_parent_comms_mg calls are not preserved.
+            ! Activate grid
             nact_tot=nact_tot+1
             flag2(nact_tot)=cur_grid
             lookup_mg(cur_grid)=nact_tot
@@ -863,8 +864,7 @@ subroutine build_parent_comms_mg(active_loc, ifinelevel)
 #endif
       ! Backup lookup_mg. Must survive until cleanup_mg_level
       lookup_mg_backup(cur_grid)=lookup_mg(cur_grid)
-
-      ! Temporarily use lookup_mg as the reception-position index.
+      ! Temporarily update lookup_mg
       lookup_mg(cur_grid)=nreq(cur_cpu)
    end do
 
@@ -883,8 +883,7 @@ subroutine build_parent_comms_mg(active_loc, ifinelevel)
 #endif
          ! Backup lookup_mg. Must survive until cleanup_mg_level
          lookup_mg_backup(cur_grid)=-lookup_mg(cur_grid)
-
-         ! Temporarily use lookup_mg as the reception-position index.
+         ! Temporarily update lookup_mg
          lookup_mg(cur_grid)=indx(cur_cpu)
       end if
    end do
