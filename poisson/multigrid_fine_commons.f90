@@ -478,18 +478,15 @@ subroutine build_parent_comms_mg(active_loc, ifinelevel)
 
             cur_cpu=cpu_map(father(cur_grid))
             if(cur_cpu==0) cycle
+
             if(cur_cpu==myid) then
+               ! Stack grid for local activation.
                ! We own the grid: fill lookup_mg with its final value
-               ! Stack grid for local activation. flag2 is scratch storage here and
-               ! may overwrite values left by previous build_parent_comms_mg calls.
-               ! Persistent lookup_mg backups must therefore NOT be stored in flag2.
                nact_tot=nact_tot+1
                flag2(nact_tot)=cur_grid
                lookup_mg(cur_grid)=nact_tot
             else
-               ! Stack grid into 2nd part of flag2 for remote activation
-               ! Here, lookup_mg(cur_grid) should be MINUS the AMR index
-               ! of the grid in the corresponding CPU AMR structure.
+               ! Activate grid
                nreq_tot=nreq_tot+1
                nreq(cur_cpu)=nreq(cur_cpu)+1
                flag2(ngridmax+nreq_tot)=cur_grid ! "home" index in 2nd part
@@ -864,8 +861,7 @@ subroutine build_parent_comms_mg(active_loc, ifinelevel)
 #else
       active_mg(cur_cpu,icoarselevel)%igrid(nreq(cur_cpu))=cur_grid
 #endif
-      ! Backup lookup_mg. This value must survive until cleanup_mg_level
-      ! restores the persistent AMR-to-MG mapping.
+      ! Backup lookup_mg. Must survive until cleanup_mg_level
       lookup_mg_backup(cur_grid)=lookup_mg(cur_grid)
 
       ! Temporarily use lookup_mg as the reception-position index.
@@ -885,8 +881,7 @@ subroutine build_parent_comms_mg(active_loc, ifinelevel)
 #else
          active_mg(cur_cpu,icoarselevel)%igrid(indx(cur_cpu))=cur_grid
 #endif
-         ! Backup lookup_mg. This value must survive until cleanup_mg_level
-         ! restores the persistent AMR-to-MG mapping.
+         ! Backup lookup_mg. Must survive until cleanup_mg_level
          lookup_mg_backup(cur_grid)=-lookup_mg(cur_grid)
 
          ! Temporarily use lookup_mg as the reception-position index.
@@ -943,15 +938,7 @@ subroutine cleanup_mg_level(ilevel)
             ! Locally owned AMR grids have canonical lookup_mg value zero.
             lookup_mg(cur_grid)=0
          else
-            ! Restore the remote AMR grid index saved during the final communication
-            ! setup stage of build_parent_comms_mg. Do not use flag2 here: it is
-            ! scratch storage and may have been repurposed by subsequent calls to
-            ! build_parent_comms_mg.
-            !
-            ! Since lookup_mg_backup is constrained to 1:ngridmax, the modulo
-            ! operation is redundant. The previous mapping for flag2 should have been
-            ! lookup_mg(cur_grid)=-(mod(flag2(cur_grid)-1,ngridmax)+1)
-            ! because it could hold values N*ngridmax+index.
+            ! Restore the remote AMR grid index saved in build_parent_comms_mg. 
             lookup_mg(cur_grid)=-lookup_mg_backup(cur_grid)
          end if
       end do
