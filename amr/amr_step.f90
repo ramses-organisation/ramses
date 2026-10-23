@@ -567,7 +567,7 @@ recursive subroutine amr_step(ilevel,icount)
   end if
 
   ! Reset move flag flag
-  if(MC_tracer) then
+  if(MC_tracer .and. .not. ito_tracer) then
                                 call timer('tracer','start')
      ! Decrease the move flag by 1
      call reset_tracer_move_flag(ilevel)
@@ -590,7 +590,6 @@ subroutine rt_step(ilevel)
   use rt_hydro_commons
   use UV_module
   use SED_module,     only: star_RT_feedback
-  use mpi_mod
   implicit none
   integer, intent(in) :: ilevel
 

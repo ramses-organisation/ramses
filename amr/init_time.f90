@@ -9,16 +9,12 @@ subroutine init_time
 #ifdef RT
   use rt_cooling_module
 #endif
-  use mpi_mod
   implicit none
   integer::i,Nmodel
   real(kind=8)::T2_sim
 #ifdef grackle
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   logical::file_exists
-#ifndef WITHOUTMPI
-  integer::info
-#endif
 #endif
 
   if(nrestart==0)then
@@ -87,11 +83,7 @@ subroutine init_time
      iresult = set_default_chemistry_parameters(my_grackle_data)
      if(iresult.eq.0)then
          write(*,*) 'Grackle - error in initialize_chemistry_data'
-#ifndef WITHOUTMPI
-         call MPI_ABORT(MPI_COMM_WORLD,1,info)
-#else
-         stop
-#endif
+         call clean_stop
      endif
      my_grackle_data%use_grackle = use_grackle
      my_grackle_data%with_radiative_cooling = grackle_with_radiative_cooling
@@ -167,11 +159,7 @@ subroutine init_time
      my_grackle_data%UVbackground_redshift_fullon = grackle_UVbackground_redshift_fullon
      if(iresult.eq.0)then
          write(*,*) 'Grackle - error in initialize_chemistry_data'
-#ifndef WITHOUTMPI
-         call MPI_ABORT(MPI_COMM_WORLD,1,info)
-#else
-         stop
-#endif
+         call clean_stop
      endif
      my_grackle_fields%grid_dimension = C_LOC(gr_dimension)
      my_grackle_fields%grid_start = C_LOC(gr_start)

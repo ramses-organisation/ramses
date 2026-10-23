@@ -3,30 +3,34 @@ import matplotlib as mpl
 mpl.use("Agg")
 import numpy as np
 import matplotlib.pyplot as plt
-import visu_ramses
 from scipy.interpolate import griddata
+import osyris
 
 fig = plt.figure(constrained_layout=True, figsize=(12, 6))
 axes = fig.subplots(nrows=2, ncols=3)
 
 # Load RAMSES output
-data = visu_ramses.load_snapshot(2)
-x = data["data"]["x"]
-y = data["data"]["y"]
-dx = data["data"]["dx"]
-rho = data["data"]["density"]
+data = osyris.RamsesDataset(2).load()
+x = data["mesh"]["position"].x.values
+y = data["mesh"]["position"].y.values
+dx = data["mesh"]["dx"].values
 
-xp = data["particle"]["position_x"]
-yp = data["particle"]["position_y"]
-mp = data["particle"]["mass"]
+rho = data["mesh"]["density"].values
+
+xp = data["part"]["position"].x.values
+yp = data["part"]["position"].y.values
+mp = data["part"]["mass"].values
 
 # Check that the tracer total mass agrees with the gas mass within
 # 1/sqrt(Ntracer) (~1 sigma for a Poisson distribution)
-Mgas = (data["data"]["density"] * data["data"]["dx"]**2).sum()
-Mtracer = data["particle"]["mass"].sum()
-Ntracer = data["particle"]["mass"].size
-
+Mgas = (rho * dx**2).sum()
+Mtracer = mp.sum()
+Ntracer = mp.size
 rtol = 1/np.sqrt(Ntracer)
+
+
+print('gas mass=', Mgas)
+print('tracer mass=', Mtracer)
 
 np.testing.assert_allclose(Mgas, Mtracer, rtol=rtol)
 
@@ -118,31 +122,29 @@ axes[1, 2].set_xlabel("x")
 axes[1, 2].set_ylabel(r"Dens. diff. ${\rho_\mathrm{gas}-\rho_\mathrm{tracer}}$")
 axes[1, 2].yaxis.tick_right()
 
-fig.savefig("sedov.pdf", bbox_inches="tight")
+fig.savefig("sedov-ito-tracers.pdf", bbox_inches="tight")
 
 # Check results against reference solution
 dt = {
-    k: v for k, v in data["particle"].items()
-    if k in ("family", "levelp", "mass", "position_x", "position_y", "tag")
+    "tracer_x": xp,
+    "tracer_y": yp,
+    "tracer_mass": mp,
+    "tracer_N": Ntracer,
+    "tracer_total_mass": Mtracer,
+    "tracer_vx": data["part"]["velocity"].x.values,
+    "tracer_vy": data["part"]["velocity"].y.values,
+    "tracer_family": data["part"]["family"].values,
+    "gas_total_mass": Mgas,
+    "gas_density": rho,
 }
 
-# Check both grid and tracer particles.
-# partp is left out on purpose: it is the index of the cell a tracer is
-# attached to (ncoarse + (ind-1)*ngridmax + igrid). The order of the grids
-# changes with refinement history, restart, etc. It doesn't carry any
-# physical meaning, only internal code indexing.
-to_check = data["data"]
-for key in data["particle"].keys():
-    if key == "partp":
-        continue
-    to_check["tracer_"+key] = data["particle"][key]
+dt["time"] = data.meta["time"].magnitude
 
-# TC: commented this since these values are so big that it didn't even pick
-#     up that the simulation crashed at restart.
 # Use a relative tolerance within ± 2 Poisson noise
 #rtol = {
-#    key: 2/np.sqrt(data["particle"]["identity"].size)
+#    key: 2/Ntracer
 #    for key in dt
 #}
 
-visu_ramses.check_solution(to_check, 'sedov')#, tolerance=rtol)
+import visu_ramses
+visu_ramses.check_solution(dt, 'sedov-ito-tracers')

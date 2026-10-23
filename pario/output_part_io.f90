@@ -146,7 +146,7 @@ subroutine backup_part_recv
         list_recv(src)=.true.
      else
         print *,'Error: unexpected message received by ',myid_world
-        call MPI_ABORT(MPI_COMM_WORLD,1,ierr)
+        call clean_stop
      end if
 
      ! Generate filename
@@ -162,7 +162,7 @@ subroutine backup_part_recv
      open(unit=ilun,file=trim(scratchdir)//trim(filename),form="unformatted",status="replace",action="write",iostat=ierr)
      if(ierr/=0)then
         print *,'Error: open file failed in backup_part_recv'
-        call MPI_ABORT(MPI_COMM_WORLD,1,ierr)
+        call clean_stop
      end if
 
      call MPI_RECV(xdp,2,MPI_DOUBLE_PRECISION,src,tag,MPI_COMM_IOGROUP,MPI_STATUS_IGNORE,ierr)
