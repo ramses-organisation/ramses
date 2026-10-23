@@ -937,7 +937,7 @@ subroutine cleanup_mg_level(ilevel)
             ! Locally owned AMR grids have canonical lookup_mg value zero.
             lookup_mg(cur_grid)=0
          else
-            ! Restore the remote AMR grid index saved in build_parent_comms_mg. 
+            ! Restore the remote AMR grid index saved in build_parent_comms_mg.
             lookup_mg(cur_grid)=-lookup_mg_backup(cur_grid)
          end if
       end do
