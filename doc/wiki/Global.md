@@ -19,6 +19,7 @@ More thorough explanations will be given in dedicated sections of the wiki.
 | `poisson=.false.`            |  `logical`    | Activate Poisson solver for self-gravity |
 | `hydro=.false.`              |  `logical`    | Activate hydro or MHD solver. |
 | `rt=.false.`                 |  `logical`    | Activate radiative transfer using CPU-based M1 solver. This solver works on the AMR grid. |
+| `cr=.false.`                 |  `logical`    | Carry cosmic rays in the run (requires a `DO_CR=1` build). Their evolution is switched on separately with `cr_advect` in `&CR_PARAMS`. |
 | `aton=.false.`               |  `logical`    | Activate radiative transfer using GPU-based M1 solver. This solver works only on unigrid at `levelmin`. |
 | `verbose=.false.`            |  `logical`    | Activate verbose mode. |
 | `cost_weighting=.true.`      |  `logical`    | Load balancing based on computational cost, not memory. This is rather expensive in term of memory usage. For memory limited runs, using `cost_weighting=.false.` is better. |

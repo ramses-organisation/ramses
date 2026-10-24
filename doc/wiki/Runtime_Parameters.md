@@ -96,4 +96,5 @@ TurbulenceDriving.md
 Tracers.md
 RHD_params.md
 RHD_groups.md
+CR_params.md
 ```

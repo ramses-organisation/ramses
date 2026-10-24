@@ -23,6 +23,12 @@ SOLVER = hydro
 PATCH =
 # Use RT? 1=Yes, 0=No
 RT = 0
+# Cosmic-ray physics: 1=on, 0=off. Two-moment CR transport (E_cr + F_cr per
+# group); requires SOLVER=mhd. NENER is deliberately NOT tied to CR (difference
+# from ramses_cral).
+DO_CR = 0
+# Number of CR groups (>=1 required when DO_CR=1)
+NCRGRP = 1
 # Use turbulence? 1=Yes, 0=No (requires fftw3)
 USE_TURB = 0
 # Use MPI? 1=Yes, 0=No
@@ -82,6 +88,24 @@ ifeq ($(OLD_MPI_SUPPORT),1)
 endif
 ifeq ($(RT),1)
    DEFINES += -DRT -DNIONS=$(NIONS) -DNGROUPS=$(NGROUPS)
+endif
+ifneq ($(origin CRPHYS),undefined)
+   $(error CRPHYS has been renamed to DO_CR; use DO_CR=1)
+endif
+ifneq ($(origin NCR_GROUPS),undefined)
+   $(error NCR_GROUPS has been renamed to NCRGRP; use NCRGRP=1)
+endif
+ifeq ($(DO_CR),1)
+   ifeq ($(NCRGRP),0)
+      $(error DO_CR=1 requires NCRGRP>=1)
+   endif
+   ifneq ($(NCRGRP),1)
+      $(error DO_CR=1 currently supports NCRGRP=1 only; multi-group CR transport is not implemented yet)
+   endif
+   ifneq ($(SOLVER),mhd)
+      $(error DO_CR=1 requires SOLVER=mhd: the CR closure and source terms need the magnetic field)
+   endif
+   DEFINES += -DDO_CR -DNCRGRP=$(NCRGRP)
 endif
 ifeq ($(USE_TURB),1)
    DEFINES += -DUSE_TURB
@@ -271,6 +295,9 @@ VPATH = $(PATCH):../$(SOLVER):../aton:
 ifeq ($(RT),1)
    VPATH += ../rt:
 endif
+ifeq ($(DO_CR),1)
+   VPATH += ../cr:
+endif
 ifeq ($(USE_TURB),1)
    VPATH += ../turb:
 endif
@@ -289,6 +316,9 @@ MODOBJ += poisson_commons.o hydro_parameters.o hydro_commons.o \
 ifeq ($(RT),1)
    MODOBJ += rt_parameters.o rt_hydro_commons.o coolrates_module.o \
              rt_spectra.o rt_cooling_module.o rt_flux_module.o
+endif
+ifeq ($(DO_CR),1)
+   MODOBJ += cr_parameters.o cr_hydro_commons.o cr_flux_module.o
 endif
 ifeq ($(USE_TURB),1)
    MODOBJ += turb_parameters.o turb_commons.o
@@ -323,6 +353,11 @@ RTOBJ = rt_init_hydro.o rt_init_xion.o rt_init.o rt_init_flow_fine.o \
         rt_output_hydro.o rt_godunov_fine.o rt_interpol_hydro.o \
         rt_godunov_utils.o rt_condinit.o rt_hydro_flag.o rt_hydro_boundary.o \
         rt_boundana.o rt_units.o
+# Cosmic-ray objects
+CROBJ = cr_read_params.o cr_init_hydro.o cr_godunov_utils.o cr_courant_fine.o cr_godunov_fine.o \
+        cr_hydro_boundary.o cr_boundana.o cr_condinit.o cr_init_flow_fine.o \
+        cr_interpol_hydro.o cr_hydro_flag.o cr_cooling_fine.o cr_output_hydro.o \
+        cr_cmpdt.o
 # Turbulence objects
 TURBOBJ = turb_force_utils.o read_turb_params.o init_turb.o mpi_share_turb_fields.o \
           turb_next_field.o turb_check_time.o write_turb_fields.o read_turb_fields.o \
@@ -334,6 +369,9 @@ sinclude $(PATCH)/Makefile
 AMRLIB = $(AMROBJ) $(HYDROOBJ) $(PMOBJ) $(POISSONOBJ)
 ifeq ($(RT),1)
    AMRLIB += $(RTOBJ)
+endif
+ifeq ($(DO_CR),1)
+   AMRLIB += $(CROBJ)
 endif
 ifeq ($(USE_TURB),1)
    AMRLIB += $(TURBOBJ)
