@@ -174,6 +174,7 @@ subroutine cmpdt(uu,gg,pp,dx,dt,ncell)
   use hydro_parameters
   use const
   implicit none
+  real(dp), external :: viscous_dt
   integer::ncell
   real(dp)::dx,dt
   real(dp),dimension(1:nvector,1:nvar)::uu

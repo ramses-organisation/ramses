@@ -55,11 +55,10 @@ ax[1].set_ylabel(r"$\rho$")
 error = np.abs(profile_vx - solution) / expected_amplitude
 data["data"]["error_wrt_analytical"] = error
 
-# Make sure that we are close enough to the analytical solution
-assert error.max() < 1e-3
-
-
 fig.savefig('visco-shear-wave-decay.pdf',bbox_inches='tight')
 
 # Check results against reference solution
 visu_ramses.check_solution(data["data"],'visco-shear-wave-decay', tolerance={"all":1e-10}, overwrite=False)
+
+# Make sure that we are close enough to the analytical solution
+assert error.max() < 1e-3
