@@ -32,11 +32,11 @@ describe them now
 :::{warning}
 The implementation of the artificial viscosity is recent (2026, PR [#259](https://github.com/ramses-organisation/ramses/pull/259)), so please report any unexpected behaviour.
 
-**Know limitations**
+**Known limitations**
 
 - It is an explicit source term. Momentum and energy are not conserved at coarse/fine level boundaries.
 - Large viscosities can significantly reduce the timestep and make the simulation more expensive.
-- In 1D and 2D, $v_y$ and $v_z$ are ignored.
+- In 1D, a 1D gas is modelled, so $v_y$ and $v_z$ are ignored. Shear viscosity has no effect, and `nu_viscosity_bulk` should be $> 0$. In 2D, $v_z$ is ignored.
 - An extra warning from Pierre Dumond's Phd thesis: the implemented `constant_uniform` corresponds to a constant kinematic vıscosity $\nu$.
 While this facilitates the characterisation of turbulence (through a single Reynolds number), kinetic theory predicts that it is the dynamical viscosity $\mu = \rho \nu$ that should instead remain approximately constant for isothermal flows (Landau and Lifshitz, 1987; White and Majdalani, 2022).
 :::
