@@ -3,6 +3,9 @@ subroutine courant_fine(ilevel)
   use hydro_commons
   use poisson_commons
   use mpi_mod
+#if USE_TURB==1
+  use turb_commons
+#endif
   implicit none
 #ifndef WITHOUTMPI
   integer::info
@@ -20,9 +23,9 @@ subroutine courant_fine(ilevel)
   real(dp)::dt_lev,dx,vol,scale
   real(kind=8)::mass_loc,ekin_loc,eint_loc,dt_loc
   real(kind=8)::mass_all,ekin_all,eint_all,dt_all
-  real(dp),dimension(1:nvector,1:nvar),save::uu
+  real(dp),dimension(1:nvector,1:nvar_all),save::uu
   real(dp),dimension(1:nvector,1:ndim),save::gg
-  real(dp),dimension(1:nvector)::pp
+  real(dp),dimension(1:nvector),save::pp
 
   if(numbtot(1,ilevel)==0)return
   if(verbose)write(*,111)ilevel
@@ -63,7 +66,7 @@ subroutine courant_fine(ilevel)
         end do
 
         ! Gather hydro variables
-        do ivar=1,nvar
+        do ivar=1,nvar_all
            do i=1,nleaf
               uu(i,ivar)=uold(ind_leaf(i),ivar)
            end do
@@ -79,6 +82,16 @@ subroutine courant_fine(ilevel)
            end do
         end if
 
+#if USE_TURB==1
+        if (driven_turb) then
+           do idim=1,ndim
+              do i=1,nleaf
+                 gg(i,idim)=gg(i,idim)+fturb(ind_leaf(i),idim)
+              end do
+           end do
+        end if
+#endif
+
         ! Compute total mass
         do i=1,nleaf
            mass_loc=mass_loc+uu(i,1)*vol
@@ -86,12 +99,12 @@ subroutine courant_fine(ilevel)
 
         ! Compute total energy
         do i=1,nleaf
-           ekin_loc=ekin_loc+uu(i,ndim+2)*vol
+           ekin_loc=ekin_loc+uu(i,neul)*vol
         end do
 
         ! Compute total internal energy
         do i=1,nleaf
-           eint_loc=eint_loc+uu(i,ndim+2)*vol
+           eint_loc=eint_loc+uu(i,neul)*vol
         end do
         do ivar=1,ndim
            do i=1,nleaf
@@ -101,14 +114,15 @@ subroutine courant_fine(ilevel)
 #if NENER>0
         do ivar=1,nener
            do i=1,nleaf
-              eint_loc=eint_loc-uu(i,ndim+2+ivar)*vol
+              eint_loc=eint_loc-uu(i,nhydro+ivar)*vol
            end do
         end do
 #endif
 
+        ! Gather stellar momentum
         if(momentum_feedback>0)then
            do i=1,nleaf
-             pp(i)=pstarold(ind_leaf(i))
+              pp(i)=pstarold(ind_leaf(i))
            end do
         endif
 
@@ -187,13 +201,13 @@ subroutine cmpdt(uu,gg,pp,dx,dt,ncell)
   ! Internal energy
   do idim = 1,ndim
      do k = 1, ncell
-        uu(k,ndim+2) = uu(k,ndim+2)-half*uu(k,1)*uu(k,idim+1)**2
+        uu(k,neul) = uu(k,neul)-half*uu(k,1)*uu(k,idim+1)**2
      end do
   end do
 #if NENER>0
   do irad = 1,nener
      do k = 1, ncell
-        uu(k,ndim+2) = uu(k,ndim+2)-uu(k,ndim+2+irad)
+        uu(k,neul) = uu(k,neul)-uu(k,nhydro+irad)
      end do
   end do
 #endif
@@ -201,12 +215,12 @@ subroutine cmpdt(uu,gg,pp,dx,dt,ncell)
   ! Debug
   if(debug)then
      do k = 1, ncell
-        if(uu(k,ndim+2).le.0.or.uu(k,1).le.smallr)then
+        if(uu(k,neul).le.0.or.uu(k,1).le.smallr)then
            write(*,*)'stop in cmpdt'
            write(*,*)'dx   =',dx
            write(*,*)'ncell=',ncell
            write(*,*)'rho  =',uu(k,1)
-           write(*,*)'P    =',uu(k,ndim+2)
+           write(*,*)'P    =',uu(k,neul)
            write(*,*)'vel  =',uu(k,2:ndim+1)
            stop
         end if
@@ -215,45 +229,45 @@ subroutine cmpdt(uu,gg,pp,dx,dt,ncell)
 
   ! Compute pressure
   do k = 1, ncell
-     uu(k,ndim+2) = max((gamma-one)*uu(k,ndim+2),uu(k,1)*smallp)
+     uu(k,neul) = max((gamma-one)*uu(k,neul),uu(k,1)*smallp)
   end do
 #if NENER>0
   do irad = 1,nener
      do k = 1, ncell
-        uu(k,ndim+2+irad) = (gamma_rad(irad)-one)*uu(k,ndim+2+irad)
+        uu(k,nhydro+irad) = (gamma_rad(irad)-1)*uu(k,nhydro+irad)
      end do
   end do
 #endif
 
   ! Compute sound speed
   do k = 1, ncell
-     uu(k,ndim+2) = gamma*uu(k,ndim+2)
+     uu(k,neul) = gamma*uu(k,neul)
   end do
-
 #if NENER>0
   do irad = 1,nener
      do k = 1, ncell
-        uu(k,ndim+2) = uu(k,ndim+2) + gamma_rad(irad)*uu(k,ndim+2+irad)
+        uu(k,neul) = uu(k,neul) + gamma_rad(irad)*uu(k,nhydro+irad)
      end do
   end do
 #endif
   do k = 1, ncell
-     uu(k,ndim+2)=sqrt(uu(k,ndim+2)/uu(k,1))
+     uu(k,neul)=sqrt(uu(k,neul)/uu(k,1))
   end do
 
   ! Compute wave speed
   do k = 1, ncell
-     uu(k,ndim+2)=dble(ndim)*uu(k,ndim+2)
+     uu(k,neul)=dble(ndim)*uu(k,neul)
   end do
   do idim = 1,ndim
      do k = 1, ncell
-        uu(k,ndim+2)=uu(k,ndim+2)+abs(uu(k,idim+1))
+        uu(k,neul)=uu(k,neul)+abs(uu(k,idim+1))
      end do
   end do
 
+  ! Add stellar momentum contribution
   if(momentum_feedback>0)then
      do k = 1, ncell
-       uu(k,ndim+2) = uu(k,ndim+2) + abs(pp(k)/uu(k,1))
+        uu(k,neul) = uu(k,neul) + abs(pp(k)/uu(k,1))
      end do
   endif
 
@@ -267,134 +281,139 @@ subroutine cmpdt(uu,gg,pp,dx,dt,ncell)
      end do
   end do
   do k = 1, ncell
-     uu(k,1)=uu(k,1)*dx/uu(k,ndim+2)**2
+     uu(k,1)=uu(k,1)*dx/uu(k,neul)**2
      uu(k,1)=MAX(uu(k,1),0.0001_dp)
   end do
 
   ! Compute maximum time step for each authorized cell
   dt = courant_factor*dx/smallc
   do k = 1,ncell
-     dtcell = dx/uu(k,ndim+2)*(sqrt(one+two*courant_factor*uu(k,1))-one)/uu(k,1)
+     dtcell = dx/uu(k,neul)*(sqrt(one+two*courant_factor*uu(k,1))-one)/uu(k,1)
      dt = min(dt,dtcell)
   end do
 
 end subroutine cmpdt
+!###########################################################
+!###########################################################
+!###########################################################
+!###########################################################
 
-subroutine check_cons(ilevel)
-  use amr_commons
-  use hydro_commons
-  use poisson_commons
-  use mpi_mod
-  implicit none
-#ifndef WITHOUTMPI
-  integer::info
-  real(kind=8),dimension(3)::comm_buffin,comm_buffout
-#endif
-  integer::ilevel
-  !----------------------------------------------------------------------
-  ! Check mass and energy conservation
-  !----------------------------------------------------------------------
-  integer::i,ivar,ind,ncache,igrid,iskip
-  integer::nleaf,ngrid
-  integer,dimension(1:nvector),save::ind_grid,ind_cell,ind_leaf
-
-  real(dp)::dx,vol
-  real(kind=8)::mass_loc,ekin_loc,eint_loc
-  real(kind=8)::mass_all,ekin_all,eint_all
-  real(dp),dimension(1:nvector,1:nvar),save::uu
-
-  if(numbtot(1,ilevel)==0)return
-  if(verbose)write(*,111)ilevel
-
-  mass_all=0.0d0; mass_loc=0.0d0
-  ekin_all=0.0d0; ekin_loc=0.0d0
-  eint_all=0.0d0; eint_loc=0.0d0
-
-  ! Mesh spacing at that level
-  dx=0.5D0**ilevel*boxlen
-  vol=dx**ndim
-
-  ! Loop over active grids by vector sweeps
-  ncache=active(ilevel)%ngrid
-  do igrid=1,ncache,nvector
-     ngrid=MIN(nvector,ncache-igrid+1)
-     do i=1,ngrid
-        ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
-     end do
-
-     ! Loop over cells
-     do ind=1,twotondim
-        iskip=ncoarse+(ind-1)*ngridmax
-        do i=1,ngrid
-           ind_cell(i)=ind_grid(i)+iskip
-        end do
-
-        ! Gather leaf cells
-        nleaf=0
-        do i=1,ngrid
-           if(son(ind_cell(i))==0)then
-              nleaf=nleaf+1
-              ind_leaf(nleaf)=ind_cell(i)
-           end if
-        end do
-
-        ! Gather hydro variables
-        do ivar=1,nvar
-           do i=1,nleaf
-              uu(i,ivar)=uold(ind_leaf(i),ivar)
-           end do
-        end do
-
-        ! Compute total mass
-        do i=1,nleaf
-           mass_loc=mass_loc+uu(i,1)*vol
-        end do
-
-        ! Compute total energy
-        do i=1,nleaf
-           ekin_loc=ekin_loc+uu(i,ndim+2)*vol
-        end do
-
-        ! Compute total internal energy
-        do i=1,nleaf
-           eint_loc=eint_loc+uu(i,ndim+2)*vol
-        end do
-        do ivar=1,ndim
-           do i=1,nleaf
-              eint_loc=eint_loc-0.5d0*uu(i,1+ivar)**2/max(uu(i,1),smallr)*vol
-           end do
-        end do
-#if NENER>0
-        do ivar=1,nener
-           do i=1,nleaf
-              eint_loc=eint_loc-uu(i,ndim+2+ivar)*vol
-           end do
-        end do
-#endif
-     end do
-     ! End loop over cells
-  end do
-  ! End loop over grids
-
-  ! Compute global quantities
-#ifndef WITHOUTMPI
-  comm_buffin(1)=mass_loc
-  comm_buffin(2)=ekin_loc
-  comm_buffin(3)=eint_loc
-  call MPI_ALLREDUCE(comm_buffin,comm_buffout,3,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
-  mass_all=comm_buffout(1)
-  ekin_all=comm_buffout(2)
-  eint_all=comm_buffout(3)
-#endif
-#ifdef WITHOUTMPI
-  mass_all=mass_loc
-  ekin_all=ekin_loc
-  eint_all=eint_loc
-#endif
-  mass_tot=mass_tot+mass_all
-  ekin_tot=ekin_tot+ekin_all
-  eint_tot=eint_tot+eint_all
-
-111 format('   Entering check_cons for level ',I2)
-
-end subroutine check_cons
+! TC: commented because unused by default
+!subroutine check_cons(ilevel)
+!  use amr_commons
+!  use hydro_commons
+!  use poisson_commons
+!  use mpi_mod
+!  implicit none
+!#ifndef WITHOUTMPI
+!  integer::info
+!  real(kind=8),dimension(3)::comm_buffin,comm_buffout
+!#endif
+!  integer::ilevel
+!  !----------------------------------------------------------------------
+!  ! Check mass and energy conservation
+!  !----------------------------------------------------------------------
+!  integer::i,ivar,ind,ncache,igrid,iskip
+!  integer::nleaf,ngrid
+!  integer,dimension(1:nvector),save::ind_grid,ind_cell,ind_leaf
+!
+!  real(dp)::dx,vol
+!  real(kind=8)::mass_loc,ekin_loc,eint_loc
+!  real(kind=8)::mass_all,ekin_all,eint_all
+!  real(dp),dimension(1:nvector,1:nvar),save::uu
+!
+!  if(numbtot(1,ilevel)==0)return
+!  if(verbose)write(*,111)ilevel
+!
+!  mass_all=0.0d0; mass_loc=0.0d0
+!  ekin_all=0.0d0; ekin_loc=0.0d0
+!  eint_all=0.0d0; eint_loc=0.0d0
+!
+!  ! Mesh spacing at that level
+!  dx=0.5D0**ilevel*boxlen
+!  vol=dx**ndim
+!
+!  ! Loop over active grids by vector sweeps
+!  ncache=active(ilevel)%ngrid
+!  do igrid=1,ncache,nvector
+!     ngrid=MIN(nvector,ncache-igrid+1)
+!     do i=1,ngrid
+!        ind_grid(i)=active(ilevel)%igrid(igrid+i-1)
+!     end do
+!
+!     ! Loop over cells
+!     do ind=1,twotondim
+!        iskip=ncoarse+(ind-1)*ngridmax
+!        do i=1,ngrid
+!           ind_cell(i)=ind_grid(i)+iskip
+!        end do
+!
+!        ! Gather leaf cells
+!        nleaf=0
+!        do i=1,ngrid
+!           if(son(ind_cell(i))==0)then
+!              nleaf=nleaf+1
+!              ind_leaf(nleaf)=ind_cell(i)
+!           end if
+!        end do
+!
+!        ! Gather hydro variables
+!        do ivar=1,nvar
+!           do i=1,nleaf
+!              uu(i,ivar)=uold(ind_leaf(i),ivar)
+!           end do
+!        end do
+!
+!        ! Compute total mass
+!        do i=1,nleaf
+!           mass_loc=mass_loc+uu(i,1)*vol
+!        end do
+!
+!        ! Compute total energy
+!        do i=1,nleaf
+!           ekin_loc=ekin_loc+uu(i,neul)*vol
+!        end do
+!
+!        ! Compute total internal energy
+!        do i=1,nleaf
+!           eint_loc=eint_loc+uu(i,neul)*vol
+!        end do
+!        do ivar=1,ndim
+!           do i=1,nleaf
+!              eint_loc=eint_loc-0.5d0*uu(i,1+ivar)**2/max(uu(i,1),smallr)*vol
+!           end do
+!        end do
+!#if NENER>0
+!        do ivar=1,nener
+!           do i=1,nleaf
+!              eint_loc=eint_loc-uu(i,nhydro+ivar)*vol
+!           end do
+!        end do
+!#endif
+!     end do
+!     ! End loop over cells
+!  end do
+!  ! End loop over grids
+!
+!  ! Compute global quantities
+!#ifndef WITHOUTMPI
+!  comm_buffin(1)=mass_loc
+!  comm_buffin(2)=ekin_loc
+!  comm_buffin(3)=eint_loc
+!  call MPI_ALLREDUCE(comm_buffin,comm_buffout,3,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
+!  mass_all=comm_buffout(1)
+!  ekin_all=comm_buffout(2)
+!  eint_all=comm_buffout(3)
+!#endif
+!#ifdef WITHOUTMPI
+!  mass_all=mass_loc
+!  ekin_all=ekin_loc
+!  eint_all=eint_loc
+!#endif
+!  mass_tot=mass_tot+mass_all
+!  ekin_tot=ekin_tot+ekin_all
+!  eint_tot=eint_tot+eint_all
+!
+!111 format('   Entering check_cons for level ',I2)
+!
+!end subroutine check_cons
