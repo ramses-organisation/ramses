@@ -296,7 +296,7 @@ subroutine read_hydro_params(nml_ok)
      case('constant_uniform')
       if (nu_viscosity_bulk + nu_viscosity_shear * (ndim - 1) == 0 &
           & .or. nu_viscosity_bulk < 0 .or. nu_viscosity_shear < 0) then
-         if(myid==1)write(*,*)'nu_viscosity_bulk + nu_viscosity_shear should be > 0 and both positive'
+         if(myid==1)write(*,*)'nu_viscosity_bulk + nu_viscosity_shear * (ndim - 1) should be > 0 and both ≥ 0'
          nml_ok=.false.
       end if
 
