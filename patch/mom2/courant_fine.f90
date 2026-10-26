@@ -292,6 +292,11 @@ subroutine cmpdt(uu,gg,pp,dx,dt,ncell)
      dt = min(dt,dtcell)
   end do
 
+  ! Maximum time step from viscosity
+  if (add_viscosity) then
+      dt = min(dt, viscous_dt(dx))
+  end if
+
 end subroutine cmpdt
 !###########################################################
 !###########################################################
