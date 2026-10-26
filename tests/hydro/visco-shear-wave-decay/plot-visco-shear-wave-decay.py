@@ -55,6 +55,9 @@ ax[1].set_ylabel(r"$\rho$")
 error = np.abs(profile_vx - solution) / expected_amplitude
 data["data"]["error_wrt_analytical"] = error
 
+# Make sure that we are close enough to the analytical solution
+assert error.max() < 1e-3
+
 
 fig.savefig('visco-shear-wave-decay.pdf',bbox_inches='tight')
 
