@@ -122,7 +122,57 @@ subroutine create_sink
   ! Compute and print accretion rates
   if(hydro)call compute_accretion_rate(.true.)
 
+  ! Move the AGN feedback budget to the levels that now hold cloud particles
+  if(hydro.and.agn)call regrid_agn_reservoir
+
 end subroutine create_sink
+!################################################################
+!################################################################
+!################################################################
+!################################################################
+subroutine regrid_agn_reservoir
+  use pm_commons
+  use amr_commons
+  implicit none
+  !----------------------------------------------------------------------------
+  ! The AGN feedback budget is kept per level (delta_mass_lev), because the
+  ! feedback can only be deposited by the cloud particles of the level being
+  ! updated. Called once per coarse step, after the accretion zone averages
+  ! have been recomputed: the budget left on levels that no longer hold cloud
+  ! particles is moved to the levels that do, in proportion to their cloud
+  ! volume, keeping a pending release.
+  !----------------------------------------------------------------------------
+  integer::isink,lev
+  real(dp)::stranded,vtot
+  logical::pending
+
+  do isink=1,nsink
+     stranded=0d0; vtot=0d0; pending=.false.
+     do lev=levelmin,nlevelmax
+        if(weighted_volume(isink,lev)>0d0)then
+           vtot=vtot+weighted_volume(isink,lev)
+        else
+           stranded=stranded+delta_mass_lev(isink,lev)
+           pending=pending.or.ok_blast_agn_lev(isink,lev)
+           delta_mass_lev(isink,lev)=0d0
+           ok_blast_agn_lev(isink,lev)=.false.
+        end if
+     end do
+     if(vtot<=0d0)then
+        ! No cloud particles yet: keep the budget on levelmin
+        delta_mass_lev(isink,levelmin)=delta_mass_lev(isink,levelmin)+stranded
+     else
+        do lev=levelmin,nlevelmax
+           if(weighted_volume(isink,lev)>0d0)then
+              delta_mass_lev(isink,lev)=delta_mass_lev(isink,lev)+stranded*weighted_volume(isink,lev)/vtot
+              if(pending.and.stranded>0d0)ok_blast_agn_lev(isink,lev)=.true.
+           end if
+        end do
+     end if
+     delta_mass(isink)=sum(delta_mass_lev(isink,levelmin:nlevelmax))
+  end do
+
+end subroutine regrid_agn_reservoir
 !##############################################################################
 !##############################################################################
 !##############################################################################
@@ -767,12 +817,44 @@ subroutine grow_sink(ilevel,on_creation)
   integer::igrid,jgrid,ipart,jpart,next_part
   integer::ig,ip,npart1,npart2,icpu,isink,lev
   integer,dimension(1:nvector)::ind_grid,ind_part,ind_grid_part
+  real(dp)::mdot_fbk,frac_lev
 
   if(accretion_scheme=='none'.and.(.not.on_creation))return
   if(verbose)write(*,111)ilevel
 
   ! Compute sink accretion rates
   call compute_accretion_rate(.false.)
+
+  ! AGN feedback reservoir. The feedback can only be deposited by the cloud
+  ! particles of the level being updated, so the budget is kept per level:
+  ! add the mass accreted in this level step, then, once ok_blast_agn is set,
+  ! flag a release on every level holding cloud particles. A level releases its
+  ! whole budget at its next update (accrete_sink) and is emptied only then, so
+  ! all the accreted mass is used for feedback, for any T2_min.
+  if(agn.and.(.not.on_creation))then
+     do isink=1,nsink
+        if(bondi_accretion.and.volume_gas(isink)>0d0.and.weighted_volume(isink,ilevel)>0d0)then
+           if(mass_smbh_seed>0.0)then
+              mdot_fbk=dMsmbh_overdt(isink)
+           else
+              mdot_fbk=dMsink_overdt(isink)
+           end if
+           ! Fraction of the accretion done by the cloud particles of this level
+           if(agn_acc_method=='mass')then
+              frac_lev=0d0
+              if(rho_gas(isink)>0d0)frac_lev=weighted_density(isink,ilevel)/(rho_gas(isink)*volume_gas(isink))
+           else
+              frac_lev=weighted_volume(isink,ilevel)/volume_gas(isink)
+           end if
+           delta_mass_lev(isink,ilevel)=delta_mass_lev(isink,ilevel)+max(mdot_fbk,0d0)*dtnew(ilevel)*frac_lev
+        end if
+        if(ok_blast_agn(isink))then
+           do lev=levelmin,nlevelmax
+              if(weighted_volume(isink,lev)>0d0)ok_blast_agn_lev(isink,lev)=.true.
+           end do
+        end if
+     end do
+  end if
 
   ! Reset new sink variables
   msink_new=0d0; msmbh_new=0d0; dmfsink_new=0d0
@@ -879,8 +961,14 @@ subroutine grow_sink(ilevel,on_creation)
      end if
 
      ! Store accreted mass
-     if (agn.and.ok_blast_agn(isink))then
-        delta_mass(isink)=delta_mass_all(isink) ! only the most recent accretion
+     if (agn)then
+        ! The release of this level was done in accrete_sink: empty its reservoir
+        if((.not.on_creation).and.ok_blast_agn_lev(isink,ilevel).and.weighted_volume(isink,ilevel)>0d0)then
+           delta_mass_lev(isink,ilevel)=0d0
+           ok_blast_agn_lev(isink,ilevel)=.false.
+        end if
+        ! Total pending budget (used by the T2_min test)
+        delta_mass(isink)=sum(delta_mass_lev(isink,levelmin:nlevelmax))
      else
         delta_mass(isink)=delta_mass(isink)+delta_mass_all(isink)
      end if
@@ -939,7 +1027,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
   real(dp),dimension(1:ndim)::vv
 
   real(dp),dimension(1:ndim)::r_rel,v_rel,x_acc,p_acc,l_acc
-  real(dp)::fbk_ener_AGN,fbk_mom_AGN,r_len
+  real(dp)::fbk_ener_AGN,fbk_mom_AGN,r_len,dm_fbk,dm_acc_fbk
   logical,dimension(1:ndim)::period
 
   real(dp)::tan_theta,cone_dist,orth_dist
@@ -1074,6 +1162,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
                  m_acc_smbh = 0.
               end if
 
+              dm_fbk=0d0
               if(agn.and.msink(isink).gt.0)then
                  if(mass_smbh_seed>0.0)then
                     acc_ratio=dMsmbh_overdt(isink)/(4d0*pi*factG_in_cgs*msmbh(isink)*mH/(0.1d0*sigma_T*c_cgs)*scale_t)
@@ -1092,13 +1181,17 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
                     end if
                  end if
                  v_AGN = (2*0.1d0*epsilon_kin/kin_mass_loading)**0.5d0*c_cgs ! in cm/s
-                 if (agn_inj_method=='mass') then
-                    fbk_ener_AGN=AGN_fbk_frac_ener*min(delta_mass(isink)*T2_AGN/scale_T2*weight/volume*d/density,T2_max/scale_T2*weight*d)
-                    fbk_mom_AGN=AGN_fbk_frac_mom*min(kin_mass_loading*delta_mass(isink)*v_AGN/scale_v*weight/volume*d/density/(1d0-cos(pi/180*cone_opening/2)),v_max*1d5/scale_v*weight*d)
-                 else if (agn_inj_method=='volume') then
-                    fbk_ener_AGN=AGN_fbk_frac_ener*min(delta_mass(isink)*T2_AGN/scale_T2*weight/volume,T2_max/scale_T2*weight*d)
-                    fbk_mom_AGN=AGN_fbk_frac_mom*min(kin_mass_loading*delta_mass(isink)*v_AGN/scale_v*weight/volume/(1d0-cos(pi/180*cone_opening/2)),v_max*1d5/scale_v*weight*d)
-                 endif
+                 ! Share of this cloud particle in the release of the level reservoir
+                 ! (zero unless a release is pending on this level)
+                 if(ok_blast_agn_lev(isink,ilevel))then
+                    if (agn_inj_method=='mass') then
+                       if(weighted_density(isink,ilevel)>0d0)dm_fbk=delta_mass_lev(isink,ilevel)*weight*d/weighted_density(isink,ilevel)
+                    else if (agn_inj_method=='volume') then
+                       if(weighted_volume(isink,ilevel)>0d0)dm_fbk=delta_mass_lev(isink,ilevel)*weight/weighted_volume(isink,ilevel)
+                    endif
+                 end if
+                 fbk_ener_AGN=AGN_fbk_frac_ener*min(dm_fbk*T2_AGN/scale_T2,T2_max/scale_T2*weight*d)
+                 fbk_mom_AGN=AGN_fbk_frac_mom*min(kin_mass_loading*dm_fbk*v_AGN/scale_v/(1d0-cos(pi/180*cone_opening/2)),v_max*1d5/scale_v*weight*d)
               end if
            end if
 
@@ -1122,10 +1215,11 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
            vsink_new(isink,1:ndim)=vsink_new(isink,1:ndim)+p_acc(1:ndim)
            lsink_new(isink,1:ndim)=lsink_new(isink,1:ndim)+l_acc(1:ndim)
            if(mass_smbh_seed>0.0)then
-              delta_mass_new(isink)=delta_mass_new(isink)+m_acc_smbh
+              dm_acc_fbk=m_acc_smbh
            else
-              delta_mass_new(isink)=delta_mass_new(isink)+m_acc
+              dm_acc_fbk=m_acc
            end if
+           delta_mass_new(isink)=delta_mass_new(isink)+dm_acc_fbk
 
            m_acc=m_acc+m_acc_smbh
            ! Accrete mass, momentum and gas total energy
@@ -1144,7 +1238,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
            ! Can deposit thermal dump or/and momentum kicks (and/or radiation if RT used).
            if( .not. on_creation)then
               if(agn)then
-                 if(ok_blast_agn(isink).and.delta_mass(isink)>0.0)then
+                 if(dm_fbk>0.0)then
                     if(AGN_fbk_frac_ener.gt.0.0)then ! thermal AGN feedback
                        unew(indp(j,ind),neul)=unew(indp(j,ind),neul)+fbk_ener_AGN/vol_loc
                     end if
@@ -1162,9 +1256,10 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
                  end if
 #ifdef RT
                  if(rt_AGN)then
-                    dert=0.1d0*delta_mass(isink)*(c_cgs/scale_v)**2
+                    ! Radiation from the mass accreted by this cloud particle in this step
+                    dert=0.1d0*dm_acc_fbk*(c_cgs/scale_v)**2
                     do igroup=1,nGroups
-                       Np_inj=dert * group_egy_AGNfrac(igroup) / (scale_evtocode*group_egy(igroup)) / (vol_loc*scale_vol) / scale_Np*weight/volume
+                       Np_inj=dert * group_egy_AGNfrac(igroup) / (scale_evtocode*group_egy(igroup)) / (vol_loc*scale_vol) / scale_Np
                        rtunew(indp(j,ind),iGroups(igroup))=rtunew(indp(j,ind),iGroups(igroup))+Np_inj
                     enddo
                  end if
@@ -2031,6 +2126,8 @@ subroutine update_sink(ilevel)
                  msmbh(isink)        = msmbh(isink)+msmbh(jsink)
                  dmfsink(isink)      = dmfsink(isink)+dmfsink(jsink)
                  delta_mass(isink)   = delta_mass(isink)+delta_mass(jsink)
+                 delta_mass_lev(isink,:)=delta_mass_lev(isink,:)+delta_mass_lev(jsink,:)
+                 ok_blast_agn_lev(isink,:)=ok_blast_agn_lev(isink,:).or.ok_blast_agn_lev(jsink,:)
                  xsink(isink,1:ndim) = xcom(1:ndim)
                  vsink(isink,1:ndim) = vcom(1:3)
                  lsink(isink,1:ndim) = lcom(1:ndim)+lsink(isink,1:ndim)+lsink(jsink,1:ndim)
@@ -2048,6 +2145,8 @@ subroutine update_sink(ilevel)
                  dmfsink(jsink)=0
                  msum_overlap(jsink)=0
                  delta_mass(jsink)=0
+                 delta_mass_lev(jsink,:)=0d0
+                 ok_blast_agn_lev(jsink,:)=.false.
 
                  ! check whether there are stellar particles attached to the merged in sink
                  if(stellar)then
@@ -2366,6 +2465,8 @@ subroutine clean_merged_sinks
            idsink(j)=idsink(j+1)
            msum_overlap(j)=msum_overlap(j+1)
            delta_mass(j)=delta_mass(j+1)
+           delta_mass_lev(j,:)=delta_mass_lev(j+1,:)
+           ok_blast_agn_lev(j,:)=ok_blast_agn_lev(j+1,:)
         end do
 
         ! Whipe last position in the sink list
@@ -2380,6 +2481,8 @@ subroutine clean_merged_sinks
         idsink(nsink+1)=0
         msum_overlap(nsink+1)=0d0
         delta_mass(nsink+1)=0d0
+        delta_mass_lev(nsink+1,:)=0d0
+        ok_blast_agn_lev(nsink+1,:)=.false.
      else
         i=i+1
      end if
@@ -3159,6 +3262,8 @@ subroutine synchronize_sink_info
   call MPI_BCAST(vsink,    3*nsinkmax, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, info)
   call MPI_BCAST(lsink,    3*nsinkmax, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, info)
   call MPI_BCAST(delta_mass, nsinkmax, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, info)
+  call MPI_BCAST(delta_mass_lev, nsinkmax*nlevelmax, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, info)
+  call MPI_BCAST(ok_blast_agn_lev, nsinkmax*nlevelmax, MPI_LOGICAL, 0, MPI_COMM_WORLD, info)
   call MPI_BCAST(idsink,     nsinkmax, MPI_INTEGER,          0, MPI_COMM_WORLD, info)
   call MPI_BCAST(tsink,      nsinkmax, MPI_DOUBLE_PRECISION, 0, MPI_COMM_WORLD, info)
   call MPI_BCAST(new_born,   nsinkmax, MPI_LOGICAL,          0, MPI_COMM_WORLD, info)
