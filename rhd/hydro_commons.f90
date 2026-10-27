@@ -2,6 +2,7 @@ module hydro_commons
   use amr_parameters
   use hydro_parameters
   real(dp),allocatable,dimension(:,:)::uold,unew ! State vector and its update
+  real(dp),allocatable,dimension(:,:)::fluxes ! Mass flux on the faces of the cells
   real(dp),allocatable,dimension(:)::pstarold,pstarnew ! Stellar momentum and its update
   real(dp),allocatable,dimension(:)::divu,enew ! Non conservative variables
   real(dp),allocatable,dimension(:)::rho_eq,p_eq ! Strict hydrostatic equilibrium

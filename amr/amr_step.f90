@@ -410,6 +410,11 @@ recursive subroutine amr_step(ilevel,icount)
         call add_pdv_source_terms(ilevel)
      endif
 
+     ! Add viscous source terms to unew
+     if(add_viscosity)then
+        call add_viscous_stress_terms(ilevel)
+     endif
+
      ! Set uold equal to unew
                                call timer('hydro - set uold','start')
      call set_uold(ilevel)
@@ -567,7 +572,7 @@ recursive subroutine amr_step(ilevel,icount)
   end if
 
   ! Reset move flag flag
-  if(MC_tracer) then
+  if(MC_tracer .and. .not. ito_tracer) then
                                 call timer('tracer','start')
      ! Decrease the move flag by 1
      call reset_tracer_move_flag(ilevel)

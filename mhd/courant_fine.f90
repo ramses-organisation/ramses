@@ -189,6 +189,7 @@ subroutine cmpdt(uu,gg,dx,dt,ncell)
   use hydro_parameters
   use const
   implicit none
+  real(dp), external :: viscous_dt
   integer::ncell
   real(dp)::dx,dt
   real(dp),dimension(1:nvector,1:nvar+3)::uu
@@ -286,6 +287,12 @@ subroutine cmpdt(uu,gg,dx,dt,ncell)
      dtcell=dx/ctot(k)*(sqrt(one+two*courant_factor*rho(k))-one)/rho(k)
      dt = min(dt,dtcell)
   end do
+
+
+  ! Maximum time step from viscosity
+  if (add_viscosity) then
+     dt = min(dt, viscous_dt(dx))
+  end if
 
 end subroutine cmpdt
 !#########################################################
