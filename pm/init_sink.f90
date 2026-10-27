@@ -110,6 +110,8 @@ subroutine init_sink
   allocate(xmsink(1:nsinkmax))
   allocate(delta_mass_new(1:nsinkmax),delta_mass_all(1:nsinkmax))
   allocate(ok_blast_agn(1:nsinkmax),ok_blast_agn_all(1:nsinkmax))
+  allocate(delta_mass_lev(1:nsinkmax,1:nlevelmax),ok_blast_agn_lev(1:nsinkmax,1:nlevelmax))
+  delta_mass_lev=0d0; ok_blast_agn_lev=.false.
   allocate(direct_force_sink(1:nsinkmax))
   direct_force_sink=.false.
   allocate(new_born(1:nsinkmax),new_born_all(1:nsinkmax),new_born_new(1:nsinkmax))
@@ -320,6 +322,10 @@ subroutine init_sink
              vsink(isink,1:ndim),lsink(isink,1:ndim)
      end do
   end if
+
+  ! The pending AGN feedback budget read from the restart file is put on levelmin;
+  ! regrid_agn_reservoir moves it to the levels holding cloud particles.
+  if(nsink>0)delta_mass_lev(1:nsink,levelmin)=max(delta_mass(1:nsink),0d0)
 
   ! Set direct force boolean
   if(mass_sink_direct_force .ge. 0.0)then
