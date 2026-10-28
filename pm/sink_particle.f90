@@ -898,7 +898,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
   use amr_commons
   use pm_commons
   use hydro_commons
-  use constants, only: pi, twopi, c_cgs, factG_in_cgs, M_sun, mH, sigma_t, ev2erg
+  use constants, only: pi, twopi, c_cgs, factG_in_cgs, M_sun, mH, sigma_t, ev2erg, Myr2sec
 #ifdef RT
   use rt_hydro_commons,only: rtunew
   use rt_parameters,only: nGroups, iGroups, group_egy, rt_AGN, group_egy_AGNfrac
@@ -945,6 +945,10 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
   real(dp)::tan_theta,cone_dist,orth_dist
   real(dp),dimension(1:ndim)::cone_dir
   real(dp)::acc_ratio,v_AGN
+  real(dp)::e_int,cgas,vnorm_rel,mach,mach_factor,alpha,fudge,factor,max_factor
+  real(dp)::ddt,Deltat,dvdrag_norm,r_grav,dx_drag
+  real(dp),dimension(1:ndim)::vrel,dvdrag,v_sink_drag,vv_drag
+  integer::counter
 
   ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
@@ -957,6 +961,7 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
   ! Gravitational constant
   factG=1d0
   if(cosmo)factG=3d0/4d0/twopi*omega_m*aexp
+  fudge=2d0*twopi*factG**2
 
   ! Mesh spacing in that level
   dx=0.5D0**ilevel
@@ -970,6 +975,9 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
   ! Compute volume of each cloud particle
   dx_cloud=dx_min/2 ! factor of 2 hard-coded
   vol_cloud=dx_cloud**ndim
+
+  ! Finest cell size for the gas friction switch on test
+  dx_drag=scale*0.5d0**nlevelmax/aexp
 
 #ifdef RT
   call rt_units(scale_Np, scale_Fp)
@@ -1138,6 +1146,51 @@ subroutine accrete_sink(ind_grid,ind_part,ind_grid_part,ng,np,ilevel,on_creation
            do ivar=imetal,nvar
               unew(indp(j,ind),ivar)=unew(indp(j,ind),ivar)-m_acc*uold(indp(j,ind),ivar)/d/vol_loc
            end do
+           ! Gas dynamical friction, see Ostriker 1999 and Chapon et al. 2013
+           ! Only when the Bondi Hoyle radius is unresolved
+           if(drag_gas .and. (.not.on_creation) .and. mp(ind_part(j))>0d0)then
+              r_grav=factG*msink(isink)/(c2sink(isink)+sum((vel_gas(isink,1:ndim)-vsink(isink,1:ndim))**2))
+              if(r_grav<=0.2d0*dx_drag)then
+                 e_int=max(e-0.5d0*sum(vv(1:ndim)**2),0d0)
+                 cgas=max(sqrt(gamma*(gamma-1d0)*e_int),smallc)
+                 alpha=max((d/(boost_threshold_density/scale_nH))**boost_drag,1d0)
+                 v_sink_drag(1:ndim)=vsink(isink,1:ndim)
+                 vv_drag(1:ndim)=vv(1:ndim)
+                 Deltat=0d0; counter=0
+                 do while ((Deltat .lt. dtnew(ilevel)) .and. (counter .le. 10))
+                    ddt=dtnew(ilevel)-Deltat
+                    vrel(1:ndim)=v_sink_drag(1:ndim)-vv_drag(1:ndim)
+                    vnorm_rel=max(sqrt(sum(vrel(1:ndim)**2)),smallc)
+                    mach=vnorm_rel/cgas
+                    mach_factor=1d0
+                    if(mach<=0.950d0)then
+                       mach_factor=mach_factor/mach**2*(0.5d0*log((1d0+mach)/(1d0-mach))-mach)
+                    else if(mach>=1.007d0)then
+                       mach_factor=mach_factor/mach**2*(0.5d0*log(mach**2-1d0)+3.2d0)
+                    end if
+                    factor=mach_factor*alpha*fudge*d*msink(isink)/cgas**2/vnorm_rel
+                    dvdrag_norm=factor*ddt*vnorm_rel
+                    if((dvdrag_norm/vnorm_rel .ge. 0.1) .and. (counter .le. 9))then
+                       ddt=0.1/(dvdrag_norm/vnorm_rel)*ddt
+                    end if
+                    max_factor=1/ddt
+                    if(adfmax>0d0)then
+                       max_factor=min(adfmax*1d5/scale_v*(scale_t/Myr2sec)/vnorm_rel,max_factor)
+                    end if
+                    factor=min(max_factor,factor)
+                    dvdrag(1:ndim)=-factor*vrel(1:ndim)*ddt
+                    vsink_new(isink,1:ndim)=vsink_new(isink,1:ndim)+mp(ind_part(j))*vol(j,ind)*dvdrag(1:ndim)
+                    v_sink_drag(1:ndim)=v_sink_drag(1:ndim)+dvdrag(1:ndim)
+                    vv_drag(1:ndim)=vv_drag(1:ndim)-mp(ind_part(j))*vol(j,ind)*dvdrag(1:ndim)/(d*vol_loc)
+                    Deltat=Deltat+ddt
+                    counter=counter+1
+                 end do
+                 ! The gas takes the opposite momentum, its internal energy is unchanged
+                 unew(indp(j,ind),2:ndim+1)=unew(indp(j,ind),2:ndim+1)+d*(vv_drag(1:ndim)-vv(1:ndim))
+                 unew(indp(j,ind),neul)=unew(indp(j,ind),neul)+0.5d0*d*(sum(vv_drag(1:ndim)**2)-sum(vv(1:ndim)**2))
+              end if
+           end if
+
 
            ! AGN feedback
            ! Only for sinks that could accrete.
@@ -1766,6 +1819,15 @@ subroutine make_sink_from_clump(ilevel)
         fsink_partial(isink,1:ndim,levelmin:nlevelmax)=0.0
         vsold(isink,1:ndim,ilevel)=vsink_all(isink,1:ndim)
         vsnew(isink,1:ndim,ilevel)=vsink_all(isink,1:ndim)
+        if(drag_part)then
+           v_DF(isink,levelmin:nlevelmax,1,1:2)=vsink_all(isink,1)
+           v_DF(isink,levelmin:nlevelmax,2,1:2)=vsink_all(isink,2)
+           v_DF(isink,levelmin:nlevelmax,3,1:2)=vsink_all(isink,3)
+           mass_DF(isink,levelmin:nlevelmax,1:2)=0d0
+           mass_lowspeed(isink,levelmin:nlevelmax,1:2)=0d0
+           fact_fast(isink,levelmin:nlevelmax,1:2)=0d0
+        end if
+
      endif
   end do
 #endif
@@ -2027,6 +2089,13 @@ subroutine update_sink(ilevel)
                  end do
 
                  ! Compute merged quantities
+                 ! Keep the dynamical friction history of the more massive sink
+                 if(drag_part .and. msink(jsink)>msink(isink))then
+                    v_DF(isink,levelmin:nlevelmax,1:ndim,1:2)=v_DF(jsink,levelmin:nlevelmax,1:ndim,1:2)
+                    mass_DF(isink,levelmin:nlevelmax,1:2)=mass_DF(jsink,levelmin:nlevelmax,1:2)
+                    mass_lowspeed(isink,levelmin:nlevelmax,1:2)=mass_lowspeed(jsink,levelmin:nlevelmax,1:2)
+                    fact_fast(isink,levelmin:nlevelmax,1:2)=fact_fast(jsink,levelmin:nlevelmax,1:2)
+                 end if
                  msink(isink)        = mcom
                  msmbh(isink)        = msmbh(isink)+msmbh(jsink)
                  dmfsink(isink)      = dmfsink(isink)+dmfsink(jsink)
@@ -2366,6 +2435,12 @@ subroutine clean_merged_sinks
            idsink(j)=idsink(j+1)
            msum_overlap(j)=msum_overlap(j+1)
            delta_mass(j)=delta_mass(j+1)
+           if(drag_part)then
+              v_DF(j,levelmin:nlevelmax,1:ndim,1:2)=v_DF(j+1,levelmin:nlevelmax,1:ndim,1:2)
+              mass_DF(j,levelmin:nlevelmax,1:2)=mass_DF(j+1,levelmin:nlevelmax,1:2)
+              mass_lowspeed(j,levelmin:nlevelmax,1:2)=mass_lowspeed(j+1,levelmin:nlevelmax,1:2)
+              fact_fast(j,levelmin:nlevelmax,1:2)=fact_fast(j+1,levelmin:nlevelmax,1:2)
+           end if
         end do
 
         ! Whipe last position in the sink list
@@ -2380,6 +2455,12 @@ subroutine clean_merged_sinks
         idsink(nsink+1)=0
         msum_overlap(nsink+1)=0d0
         delta_mass(nsink+1)=0d0
+        if(drag_part)then
+           v_DF(nsink+1,levelmin:nlevelmax,1:ndim,1:2)=0d0
+           mass_DF(nsink+1,levelmin:nlevelmax,1:2)=0d0
+           mass_lowspeed(nsink+1,levelmin:nlevelmax,1:2)=0d0
+           fact_fast(nsink+1,levelmin:nlevelmax,1:2)=0d0
+        end if
      else
         i=i+1
      end if
@@ -2677,7 +2758,8 @@ subroutine read_sink_params()
        clump_core,verbose_AGN,T2_AGN,T2_min,cone_opening,mass_halo_AGN,mass_clump_AGN,mass_star_AGN,&
        AGN_fbk_frac_ener,AGN_fbk_frac_mom,T2_max,v_max,boost_threshold_density,&
        epsilon_kin,AGN_fbk_mode_switch_threshold,kin_mass_loading,bondi_use_vrel,smbh,agn,max_mass_nsc,&
-       agn_acc_method,agn_inj_method,sink_descent,gamma_grad_descent,fudge_graddescent
+       agn_acc_method,agn_inj_method,sink_descent,gamma_grad_descent,fudge_graddescent,&
+       drag_gas,drag_part,DF_ncells,boost_drag,boost_drag_part,adfmax
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
 
   if(.not.cosmo) call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
@@ -3165,6 +3247,319 @@ subroutine synchronize_sink_info
 
 end subroutine synchronize_sink_info
 #endif
+!##############################################################################
+!##############################################################################
+!##############################################################################
+!##############################################################################
+
+subroutine get_drag_part(ilevel)
+  !------------------------------------------------------------------------
+  ! Hugo Pfister
+  ! This routine computes the drag from collisionless particles
+  ! onto sink particles.
+  ! We distinguish stars and DM: index 2 is DM - 1 is stars
+  ! NOTE: this routine is not vectorized
+  !------------------------------------------------------------------------
+  use pm_commons
+  use amr_commons
+  use hydro_commons
+  use constants, only: pi, c_cgs
+  use poisson_commons, only: cic_levelmax
+  use mpi_mod
+  implicit none
+#ifndef WITHOUTMPI
+  integer::info
+#endif
+
+  integer::ilevel
+
+  integer :: icpu, igrid, next_part, nx_loc, jgrid
+  integer :: npart1, isink, ipart, jpart, idim, itype
+  integer :: ii,nsink_cell
+
+  real(dp) :: factG, c, dx_min, scale, r2_cloud, vol_cloud, alpha
+  real(dp) :: scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2
+  real(dp) :: b90, Rsh, bmin, CoulombLog, factor
+  real(dp) :: dx_dm, r2_dm, vol_dm, rmax_dm, d2_sink_part
+  real(dp) :: vrel_part_norm, volume, xc,yc,zc
+  real(dp) :: rmax, dx, dx2cell_sink
+  real(dp),dimension(1:3)::skip_loc
+
+  integer, dimension(1:nsinkmax)::sink_cell
+#if NDIM==3
+  if(numbtot(1,ilevel)==0)return
+  if(verbose)write(*,*) 'Entering get_drag_part for level', ilevel
+
+  ! Conversion factor from user units to cgs units
+  call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
+  nx_loc=(icoarse_max-icoarse_min+1)
+  scale=boxlen/dble(nx_loc)
+  dx = scale*0.5d0**ilevel/aexp
+  dx_min=scale*0.5d0**nlevelmax/aexp
+  rmax = DF_ncells*dx_min
+  r2_cloud = rmax**2
+  vol_cloud = 4d0/3d0*pi*(rmax)**3
+
+  if (cic_levelmax.gt.0) then
+    dx_dm = scale*0.5d0**cic_levelmax/aexp
+  else
+    dx_dm = dx_min
+  end if
+  rmax_dm = DF_ncells*dx_dm
+  r2_dm = rmax_dm**2
+  vol_dm = 4d0/3d0*pi*rmax_dm**3
+  dx2cell_sink = (2*max(dx, rmax_dm)+rmax_dm)**2
+
+  skip_loc=(/0.0d0,0.0d0,0.0d0/)
+  if(ndim>0)skip_loc(1)=dble(icoarse_min)
+  if(ndim>1)skip_loc(2)=dble(jcoarse_min)
+  if(ndim>2)skip_loc(3)=dble(kcoarse_min)
+
+  factG=1
+  if(cosmo)factG=3d0/8d0/pi*omega_m*aexp
+  c=c_cgs/scale_v
+
+  !We compute the relative velocity of sinks wrt the background
+  !using the value from previous timestep to avoid doubling
+  !loops on cells.
+  v_background(1:nsink, 1:ndim, 1:2) = 0d0
+  m_background(1:nsink, 1:2) = tiny(0d0)
+
+  ! Must be sequencial!
+  do ii = levelmin, nlevelmax
+     do isink = 1,nsink
+        do itype = 1, 2
+           do idim = 1, ndim
+              v_background(isink, idim, itype) =&
+                    v_background(isink, idim, itype) * m_background(isink, itype)+&
+                          v_DF(isink, ii, idim, itype) * mass_DF(isink, ii, itype)
+           end do
+           m_background(isink, itype) = m_background(isink, itype) + mass_DF(isink, ii, itype)
+           do idim = 1, ndim
+              v_background(isink, idim, itype) =&
+                    v_background(isink, idim, itype) / m_background(isink, itype)
+           end do
+        end do
+     end do
+  end do
+
+  do isink = 1, nsink
+     vrel_sink (isink, 1:ndim, 1:2) = 0d0
+     vrel_sink_norm(isink, 1:2) = tiny(0d0)
+
+     v_DFnew(isink, 1:ndim, 1:2) = 0d0
+     mass_DFnew(isink, 1:2) = tiny(0d0)
+     mass_lowspeednew(isink, 1:2) = 0d0
+     fact_fastnew(isink, 1:2) = 0d0
+  end do
+
+  do isink = 1, nsink
+     do itype = 1, 2
+        do idim = 1, ndim
+            vrel_sink(isink, idim, itype) = vsink(isink, idim) - v_background(isink, idim, itype)
+            vrel_sink_norm(isink, itype) = vrel_sink_norm(isink, itype) + vrel_sink(isink, idim, itype)**2
+        end do
+        vrel_sink_norm(isink, itype) = max(sqrt(vrel_sink_norm(isink, itype)), tiny(0d0))
+     end do
+  end do
+
+  !We compute the different quantities needed or DF: fraction of stars moving
+  !slower, factor for fast moving stars. We also update the value of v_DF and
+  !mass_DF which will be used to compute DF at next timestep and higher levels
+  !CARE: Here what we call v_DF is in fact the momentum to correctly
+  !mass-weight between CPUS
+
+  ! Loop over cpus
+  do icpu=1, ncpu
+     igrid=headl(icpu,ilevel)
+     ! Loop over grids
+     do jgrid=1,numbl(icpu,ilevel)
+
+        npart1=numbp(igrid)  ! Number of particles in the grid
+        nsink_cell=0
+
+      ! Loop over particles
+      if(npart1>0)then
+         !We check which sink might be close (speeds up calculation)
+         xc = (xg(igrid, 1) - skip_loc(1))*scale
+         yc = (xg(igrid, 2) - skip_loc(2))*scale
+         zc = (xg(igrid, 3) - skip_loc(3))*scale
+         do isink = 1, nsink
+             dx = abs(xc-xsink(isink, 1))
+             if (dx.gt.0.5*scale) dx = scale - dx
+             d2_sink_part = dx**2
+             if (d2_sink_part.lt.dx2cell_sink) then
+                 dx = abs(yc-xsink(isink, 2))
+                 if (dx.gt.0.5*scale) dx = scale - dx
+                 d2_sink_part = d2_sink_part+ dx**2
+                 if (d2_sink_part.lt.dx2cell_sink) then
+                     dx = abs(zc-xsink(isink, 3))
+                     if (dx.gt.0.5*scale) dx = scale - dx
+                     d2_sink_part = d2_sink_part+ dx**2
+                     if (d2_sink_part.lt.dx2cell_sink) then
+                         nsink_cell = nsink_cell+1
+                         sink_cell(nsink_cell) = isink
+                     end if
+                 end if
+             end if
+         end do
+
+         ipart=headp(igrid)
+         ! Loop over particles
+         do jpart=1, npart1
+             ! Save next particle   <--- Very important !!!
+             next_part=nextp(ipart)
+             !Stellar case (1)
+             !if (tp(ipart).ne.0.d0) then
+             if (is_star(typep(ipart))) then
+                do ii = 1, nsink_cell
+                   isink = sink_cell(ii)
+                   dx = abs(xp(ipart, 1)-xsink(isink, 1))
+                   if (dx.gt.0.5*scale) dx = scale - dx
+                   d2_sink_part = dx**2
+
+                   if (d2_sink_part.lt.r2_cloud) then
+                      dx = abs(xp(ipart, 2)-xsink(isink, 2))
+                      if (dx.gt.0.5*scale) dx = scale - dx
+                      d2_sink_part = d2_sink_part+ dx**2
+
+                      if (d2_sink_part.lt.r2_cloud) then
+                         dx = abs(xp(ipart, 3)-xsink(isink, 3))
+                         if (dx.gt.0.5*scale) dx = scale - dx
+                         d2_sink_part = d2_sink_part+ dx**2
+
+                         if (d2_sink_part.lt.r2_cloud) then
+                            v_DFnew(isink, 1:ndim, 1) = v_DFnew(isink, 1:ndim, 1) + mp(ipart) * vp(ipart, 1:ndim)
+                            mass_DFnew(isink, 1)      = mass_DFnew(isink, 1)      + mp(ipart)
+
+                            vrel_part_norm = 0d0
+                            do idim = 1, ndim
+                               vrel_part_norm = vrel_part_norm + (vp(ipart, idim) - v_background(isink, idim, 1))**2
+                            end do
+                            vrel_part_norm = max(tiny(0d0), sqrt(vrel_part_norm))
+
+                            if (vrel_part_norm.le.vrel_sink_norm(isink, 1)) then
+                               mass_lowspeednew(isink, 1) = mass_lowspeednew(isink, 1) + mp(ipart)
+                            else
+                               fact_fastnew(isink, 1) = fact_fastnew(isink, 1) + mp(ipart) *&
+                                    (log((vrel_part_norm + vrel_sink_norm(isink, 1))/(vrel_part_norm-vrel_sink_norm(isink,1))) - 2*vrel_sink_norm(isink, 1) / vrel_part_norm)
+                            end if
+                         end if
+                      end if
+                   end if
+                end do
+
+             !DM case (2)
+             !else if (idp(ipart).gt.0 .and. tp(ipart).eq.0.d0) then
+             else if (is_dm(typep(ipart))) then
+                do ii = 1, nsink_cell
+                   isink = sink_cell(ii)
+                   dx = abs(xp(ipart, 1)-xsink(isink, 1))
+                   if (dx.gt.0.5*scale) dx = scale - dx
+                   d2_sink_part = dx**2
+
+                   if (d2_sink_part.lt.r2_dm) then
+                      dx = abs(xp(ipart, 2)-xsink(isink, 2))
+                      if (dx.gt.0.5*scale) dx = scale - dx
+                      d2_sink_part = d2_sink_part+ dx**2
+
+                      if (d2_sink_part.lt.r2_dm) then
+                         dx = abs(xp(ipart, 3)-xsink(isink, 3))
+                         if (dx.gt.0.5*scale) dx = scale - dx
+                         d2_sink_part = d2_sink_part+ dx**2
+
+                         if (d2_sink_part.lt.r2_dm) then
+                            v_DFnew(isink, 1:ndim, 2) = v_DFnew(isink, 1:ndim, 2) + mp(ipart) * vp(ipart, 1:ndim)
+                            mass_DFnew(isink, 2)      = mass_DFnew(isink, 2)      + mp(ipart)
+
+                            vrel_part_norm = 0d0
+                            do idim = 1, ndim
+                               vrel_part_norm = vrel_part_norm + (vp(ipart, idim) - v_background(isink, idim, 2))**2
+                            end do
+                            vrel_part_norm = max(tiny(0d0), sqrt(vrel_part_norm))
+
+                            if (vrel_part_norm.le.vrel_sink_norm(isink, 2)) then
+                               mass_lowspeednew(isink, 2) = mass_lowspeednew(isink, 2) + mp(ipart)
+                            else
+                               fact_fastnew(isink, 2) = fact_fastnew(isink, 2) + mp(ipart) *&
+                                    (log((vrel_part_norm + vrel_sink_norm(isink, 2))/(vrel_part_norm-vrel_sink_norm(isink,2))) - 2*vrel_sink_norm(isink, 2) / vrel_part_norm)
+                            end if
+                         end if
+                      end if
+                   end if
+                end do
+             end if
+             ipart=next_part  ! Go to next particle
+          end do
+       endif
+    igrid=next(igrid)   ! Go to next grid
+    end do
+    ! End loop over grids
+  end do
+  ! End loop over cpus
+
+
+  !We gather all the quantities: mass, mass moving slow etc... from all CPUs
+  if(nsink>0)then
+#ifndef WITHOUTMPI
+     call MPI_ALLREDUCE(v_DFnew,v_DFall,nsinkmax*ndim*2,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
+     call MPI_ALLREDUCE(mass_DFnew, mass_DFall,nsinkmax*2,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
+     call MPI_ALLREDUCE(mass_lowspeednew, mass_lowspeedall,nsinkmax*2,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
+     call MPI_ALLREDUCE(fact_fastnew, fact_fastall,nsinkmax*2,MPI_DOUBLE_PRECISION,MPI_SUM,MPI_COMM_WORLD,info)
+#else
+     v_DFall(1:nsink, 1:ndim, 1:2)  = v_DFnew(1:nsink, 1:ndim, 1:2)
+     mass_DFall(1:nsink, 1:2)       = mass_DFnew(1:nsink, 1:2)
+     mass_lowspeedall(1:nsink, 1:2) = mass_lowspeednew(1:nsink, 1:2)
+     fact_fastall(1:nsink, 1:2)     = fact_fastnew(1:nsink, 1:2)
+#endif
+  endif
+
+  !Three things are done in this loop:
+  !   1) we fill the table that contains all the quantities of all levels with the
+  !   ones we just computed
+  !   2) we switch v_DF which was momentum to realy velocity)
+  !   3) we remove the momentum due to matter which is at THIS level
+  !   using eq. (6) and (7) from Antonini+11
+
+  do isink = 1 ,nsink
+     do itype = 1,2
+        mass_DF(isink, ilevel, itype)       = mass_DFall(isink, itype)
+        mass_lowspeed(isink, ilevel, itype) = mass_lowspeedall(isink, itype)
+        fact_fast(isink, ilevel, itype)     = fact_fastall(isink, itype)
+
+        b90 = factG * msink(isink) / vrel_sink_norm(isink, itype)**2
+        Rsh = factG * msink(isink) / c**2
+        bmin = max(b90, Rsh)
+        if (itype.eq.1) then
+           CoulombLog = DF_ncells*dx_min / bmin
+           volume = vol_cloud
+        else
+           CoulombLog = DF_ncells*dx_dm / bmin
+           volume = vol_dm
+        end if
+        if (CoulombLog .gt. 1) then
+           alpha = max((m_background(isink,itype)/volume/(boost_threshold_density/scale_nH))**boost_drag_part, 1d0)
+           factor = alpha*4*pi*factG**2*msink(isink)/vrel_sink_norm(isink, itype)**3 * &
+                & (mass_lowspeedall(isink, itype)*log(CoulombLog)+&
+                &  fact_fastall(isink, itype)) / volume
+        else
+           factor = 0
+        end if
+        ! At the first timestep, the dt hasn't been computed yet
+        if (dtnew(ilevel) > 0) then
+           factor = min(1/dtnew(ilevel), factor)
+        else
+           factor = 0
+        end if
+
+        do idim = 1, ndim
+           vsink(isink, idim) = vsink(isink, idim) - factor*dtnew(ilevel)*vrel_sink(isink, idim, itype)
+           v_DF(isink, ilevel, idim, itype) = v_DFall(isink, idim, itype) / mass_DFall(isink, itype)
+        end do
+     end do
+  end do
+#endif
+end subroutine get_drag_part
 !##############################################################################
 !##############################################################################
 !##############################################################################
