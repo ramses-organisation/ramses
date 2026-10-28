@@ -39,7 +39,7 @@ For detailed descriptions of the scheme, see:
 | `cr_ne=1e-3`                 |  `real`       | Number of free electrons per hydrogen nucleus. |
 | `cr_fneut=0.875`             |  `real`       | Neutral gas fraction. |
 | **====================** | **====================** | **Supernova injection** |
-| `fecr=0.`                    |  `real`       | Fraction of the SN energy additionally injected as CR energy: into the SN cell for thermal feedback, over the blast bubble for kinetic feedback (`f_w>0`). The gas still receives the full SN energy. Requires `cr=.true.`. With `fecr>0` and `cr_advect=.false.`, CR transport is switched on as soon as star particles exist, each AMR level joining at the start of its next step. |
+| `fecr=0.`                    |  `real`       | Fraction of the SN energy additionally injected as CR energy: into the SN cell for thermal feedback, over the blast bubble for kinetic feedback (`f_w>0`). The gas still receives the full SN energy. Requires `cr=.true.`. With `fecr>0` and `cr_advect=.false.`, CR transport is switched on for all AMR levels as soon as star particles exist. |
 | **====================** | **====================** | **CR initialisation regions** |
 | `cr_nregion=0`               |  `integer`    | Number of CR initial-condition regions. The region geometry is independent of the gas `&INIT_PARAMS` regions but follows the same conventions. |
 | `cr_region_type='square'`    |  `character array` | Geometry of each region: 'square' (generalized ellipsoid, CR state replaced inside) or 'point' (CIC-deposited point value). |

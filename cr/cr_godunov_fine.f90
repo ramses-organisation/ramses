@@ -507,13 +507,30 @@ SUBROUTINE cr_set_unew(ilevel)
    integer::ilevel
    !--------------------------------------------------------------------------
    ! This routine sets array crunew to its initial value cruold before
-   ! calling the CR advection scheme. crunew is set to zero in virtual
-   ! boundaries.
+   ! calling the CR advection scheme, after rescaling superluminal CR fluxes
+   ! in cruold. crunew is set to zero in virtual boundaries.
    !--------------------------------------------------------------------------
-   integer::i,ivar,ind,icpu,iskip
+   integer::i,ivar,ind,icpu,iskip,iGrp,icrE,icell
+   real(dp)::fred,sqrt3
 
    if(numbtot(1,ilevel)==0)return
    if(verbose)write(*,111)ilevel
+
+   sqrt3=1d0
+   if(cr_isotropic_pressure)sqrt3=sqrt(3d0)
+
+   ! Make sure that |F|<=cE/sqrt3 (sqrt3=1 or sqrt(3) for M1 or P1 resp.)
+   do ind=1,twotondim
+      iskip=ncoarse+(ind-1)*ngridmax
+      do iGrp=1,ncr_groups
+         icrE=Ecr_idx(iGrp)
+         do i=1,active(ilevel)%ngrid
+            icell=active(ilevel)%igrid(i)+iskip
+            fred=sqrt(sum(cruold(icell,icrE+1:icrE+ndim)**2))/(cr_vmax(ilevel)*cruold(icell,icrE))*sqrt3
+            if(fred>1d0)cruold(icell,icrE+1:icrE+ndim)=cruold(icell,icrE+1:icrE+ndim)/fred
+         end do
+      end do
+   end do
 
    ! Set crunew to cruold for myid cells
    do ind=1,twotondim
@@ -557,7 +574,7 @@ SUBROUTINE cr_set_uold(ilevel)
    integer::ilevel
    !--------------------------------------------------------------------------
    ! This routine sets array cruold to its new value crunew after the CR
-   ! step.
+   ! step, after rescaling superluminal CR fluxes in crunew.
    !
    ! Transport-robustness floor: the per-group CR energy is floored at
    ! cr_efloor after the update. This makes the explicit transport robust on
@@ -566,10 +583,27 @@ SUBROUTINE cr_set_uold(ilevel)
    ! cruold. This is pure transport robustness -- no scattering/streaming/
    ! cooling source physics.
    !--------------------------------------------------------------------------
-   integer::i,ivar,ind,iskip,iGrp,icrE
+   integer::i,ivar,ind,iskip,iGrp,icrE,icell
+   real(dp)::fred,sqrt3
 
    if(numbtot(1,ilevel)==0)return
    if(verbose)write(*,111)ilevel
+
+   sqrt3=1d0
+   if(cr_isotropic_pressure)sqrt3=sqrt(3d0)
+
+   ! Make sure that |F|<=cE/sqrt3 (sqrt3=1 or sqrt(3) for M1 or P1 resp.)
+   do ind=1,twotondim
+      iskip=ncoarse+(ind-1)*ngridmax
+      do iGrp=1,ncr_groups
+         icrE=Ecr_idx(iGrp)
+         do i=1,active(ilevel)%ngrid
+            icell=active(ilevel)%igrid(i)+iskip
+            fred=sqrt(sum(crunew(icell,icrE+1:icrE+ndim)**2))/(cr_vmax(ilevel)*crunew(icell,icrE))*sqrt3
+            if(fred>1d0)crunew(icell,icrE+1:icrE+ndim)=crunew(icell,icrE+1:icrE+ndim)/fred
+         end do
+      end do
+   end do
 
    ! Set cruold to crunew for myid cells
    do ind=1,twotondim

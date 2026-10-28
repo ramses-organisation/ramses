@@ -4,10 +4,10 @@
 SUBROUTINE cr_courant_fine(ilevel)
 
    ! CR contribution to the level timestep, called after courant_fine has set
-   ! dtnew(ilevel) from the gas: accumulate ecrs_tot and, when the CRs evolve,
-   ! reduce dtnew by the gas Courant condition with CR pressure (cr_cmpdt),
-   ! refresh cr_vmax/Dcr_code, apply the cr_varvmax cap, clamp to c, and
-   ! reduce dtnew by the CR Courant condition.
+   ! dtnew(ilevel) from the gas: accumulate ecrs_tot, refresh cr_vmax/Dcr_code
+   ! and clamp cr_vmax to c. When the CRs evolve, also reduce dtnew by the gas
+   ! Courant condition with CR pressure (cr_cmpdt), apply the cr_varvmax cap
+   ! and reduce dtnew by the CR Courant condition.
    !-------------------------------------------------------------------------
    use amr_commons
    use hydro_commons
@@ -147,15 +147,14 @@ SUBROUTINE cr_courant_fine(ilevel)
 #endif
 
    ecrs_tot=ecrs_tot+ecrs_all
-   if(.not.cr_advect)return
-   dtnew(ilevel)=MIN(dtnew(ilevel),dt_all)
+   if(cr_advect)dtnew(ilevel)=MIN(dtnew(ilevel),dt_all)
 
    call update_cr_vmax_and_Dcr_code(cr_vmax(ilevel))
 
    ! Adaptive reduced light speed (cr_varvmax): keep cr_vmax at least
    ! cr_varvmax_fudge times larger than the gas signal speed dx/3/dt so the
    ! CR wave always outruns the moving gas. Inert when cr_varvmax=.false.
-   if(cr_varvmax)then
+   if(cr_advect .and. cr_varvmax)then
       cr_vmax(ilevel) = max(cr_vmax(ilevel), dx/3d0/dtnew(ilevel) * cr_varvmax_fudge)
       if(cr_varvmax_vdvs)then
          if(cr_streaming_diffusion)then
@@ -172,6 +171,7 @@ SUBROUTINE cr_courant_fine(ilevel)
    ! Finally, make sure vmax <= c
    if(cr_vmax(ilevel) .gt. cr_c_code) cr_vmax(ilevel)=cr_c_code
 
+   if(.not.cr_advect)return
    call get_crmom_courant(dt_cr,ilevel)
    dtnew(ilevel) = MIN(dtnew(ilevel), dt_cr * cr_nsubcycle*0.99999d0)
 
