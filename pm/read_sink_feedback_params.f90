@@ -1,7 +1,7 @@
 subroutine read_stellar_params()
   use amr_commons, only: myid
   use pm_commons, only: iseed
-  use amr_parameters, only: dp,stellar
+  use amr_parameters, only: dp,stellar,levelmin,nlevelmax
   use sink_feedback_parameters
 #ifdef RT
   use rt_parameters, only: nGroups
@@ -19,7 +19,7 @@ subroutine read_stellar_params()
                          & sn_feedback_sink,stellar_strategy,iseed, &
                          & mstellarini, &
                          & Tsat, Vsat, sn_r_sat, sn_p_ref, sn_e_ref, &
-                         & Vdisp, stellar_info
+                         & Vdisp, stellar_info, nlevel_sne
 
   real(dp):: scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   real(dp):: msun, Myr, km_s
@@ -55,6 +55,12 @@ subroutine read_stellar_params()
 
   if((stellar_strategy .ne. 'local') .and. (stellar_strategy .ne. 'global'))then
       if(myid == 1) write(*, *) 'stellar_strategy should be local or global'
+      call clean_stop
+  end if
+
+  if(nlevel_sne == 0) nlevel_sne = levelmin
+  if(nlevel_sne < levelmin .or. nlevel_sne > nlevelmax) then
+      if(myid == 1) write(*, *) 'nlevel_sne should be between levelmin and levelmax'
       call clean_stop
   end if
 
