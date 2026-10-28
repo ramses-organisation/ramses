@@ -15,7 +15,7 @@ subroutine make_sn_stellar
   real(dp), dimension(1:twotondim, 1:3):: xc
   logical, dimension(1:nvector), save:: ok
   real(dp), dimension(1:nvector, 1:ndim), save:: xx
-  real(dp):: sn_r, sn_m, sn_p, sn_e, sn_d, sn_ed
+  real(dp):: sn_r, sn_r_ref, sn_m, sn_p, sn_e, sn_d, sn_ed
   real(dp):: rr,pgas,dgas,ekin
 #ifndef WITHOUTMPI
   integer:: info
@@ -61,10 +61,10 @@ subroutine make_sn_stellar
   ! Conversion factor from user units to cgs units
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
 
-  ! radius of sphere where we dump the SN energy/momentum/mass (numerical, we choose 3 coarse cells)
-  sn_r = 3.0d0*(0.5d0**levelmin)*scale
+  ! radius of sphere where we dump the SN energy/momentum/mass (numerical, we choose 3 cells of level nlevel_sne)
+  sn_r_ref = 3.0d0*(0.5d0**nlevel_sne)*scale
   ! namelist option to set a minimum radius for the SN remnant
-  if(sn_r_sat .ne. 0) sn_r = max(sn_r, sn_r_sat * pc2cm / scale_l)
+  if(sn_r_sat .ne. 0) sn_r_ref = max(sn_r_ref, sn_r_sat * pc2cm / scale_l)
 
   ! we assume the SN energy and momentum is always the same
   sn_p = sn_p_ref
@@ -122,6 +122,7 @@ subroutine make_sn_stellar
     end do
 
     ! Now that we have the location of the SN, we check the properties of the surroundings
+    sn_r = sn_r_ref
     avg_center = x_sn
     avg_radius = sn_r
     avg_rpow = 0.0d0
@@ -132,6 +133,13 @@ subroutine make_sn_stellar
     avg_upow(2, 1) = 1.0d0
     avg_rpow(3) = 1.0d0
     call sphere_average(navg, avg_center, avg_radius, avg_rpow, avg_upow, avg)
+    ! no cell centre inside the sphere (grid coarser than nlevel_sne): enlarge it
+    do while(avg(1) <= 0.0d0)
+      sn_r = 2.0d0*sn_r
+      avg_radius = sn_r
+      if(myid == 1) write(*, *) 'SN sphere contains no cell, radius doubled to', sn_r*scale_l/pc2cm, 'pc'
+      call sphere_average(navg, avg_center, avg_radius, avg_rpow, avg_upow, avg)
+    end do
     vol_sn = avg(1)
     mass_sn = avg(2) + sn_m ! region average + ejecta
     pnorm_sn = avg(3)
