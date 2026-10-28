@@ -284,7 +284,7 @@ module amr_parameters
   integer::i_mv_dm=-1,    i_mv_stars=-1,      i_mv_lum=-1
   integer::i_mv_var=-1,   i_mv_xh2=-1,        i_mv_xhi=-1
   integer:: i_mv_xhii=-1, i_mv_xheii=-1,      i_mv_xheiii=-1
-  integer::i_mv_fp=-1,    i_mv_pmag=-1
+  integer::i_mv_fp=-1,    i_mv_pmag=-1,       i_mv_crflx_p=-1
   integer,dimension(1:50)::movie_vars=-1
   integer,dimension(1:50)::movie_var_number=1
 
