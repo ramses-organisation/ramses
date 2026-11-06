@@ -45,7 +45,7 @@ Test 2/3: hydro/sod-tube-nener
 ...
 All tests were completed successfully
 ```
-Each test runs in a few seconds; most of the time is spent compiling RAMSES, which is done again for each test. The whole run takes a few minutes.
+Each of these 1D  tests runs in a few seconds; most of the time is spent compiling RAMSES, which is done for each test. The whole run takes a few tens of minutes.
 
 If the numbers do not match the test names above (because tests were added since this page was written), use the list printed at the start of a run to find them again.
 
