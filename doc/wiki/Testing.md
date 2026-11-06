@@ -62,6 +62,8 @@ For each test, the script compiles RAMSES with the flags of that test, runs it, 
 
 Once the tests have completed, a report is generated in a `.pdf` file named `test_results.pdf`, alongside a log file `test_suite.log`. The script exits with status 1 if any test failed, so it can be used in scripts and CI.
 
+Depending on your computer, running the full test suite can take a few tens of minutes.
+
 ### Options
 
 - Run the suite in parallel (on 4 cpus):
