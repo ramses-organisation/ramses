@@ -2,38 +2,35 @@
 !################################################################
 !################################################################
 !################################################################
-subroutine remove_list(ind_part,ind_grid,ok,np)
+subroutine remove_list(ind_part,ind_grid,np)
   use amr_commons
   use pm_commons
   implicit none
   integer, intent(in)::np
   integer,dimension(1:nvector), intent(in)::ind_part,ind_grid
-  logical,dimension(1:nvector), intent(in)::ok
   !----------------------------------------------------
   ! Remove particles from their original linked lists
   !----------------------------------------------------
   integer::j
   do j=1,np
-     if(ok(j))then
-        if(prevp(ind_part(j)) .ne. 0) then
-           if( nextp(ind_part(j)) .ne. 0 )then
-              nextp(prevp(ind_part(j)))=nextp(ind_part(j))
-              prevp(nextp(ind_part(j)))=prevp(ind_part(j))
-           else
-              nextp(prevp(ind_part(j)))=0
-              tailp(ind_grid(j))=prevp(ind_part(j))
-           end if
+     if(prevp(ind_part(j)) .ne. 0) then
+        if( nextp(ind_part(j)) .ne. 0 )then
+           nextp(prevp(ind_part(j)))=nextp(ind_part(j))
+           prevp(nextp(ind_part(j)))=prevp(ind_part(j))
         else
-           if(nextp(ind_part(j)) .ne. 0)then
-              prevp(nextp(ind_part(j)))=0
-              headp(ind_grid(j))=nextp(ind_part(j))
-           else
-              headp(ind_grid(j))=0
-              tailp(ind_grid(j))=0
-           end if
+           nextp(prevp(ind_part(j)))=0
+           tailp(ind_grid(j))=prevp(ind_part(j))
         end if
-        numbp(ind_grid(j))=numbp(ind_grid(j))-1
+     else
+        if(nextp(ind_part(j)) .ne. 0)then
+           prevp(nextp(ind_part(j)))=0
+           headp(ind_grid(j))=nextp(ind_part(j))
+        else
+           headp(ind_grid(j))=0
+           tailp(ind_grid(j))=0
+        end if
      end if
+     numbp(ind_grid(j))=numbp(ind_grid(j))-1
   end do
 end subroutine remove_list
 !################################################################
