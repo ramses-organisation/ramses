@@ -7,6 +7,13 @@ ifeq ($(MACHINE),generic)
    MPIF90 = mpif90
 endif
 
+# Compiler options for CI test suite
+# -ffp-contract=off needed for ito tracer test reproducability
+ifeq ($(MACHINE),testsuite)
+   MPIF90 = mpif90
+   FFLAGS_OPT += -ffp-contract=off
+endif
+
 ####### EuroHPC clusters #######
 
 #
