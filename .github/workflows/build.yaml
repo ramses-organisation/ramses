@@ -12,7 +12,7 @@ defaults:
 jobs:
     build:
         name: "${{ matrix.test-type }} in ${{ matrix.ndim }}D"
-        runs-on: ubuntu-24.04
+        runs-on: ubuntu-latest
         strategy:
             matrix:
                 test-type: [default, rt, mhd]
