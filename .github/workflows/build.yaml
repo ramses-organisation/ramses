@@ -12,7 +12,7 @@ defaults:
 jobs:
     build:
         name: "${{ matrix.test-type }} in ${{ matrix.ndim }}D"
-        runs-on: ubuntu-latest
+        runs-on: ubuntu-24.04
         strategy:
             matrix:
                 test-type: [default, rt, mhd]
@@ -24,6 +24,6 @@ jobs:
         - name: Checkout repository
           uses: actions/checkout@v4
         - name: Install OpenMPI
-          run: sudo apt-get install -y openmpi-bin libopenmpi-dev
+          run: sudo apt-get update; sudo apt-get install -y openmpi-bin libopenmpi-dev
         - name: Build
           run: bash tests/build.${{ matrix.test-type }}.sh ${{ matrix.ndim }}

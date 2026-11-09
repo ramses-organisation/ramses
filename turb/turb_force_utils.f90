@@ -111,7 +111,7 @@ subroutine calc_power_spectrum(spectrum, k, power_spectrum)
       case default
          write (6,*) "Unknown forcing_power_spectrum!"
          write (6,*) "Use 'power_law', 'parabolic', 'konstandin' or 'test'"
-         stop
+         call clean_stop
       end select
 
 end subroutine calc_power_spectrum

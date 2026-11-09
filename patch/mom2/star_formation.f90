@@ -5,7 +5,7 @@ subroutine star_formation(ilevel)
   use hydro_commons
   use poisson_commons
   use cooling_module, ONLY: XH=>X
-  use constants, only: Myr2sec, Gyr2sec, mH, pi, rhoc, twopi
+  use constants, only: Myr2sec, Gyr2sec, mH, pi, rhoc, twopi, kB, factG_in_cgs
   use random
   use mpi_mod
   implicit none
@@ -48,6 +48,7 @@ subroutine star_formation(ilevel)
   real(dp)::dx,dx_loc,scale,vol_loc,dx_min,vol_min
   real(dp)::mdebris
   real(dp),dimension(1:nvector)::sfr_ff
+  real(dp)::polytropic_constant
   integer ,dimension(1:ncpu,1:IRandNumSize)::allseed
   integer ,dimension(1:nvector),save::ind_grid,ind_cell,nstar
   integer ,dimension(1:nvector),save::ind_grid_new,ind_cell_new,ind_part
@@ -355,10 +356,17 @@ subroutine star_formation(ilevel)
               if(d<=d0)ok(i)=.false.
            end do
            ! Temperature criterion
+           if(jeans_ncells > 0)then
+              polytropic_constant=factG_in_cgs*(boxlen*jeans_ncells*0.5d0**dble(nlevelmax)*scale_l/aexp)**2/ pi / gamma
+           endif
            do i=1,ngrid
               T2=uold(ind_cell(i),5)*scale_T2*(gamma-1.0d0)
               nH=max(uold(ind_cell(i),1),smallr)*scale_nH
-              T_poly=T2_star*(nH/nISM)**(g_star-1.0d0)
+              if(jeans_ncells > 0)then
+                 T_poly=nH*polytropic_constant*mH**2/XH/kB
+              else
+                 T_poly=T2_star*(nH/nISM)**(g_star-1.0d0)
+              endif
               T2=T2-T_poly
               if(T2>2d4)ok(i)=.false.
            end do
@@ -384,8 +392,14 @@ subroutine star_formation(ilevel)
               ! Poisson mean
               PoissMean=mgas/mstar
               if((trel>0.).and.(.not.cosmo)) PoissMean = PoissMean*min((t/trel), 1.0d0)
-              ! Compute Poisson realisation
-              call poissdev(localseed,PoissMean,nstar(i))
+              if(randomize_sf)then
+                 ! Compute Poisson realisation
+                 call poissdev(localseed,PoissMean,nstar(i))
+              else
+                 ! this is useful for the test suite only
+                 ! NB: SF testing is made easier by extreme boosting of SF as below:
+                 nstar(i)=PoissMeanMult*PoissMean
+              endif
               ! Compute depleted gas mass
               mgas=nstar(i)*mstar
               ! Security to prevent more than 90% of gas depletion
@@ -577,9 +591,9 @@ subroutine star_formation(ilevel)
               enddo
               write(ilun,'(E24.12)',advance='no') uold(ind_cell_new(i),1)
               do ivar=2,nvar
-                 if(ivar.eq.ndim+2)then
+                 if(ivar.eq.neul)then
                     ! Temperature
-                    uvar=(gamma-1.0d0)*(uold(ind_cell_new(i),ndim+2))*scale_T2
+                    uvar=(gamma-1.0d0)*(uold(ind_cell_new(i),neul))*scale_T2
                  else
                     uvar=uold(ind_cell_new(i),ivar)
                  endif

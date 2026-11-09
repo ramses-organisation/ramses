@@ -1,8 +1,9 @@
-subroutine backup_hydro(filename)
+subroutine backup_hydro(filename, filename_desc)
   use amr_commons
   use hydro_commons
+  use dump_utils, only : dump_header_info, generic_dump, dim_keys
   implicit none
-  character(LEN=80)::filename
+  character(LEN=80)::filename, filename_desc
 
   integer::i,ivar,ncache,ind,ilevel,igrid,iskip,ilun,istart,ibound
   integer,allocatable,dimension(:)::ind_grid
@@ -15,6 +16,10 @@ subroutine backup_hydro(filename)
   real(dp) :: D,M,E,Mx,My,Mz,u2,Xsi,R
   real(dp) ::rho,p,vpar,vx,vy,vz,smallp,tau
   real(dp) :: small_bigD=1e-12
+  integer :: unit_info
+  logical :: dump_info_flag
+  integer :: info_var_count
+  character(len=100) :: field_name
 
   if(verbose)write(*,*)'Entering backup_hydro'
   ilun=ncpu+myid+10
@@ -22,6 +27,16 @@ subroutine backup_hydro(filename)
   call title(myid,nchar)
   fileloc=TRIM(filename)//TRIM(nchar)
   open(unit=ilun,file=fileloc,form='unformatted')
+
+  if (myid == 1) then
+     open(newunit=unit_info, file=filename_desc, form='formatted')
+     call dump_header_info(unit_info)
+     info_var_count = 1
+     dump_info_flag = .true.
+  else
+     dump_info_flag = .false.
+  end if
+
   write(ilun)ncpu
   write(ilun)nvar
   write(ilun)ndim
@@ -67,13 +82,13 @@ subroutine backup_hydro(filename)
               !Method from Mignone,McKinney,2007. Same as BS2011 except one uses E'=U-D and u^2=Lor^2*v^2
 
               if (D<0) then
-                 write(*,*),'D<0 in ctoprimbis'
+                 write(*,*) 'D<0 in ctoprimbis'
                  D=small_bigD
                  uold(ind_grid(i)+iskip,1)=D
               endif
               if (E<0) then
                  E=sqrt(M**2+d**2+1d-8)
-                 write(*,*),'E<0 in ctoprimbis'
+                 write(*,*) 'E<0 in ctoprimbis'
                  uold(ind_grid(i)+iskip,5)=E
               endif
 
@@ -133,29 +148,28 @@ subroutine backup_hydro(filename)
            enddo
            do ivar=1,nvar
               if(ivar==1)then ! Write density
-                 do i=1,ncache
-                    xdp(i)=qq(i,1)
-                 end do
+                 field_name = 'density'
               else if(ivar>=2.and.ivar<=4)then ! Write velocity field
-                 do i=1,ncache
-                    xdp(i)=qq(i,ivar)
-                 end do
+                 field_name = 'velocity_' // dim_keys(ivar - 1)
               else if(ivar==5)then ! Write pressure
-                 do i=1,ncache
-                    xdp(i)=qq(i,ivar)
-                 end do
+                 field_name = 'pressure'
               else ! Write passive scalars if any
-                 do i=1,ncache
-                    xdp(i)=qq(i,ivar)
-                 end do
+                 write(field_name, '("scalar_", i0.2)') ivar - 6
               endif
-              write(ilun)xdp
+              do i=1,ncache
+                 xdp(i)=qq(i,ivar)
+              end do
+              call generic_dump(field_name, info_var_count, xdp, ilun, dump_info_flag, unit_info)
            end do
+           ! We did one output, deactivate dumping of variables
+           dump_info_flag = .false.
         end do
         deallocate(ind_grid, xdp,qq)
      end if
   end do
 end do
 close(ilun)
+
+if (myid == 1) close(unit_info)
 
 end subroutine backup_hydro

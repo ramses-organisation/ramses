@@ -98,12 +98,12 @@ subroutine read_radiation_params(file_desc)
   if (rad_num_sources.gt.1) then
      write(*,*) "Sorry, rad_num_sources > 1 is not supported yet."
      ! NOTE(tstranex): It should be easy to fix this if needed.
-     stop
+     call clean_stop
   end if
 
   if ((rad_aton_version.ne.'gpu').and.(rad_aton_version.ne.'cpu')) then
      write(*,*) "Invalid value for rad_aton_version."
-     stop
+     call clean_stop
   end if
   write(*,*) "Using ATON version: ", rad_aton_version
   if (rad_aton_version.eq.'cpu') then

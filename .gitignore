@@ -23,10 +23,11 @@ part2cylprof
 Makefile.*
 doc/*_build
 __pycache__
-# gprof
+# gcov
 *.gcda
 *.gcno
 *.gcov
+tests/coverage_*/*
 # test byproducts
 *output_0*
 *.tex

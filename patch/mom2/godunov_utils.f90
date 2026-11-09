@@ -54,20 +54,20 @@ subroutine hydro_refine(ug,um,ud,ok,nn)
 #if NENER>0
   do irad = 1,nener
      do k = 1, nn
-        eking(k) = eking(k) + ug(k,ndim+2+irad)
-        ekinm(k) = ekinm(k) + um(k,ndim+2+irad)
-        ekind(k) = ekind(k) + ud(k,ndim+2+irad)
+        eking(k) = eking(k) + ug(k,nhydro+irad)
+        ekinm(k) = ekinm(k) + um(k,nhydro+irad)
+        ekind(k) = ekind(k) + ud(k,nhydro+irad)
      end do
   end do
 #endif
   do k = 1,nn
-     ug(k,ndim+2) = (gamma-one)*(ug(k,ndim+2)-eking(k))
-     um(k,ndim+2) = (gamma-one)*(um(k,ndim+2)-ekinm(k))
-     ud(k,ndim+2) = (gamma-one)*(ud(k,ndim+2)-ekind(k))
+     ug(k,neul) = (gamma-one)*(ug(k,neul)-eking(k))
+     um(k,neul) = (gamma-one)*(um(k,neul)-ekinm(k))
+     ud(k,neul) = (gamma-one)*(ud(k,neul)-ekind(k))
   end do
   ! Passive scalars
-#if NVAR > NDIM + 2
-  do idim = ndim+3,nvar
+#if NVAR > NHYDRO
+  do idim = nhydro+1,nvar
      do k = 1,nn
         ug(k,idim) = ug(k,idim)/ug(k,1)
         um(k,idim) = um(k,idim)/um(k,1)
@@ -89,7 +89,7 @@ subroutine hydro_refine(ug,um,ud,ok,nn)
 
   if(err_grad_p >= 0.)then
      do k=1,nn
-        pg=ug(k,ndim+2); pm=um(k,ndim+2); pd=ud(k,ndim+2)
+        pg=ug(k,neul); pm=um(k,neul); pd=ud(k,neul)
         error=2.0d0*MAX( &
              & ABS((pd-pm)/(pd+pm+floor_p)), &
              & ABS((pm-pg)/(pm+pg+floor_p)) )
@@ -101,9 +101,9 @@ subroutine hydro_refine(ug,um,ud,ok,nn)
      do idim = 1,ndim
         do k=1,nn
            vg=ug(k,idim+1); vm=um(k,idim+1); vd=ud(k,idim+1)
-           cg=sqrt(max(gamma*ug(k,ndim+2)/ug(k,1),floor_u**2))
-           cm=sqrt(max(gamma*um(k,ndim+2)/um(k,1),floor_u**2))
-           cd=sqrt(max(gamma*ud(k,ndim+2)/ud(k,1),floor_u**2))
+           cg=sqrt(max(gamma*ug(k,neul)/ug(k,1),floor_u**2))
+           cm=sqrt(max(gamma*um(k,neul)/um(k,1),floor_u**2))
+           cd=sqrt(max(gamma*ud(k,neul)/ud(k,1),floor_u**2))
            error=2.0d0*MAX( &
                 & ABS((vd-vm)/(cd+cm+ABS(vd)+ABS(vm)+floor_u)) , &
                 & ABS((vm-vg)/(cm+cg+ABS(vm)+ABS(vg)+floor_u)) )
@@ -574,7 +574,7 @@ subroutine riemann_llf(qleft,qright,fgdnv,ngrid)
      cl = gamma*pl
 #if NENER>0
      do n = 1,nener
-        cl = cl + gamma_rad(n)*qleft(i,ndim+2+n)
+        cl = cl + gamma_rad(n)*qleft(i,nhydro+n)
      end do
 #endif
      cl = sqrt(cl/rl)
@@ -585,7 +585,7 @@ subroutine riemann_llf(qleft,qright,fgdnv,ngrid)
      cr = gamma*pr
 #if NENER>0
      do n = 1,nener
-        cr = cr + gamma_rad(n)*qright(i,ndim+2+n)
+        cr = cr + gamma_rad(n)*qright(i,nhydro+n)
      end do
 #endif
      cr = sqrt(cr/rr)
@@ -616,8 +616,8 @@ subroutine riemann_llf(qleft,qright,fgdnv,ngrid)
 #endif
 #if NENER>0
      do n = 1,nener
-        uleft (i,3) = uleft (i,3) + qleft (i,ndim+2+n)/(gamma_rad(n)-one)
-        uright(i,3) = uright(i,3) + qright(i,ndim+2+n)/(gamma_rad(n)-one)
+        uleft (i,3) = uleft (i,3) + qleft (i,nhydro+n)/(gamma_rad(n)-one)
+        uright(i,3) = uright(i,3) + qright(i,nhydro+n)/(gamma_rad(n)-one)
      end do
 #endif
   end do
@@ -634,13 +634,13 @@ subroutine riemann_llf(qleft,qright,fgdnv,ngrid)
 #if NENER>0
   do n = 1, nener
      do i = 1, ngrid
-        uleft (i,ndim+2+n) = qleft (i,ndim+2+n)/(gamma_rad(n)-one)
-        uright(i,ndim+2+n) = qright(i,ndim+2+n)/(gamma_rad(n)-one)
+        uleft (i,nhydro+n) = qleft (i,nhydro+n)/(gamma_rad(n)-one)
+        uright(i,nhydro+n) = qright(i,nhydro+n)/(gamma_rad(n)-one)
      end do
   end do
 #endif
   ! Other passively advected quantities
-#if NVAR > 2+NDIM+NENER
+#if NVAR > NHYDRO+NENER
   do n = 3+ndim+nener, nvar
      do i = 1, ngrid
         uleft (i,n) = qleft (i,1)*qleft (i,n)
@@ -666,8 +666,8 @@ subroutine riemann_llf(qleft,qright,fgdnv,ngrid)
      fright(i,2) = qright(i,2)*uright(i,2) + qright(i,3)
 #if NENER>0
      do n = 1,nener
-        fleft (i,2) = fleft (i,2) + qleft (i,ndim+2+n)
-        fright(i,2) = fright(i,2) + qright(i,ndim+2+n)
+        fleft (i,2) = fleft (i,2) + qleft (i,nhydro+n)
+        fright(i,2) = fright(i,2) + qright(i,nhydro+n)
      end do
 #endif
      ! Total energy
@@ -675,8 +675,8 @@ subroutine riemann_llf(qleft,qright,fgdnv,ngrid)
      fright(i,3) = qright(i,2)*(uright(i,3)+qright(i,3))
 #if NENER>0
      do n = 1,nener
-        fleft (i,3) = fleft (i,3) + qleft (i,2)*qleft (i,ndim+2+n)
-        fright(i,3) = fright(i,3) + qright(i,2)*qright(i,ndim+2+n)
+        fleft (i,3) = fleft (i,3) + qleft (i,2)*qleft (i,nhydro+n)
+        fright(i,3) = fright(i,3) + qright(i,2)*qright(i,nhydro+n)
      end do
 #endif
   end do
@@ -735,7 +735,7 @@ subroutine riemann_hll(qleft,qright,fgdnv,ngrid)
      cl = gamma*pl
 #if NENER>0
      do n = 1,nener
-        cl = cl + gamma_rad(n)*qleft(i,ndim+2+n)
+        cl = cl + gamma_rad(n)*qleft(i,nhydro+n)
      end do
 #endif
      cl = sqrt(cl/rl)
@@ -746,7 +746,7 @@ subroutine riemann_hll(qleft,qright,fgdnv,ngrid)
      cr = gamma*pr
 #if NENER>0
      do n = 1,nener
-        cr = cr + gamma_rad(n)*qright(i,ndim+2+n)
+        cr = cr + gamma_rad(n)*qright(i,nhydro+n)
      end do
 #endif
      cr = sqrt(cr/rr)
@@ -778,8 +778,8 @@ subroutine riemann_hll(qleft,qright,fgdnv,ngrid)
 #endif
 #if NENER>0
      do n = 1,nener
-        uleft (i,3) = uleft (i,3) + qleft (i,ndim+2+n)/(gamma_rad(n)-one)
-        uright(i,3) = uright(i,3) + qright(i,ndim+2+n)/(gamma_rad(n)-one)
+        uleft (i,3) = uleft (i,3) + qleft (i,nhydro+n)/(gamma_rad(n)-one)
+        uright(i,3) = uright(i,3) + qright(i,nhydro+n)/(gamma_rad(n)-one)
      end do
 #endif
   end do
@@ -796,13 +796,13 @@ subroutine riemann_hll(qleft,qright,fgdnv,ngrid)
 #if NENER>0
   do n = 1, nener
      do i = 1, ngrid
-        uleft (i,ndim+2+n) = qleft (i,ndim+2+n)/(gamma_rad(n)-one)
-        uright(i,ndim+2+n) = qright(i,ndim+2+n)/(gamma_rad(n)-one)
+        uleft (i,nhydro+n) = qleft (i,nhydro+n)/(gamma_rad(n)-one)
+        uright(i,nhydro+n) = qright(i,nhydro+n)/(gamma_rad(n)-one)
      end do
   end do
 #endif
   ! Other passively advected quantities
-#if NVAR > 2+NDIM+NENER
+#if NVAR > NHYDRO+NENER
   do n = 3+ndim+nener, nvar
      do i = 1, ngrid
         uleft (i,n) = qleft (i,1)*qleft (i,n)
@@ -828,8 +828,8 @@ subroutine riemann_hll(qleft,qright,fgdnv,ngrid)
      fright(i,2) = qright(i,3)+uright(i,2)*qright(i,2)
 #if NENER>0
      do n = 1,nener
-        fleft (i,2) = fleft (i,2) + qleft (i,ndim+2+n)
-        fright(i,2) = fright(i,2) + qright(i,ndim+2+n)
+        fleft (i,2) = fleft (i,2) + qleft (i,nhydro+n)
+        fright(i,2) = fright(i,2) + qright(i,nhydro+n)
      end do
 #endif
      ! Total energy
@@ -837,8 +837,8 @@ subroutine riemann_hll(qleft,qright,fgdnv,ngrid)
      fright(i,3) = qright(i,2)*(uright(i,3)+qright(i,3))
 #if NENER>0
      do n = 1,nener
-        fleft (i,3) = fleft (i,3) + qleft (i,2)*qleft (i,ndim+2+n)
-        fright(i,3) = fright(i,3) + qright(i,2)*qright(i,ndim+2+n)
+        fleft (i,3) = fleft (i,3) + qleft (i,2)*qleft (i,nhydro+n)
+        fright(i,3) = fright(i,3) + qright(i,2)*qright(i,nhydro+n)
      end do
 #endif
   end do
@@ -873,9 +873,9 @@ subroutine riemann_hllc(qleft,qright,snleft,snright,fgdnv,ngrid)
 
   ! HLLC Riemann solver (Toro)
   integer::ngrid
-  real(dp),dimension(1:nvector)::snleft,snright
   real(dp),dimension(1:nvector,1:nvar)::qleft,qright
   real(dp),dimension(1:nvector,1:nvar+1)::fgdnv
+  real(dp),dimension(1:nvector)::snleft,snright
 
   REAL(dp)::SL,SR
   REAL(dp)::entho
@@ -960,7 +960,7 @@ subroutine riemann_hllc(qleft,qright,snleft,snright,fgdnv,ngrid)
      cfastl=gamma*Pl
 #if NENER>0
      do irad = 1,nener
-        cfastl = cfastl + gamma_rad(irad)*qleft(i,ndim+2+irad)
+        cfastl = cfastl + gamma_rad(irad)*qleft(i,nhydro+irad)
      end do
 #endif
      cfastl = cfastl + snleft(i)
@@ -969,7 +969,7 @@ subroutine riemann_hllc(qleft,qright,snleft,snright,fgdnv,ngrid)
      cfastr=gamma*Pr
 #if NENER>0
      do irad = 1,nener
-        cfastr = cfastr + gamma_rad(irad)*qright(i,ndim+2+irad)
+        cfastr = cfastr + gamma_rad(irad)*qright(i,nhydro+irad)
      end do
 #endif
      cfastr = cfastr + snright(i)
@@ -1064,7 +1064,7 @@ subroutine riemann_hllc(qleft,qright,snleft,snright,fgdnv,ngrid)
 #if NDIM > 1
      do ivar = 4,ndim+2
         if(ustar>0)then
-           fgdnv(i,ivar) = ro*uo*qleft(i,ivar)
+           fgdnv(i,ivar) = ro*uo*qleft (i,ivar)
         else
            fgdnv(i,ivar) = ro*uo*qright(i,ivar)
         endif
@@ -1073,14 +1073,14 @@ subroutine riemann_hllc(qleft,qright,snleft,snright,fgdnv,ngrid)
      ! Non-thermal energies
 #if NENER>0
      do irad = 1,nener
-        fgdnv(i,ndim+2+irad) = uo*erado(irad)
+        fgdnv(i,nhydro+irad) = uo*erado(irad)
      end do
 #endif
      ! Other passively advected quantities
-#if NVAR > 2+NDIM+NENER
+#if NVAR > NHYDRO+NENER
      do ivar = 3+ndim+nener,nvar
         if(ustar>0)then
-           fgdnv(i,ivar) = ro*uo*qleft(i,ivar)
+           fgdnv(i,ivar) = ro*uo*qleft (i,ivar)
         else
            fgdnv(i,ivar) = ro*uo*qright(i,ivar)
         endif

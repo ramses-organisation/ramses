@@ -5,9 +5,6 @@ module tracer_utils
    use pm_commons          ! xp, tp, idp, levelp, headp, mp, localseed, numbp, nextp, move_flag
    use random, only        : ranf
    use hydro_commons, only : uold, if1, if2, jf1, jf2, kf1, kf2, nvar
-#ifndef WITHOUTMPI
-   use mpi_mod
-#endif
    implicit none
 
    real(kind=dp), dimension(1:3) :: skip_loc
@@ -62,7 +59,7 @@ module tracer_utils
       ! print*, 'in pre_kill_grid_hook'
       dx = 0.5D0**ilevel
 
-      if (MC_tracer) then
+      if (MC_tracer .and. .not. ito_tracer) then
          ! For all particles, recenter them in the center of the grid that's being deleted
          ! (becoming a cell)
          do j = 1, nn
@@ -147,7 +144,7 @@ module tracer_utils
       dxcoarse = 0.5D0**(ilevel-1) ! dx of the previous level
 
       ! print*, 'in post_make_grid_fine_hook'
-      if (MC_tracer) then
+      if (MC_tracer .and. .not. ito_tracer) then
          ! Compute the expected location of particles relative to xg in dx units
          loc(3) = (ind-1) / 4
          loc(2) = (ind-1-loc(3)*4) / 2

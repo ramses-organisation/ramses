@@ -353,7 +353,7 @@ subroutine output_cone()
    if((opened.and.(npart_out==0)).or.((.not.opened).and.(npart_out>0))) then
      write(*,*)'Error in output_cone'
      write(*,*)'npart_out=',npart_out,'opened=',opened
-     stop
+     call clean_stop
   endif
 
 contains
@@ -843,7 +843,7 @@ subroutine init_cosmo_cone(om0in,omLin,hubin,Omega0,OmegaL,OmegaR,coverH0)
   if (abs(omegaR) > verysmall) then
      write(*,*) 'ERROR in propagate_photons, init_cosmo.'
      write(*,*) 'This routine works only for flat universes, omega0+Lambda=1.'
-     STOP
+     call clean_stop
   endif
   coverH0=2.9979246d+5/(100.0d0*hubin) ! use the same value for the speed of
                                        ! light as in constants.f90

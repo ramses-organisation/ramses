@@ -342,7 +342,7 @@ subroutine prep_collapse
      read(20,*) n_size, ind, seed1,seed2,seed3
      if(n_size .ne. 100) then
         write(*,*) 'Unexpected field size'
-        stop
+        call clean_stop
      endif
      do k=1,n_size
         do j=1,n_size
