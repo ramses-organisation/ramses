@@ -71,13 +71,13 @@ subroutine init_part
      return
   end if
 
-  if (MC_tracer) call initialize_skip_loc
+  if (MC_tracer .and. .not. ito_tracer) call initialize_skip_loc
 
   ! Allocate particle variables
   allocate(xp    (npartmax,ndim))
   allocate(vp    (npartmax,ndim))
   allocate(mp    (npartmax))
-  if (MC_tracer) then
+  if (MC_tracer .and. .not. ito_tracer) then
      allocate(itmpp (npartmax))
      allocate(partp (npartmax))
      allocate(move_flag(npartmax))
@@ -217,7 +217,7 @@ subroutine init_part
         deallocate(xdp)
      end if
 
-     if (MC_tracer) then
+     if (MC_tracer .and. .not. ito_tracer) then
         allocate(isp(1:npart2))
         ! Now read partp
         read(ilun)isp
@@ -268,7 +268,7 @@ subroutine init_part
      if(debug)write(*,*)'part.tmp read for processor ',myid
      npart=npart2
 
-     if (tracer .and. MC_tracer) then
+     if (tracer .and. (MC_tracer .and. .not. ito_tracer)) then
         ! Attempt to read mass from binary file
         call read_tracer_mass
      end if
@@ -745,7 +745,6 @@ contains
        deallocate(emission_part(1)%cpuid)
        deallocate(emission_part(1)%nparts)
        deallocate(emission_part(1)%u)
-       deallocate(emission_part(1)%f)
        deallocate(emission_part(1)%f8)
     end if
 
@@ -767,8 +766,8 @@ contains
     if(emission_part(1)%nactive>0)then
        allocate(emission_part(1)%cpuid(emission_part(1)%nactive))
        allocate(emission_part(1)%nparts(emission_part(1)%nactive))
-       allocate(emission_part(1)%u(emission_part(1)%nparts_tot*(twondim+1), 1:1))
-       allocate(emission_part(1)%f8(emission_part(1)%nparts_tot*2, 1:1))
+       allocate(emission_part(1)%u(1:twondim+1, 1:emission_part(1)%nparts_tot))
+       allocate(emission_part(1)%f8(1:2, 1:emission_part(1)%nparts_tot))
        idx=1
        do icpu=1,ncpu
          ncache=sendbuf(icpu)
@@ -788,16 +787,18 @@ contains
           call cmp_cpumap(xx_dp,cc,1)
           if(cc(1).ne.myid)then
              icpu=cc(1)
-             ibuf=sendbuf(icpu)
-             emission_part(1)%u((sendbuf_cum(icpu)+ibuf)*(twondim+1),1)     = xp(ipart,1)
-             emission_part(1)%u((sendbuf_cum(icpu)+ibuf)*(twondim+1) + 1,1) = xp(ipart,2)
-             emission_part(1)%u((sendbuf_cum(icpu)+ibuf)*(twondim+1) + 2,1) = xp(ipart,3)
-             emission_part(1)%u((sendbuf_cum(icpu)+ibuf)*(twondim+1) + 3,1) = vp(ipart,1)
-             emission_part(1)%u((sendbuf_cum(icpu)+ibuf)*(twondim+1) + 4,1) = vp(ipart,2)
-             emission_part(1)%u((sendbuf_cum(icpu)+ibuf)*(twondim+1) + 5,1) = vp(ipart,3)
-             emission_part(1)%u((sendbuf_cum(icpu)+ibuf)*(twondim+1) + 6,1) = mp(ipart)
-             emission_part(1)%f8((sendbuf_cum(icpu)+ibuf)*2,1)              = part2int(typep(ipart))
-             emission_part(1)%f8((sendbuf_cum(icpu)+ibuf)*2 + 1,1)          = idp(ipart)
+             sendbuf(icpu)=sendbuf(icpu)+1
+             ! Index of the current particle inside the shared emission buffers
+             ibuf=sendbuf_cum(icpu)+sendbuf(icpu)
+             emission_part(1)%u(1,ibuf)=xp(ipart,1)
+             emission_part(1)%u(2,ibuf)=xp(ipart,2)
+             emission_part(1)%u(3,ibuf)=xp(ipart,3)
+             emission_part(1)%u(4,ibuf)=vp(ipart,1)
+             emission_part(1)%u(5,ibuf)=vp(ipart,2)
+             emission_part(1)%u(6,ibuf)=vp(ipart,3)
+             emission_part(1)%u(7,ibuf)=mp(ipart)
+             emission_part(1)%f8(1,ibuf)=part2int(typep(ipart))
+             emission_part(1)%f8(2,ibuf)=idp(ipart)
           else
              jpart=jpart+1
              xp(jpart,1:3)=xp(ipart,1:3)
@@ -861,7 +862,7 @@ contains
        write(*,*)myid
        write(*,*)jpart,npart_new
        write(*,*)bound_key
-       call MPI_ABORT(MPI_COMM_WORLD,1,info)
+       call clean_stop
     end if
 
     ! Allocate communication buffer in reception
@@ -869,8 +870,11 @@ contains
        ncache=recvbuf(icpu)
        if(ncache>0)then
 #ifdef LIGHT_MPI_COMM
-         allocate(reception(icpu,1)%pcomm%u(1:ncache,1:twondim+1))
-         allocate(reception(icpu,1)%pcomm%f8(1:ncache,1:2))
+         if(.not. associated(reception(icpu,1)%pcomm))then
+            allocate(reception(icpu,1)%pcomm)
+         end if
+         allocate(reception(icpu,1)%pcomm%u(1:twondim+1,1:ncache))
+         allocate(reception(icpu,1)%pcomm%f8(1:2,1:ncache))
 #else
          allocate(reception(icpu,1)%up(1:ncache,1:twondim+1))
          allocate(reception(icpu,1)%fp(1:ncache,1:2))
@@ -906,7 +910,7 @@ contains
           buf_count=ncache*(twondim+1)
           countsend=countsend+1
 #ifdef LIGHT_MPI_COMM
-          call MPI_ISEND(emission_part(1)%u(sendbuf_cum(icpu)+ncache,1),buf_count, &
+          call MPI_ISEND(emission_part(1)%u(1,sendbuf_cum(icpu)+1),buf_count, &
                & MPI_DOUBLE_PRECISION,icpu-1,&
                & tagu,MPI_COMM_WORLD,reqsend(countsend),info)
 #else
@@ -964,11 +968,11 @@ contains
           countsend=countsend+1
 #ifdef LIGHT_MPI_COMM
 #ifndef LONGINT
-          call MPI_ISEND(emission_part(1)%f8(sendbuf_cum(icpu)+ncache,1),buf_count, &
+          call MPI_ISEND(emission_part(1)%f8(1,sendbuf_cum(icpu)+1),buf_count, &
                 & MPI_INTEGER,icpu-1,&
                 & tagu,MPI_COMM_WORLD,reqsend(countsend),info)
 #else
-          call MPI_ISEND(emission_part(1)%f8(sendbuf_cum(icpu)+ncache,1),buf_count, &
+          call MPI_ISEND(emission_part(1)%f8(1,sendbuf_cum(icpu)+1),buf_count, &
                 & MPI_INTEGER8,icpu-1,&
                 & tagu,MPI_COMM_WORLD,reqsend(countsend),info)
 #endif
@@ -998,14 +1002,14 @@ contains
        do ibuf=1,recvbuf(icpu)
           jpart=jpart+1
 #ifdef LIGHT_MPI_COMM
-          xp(jpart,1)=reception(icpu,1)%pcomm%u(ibuf,1)
-          xp(jpart,2)=reception(icpu,1)%pcomm%u(ibuf,2)
-          xp(jpart,3)=reception(icpu,1)%pcomm%u(ibuf,3)
-          vp(jpart,1)=reception(icpu,1)%pcomm%u(ibuf,4)
-          vp(jpart,2)=reception(icpu,1)%pcomm%u(ibuf,5)
-          vp(jpart,3)=reception(icpu,1)%pcomm%u(ibuf,6)
-          mp(jpart)  =reception(icpu,1)%pcomm%u(ibuf,7)
-          idp(jpart) =reception(icpu,1)%pcomm%f8(ibuf,2)
+          xp(jpart,1)=reception(icpu,1)%pcomm%u(1,ibuf)
+          xp(jpart,2)=reception(icpu,1)%pcomm%u(2,ibuf)
+          xp(jpart,3)=reception(icpu,1)%pcomm%u(3,ibuf)
+          vp(jpart,1)=reception(icpu,1)%pcomm%u(4,ibuf)
+          vp(jpart,2)=reception(icpu,1)%pcomm%u(5,ibuf)
+          vp(jpart,3)=reception(icpu,1)%pcomm%u(6,ibuf)
+          mp(jpart)  =reception(icpu,1)%pcomm%u(7,ibuf)
+          idp(jpart) =reception(icpu,1)%pcomm%f8(2,ibuf)
 #else
           xp(jpart,1)=reception(icpu,1)%up(ibuf,1)
           xp(jpart,2)=reception(icpu,1)%up(ibuf,2)
@@ -1035,8 +1039,14 @@ contains
 
     ! Deallocate communicators
 #ifdef LIGHT_MPI_COMM
-    deallocate(emission_part(1)%u)
-    deallocate(emission_part(1)%f8)
+    if(emission_part(1)%nactive>0)then
+       deallocate(emission_part(1)%cpuid)
+       deallocate(emission_part(1)%nparts)
+       deallocate(emission_part(1)%u)
+       deallocate(emission_part(1)%f8)
+       emission_part(1)%nactive=0
+       emission_part(1)%nparts_tot=0
+    end if
 #endif
 
     do icpu=1,ncpu
@@ -1603,11 +1613,7 @@ contains
                    ipart          = ipart+1
                    if(ipart.gt.npartmax) then
                       write(*,*) "Increase npartmax"
-#ifndef WITHOUTMPI
-                      call MPI_ABORT(MPI_COMM_WORLD,1,info)
-#else
-                      stop
-#endif
+                      call clean_stop
                    endif
                    xp(ipart,1:3)  = xx(i,1:3)+boxlen/2.0D0-ic_center(1:3)
                    vp(ipart,1:3)  = vv(i,1:3)

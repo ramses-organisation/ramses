@@ -300,7 +300,6 @@ subroutine compute_clump_properties_round2
   use constants, only: pi, c_cgs, ev2erg
 #endif
 
-  use mpi_mod
   implicit none
 
   !----------------------------------------------------------------------------
@@ -779,7 +778,6 @@ subroutine surface_int
   use pm_commons
   use clfind_commons
   use poisson_commons
-  use mpi_mod
   implicit none
 
   !---------------------------------------------------------------
@@ -1211,7 +1209,6 @@ subroutine compute_rho_star
   use pm_commons
   use hydro_commons
   use clfind_commons
-  use mpi_mod
   implicit none
 
   integer::ilevel,ivar_clump_old
@@ -1248,7 +1245,6 @@ subroutine rho_star_only(ilevel)
   use pm_commons
   use hydro_commons
   use poisson_commons
-  use mpi_mod
   implicit none
   integer::ilevel
   !------------------------------------------------------------------

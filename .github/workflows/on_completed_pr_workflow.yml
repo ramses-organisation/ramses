@@ -23,7 +23,7 @@ jobs:
     steps:
 
     - name: Install pdfunite
-      run: sudo apt install -y poppler-utils
+      run: sudo apt-get update; sudo apt install -y poppler-utils
 
     - name: 'Download reports artifact'
       uses: actions/github-script@v6

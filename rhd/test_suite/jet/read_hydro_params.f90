@@ -1,7 +1,6 @@
 subroutine read_hydro_params(nml_ok)
   use amr_commons
   use hydro_commons
-  use mpi_mod
   implicit none
   logical::nml_ok
   !--------------------------------------------------
@@ -62,12 +61,7 @@ subroutine read_hydro_params(nml_ok)
   if (nlevelmax .gt. levelmin) then
      if (eos_rhd .eq. 'TM') then
         if (interpol_var .eq. 1) then
-           write(*,*),'TM does only works with interpol_var=0'
-!           stop
-        endif
-     else
-        if (interpol_var .ne. 1) then
-           write(*,*),'ID eos_rhd does only works with interpol_var=1'
+           write(*,*) 'TM does only works with interpol_var=0'
 !           stop
         endif
      endif
