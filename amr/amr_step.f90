@@ -359,6 +359,13 @@ recursive subroutine amr_step(ilevel,icount)
                                call timer('feedback','start')
   if(hydro.and.star.and.eta_sn>0)call thermal_feedback(ilevel)
 #endif
+  ! Dynamical friction from stars and DM onto sink particles
+#if NDIM==3
+  if(sink.and.drag_part)then
+                               call timer('sinks','start')
+     call get_drag_part(ilevel)
+  end if
+#endif
 
   ! Density threshold or Bondi accretion onto sink particle
 #if NDIM==3
