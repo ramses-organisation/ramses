@@ -32,6 +32,16 @@ module pm_commons
   real(dp),allocatable,dimension(:,:,:)::weighted_momentum
   real(dp),allocatable,dimension(:)    ::rho_sink_tff
   real(dp),allocatable,dimension(:)    ::msum_overlap
+  ! Sink dynamical friction from stars and DM
+  real(dp),allocatable,dimension(:,:,:)  ::v_background,vrel_sink
+  real(dp),allocatable,dimension(:,:)    ::m_background,vrel_sink_norm
+  real(dp),allocatable,dimension(:,:,:)  ::v_DFnew,v_DFall
+  real(dp),allocatable,dimension(:,:,:,:)::v_DF
+  real(dp),allocatable,dimension(:,:)    ::mass_DFnew,mass_DFall
+  real(dp),allocatable,dimension(:,:)    ::fact_fastnew,fact_fastall
+  real(dp),allocatable,dimension(:,:)    ::mass_lowspeednew,mass_lowspeedall
+  real(dp),allocatable,dimension(:,:,:)  ::mass_DF,fact_fast,mass_lowspeed
+
   integer,allocatable,dimension(:)     ::idsink,idsink_new,idsink_old,idsink_all
   logical,allocatable,dimension(:)     ::ok_blast_agn,ok_blast_agn_all
   logical,allocatable,dimension(:)     ::direct_force_sink

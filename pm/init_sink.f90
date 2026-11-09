@@ -113,6 +113,29 @@ subroutine init_sink
   allocate(direct_force_sink(1:nsinkmax))
   direct_force_sink=.false.
   allocate(new_born(1:nsinkmax),new_born_all(1:nsinkmax),new_born_new(1:nsinkmax))
+  ! Dynamical friction from stars and DM, index 1 is stars and index 2 is DM
+  if(drag_part)then
+     allocate(v_background(1:nsinkmax,1:ndim,1:2))
+     allocate(m_background(1:nsinkmax,1:2))
+     allocate(vrel_sink(1:nsinkmax,1:ndim,1:2))
+     allocate(vrel_sink_norm(1:nsinkmax,1:2))
+     allocate(v_DFnew(1:nsinkmax,1:ndim,1:2))
+     allocate(v_DFall(1:nsinkmax,1:ndim,1:2))
+     allocate(v_DF(1:nsinkmax,levelmin:nlevelmax,1:ndim,1:2))
+     allocate(mass_DFnew(1:nsinkmax,1:2))
+     allocate(mass_DFall(1:nsinkmax,1:2))
+     allocate(mass_DF(1:nsinkmax,levelmin:nlevelmax,1:2))
+     allocate(fact_fastnew(1:nsinkmax,1:2))
+     allocate(fact_fastall(1:nsinkmax,1:2))
+     allocate(fact_fast(1:nsinkmax,levelmin:nlevelmax,1:2))
+     allocate(mass_lowspeednew(1:nsinkmax,1:2))
+     allocate(mass_lowspeedall(1:nsinkmax,1:2))
+     allocate(mass_lowspeed(1:nsinkmax,levelmin:nlevelmax,1:2))
+     v_background=0d0; m_background=0d0; vrel_sink=0d0; vrel_sink_norm=0d0
+     v_DFnew=0d0; v_DFall=0d0; v_DF=0d0; mass_DFnew=0d0; mass_DFall=0d0; mass_DF=0d0
+     fact_fastnew=0d0; fact_fastall=0d0; fact_fast=0d0
+     mass_lowspeednew=0d0; mass_lowspeedall=0d0; mass_lowspeed=0d0
+  end if
 
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
 
@@ -331,6 +354,14 @@ subroutine init_sink
         direct_force_sink(isink)=.False.
      end do
   endif
+  ! Dynamical friction history starts in the sink rest frame
+  if(drag_part)then
+     do isink=1,nsink
+        v_DF(isink,levelmin:nlevelmax,1,1:2)=vsink(isink,1)
+        v_DF(isink,levelmin:nlevelmax,2,1:2)=vsink(isink,2)
+        v_DF(isink,levelmin:nlevelmax,3,1:2)=vsink(isink,3)
+     end do
+  end if
 
 end subroutine init_sink
 !################################################################
