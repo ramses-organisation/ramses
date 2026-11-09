@@ -113,7 +113,7 @@ subroutine cmp_residual_mg_fine(ilevel)
          nb_sum=0.0d0                     ! Sum of phi on neighbors
 
          ! SCAN FLAG TEST
-         if(flag2(icell_amr)/ngridmax==0) then
+         if(flag2(icell_amr)==0) then
             do inbor=1,2
                do idim=1,ndim
                   ! Get neighbor grid
@@ -265,7 +265,7 @@ subroutine gauss_seidel_mg_fine(ilevel,redstep)
          nb_sum=0.0d0                       ! Sum of phi on neighbors
 
          ! Read scan flag
-         if(flag2(icell_amr)/ngridmax==0) then
+         if(flag2(icell_amr)==0) then
             ! Use max-speed "dumb" Gauss-Seidel for "inner" cells
             ! Those cells are active, have all their neighbors active
             ! and all neighbors are in the AMR+MG trees
@@ -561,12 +561,8 @@ subroutine set_scan_flag_fine(ilevel)
          else
             scan_flag=1
          end if
-         ! Update flag2 with scan flag,
-         ! BEWARE as lookup_mg backups are stored in flag2
-         ! Safety init:
-         if(flag2(icell_amr)>ngridmax .or. flag2(icell_amr)<0) flag2(icell_amr)=0
-         ! Do NOT overwrite flag2 !
-         flag2(icell_amr)=flag2(icell_amr)+ngridmax*scan_flag
+         ! Update flag2 with scan flag
+         flag2(icell_amr)=scan_flag
       end do
    end do
 end subroutine set_scan_flag_fine

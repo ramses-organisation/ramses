@@ -466,7 +466,8 @@ subroutine read_solver_params(namelist_unit,nml_ok)
        & ,switch_solv_B,switch_solv_dens,switch_solv_min_dens &
 #endif
        & ,pressure_fix,beta_fix,scheme,riemann &
-       & ,strict_equilibrium
+       & ,strict_equilibrium &
+       & ,add_viscosity,viscosity_kind,nu_viscosity_shear, nu_viscosity_bulk
 
    ! Go to the beginning of the file
    rewind(namelist_unit)
@@ -630,6 +631,25 @@ subroutine read_solver_params(namelist_unit,nml_ok)
 #endif
    endif
 #endif
+
+  !----------------------------------
+  ! Check viscosity parameters
+  !----------------------------------
+  if (add_viscosity) then
+     select case (viscosity_kind)
+     case('constant_uniform')
+      if (nu_viscosity_bulk + nu_viscosity_shear * (ndim - 1) == 0 &
+          & .or. nu_viscosity_bulk < 0 .or. nu_viscosity_shear < 0) then
+         if(myid==1)write(*,*)'nu_viscosity_bulk + nu_viscosity_shear * (ndim - 1) should be > 0 and both ≥ 0'
+         nml_ok=.false.
+      end if
+
+     case default
+        if(myid==1)write(*,*)'Error: unimplemented viscosity_kind selected'
+        if(myid==1)write(*,*)'Implemented schemes are: constant_uniform'
+        nml_ok=.false.
+     end select
+  end if
 
 end subroutine read_solver_params
 !###############################################################

@@ -18,12 +18,12 @@ on:
 
 jobs:
   comment_with_results:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
 
     - name: Install pdfunite
-      run: sudo apt install -y poppler-utils
+      run: sudo apt-get update; sudo apt install -y poppler-utils
 
     - name: 'Download reports artifact'
       uses: actions/github-script@v6

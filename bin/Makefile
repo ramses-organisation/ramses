@@ -52,6 +52,9 @@ NHYDRO = 2+$(NDIM)
 ifeq ($(SOLVER),mhd)
    NHYDRO = 8
 endif
+ifeq ($(SOLVER),rhd)
+   NHYDRO = 5
+endif
 NVAR := $(NHYDRO)+$(NENER)+$(NPSCAL)+$(NMETALS)
 ifeq ($(RT),1)
    NVAR := $(NVAR)+$(NIONS)
@@ -311,7 +314,7 @@ POISSONOBJ = init_poisson.o phi_fine_cg.o interpol_phi.o force_fine.o \
              output_poisson.o
 # Hydro objects
 HYDROOBJ = init_hydro.o init_flow_fine.o write_screen.o output_hydro.o \
-           courant_fine.o godunov_fine.o uplmde.o slope_types.o umuscl.o interpol_hydro.o \
+           courant_fine.o viscosity.o godunov_fine.o uplmde.o slope_types.o umuscl.o interpol_hydro.o \
            godunov_utils.o condinit.o hydro_flag.o hydro_boundary.o boundana.o \
            read_hydro_params.o synchro_hydro_fine.o cooling_module_ism.o \
 	   init_dice.o
