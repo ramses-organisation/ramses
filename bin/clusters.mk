@@ -11,7 +11,7 @@ endif
 # -ffp-contract=off needed for ito tracer test reproducability
 ifeq ($(MACHINE),testsuite)
    MPIF90 = mpif90
-   FFLAGS_OPT += -march=native -ffp-contract=off
+   FFLAGS_OPT += -ffp-contract=off
 endif
 
 ####### EuroHPC clusters #######
