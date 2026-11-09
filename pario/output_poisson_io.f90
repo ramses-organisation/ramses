@@ -91,7 +91,7 @@ subroutine backup_poisson_recv
         list_recv(src)=.true.
      else
         print *,'Error: unexpected message received by ',myid_world
-        call MPI_ABORT(MPI_COMM_WORLD,1,ierr)
+        call clean_stop
      end if
 
      ! Generate filename
@@ -107,7 +107,7 @@ subroutine backup_poisson_recv
      open(unit=ilun,file=trim(scratchdir)//trim(filename),form="unformatted",status="replace",action="write",iostat=ierr)
      if(ierr/=0)then
         print *,'Error: open file failed in backup_part_recv'
-        call MPI_ABORT(MPI_COMM_WORLD,1,ierr)
+        call clean_stop
      end if
 
     write(ilun)ncpu

@@ -359,6 +359,13 @@ recursive subroutine amr_step(ilevel,icount)
                                call timer('feedback','start')
   if(hydro.and.star.and.eta_sn>0)call thermal_feedback(ilevel)
 #endif
+  ! Dynamical friction from stars and DM onto sink particles
+#if NDIM==3
+  if(sink.and.drag_part)then
+                               call timer('sinks','start')
+     call get_drag_part(ilevel)
+  end if
+#endif
 
   ! Density threshold or Bondi accretion onto sink particle
 #if NDIM==3
@@ -408,6 +415,11 @@ recursive subroutine amr_step(ilevel,icount)
      ! for thermal and/or non-thermal energies
      if(pressure_fix.OR.nener>0)then
         call add_pdv_source_terms(ilevel)
+     endif
+
+     ! Add viscous source terms to unew
+     if(add_viscosity)then
+        call add_viscous_stress_terms(ilevel)
      endif
 
      ! Set uold equal to unew
@@ -497,6 +509,14 @@ recursive subroutine amr_step(ilevel,icount)
      if(strict_equilibrium>0)call make_virtual_fine_dp(p_eq(1),ilevel)
      if(simple_boundary)call make_boundary_hydro(ilevel)
   endif
+#ifdef RT
+  if(rt)then
+     do ivar=1,nrtvar
+        call make_virtual_fine_dp(rtuold(1,ivar),ilevel)
+     end do
+     if(simple_boundary)call rt_make_boundary_hydro(ilevel)
+  endif
+#endif
 
 #ifdef SOLVERmhd
   ! Magnetic diffusion step
@@ -559,7 +579,7 @@ recursive subroutine amr_step(ilevel,icount)
   end if
 
   ! Reset move flag flag
-  if(MC_tracer) then
+  if(MC_tracer .and. .not. ito_tracer) then
                                 call timer('tracer','start')
      ! Decrease the move flag by 1
      call reset_tracer_move_flag(ilevel)
@@ -582,7 +602,6 @@ subroutine rt_step(ilevel)
   use rt_hydro_commons
   use UV_module
   use SED_module,     only: star_RT_feedback
-  use mpi_mod
   implicit none
   integer, intent(in) :: ilevel
 

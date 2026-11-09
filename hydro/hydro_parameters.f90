@@ -4,7 +4,6 @@ module hydro_parameters
   use grackle_parameters
 #endif
   use amr_parameters
-  use collapse_parameters
 
   ! Number of independant variables
 
@@ -175,5 +174,11 @@ module hydro_parameters
   integer::ivirial2=imetal
   integer::ixion=imetal
   integer::ichem=imetal
+
+  ! Artificial viscosity
+  logical :: add_viscosity = .false.
+  character(LEN=20)::viscosity_kind='constant_uniform' ! 'constant_uniform'
+  real(dp) :: nu_viscosity_shear = 0.001d0 ! Shear viscosity coefficient for constant uniform viscosity
+  real(dp) :: nu_viscosity_bulk = 0.0d0 ! Bulk viscosity coefficient for constant uniform viscosity
 
 end module hydro_parameters

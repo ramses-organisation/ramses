@@ -9,6 +9,7 @@ subroutine init_sink
 #ifndef WITHOUTMPI
   integer,parameter::tag=1112,tag2=1113
   integer::dummy_io,info2
+  logical::create_sink_file
 #endif
   real(dp)::scale_nH,scale_T2,scale_l,scale_d,scale_t,scale_v
   integer::isink, nsinkold
@@ -109,9 +110,34 @@ subroutine init_sink
   allocate(xmsink(1:nsinkmax))
   allocate(delta_mass_new(1:nsinkmax),delta_mass_all(1:nsinkmax))
   allocate(ok_blast_agn(1:nsinkmax),ok_blast_agn_all(1:nsinkmax))
+  allocate(delta_mass_lev(1:nsinkmax,1:nlevelmax),ok_blast_agn_lev(1:nsinkmax,1:nlevelmax))
+  delta_mass_lev=0d0; ok_blast_agn_lev=.false.
   allocate(direct_force_sink(1:nsinkmax))
   direct_force_sink=.false.
   allocate(new_born(1:nsinkmax),new_born_all(1:nsinkmax),new_born_new(1:nsinkmax))
+  ! Dynamical friction from stars and DM, index 1 is stars and index 2 is DM
+  if(drag_part)then
+     allocate(v_background(1:nsinkmax,1:ndim,1:2))
+     allocate(m_background(1:nsinkmax,1:2))
+     allocate(vrel_sink(1:nsinkmax,1:ndim,1:2))
+     allocate(vrel_sink_norm(1:nsinkmax,1:2))
+     allocate(v_DFnew(1:nsinkmax,1:ndim,1:2))
+     allocate(v_DFall(1:nsinkmax,1:ndim,1:2))
+     allocate(v_DF(1:nsinkmax,levelmin:nlevelmax,1:ndim,1:2))
+     allocate(mass_DFnew(1:nsinkmax,1:2))
+     allocate(mass_DFall(1:nsinkmax,1:2))
+     allocate(mass_DF(1:nsinkmax,levelmin:nlevelmax,1:2))
+     allocate(fact_fastnew(1:nsinkmax,1:2))
+     allocate(fact_fastall(1:nsinkmax,1:2))
+     allocate(fact_fast(1:nsinkmax,levelmin:nlevelmax,1:2))
+     allocate(mass_lowspeednew(1:nsinkmax,1:2))
+     allocate(mass_lowspeedall(1:nsinkmax,1:2))
+     allocate(mass_lowspeed(1:nsinkmax,levelmin:nlevelmax,1:2))
+     v_background=0d0; m_background=0d0; vrel_sink=0d0; vrel_sink_norm=0d0
+     v_DFnew=0d0; v_DFall=0d0; v_DF=0d0; mass_DFnew=0d0; mass_DFall=0d0; mass_DF=0d0
+     fact_fastnew=0d0; fact_fastall=0d0; fact_fast=0d0
+     mass_lowspeednew=0d0; mass_lowspeedall=0d0; mass_lowspeed=0d0
+  end if
 
   call units(scale_l,scale_t,scale_d,scale_v,scale_nH,scale_T2)
 
@@ -140,7 +166,12 @@ subroutine init_sink
      nsink=0
      ! Create an empty sink file if the previous snapshot had no sinks.
 #ifndef WITHOUTMPI
-     if ((IOGROUPSIZE == 0 .and. myid == 1) .or. (IOGROUPSIZE > 0 .and. mod(myid-1,IOGROUPSIZE) == 0)) then
+     if(IOGROUPSIZE==0)then
+        create_sink_file = (myid==1)
+     else !(IOGROUPSIZE > 0)
+        create_sink_file = (mod(myid-1,IOGROUPSIZE)==0)
+     endif
+     if(create_sink_file)then
 #endif
         inquire(file=fileloc, exist=exists_sink_restart)
         if (.not. exists_sink_restart) then
@@ -160,7 +191,8 @@ subroutine init_sink
      read(10,'(A200)')comment_line
      read(10,'(A200)')comment_line
      do
-        read(10,'(I10,21(A1,ES21.10),A1,I10)',end=104)sid,co, sm1,co,&
+        ! Must match the write format in output_sink_csv exactly.
+        read(10,'(I10,21(A1,ES25.16E3),A1,I10)',end=104)sid,co, sm1,co,&
                            sx1,co,sx2,co,sx3,co, &
                            sv1,co,sv2,co,sv3,co, &
                            sl1,co,sl2,co,sl3,co, &
@@ -314,6 +346,10 @@ subroutine init_sink
      end do
   end if
 
+  ! The pending AGN feedback budget read from the restart file is put on levelmin;
+  ! regrid_agn_reservoir moves it to the levels holding cloud particles.
+  if(nsink>0)delta_mass_lev(1:nsink,levelmin)=max(delta_mass(1:nsink),0d0)
+
   ! Set direct force boolean
   if(mass_sink_direct_force .ge. 0.0)then
      do isink=1,nsink
@@ -324,6 +360,14 @@ subroutine init_sink
         direct_force_sink(isink)=.False.
      end do
   endif
+  ! Dynamical friction history starts in the sink rest frame
+  if(drag_part)then
+     do isink=1,nsink
+        v_DF(isink,levelmin:nlevelmax,1,1:2)=vsink(isink,1)
+        v_DF(isink,levelmin:nlevelmax,2,1:2)=vsink(isink,2)
+        v_DF(isink,levelmin:nlevelmax,3,1:2)=vsink(isink,3)
+     end do
+  end if
 
 end subroutine init_sink
 !################################################################

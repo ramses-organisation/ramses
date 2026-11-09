@@ -17,7 +17,9 @@ subroutine make_sn_stellar
   real(dp), dimension(1:nvector, 1:ndim), save:: xx
   real(dp):: sn_r, sn_m, sn_p, sn_e, sn_d, sn_ed
   real(dp):: rr,pgas,dgas,ekin
+#ifndef WITHOUTMPI
   integer:: info
+#endif
   real(dp),dimension(1:nvector,1:ndim)::x
   real(dp),dimension(1:3):: xshift, x_sn
   logical, save:: first = .true.
@@ -328,7 +330,9 @@ subroutine sphere_average(navg, center, radius, rpow, upow, avg)
     real(dp), dimension(1:twotondim, 1:3):: xc
     real(dp), dimension(1:nvector, 1:ndim):: xx
 
+#ifndef WITHOUTMPI
     integer:: info
+#endif
     real(dp), dimension(1:navg):: avg_loc
     real(dp), dimension(1:navg):: integrand
     real(dp), dimension(1:navg):: utemp

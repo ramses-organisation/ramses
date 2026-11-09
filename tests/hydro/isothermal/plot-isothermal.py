@@ -17,11 +17,19 @@ unit_d=1.50492957435e-20
 unit_t=3.1556926e13
 unit_l=3.0857e18
 unit_v=unit_l/unit_t
+gamma=1.666667
 
 fig, ax = plt.subplots(nrows=1, ncols=3, figsize=(12, 4))
 
 # Load RAMSES output
 data = visu_ramses.load_snapshot(2)
+
+# compute primitive variables
+etherm = data["data"]["total_energy"] - 0.5 * data["data"]["momentum_x"]**2 / data["data"]["density"]
+data["data"]["pressure"] = (gamma-1.0) * etherm
+data["data"]["velocity_x"] = data["data"]["momentum_x"] / data["data"]["density"]
+
+# gather primitives for plotting
 x      = (data["data"]["x"] - 0.5) * unit_l / AU
 rho    = data["data"]["density"] * unit_d
 p      = data["data"]["pressure"] * unit_d * unit_l**2 / unit_t**2

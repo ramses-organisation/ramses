@@ -2,7 +2,6 @@ subroutine read_hydro_params(nml_ok)
   use amr_commons
   use hydro_commons
   use cooling_module, only:X,Y
-  use mpi_mod
   implicit none
   logical::nml_ok
   !--------------------------------------------------
@@ -20,22 +19,6 @@ subroutine read_hydro_params(nml_ok)
   ! Namelist definitions
   !--------------------------------------------------
 
-  ! Initial conditions parameters
-  namelist/init_params/condinit_kind,filetype,initfile,multiple,nregion,region_type &
-       & ,x_center,y_center,z_center,aexp_ini &
-       & ,length_x,length_y,length_z,exp_region &
-       & ,d_region,u_region,v_region,w_region,p_region &
-#ifdef SOLVERmhd
-       & ,A_region,B_region,C_region,B_ave &
-#endif
-#if NVAR>NHYDRO+NENER
-       & ,var_region &
-#endif
-#if NENER>0
-       & ,prad_region &
-#endif
-       & ,omega_b,alpha_dense_core,beta_dense_core,crit_dense_core,delta_rho,theta_mag,mass_c,Mach
-
   ! Hydro parameters
   namelist/hydro_params/gamma,courant_factor,smallr,smallc &
        & ,niter_riemann,slope_type,difmag &
@@ -48,7 +31,9 @@ subroutine read_hydro_params(nml_ok)
        & ,switch_solv_B,switch_solv_dens,switch_solv_min_dens &
 #endif
        & ,pressure_fix,beta_fix,scheme,riemann &
-       & ,strict_equilibrium
+       & ,strict_equilibrium &
+       & ,add_viscosity,viscosity_kind,nu_viscosity_shear, nu_viscosity_bulk
+
 
   ! Refinement parameters
   namelist/refine_params/x_refine,y_refine,z_refine,r_refine &
@@ -116,12 +101,9 @@ subroutine read_hydro_params(nml_ok)
 #endif
 
   ! Read namelist file
+  call read_init_params(1,nml_ok)
+
   rewind(1)
-  read(1,NML=init_params,END=121)
-  goto 122
-121 write(*,*)' You need to set up namelist &INIT_PARAMS in parameter file'
-  call clean_stop
-122 rewind(1)
 
   ! Fail if physics params is found
   read(1, NML=physics_params, end=110)
@@ -305,6 +287,25 @@ subroutine read_hydro_params(nml_ok)
      nml_ok=.false.
   endif
 #endif
+
+  !----------------------------------
+  ! Check viscosity parameters
+  !----------------------------------
+  if (add_viscosity) then
+     select case (viscosity_kind)
+     case('constant_uniform')
+      if (nu_viscosity_bulk + nu_viscosity_shear * (ndim - 1) == 0 &
+          & .or. nu_viscosity_bulk < 0 .or. nu_viscosity_shear < 0) then
+         if(myid==1)write(*,*)'nu_viscosity_bulk + nu_viscosity_shear * (ndim - 1) should be > 0 and both ≥ 0'
+         nml_ok=.false.
+      end if
+
+     case default
+        if(myid==1)write(*,*)'Error: unimplemented viscosity_kind selected'
+        if(myid==1)write(*,*)'Implemented schemes are: constant_uniform'
+        nml_ok=.false.
+     end select
+  end if
 
   !--------------------------------------------------
   ! Check ind_rsink
@@ -536,3 +537,48 @@ subroutine read_hydro_params(nml_ok)
 #endif
 
 end subroutine read_hydro_params
+!###############################################################
+!###############################################################
+!###############################################################
+subroutine read_init_params(namelist_unit,nml_ok)
+   use amr_parameters
+   use amr_commons
+   use hydro_parameters
+   use collapse_parameters
+   implicit none
+   integer,intent(in)::namelist_unit
+   logical,intent(inout)::nml_ok
+   integer::nml_err
+
+  ! Initial conditions parameters
+  namelist/init_params/condinit_kind,filetype,initfile,multiple,nregion,region_type &
+       & ,x_center,y_center,z_center,aexp_ini &
+       & ,length_x,length_y,length_z,exp_region &
+       & ,d_region,u_region,v_region,w_region,p_region &
+#ifdef SOLVERmhd
+       & ,A_region,B_region,C_region,B_ave &
+#endif
+#if NVAR>NHYDRO+NENER
+       & ,var_region &
+#endif
+#if NENER>0
+       & ,prad_region &
+#endif
+       & ,omega_b,alpha_dense_core,beta_dense_core,crit_dense_core,delta_rho,theta_mag,mass_c,Mach
+
+   ! Go to the beginning of the file
+   rewind(namelist_unit)
+
+   ! Read namelist
+   read(namelist_unit,NML=init_params,IOSTAT=nml_err)
+
+   if(nml_err<0)then
+      ! EOF reached before namelist was found
+      if(myid==1)write(*,*)'You need to set up namelist &INIT_PARAMS in parameter file.'
+      nml_ok=.false.
+   elseif(nml_err>0)then
+      if(myid==1)write(*,*)'Error reading namelist &INIT_PARAMS. Check formatting.'
+      nml_ok=.false.
+   endif
+
+end subroutine read_init_params

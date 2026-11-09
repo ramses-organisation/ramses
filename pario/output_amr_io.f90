@@ -224,7 +224,7 @@ subroutine backup_amr_recv
         list_recv(src)=.true.
      else
         print *,'Error: unexpected message received by ',myid_world
-        call MPI_ABORT(MPI_COMM_WORLD,1,ierr)
+        call clean_stop
      end if
 
      call MPI_RECV(xdp,19+2*noutput+ncpu,MPI_DOUBLE_PRECISION,src,tag, &
@@ -243,7 +243,7 @@ subroutine backup_amr_recv
      open(unit=ilun,file=trim(scratchdir)//trim(filename),status="replace",form="unformatted",action="write",iostat=ierr)
      if(ierr/=0)then
         print *,'Error: open file failed in backup_amr_recv'
-        call MPI_ABORT(MPI_COMM_WORLD,1,ierr)
+        call clean_stop
      end if
 
      !-----------------------------------
@@ -477,7 +477,7 @@ subroutine output_info_recv
   if(ierr/=0)then
      print *,'Error: open file failed in output_info_recv'
 print *,'filename=',trim(filename)
-     call MPI_ABORT(MPI_COMM_WORLD,1,ierr)
+     call clean_stop
   end if
 
   ! Write run parameters

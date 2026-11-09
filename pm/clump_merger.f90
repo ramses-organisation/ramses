@@ -1006,7 +1006,7 @@ subroutine get_local_peak_id(global_peak_id,local_peak_id)
         if(hfree.eq.npeaks_max)then
            write(*,*)'Too many peaks'
            write(*,*)'Increase npeaks_max'
-           stop
+           call clean_stop
         endif
      else
         ikey=hkey(ihash) ! collision in the hash table
@@ -1024,7 +1024,7 @@ subroutine get_local_peak_id(global_peak_id,local_peak_id)
            if(hfree.eq.npeaks_max)then
               write(*,*)'Too many peaks'
               write(*,*)'Increase npeaks_max'
-              stop
+              call clean_stop
            endif
         else            ! peak already exists
            local_peak_id=ikey

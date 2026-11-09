@@ -1,4 +1,6 @@
-Copyright CEA and Romain Teyssoer
+Copyright (C) 1999-2008 CEA, CNRS
+Copyright (C) 2008-2021 University of Zurich
+Copyright (C) 2021-2026 The Trustees of Princeton University
 
 romain.teyssier@cea.fr
 

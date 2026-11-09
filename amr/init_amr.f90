@@ -205,6 +205,8 @@ subroutine init_amr
   if(poisson)then
      allocate(lookup_mg(1:ngridmax))
      lookup_mg=0
+     allocate(lookup_mg_backup(1:ngridmax))
+     lookup_mg_backup=0
   endif
 
   ! Allocate physical boundary for each level

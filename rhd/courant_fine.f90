@@ -19,7 +19,7 @@ subroutine courant_fine(ilevel)
   real(kind=8),dimension(3)::comm_buffin,comm_buffout
   real(dp),dimension(1:nvector,1:nvar),save::uu
   real(dp),dimension(1:nvector,1:ndim),save::gg
-  real(dp),dimension(1:nvector,1:ndim),save::q
+  real(dp),dimension(1:nvector,1:nvar),save::q
   real(dp)::lor,v
 !  real(dp)::lor_max_loc,lor_max_all
 

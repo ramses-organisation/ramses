@@ -18,6 +18,7 @@ module pm_commons
   real(dp),allocatable,dimension(:)    ::rho_gas,volume_gas,eps_sink,c2sink
   real(dp),allocatable,dimension(:,:)  ::vel_gas
   real(dp),allocatable,dimension(:)    ::delta_mass,delta_mass_new,delta_mass_all
+  real(dp),allocatable,dimension(:,:)  ::delta_mass_lev   ! AGN feedback reservoir per level (accreted mass)
   real(dp),allocatable,dimension(:)    ::wden,weth,wvol,wdiv,wden_new,weth_new,wvol_new,wdiv_new
   real(dp),allocatable,dimension(:,:)  ::wmom,wmom_new
   real(dp),allocatable,dimension(:,:)  ::vsink,vsink_new,vsink_all
@@ -32,8 +33,19 @@ module pm_commons
   real(dp),allocatable,dimension(:,:,:)::weighted_momentum
   real(dp),allocatable,dimension(:)    ::rho_sink_tff
   real(dp),allocatable,dimension(:)    ::msum_overlap
+  ! Sink dynamical friction from stars and DM
+  real(dp),allocatable,dimension(:,:,:)  ::v_background,vrel_sink
+  real(dp),allocatable,dimension(:,:)    ::m_background,vrel_sink_norm
+  real(dp),allocatable,dimension(:,:,:)  ::v_DFnew,v_DFall
+  real(dp),allocatable,dimension(:,:,:,:)::v_DF
+  real(dp),allocatable,dimension(:,:)    ::mass_DFnew,mass_DFall
+  real(dp),allocatable,dimension(:,:)    ::fact_fastnew,fact_fastall
+  real(dp),allocatable,dimension(:,:)    ::mass_lowspeednew,mass_lowspeedall
+  real(dp),allocatable,dimension(:,:,:)  ::mass_DF,fact_fast,mass_lowspeed
+
   integer,allocatable,dimension(:)     ::idsink,idsink_new,idsink_old,idsink_all
   logical,allocatable,dimension(:)     ::ok_blast_agn,ok_blast_agn_all
+  logical,allocatable,dimension(:,:)   ::ok_blast_agn_lev ! AGN feedback release pending per level
   logical,allocatable,dimension(:)     ::direct_force_sink
   logical,allocatable,dimension(:)     ::new_born,new_born_all,new_born_new
   integer,allocatable,dimension(:)     ::idsink_sort

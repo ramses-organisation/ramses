@@ -128,6 +128,46 @@ subroutine read_params
 
   ! Read parameter blocks
   call read_run_params(1,nml_ok)  !should be read first
+
+  !-------------------------------------------------
+  ! Read optional nrestart command-line argument
+  !-------------------------------------------------
+
+  ! Will overwrite whatever was set in the namelist
+  if (myid==1 .and. narg == 2) then
+   CALL getarg(2,cmdarg)
+   read(cmdarg,*) nrestart
+endif
+
+! Check if info file of restart output exists,
+! otherwise look for earlier outputs
+if (myid==1 .and. nrestart .gt. 0) then
+   call title(nrestart,nchar)
+   info_file='output_'//TRIM(nchar)//'/info_'//TRIM(nchar)//'.txt'
+   inquire(file=info_file, exist=info_ok)
+   do while(.not. info_ok .and. nrestart .gt. 1)
+      nrestart = nrestart - 1
+      call title(nrestart,nchar)
+      info_file='output_'//TRIM(nchar)//'/info_'//TRIM(nchar)//'.txt'
+      inquire(file=info_file, exist=info_ok)
+   enddo
+endif
+
+#ifndef WITHOUTMPI
+  call MPI_BCAST(info_ok,1,MPI_LOGICAL,0,MPI_COMM_WORLD,ierr)
+#endif
+
+if (nrestart .gt. 0 .and. .not. info_ok) then
+   if (myid==1) then
+       write(*,*) "Error: Could not find restart file"
+   endif
+   call clean_stop
+endif
+
+#ifndef WITHOUTMPI
+  call MPI_BCAST(nrestart,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
+#endif
+
   call read_amr_params(1,nml_ok)
   call read_output_params(1,nml_ok)
   call read_movie_params(1,nml_ok)
@@ -216,45 +256,6 @@ subroutine read_params
     write(*,*) "--------------------------------------------------------------------------------------------------------------"
   endif
 #endif
-#endif
-
-  !-------------------------------------------------
-  ! Read optional nrestart command-line argument
-  !-------------------------------------------------
-
-  ! Will overwrite whatever was set in the namelist
-  if (myid==1 .and. narg == 2) then
-     CALL getarg(2,cmdarg)
-     read(cmdarg,*) nrestart
-  endif
-
-  ! Check if info file of restart output exists,
-  ! otherwise look for earlier outputs
-  if (myid==1 .and. nrestart .gt. 0) then
-     call title(nrestart,nchar)
-     info_file='output_'//TRIM(nchar)//'/info_'//TRIM(nchar)//'.txt'
-     inquire(file=info_file, exist=info_ok)
-     do while(.not. info_ok .and. nrestart .gt. 1)
-        nrestart = nrestart - 1
-        call title(nrestart,nchar)
-        info_file='output_'//TRIM(nchar)//'/info_'//TRIM(nchar)//'.txt'
-        inquire(file=info_file, exist=info_ok)
-     enddo
-  endif
-
-#ifndef WITHOUTMPI
-  call MPI_BCAST(info_ok,1,MPI_LOGICAL,0,MPI_COMM_WORLD,ierr)
-#endif
-
-  if (nrestart .gt. 0 .and. .not. info_ok) then
-     if (myid==1) then
-         write(*,*) "Error: Could not find restart file"
-     endif
-     call clean_stop
-  endif
-
-#ifndef WITHOUTMPI
-  call MPI_BCAST(nrestart,1,MPI_INTEGER,0,MPI_COMM_WORLD,ierr)
 #endif
 
 
@@ -634,7 +635,7 @@ end subroutine read_lightcone_params
 !###############################################################
 !###############################################################
 subroutine read_tracer_params(namelist_unit,nml_ok)
-   use amr_parameters, only:tracer,mc_tracer,pic,nlevelmax
+   use amr_parameters, only:tracer,mc_tracer,ito_tracer,pic,nlevelmax
    use amr_commons, only:myid
    use pm_parameters
    implicit none
@@ -642,7 +643,7 @@ subroutine read_tracer_params(namelist_unit,nml_ok)
    logical,intent(inout)::nml_ok
    integer::nml_err
 
-   namelist/tracer_params/MC_tracer,tracer_feed,tracer_feed_fmt &
+   namelist/tracer_params/MC_tracer, ito_tracer, tracer_feed,tracer_feed_fmt &
    & ,tracer_mass,tracer_first_balance_part_per_cell &
    & ,tracer_first_balance_levelmin
 
@@ -660,9 +661,16 @@ subroutine read_tracer_params(namelist_unit,nml_ok)
    ! Verify input
    if (tracer_first_balance_levelmin <= 0) tracer_first_balance_levelmin = nlevelmax + 1
 
+   if(ito_tracer .and. (.not. MC_tracer)) then
+      if(myid==1)write(*,*)'Warning: you have activated the Itô tracer but not the MC tracers.'
+      if(myid==1)write(*,*)'Warning: activating the parameter MC_tracer'
+      MC_tracer = .true.
+   end if
+
    if(MC_tracer .and. (.not. tracer))then
-      if(myid==1)write(*,*)'Error: you have activated the MC tracer but not the tracers in RUN_PARAMS.'
-      nml_ok=.false.
+      if(myid==1)write(*,*)'Warning: you have activated the MC tracer but not the tracers in RUN_PARAMS.'
+      if(myid==1)write(*,*)'Warning: activating the parameter RUN_PARAMS/tracer'
+      tracer = .true.
    end if
 
    if(MC_tracer .and. (.not. pic)) then
@@ -684,7 +692,7 @@ subroutine read_poisson_params(namelist_unit,nml_ok)
 
    namelist/poisson_params/epsilon,gravity_type,gravity_params &
    & ,cg_levelmin,cic_levelmax,self_gravity,gravity_rho_ana_type,gravity_force_ana_type &
-   & ,gravity_rho_ana_params,gravity_force_ana_params
+   & ,gravity_rho_ana_params,gravity_force_ana_params,mg_maxiter,mg_safe_mode_reset
 
    ! Go to the beginning of the file
    rewind(namelist_unit)
@@ -716,6 +724,16 @@ subroutine read_poisson_params(namelist_unit,nml_ok)
    ! Currently you cannot have both, since then it is unclear what to do with the gravity_params input array
    if(gravity_rho_ana_type>0.and.gravity_force_ana_type>0)then
       if(myid==1)write(*,*)'Error: you cannot have both gravity_rho_ana_type and gravity_force_ana_type > 0 at the same time.'
+      nml_ok=.false.
+   endif
+
+   if(mg_maxiter<1)then
+      if(myid==1)write(*,*)'Error: mg_maxiter must be at least 1.'
+      nml_ok=.false.
+   endif
+
+   if(mg_safe_mode_reset<0)then
+      if(myid==1)write(*,*)'Error: mg_safe_mode_reset must be >= 0.'
       nml_ok=.false.
    endif
 

@@ -17,7 +17,7 @@ subroutine rt_hydro_flag(ilevel)
   integer,dimension(1:nvector),save::ind_grid,ind_cell
   integer,dimension(1:nvector,0:twondim),save::igridn
   integer,dimension(1:nvector,1:twondim),save::indn
-  integer,dimension(1:nvector,1:twondim),save::c_factor
+  real(dp),dimension(1:nvector,1:twondim),save::c_factor
 
   logical,dimension(1:nvector),save::ok
 
@@ -51,7 +51,6 @@ subroutine rt_hydro_flag(ilevel)
   end do
 
   if( rt_err_grad_cn==-1.0) return
-  c_factor(:,:)=rt_c(ilevel)
 
   ! Loop over active grids
   ncache=active(ilevel)%ngrid
@@ -84,6 +83,7 @@ subroutine rt_hydro_flag(ilevel)
 
         ! If a neighbor cell does not exist,
         ! replace it by its father cell
+        c_factor(:,:)=rt_c(ilevel)
         do j=1,twondim
            do i=1,ngrid
               if(indn(i,j)==0)then
