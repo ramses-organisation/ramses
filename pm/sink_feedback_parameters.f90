@@ -32,6 +32,7 @@ module sink_feedback_parameters
   real(dp):: Tsat=1d99    ! maximum temperature in SN remnants
   real(dp):: Vsat=1d99    ! maximum velocity in SN remnants
   real(dp):: sn_r_sat=0d0 ! minimum radius for SN remnant
+  integer:: nlevel_sne=0  ! SN radius is 3 cells of this level (0: levelmin)
 
   real(dp):: Vdisp=1d0    ! dispersion velocity of the stellar objects [km/s]
                           ! determines how far SN can explode from the sink

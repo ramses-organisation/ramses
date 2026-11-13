@@ -49,6 +49,20 @@ subroutine  condinit(x,u,dx,nn)
   case('collapse')
      call collapse_condinit(x, q, dx, nn)
 
+  case('jiang_415','jiang_415_donut')
+     call region_condinit(x, q, dx, nn)
+#if NDIM>1
+     call jiang_loop_primitives(x, q, dx, nn)
+#endif
+
+  case('jiang_413')
+     call region_condinit(x, q, dx, nn)
+     call jiang_density_bump(x, q, dx, nn, 1d0)
+
+  case('jiang_424')
+     call region_condinit(x, q, dx, nn)
+     call jiang_density_bump(x, q, dx, nn, 1d1)
+
   ! Add here, if you wish, some user-defined initial conditions
   ! ........
 
@@ -96,6 +110,77 @@ subroutine  condinit(x,u,dx,nn)
 #endif
 
 end subroutine condinit
+#if NDIM>1
+!================================================================
+!================================================================
+!================================================================
+!================================================================
+subroutine jiang_loop_primitives(x,q,dx,nn)
+  !--------------------------------------------------------------
+  ! Jiang & Oh (2018) 4.1.5 magnetic loop: current-loop B field from the
+  ! vector potential A_z = A0*max(R0-r,-boxlen). Sets the six B components
+  ! only; density, velocity and pressure come from the region parameters.
+  !--------------------------------------------------------------
+  use amr_parameters
+  use hydro_parameters
+  implicit none
+  integer ::nn
+  real(dp)::dx
+  real(dp),dimension(1:nvector,1:nvar+3)::q
+  real(dp),dimension(1:nvector,1:ndim)::x
+  integer::i
+  real(dp)::R0,A0,xl,xr,yl,yr,Al,Ar,xcenter
+
+  xcenter=boxlen*0.5d0
+  R0=0.3d0
+  A0=1d-3
+
+  do i=1,nn
+     xl=x(i,1)-0.5d0*dx-xcenter
+     xr=x(i,1)+0.5d0*dx-xcenter
+     yl=x(i,2)-0.5d0*dx-xcenter
+     yr=x(i,2)+0.5d0*dx-xcenter
+     Ar=A0*max(R0-sqrt(xl**2+yr**2),-boxlen)
+     Al=A0*max(R0-sqrt(xl**2+yl**2),-boxlen)
+     q(i,6)=(Ar-Al)/dx
+     Ar=A0*max(R0-sqrt(xr**2+yr**2),-boxlen)
+     Al=A0*max(R0-sqrt(xr**2+yl**2),-boxlen)
+     q(i,nvar+1)=(Ar-Al)/dx
+     Ar=A0*max(R0-sqrt(xr**2+yl**2),-boxlen)
+     Al=A0*max(R0-sqrt(xl**2+yl**2),-boxlen)
+     q(i,7)=(Al-Ar)/dx
+     Ar=A0*max(R0-sqrt(xr**2+yr**2),-boxlen)
+     Al=A0*max(R0-sqrt(xl**2+yr**2),-boxlen)
+     q(i,nvar+2)=(Al-Ar)/dx
+     q(i,8)=0d0
+     q(i,nvar+3)=0d0
+  enddo
+
+end subroutine jiang_loop_primitives
+#endif
+!================================================================
+!================================================================
+!================================================================
+!================================================================
+subroutine jiang_density_bump(x,q,dx,nn,dpeak)
+  !--------------------------------------------------------------
+  ! Jiang & Oh (2018) 4.1.3 / 4.2.4: symmetric sech^2 density bump of peak
+  ! dpeak over a baseline of 0.1, centred on x=200 with a width of 25. Sets
+  ! the Alfven speed v_A = B/sqrt(rho) the CRs stream along, producing the
+  ! bottleneck the test measures. Sets the density only.
+  !--------------------------------------------------------------
+  use amr_parameters
+  use hydro_parameters
+  implicit none
+  integer ::nn
+  real(dp)::dx,dpeak
+  real(dp),dimension(1:nvector,1:nvar+3)::q
+  real(dp),dimension(1:nvector,1:ndim)::x
+
+  q(1:nn,1)=0.1d0+(dpeak-0.1d0)*(1d0+tanh((x(1:nn,1)-200d0)/25d0)) &
+       &                       *(1d0+tanh((200d0-x(1:nn,1))/25d0))
+
+end subroutine jiang_density_bump
 !================================================================
 !================================================================
 !================================================================
