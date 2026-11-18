@@ -184,6 +184,8 @@ module amr_parameters
   real(dp)::mass_star_max=120        ! Maximum mass of a star in solar mass
   real(dp)::mass_sne_min=10          ! Minimum mass of a single supernova in solar mass
   integer::momentum_feedback=0       ! Use supernovae momentum feedback if cooling radius not resolved
+  real(dp)::t_photo=0                ! patch/mom2: photoionization heating as a rate, rho*(22 km/s)^2 per t_photo (yr) per star particle younger than 20 Myr; 0 = per fine step
+  logical::sn_block_deposit=.false.  ! patch/mom2: spread the SN momentum over all 8 CIC cells instead of one random CIC cell
   integer::strict_equilibrium=0      ! Hydro scheme to preserve exactly hydrostatic equilibrium
 
   ! PIC dust parameters
