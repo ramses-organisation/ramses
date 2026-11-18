@@ -201,7 +201,11 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   integer ,dimension(1:nvector,1:twotondim),save::icell,kg
   real(dp),dimension(1:3)::skip_loc
 
-  integer ,dimension(1:nvector),save::hra
+  integer ,dimension(1:nvector),save::hra,nleaf
+  integer ,dimension(1:nvector,1:twotondim),save::cic_cell
+  logical ,dimension(1:nvector,1:twotondim),save::leaf
+  integer::k,n,kpick,igrid8
+  real(dp)::t_photo_code,pdep
   real(dp),dimension(1:nvector,1:ndim),save::dd,dg
   integer ,dimension(1:nvector,1:ndim),save::ig,igg,icg
 
@@ -280,6 +284,13 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   ! Photoionization momentum injection from cgs to code units
   cs_H2_2=f_esn*(22.0*1d5/scale_v)**2 ! 22 km/s
 
+  ! Reference time step of the photoionization heating (t_photo in yr; same units as dteff)
+  if(use_proper_time)then
+     t_photo_code=t_photo*(365.*24.*3600.)/(scale_t/aexp**2)
+  else
+     t_photo_code=t_photo*(365.*24.*3600.)/scale_t
+  endif
+
   ! Fraction of the SN energy into non-thermal component
   FRAC_NT=0.0
 
@@ -344,33 +355,18 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
         kg(j,8)=1+igd(j,1)+3*igd(j,2)+9*igd(j,3)
     end do
 
-    do j=1,np
-        call ranf(localseed,RandNum)
-        hra(j) = int(RandNum*8)+1
-    enddo
-
-    do j=1,np
-        igrid(j)=son(nbors_father_cells(ind_grid_part(j),kg(j,hra(j))))
-    end do
-
-    ! Check if particles are entirely in level ilevel
-    ok(1:np)=.true.
-    do j=1,np
-        ok(j)=ok(j).and.igrid(j)>0
-    end do
-
-    ! Compute parent cell position
+    ! Address of each of the 8 CIC cells and whether it is a leaf cell at level ilevel.
+    ! A CIC cell can be missing at level ilevel (its parent grid is not refined) or be refined itself:
+    ! depositing into the former used the wrong (fine) cell volume for the momentum, and a deposit into
+    ! the latter is overwritten by the restriction from its children. Only leaf cells at level ilevel are
+    ! therefore used; the cell hosting the particle is always one of them.
     do idim=1,ndim
         do j=1,np
-        if(ok(j))then
             icg(j,idim)=ig(j,idim)-2*igg(j,idim)
             icd(j,idim)=id(j,idim)-2*igd(j,idim)
-        endif
         end do
     end do
-
     do j=1,np
-        if(ok(j))then
         icell(j,1)=1+icg(j,1)+2*icg(j,2)+4*icg(j,3)
         icell(j,2)=1+icd(j,1)+2*icg(j,2)+4*icg(j,3)
         icell(j,3)=1+icg(j,1)+2*icd(j,2)+4*icg(j,3)
@@ -379,17 +375,45 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
         icell(j,6)=1+icd(j,1)+2*icg(j,2)+4*icd(j,3)
         icell(j,7)=1+icg(j,1)+2*icd(j,2)+4*icd(j,3)
         icell(j,8)=1+icd(j,1)+2*icd(j,2)+4*icd(j,3)
-        endif
+    end do
+    do j=1,np
+        nleaf(j)=0
+        do k=1,twotondim
+            igrid8=son(nbors_father_cells(ind_grid_part(j),kg(j,k)))
+            leaf(j,k)=.false.
+            cic_cell(j,k)=0
+            if(igrid8>0)then
+                cic_cell(j,k)=ncoarse+(icell(j,k)-1)*ngridmax+igrid8
+                leaf(j,k)=(son(cic_cell(j,k))==0)
+            endif
+            if(leaf(j,k))nleaf(j)=nleaf(j)+1
+        end do
     end do
 
-    ! Compute parent cell adresses
+    ! Pick one of the leaf CIC cells at random (identical to the original choice when all 8 are leaf cells)
     do j=1,np
-        if(ok(j))then
-            indp(j)=ncoarse+(icell(j,hra(j))-1)*ngridmax+igrid(j)
+        call ranf(localseed,RandNum)
+        if(nleaf(j)>0)then
+            kpick=min(int(RandNum*nleaf(j))+1,nleaf(j))
+            n=0
+            do k=1,twotondim
+                if(leaf(j,k))then
+                    n=n+1
+                    if(n==kpick)hra(j)=k
+                endif
+            end do
+            indp(j)=cic_cell(j,hra(j))
         else
-            indp(j) = nbors_father_cells(ind_grid_part(j),kg(j,hra(j)))
-            vol_loc(j)=vol_loc(j)*2**ndim ! ilevel-1 cell volume
-        end if
+            ! Should not happen: fall back to the original choice, with the volume of the cell actually used
+            hra(j)=int(RandNum*8)+1
+            igrid(j)=son(nbors_father_cells(ind_grid_part(j),kg(j,hra(j))))
+            if(igrid(j)>0)then
+                indp(j)=ncoarse+(icell(j,hra(j))-1)*ngridmax+igrid(j)
+            else
+                indp(j)=nbors_father_cells(ind_grid_part(j),kg(j,hra(j)))
+                vol_loc(j)=vol_loc(j)*2**ndim ! ilevel-1 cell volume
+            endif
+        endif
     end do
 
   else
@@ -521,7 +545,7 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
                  endif
                  write(ilun,'(E24.12)',advance='no') uvar/unew(indp(j),1)
               enddo
-              write(ilun,'(I10)',advance='no') typep(ind_part(i))%tag
+              write(ilun,'(I10)',advance='no') typep(ind_part(j))%tag
               write(ilun,'(E24.12)',advance='no') current_time
               write(ilun,'(A1)') ' '
            endif
@@ -529,8 +553,11 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
      end do
 
      ! Photo-ionization thermal feedback
+     ! t_photo=0 (default): rho*cs_H2_2 per young particle at every fine step of its level, so the heating rate
+     ! scales as 1/dt and depends on resolution. t_photo>0: injected as a rate, rho*cs_H2_2 per t_photo.
      do j=1,np
         pressure=max(uold(indp(j),1),smallr)*cs_H2_2
+        if(t_photo>0d0)pressure=pressure*dteff(j)/t_photo_code
         ethermal(j)=ethermal(j)+pressure
      end do
 
@@ -550,7 +577,18 @@ subroutine feedbk(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
            p_boost=(metallicity**p_SN_z_exp)*((gas_density*scale_nH/100.0)**p_SN_n_exp)
            r_cool=r_c*(metallicity**r_c_z_exp)*((gas_density*scale_nH/100.0)**r_c_n_exp)
            if(birth_time.lt.(current_time-t0).and.r_cool.lt.(4.0*dx_min/aexp))then
-              pstarnew(indp(j))=pstarnew(indp(j))+p_SN*n_SN(j)*p_boost*min(1.0,(dx_min/r_cool/aexp)**(3.0/2.0))/dx_loc**3
+              ! Divide by the volume of the cell actually used (was dx_loc**3 even for an ilevel-1 cell)
+              pdep=p_SN*n_SN(j)*p_boost*min(1.0,(dx_min/r_cool/aexp)**(3.0/2.0))/vol_loc(j)
+              if(sn_block_deposit.and.nleaf(j)==twotondim)then
+                 ! Spread over the 2x2x2 block of CIC cells: the faces inside the block balance, so every block
+                 ! cell pushes only through its 3 outer faces. Each cell gets pdep/4, so the 24 outer faces carry
+                 ! 24*(pdep/4)/6 = pdep in total, the same as the 6 faces of a single cell (pdep/6 each)
+                 do k=1,twotondim
+                    pstarnew(cic_cell(j,k))=pstarnew(cic_cell(j,k))+0.25d0*pdep
+                 end do
+              else
+                 pstarnew(indp(j))=pstarnew(indp(j))+pdep
+              endif
            endif
         end do
 
