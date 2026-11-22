@@ -359,12 +359,12 @@ for ((i=0;i<$ntests;i++)); do
 
    # Compile source
    echo "Compiling source" | tee -a $LOGFILE;
-   MAKESTRING="make EXEC=${EXECNAME} MPI=${MPI} GCOV=${GCOV} ${FLAGS}";
+   MAKESTRING="make EXEC=${EXECNAME} MPI=${MPI} GCOV=${GCOV} ${FLAGS} MACHINE=testsuite";
 
    # Record how this test is built and run, for build_records/.
    # Used to distinguish between "never compiled" and "never executed".
    if ${COVERAGE} ; then
-      TEST_DEFINES=$(make EXEC=${EXECNAME} MPI=${MPI} GCOV=${GCOV} ${FLAGS} print-FFLAGS_BASE 2>/dev/null | grep -o -- '-D[^[:space:]]*' | paste -sd' ');
+      TEST_DEFINES=$(make EXEC=${EXECNAME} MPI=${MPI} GCOV=${GCOV} ${FLAGS} MACHINE=testsuite print-FFLAGS_BASE 2>/dev/null | grep -o -- '-D[^[:space:]]*' | paste -sd' ');
       {
         echo "test    : ${testname[n]}";
         echo "  run     : ${RUN_STAMP}";

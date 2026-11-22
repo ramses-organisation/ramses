@@ -13,7 +13,7 @@ jobs:
 
     run:
         name: "Tests ${{ matrix.test-family }}"
-        runs-on: ubuntu-24.04
+        runs-on: ubuntu-latest
         strategy:
             matrix:
                 test-family: [hydro,mhd,poisson,rt,sink,star,turb,tracer]
