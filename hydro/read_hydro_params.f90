@@ -37,7 +37,7 @@ subroutine read_hydro_params(nml_ok)
   ! Feedback parameters
   namelist/feedback_params/eta_sn,eta_ssn,yield,rbubble,f_ek,ndebris &
        & ,f_w,f_esn,mass_gmc,kappa_IR,delayed_cooling,momentum_feedback &
-       & ,ir_feedback,ir_eff,t_diss,t_sne,mass_star_max,mass_sne_min
+       & ,ir_feedback,ir_eff,t_diss,t_sne,mass_star_max,mass_sne_min,t_photo,sn_block_deposit
 
   ! Cooling / basic chemistry parameters
   namelist/cooling_params/cooling,metal,isothermal,haardt_madau,J21 &
