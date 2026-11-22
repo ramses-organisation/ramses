@@ -1124,5 +1124,7 @@ subroutine kill_grid(ind_cell,ilevel,nn,ibound,boundary_region)
      tailf=igrid
      numbf=numbf+1
   end do
+  used_mem=ngridmax-numbf
+
 
 end subroutine kill_grid

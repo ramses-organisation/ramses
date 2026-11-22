@@ -398,6 +398,7 @@ subroutine init_amr
      headf=ngrid_current+1
      tailf=ngridmax
      numbf=ngridmax-ngrid_current
+     used_mem=ngridmax-numbf
      prev(headf)=0
      next(tailf)=0
      ! Read cpu boundaries
