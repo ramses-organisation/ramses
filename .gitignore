@@ -33,5 +33,6 @@ tests/coverage_*/*
 *.tex
 *.pdf
 *.log
+*.ipynb
 # IDEs files
 .vscode

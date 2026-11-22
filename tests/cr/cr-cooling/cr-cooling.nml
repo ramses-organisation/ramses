@@ -1,0 +1,63 @@
+! Diallo et al. (2026) single-group analogue: collisional CR cooling of a Gaussian CR-energy profile (1D periodic box, static gas, negligible transport).
+&RUN_PARAMS
+hydro=.true.
+cr=.true.
+nremap=0
+ncontrol=10
+static_gas=.true.
+/
+
+&AMR_PARAMS
+levelmin=9                   ! 512 cells, dx = 1.95 pc
+levelmax=9
+ngridmax=1000
+nexpand=1
+boxlen=1000.0
+/
+
+&UNITS_PARAMS
+units_density=1.6605390d-24  ! m_H, so scale_nH = X = 0.76
+units_time=3.156d13          ! 1 Myr
+units_length=3.0856776d18    ! 1 pc
+/
+
+&INIT_PARAMS
+nregion=1
+region_type(1)='square'
+x_center=500.0
+length_x=2000.0
+d_region=1.3157894736842106  ! n_H = 1 cm^-3
+u_region=0.0
+v_region=0.0
+w_region=0.0
+p_region=114.45              ! T/mu ~ 1e4 K
+A_region=1.0
+B_region=0.0
+C_region=0.0
+/
+
+&CR_PARAMS
+cr_advect=.true.
+cr_condinit_kind='diallo_314'
+Dcr=1d10                     ! diffusion off in practice [cm^2/s]
+cr_c_fraction=1d-4           ! reduced light speed ~ 30 km/s
+cr_nsubcycle=10
+cr_streaming_diffusion=.false.
+cr_streaming_heating=.false.
+cr_cooling=.true.
+zeta_cr=7.51d-16
+cr_ne=1d-3
+cr_fneut=0.875d0
+/
+
+&OUTPUT_PARAMS
+tout=1.,10.,100.
+exact_output_time=.true.
+/
+
+&HYDRO_PARAMS
+gamma=1.6666666666667
+courant_factor=0.8
+slope_type=2
+riemann='hlld'
+/

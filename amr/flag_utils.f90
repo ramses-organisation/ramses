@@ -307,6 +307,9 @@ subroutine userflag_fine(ilevel)
   use amr_commons
   use hydro_commons
   use cooling_module
+#ifdef DO_CR
+  use cr_parameters, only: cr
+#endif
   implicit none
   integer::ilevel
   ! -------------------------------------------------------------------
@@ -443,6 +446,11 @@ subroutine userflag_fine(ilevel)
 #ifdef RT
   ! Do the same for RT solver
   if(rt)call rt_hydro_flag(ilevel)
+#endif
+
+#ifdef DO_CR
+  ! Do the same for CR
+  if(cr)call cr_hydro_flag(ilevel)
 #endif
 
   ! Update boundaries

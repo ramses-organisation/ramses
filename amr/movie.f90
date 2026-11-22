@@ -10,6 +10,10 @@ subroutine output_frame()
   use rt_parameters
   use rt_hydro_commons
 #endif
+#ifdef DO_CR
+  use cr_parameters, only: cr,ncr_groups,gamma_cr,Ecr_idx
+  use cr_hydro_commons, only: cruold
+#endif
   use constants, only: pi, c_cgs, L_sun, M_sun, yr2sec
   use mpi_mod
   use file_module, ONLY: mkdir
@@ -34,6 +38,9 @@ subroutine output_frame()
 #endif
 #ifdef RT
   character(len=100)::rt_infofile
+#endif
+#ifdef DO_CR
+  integer::ig
 #endif
   integer::ncache,iskip,ngrid,nlevelmax_frame
   integer::idim,ilun,nx_loc,ind,ix,iy,iz
@@ -731,6 +738,15 @@ subroutine output_frame()
                                           & + (uold(ind_cell(i),7)+uold(ind_cell(i),NVAR+2))**2 &
                                           & + (uold(ind_cell(i),8)+uold(ind_cell(i),NVAR+3))**2 )
 #endif
+#ifdef DO_CR
+                                     ! Cosmic-ray pressure map
+                                  else if(movie_vars(kk).eq.i_mv_crflx_p .and. cr)then
+                                     ok_frame=.true.
+                                     uvar = 0d0
+                                     do ig=1,ncr_groups
+                                        uvar = uvar + (gamma_cr(ig)-1d0)*cruold(ind_cell(i),Ecr_idx(ig))
+                                     end do
+#endif
                                   endif
 #ifdef RT
                                   ! Ionization fraction map
@@ -1100,6 +1116,10 @@ subroutine set_movie_vars()
      else if (movie_vars_txt(kk) .eq. 'pmag') then
         if(i_mv_pmag .eq. -1) i_mv_pmag = kk
         movie_vars(kk) = i_mv_pmag
+
+     else if (movie_vars_txt(kk) .eq. 'crflx_P') then
+        if(i_mv_crflx_p .eq. -1) i_mv_crflx_p = kk
+        movie_vars(kk) = i_mv_crflx_p
 
      else if (movie_vars_txt(kk) .eq. 'xH2') then
         if(i_mv_xh2 .eq. -1) i_mv_xh2 = kk
