@@ -205,6 +205,8 @@ subroutine init_amr
   if(poisson)then
      allocate(lookup_mg(1:ngridmax))
      lookup_mg=0
+     allocate(lookup_mg_backup(1:ngridmax))
+     lookup_mg_backup=0
   endif
 
   ! Allocate physical boundary for each level
@@ -233,13 +235,12 @@ subroutine init_amr
   father=0; nbor=0; next=0; prev=0
 
   ! Allocate pointer to particles linked lists
+  ! and helper arrays for particle moves
   if(pic)then
      allocate(headp(1:ngridmax))
      allocate(tailp(1:ngridmax))
      allocate(numbp(1:ngridmax))
      headp=0; tailp=0; numbp=0
-     ! Pending particle moves. Allocated whether or not OpenMP is used, so that
-     ! the particle linked lists are built in the same order either way.
      allocate(newgridp(1:npartmax))
      allocate(nmovep(1:ngridmax))
      newgridp=0; nmovep=0
@@ -397,6 +398,7 @@ subroutine init_amr
      headf=ngrid_current+1
      tailf=ngridmax
      numbf=ngridmax-ngrid_current
+     used_mem=ngridmax-numbf
      prev(headf)=0
      next(tailf)=0
      ! Read cpu boundaries

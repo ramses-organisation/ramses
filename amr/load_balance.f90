@@ -1951,6 +1951,7 @@ subroutine defrag
   headf=ngrid2+1
   tailf=ngridmax
   numbf=ngridmax-ngrid2
+  used_mem=ngridmax-numbf
   prev(headf)=0
   next(tailf)=0
   ngrid_current=ngrid2

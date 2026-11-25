@@ -22,6 +22,10 @@ subroutine init_hydro
   allocate(uold(1:ncell,1:nvar))
   allocate(unew(1:ncell,1:nvar))
   uold=0.0d0; unew=0.0d0
+  if(MC_tracer) then
+     allocate(fluxes(1:ncell,1:twondim))
+     fluxes(1:ncell,1:twondim)=0.0d0
+  end if
   if(pressure_fix)then
      allocate(divu(1:ncell))
      allocate(enew(1:ncell))

@@ -13,7 +13,7 @@ jobs:
 
     run:
         name: "Tests ${{ matrix.test-family }}"
-        runs-on: ubuntu-latest
+        runs-on: ubuntu-24.04
         strategy:
             # Run every family even after one fails, so a single bad family does
             # not hide problems in the others.
@@ -59,7 +59,7 @@ jobs:
 
     run-openmp:
         name: "Tests ${{ matrix.test-family }} (OpenMP, ${{ matrix.config.label }})"
-        runs-on: ubuntu-latest
+        runs-on: ubuntu-24.04
         # Two ways of running the OpenMP build, both compared against the same
         # reference solutions:
         #  - 1 thread: the parallel regions are entered but never run
