@@ -354,7 +354,7 @@ ramses_aton: $(MODOBJ) $(ATON_MODOBJ) $(AMRLIB) $(ATON_OBJ) ramses.o
 	rm write_patch.f90
 #############################################################################
 write_gitinfo.o: FORCE
-	$(FC) -O0 $(FFLAGS_GCOV) $(FFLAGS_PP) -DPATCH=\'$(PATCH)\' -DGITBRANCH=\'$(GITBRANCH)\' \
+	$(FC) -O0 $(FFLAGS_GCOV) $(FFLAGS_PP) -DBUILDPATCH=\'$(PATCH)\' -DGITBRANCH=\'$(GITBRANCH)\' \
 		-DGITHASH=\'"$(GITHASH)"\' -DGITREPO=\'$(GITREPO)\' \
 		-DBUILDDATE=\'"$(BUILDDATE)"\' -DBUILDCOMMAND=\'"$(BUILDCOMMAND)"\' -c ../amr/write_gitinfo.f90 -o $@
 write_makefile.o: FORCE
