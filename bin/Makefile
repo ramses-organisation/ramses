@@ -244,6 +244,10 @@ ifeq ($(COMPILER),CRAY)
    ifeq ($(MPI),0)
       FFLAGS_BASE += -DWITHOUTMPI
    endif
+   ifeq ($(OPENMP),1)
+      FFLAGS_BASE += -fopenmp
+      LIBS += -fopenmp
+   endif
    # Flags for debugging (resets optimization flags)
    ifeq ($(DEBUG),1)
       # -g: debug symbols
