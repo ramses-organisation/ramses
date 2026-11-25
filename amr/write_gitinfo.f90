@@ -5,7 +5,7 @@ module buildinfo
   ! Set at compile time (via -D flags)
   character(len=300),parameter::builddate    = BUILDDATE
   character(len=300),parameter::buildcommand = BUILDCOMMAND
-  character(len=300),parameter::patchdir     = PATCH
+  character(len=300),parameter::patchdir     = BUILDPATCH
   character(len=300),parameter::gitrepo      = GITREPO
   character(len=300),parameter::gitbranch    = GITBRANCH
   character(len=300),parameter::githash      = GITHASH
