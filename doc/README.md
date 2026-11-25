@@ -49,4 +49,4 @@ If you are navigating using the GitHub webpage for a quick look at the markdown 
 # [Chapter 6. Testing](./wiki/Testing.md)
 1. Running the automatic test suite
 2. Creating a new test
-3. Creating a new group of tests
+3. Code coverage

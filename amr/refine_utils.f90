@@ -453,13 +453,13 @@ subroutine refine_fine(ilevel)
               end do
               ! Tracer particle need to be scattered to newly-created cells on grid creation.
               ! The hooks perform this action.
-              if (MC_tracer) then
+              if (MC_tracer .and. .not. ito_tracer) then
                  call pre_make_grid_fine_hook(ind_grid_tmp, ind_cell_tmp, ind, &
                       & ilevel+1, ncreate_tmp, ibound, boundary_region)
               end if
               call make_grid_fine(ind_grid_tmp,ind_cell_tmp,ind, &
                    & ilevel+1,ncreate_tmp,ibound,boundary_region)
-              if (MC_tracer) then
+              if (MC_tracer  .and. .not. ito_tracer) then
                  call post_make_grid_fine_hook(ind_grid_tmp, ind_cell_tmp, ind, &
                       & ilevel+1, ncreate_tmp, ibound, boundary_region)
               end if
@@ -543,11 +543,11 @@ subroutine refine_fine(ilevel)
                     ind_cell_tmp(icell)=ind_cell(i)
                  end if
               end do
-              if (MC_tracer) then
+              if (MC_tracer .and. .not. ito_tracer ) then
                  call pre_kill_grid_hook(ind_cell_tmp,ilevel+1,nkill_tmp,ibound,boundary_region)
               end if
               call kill_grid(ind_cell_tmp,ilevel+1,nkill_tmp,ibound,boundary_region)
-              if (MC_tracer) then
+              if (MC_tracer .and. .not. ito_tracer) then
                  call post_kill_grid_hook(ind_cell_tmp,ilevel+1,nkill_tmp,ibound,boundary_region)
               end if
            end if
@@ -1136,5 +1136,7 @@ subroutine kill_grid(ind_cell,ilevel,nn,ibound,boundary_region)
      tailf=igrid
      numbf=numbf+1
   end do
+  used_mem=ngridmax-numbf
+
 
 end subroutine kill_grid

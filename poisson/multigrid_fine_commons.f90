@@ -484,7 +484,7 @@ subroutine build_parent_comms_mg(active_loc, ifinelevel)
             if(cur_cpu==0) cycle
 
             if(cur_cpu==myid) then
-               ! Stack grid for local activation
+               ! Stack grid for local activation.
                ! We own the grid: fill lookup_mg with its final value
                !TC: problematic for openmp
                nact_tot=nact_tot+1
@@ -867,9 +867,9 @@ subroutine build_parent_comms_mg(active_loc, ifinelevel)
 #else
       active_mg(cur_cpu,icoarselevel)%igrid(nreq(cur_cpu))=cur_grid
 #endif
-      ! Backup lookup_mg into flag2
-      flag2(cur_grid)=lookup_mg(cur_grid)
-      ! Update lookup_mg
+      ! Backup lookup_mg. Must survive until cleanup_mg_level
+      lookup_mg_backup(cur_grid)=lookup_mg(cur_grid)
+      ! Temporarily update lookup_mg
       lookup_mg(cur_grid)=nreq(cur_cpu)
    end do
 
@@ -886,9 +886,9 @@ subroutine build_parent_comms_mg(active_loc, ifinelevel)
 #else
          active_mg(cur_cpu,icoarselevel)%igrid(indx(cur_cpu))=cur_grid
 #endif
-         ! Backup lookup_mg
-         flag2(cur_grid)=-lookup_mg(cur_grid)
-         ! Update lookup_mg
+         ! Backup lookup_mg. Must survive until cleanup_mg_level
+         lookup_mg_backup(cur_grid)=-lookup_mg(cur_grid)
+         ! Temporarily update lookup_mg
          lookup_mg(cur_grid)=indx(cur_cpu)
       end if
    end do
@@ -941,9 +941,11 @@ subroutine cleanup_mg_level(ilevel)
 #endif
          cur_cpu=cpu_map(father(cur_grid))
          if(cur_cpu==myid) then
+            ! Locally owned AMR grids have canonical lookup_mg value zero.
             lookup_mg(cur_grid)=0
          else
-            lookup_mg(cur_grid)=-mod(flag2(cur_grid),ngridmax)
+            ! Restore the remote AMR grid index saved in build_parent_comms_mg.
+            lookup_mg(cur_grid)=-lookup_mg_backup(cur_grid)
          end if
       end do
 !$omp end do nowait

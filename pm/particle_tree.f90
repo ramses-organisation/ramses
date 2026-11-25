@@ -31,11 +31,10 @@ integer::ipart,idim,i,nxny,ilevel
   real(dp),dimension(1:3)::xbound
   integer,dimension(1:nvector),save::ix,iy,iz
   integer,dimension(1:nvector),save::ind_grid,ind_part
-  logical,dimension(1:nvector),save::ok=.true.
   real(dp),dimension(1:3)::skip_loc
   real(dp)::scale
 
-!$omp threadprivate(ix,iy,iz,ind_grid,ind_part,ok)
+!$omp threadprivate(ix,iy,iz,ind_grid,ind_part)
 
   if(verbose)write(*,*)'  Entering init_tree'
 
@@ -153,7 +152,7 @@ integer::ipart,idim,i,nxny,ilevel
         call clean_stop
      end if
      ! Add particle to level 1 linked list
-     call add_list(ind_part,ind_grid,ok,npart1)
+     call add_list(ind_part,ind_grid,npart1)
   end do
 
   ! destroy and recreate cloud particles to account for changes in sink
@@ -232,8 +231,8 @@ subroutine make_tree_fine(ilevel)
   if(ndim>2)skip_loc(3)=dble(kcoarse_min)
   scale=boxlen/dble(nx_loc)
 
-  ! First, walk the particle tree and record the changes to be made
-  ! We do no modify the tree during this walk. This makes it safe for OMP.
+  ! First, walk the particle tree and record the changes to be made.
+  ! We do not modify the tree during this walk.
 
   ! Loop over cpus
 !$omp parallel private(icpu,igrid,ig,ip,jgrid,npart1,ipart,jpart,next_part)
@@ -515,7 +514,7 @@ subroutine kill_tree_fine(ilevel)
   ! Sort particles between ilevel and ilevel+1
 
   ! First, walk the particle tree and record the changes to be made
-  ! We do no modify the tree during this walk. This makes it safe for OMP.
+  ! We do not modify the tree during this walk.
 
   ! Loop over cpus
 !$omp parallel private(icpu,ig,ip,jgrid,igrid,npart1,ipart,jpart,next_part)
@@ -585,13 +584,15 @@ subroutine kill_tree(ind_grid,ind_part,ind_grid_part,ng,np,ilevel)
   integer,dimension(1:nvector)::ind_grid
   integer,dimension(1:nvector)::ind_grid_part,ind_part
   !-----------------------------------------------------------------------
-  ! This routine is called by subroutine kill_tree_fine, which moves particles to ilevel+1.
+  ! This routine is called by subroutine kill_tree_fine, which moves
+  ! particles to ilevel+1.
   ! This routine first finds the child grid each particle are located in
-  ! based on their position. If the child grid exists, it records that the particle
-  ! has to be moved from the parent grid linked list at ilevel to
-  ! child grid linked list at ilevel+1. If the child grid does not exist, nothing is
-  ! recorded and the particle stays with the parent. The linked lists themselves
-  ! are updated later by apply_tree_moves.
+  ! based on their position. If the child grid exists, it records that the
+  ! particle has to be moved from the parent grid linked list at ilevel
+  ! to the corresponding child grid linked list at ilevel+1. If the child
+  ! grid does not exist, nothing is recorded and the particle stays with
+  ! the parent.
+  ! The linked lists themselves are updated later by apply_tree_moves.
   !-----------------------------------------------------------------------
   ! Input parameters
   ! ind_grid      => (input) list of parent grid indices, up to ng
@@ -687,20 +688,12 @@ subroutine apply_tree_moves(ilevel)
   ! make_tree_fine) or by kill_tree (called from kill_tree_fine).
   ! These have been stored in newgridp.
   !
-  ! Those routines run in parallel and must not touch the shared linked
-  ! lists: several threads can be sending particles to the same destination
-  ! grid at the same time. To avoid race condition, the linked list update
-  ! can be protected with a critical section. This however changes the order
-  ! in which particles are linked, in an undeterminisitc way. This affects
-  ! the result of anything that depends on the order of the tree walk,
-  ! such as the MC tracer random moves.
-
-  ! OMP: This routine MUST be done in serial, as the tree must be walked in
-  ! this order (same order as check_tree, kill_tree, ...).
-  !
   ! Note that a particle moved to a sister grid further down the traversal is
   ! visited again when that grid is reached. This is harmless: newgridp is
   ! cleared as the move is applied, so the particle is simply skipped.
+  !
+  ! OMP: This routine MUST be done in serial, as the tree must be walked in
+  ! this order (same order as check_tree, kill_tree, ...).
   !-----------------------------------------------------------------------
   ! Input parameters
   ! ilevel        => (input) current level
@@ -714,10 +707,12 @@ subroutine apply_tree_moves(ilevel)
   ! newgridp <= (modify) reset to 0 as the moves are applied
   ! nmovep   <= (modify) reset to 0 as the moves are applied
   !-----------------------------------------------------------------------
-  integer::icpu,jgrid,igrid,ipart,next_part,jmove,nmove
+  integer::ip,icpu,jgrid,igrid,ipart,next_part,jmove,nmove
+  integer,dimension(1:nvector),save::ind_part,ind_grid_old,ind_grid_new
 
   ! Loop over cpus
   do icpu=1,ncpu
+     ip=0
      ! Loop over grids
      do jgrid=1,numbl(icpu,ilevel)
         if(icpu==myid)then
@@ -739,20 +734,28 @@ subroutine apply_tree_moves(ilevel)
            ! Save next particle  <--- Very important !!!
            next_part=nextp(ipart)
            if(newgridp(ipart)>0)then
-              call remove_list_one(ipart,igrid)
-              call add_list_one(ipart,newgridp(ipart))
+              ip=ip+1
+              ind_part(ip)=ipart
+              ind_grid_new(ip)=newgridp(ipart)
+              ind_grid_old(ip)=igrid
               newgridp(ipart)=0  ! reset newgridp
               jmove=jmove+1
-              ! All the particles recorded for this grid have been moved. Any
-              ! particle left in the list either stays, or has just arrived
-              ! from a grid processed earlier and is already in the right place.
-              if(jmove==nmove)exit
+           endif
+           if(ip==nvector)then
+              call remove_list(ind_part,ind_grid_old,ip)
+              call add_list(ind_part,ind_grid_new,ip)
+              ip=0
            end if
-           ipart=next_part  ! Go to next particle
+           if(jmove==nmove)exit ! everything has been moved for this grid -> go to next grid
+           ipart=next_part  ! Go to next particle in current grid
         end do
         ! End loop over particles
      end do
      ! End loop over grids
+     if(ip>0)then
+        call remove_list(ind_part,ind_grid_old,ip)
+        call add_list(ind_part,ind_grid_new,ip)
+     endif
   end do
   ! End loop over cpus
 
@@ -981,7 +984,7 @@ subroutine virtual_tree_fine(ilevel)
   ! Calculate how many particle properties are being transferred
   ! igrid, level, id, families
   particle_data_width_int = 4
-  if (MC_tracer) then
+  if (MC_tracer .and. .not. ito_tracer) then
      ! Also send partp
      particle_data_width_int = particle_data_width_int + 1
   end if
@@ -1014,7 +1017,7 @@ subroutine virtual_tree_fine(ilevel)
 #endif
      end if
   end do
-  if (MC_tracer) then
+  if (MC_tracer .and. .not. ito_tracer) then
      ! Use itmpp to store the index within communicator
      ! Note: itmpp is also used in `sink_particle_tracer` for
      ! `gas_tracers`, so there is no interference here.
@@ -1258,7 +1261,7 @@ subroutine virtual_tree_fine(ilevel)
 #endif
      end do
      ! Loop on star tracers in the communicator
-     if (MC_tracer) then
+     if (MC_tracer .and. .not. ito_tracer) then
         do ipart = 1, ncache
 #ifdef LIGHT_MPI_COMM
            jpart = emission_part(ilevel)%f8(1,offset_np+ipart-1)
@@ -1402,9 +1405,6 @@ subroutine fill_comm(ind_part,ind_com,ind_list,np,ilevel,icpu)
   integer,dimension(1:nvector)::ind_part,ind_com,ind_list
   integer::current_property
   integer::i,idim
-  logical,dimension(1:nvector),save::ok=.true.
-
-!$omp threadprivate(ok)
 
   ! Gather particle level and identity
   do i=1,np
@@ -1477,7 +1477,7 @@ subroutine fill_comm(ind_part,ind_com,ind_list,np,ilevel,icpu)
      end if
   end if
   ! MC Tracer
-  if (MC_tracer) then
+  if (MC_tracer .and. .not. ito_tracer) then
      do i=1,np
         if (is_star_tracer(typep(ind_part(i)))) then
            ! Store index of the star *within* communicator
@@ -1521,7 +1521,7 @@ subroutine fill_comm(ind_part,ind_com,ind_list,np,ilevel,icpu)
   endif
 
   ! Remove particles from parent linked list
-  call remove_list(ind_part,ind_list,ok,np)
+  call remove_list(ind_part,ind_list,np)
   call add_free(ind_part,np)
 
 end subroutine fill_comm
@@ -1586,10 +1586,9 @@ subroutine empty_comm(ind_com,np,ilevel,icpu)
 
   integer::i,idim,igrid
   integer,dimension(1:nvector),save::ind_list,ind_part
-  logical,dimension(1:nvector),save::ok=.true.
   integer::current_property
 
-!$omp threadprivate(ind_list,ind_part,ok)
+!$omp threadprivate(ind_list,ind_part)
 
 #ifdef LIGHT_MPI_COMM
   offset_ig=0
@@ -1621,7 +1620,7 @@ subroutine empty_comm(ind_com,np,ilevel,icpu)
 
   ! Add particle to parent linked list
   call remove_free(ind_part,np)
-  call add_list(ind_part,ind_list,ok,np)
+  call add_list(ind_part,ind_list,np)
 
   ! Scatter particle level and identity
   do i=1,np
@@ -1696,7 +1695,7 @@ subroutine empty_comm(ind_com,np,ilevel,icpu)
   end if
 
   ! MC Tracer
-  if (MC_tracer) then
+  if (MC_tracer .and. .not. ito_tracer) then
      do i=1,np
         ! Store the target
         ! NB: this 'partp' contains for star tracers: the adress in
