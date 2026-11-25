@@ -1,5 +1,6 @@
 FLAGS: NDIM=2 PATCH= SOLVER=hydro
 RESTART: true
-# MC tracers: init_tracer splits the random generator into ncpu substreams, so
-# the trajectories, and hence the reference, depend on the number of ranks.
+# Ito tracers: the random displacement in move1 draws from tracer_seed, which
+# init_tracer splits into ncpu substreams, so the trajectories, and hence the
+# reference, depend on the number of ranks.
 NPROC: 2
